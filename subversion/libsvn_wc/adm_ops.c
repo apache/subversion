@@ -946,6 +946,111 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
 
 
 
+svn_error_t *
+svn_wc_get_auth_file (svn_stringbuf_t *path,
+                      const char *filename,
+                      svn_stringbuf_t **contents,
+                      apr_pool_t *pool)
+{
+  svn_stringbuf_t *full_path_to_file =
+    svn_wc__adm_path (path, 0, pool, SVN_WC__ADM_AUTH_DIR, filename, NULL);
+  
+  /* Sanity check */
+  if (! svn_wc__adm_path_exists (path, 0, pool,
+                                 SVN_WC__ADM_AUTH_DIR, filename, NULL))
+    return 
+      svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                         "auth file '%s' not found in adm area of '%s'",
+                         filename, path->data);
+
+  /* Read the file's contents into a stringbuf, allocated in POOL. */
+  SVN_ERR (svn_string_from_file (contents, full_path_to_file->data, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_wc_set_auth_file (svn_stringbuf_t *path,
+                      svn_boolean_t recurse,
+                      const char *filename,
+                      svn_stringbuf_t *contents,
+                      apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_file_t *fp;
+  apr_size_t sz;
+
+  svn_stringbuf_t *full_path_to_file =
+    svn_wc__adm_path (path, 0, pool, SVN_WC__ADM_AUTH_DIR, filename, NULL);
+
+
+  /* Create or overwrite the file in PATH's administrative area. */
+  status = apr_file_open (&fp, full_path_to_file->data,
+                          (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
+  if (status) 
+    return svn_error_createf (status, 0, NULL, pool,
+                              "error opening '%s' for writing",
+                              full_path_to_file->data);
+
+  status = apr_file_write_full (fp, contents->data, contents->len, &sz);
+  if (status) 
+    return svn_error_createf (status, 0, NULL, pool,
+                              "error writing data to '%s'",
+                              full_path_to_file->data);
+  
+  status = apr_file_close (fp);
+  if (status) 
+    return svn_error_createf (status, 0, NULL, pool,
+                              "error closing file '%s'",
+                              full_path_to_file->data);
+
+  if (recurse)
+    {
+      /* Loop over PATH's entries, and recurse into directories. */
+      apr_hash_index_t *hi;
+      apr_hash_t *entries;
+      const char *basename;
+      svn_wc_entry_t *entry;
+
+      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          apr_size_t keylen;
+          void *val;
+
+          apr_hash_this (hi, &key, &keylen, &val);
+          basename = (const char *) key;          
+          entry = (svn_wc_entry_t *) val;
+
+          if (entry->kind == svn_node_dir)
+            {              
+              svn_stringbuf_t *childpath; 
+              
+              /* If the entry's existence is `deleted', skip it. */
+              if ((entry->existence == svn_wc_existence_deleted)
+                  && (entry->schedule != svn_wc_schedule_add))
+                continue;
+
+              childpath = svn_stringbuf_dup (path, pool);
+              svn_path_add_component (childpath, 
+                                      svn_stringbuf_create (basename, pool),
+                                      svn_path_local_style);
+
+              SVN_ERR (svn_wc_set_auth_file (childpath, TRUE,
+                                             filename, contents, pool));
+            }
+        }
+    }
+
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 

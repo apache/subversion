@@ -37,6 +37,20 @@ extern "C" {
 #include "svn_error.h"
 
 
+
+/* ### TODO:  Multiple Targets
+
+    - Up for debate:  an update on multiple targets is *not* atomic.
+    Right now, svn_client_update only takes one path.  What's
+    debatable is whether this should ever change.  On the one hand,
+    it's kind of losing to have the client application loop over
+    targets and call svn_client_update() on each one;  each call to
+    update initializes a whole new repository session (network
+    overhead, etc.)  On the other hand, it's this is a very simple
+    implementation, and allows for the possibility that different
+    targets may come from different repositories.  */
+
+
 /*  A callback function type defined by the top-level client
     application (the user of libsvn_client.)
 
@@ -53,38 +67,50 @@ typedef svn_error_t *(*svn_client_auth_info_callback_t)
         void *baton,
         apr_pool_t *pool);
 
-
-/* ### TODO:  Multiple Targets
-
-    - Up for debate:  an update on multiple targets is *not* atomic.
-    Right now, svn_client_update only takes one path.  What's
-    debatable is whether this should ever change.  On the one hand,
-    it's kind of losing to have the client application loop over
-    targets and call svn_client_update() on each one;  each call to
-    update initializes a whole new repository session (network
-    overhead, etc.)  On the other hand, it's this is a very simple
-    implementation, and allows for the possibility that different
-    targets may come from different repositories.  */
+/* Function type possibly returned along with an RA session baton.  If
+   returned, the user should call this routine after closing the RA
+   session. */
+typedef svn_error_t *(*svn_client_auth_storage_callback_t) (void *baton);
 
 
 
 /*** Milestone 3 Interfaces ***/
 
 
-/* Open a session to REPOS_URL using RA_LIB.  
+/* Open an authenticated session to REPOS_URL using RA_LIB.  
+
    This routine will negotiate with the RA library and authenticate
-   the user.  If successful, *SESSION_BATON will be set to an object
-   that represents an "open", authenticated session with the
-   repository.  (The session_baton is necessary for further
-   interaction with RA layer.) */
+   the user.  CALLBACK/BATON is a routine that the client library can
+   use to fetch information from the calling application (by say,
+   displaying a prompt to the user.)  PATH is a working copy path that
+   can be searched for previously-stored authentication data.
+
+   If successful, *SESSION_BATON will be set to an object that
+   represents an "open" session with the repository.  (The
+   session_baton is necessary for further interaction with RA layer.)
+ 
+   This routine might also return an *STORAGE_CALLBACK/BATON for
+   storing the authentication information in the working copy at PATH.
+   If a non-NULL routine is returned, the caller of this function must
+   remember to call the storage callback after closing the RA session.
+   If the authentication requires no storage, *STORAGE_CALLBACK is set
+   to NULL. */
 svn_error_t *
 svn_client_authenticate (void **session_baton,
+                         svn_client_auth_storage_callback_t *storage_callback,
+                         void **storage_baton,
                          svn_ra_plugin_t *ra_lib,
                          svn_stringbuf_t *repos_URL,
+                         svn_stringbuf_t *path,
                          svn_client_auth_info_callback_t callback,
                          void *callback_baton,
                          apr_pool_t *pool);
 
+/* Defines -- names of files that contain authorization information.
+   libsvn_client will store these in the working copy, depending on
+   whatever authorization methods are being used. */
+#define SVN_CLIENT_AUTH_USERNAME             "username"
+#define SVN_CLIENT_AUTH_PASSWORD             "password"
 
 
 
