@@ -817,24 +817,6 @@ do_begin_propdelta (svn_xml__digger_t *digger)
                             digger->pool);
         break;
       }
-    case svn_delta__XML_add:
-      {
-        digger->current_propdelta->kind = svn_propdelta_dirent;
-        /* Get the name of the dirent, too. */
-        digger->current_propdelta->entity_name = 
-            svn_string_dup (youngest_frame->previous->name,
-                            digger->pool);
-        break;
-      }
-    case svn_delta__XML_replace:
-      {
-        digger->current_propdelta->kind = svn_propdelta_dirent;
-        /* Get the name of the dirent, too. */
-        digger->current_propdelta->entity_name = 
-            svn_string_dup (youngest_frame->previous->name,
-                            digger->pool);
-        break;
-      }
     default:
       return 
         svn_error_create 
