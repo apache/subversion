@@ -38,6 +38,9 @@ extern "C" {
 /** The well-known svn port number. */
 #define SVN_RA_SVN_PORT 3690
 
+/** Currently-defined capabilities. */
+#define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
+
 /** A specialized form of @c SVN_ERR to deal with errors which occur in an
  * @c svn_ra_svn_command_handler.
  *
@@ -64,7 +67,7 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
 
 /** Command table, used by @c svn_ra_svn_handle_commands.
  *
- * If @c terminate is set, command-handling will cease after command is 
+ * If @c terminate is set, command-handling will cease after command is
  * processed.
  */
 typedef struct {
@@ -102,6 +105,18 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *in_file,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool);
+
+/** Initialize a connection's capabilities to the ones specified in
+ * @a list, which contains svn_ra_svn_item_t entries (which should
+ * be of type SVN_RA_SVN_WORD; a malformed data error will result if
+ * any are not). */
+svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
+                                         apr_array_header_t *list);
+
+/** Return @c TRUE if @a conn has the capability @a capability, or
+ * @c FALSE if it does not. */
+svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
+                                        const char *capability);
 
 /** Write a number over the net.
  *

@@ -82,7 +82,7 @@ command response whose parameters match the prototype:
 minver and maxver give the minimum and maximum Subversion protocol
 versions supported by the server.  mechs is present for historical
 reasons, and is ignored by the client.  The cap values give a list of
-server capabilities; no capabilities are currently defined.
+server capabilities (see section 2.1).
 
 If the client does not support a protocol version within the specified
 range, or does not support any of the specified SASL mechanisms, it
@@ -92,8 +92,8 @@ with an item matching the prototype:
   response: ( version:number ( cap:word ... ) url:string )
 
 version gives the protocol version selected by the client.  The cap
-values give a list of client capabilities; no capabilities are
-currently defined.  url gives the URL the client is accessing.
+values give a list of client capabilities (see section 2.1).  url
+gives the URL the client is accessing.
 
 Upon receiving the client's response to the greeting, the server sends
 an authentication request, which is a command response whose arguments
@@ -147,7 +147,16 @@ uuid gives the universal unique identifier of the repository, and
 repos-url gives the URL of the repository's root directory.  The
 client can now begin sending commands from the main command set.
 
+2.1 Capabilities
+
+The following capabilities are currently defined:
+
+  edit-pipeline     If both the client and server present this
+                    capability, edits operations will use pipelining.
+                    See section 3.1.2.
+
 3. Commands
+-----------
 
 Commands match the prototypes:
 
@@ -272,72 +281,83 @@ second place for auth-request point as noted below.
 
 3.1.2. Editor Command Set
 
+If edit pipelining is negotiated (see section 2.1), than an edit
+operation produces only one response, at close-edit or abort-edit
+time.  However, the consumer may write an error response at any time
+during the edit in order to terminate the edit operation early; the
+driver must notice that input is waiting on the connection, read the
+error, and send an abort-edit operation.  After an error is returned,
+the consumer must read and discard editing operations until the
+abort-edit.  In order to prevent TCP deadlock, the consumer must use
+non-blocking I/O to send an early error response; if writing blocks,
+the consumer must read and discard edit operations until writing
+unblocks or it reads an abort-edit.
+
+If edit pipelining is not negotiated, then the target-rev, open-root,
+delete-entry, add-dir, open-dir, close-dir, and close-file operations
+produce empty responses.  Errors produced other operations are
+reported by the enclosing close-dir or close-file operation.
+
   target-rev
     params:   ( rev:number )
-    response: ( )
 
   open-root
     params:   ( [ rev:number ] root-token:string )
-    response: ( )
 
   delete-entry
     params:   ( path:string rev:number dir-token:string )
-    response: ( )
 
   add-dir
     params:   ( path:string parent-token:string child-token:string
                 [ copy-path:string copy-rev:number ] )
-    response: ( )
 
   open-dir
     params:   ( path:string parent-token:string child-token:string rev:number )
-    response: ( )
 
   change-dir-prop
-    This command has no response; errors will be reported in close-dir.
     params:   ( dir-token:string name:string [ value:string ] )
 
   close-dir
     params:   ( dir-token:string )
-    response: ( )
 
   add-file
-    This command has no response; errors will be reported in close-file.
     params:   ( path:string dir-token:string file-token:string
                 [ copy-path:string copy-rev:number ] )
 
   open-file
-    This command has no response; errors will be reported in close-file.
     params:   ( path:string dir-token:string file-token:string rev:number )
 
-  apply-textdelta:
-    This command has no response; errors will be reported in close-file.
+  apply-textdelta
     params:   ( file-token:string [ base-checksum:string ] )
-    After sending command, client sends svndiff data as strings,
-     terminated by an empty string.
+    If edit-pipelining is not negotiated, after sending command,
+     client sends svndiff data as strings, terminated by an empty string.
 
-  change-file-prop:
-    This command has no response; errors will be reported in close-file.
+  textdelta-chunk (only used if edit-pipeline is negotiated)
+    params: ( file-token:string chunk:string )
+
+  textdelta-end (only used if edit-pipeline is negotiated)
+    params: ( file-token:string )
+
+  change-file-prop
     params:   ( file-token:string name:string [ value:string ] )
 
-  close-file:
+  close-file
     params:   ( file-token:string [ text-checksum:string ] )
-    response: ( )
 
-  close-edit:
+  close-edit
     params:   ( )
     response: ( )
 
-  abort-edit:
+  abort-edit
     params:   ( )
     response: ( )
 
 3.1.3. Report Command Set
 
-To allow for pipelining, report commands do not return responses.  Any
-errors resulting from a report call will be returned to the client by
-the command which invoked the report (following an abort-edit call).
-Errors resulting from an abort-report call are ignored.
+To reduce round-trip delays, report commands do not return responses.
+Any errors resulting from a report call will be returned to the client
+by the command which invoked the report (following an abort-edit
+call).  Errors resulting from an abort-report call are ignored.
 
   set-path:
     params: ( path:string rev:number start-empty:bool )

@@ -519,6 +519,17 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * passed to @c open_directory and @c add_directory definitely does not
  * have the proper lifetime). In general, it is recommended to simply
  * avoid keeping a parent directory baton in a file baton.
+ *
+ *
+ * <h3>Errors</h3>
+ *
+ * At least one implementation of the editor interface is
+ * asynchronous; an error from one operation may be detected some
+ * number of operations later.  As a result, an editor driver must not
+ * assume that an error from an editing function resulted from the
+ * particular operation being detected.  Moreover, once an editing
+ * function returns an error, the edit is dead; the only further
+ * operation which may be called on the editor is abort_edit.
  */
 typedef struct
 {
