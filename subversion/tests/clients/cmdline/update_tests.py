@@ -1144,6 +1144,8 @@ def new_dir_with_spaces(sbox):
                                         expected_disk,
                                         expected_status)  
 
+#----------------------------------------------------------------------
+
 def non_recursive_update(sbox):
   "non-recursive update"
 
@@ -1191,6 +1193,26 @@ def non_recursive_update(sbox):
                                         None, None, None, None, None, 0,
                                         '-N', A_path)
 
+#----------------------------------------------------------------------
+
+def checkout_empty_dir(sbox):
+  "check out an empty dir"
+  # See issue #1472 -- checked out empty dir should not be marked as
+  # incomplete ("!" in status).
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  C_url = svntest.main.current_repo_url + '/A/C'
+
+  svntest.main.safe_rmtree(wc_dir)
+  out, err = svntest.main.run_svn(None, 'checkout', C_url, wc_dir)
+  if err:
+    raise svntest.Failure
+
+  out, err = svntest.main.run_svn(None, 'status', wc_dir)
+  if out or err:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -1214,6 +1236,7 @@ test_list = [ None,
               XFail(another_hudson_problem),
               new_dir_with_spaces,
               non_recursive_update,
+              XFail(checkout_empty_dir),
              ]
 
 if __name__ == '__main__':
