@@ -475,8 +475,10 @@ int main(int argc, const char *const *argv)
         }
       if (status)
         {
-          fprintf(stderr, "Can't accept client connection: %s\n",
-                  apr_strerror(status, errbuf, sizeof(errbuf)));
+          svn_error_clear
+            (svn_cmdline_fprintf
+             (stderr, _("Can't accept client connection: %s\n"),
+              apr_strerror(status, errbuf, sizeof(errbuf))));
           exit(1);
         }
 
@@ -528,15 +530,19 @@ int main(int argc, const char *const *argv)
           status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
-              fprintf(stderr, "Can't create threadattr: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, _("Can't create threadattr: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
           status = apr_threadattr_detach_set(tattr, 1);
           if (status)
             {
-              fprintf(stderr, "Can't set detached state: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, _("Can't set detached state: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
@@ -547,7 +553,9 @@ int main(int argc, const char *const *argv)
                                      connection_pool);
           if (status)
             {
-              fprintf(stderr, "Can't create thread: %s\n",
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, _("Can't create thread: %s\n"),
                       apr_strerror(status, errbuf, sizeof(errbuf)));
               exit(1);
             }
