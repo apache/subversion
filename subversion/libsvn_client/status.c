@@ -66,7 +66,17 @@ svn_client_status (apr_hash_t **statushash,
   /* Get a URL out of the working copy. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
 
-  if (entry)
+  if ((entry) && (entry->kind != svn_node_dir) && (! entry->ancestor))
+    {
+      /* If this entry has no ancestry and isn't a directory
+         (perhaps because it was just added) we'll get the
+         ancestry from its parent. */
+      svn_stringbuf_t *parent = svn_stringbuf_dup (path, pool);
+      svn_path_remove_component (parent, svn_path_local_style);
+      SVN_ERR (svn_wc_entry (&entry, parent, pool));
+    }
+
+  if ((entry) && (entry->ancestor))
     {
       URL = entry->ancestor->data;
 
