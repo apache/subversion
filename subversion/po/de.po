@@ -49,12 +49,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-04-27 14:09+0200\n"
-"PO-Revision-Date: 2004-05-25 09:31+0100\n"
+"PO-Revision-Date: 2004-06-11 09:07+0100\n"
+"Last-Translator: Lübbe Onken <l.onken@rac.de>\n"
+"Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: clients/cmdline/blame-cmd.c:153
+#: clients/cmdline/blame-cmd.c:162
 #, c-format
 msgid "Skipping binary file: '%s'\n"
 msgstr "Überspringe Binärdatei: '%s'\n"
@@ -1433,9 +1435,9 @@ msgstr ""
 "Hole Status des externen Objekts in '%s'\n"
 
 #: clients/cmdline/notify.c:300
-#, fuzzy, c-format
+#, c-format
 msgid "Status against revision: %6ld\n"
-msgstr "Status gegen Revision: %6ld\n"
+msgstr "Status bezogen auf Revision: %6ld\n"
 
 #: clients/cmdline/notify.c:308
 #, c-format
@@ -1570,8 +1572,9 @@ msgid "property '%s' deleted from '%s'.\n"
 msgstr "Eigenschaft '%s' wurde von '%s' gelöscht.\n"
 
 #: clients/cmdline/propedit-cmd.c:127
-msgid "Bad encoding option: prop's value isn't stored as UTF8"
-msgstr ""
+#: clients/cmdline/propedit-cmd.c:256
+msgid "Bad encoding option: prop value not stored as UTF8"
+msgstr "Fehlerhafte Codierung: Eigenschaftswert ist nicht als UTF8 gespeichert"
 
 #: clients/cmdline/propedit-cmd.c:136
 #, c-format
@@ -2207,7 +2210,7 @@ msgstr "Svndiff Datum enthält defektes Fenster"
 #: include/svn_error_codes.h:683
 #, fuzzy
 msgid "Svndiff data contains backward-sliding source view"
-msgstr "Svndiff Datum enthält zurück-rutschenden Blick auf Quellen"
+msgstr "Svndiff Daten enthahlten zurückgleitenden Blick auf Quellen"
 
 #: include/svn_error_codes.h:687
 msgid "Svndiff data contains invalid instruction"
@@ -2430,7 +2433,7 @@ msgstr "'%s' ist der Ressource, die sich unter Versionskontrolle befindet, im We
 #: libsvn_client/diff.c:1204
 #: libsvn_client/diff.c:1846
 #: libsvn_client/diff.c:2281
-#: libsvn_client/diff.c:2385
+#: libsvn_client/diff.c:2386
 #: libsvn_client/prop_commands.c:170
 #: libsvn_client/prop_commands.c:386
 #: libsvn_client/prop_commands.c:537
@@ -2441,7 +2444,7 @@ msgstr "'%s' ist der Ressource, die sich unter Versionskontrolle befindet, im We
 #: libsvn_wc/adm_ops.c:2067
 #: libsvn_wc/copy.c:291
 #: libsvn_wc/entries.c:1374
-#: libsvn_wc/entries.c:1776
+#: libsvn_wc/entries.c:1792
 #: libsvn_wc/props.c:282
 #: libsvn_wc/questions.c:171
 #: libsvn_wc/update_editor.c:2709
@@ -2518,7 +2521,7 @@ msgstr "Bei einem 'angetackerten' Diff muß zumindest eine Revision nicht lokal 
 
 #: libsvn_client/diff.c:2258
 #: libsvn_client/diff.c:2263
-#: libsvn_client/diff.c:2373
+#: libsvn_client/diff.c:2374
 #: libsvn_client/export.c:719
 #: libsvn_client/ra.c:752
 #, c-format
@@ -2608,7 +2611,7 @@ msgstr "Kann Eintrag für '%s' nicht finden"
 #: libsvn_client/ra.c:443
 #, c-format
 msgid "Missing changed-path information for '%s' in revision %ld"
-msgstr ""
+msgstr "'%s' fehlt in der Liste der geänderten Pfade von Revsion %ld"
 
 #: libsvn_client/ra.c:614
 #, c-format
@@ -2622,11 +2625,10 @@ msgstr "Pfad '%s' existiert nicht in Revision %ld"
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "Kann '%s' in Revision %ld nicht im Projektarchiv finden"
 
-# Der Satz gefällt mir im englischen schon nicht
 #: libsvn_client/ra.c:704
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' in revision %ld is an unrelated object"
-msgstr "'%s' in Revision %ld hat keinen Bezug"
+msgstr "'%s' in Revision %ld hat keinen Bezug zur Arbeitskopie"
 
 #: libsvn_client/relocate.c:56
 #, c-format
@@ -2746,32 +2748,31 @@ msgstr ""
 "   Erwartet:    %s\n"
 "   Tatsächlich: %s\n"
 
-#: libsvn_ra_dav/fetch.c:1082
+#: libsvn_ra_dav/fetch.c:1088
 msgid "Server does not support date-based operations"
 msgstr "Server unterstützt keine datumsbasierten Operationen"
 
-#: libsvn_ra_dav/fetch.c:1089
+#: libsvn_ra_dav/fetch.c:1095
 msgid "Invalid server response to dated-rev request"
 msgstr "Ungültige Antwort des Servers auf datierte Revisionsanfrage"
 
-#: libsvn_ra_dav/fetch.c:1176
+#: libsvn_ra_dav/fetch.c:1182
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
 msgstr "DAV Anfrage fehlgeschlagen; möglicherweise ist entweder der pre-revprop-change Haken fehlgeschlagen oder er fehlt"
 
-#: libsvn_ra_dav/fetch.c:1919
+#: libsvn_ra_dav/fetch.c:1925
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Fehler beim Schreiben nach '%s': unerwartetes EOF"
 
-#: libsvn_ra_dav/fetch.c:2056
+#: libsvn_ra_dav/fetch.c:2062
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Unbekannte XML Codierung: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2314
-#, fuzzy
+#: libsvn_ra_dav/fetch.c:2320
 msgid "REPORT response handling failed to complete the editor drive"
-msgstr "REPORT-Antwort-Behandlung konnte die Editorfahrt nicht beenden"
+msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
 
 #: libsvn_ra_dav/merge.c:216
 #, c-format
@@ -3411,22 +3412,22 @@ msgstr "Eintrag '%s' ist bereits unter Versionskontrolle"
 msgid "Entry '%s' has illegal schedule"
 msgstr "Eintrag '%s' hat einen illegalen Plan"
 
-#: libsvn_wc/entries.c:1653
+#: libsvn_wc/entries.c:1669
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "Kein Eintrag: '%s'"
 
-#: libsvn_wc/entries.c:1719
+#: libsvn_wc/entries.c:1735
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "Verzeichnis '%s' hat keinen THIS_DIR Eintrag"
 
-#: libsvn_wc/entries.c:1787
+#: libsvn_wc/entries.c:1803
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' hat einen nicht erkannten Knotentyp"
 
-#: libsvn_wc/entries.c:1822
+#: libsvn_wc/entries.c:1838
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Unerwartetes '%s' gefunden: Pfad wird als 'fehlend' markiert"
@@ -4153,7 +4154,7 @@ msgstr "Revision %ld als %ld übertragen.\n"
 msgid "Revision %ld skipped.\n"
 msgstr "Revision: '%ld' übersprungen\n"
 
-#: svndumpfilter/main.c:873
+#: svndumpfilter/main.c:874
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -4162,26 +4163,26 @@ msgstr ""
 "%d Revision(en) fallen gelassen.\n"
 "\n"
 
-#: svndumpfilter/main.c:879
+#: svndumpfilter/main.c:880
 msgid "Revisions renumbered as follows:\n"
 msgstr "Revisionenen folgendermaßen neu numeriert:\n"
 
-#: svndumpfilter/main.c:907
+#: svndumpfilter/main.c:908
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (fallen gelassen)\n"
 
-#: svndumpfilter/main.c:911
+#: svndumpfilter/main.c:912
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:922
+#: svndumpfilter/main.c:923
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "%d Knoten fallen gelassen:\n"
 
-#: svndumpfilter/main.c:1120
+#: svndumpfilter/main.c:1121
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -4189,7 +4190,7 @@ msgstr ""
 "\n"
 "Fehler: keine Prefixe angegeben.\n"
 
-#: svndumpfilter/main.c:1163
+#: svndumpfilter/main.c:1164
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
