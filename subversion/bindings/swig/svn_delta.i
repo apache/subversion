@@ -33,20 +33,9 @@
     svn_delta_xml_parser_t **,
     svn_txdelta_window_t **,
     svn_delta_edit_fns_t **,
-    struct svn_pipe_edit_baton **
+    struct svn_pipe_edit_baton **,
+    svn_txdelta_window_handler_t *
 };
-
-/* -----------------------------------------------------------------------
-   all uses of "svn_txdelta_window_handler_t *" are OUT params
-*/
-%typemap(ignore) svn_txdelta_window_handler_t * (svn_txdelta_window_handler_t temp) {
-    $1 = &temp;
-}
-%typemap(python,argout) svn_txdelta_window_handler_t * {
-    $result = t_output_helper(
-        $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
-}
 
 /* -----------------------------------------------------------------------
    handle the ptr/len params of svn_delta_xml_parsebytes()
