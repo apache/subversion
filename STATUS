@@ -99,3 +99,10 @@ Candidate changes:
       This also fixes --encoding with propedit.
     Votes:
       +1: lundblad
+
+  * r11262
+    Fix issue #2012.
+    Justification:
+      Regression fix.
+    Votes:
+      +1: lundblad
