@@ -1104,139 +1104,240 @@ $ svn status
       <sect3 id="svn-ch-6-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
-        <para>Subversion has the ability to substitute useful strings
-          into special <firstterm>keywords</firstterm> within text
-          files.  For example, if I placed this text into a
-          file:</para>
+        <para>Subversion has the ability to substitute
+          <firstterm>keywords</firstterm>&mdash;pieces of useful,
+          dynamic information about a versioned file&mdash;into the
+          contents of the file itself.  Keywords generally describe
+          information about the last time the file was modified.
+          Because this information changes each time the file changes,
+          and more importantly, just <emphasis>after</emphasis> the
+          file changes, it is a hassle for any process except the
+          version control system to keep the data completely
+          up-to-date.  Left to human authors, the information would
+          inevitably grow stale.</para>
 
-        <screen>
+        <para>For example, say you have a document in which you would
+          like to display the last date on which it was modified.  You
+          could burder every author of that document to, just before
+          committing their changes, also tweak the part of the
+          document that describes when it was last changed.  But
+          sooner or later, someone would forget to do that.  Instead
+          simply ask Subversion to perform keyword substitution on the
+          <literal>LastChangedDate</literal> keyword.  You control
+          where the keyword is inserted into your document by placing
+          a <firstterm>keyword anchor</firstterm> at the desired
+          location in the file.  This anchor is just a string of text
+          formatted as
+          <literal>$</literal><replaceable>KeywordName</replaceable><literal>$</literal></para>
+
+        <para>Subversion defines the list of keywords available for
+          substitution.  That list contains the following five
+          keywords, some of which have shorter aliases that you can
+          also use:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term>LastChangedDate</term>
+            <listitem>
+              <para>This keyword describes the last time the file was
+                changed in the repository, and looks something like
+                <literal>$LastChangedDate: 2002-07-22 21:42:37 -0700
+                (Mon, 22 Jul 2002) $</literal>.  It may be abbreviated
+                as <literal>Date</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>LastChangedRevision</term>
+            <listitem>
+              <para>This keyword describes the last revision in which
+                this file changed in the repository, and looks
+                something like <literal>$LastChangedRevision: 144
+                $</literal>.  It may be abbreviated as
+                <literal>Rev</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>LastChangedBy</term>
+            <listitem>
+              <para>This keyword describes the last user to change
+                this file in the repository, and looks something like
+                <literal>$LastChangedBy: joe $</literal>.  It may be
+                abbreviated as <literal>Author</literal></para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>HeadURL</term>
+            <listitem>
+              <para>This keyword describes the full URL to the latest
+                version of the file in the repository, and looks
+                something like <literal>$HeadURL:
+                http://svn.collab.net/repos/trunk/README $</literal>.
+                It may be abbreviated as
+                <literal>URL</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Id</term>
+            <listitem>
+              <para>This keyword is compressed combination of the
+                other keywords.  Its substitution looks something like
+                <literal>$Id: bar 148 2002-07-28 21:30:43 epg
+                $</literal>, and is interpreted to mean that the file
+                <filename>bar</filename> was last changed in revision
+                148 on the evening of July 28, 2002 by the user
+                <literal>epg</literal>.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>Simply adding keyword anchor text to your file does
+          nothing special.  Subversion will never attempt to perform
+          textual substitutions on your file contents unless
+          explicitly asked to do so.  After all, you might be writing
+          a document
+          <footnote>
+            <para>&hellip; or maybe even a section of a book &hellip;</para>
+          </footnote> 
+          about how to use keywords, and you don't want Subversion to
+          substitute your beautiful examples of un-substited keyword
+          anchors!</para>
+
+        <para>To tell Subversion whether or not to substitute keywords
+          on a particular file, we again turn to the property-related
+          subcommands.  The <literal>svn:keywords</literal> property,
+          when set on a versioned file, controls which keywords will
+          be substituted on that file.  The value is a space-delimited
+          list of the keyword names or aliases found in the previous
+          table.</para>
+
+        <para>For example, say you have a versioned file named
+          <filename>weather.txt</filename> that looks like
+          this:</para>
+
+        <programlisting>
 Here is the latest report from the front lines.
 $LastChangedDate$
+$Rev$
 Cumulus clouds are appearing more frequently as summer approaches.
-        </screen>
+</programlisting>
         
-        <para>Subversion is able substitute the
-          <literal>$LastChangedDate$</literal> string with the actual
-          date in which this file last changed.  The keyword string is
-          not removed in the replacement, just the specific
-          information is placed after the keyword string:</para>
+        <para>With no <literal>svn:keywords</literal> property set on
+          that file, Subversion will do nothing special.  Now, let's
+          enable substitution of the
+          <literal>LastChangedDate</literal> keyword.</para>
+
+        <screen>
+$ svn propset svn:keywords "LastChangedDate Author" weather.txt
+property `svn:keywords' set on 'weather.txt'
+$
+</screen>        
+
+        <para>Now you have made a local property modification on the
+          <filename>weather.txt</filename> file.  You will see no
+          changes to the file's contents (unless you made some of your
+          own prior to setting the property).  Notice that the file
+          contained a keyword anchor for the <literal>Rev</literal>
+          keyword, yet we did not include that keyword in the property
+          value we set.  Subversion will happily ignore requests to
+          substitute keywords that are not present in the file, and
+          will not substitute keywords that are not present in the
+          <literal>svn:keywords</literal> property value.</para>
+
+        <sidebar>
+          <title>Keywords and Spurious Differences</title>
+
+          <para>The user-visible result of keyword substitution might
+            lead you to think that every version of a file with that
+            feature in use differs from the previous version in at
+            least the area where the keyword anchor was placed.
+            However, this is actually not the case.  While checking
+            for local modifications during <command>svn
+            diff</command>, and before transmitting those local
+            modifications during <command>svn commit</command>,
+            Subversion <quote>un-substitutes</quote> any keywords that
+            it previously substituted.  The result is that the
+            versions of the file that are stored in the repository
+            contain only the real modifications that users make to the
+            file.</para>
+
+        </sidebar>
+
+        <para>Immediately after you commit this property change,
+          Subversion will update your working file with the new
+          substitute text.  Instead of seeing your keyword anchor
+          <literal>$LastChangedDate$</literal>, you'll see its
+          substituted result.  That result also contains the name of
+          the keyword, and continues to be bounded by the dollar sign
+          (<literal>$</literal>) characters.  And as we predicted, the
+          <literal>Rev</literal> keyword was not substituted because
+          we didn't ask for it to be.</para>
 
         <screen>
 Here is the latest report from the front lines.
 $LastChangedDate: 2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002) $
+$Rev$
 Cumulus clouds are appearing more frequently as summer approaches.
-        </screen>
-
-        <variablelist>
-          <title>Subversion substitutes five keywords</title>
-
-          <varlistentry>
-            <term>LastChangedDate</term>
-            <listitem>
-              <para>The last time this file changed.  Can also be
-                abbreviated as <literal>Date</literal>.  The keyword
-                substitution of <literal>$LastChangedDate$</literal>
-                will look something like <literal>$LastChangedDate:
-                2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002)
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>LastChangedRevision</term>
-            <listitem>
-              <para>The last revision in which this file changed.  Can
-                be abbreviated as <literal>Rev</literal>.  The keyword
-                substitution of
-                <literal>$LastChangedRevision</literal> will look
-                something like <literal>$LastChangedRevision: 144
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>LastChangedBy</term>
-            <listitem>
-              <para>The last user to change this file.  Can be
-                abbreviated as <literal>Author</literal>.  The keyword
-                substitution of <literal>$LastChangedBy$</literal>
-                will look something like <literal>$LastChangedBy: joe
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>HeadURL</term>
-            <listitem>
-              <para>A full URL to the latest version of the file in
-                the repository.  Can be abbreviated as
-                <literal>URL</literal>.  The keyword substitution of
-                <literal>$HeadURL$</literal> will look something like
-                <literal>$HeadURL:
-                http://svn.collab.net/repos/trunk/README
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>Id</term>
-            <listitem>
-              <para>A compressed summary of the other keywords, for
-                example: <literal>$Id: bar 148 2002-07-28 21:30:43 epg
-                $</literal>.  This means the file
-                <literal>bar</literal> was last changed in revision
-                148 by committer <literal>epg</literal>, at 2002-07-28
-                21:30:43.</para>
-            </listitem>
-          </varlistentry>
-
-        </variablelist>
+</screen>
         
-        <para>To activate a keyword, or set of keywords, you merely
-          need to set the <literal>svn:keywords</literal> property to
-          a list of keywords you want replaced.  Keywords not listed
-          in <literal>svn:keywords</literal> will not be
-          replaced.</para>
-
-        <screen>
-$ svn propset svn:keywords "Date Author" foo.c
-property `svn:keywords' set on 'foo.c'
-        </screen>
-        
-        <para>And when you commit this property change, you'll
-          discover that all occurrences of <literal>$Date$</literal>,
-          <literal>$LastChangedDate$</literal>,
-          <literal>$Author$</literal>, and
-          <literal>$LastChangedBy$</literal> will have substituted
-          values within <filename>foo.c</filename>.</para>
+        <para>If someone else now commits a change to
+          <filename>weather.txt</filename>, your copy of that file
+          will continue to display the same substituted keyword
+          value&mdash;until you update your working copy.  At that
+          time the keywords in your <filename>weather.txt</filename>
+          file will be re-substituted again with information that
+          reflects the most recent known commit to that file.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.5">
         <title><literal>svn:eol-style</literal></title>
 
-        <para>By default, Subversion doesn't pay any attention to line
-          endings.  If a text file has either LF, CR, or CRLF endings,
-          then those are the line endings that will exist on the file
-          in both the repository and working copy.</para>
+        <para>By default, Subversion doesn't pay any attention to the
+          type of line ending markers used in your files.  Files are
+          assumed to contain human-readable data unless Subversion is
+          told otherwise, and that only for the purpose of generating
+          contextual difference reports.  But to Subversion, bytes are
+          bytes.</para>
         
-        <para>But if developers are working on different platforms,
-          line endings can sometimes become troublesome.  For example,
-          if a Win32 developer and Unix developer took turns modifying
-          a file, its line endings might flip-flop back and forth from
+        <para>Unfortunately, different operating system use different
+          tokens to represent the end of a line of text in a file.
+          For example, the usual line ending token used in software on
+          the Windows platform is a pair of ASCII control
+          characters&mdash;carriage return (<literal>CR</literal>) and
+          line feed (<literal>LF</literal>).  Unix software, however,
+          just uses the LF character to denote the end of a line.
+          Unfortunately, not all of the various tools on these
+          operation systems are prepared to understand files that
+          contain line endings in a format that differs from the
+          <firstterm>native line ending style</firstterm> of the
+          operation system on which they are running.  Common results
+          are that Unix programs treat the <literal>CR</literal>
+          character present in Windows files as a regular character
+          (usually rendered as <literal>^M</literal>), and that
+          Windows programs combine all of the lines of a Unix file
+          into one giant line because no carriage return-linefeed
+          (<literal>CRLF</literal>) character combination was found to
+          denote the end of line.</para>
+
+        <!-- ### cmpilato was here. -->
+        
+        <para>If developers are working on different platforms, line
+          endings can sometimes become troublesome.  For example, if a
+          Win32 developer and Unix developer took turns modifying a
+          file, its line endings might flip-flop back and forth from
           revision to revision in the repository.  This makes
           examining or merging differences very difficult, as
           <emphasis>every</emphasis> line appears to be changed in
           each version of the file.</para>
 
         <para>The solution here is to set the
-          <literal>svn:eol-style</literal> property to ``native''.
-          This makes the file always appear with the
-          <quote>native</quote> line endings of each developer's
-          operating system.  Note, however, that the file will always
-          contain LF endings in the repository.  This prevents the
-          line-ending <quote>churn</quote> from revision to
-          revision.</para>
+          <literal>svn:eol-style</literal> property to
+          <literal>native</literal>.  This makes the file always
+          appear with the <quote>native</quote> line endings of each
+          developer's operating system.  Note, however, that the file
+          will always contain <literal>LF</literal> endings in the
+          repository.  This prevents the line-ending
+          <quote>churn</quote> from revision to revision.</para>
 
         <para>Alternately, you can force files to always retain a
           fixed, specific line ending: set a file's
@@ -1244,14 +1345,19 @@ property `svn:keywords' set on 'foo.c'
           <literal>LF</literal>, <literal>CR</literal> or
           <literal>CRLF</literal>.  A Win32 <filename>.dsp</filename>
           file, for example, which is used by Microsoft development
-          tools, should always have CRLF endings.</para>
+          tools, should always have <literal>CRLF</literal>
+          endings.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.6">
         <title><literal>svn:externals</literal></title>
 
-        <para>See <xref linkend="svn-ch-6-sect-3"/>.</para>
+        <para>The <literal>svn:externals</literal> property is used to
+          instruct Subversion to populate a versioned directory with
+          one or more other checked-out Subversion working copies.
+          For more information on this keyword and its use, see <xref
+          linkend="svn-ch-6-sect-3"/>.</para>
 
       </sect3>
     </sect2>
