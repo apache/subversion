@@ -78,7 +78,7 @@
 Copyright @copyright{} 2000 Collab.Net, Inc. @*
 See @xref{License} for details.
 
-This is $Revision: 1.7 $ of this document.
+This is $Revision: 1.8 $ of this document.
 
 @end titlepage
 @c -----------------------------------------------------------------
@@ -89,7 +89,7 @@ This is $Revision: 1.7 $ of this document.
 This manual describes the design of the Subversion version control
 system.
 
-This is $Revision: 1.7 $ of this document.
+This is $Revision: 1.8 $ of this document.
 
 @end ifinfo
 
@@ -115,9 +115,9 @@ This is $Revision: 1.7 $ of this document.
 @include goals.texi
 @include model.texi
 @include architecture.texi
-@include server.texi
 @include client.texi
 @include protocol.texi
+@include server.texi
 @include future.texi
 @include license.texi
 
