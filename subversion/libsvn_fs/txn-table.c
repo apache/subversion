@@ -116,7 +116,7 @@ allocate_txn_id (char **id_p,
 
     next_id = svn_fs__getsize (value.data, value.size, &endptr, 1000000);
     if (endptr != (const char *) value.data + value.size)
-      return svn_fs__err_corrupt_next_txn_id (fs);
+      return svn_fs__err_corrupt_next_id (fs, "transactions");
   }
 
   /* Store the next value.  */

@@ -44,11 +44,15 @@ svn_fs__open_copies_table (DB **copies_p,
                         create ? (DB_CREATE | DB_EXCL) : 0,
                         0666));
 
-  /* Create the `next-id' table entry.  */
+  /* Create the initial copy id `0' and the `next-id' table entry.  */
   if (create)
   {
     DBT key, value;
 
+    DB_ERR (copies->put (copies, 0,
+                         svn_fs__str_to_dbt (&key, (char *) "0"),
+                         svn_fs__str_to_dbt (&value, (char *) "0.0.0"),
+                         0));
     DB_ERR (copies->put (copies, 0,
                          svn_fs__str_to_dbt (&key, (char *) next_id_key),
                          svn_fs__str_to_dbt (&value, (char *) "0"),
@@ -63,7 +67,7 @@ svn_fs__open_copies_table (DB **copies_p,
 /* Store COPY as a copy named COPY_ID in FS as part of TRAIL.  */
 static svn_error_t *
 put_copy (svn_fs_t *fs,
-          svn_fs__copy_t *copy,
+          const svn_fs__copy_t *copy,
           const char *copy_id,
           trail_t *trail)
 {
@@ -99,7 +103,7 @@ allocate_copy_id (char **id_p,
   svn_fs__str_to_dbt (&key, (char *) next_id_key);
 
   /* Get the current value associated with the `next-id' key in the
-     transactions table.  */
+     copies table.  */
   SVN_ERR (DB_WRAP (fs, "allocating new copy ID (getting `next-id')",
                     fs->copies->get (fs->copies, trail->db_txn,
                                      &key,
@@ -116,7 +120,7 @@ allocate_copy_id (char **id_p,
 
     next_id = svn_fs__getsize (value.data, value.size, &endptr, 1000000);
     if (endptr != (const char *) value.data + value.size)
-      return svn_fs__err_corrupt_next_txn_id (fs);
+      return svn_fs__err_corrupt_next_id (fs, "copies");
   }
 
   /* Store the next value.  */
@@ -191,7 +195,7 @@ svn_fs__get_copy (svn_fs__copy_t **copy_p,
     return svn_fs__err_no_such_copy (fs, copy_id);
   SVN_ERR (DB_WRAP (fs, "reading copy", db_err));
 
-  /* Unparse TRANSACTION skel */
+  /* Unparse COPY skel */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! skel)
     return svn_fs__err_corrupt_copy (fs, copy_id);

@@ -119,9 +119,8 @@ svn_error_t *svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev);
 /* SVN_ERR_FS_CORRUPT: a key in FS's `nodes' table is bogus.  */
 svn_error_t *svn_fs__err_corrupt_nodes_key (svn_fs_t *fs);
 
-/* SVN_ERR_FS_CORRUPT: the `next-id' value is the `transactions' table
-   is bogus.  */
-svn_error_t *svn_fs__err_corrupt_next_txn_id (svn_fs_t *fs);
+/* SVN_ERR_FS_CORRUPT: the `next-id' value in TABLE is bogus.  */
+svn_error_t *svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table);
 
 /* SVN_ERR_FS_CORRUPT: the entry for TXN in the `transactions' table
    is corrupt.  */

@@ -167,13 +167,13 @@ svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs__err_corrupt_next_txn_id (svn_fs_t *fs)
+svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
 {
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-     "corrupt value for `next-id' key in `transactions' table"
-     " of filesystem `%s'", fs->path);
+     "corrupt value for `next-id' key in `%s' table of filesystem `%s'", 
+     table, fs->path);
 }
 
 

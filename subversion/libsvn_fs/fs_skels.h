@@ -131,7 +131,7 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
    allocations.  */
 svn_error_t *
 svn_fs__unparse_copy_skel (skel_t **skel_p,
-                           svn_fs__copy_t *copy,
+                           const svn_fs__copy_t *copy,
                            apr_pool_t *pool);
 
 /* Unparse an ENTRIES hash, which has const char * names (the entry
