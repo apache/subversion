@@ -625,6 +625,7 @@ update_close_file (void *edit_baton, void *file_baton)
 ** the client to a specific version/latest/label/etc.
 */
 static const svn_delta_edit_fns_t update_editor = {
+  NULL,  /* update_replace_root */
   update_delete,
   update_add_dir,
   update_rep_dir,
@@ -635,7 +636,8 @@ static const svn_delta_edit_fns_t update_editor = {
   update_rep_file,
   update_apply_txdelta,
   update_change_file_prop,
-  update_close_file
+  update_close_file,
+  NULL   /* update_close_edit */
 };
 
 svn_error_t *
