@@ -122,7 +122,7 @@ def guarantee_greek_repository(path):
       sys.exit(1)
 
   # Now that the pristine repos exists, copy it to PATH.
-  svntest.main.safe_rmtree(path)
+  main.safe_rmtree(path)
   if main.copy_repos(main.pristine_dir, path, 1):
     print "ERROR:  copying repository failed."
     sys.exit(1)
