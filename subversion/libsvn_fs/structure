@@ -52,29 +52,53 @@ So:
 - "100.10" is a node version id, referring to version 10 of node 100.
 - "100.10.3" is a node id, referring to the third branch based on
   version 10 of node 100.
-- "100.10.3.13" is a node version id, referring to version 13 of
+- "100.10.3.4" is a node version id, referring to version 4 of
   of the third branch from version 10 of node 100.
 And so on.
 
+Node version numbers start with 1.  Thus, N.1 is the first version
+of node N.
+
 A directory entry identifies the file or subdirectory it refers to
-using a node version number.  Changes far down in a filesystem
-hierarchy requires all their parents to be updated to hold the new
-node version ID.  This makes it easy to find changes in large trees.
+using a node version number --- not a node number.  This means that
+a change to a file far down in a directory hierarchy requires the
+parent directory of the changed node to be updated, to hold the new
+node version ID.  Now, since that parent directory has changed, its
+parent needs to be updated.
 
-Note that the numbers specifying a particular version of a node is the
-number of the global filesystem version when that node version was
-created.  So 100.13 was created in filesystem version 13.  This means
-that 100.13.10.2 is meaningless --- the last number implies that it
-was created in filesystem version 2, but the root implies that it's a
-branch of the version of node 10 created in filesystem verison 13.
-The version numbers in node ID's and node version ID's must increase
-from left to right.
+If a particular subtree was unaffected by a given commit, the node
+version ID that appears in its parent will be unchanged.  When
+doing an update, we can notice this, and ignore that entire
+subtree.  This makes it efficient to find localized changes in
+large trees.
 
-Identifying nodes and node versions this way makes it easy to discover
-whether and how two nodes are related.  Simply by looking at the node
-version id's, we can tell that the difference from 100.10.3.11 to
-100.12 is the difference from 100.10.3.11 to 100.10, plus the
-difference from 100.10 to 100.12.
+Note that the number specifying a particular version of a node is
+unrelated to the global filesystem version when that node version
+was created.  So 100.10 may have been created in filesystem version
+1218; 100.10.3.2 may have been created any time after 100.10; it
+doesn't matter.
+
+Since version numbers increase by one each time a delta is added,
+we can compute how many deltas separate two related node versions
+simply by comparing their ID's.  For example, the distance between
+100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
+common ancestor, 100.10 (two deltas), plus the distance from 100.10
+to 100.12 (two deltas).
+
+However, this is kind of a kludge, since the number of deltas is
+not necessarily an accurate indicator of how different two files
+are --- a single delta could be a minor change, or a complete
+replacement.  Furthermore, the filesystem may decide arbitrary to
+store a given node version as a delta or as full text --- perhaps
+depending on how recently the node was used --- so version id
+distance isn't necessarily an accurate predictor of retrieval time.
+
+If you have insights about how this stuff could work better, let me
+know.  I've read some of Josh MacDonald's stuff on this; his
+discussion seems to be mostly about how to retrieve things quickly,
+which is important, but only part of the issue.  I'd like to find
+better ways to recognize renames, and find appropriate ancestors in
+a source tree for changed files.
 
 When we need to treat a node or node version ID as a string of bytes,
 we use the forms shown here --- a series of unsigned ASCII decimal
