@@ -45,8 +45,8 @@
 
    An atom has one the following two forms:
    - any string of bytes whose first byte is a name character, and
-     which contains no whitespace, followed by a (not optional!)
-     whitespace character (`implicit-length form'), or
+     which contains no whitespace characters, bytes 40 (ASCII '(') or
+     bytes 41 (ASCII ')') (`implicit-length form'), or
    - a string of digit bytes, followed by exactly one whitespace
      character, followed by N bytes, where N is the value of the digit
      bytes as a decimal number (`explicit-length form').
@@ -145,3 +145,11 @@ int svn_fs__list_length (skel_t *skel);
 skel_t *svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_FS_SKEL_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

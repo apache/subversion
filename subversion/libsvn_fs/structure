@@ -675,7 +675,7 @@ Skels:
           list.body.opt ::=  | list.body ;
               list.body ::= skel | list.body spaces.opt skel ;
 
-           atom.imp-len ::= /{name.class}[^{ws.class}]*{ws.class}/ ;
+           atom.imp-len ::= /{name.class}[^\(\){ws.class}]*/ ;
            atom.exp-len ::= /({digit.class}+){ws.class}.{\1}/ ;
 
              spaces.opt ::= /{ws.class}*/ ;

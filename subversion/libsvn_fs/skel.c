@@ -182,7 +182,7 @@ list (char *data,
 
 
 /* Parse an atom with implicit length --- one that starts with a name
-   character, terminated by whitespace or end-of-data.  */
+   character, terminated by whitespace, '(', ')', or end-of-data.  */
 static skel_t *
 implicit_atom (char *data,
 	       apr_size_t len,
@@ -199,13 +199,10 @@ implicit_atom (char *data,
     return 0;
 
   /* Find the end of the string.  */
-  while (++data < end && skel_char_type[(unsigned char) *data] != type_space)
+  while (++data < end
+         && skel_char_type[(unsigned char) *data] != type_space
+         && skel_char_type[(unsigned char) *data] != type_paren)
     ;
-
-  /* Verify that the required terminating whitespace character is
-     present.  */
-  if (data >= end || skel_char_type[(unsigned char) *data] != type_space)
-    return 0;
 
   /* Allocate the skel representing this string.  */
   s = apr_palloc (pool, sizeof (*s));
@@ -332,13 +329,14 @@ use_implicit (skel_t *skel)
   if (skel_char_type[(unsigned char) skel->data[0]] != type_name)
     return 0;
 
-  /* If it contains any whitespace, then we must use explicit-length
-     form.  */
+  /* If it contains any whitespace or parens, then we must use
+     explicit-length form.  */
   {
     int i;
 
     for (i = 1; i < skel->len; i++)
-      if (skel_char_type[(unsigned char) skel->data[i]] == type_space)
+      if (skel_char_type[(unsigned char) skel->data[i]] == type_space
+          || skel_char_type[(unsigned char) skel->data[i]] == type_paren)
 	return 0;
   }
 
@@ -553,3 +551,10 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
   return copy;
 }
 
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
