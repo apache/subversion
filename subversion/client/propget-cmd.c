@@ -34,8 +34,9 @@ svn_cl__propget (svn_cl__opt_state_t *opt_state,
                  apr_array_header_t *targets,
                  apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_string_t *name  = ((svn_string_t **) (opt_state->args->elts))[0];
   apr_hash_t *prop_hash = apr_hash_make (pool);
+  svn_error_t *err;
   int i;
 
   if (targets->nelts)
@@ -43,13 +44,13 @@ svn_cl__propget (svn_cl__opt_state_t *opt_state,
       {
         svn_string_t *value;
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
-        err = svn_wc_prop_get (&value, opt_state->name, target, pool);
+        err = svn_wc_prop_get (&value, name, target, pool);
         if (err)
           return err;
 
         /* kff todo: this seems like an odd way to do this... */
 
-        apr_hash_set (prop_hash, opt_state->name->data, opt_state->name->len,
+        apr_hash_set (prop_hash, name->data, name->len,
                       value);
         svn_cl__print_prop_hash (prop_hash, pool);
       }

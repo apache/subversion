@@ -50,74 +50,74 @@
  */
 const svn_cl__cmd_desc_t svn_cl__cmd_table[] = 
 {
-  { "add",        FALSE,  svn_cl__add_command,      svn_cl__add,
+  { "add",        FALSE,  svn_cl__add_command,      svn_cl__add, 0,
     "Add new files and directories to version control.\n"
     "usage: add [TARGETS]\n" },
-  { "ad",         TRUE, 0, NULL, NULL },
-  { "new",        TRUE, 0, NULL, NULL },
+  { "ad",         TRUE, 0, NULL, 0, NULL },
+  { "new",        TRUE, 0, NULL, 0, NULL },
 
-  { "checkout",   FALSE,  svn_cl__checkout_command, svn_cl__checkout,
+  { "checkout",   FALSE,  svn_cl__checkout_command, svn_cl__checkout, 0,
     "Check out a working directory from a repository.\n"
     "usage: checkout REPOSPATH\n" },
-  { "co",         TRUE, 0, NULL, NULL },
+  { "co",         TRUE, 0, NULL, 0, NULL },
 
-  { "commit",     FALSE,  svn_cl__commit_command,   svn_cl__commit,
+  { "commit",     FALSE,  svn_cl__commit_command,   svn_cl__commit, 0,
     "Commit changes from your working copy to the repository.\n"
     "usage: commit [TARGETS]\n" },
-  { "ci",         TRUE, 0, NULL, NULL },
+  { "ci",         TRUE, 0, NULL, 0, NULL },
 
-  { "delete",     FALSE,  svn_cl__delete_command,   svn_cl__delete,
+  { "delete",     FALSE,  svn_cl__delete_command,   svn_cl__delete, 0,
     "Remove files and directories from version control.\n"
     "usage: delete [TARGETS]\n" },
-  { "del",        TRUE, 0, NULL, NULL },
-  { "remove",     TRUE, 0, NULL, NULL },
-  { "rm",         TRUE, 0, NULL, NULL },
+  { "del",        TRUE, 0, NULL, 0, NULL },
+  { "remove",     TRUE, 0, NULL, 0, NULL },
+  { "rm",         TRUE, 0, NULL, 0, NULL },
 
-  { "help",       FALSE,  svn_cl__help_command,   svn_cl__help,
+  { "help",       FALSE,  svn_cl__help_command,   svn_cl__help, 0,
     "Display this usage message.\n"
     "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n" },
-  { "?",          TRUE, 0, NULL, NULL },
-  { "h",          TRUE, 0, NULL, NULL },
+  { "?",          TRUE, 0, NULL, 0, NULL },
+  { "h",          TRUE, 0, NULL, 0, NULL },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
      support them explicitly. */
 
-  { "proplist",   FALSE,  svn_cl__proplist_command, svn_cl__proplist,
+  { "proplist",   FALSE,  svn_cl__proplist_command, svn_cl__proplist, 0,
     "List all properties for given files and directories.\n"
     "usage: proplist [TARGETS]\n" },
-  { "plist",      TRUE, 0, NULL, NULL },
-  { "pl",         TRUE, 0, NULL, NULL },
+  { "plist",      TRUE, 0, NULL, 0, NULL },
+  { "pl",         TRUE, 0, NULL, 0, NULL },
 
-  { "propget",    FALSE,  svn_cl__propget_command,  svn_cl__propget,
+  { "propget",    FALSE,  svn_cl__propget_command,  svn_cl__propget, 1,
     "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },
-  { "pget",       TRUE,   svn_cl__propget_command,  svn_cl__propget, NULL },
-  { "pg",         TRUE,   svn_cl__propget_command,  svn_cl__propget, NULL },
+  { "pget",       TRUE,   svn_cl__propget_command,  svn_cl__propget, 1, NULL },
+  { "pg",         TRUE,   svn_cl__propget_command,  svn_cl__propget, 1, NULL },
 
-  { "propset",    FALSE,  svn_cl__propset_command,  svn_cl__propset,
+  { "propset",    FALSE,  svn_cl__propset_command,  svn_cl__propset, 2, 
     "Set property PROPNAME to PROPVAL on the named files and directories.\n"
     "usage: propset PROPNAME [PROPVAL | --valfile VALFILE] "
     "[TARGET1 [TARGET2] ...]\n"},
-  { "pset",       TRUE, 0, NULL, NULL },
-  { "ps",         TRUE, 0, NULL, NULL },
+  { "pset",       TRUE, 0, NULL, 2, NULL },
+  { "ps",         TRUE, 0, NULL, 2, NULL },
 
-  { "status",     FALSE,  svn_cl__status_command,   svn_cl__status,
+  { "status",     FALSE,  svn_cl__status_command,   svn_cl__status, 0,
     "Print the status of working copy files and directories.\n"
     "usage: status [TARGETS]\n" },
-  { "stat",       TRUE, 0, NULL, NULL },
-  { "st",         TRUE, 0, NULL, NULL },
+  { "stat",       TRUE, 0, NULL, 0, NULL },
+  { "st",         TRUE, 0, NULL, 0, NULL },
 
-  { "diff",     FALSE,  svn_cl__diff_command,   svn_cl__diff,
+  { "diff",     FALSE,  svn_cl__diff_command,   svn_cl__diff, 0,
     "Display local file changes as contextual diffs.\n"
     "usage: diff [TARGETS]\n" },
-  { "df",         TRUE, 0, NULL, NULL },
+  { "df",         TRUE, 0, NULL, 0, NULL },
 
-  { "update",     FALSE,  svn_cl__update_command,   svn_cl__update,
+  { "update",     FALSE,  svn_cl__update_command,   svn_cl__update, 0,
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },
-  { "up",         TRUE, 0, NULL, NULL },
-  { NULL,         FALSE,  0, NULL, NULL }
+  { "up",         TRUE, 0, NULL, 0, NULL },
+  { NULL,         FALSE,  0, NULL, 0, NULL }
 };
 
 
@@ -162,6 +162,7 @@ svn_cl__get_canonical_command (const char *cmd)
 
 
 
+/* TODO Move this into libsvn_subr -Fitz */
 /* Read the contents of FILENAME into *RESULT. */
 static svn_error_t *
 read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
@@ -292,9 +293,20 @@ main (int argc, const char * const *argv)
         opt_state.ancestor_path = svn_string_create (optarg, pool);
         break;
       case svn_cl__valfile_opt:
+        /* TODO This needs a little thought before being implemented
+           properly. I'm putting the non-file args into an array now,
+           so how to best get this to the commands without special
+           casing myself into a corner? For example, propset takes 2
+           non-file args: name and value. name is (effectively, since
+           I'm using an apr_array) args[0] and value is
+           args[1]. Suggestions? Greg[SH]? I'll get to it this week
+           -Fitz 4-Mar-2001*/
+#if 0
         err = read_from_file (&(opt_state.value), optarg, pool);
         if (err)
           svn_handle_error (err, stdout, TRUE);
+#endif
+        fprintf (stderr, "TODO fixme\n");
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;
@@ -338,63 +350,45 @@ main (int argc, const char * const *argv)
         }
     }
   
-  /* If made it this far, then we definitely have the subcommand. */
+  /* If we made it this far, then we definitely have the subcommand. */
 
   /* Below, we greedily parse out some of the regular arguments,
    * because certain subcommands consume them.  For example, both
    * propget and propset need NAME, and propset needs VALUE in
-   * addition.
-   *
-   * This code will probably move into subcommand-specific domains,
-   * where it belongs.  As Greg Hudson points out:
-   *
-   * > A further, independent suggestion: instead of forcing main() to know
-   * > about the syntax of particular commands (which will only get uglier as
-   * > time goes on), make the command desc include a number of non-filename
-   * > arguments--2 for propset, 1 for propget, 0 for most other commands.
-   * > Bundle the non-option arguments into an array of strings and then
-   * > iterate over the filename arguments like you do now.  When we need it,
-   * > a -1 in that field can mean "just give me all of the arguments in a
-   * > string array and I'll decide what to do with them."  Get rid of
-   * > svn_cl__command_id so that you won't get back into the trap of main()
-   * > having to know about specific commands.
-   * 
-   * kff todo: do above. :-)
-   */
-  if ((subcommand->cmd_code == svn_cl__propset_command)
-      || (subcommand->cmd_code == svn_cl__propget_command))
-    {
-      if (os->ind >= os->argc)
-        {
-          fprintf (stderr, "property name argument required\n");
-          svn_cl__help (NULL, targets, pool);
-          apr_pool_destroy (pool);
-          return EXIT_FAILURE;
-        }
-      else
-        {
-          const char *this_arg = os->argv[os->ind++];
-          opt_state.name = svn_string_create (this_arg, pool);
-        }
-    }
+   * addition. */
+  opt_state.args = apr_array_make (pool, 0, sizeof (svn_string_t *));
 
-  /* Grab value for propset, unless got it already via --valfile. */
-  if ((subcommand->cmd_code == svn_cl__propset_command)
-      && (opt_state.value == NULL))
-    {
-      if (os->ind >= os->argc)
-        {
-          fprintf (stderr, "property value argument required\n");
-          svn_cl__help (NULL, targets, pool);
-          apr_pool_destroy (pool);
-          return EXIT_FAILURE;
-        }
-      else
-        {
-          const char *this_arg = os->argv[os->ind++];
-          opt_state.value = svn_string_create (this_arg, pool);
-        }
+  if (subcommand->num_args > 0) {
+    const char *this_arg;
+    int i;
+    /* loop for num_args and add each arg to the args array */
+    for (i = 0; i < subcommand->num_args; i++) {
+      if (os->ind >= os->argc) {
+        const char *plural = "s"; 
+        fprintf (stderr, "ERROR: The %s command requires %i argument%s\n",
+                 subcommand->name, subcommand->num_args, 
+                 (subcommand->num_args == 1) ? "" : plural);
+        fprintf (stderr, "Help for %s:\n%s", subcommand->name, subcommand->help);
+        /* svn_cl__help (NULL, targets, pool); */
+        /* TODO Do we have to print out the WHOLE help thing every
+           time for EVERY error? -Fitz */
+        apr_pool_destroy (pool);
+        return EXIT_FAILURE;
+      }
+      this_arg = os->argv[os->ind++];
+      (*((svn_string_t **) apr_array_push (opt_state.args)))
+        = svn_string_create (this_arg, pool);
+
     }
+  }
+  /* greedily suck up all args if num_args is a negative number. */
+  else if (subcommand->num_args == -1) {
+    /* TODO. This is currently not used by any subcommand, so I'm not
+       writing it right now. -Fitz */
+    fprintf (stderr, "unimplemented function. -1 args not written yet\n");
+    apr_pool_destroy (pool);
+    return EXIT_FAILURE;
+  }
 
   /* Do the regular arguments (target files and target dirs). */
   for (; os->ind < os->argc; os->ind++)
