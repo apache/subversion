@@ -228,30 +228,20 @@ typedef unsigned long svn_token_t;
  * probably record them here.
  */
 
-/* todo: We'll need a way to stream these, so when you do a checkout
- * of comp-tools, the client doesn't wait for an entire 200 meg tree
- * delta to arrive before doing anything.
- * 
- * Proposal:
- * 
- * A caller (say, the working copy library) is given the tree delta as
- * soon as there is at least one svn_edit_t in its list ready to
- * use.  The callee may continue to append svn_edit_t objects to the
- * list even while the caller is using the ones already there.  The
- * callee signals that it is done by adding a change of the special
- * type `end'.
+/* Note that deltas are constructed and deconstructed streamily.  That
+ * way when you do a checkout of comp-tools, for example, the client
+ * doesn't wait for an entire 200 meg tree delta to arrive before
+ * doing anything.
  *
- * Since the caller can tell by inspection whether or not it's done
- * yet, the callee could tack on new change objects in an unscheduled
- * fashion (i.e., as a separate thread), or the caller could make an
- * explicit call each time it finishes available changes.  Either way
- * works; the important thing is to give the network time to catch up.
+ * The delta being {de}constructed is passed along as one of the
+ * arguments to the XML parser callbacks; the callbacks use the
+ * existing delta, plus whatever the parser just saw that caused the
+ * callback to be invoked, to figure out what to do next.
  */
 
 typedef size_t svn_version_t;   /* Would they ever need to be signed? */
 typedef int pdelta_t;           /* todo: for now */
 typedef int vdelta_t;           /* todo: for now */
-
 
 
 /* A property diff */
@@ -296,21 +286,10 @@ typedef struct svn_edit_content_t
 
 
 /* A tree delta is a list of edits.  This is an edit. */
-/* 
- * kff todo: you might be asking yourself, why do we need a `done'
- * flag when there's a next pointer?  Couldn't we just check if the
- * next pointer is NULL?  Well, not necessarily; the callee still has
- * the address of that pointer, and, if something new comes down the
- * pipe, will make it point to the next change.  So NULL doesn't mean
- * "the end", it just means "nothing more to do right now, check back
- * later".  The caller can't know it's done until it actually sees an
- * `end' marker.  (This is a tentative plan.)
- */
 typedef struct svn_edit_t
 {
   enum { 
-    action_end = 0,               /* Special flag: no more changes. */
-    action_delete,                /* Delete a file or directory. */
+    action_delete = 1,            /* Delete a file or directory. */
     action_new,                   /* Create a new file or directory. */
     action_replace,               /* Replace an existing file or dir */
   } kind;
