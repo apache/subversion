@@ -176,6 +176,8 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
           return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
+
+      ne_set_secure(sess2, 1);
     }
 #if 0
   else
