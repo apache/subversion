@@ -1360,6 +1360,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
         
         if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) {
           found_changed_path = TRUE;
+          break;
         }
       }
 
