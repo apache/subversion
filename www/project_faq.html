@@ -320,7 +320,17 @@ as on port 80.  Try:</p>
    svn checkout http://svn.collab.net:81/repos/svn/trunk subversion
 </pre>
 
-<p>and maybe the proxy will let you through.</p>
+<p>and maybe the proxy will let you through.  Another strategy is to
+attempt the checkout over SSL, which many proxies allow:</p>
+
+<pre>
+   svn checkout https://svn.collab.net/repos/svn/trunk subversion
+</pre>
+
+<p>Of course, your svn client will have to have been built with ssl
+support; just pass <tt>--with-ssl</tt> to subversion's
+<tt>./configure</tt> script.  You can check to see whether the 'https'
+schema is supported by running <tt>svn --version</tt>.</p>
 
 <![CDATA[=========================================================]]>
 
