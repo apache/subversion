@@ -121,10 +121,13 @@ II. COMPILING THE DOCS
      already have that.
 
      Sometimes building the book can use more memory than Java is
-     willing to allocate by default.  Michael Price reports that with
-     the Sun 1.4.1 JVM, he had to add "-Xms100m -Xmx200m" options to
-     the $JAVACMD in fop.sh; the options to increase heap size are
-     likely different for other JVM's.
+     willing to allocate by default, and you may need to increase the
+     default heap size.  With Sun's JVM, this is accomplished by
+     passing the arguments "-Xms100m -Xmx200m" (known to work with
+     versions 1.2.x-1.4.x, and likely different for JVMs from other
+     vendors).  To tell fop.sh about these arguments, pass them via
+     the environment variable FOP_OPTS (which is also configurable in
+     your ~/.foprc).
 
    * If you want images to be included in the PDF, you'll need to use
      the JIMI image processing library.  Grab the latest release from
