@@ -185,9 +185,6 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
   ap_status_t result;     
   ap_file_t *FILE = NULL;
 
-  svn_error_t *warning = NULL;
-  svn_error_t *latest_warning = NULL;
-
   /* Create our uberhash */
   *uberhash = ap_make_hash (pool);
 
@@ -258,24 +255,17 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
             svn_string_t *new_section;
 
             svn__slurp_to (currentline,  /* search current line */
-                       &new_section,  /* place new substring here */
-                       offset + 1,    /* start searching past the '[' */
-                       ']',          /* look for this ending character */
-                       pool);        /* build our substring in this pool */
+                           &new_section,  /* place new substring here */
+                           offset + 1,    /* start searching past the '[' */
+                           ']',          /* look for this ending character */
+                           pool);        /* build our substring in this pool */
            
             if (new_section == NULL)  /* couldn't find a ']' ! */
               {
-                char *finalmsg = 
-                  ap_psprintf 
-                  (pool, 
-                   "svn_parse(): warning: skipping malformed line: %s",
-                   svn_string_2cstring (currentline, pool));
-
-                /* Batch up a new warning */
-                warning = 
-                  svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
-                warning->child = latest_warning; /* wrap the batch */
-                latest_warning = warning;  /* new top of batch */
+                policy->warning 
+                  (policy->data, 
+                   "svn_parse():  skipping malformed line: `%s'",
+                   svn_string_2cstring, (currentline, pool));
                 break;
               }
                                         
@@ -312,17 +302,10 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
             
             if (new_key == NULL)  /* didn't find a colon! */
               {
-                char *finalmsg = 
-                  ap_psprintf 
-                  (pool, 
-                   "svn_parse(): warning: skipping malformed line: %s",
-                   svn_string_2cstring (currentline, pool));
-
-                /* Batch up a new warning */
-                warning = 
-                  svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
-                warning->child = latest_warning; /* wrap the batch */
-                latest_warning = warning;  /* new top of batch */
+                policy->warning 
+                  (policy->data, 
+                   "svn_parse():  skipping malformed line: `%s'",
+                   svn_string_2cstring, (currentline, pool));
                 break;
               }
 
@@ -361,28 +344,15 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
   result = ap_close (FILE);
   if (result != APR_SUCCESS)
     {
-      char *finalmsg = 
-        ap_psprintf 
-        (pool, 
-         "svn_parse(): warning: can't close file: %s",
-         svn_string_2cstring (filename, pool));
-      
-      /* Batch up a new warning */
-      warning = 
-        svn_create_error (SVN_WARNING, NULL, finalmsg, NULL, pool);
-      warning->child = latest_warning; /* wrap the batch */
-      latest_warning = warning;  /* new top of batch */
+      policy->warning 
+        (policy->data, 
+         "svn_parse():  can't close file: `%s'",
+         svn_string_2cstring, (filename, pool));
     }
   
   ap_destroy_pool (scratchpool);
 
-
-  /* Are there any batched warnings? */
-
-  if (latest_warning)
-    return latest_warning;
-  else
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 

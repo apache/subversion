@@ -137,7 +137,11 @@ svn_error_t * svn_quick_wrap_error (svn_error_t *child, const char *new_msg);
 
 void svn_handle_error (svn_error_t *error, FILE *stream);
 
+/* Very dumb "default" warning handler -- used by all policies, unless
+   svn_svr_warning_callback() is used to set the warning handler
+   differently.  */
 
+void svn_handle_warning (void *data, char *fmt, ...);
 
 
 #endif   /* __SVN_ERROR_H__ */
