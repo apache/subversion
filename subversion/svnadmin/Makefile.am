@@ -1,6 +1,6 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = svnadmin
+sbin_PROGRAMS = svnadmin
 svnadmin_SOURCES = main.c
 
 ## Flags needed when compiling:
