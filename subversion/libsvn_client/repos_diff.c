@@ -503,8 +503,8 @@ delete_entry (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
-  svn_wc_notify_action_t action;
-  svn_wc_notify_state_t state;
+  svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
+  svn_wc_notify_action_t action = svn_wc_notify_skip;
 
   /* We need to know if this is a directory or a file */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (pb->edit_baton->ra_session,
@@ -512,52 +512,49 @@ delete_entry (const char *path,
                                                pb->edit_baton->revision,
                                                &kind,
                                                pool));
-
-  /* Missing access batons are a problem during delete */
   SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath,
-                            FALSE, pool));
-  switch (kind)
+                            TRUE, pool));
+  if ((! eb->adm_access) || adm_access)
     {
-    case svn_node_file:
-      {
-        const char *mimetype1, *mimetype2;
-
-        /* Compare a file being deleted against an empty file */
-        struct file_baton *b = make_file_baton (path,
-                                                FALSE,
-                                                pb->edit_baton,
-                                                pool);
-
-        SVN_ERR (get_file_from_ra (b));
-        SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
-
-        get_file_mime_types (&mimetype1, &mimetype2, b);
-        
-        SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
-                 (adm_access, &state, b->wcpath,
-                  b->path_start_revision,
-                  b->path_end_revision,
-                  mimetype1, mimetype2,
-                  b->edit_baton->diff_cmd_baton));
-
-        break;
-      }
-    case svn_node_dir:
-      {
-        SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
-                 (adm_access, &state, svn_path_join (eb->target, path, pool),
-                  pb->edit_baton->diff_cmd_baton));
-        break;
-      }
-    default:
-      break;
+      switch (kind)
+        {
+        case svn_node_file:
+          {
+            const char *mimetype1, *mimetype2;
+            struct file_baton *b;
+            
+            /* Compare a file being deleted against an empty file */
+            b = make_file_baton (path, FALSE, pb->edit_baton, pool);
+            SVN_ERR (get_file_from_ra (b));
+            SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
+            
+            get_file_mime_types (&mimetype1, &mimetype2, b);
+            
+            SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
+                     (adm_access, &state, b->wcpath,
+                      b->path_start_revision,
+                      b->path_end_revision,
+                      mimetype1, mimetype2,
+                      b->edit_baton->diff_cmd_baton));
+            
+            break;
+          }
+        case svn_node_dir:
+          {
+            SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
+                     (adm_access, &state, 
+                      svn_path_join (eb->target, path, pool),
+                      pb->edit_baton->diff_cmd_baton));
+            break;
+          }
+        default:
+          break;
+        }
+      
+      if ((state != svn_wc_notify_state_missing)
+          && (state != svn_wc_notify_state_obstructed))
+        action = svn_wc_notify_update_delete;
     }
-
-  if ((state == svn_wc_notify_state_missing)
-      || (state == svn_wc_notify_state_obstructed))
-    action = svn_wc_notify_skip;
-  else
-    action = svn_wc_notify_update_delete;
 
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
