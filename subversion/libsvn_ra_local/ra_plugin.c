@@ -160,6 +160,7 @@ static svn_error_t *
 get_commit_editor (void *session_baton,
                    const svn_delta_edit_fns_t **editor,
                    void **edit_baton,
+                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_ra_get_wc_prop_func_t get_func,
                    svn_ra_set_wc_prop_func_t set_func,
@@ -188,6 +189,7 @@ get_commit_editor (void *session_baton,
   SVN_ERR (svn_repos_get_editor (&commit_editor, &commit_editor_baton,
                                  sess_baton->fs, 
                                  sess_baton->fs_path,
+                                 user,
                                  log_msg,
                                  cleanup_commit, closer, /* fs will call
                                                             this when done.*/

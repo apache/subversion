@@ -125,6 +125,7 @@ svn_cl__import (apr_getopt_t *os,
                               path,
                               url,
                               new_entry,
+                              "",   /* ### todo: pass author */
                               message,
                               opt_state->xml_file,
                               opt_state->revision,

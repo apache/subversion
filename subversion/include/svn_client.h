@@ -155,7 +155,7 @@ svn_client_undelete (svn_stringbuf_t *path,
  * only for extensibility; pass four NULLs here if you don't need
  * them.
  *
- * Store LOG_MSG as the log for the commit.
+ * Store USER as the author of the commit, LOG_MSG as its log.
  * 
  * PATH is the path to local tree being imported.  PATH can be a file
  * or directory.
@@ -195,6 +195,7 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
                                 svn_stringbuf_t *path,
                                 svn_stringbuf_t *url,
                                 svn_stringbuf_t *new_entry,
+                                const char *user,
                                 svn_stringbuf_t *log_msg,
                                 svn_stringbuf_t *xml_dst,
                                 svn_revnum_t revision,
@@ -207,7 +208,7 @@ svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
    only for extensibility; pass four NULLs here if you don't need
    them.
 
-   Store LOG_MSG as the log for the commit.
+   Store USER as the author of the commit, LOG_MSG as its log.
 
    TARGETS is an array of svn_stringbuf_t * paths to commit.  They need
    not be canonicalized nor condensed; this function will take care of
@@ -228,6 +229,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
                    const apr_array_header_t *targets,
+                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */

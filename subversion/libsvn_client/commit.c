@@ -318,7 +318,8 @@ import (svn_stringbuf_t *path,
  * are optional pre- and post-commit editors, wrapped around the
  * committing editor.
  *
- * Record LOG_MSG as the log message for the new revision.
+ * Record USER as the author of the new revision, and LOG_MSG as its
+ * log message.
  * 
  * BASE_PATH is the common prefix of all the targets.
  * 
@@ -370,6 +371,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                apr_array_header_t *condensed_targets,
                svn_stringbuf_t *url,        /* null unless importing */
                svn_stringbuf_t *new_entry,  /* null except when importing */
+               const char *user,
                svn_stringbuf_t *log_msg,
                svn_stringbuf_t *xml_dst,
                svn_revnum_t revision,
@@ -462,6 +464,10 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
           url = entry->ancestor;
         }
       
+      /* Make sure our user at least exists, even if empty. */
+      if (! user)
+        user = "";
+      
       /* Make sure our log message at least exists, even if empty. */
       if (! log_msg)
         log_msg = svn_stringbuf_create ("", pool);
@@ -477,6 +483,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
+                user,
                 log_msg,
                 /* wc prop fetching routine */
                 is_import ? NULL : svn_wc_get_wc_prop,
@@ -570,6 +577,7 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *url,
                    svn_stringbuf_t *new_entry,
+                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
@@ -579,7 +587,8 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                           after_editor, after_edit_baton,                   
                           path, NULL,
                           url, new_entry,
-                          log_msg, 
+                          user,
+                          log_msg,
                           xml_dst, revision,
                           pool));
 
@@ -593,6 +602,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
                    const apr_array_header_t *targets,
+                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,
@@ -641,6 +651,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                           base_dir,
                           condensed_targets,
                           NULL, NULL,  /* NULLs because not importing */
+                          user,
                           log_msg,
                           xml_dst, revision,
                           pool));
