@@ -130,12 +130,12 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
   svn_error_t *err;
 
   svn_txdelta_window_t *window =
-    (svn_txdelta_window_t *) apr_palloc (parser->subpool, 
-                                       sizeof(svn_txdelta_window_t));
+    (svn_txdelta_window_t *) apr_pcalloc (parser->subpool, 
+                                          sizeof(svn_txdelta_window_t));
   
   svn_txdelta_op_t *new_op = 
-    (svn_txdelta_op_t *) 
-    apr_palloc (parser->subpool, sizeof(svn_txdelta_op_t));
+    (svn_txdelta_op_t *)
+    apr_pcalloc (parser->subpool, sizeof(svn_txdelta_op_t));
   
   /* Right now, we have only one kind of vcdiff operation:
      "create new text" :) */
@@ -146,6 +146,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
   window->pool = parser->subpool;
   window->num_ops = 1;
   window->ops = new_op;
+  window->tview_len = len;
   window->new = parser->buffer;  /* just give away our whole
                                     parser-buffer to the
                                     consumer... it will free the whole
