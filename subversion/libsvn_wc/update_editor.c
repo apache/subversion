@@ -141,6 +141,9 @@ struct dir_baton
   /* The bump information for this directory. */
   struct bump_dir_info *bump_info;
 
+  /* The current log file number. */
+  int log_number;
+
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 };
@@ -210,6 +213,52 @@ get_entry_url (svn_wc_adm_access_t *associated_access,
 
   return entry->url;
 }
+
+/* An APR pool cleanup handler.  This runs the log file for a
+   directory baton. */
+static apr_status_t
+cleanup_dir_baton (void *dir_baton)
+{
+  struct dir_baton *db = dir_baton;
+  svn_error_t *err;
+  apr_status_t apr_err;
+  svn_wc_adm_access_t *adm_access;
+
+  /* If there are no log files to write, return immediately. */
+  if (db->log_number == 0)
+    return APR_SUCCESS;
+
+  err = svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
+                             db->path, apr_pool_parent_get (db->pool));
+
+  if (err)
+    {
+      apr_err = err->apr_err;
+      svn_error_clear (err);
+      return apr_err;
+    }
+
+  err = svn_wc__run_log (adm_access, NULL, apr_pool_parent_get (db->pool));
+
+  if (err)
+    {
+      apr_err = err->apr_err;
+      svn_error_clear (err);
+      return apr_err;
+    }
+
+  return APR_SUCCESS;
+}
+
+/* An APR pool cleanup handler.  This is a child handler, it removes
+   the mail pool handler. */
+static apr_status_t
+cleanup_dir_baton_child (void *dir_baton)
+{
+  struct dir_baton *db = dir_baton;
+  apr_pool_cleanup_kill (db->pool, db, cleanup_dir_baton);
+  return APR_SUCCESS;
+}    
 
 
 /* Return a new dir_baton to represent NAME (a subdirectory of
@@ -291,11 +340,15 @@ make_dir_baton (const char *path,
 
   d->edit_baton   = eb;
   d->parent_baton = pb;
-  d->pool         = pool;
+  d->pool         = svn_pool_create (pool);
   d->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   d->added        = added;
   d->bump_info    = bdi;
+  d->log_number   = 0;
 
+  apr_pool_cleanup_register (d->pool, d, cleanup_dir_baton,
+                             cleanup_dir_baton_child);
+  
   return d;
 }
 
@@ -443,6 +496,9 @@ struct file_baton
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
+  /* The parent directory of this file. */
+  struct dir_baton *dir_baton;
+
   /* Pool specific to this file_baton. */
   apr_pool_t *pool;
 
@@ -520,6 +576,7 @@ make_file_baton (struct dir_baton *pb,
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   f->bump_info    = pb->bump_info;
   f->added        = adding;
+  f->dir_baton    = pb;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
 
@@ -789,7 +846,8 @@ leftmod_error_chain (svn_error_t *err,
 static svn_error_t *
 do_entry_deletion (struct edit_baton *eb,
                    const char *parent_path,
-                   const char *path, 
+                   const char *path,
+                   int *log_number,
                    apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
@@ -797,7 +855,7 @@ do_entry_deletion (struct edit_baton *eb,
   const char *tgt_rev_str = NULL;
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
-  const char *logfile_path;
+  const char *logfile_path, *logfile_name;
   const char *full_path = svn_path_join (eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
@@ -806,12 +864,16 @@ do_entry_deletion (struct edit_baton *eb,
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                 parent_path, pool));
 
+  logfile_name = apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
+                               (*log_number == 0) ? ""
+                               : apr_psprintf (pool, ".%d", *log_number));
+  
   logfile_path = svn_wc__adm_path (parent_path, FALSE, pool,
-                                   SVN_WC__ADM_LOG, NULL);
+                                   logfile_name, NULL);
 
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   parent_path,
-                                  SVN_WC__ADM_LOG,
+                                  logfile_name,
                                   (APR_WRITE | APR_CREATE), /* not excl */
                                   pool));
 
@@ -862,7 +924,7 @@ do_entry_deletion (struct edit_baton *eb,
 
   SVN_ERR (svn_wc__close_adm_file (log_fp,
                                    parent_path,
-                                   SVN_WC__ADM_LOG,
+                                   logfile_name,
                                    TRUE, /* sync */
                                    pool));
     
@@ -906,6 +968,7 @@ do_entry_deletion (struct edit_baton *eb,
 
   SVN_ERR (leftmod_error_chain (svn_wc__run_log (adm_access, NULL, pool),
                                 logfile_path, parent_path, pool));
+  *log_number = 0;
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
@@ -934,7 +997,8 @@ delete_entry (const char *path,
               apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  return do_entry_deletion (pb->edit_baton, pb->path, path, pool);
+  return do_entry_deletion (pb->edit_baton, pb->path, path, &pb->log_number,
+                            pool);
 }
 
 
@@ -1125,27 +1189,32 @@ close_directory (void *dir_baton,
   struct dir_baton *db = dir_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
-
+  svn_wc_adm_access_t *adm_access;
+      
   SVN_ERR (svn_categorize_props (db->propchanges, &entry_props, &wc_props,
                                  &regular_props, pool));
 
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
+                                db->path, db->pool));
+      
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
+      const char *logfile_name;
 
       /* to hold log messages: */
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
-                                    db->path, db->pool));
+      logfile_name = apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
+                                   (db->log_number == 0) ? ""
+                                   : apr_psprintf (pool, ".%d", db->log_number));
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                       db->path,
-                                      SVN_WC__ADM_LOG,
+                                      logfile_name,
                                       (APR_WRITE | APR_CREATE), /* not excl */
                                       db->pool));
 
@@ -1244,14 +1313,16 @@ close_directory (void *dir_baton,
       /* The log is ready to run, close it. */
       SVN_ERR (svn_wc__close_adm_file (log_fp,
                                        db->path,
-                                       SVN_WC__ADM_LOG,
+                                       logfile_name,
                                        TRUE, /* sync */
                                        db->pool));
 
-      /* Run the log. */
-      SVN_ERR (svn_wc__run_log (adm_access, NULL, db->pool));
     }
 
+  /* Run the log. */
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, db->pool));
+  db->log_number = 0;
+  
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
      maybe_bump_dir_info() for more information.  */
@@ -1710,6 +1781,7 @@ static svn_error_t *
 install_file (svn_wc_notify_state_t *content_state,
               svn_wc_notify_state_t *prop_state,
               svn_wc_adm_access_t *adm_access,
+              int *log_number,
               const char *file_path,
               svn_revnum_t new_revision,
               const char *new_text_path,
@@ -1731,6 +1803,8 @@ install_file (svn_wc_notify_state_t *content_state,
   svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
+  enum svn_wc_merge_outcome_t merge_outcome;
+  const char *logfile_name;
 
   /* The code flow does not depend upon these being set to NULL, but
      it removes a gcc 3.1 `might be used uninitialized in this
@@ -1763,9 +1837,13 @@ install_file (svn_wc_notify_state_t *content_state,
 
   /* Open a log file.  This is safe because the adm area is locked
      right now. */
+  logfile_name = apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
+                               (*log_number == 0) ? ""
+                               : apr_psprintf (pool, ".%d", *log_number));
+
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   parent_dir,
-                                  SVN_WC__ADM_LOG,
+                                  logfile_name,
                                   (APR_WRITE | APR_CREATE), /* not excl */
                                   pool));
 
@@ -2050,6 +2128,7 @@ install_file (svn_wc_notify_state_t *content_state,
                  textual changes into the working file. */
               const char *oldrev_str, *newrev_str;
               const svn_wc_entry_t *e;
+              const char *base;
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
@@ -2080,9 +2159,18 @@ install_file (svn_wc_notify_state_t *content_state,
                                      SVN_WC__LOG_ATTR_ARG_5, ".mine",
                                      NULL);
               
-              /* If a conflict happens, then the entry will be
-                 marked "Conflicted" and will track either 2 or 3 new
-                 temporary fulltext files that resulted. */
+              /* Run a dry-run of the merge to see if a conflict will
+                 occur.  This is needed so we can report back to the
+                 client as the changes come in. */
+              base = svn_wc_adm_access_path (adm_access);
+
+              SVN_ERR (svn_wc_merge (svn_path_join (base, txtb, pool),
+                                     svn_path_join (base, tmp_txtb, pool),
+                                     svn_path_join (base, base_name, pool),
+                                     adm_access,
+                                     oldrev_str, newrev_str, ".mine",
+                                     TRUE, &merge_outcome, diff3_cmd,
+                                     pool));
               
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
@@ -2190,26 +2278,16 @@ install_file (svn_wc_notify_state_t *content_state,
                                     log_accum->len, NULL, pool),
              apr_psprintf (pool, _("Error writing log for '%s'"), file_path));
 
-  /* The log is ready to run.  Close it and run it! */
-  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
+  /* The log is done, close it. */
+  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir,
+                                   logfile_name,
                                    TRUE, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
-
+  (*log_number)++;
+  
   if (content_state)
     {
-      const svn_wc_entry_t *entry;
-      svn_boolean_t tc, pc;
-
       /* Initialize the state of our returned value. */
       *content_state = svn_wc_notify_state_unknown;
-      
-      /* ### There should be a more efficient way of finding out whether
-         or not the file is modified|merged|conflicted.  If the
-         svn_wc__run_log() call above could return a special error code
-         in case of a conflict or something, that would work. */
-
-      SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, TRUE, pool));
-      SVN_ERR (svn_wc_conflicted_p (&tc, &pc, parent_dir, entry, pool));
       
       /* This is kind of interesting.  Even if no new text was
          installed (i.e., new_text_path was null), we could still
@@ -2218,7 +2296,7 @@ install_file (svn_wc_notify_state_t *content_state,
          update.  Then we'll notify that it has text conflicts.  This
          seems okay to me.  I guess.  I dunno.  You? */
 
-      if (tc)
+      if (merge_outcome == svn_wc_merge_conflict)
         *content_state = svn_wc_notify_state_conflicted;
       else if (new_text_path)
         {
@@ -2277,6 +2355,7 @@ close_file (void *file_baton,
   SVN_ERR (install_file (&content_state,
                          &prop_state,
                          adm_access,
+                         &fb->dir_baton->log_number,
                          fb->path,
                          (*eb->target_revision),
                          new_text_path,
@@ -2317,13 +2396,15 @@ close_edit (void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   const char *target_path = svn_path_join (eb->anchor, eb->target, pool);
+  int log_number = 0;
 
   /* If there is a target and that target is missing, then it
      apparently wasn't re-added by the update process, so we'll
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
   if ((*eb->target) && (svn_wc__adm_missing (eb->adm_access, target_path)))
-    SVN_ERR (do_entry_deletion (eb, eb->anchor, eb->target, pool));
+    SVN_ERR (do_entry_deletion (eb, eb->anchor, eb->target, &log_number,
+                                pool));
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
@@ -2737,6 +2818,7 @@ svn_wc_add_repos_file (const char *dst_path,
 {
   const char *new_URL;
   apr_array_header_t *propchanges;
+  int log_number = 0;
 
   /* Fabricate the anticipated new URL of the target. */
   {
@@ -2757,6 +2839,7 @@ svn_wc_add_repos_file (const char *dst_path,
   SVN_ERR (install_file (NULL,
                          NULL,
                          adm_access,
+                         &log_number,
                          dst_path,
                          0,
                          new_text_path,
@@ -2769,6 +2852,8 @@ svn_wc_add_repos_file (const char *dst_path,
                          NULL,
                          NULL,
                          pool));
+
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
 }
