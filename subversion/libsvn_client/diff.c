@@ -506,11 +506,27 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
           assert (child != NULL);
           copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
-          /* ### FIXME: This will get the file again! */
-          /* ### 838 When 838 stops using svn_client_copy the adm_access
-             parameter can be removed from the function. */          
-          SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision,
-                                    mine, adm_access, merge_b->ctx, subpool));
+
+          {
+            svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
+            svn_error_t *err;
+
+            /* FIXME: This is lame, we should have some way of doing this 
+               that doesn't involve messing with the client context, but 
+               for now we have to or we get double notifications for each 
+               add. */
+            merge_b->ctx->notify_func = NULL; 
+
+            /* ### FIXME: This will get the file again! */
+            /* ### 838 When 838 stops using svn_client_copy the adm_access
+               parameter can be removed from the function. */
+            err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, 
+                                   mine, adm_access, merge_b->ctx, subpool);
+
+            merge_b->ctx->notify_func = notify_func;
+
+            if (err) return err;
+          }
         }
       break;
     case svn_node_dir:
@@ -608,18 +624,48 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
     {
     case svn_node_none:
       if (! merge_b->dry_run)
-        /* ### FIXME: This will get the directory tree again! */
-        SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                  adm_access, merge_b->ctx, subpool));
+        {
+          svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
+          svn_error_t *err;
+
+          /* FIXME: This is lame, we should have some way of doing this 
+             that doesn't involve messing with the client context, but 
+             for now we have to or we get double notifications for each 
+             add. */
+          merge_b->ctx->notify_func = NULL;
+
+          /* ### FIXME: This will get the directory tree again! */
+          err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                  adm_access, merge_b->ctx, subpool);
+
+          merge_b->ctx->notify_func = notify_func;
+
+          if (err) return err;
+        }
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));
       if (!merge_b->dry_run
           && (! entry || (entry && entry->schedule == svn_wc_schedule_delete)))
-        /* ### FIXME: This will get the directory tree again! */
-        SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                  adm_access, merge_b->ctx, subpool));
+        {
+          svn_wc_notify_func_t notify_func = merge_b->ctx->notify_func;
+          svn_error_t *err;
+
+          /* FIXME: This is lame, we should have some way of doing this 
+             that doesn't involve messing with the client context, but 
+             for now we have to or we get double notifications for each 
+             add. */
+          merge_b->ctx->notify_func = NULL;
+
+          /* ### FIXME: This will get the directory tree again! */
+          err = svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                 adm_access, merge_b->ctx, subpool);
+
+          merge_b->ctx->notify_func = notify_func;
+
+          if (err) return err;
+        }
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
