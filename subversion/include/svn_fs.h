@@ -311,7 +311,9 @@ svn_error_t *svn_fs_set_user (svn_fs_t *fs,
                               svn_fs_user_t *user);
 
 
-/** Set @a *user to the current @a fs user. */
+/** Set @a *user to the current @a fs user, or NULL if there is no
+ * current fs user. 
+ */
 svn_error_t *svn_fs_get_user (svn_fs_user_t **user,
                               svn_fs_t *fs);
 
@@ -1420,8 +1422,13 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * username of the current @a fs user.
  *
  * If path is already locked by a different user, then return @c
- * SVN_ERR_FS_PATH_LOCKED.  If @a force is true, then delete the lock
- * on path (if any), and unconditionally create a new lock.
+ * SVN_ERR_FS_PATH_LOCKED.  If path is already locked by the same
+ * user, and @a current_token matches the lock, then "refresh" the
+ * lock and return a new token in @a *token.
+ *
+ * If @a force is true, then "steal" any existing lock, even if the FS
+ * user does not match the current lock owner.  Delete any lock on @a
+ * path, and unconditionally create a new lock.
  *
  * If @a timeout is zero, then create a non-expiring lock.  Else, the
  * lock will expire in @a timeout seconds after creation.
@@ -1436,6 +1443,7 @@ svn_error_t *svn_fs_lock (svn_fs_lock_token_t **token,
                           const char *path,
                           svn_boolean_t force,
                           long int timeout,
+                          svn_fs_lock_token_t *current_token,
                           apr_pool_t *pool);
 
 

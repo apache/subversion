@@ -508,23 +508,23 @@ SVN_ERROR_START
   /* @since New in 1.2 */
   SVN_ERRDEF (SVN_ERR_FS_NO_USER,
               SVN_ERR_FS_CATEGORY_START + 34,
-              "No user associated with filesystem.")
+              "No user associated with filesystem")
 
   SVN_ERRDEF (SVN_ERR_FS_PATH_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 35,
-              "Path is locked.")
+              "Path is locked")
 
   SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 36,
-              "Path is not locked.")
+              "Path is not locked")
 
   SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN
               SVN_ERR_FS_CATEGORY_START + 37,
-              "Lock token is incorrect.")
+              "Lock token is incorrect")
 
   SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH
              SVN_ERR_FS_CATEGORY_START + 38,
-             "Username does not match lock owner.")
+             "Username does not match lock owner")
 
 
   /* repos errors */
@@ -564,11 +564,11 @@ SVN_ERROR_START
   /* @since New in 1.2 */
   SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED
               SVN_ERR_REPOS_CATEGORY_START + 8,
-              "Error running post-lock hook.")
+              "Error running post-lock hook")
 
   SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED
               SVN_ERR_REPOS_CATEGORY_START + 9,
-              "Error running post-unlock hook.")
+              "Error running post-unlock hook")
 
 
   /* generic RA errors */

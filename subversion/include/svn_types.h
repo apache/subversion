@@ -422,7 +422,7 @@ typedef struct svn_lock_token_t
   const char *owner;            /* the username which 'owns' the lock */
   apr_time_t creation_date;     /* when lock was made */
   apr_time_t expiration_date;   /* (optional) when lock will expire;
-                                   A value of 0 will never expire. */
+                                   If value is 0, lock will never expire. */
 } svn_lock_token_t;
 
 
