@@ -72,7 +72,8 @@ enum command
   add_command,
   delete_command,
   commit_command,
-  status_command
+  status_command,
+  propfind_command
 };
 
 
@@ -195,6 +196,12 @@ parse_options (int argc,
           *command = status_command;
           goto do_command_opts;
         }
+      else if (strcmp (argv[i], "propfind") == 0)
+        {
+          *command = propfind_command;
+          goto do_command_opts;
+        }
+
       else
         {
           fprintf (stderr, "%s: unknown or untimely argument \"%s\"\n",
@@ -216,6 +223,7 @@ parse_options (int argc,
     }
   if ((! *xml_file) && ((*command != add_command)
                         && (*command != status_command)
+                        && (*command != propfind_command)
                         && (*command != delete_command)))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
@@ -236,7 +244,8 @@ parse_options (int argc,
   if (((*command == checkout_command) 
        || (*command == update_command)
        || (*command == commit_command)
-       || (*command == status_command))
+       || (*command == status_command)
+       || (*command == propfind_command))
       && (*target == NULL))
     *target = svn_string_create (".", pool);
 }
@@ -309,6 +318,14 @@ main (int argc, char **argv)
         err = svn_client_status (&statushash, target, pool);
         if (! err) 
           svn_cl__print_status_list (statushash, pool);
+        break;
+      }
+    case propfind_command:
+      {
+        apr_hash_t *prop_hash;
+        err = svn_wc_prop_find (&prop_hash, target, pool);
+        if (! err)
+          svn_cl__print_prop_hash (prop_hash, pool);
         break;
       }
     default:

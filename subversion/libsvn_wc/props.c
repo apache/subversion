@@ -766,8 +766,69 @@ svn_wc__do_property_merge (svn_string_t *path,
 
 /*** Public Functions ***/
 
-/*svn_error_t
-  svn_wc_prop_find (apr_array_header_t*/
+
+svn_error_t *
+svn_wc_prop_find (apr_hash_t **props,
+                  svn_string_t *path,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+  enum svn_node_kind kind, pkind;
+  svn_string_t *prop_path, *prop_name, *base_path;
+  
+  *props = apr_make_hash (pool);
+
+  /* Check validity of PATH */
+  err = svn_io_check_path (path, &kind, pool);
+  if (err) return err;
+  
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                              "svn_wc_prop_find: non-existent path '%s'.",
+                              path->data);
+  
+  if (kind == svn_node_unknown)
+    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+                              "svn_wc_prop_find: unknown node kind: '%s'.",
+                              path->data);
+
+  /* Construct a path to the relevant property file */
+  if (kind == svn_node_file)
+    {
+      svn_path_split (path, &base_path, &prop_name,
+                      svn_path_local_style, pool);
+      prop_path = svn_wc__adm_path (base_path,
+                                    0, /* not tmp */
+                                    pool,
+                                    SVN_WC__ADM_PROPS,
+                                    prop_name->data,
+                                    NULL);
+    }
+
+  else if (kind == svn_node_dir)
+    prop_path = svn_wc__adm_path (path,
+                                  0, /* not tmp */
+                                  pool,
+                                  SVN_WC__ADM_DIR_PROPS,
+                                  NULL);
+
+
+  /* Does the property file exist? */
+  err = svn_io_check_path (prop_path, &pkind, pool);
+  if (err) return err;
+  
+  if (pkind == svn_node_none)
+    /* No property file exists.  Just go home, with an empty hash. */
+    return SVN_NO_ERROR;
+  
+
+  /* else... */
+
+  err = svn_wc__load_prop_file (prop_path, *props, pool);
+  if (err) return err;
+
+  return SVN_NO_ERROR;
+}
 
 
 

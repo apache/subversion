@@ -1,5 +1,5 @@
 /*
- * cl.h:  shared stuff in the command line program
+ * main.c:  Subversion command line client.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -51,38 +51,54 @@
 
 
 
-#ifndef SVN_CL_H
-#define SVN_CL_H
-
 /*** Includes. ***/
+
+#include <apr_hash.h>
 #include "svn_wc.h"
+#include "svn_client.h"
 #include "svn_string.h"
+#include "svn_path.h"
+#include "svn_delta.h"
+#include "svn_error.h"
+#include "cl.h"
 
 
 
-/* Print PATH's status line using STATUS. */
-void svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status);
 
-/* Print a hash that maps names to status-structs to stdout for human
-   consumption. */
-void svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool);
+void
+svn_cl__print_prop_hash (apr_hash_t *prop_hash,
+                         apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
 
-/* Print a hash that maps property names (char *) to property values
-   (svn_string_t *). */
-void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
+  for (hi = apr_hash_first (prop_hash); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      
+      svn_string_t *propkey, *propval;
+
+      /* Get next property */
+      apr_hash_this (hi, &key, &klen, &val);
+      propkey = svn_string_ncreate (key, klen, pool);
+      propval = (svn_string_t *) val;
+
+      printf ("%s : %s\n", propkey->data, propval->data);
+    } 
+}
 
 
-/* Returns an editor that prints out events in an update or checkout. */
-svn_error_t *svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
-                                       void **edit_baton,
-                                       svn_string_t *initial_path,
-                                       apr_pool_t *pool);
 
-#endif /* SVN_CL_H */
+
+
+
+
+
+
 
 
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end: 
- */
+ * end: */
