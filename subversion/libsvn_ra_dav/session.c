@@ -85,7 +85,7 @@ svn_ra_open (svn_ra_session_t **p_ras,
   svn_ra_session_t *ras;
 
   if (uri_parse(repository, &uri, NULL) 
-      || uri.path == NULL || uri.path == NULL)
+      || uri.host == NULL || uri.path == NULL)
     {
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
                               "illegal URL for repository");
