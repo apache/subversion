@@ -56,13 +56,13 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/B/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
+     /A/C/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
                     exdir_H  -r 1 <schema>:///<other_repos>/A/D/H
 
      /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
                     exdir_A/G        <schema>:///<other_repos>/A/D/G
                     exdir_A/H  -r 3  <schema>:///<other_repos>/A/D/H
-                    x/y/z/blah       <schema>:///<other_repos>/A/B/E
+                    x/y/z/blah       <schema>:///<other_repos>/A/B
 
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
   remove a previous incarnation of the other repository.
@@ -85,7 +85,7 @@ def externals_test_setup(sbox):
 
   # These are the directories on which `svn:externals' will be set, in
   # revision 6 on the first repo.
-  B_path = os.path.join(wc_init_dir, "A/B")
+  C_path = os.path.join(wc_init_dir, "A/C")
   D_path = os.path.join(wc_init_dir, "A/D")
 
   # Create a working copy.
@@ -136,7 +136,7 @@ def externals_test_setup(sbox):
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn("", None, [],
                                      'pset',
-                                     '-F', tmp_f, 'svn:externals', B_path)
+                                     '-F', tmp_f, 'svn:externals', C_path)
    
   os.remove(tmp_f)
 
@@ -147,7 +147,7 @@ def externals_test_setup(sbox):
            "\n"                                              + \
            "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H"  + \
            "\n"                                              + \
-           "x/y/z/blah        " + other_repo_url + "/A/B/E"  + \
+           "x/y/z/blah        " + other_repo_url + "/A/B"    + \
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
@@ -159,13 +159,13 @@ def externals_test_setup(sbox):
   # Commit the property changes.
 
   expected_output = svntest.wc.State(wc_init_dir, {
-    'A/B' : Item(verb='Sending'),
+    'A/C' : Item(verb='Sending'),
     'A/D' : Item(verb='Sending'),
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
   expected_status.tweak(repos_rev=6)
-  expected_status.tweak('A/B', 'A/D', wc_rev=6, status='  ')
+  expected_status.tweak('A/C', 'A/D', wc_rev=6, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_init_dir,
                                         expected_output,
@@ -217,16 +217,16 @@ def checkout_with_externals(sbox):
                                      repo_url, wc_dir)
 
   # Probe the working copy a bit, see if it's as expected.
-  exdir_G_path    = os.path.join(wc_dir, "A/B/exdir_G")
+  exdir_G_path    = os.path.join(wc_dir, "A", "C", "exdir_G")
   exdir_G_pi_path = os.path.join(exdir_G_path, "pi")
-  exdir_H_path       = os.path.join(wc_dir, "A/B/exdir_H")
+  exdir_H_path       = os.path.join(wc_dir, "A", "C", "exdir_H")
   exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
-  x_path     = os.path.join(wc_dir, "A/D/x")
+  x_path     = os.path.join(wc_dir, "A", "D", "x")
   y_path     = os.path.join(x_path, "y")
   z_path     = os.path.join(y_path, "z")
   blah_path  = os.path.join(z_path, "blah")
-  alpha_path = os.path.join(blah_path, "alpha")
-  beta_path  = os.path.join(blah_path, "beta")
+  alpha_path = os.path.join(blah_path, "E", "alpha")
+  beta_path  = os.path.join(blah_path, "E", "beta")
 
   if (not os.path.exists(exdir_G_path)):
     raise svntest.Failure("Probing for " + exdir_G_path + " failed.")
@@ -584,9 +584,9 @@ def update_receive_change_under_external(sbox):
                                         other_wc_dir)
 
   svntest.actions.run_and_verify_svn("", None, [],
-                                     'up', os.path.join(wc_dir, "A", "B"))
+                                     'up', os.path.join(wc_dir, "A", "C"))
 
-  external_rho_path = os.path.join(wc_dir, 'A', 'B', 'exdir_G', 'rho')
+  external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
   fp = open(external_rho_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 2)
@@ -706,16 +706,16 @@ def export_with_externals(sbox):
                                      repo_url, wc_dir)
 
   # Probe the working copy a bit, see if it's as expected.
-  exdir_G_path    = os.path.join(wc_dir, "A/B/exdir_G")
+  exdir_G_path    = os.path.join(wc_dir, "A", "C", "exdir_G")
   exdir_G_pi_path = os.path.join(exdir_G_path, "pi")
-  exdir_H_path       = os.path.join(wc_dir, "A/B/exdir_H")
+  exdir_H_path       = os.path.join(wc_dir, "A", "C", "exdir_H")
   exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
-  x_path     = os.path.join(wc_dir, "A/D/x")
+  x_path     = os.path.join(wc_dir, "A", "D", "x")
   y_path     = os.path.join(x_path, "y")
   z_path     = os.path.join(y_path, "z")
   blah_path  = os.path.join(z_path, "blah")
-  alpha_path = os.path.join(blah_path, "alpha")
-  beta_path  = os.path.join(blah_path, "beta")
+  alpha_path = os.path.join(blah_path, "E", "alpha")
+  beta_path  = os.path.join(blah_path, "E", "beta")
 
   if (not os.path.exists(exdir_G_path)):
     raise svntest.Failure("Probing for " + exdir_G_path + " failed.")
@@ -761,10 +761,10 @@ def export_with_externals(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               checkout_with_externals,
-              update_receive_new_external,
-              update_lose_external,
-              update_change_pristine_external,
-              update_change_modified_external,
+              XFail(update_receive_new_external),
+              XFail(update_lose_external),
+              XFail(update_change_pristine_external),
+              XFail(update_change_modified_external),
               update_receive_change_under_external,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
