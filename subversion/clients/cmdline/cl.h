@@ -129,6 +129,7 @@ svn_cl__cmd_proc_t
   svn_cl__delete,
   svn_cl__help,
   svn_cl__import,
+  svn_cl__log,
   svn_cl__proplist,
   svn_cl__propget,
   svn_cl__propset,

@@ -1462,14 +1462,23 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
 
 svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                   apr_hash_t *paths,
-                                  svn_revnum_t *start,
-                                  svn_revnum_t *end,
+                                  svn_revnum_t start,
+                                  svn_revnum_t end,
                                   svn_boolean_t discover_changed_paths,
-                                  svn_ra_log_entry_receiver_t receiver,
+                                  svn_ra_log_message_receiver_t receiver,
                                   void *receiver_baton)
 {
-  /* ### todo */
+  /* See logic in ../libsvn_ra_local/ra_plugin.c:get_log() for a start
+     on what needs to happen here. */
 
+  SVN_ERR( (*receiver)(receiver_baton,
+                       NULL,
+                       SVN_INVALID_REVNUM,
+                       "(none)",
+                       "(none)",
+                       "log not implemented over ra_dav yet",
+                       1) );
+  
   return SVN_NO_ERROR;
 }
 

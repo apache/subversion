@@ -100,6 +100,10 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Import a file or tree into the repository.\n"
     "usage: import REPOS_URL [PATH] [NEW_ENTRY_IN_REPOS] \n" },
 
+  { "log",     FALSE, svn_cl__log,
+    "Show the log messages for a set of revision(s) and/or file(s).\n"
+    "usage: log [-r REV1([:)REV2]] [PATH1 [PATH2] ...] \n" },
+
   { "proplist",   FALSE, svn_cl__proplist,
     "List all properties for given files and directories.\n"
     "usage: proplist [TARGETS]\n" },
