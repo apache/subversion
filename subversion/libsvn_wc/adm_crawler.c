@@ -217,9 +217,8 @@ report_revisions (const char *wc_path,
       if (! dirent_kind)
         missing = TRUE;
       
-      /* From here on out, ignore any entry scheduled for addition
-         or deletion. */
-      if (current_entry->schedule != svn_wc_schedule_normal)
+      /* From here on out, ignore any entry scheduled for addition */
+      if (current_entry->schedule == svn_wc_schedule_add)
         continue;
       
       if (current_entry->kind == svn_node_file) 
@@ -234,7 +233,10 @@ report_revisions (const char *wc_path,
               continue;
             }
 
-          if (missing && restore_files)
+          if (missing 
+              && restore_files 
+              && (current_entry->schedule != svn_wc_schedule_delete)
+              && (current_entry->schedule != svn_wc_schedule_replace))
             {
               /* Recreate file from text-base. */
               SVN_ERR (restore_file (this_full_path, pool));
@@ -253,7 +255,9 @@ report_revisions (const char *wc_path,
             }
 
           /* Possibly report a disjoint URL... */
-          if (strcmp (current_entry->url, this_url) != 0)
+          if ((current_entry->schedule != svn_wc_schedule_add)
+              && (current_entry->schedule != svn_wc_schedule_replace)
+              && (strcmp (current_entry->url, this_url) != 0))
             SVN_ERR (reporter->link_path (report_baton,
                                           this_path,
                                           current_entry->url,
