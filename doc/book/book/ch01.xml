@@ -408,6 +408,131 @@
 
   </sect1>
 
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-7">
+
+    <title>A Quick Start</title>
+    
+    <para>Some people have trouble absorbing a new technology by
+      reading the sort of "top down" approach provided by this book.
+      This section is a very short introduction to Subversion, and is
+      designed to give "bottom up" learners a fighting chance.  If
+      you're one of those folks who prefers to learn by
+      experimentation, the following demonstration will get you up and
+      running, with links to the relevant sections of the book.</para>
+
+    <para>If you're new to the entire concept of version control or to
+      the <quote>copy-modify-merge</quote> model used by both CVS and
+      Subversion, then you should read <xref linkend="svn-ch-2"/>
+      before going any further.</para>
+
+    <note>
+      <para>The following example assumes that you have
+      <command>svn</command>, the Subversion commandline client, and
+      <command>svnadmin</command>, the administrative tool, ready to
+      go.  It also assumes that your <command>svn</command> client has
+      been compiled against Berkeley DB.  To verify this, run
+      <command>svn --version</command> and make sure the
+      <literal>ra_local</literal> module is available.  Without this
+      module, the client cannot access <literal>file://</literal>
+      URLs.</para>
+    </note>
+
+    <para>First, create a new repository:</para>
+
+    <screen>
+$ svnadmin create /path/to/repos
+$ ls /path/to/repos
+conf/  dav/  db/  format  hooks/  locks/  README.txt
+</screen>
+
+    <para>This command creates a new directory
+    <filename>/path/to/repos</filename> which contains a Subversion
+    repository.  Make sure that this directory lives on a local disk,
+    <emphasis>not</emphasis> a network share.  This new directory
+    mainly contains a collection of Berkeley DB database files.  You
+    won't see your versioned files if you peek inside.  For more
+    information about repository creation and maintenance, see <xref
+    linkend="svn-ch-5"/>.</para>
+
+    <para>Next, create a tree of files and directories into import
+    into the repository.  For reasons that will be clear later on (see
+    <xref linkend="svn-ch-4"/>), your structure should contain three
+    top-level directories named <filename>branches</filename>,
+    <filename>tags</filename>, and <filename>trunk</filename>:</para>
+
+    <screen>
+/tmp/project/branches/
+/tmp/project/tags/
+/tmp/project/trunk/
+               foo.c
+               bar.c
+               Makefile
+               &hellip;
+</screen>
+
+    <para>Once you have a tree of data ready to go, import the data
+    into the repository with the <command>svn import</command>
+    command (see <xref linkend="svn-ch-3-sect-7.3"/>):</para>
+
+    <screen>
+$ svn import /tmp/project file:///path/to/repos -m "initial import"
+Adding         /tmp/project/branches
+Adding         /tmp/project/tags
+Adding         /tmp/project/trunk
+Adding         /tmp/project/trunk/foo.c
+Adding         /tmp/project/trunk/bar.c
+Adding         /tmp/project/trunk/Makefile
+&hellip;
+Committed revision 1.
+$ 
+</screen>
+
+    <para>Now the repository contains your tree of data.  At this
+      point, you create a <quote>working copy</quote> of the
+      <filename>trunk</filename> directory.  This is where your
+      actual work will happen:</para>
+
+    <screen>
+$ svn checkout file://path/to/repos/trunk project
+A  project/foo.c
+A  project/bar.c
+A  project/Makefile
+&hellip;
+Checked out revision 1.
+</screen>
+
+    <para>Now you have a personal copy of part of the repository in a
+      new directory named <filename>project</filename>.  You can edit
+      the files in your working copy and then commit those changes
+      back into the repository.</para>
+
+    <itemizedlist>
+      <listitem><para>Enter your working copy and edit a
+      file's contents.</para></listitem>
+      <listitem><para>Run <command>svn diff</command> to see unified
+      diff output of your changes.</para></listitem>
+      <listitem><para>Run <command>svn commit</command> to commit the
+      new version of your file to the repository.</para></listitem>
+      <listitem><para>Run <command>svn update</command> to bring your
+      working copy <quote>up-to-date</quote> with the repository.
+      </para></listitem>
+    </itemizedlist>
+
+    <para>For a full tour of all the things you can do with your
+      working copy, read <xref linkend="svn-ch-3"/>.</para>
+
+    <para>At this point, you have the option of making your repository
+      available to others over a network.  See <xref
+      linkend="svn-ch-6"/> to learn about the different sorts of
+      server processes available and how to configure them.</para>
+
+  </sect1>
+
+
 </chapter>
 
 <!--
