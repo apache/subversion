@@ -556,7 +556,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
                                                    &cauthor, root, file_path,
                                                    subpool));
-          entry->last_author = apr_pstrdup (pool, cauthor);
+          entry->last_author = apr_pstrdup(pool, cauthor);
           if (cdate)
             SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
           else
