@@ -102,6 +102,13 @@ has_mutable_flag (skel_t *node_content)
   
   /* The 3rd element of the header, IF it exists, is the header's
      first `flag'.  It could be NULL.  */
+  /* ### tweakit: Heh.  Funny the way this worked out: the proplist
+     disappeared from the header, so FLAGS would now start at the
+     second element... except that we're proposing to add a REV field,
+     so FLAGS would once again be the third element.  Talk with Mike
+     about this -- probably we should stick dummy, empty-string REVs
+     in there now, so everything stays at the same place, and only
+     start using them later, after this initial rewrite is done. */
   skel_t *flag = header->children->next->next;
   
   while (flag)
@@ -128,6 +135,7 @@ has_mutable_flag (skel_t *node_content)
 static void
 set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
 {
+  /* ### tweakit: see comment in has_mutable_flag() above. */
   if (has_mutable_flag (content))
     return;
   else
@@ -205,6 +213,10 @@ get_node_revision (skel_t **skel_p,
 {
   skel_t *node_revision;
 
+  /* ### tweakit: I think this function doesn't change just because
+     we're getting most content out of the node revision itself, but
+     must think more.  Comments... Mike?  Anyone?*/
+
   /* If we've already got a copy, there's no need to read it in.  */
   if (! node->node_revision)
     {
@@ -228,6 +240,8 @@ set_node_revision (dag_node_t *node,
                    skel_t *skel,
                    trail_t *trail)
 {
+  /* ### tweakit: see comment in get_node_revision() above. */
+
   /* Write it out.  */
   SVN_ERR (svn_fs__put_node_revision (node->fs, node->id, skel, trail));
 
@@ -258,6 +272,8 @@ svn_fs__dag_get_node (dag_node_t **node,
 {
   dag_node_t *new_node;
   skel_t *contents;
+
+  /* ### tweakit: beautiful -- nothing to change here. */
 
   /* Construct the node. */
   new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
@@ -295,6 +311,9 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   /* Create empty root directory with node revision 0.0:
      "nodes" : "0.0" -> "(fulltext [(dir ()) ()])" */
   {
+    /* ### tweakit: change the skel below as appropriate for new REV
+       field: "((dir 0 ()) ())", or "((dir 1 0 ()) ())" if we're
+       feeling ambitious. :-). */
     static char unparsed_node_rev[] = "((dir ()) ())";
     skel_t *node_rev = svn_fs__parse_skel (unparsed_node_rev,
                                            sizeof (unparsed_node_rev) - 1,
@@ -396,6 +415,14 @@ add_new_entry_skel (skel_t *parent,
   svn_fs__prepend (name_skel, new_entry_skel);
   
   /* Put it into parent's entries list. */
+  /* ### tweakit: Nope.  Go fetch the entries list via its rep, store
+     the entry there.  We're going to have a mutability issue.  How do
+     we know whether to create a new string, or append to an existing
+     string?  Looks like representations themselves will have to
+     record whether they're mutable or not -- new reps start out
+     mutable, and get unmutabled when the nodes that point to them get
+     unmutabled.  Must write it up in `structure' first, before doing
+     anything here. :-) */
   svn_fs__prepend (new_entry_skel, parent->children->next);
 }
 
@@ -420,6 +447,7 @@ add_new_entry (dag_node_t *parent,
 
   SVN_ERR (get_node_revision (&parent_node_rev, parent, trail));
   new_node_rev = svn_fs__copy_skel (parent_node_rev, trail->pool);
+  /* ### tweakit: see comment in add_new_entry_skel() above. */
   add_new_entry_skel (new_node_rev, name, id, trail);
   
   /* Store the new incarnation of the directory. */
@@ -442,6 +470,13 @@ find_dir_entry_skel (skel_t **entry,
 {
   skel_t *header;
   
+  /* ### tweakit: Hmmm.  Okay, time to generalize.  This func, along
+     with other recent ones, suggests that what we want is one
+     mini-interface for reading and writing dir entry lists given a
+     noderev, and another mini-interface for operating on the entry
+     list while we have it.  Future `tweakit' comments may refer to
+     these proposed interfaces... */
+
   /* The node "header" is the first element of a node-revision skel,
      itself a list. */
   header = pnode_rev->children;
@@ -503,6 +538,17 @@ make_entry (dag_node_t **child_p,
   svn_fs_id_t *new_node_id;
   skel_t *new_node_skel;
 
+  /* ### tweakit: Retrieve the rep for this directory's entries list.
+     If it is not mutable, make a mutable new rep (this is a deep
+     copy, as it must make a new string too).  Make the entry in the
+     new rep, write it out.  Something like:
+
+        get_mutable_rep (old_rep_key, &new_rep_key);
+        do_stuff_to_new_rep_and_its_string (new_rep_key, stuff...);
+        write_new_rep (new_rep_key); // takes care of the strings, too 
+        set_entries_key (this_mutable_node_rev, new_rep_key);
+  */
+
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return 
@@ -549,6 +595,9 @@ make_entry (dag_node_t **child_p,
 
   /* Create the new node's NODE-REVISION skel */
   {
+    /* ### tweakit: Of course, change this whole block to use the new
+       noderev format.  Hmmm, time to make constructor/destructor?  */
+
     skel_t *header_skel;
     skel_t *flag_skel;
     svn_stringbuf_t *id_str;
@@ -640,6 +689,8 @@ replace_dir_entry (dag_node_t *parent,
   skel_t *parent_rev;
   skel_t *entry_skel;
 
+  /* ### tweakit: see comments in make_entry() above. */
+
   /* Go get a fresh NODE-REVISION for the parent. */
   SVN_ERR (get_node_revision (&parent_rev, parent, trail));
   parent_rev = svn_fs__copy_skel (parent_rev, trail->pool);
@@ -678,6 +729,8 @@ svn_fs__dag_dir_entries_skel (skel_t **entries_p,
 {
   skel_t *node_rev, *entries, *entry;
   
+  /* ### tweakit: this will change in the obvious way. */
+
   if (! svn_fs__dag_is_directory (node))
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
@@ -711,6 +764,9 @@ svn_fs__dag_dir_entries_hash (apr_hash_t **table_p,
 {
   skel_t *entries, *entry;
   apr_hash_t *table;
+
+  /* ### tweakit: this shouldn't need to change at all, as it just
+     uses svn_fs__dag_dir_entries_skel(). */
 
   SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
 
@@ -762,6 +818,15 @@ svn_fs__dag_set_entry (dag_node_t *node,
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
        "Attempted to set entry in immutable node.");
+
+  /* ### tweakit: again, use the library to make sure the rep itself
+     is mutable, which always implies that the string to which it
+     points is also mutable.  [Note: when mutablifying a rep, if it is
+     a delta rep, the new copy should say "fulltext" and the mutable
+     string to which it points will be the undeltified version of the
+     string the old rep pointed to.  But that's not relevant yet.]
+     The rest of this func is basically fine, just make it write the
+     string instead of the the node revision, etc, etc. */
 
   /* Get and dup the node revision. */
   SVN_ERR (get_node_revision (&node_revision, node, trail));
