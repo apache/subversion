@@ -243,14 +243,21 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           }
       }
 
-      /* Attempt to set up timestamp. */
+      /* Attempt to set up timestamps. */
       {
-        svn_string_t *timestr
-          = apr_hash_get (entry->attributes,
-                          SVN_WC_ENTRY_ATTR_TIMESTAMP, APR_HASH_KEY_STRING);
+        svn_string_t *text_timestr, *prop_timestr;
 
-        if (timestr)
-          entry->timestamp = svn_wc__string_to_time (timestr);
+        text_timestr = apr_hash_get (entry->attributes,
+                                     SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                                     APR_HASH_KEY_STRING);
+        if (text_timestr)
+          entry->text_time = svn_wc__string_to_time (text_timestr);
+
+        prop_timestr = apr_hash_get (entry->attributes,
+                                     SVN_WC_ENTRY_ATTR_PROP_TIME,
+                                     APR_HASH_KEY_STRING);
+        if (prop_timestr)
+          entry->prop_time = svn_wc__string_to_time (prop_timestr);        
       }
 
       /* Look for any action flags. */
@@ -406,12 +413,18 @@ sync_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
                       svn_string_create ("true", pool));
     }
   
-  /* Timestamp. */
-  if (entry->timestamp)
+  /* Timestamps. */
+  if (entry->text_time)
     {
       apr_hash_set (entry->attributes,
-                    SVN_WC_ENTRY_ATTR_TIMESTAMP, APR_HASH_KEY_STRING,
-                    svn_wc__time_to_string (entry->timestamp, pool));
+                    SVN_WC_ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
+                    svn_wc__time_to_string (entry->text_time, pool));
+    }
+  if (entry->prop_time)
+    {
+      apr_hash_set (entry->attributes,
+                    SVN_WC_ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
+                    svn_wc__time_to_string (entry->prop_time, pool));
     }
 }
 
@@ -641,7 +654,8 @@ stuff_entry (apr_hash_t *entries,
              svn_revnum_t revision,
              enum svn_node_kind kind,
              int flags,
-             apr_time_t timestamp,
+             apr_time_t text_time,
+             apr_time_t prop_time,
              apr_pool_t *pool,
              apr_hash_t *atts)
 {
@@ -659,8 +673,10 @@ stuff_entry (apr_hash_t *entries,
     entry->revision = revision;
   if (kind != svn_node_none)
     entry->kind = kind;
-  if (timestamp)
-    entry->timestamp = timestamp;
+  if (text_time)
+    entry->text_time = text_time;
+  if (prop_time)
+    entry->prop_time = prop_time;
   entry->flags |= flags;
 
   /* Do any other attributes. */
@@ -722,7 +738,8 @@ svn_wc__entry_merge_sync (svn_string_t *path,
                           svn_revnum_t revision,
                           enum svn_node_kind kind,
                           int flags,
-                          apr_time_t timestamp,
+                          apr_time_t text_time,
+                          apr_time_t prop_time,
                           apr_pool_t *pool,
                           apr_hash_t *atts)
 {
@@ -736,7 +753,8 @@ svn_wc__entry_merge_sync (svn_string_t *path,
   if (name == NULL)
     name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
-  stuff_entry (entries, name, revision, kind, flags, timestamp, pool, atts);
+  stuff_entry (entries, name, revision, kind, flags, text_time,
+               prop_time, pool, atts);
   
   err = svn_wc__entries_write (entries, path, pool);
   if (err)
@@ -756,7 +774,8 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
   dupentry->ancestor   = svn_string_dup (entry->ancestor, pool);
   dupentry->kind       = entry->kind;
   dupentry->flags      = entry->flags;
-  dupentry->timestamp  = entry->timestamp;
+  dupentry->text_time  = entry->text_time;
+  dupentry->prop_time  = entry->prop_time;
 
   dupentry->attributes = apr_make_hash (pool);
 

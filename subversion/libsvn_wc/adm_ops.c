@@ -158,6 +158,7 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
                                   svn_node_file,
                                   SVN_WC_ENTRY_DELETE,
                                   0,
+                                  0,
                                   pool,
                                   NULL);
   if (err)
@@ -180,6 +181,7 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
                                   0,
                                   svn_node_file,
                                   SVN_WC_ENTRY_ADD,
+                                  0,
                                   0,
                                   pool,
                                   NULL);

@@ -370,7 +370,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         }
       else
         {
-          apr_time_t timestamp;
+          apr_time_t text_time, prop_time;
+          svn_string_t *tfile, *pfile;
           svn_string_t *sname = svn_string_create (name, loggy->pool);
           svn_string_t *revstr = apr_hash_get (ah,
                                                SVN_WC_ENTRY_ATTR_REVISION,
@@ -384,9 +385,18 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                                 SVN_WC_ENTRY_ATTR_KIND,
                                                 APR_HASH_KEY_STRING);
           
-          svn_string_t *wfile = svn_string_dup (loggy->path, loggy->pool);
-          svn_path_add_component (wfile, sname, svn_path_local_style);
-          
+          /* Create a full path to the file's textual component */
+          tfile = svn_string_dup (loggy->path, loggy->pool);
+          svn_path_add_component (tfile, sname, svn_path_local_style);
+
+          /* Create a full path to the file's property component */
+          pfile = svn_wc__adm_path (loggy->path,
+                                    0, /* not tmp */
+                                    loggy->pool,
+                                    SVN_WC__ADM_PROPS,
+                                    name,
+                                    NULL);
+
           /* kff todo: similar to code in entries.c:handle_start().
              Would be nice to either write a function mapping string
              to kind, and/or write an equivalent of
@@ -415,66 +425,129 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                             APR_HASH_KEY_STRING))
             flags |= SVN_WC_ENTRY_CONFLICT;
 
-          /* Did the log command give us a timestamp?  There are three
-             possible scenarios here.  */
+          /* Did the log command give us any timestamps?  There are three
+             possible scenarios here.  We must check both text_time
+             and prop_time for each of the three scenarios.  
+
+             TODO: The next two code blocks might benefit from
+             factorization.  Then again, factorization might make them
+             more confusing.  :) */
+
           {
-          svn_string_t *timestr = apr_hash_get (ah,
-                                                SVN_WC_ENTRY_ATTR_TIMESTAMP,
-                                                APR_HASH_KEY_STRING);
-
-          /* Scenario 1:  no timestamp mentioned at all */
-          if (! timestr)
-            timestamp = 0;  /* this tells merge_sync to ignore the
-                               field */
-          
-          /* Scenario 2:  use the working copy's timestamp */
-          else if (! strcmp (timestr->data, SVN_WC_TIMESTAMP_WC))
-            {
-              enum svn_node_kind wfile_kind;
-              err = svn_io_check_path (wfile, &wfile_kind, loggy->pool);
-              if (err)
-                {
-                  signal_error (loggy, svn_error_createf
-                                (SVN_ERR_WC_BAD_ADM_LOG,
-                                 0,
+            /* GET VALUE OF TEXT_TIME: */
+            svn_string_t *text_timestr = 
+              apr_hash_get (ah, SVN_WC_ENTRY_ATTR_TEXT_TIME,
+                            APR_HASH_KEY_STRING);
+            
+            /* Scenario 1:  no timestamp mentioned at all */
+            if (! text_timestr)
+              text_time = 0;  /* this tells merge_sync to ignore the
+                                 field */
+            
+            /* Scenario 2:  use the working copy's timestamp */
+            else if (! strcmp (text_timestr->data, SVN_WC_TIMESTAMP_WC))
+              {
+                enum svn_node_kind tfile_kind;
+                err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
+                if (err)
+                  {
+                    signal_error (loggy, svn_error_createf
+                                  (SVN_ERR_WC_BAD_ADM_LOG,
+                                   0,
+                                   NULL,
+                                   loggy->pool,
+                                   "error checking path %s",
+                                   tfile->data));
+                    return;
+                  }
+                if (tfile_kind == svn_node_file)
+                  err = svn_wc__file_affected_time (&text_time,
+                                                    tfile,
+                                                    loggy->pool);
+                if (err)
+                  {
+                    signal_error (loggy, svn_error_createf
+                                  (SVN_ERR_WC_BAD_ADM_LOG,
+                                   0,
                                  NULL,
-                                 loggy->pool,
-                                 "error checking path %s",
-                                 name));
-                  return;
-                }
-              if (wfile_kind == svn_node_file)
-                err = svn_wc__file_affected_time (&timestamp,
-                                                  wfile,
-                                                  loggy->pool);
-              if (err)
-                {
-                  signal_error (loggy, svn_error_createf
-                                (SVN_ERR_WC_BAD_ADM_LOG,
-                                 0,
-                                 NULL,
-                                 loggy->pool,
-                                 "error discovering file affected time on %s",
-                                 name));
-                  return;
-                }
-            }
-
-          /* Scenario 3:  use the integer provided, as-is. */
-          else
-            /* Is atol appropriate here for converting an apr_time_t
-               to a string and then back again?  Or should we just use
-               our svn_wc__time_to_string and string_to_time? */
-            timestamp = (apr_time_t) atol (timestr->data);
+                                   loggy->pool,
+                                   "error getting file affected time on %s",
+                                   tfile->data));
+                    return;
+                  }
+              }
+            
+            /* Scenario 3:  use the integer provided, as-is. */
+            else
+              /* Is atol appropriate here for converting an apr_time_t
+                 to a string and then back again?  Or should we just use
+                 our svn_wc__time_to_string and string_to_time? */
+              text_time = (apr_time_t) atol (text_timestr->data);
           }
           
+          {
+            /* GET VALUE OF PROP_TIME: */
+            svn_string_t *prop_timestr = 
+              apr_hash_get (ah, SVN_WC_ENTRY_ATTR_PROP_TIME,
+                            APR_HASH_KEY_STRING);
+            
+            /* Scenario 1:  no timestamp mentioned at all */
+            if (! prop_timestr)
+              prop_time = 0;  /* this tells merge_sync to ignore the
+                                 field */
+            
+            /* Scenario 2:  use the working copy's timestamp */
+            else if (! strcmp (prop_timestr->data, SVN_WC_TIMESTAMP_WC))
+              {
+                enum svn_node_kind pfile_kind;
+                err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
+                if (err)
+                  {
+                    signal_error (loggy, svn_error_createf
+                                  (SVN_ERR_WC_BAD_ADM_LOG,
+                                   0,
+                                   NULL,
+                                   loggy->pool,
+                                   "error checking path %s",
+                                   pfile->data));
+                    return;
+                  }
+                if (pfile_kind == svn_node_file)
+                  err = svn_wc__file_affected_time (&prop_time,
+                                                    pfile,
+                                                    loggy->pool);
+                if (err)
+                  {
+                    signal_error (loggy, svn_error_createf
+                                  (SVN_ERR_WC_BAD_ADM_LOG,
+                                   0,
+                                   NULL,
+                                   loggy->pool,
+                                   "error getting file affected time on %s",
+                                   pfile->data));
+                    return;
+                  }
+              }
+            
+            
+            /* Scenario 3:  use the integer provided, as-is. */
+            else
+              /* Is atol appropriate here for converting an apr_time_t
+                 to a string and then back again?  Or should we just use
+                 our svn_wc__time_to_string and string_to_time? */
+              prop_time = (apr_time_t) atol (prop_timestr->data);
+          }
+          
+            /** End of Timestamp deductions **/
+
           /* Now write the new entry out */
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
                                           new_revision,
                                           kind,
                                           flags,
-                                          timestamp,
+                                          text_time,
+                                          prop_time,
                                           loggy->pool,
                                           ah);
           if (err)
@@ -622,6 +695,10 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                               svn_node_file,
                                               SVN_WC_ENTRY_CLEAR,
                                               timestamp,
+                                              0, /* FIX THIS.  Is this
+                                                    code aware of
+                                                    properties at all
+                                                    yet? */
                                               loggy->pool,
                                               NULL);
               if (err)

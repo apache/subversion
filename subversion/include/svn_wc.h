@@ -110,8 +110,13 @@ typedef struct svn_wc_entry_t
 
   int flags;                   /* Marks an entry with A, D, C, etc. */
 
-  apr_time_t timestamp;        /* When the entry was last up-to-date.
-                                  (Zero means not available) */ 
+  apr_time_t text_time;        /* When the file's text was last
+                                  up-to-date.  (Zero means not
+                                  available) */
+
+  apr_time_t prop_time;        /* When the file's properties were last
+                                  up-to-date.  (Zero means not
+                                  available) */
 
   apr_hash_t *attributes;      /* All XML attributes, both those
                                   duplicated above and any others.
@@ -122,7 +127,8 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_NAME      "name"
 #define SVN_WC_ENTRY_ATTR_REVISION  "revision"
 #define SVN_WC_ENTRY_ATTR_KIND      "kind"
-#define SVN_WC_ENTRY_ATTR_TIMESTAMP "timestamp"
+#define SVN_WC_ENTRY_ATTR_TEXT_TIME "text-time"
+#define SVN_WC_ENTRY_ATTR_PROP_TIME "prop-time"
 #define SVN_WC_ENTRY_ATTR_CHECKSUM  "checksum"
 #define SVN_WC_ENTRY_ATTR_ADD       "add"
 #define SVN_WC_ENTRY_ATTR_DELETE    "delete"

@@ -480,7 +480,8 @@ check_for_unresolved_file_conflict (svn_string_t *full_path_to_file,
   /* If the working copy has a later timestamp than the entry, then
      assume the conflict has been resolved.  Otherwise, assume the
      conflict is still present.  */
-  if (wc_time > entry->timestamp)
+  if (wc_time > entry->text_time)  /* TODO:  FIX THIS!!!  Make it
+                                      property-aware. */
     return SVN_NO_ERROR;
 
   else

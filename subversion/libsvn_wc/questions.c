@@ -113,17 +113,24 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
    mark it for removal?
 */
 
+enum svn_wc__timestamp_kind
+{
+  svn_wc__text_time = 1,
+  svn_wc__prop_time
+};
 
 
 /* Is FILENAME's timestamp the same as the one recorded in our
-   `entries' file?  Return the answer in EQUAL_P.  */
+   `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_NAME
+   should be one of */
 static svn_error_t *
 timestamps_equal_p (svn_boolean_t *equal_p,
                     svn_string_t *filename,
+                    const enum svn_wc__timestamp_kind timestamp_kind,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_time_t wfile_time;
+  apr_time_t wfile_time, entrytime;
   svn_string_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;
@@ -136,10 +143,30 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     return err;
   entry = apr_hash_get (entries, entryname->data, entryname->len);
 
-  /* Get the timestamp from the working file */
-  err = svn_wc__file_affected_time (&wfile_time, filename, pool);
+  /* Get the timestamp from the working file and the entry */
+  if (timestamp_kind == svn_wc__text_time)
+    {
+      err = svn_wc__file_affected_time (&wfile_time, filename, pool);
+      if (err) return err;
 
-  if (entry == NULL || (! entry->timestamp) || err)
+      entrytime = entry->text_time;
+    }
+  
+  else if (timestamp_kind == svn_wc__prop_time)
+    {
+      svn_string_t *prop_path = svn_wc__adm_path (dirpath,
+                                                  0, /* not tmp */
+                                                  pool,
+                                                  SVN_WC__ADM_PROPS,
+                                                  filename,
+                                                  NULL);
+      err = svn_wc__file_affected_time (&wfile_time, prop_path, pool);
+      if (err) return err;      
+
+      entrytime = entry->prop_time;
+    }
+
+  if (entry == NULL || (! entrytime))
     {
       /* TODO: If either timestamp is inaccessible, the test cannot
          return an answer.  Assume that the timestamps are
@@ -154,8 +181,8 @@ timestamps_equal_p (svn_boolean_t *equal_p,
     svn_string_t *tstr = svn_wc__time_to_string (wfile_time, pool);
     wfile_time = svn_wc__string_to_time (tstr);
   }
-
-  if (wfile_time == entry->timestamp)
+  
+  if (wfile_time == entrytime)
     *equal_p = TRUE;
   else
     *equal_p = FALSE;
@@ -315,7 +342,17 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   svn_error_t *err;
   svn_string_t *textbase_filename;
   svn_boolean_t different_filesizes, equal_timestamps;
-                     
+
+  /* Sanity check:  if the path doesn't exist, return FALSE. */
+  enum svn_node_kind kind;
+  err = svn_io_check_path (filename, &kind, pool);
+  if (err) return err;
+  if (kind != svn_node_file)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }              
+
   /* Get the full path of the textbase revision of filename */
   textbase_filename = svn_wc__text_base_path (filename, 0, pool);
 
@@ -323,7 +360,8 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
      can do is look at timestamps.  */
   if (! textbase_filename)
     {
-      err = timestamps_equal_p (&equal_timestamps, filename, pool);
+      err = timestamps_equal_p (&equal_timestamps, filename,
+                                svn_wc__text_time, pool);
       if (err) return err;
 
       if (equal_timestamps)
@@ -357,7 +395,8 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       
       /* See if the local file's timestamp is the same as the one recorded
          in the administrative directory.  */
-      err = timestamps_equal_p (&equal_timestamps, filename, pool);
+      err = timestamps_equal_p (&equal_timestamps, filename,
+                                svn_wc__text_time, pool);
       if (err) return err;
       
       if (equal_timestamps)
