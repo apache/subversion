@@ -521,7 +521,7 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 7,
               "Error running post-commit hook")
 
-  /* generic ra errors */
+  /* generic RA errors */
 
   SVN_ERRDEF (SVN_ERR_RA_ILLEGAL_URL,
               SVN_ERR_RA_CATEGORY_START + 0,

@@ -781,7 +781,7 @@ svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
 /** Return a cancellation editor that wraps @a wrapped_editor.
  *
  * The @a editor will call @a cancel_func with @a cancel_baton when each of 
- * it's functions are called, continuing on to call the corresponding wrapped 
+ * its functions is called, continuing on to call the corresponding wrapped 
  * function if it returns @c SVN_NO_ERROR.
  *
  * If @a cancel_func is @c NULL, @a *editor is set to @a wrapped_editor and 

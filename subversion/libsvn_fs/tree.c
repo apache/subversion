@@ -1079,10 +1079,10 @@ get_dag (dag_node_t **dag_node_p,
 /* Populating the `changes' table. */
 
 /* Add a change to the changes table in FS, keyed on transaction id
-   TXN_ID, and indicated that a change of kind CHANGE_KIND occured on
+   TXN_ID, and indicated that a change of kind CHANGE_KIND occurred on
    PATH (whose node revision id is--or was, in the case of a
    deletion--NODEREV_ID), and optionally that TEXT_MODs or PROP_MODs
-   occured.  Do all this as part of TRAIL.  */
+   occurred.  Do all this as part of TRAIL.  */
 static svn_error_t *
 add_change (svn_fs_t *fs,
             const char *txn_id,

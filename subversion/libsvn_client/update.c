@@ -117,7 +117,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                                         ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
-     to take a url as easily as a local path?  */
+     to take a URL as easily as a local path?  */
   SVN_ERR (svn_client__get_revision_number
            (&revnum, ra_lib, session, revision, path, pool));
 
@@ -132,7 +132,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                                      traversal_info,
                                      pool));
 
-  /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
+  /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
   SVN_ERR (ra_lib->do_update (session,
                               &reporter, &report_baton,

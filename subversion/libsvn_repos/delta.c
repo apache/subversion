@@ -451,9 +451,9 @@ get_path_revision (svn_fs_root_t *root,
     }
 
   /* If we don't get back a valid revision, this path is mutable in
-     the transaction.  We should probably examing the node on which it
+     the transaction.  We should probably examine the node on which it
      is based, doable by querying for the node-id of the path, and
-     thing examining that node-id's predecessor.  ### this predecessor
+     then examining that node-id's predecessor.  ### This predecessor
      determination isn't exposed via the FS public API right now, so
      for now, we'll just return the SVN_INVALID_REVNUM. */
   return revision;

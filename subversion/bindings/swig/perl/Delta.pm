@@ -36,7 +36,7 @@ SVN::Delta - Subversion delta functions
 SVN::Delta wraps delta related function in subversion. The most
 important one is SVN::Delta::Editor, the interface for describing tree
 deltas. by default SVN::Delta::Editor relays method calls to its
-internal member C<_editor>, which could either be a editor in C (such
+internal member C<_editor>, which could either be an editor in C (such
 as the one you get from get_commit_editor), or another
 SVN::Delta::Editor object.
 

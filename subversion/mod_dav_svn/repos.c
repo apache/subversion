@@ -2741,7 +2741,7 @@ dav_error * dav_svn_working_to_regular_resource(dav_resource *resource)
   /* remove the working flag */
   resource->working = FALSE;
 
-  /* Change the url into a either a baseline-collecton or public one. */
+  /* Change the URL into either a baseline-collection or a public one. */
   if (priv->root.rev == SVN_INVALID_REVNUM)
     {
       serr = svn_fs_youngest_rev(&priv->root.rev, repos->fs, resource->pool);
@@ -2749,12 +2749,12 @@ dav_error * dav_svn_working_to_regular_resource(dav_resource *resource)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not determine youngest rev.");
       
-      /* create public url */
+      /* create public URL */
       path = apr_psprintf(resource->pool, "%s", priv->repos_path);
     }
   else
     {
-      /* if rev was specific, create baseline-collection url */
+      /* if rev was specific, create baseline-collection URL */
       path = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_BC,
                                priv->root.rev, priv->repos_path,
                                0, resource->pool);

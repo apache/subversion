@@ -860,7 +860,7 @@ log_do_committed (struct log_runner *loggy,
         }
     }
               
-  /* Now check for property commits.  If a property commit occured, a
+  /* Now check for property commits.  If a property commit occurred, a
      copy of the "working" property file should have been dumped in
      the admistrative `tmp' area.  We'll let that tmpfile's existence
      be a signal that we need to do post-commit property processing.

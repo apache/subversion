@@ -45,8 +45,8 @@ III. WHY INTERFACES?
 There have been discussions which approach is best to connect subversion with Java software.
 However it has been agreed by all, that a common API should be agreed on if possible.
 While the group developing the SWIG based implementation follow a bottom up approach
-we have taken a top down approach. We tried to define the kind of interface required for a gui
-or a ide plugin.
+we have taken a top down approach. We tried to define the kind of interface required for a GUI
+or an IDE plugin.
 
 IV. WHY NOT 100% PURE JAVA?
 

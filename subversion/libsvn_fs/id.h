@@ -66,7 +66,7 @@ struct svn_fs_id_t
 
 /*** Accessor functions. ***/
 
-/* Create a ID based on NODE_ID, COPY_ID, and TXN_ID, and allocated in
+/* Create an ID based on NODE_ID, COPY_ID, and TXN_ID, and allocated in
    POOL.  */
 svn_fs_id_t *svn_fs__create_id (const char *node_id,
                                 const char *copy_id,

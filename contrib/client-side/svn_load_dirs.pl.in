@@ -1643,7 +1643,7 @@ sub digest_hash_file
   $ctx->digest;
 }
 
-# Read standard input until a line contains either a upper or
+# Read standard input until a line contains either an upper or
 # lowercase y or n.
 sub get_yes_or_no
 {

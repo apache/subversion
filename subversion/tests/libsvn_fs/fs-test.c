@@ -1743,7 +1743,7 @@ merging_commit (const char **msg,
   }
   revisions[revision_count++] = after_rev;
 
-  /* We don't think the A/D/H directory is pulling it's weight...let's
+  /* We don't think the A/D/H directory is pulling its weight...let's
      knock it off.  Oh, and let's re-add iota, too. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[revision_count-1], pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));

@@ -1732,7 +1732,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
             
       /* Before we start removing entries from this dir's entries
          file, mark this directory as "incomplete".  This allows this
-         function to be interruptible and the wc recoverabel by 'svn
+         function to be interruptible and the wc recoverable by 'svn
          up' later on. */
       incomplete_entry.incomplete = TRUE;
       SVN_ERR (svn_wc__entry_modify (adm_access,

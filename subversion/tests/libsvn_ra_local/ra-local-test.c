@@ -107,7 +107,7 @@ get_ra_local_plugin (svn_ra_plugin_t **plugin)
 
 /** The tests **/
 
-/* Open an ra session to a local repository. */
+/* Open an RA session to a local repository. */
 static svn_error_t *
 open_ra_session (const char **msg)
 {
@@ -121,7 +121,7 @@ open_ra_session (const char **msg)
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-open"));
   SVN_ERR (get_ra_local_plugin (&plugin));
 
-  /* Open an ra session into this repository. */
+  /* Open an RA session into this repository. */
   SVN_ERR (plugin->open (&session,
                          svn_stringbuf_create ("file:test-repo-open", pool),
                          pool));
@@ -148,7 +148,7 @@ get_youngest_rev (const char **msg)
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-getrev"));
   SVN_ERR (get_ra_local_plugin (&plugin));
 
-  /* Open an ra session into this repository. */
+  /* Open an RA session into this repository. */
   SVN_ERR (plugin->open (&session,
                          svn_stringbuf_create ("file:test-repo-getrev", pool),
                          pool));

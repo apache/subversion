@@ -1,5 +1,5 @@
 /*
- * switch.c:  implement 'switch' feature via wc & ra interfaces.
+ * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -98,9 +98,9 @@ svn_client_switch (svn_revnum_t *result_rev,
   assert (switch_url && (switch_url[0] != '\0'));
 
   /* ### Note: we don't pass the `recurse' flag as the tree_lock
-     argument to probe_open below, only because the ra layer is
+     argument to probe_open below, only because the RA layer is
      planning to blindly invalidate all wcprops below path anyway, and
-     it needs a full tree lock to do so.  If someday the ra layer gets
+     it needs a full tree lock to do so.  If someday the RA layer gets
      smarter about this, then we can start passing `recurse' below
      again.  See issue #1000 and related commits for details. */
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, TRUE, pool));
@@ -175,7 +175,7 @@ svn_client_switch (svn_revnum_t *result_rev,
                                      &switch_editor, &switch_edit_baton,
                                      traversal_info, pool));
 
-  /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
+  /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR (ra_lib->do_switch (session, &reporter, &report_baton, revnum,
                               target, recurse, switch_url,

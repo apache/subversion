@@ -134,8 +134,8 @@ svn_client_status (svn_revnum_t *result_rev,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      traversal_info, pool));
 
-  /* If this is a real update, we crawl the working copy and let the
-     RA layer drive the editor for real.  Otherwise, we just close the
+  /* If we want to know about out-of-dateness, we crawl the working copy and
+     let the RA layer drive the editor for real.  Otherwise, we just close the
      edit.  :-) */ 
   if (update)
     {

@@ -88,7 +88,7 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
                                                        apr_pool_t *pool);
 
-/* make a editor that "thunks" from C callbacks up to Python */
+/* make an editor that "thunks" from C callbacks up to Python */
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              PyObject *py_editor,

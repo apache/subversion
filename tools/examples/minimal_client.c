@@ -32,7 +32,7 @@
 #include "svn_config.h"
 
 
-/* Display a prmopt and read a one-line response into the provided buffer,
+/* Display a prompt and read a one-line response into the provided buffer,
    removing a trailing newline if present. */
 static svn_error_t *
 prompt_and_read_line(const char *prompt,
