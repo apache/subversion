@@ -1873,12 +1873,16 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
     provider of type @c svn_auth_cred_simple_t that gets/sets
     information from a working copy directory @a wc_dir.  If an access
     baton for @a wc_dir is already open and available, pass it in @a
-    wc_dir_access, else pass NULL. */
+    wc_dir_access, else pass NULL.  If either @a default_username or
+    @a default_password is non-NULL, return the default argument(s)
+    when @c svn_auth_first_credentials is called. */
 void 
 svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
                                void **provider_baton,
                                const char *wc_dir,
                                svn_wc_adm_access_t *wc_dir_access,
+                               const char *default_username,
+                               const char *default_password,
                                apr_pool_t *pool);
 
 

@@ -98,7 +98,7 @@ svn_auth_open (svn_auth_baton_t **auth_baton,
 }
 
 
-svn_error_t *
+void
 svn_auth_register_provider (svn_auth_baton_t *auth_baton,
                             int order,
                             const svn_auth_provider_t *vtable,

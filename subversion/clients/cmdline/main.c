@@ -519,6 +519,7 @@ main (int argc, const char * const *argv)
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
+  svn_auth_cred_simple_t *default_creds;
 
   /* C programs default to the "C" locale by default.  But because svn
      is supposed to be i18n-aware, it should inherit the default
@@ -876,8 +877,16 @@ main (int argc, const char * const *argv)
         }
     }
 
+  /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   command_baton.ctx = svn_client_ctx_create (pool);
+  
+  /* Place any default --username or --password credentials into the cxt. */
+  default_creds = apr_pcalloc (pool, sizeof(*default_creds));
+  default_creds->username = opt_state.auth_username;
+  default_creds->password = opt_state.auth_password;
+  svn_client_ctx_set_default_simple_creds (command_baton.ctx,
+                                           default_creds);
 
   err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)

@@ -29,8 +29,17 @@
 /*** Code. ***/
 
 struct svn_client_ctx_t {
+
+  /* old-style auth baton, soon to die.*/
   svn_client_auth_baton_t *old_auth_baton;
+
+  /* main auth baton. */
   svn_auth_baton_t *auth_baton;
+
+  /* if the application has a 'default' username or password, it's in
+     this structure.  if NULL, then no defaults exist.  */
+  svn_auth_cred_simple_t *default_simple_creds;
+
 };
 
 svn_client_ctx_t *
@@ -39,6 +48,8 @@ svn_client_ctx_create (apr_pool_t *pool)
   return apr_pcalloc (pool, sizeof (svn_client_ctx_t));
 }
 
+
+/** auth_baton accessors */
 void
 svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
                                svn_client_auth_baton_t *old_auth_baton,
@@ -52,4 +63,24 @@ svn_client_auth_baton_t *
 svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx)
 {
   return ctx->old_auth_baton;
+}
+
+svn_auth_baton_t *
+svn_client_ctx_get_auth_baton (svn_client_ctx_t *ctx)
+{
+  return ctx->auth_baton;
+}
+
+/** simple credential accessors  */
+void
+svn_client_ctx_set_default_simple_creds (svn_client_ctx_t *ctx,
+                                         svn_auth_cred_simple_t *creds)
+{
+  ctx->default_simple_creds = creds;
+}
+
+svn_auth_cred_simple_t *
+svn_client_ctx_get_default_simple_creds (svn_client_ctx_t *ctx)
+{
+  return ctx->default_simple_creds;
 }

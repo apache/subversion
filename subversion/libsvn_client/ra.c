@@ -248,8 +248,9 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
+  cbtable->auth_baton = svn_client_ctx_get_auth_baton (ctx); /* new-style */
 
-  cb->auth_baton = svn_client_ctx_get_old_auth_baton (ctx);
+  cb->auth_baton = svn_client_ctx_get_old_auth_baton (ctx); /* old-style */
   cb->base_dir = base_dir;
   cb->base_access = base_access;
   cb->do_store = do_store;

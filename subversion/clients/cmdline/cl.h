@@ -246,7 +246,9 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
                          apr_pool_t *pool);
 
 /* Helper for subcommands: given parsed OPT_STATE arguments from the
-   command-line, put auth info into a structure to pass to libsvn_client. */
+   command-line, return a newly allocated auth_baton in POOL.  This
+   auth_baton will have the cmdline-client's 'prompt' provider
+   registered.  */
 svn_auth_baton_t *
 svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
                            apr_pool_t *pool);
