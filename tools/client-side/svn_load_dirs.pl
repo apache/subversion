@@ -596,7 +596,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                       "lists files and directories that exist in the\n",
                       "directory being imported.  Match up a deleted item\n",
                       "from the left column with an added item from the\n",
-                      "right column.  Note the line numbers on the the left\n",
+                      "right column.  Note the line numbers on the left\n",
                       "which you type into this script to have a rename\n",
                       "performed.\n";
                   }
