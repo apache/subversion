@@ -172,7 +172,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
    *
    * So if we got that error for that reason, and it looks like the
    * user was just depending on the defaults (rather than explicitly
-   * requestion the log for revision 1), then we don't error.  Instead
+   * requesting the log for revision 1), then we don't error.  Instead
    * we just invoke the receiver manually on a hand-constructed log
    * message for revision 0.
    *
