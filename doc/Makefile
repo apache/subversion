@@ -15,7 +15,7 @@ html:
                  > svn-design.html
 
 html-web: html
-	cp ./svn-design.html ../../www
+	cp ./svn-design.html ../../www/
 
 dvi: 
 	tex svn-design.texi 
