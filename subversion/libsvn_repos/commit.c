@@ -529,7 +529,9 @@ close_edit (void *edit_baton,
   /* Commit. */
   err = svn_repos_fs_commit_txn (&conflict, eb->repos, &new_revision, eb->txn);
 
-  if (err)
+  /* We want to abort the transaction *unless* the error code tells us
+     the commit succeeded and something just went wrong in post-commit. */
+  if (err && (err->apr_err != SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       /* ### todo: we should check whether it really was a conflict,
          and return the conflict info if so? */
@@ -544,24 +546,21 @@ close_edit (void *edit_baton,
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
          aborted completely.  No second chances;  the user simply
-         needs to update and commit again  :) */
+         needs to update and commit again  :)
 
-      /* We don't care about the error return here, we want to return the
-         original error. There's likely something seriously wrong already, and
-         we don't want to cover it up.  */
-
-      /* The specific post-commit-hook errorcode implies that the
-         commit already went through; we only abort the transaction we
-         know the commit *didn't* happen.  */
-      if (err->apr_err != SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED)
-        svn_fs_abort_txn (eb->txn);
-
+         We ignore the possible error result from svn_fs_abort_txn();
+         it's more important to return the original error. */
+      svn_fs_abort_txn (eb->txn);
       return err;
     }
 
   /* Pass new revision information to the caller's callback. */
   {
     svn_string_t *date, *author;
+
+    /* Even if there was a post-commit hook failure, it's more serious
+       if one of the calls here fails, so we use the SVN_ERR() wrapper
+       here, while saving the possible post-commit error for later. */
 
     SVN_ERR (svn_fs_revision_prop (&date, svn_repos_fs (eb->repos),
                                    new_revision, SVN_PROP_REVISION_DATE,
@@ -577,9 +576,8 @@ close_edit (void *edit_baton,
                               eb->callback_baton));
   }
 
-  return SVN_NO_ERROR;
+  return err;
 }
-
 
 
 static svn_error_t *

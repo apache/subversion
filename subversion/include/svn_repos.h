@@ -373,9 +373,9 @@ svn_repos_replay (svn_fs_root_t *root,
  * invoke @a callback with the new revision number, the commit date (as a
  * <tt>const char *</tt>), commit author (as a <tt>const char *</tt>), and
  * @a callback_baton as arguments.  If @a callback returns an error, that
- * error will be returned from @c close_edit, otherwise @c close_edit will
- * return successfully (unless it encountered an error before invoking
- * @a callback).
+ * error will be returned from @c close_edit, otherwise if there was a
+ * post-commit hook failure, then that error will be returned and will
+ * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
  */
 svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           void **edit_baton,
