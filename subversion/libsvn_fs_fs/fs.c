@@ -110,7 +110,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 }
 
 
-/* Copying a live Berkeley DB-base filesystem.  */
+/* Copying a live FSFS filesystem. (Despite the name.) */
 
 svn_error_t *
 svn_fs_hotcopy_berkeley (const char *src_path, 
@@ -118,7 +118,7 @@ svn_fs_hotcopy_berkeley (const char *src_path,
                          svn_boolean_t clean_logs, 
                          apr_pool_t *pool)
 {
-  abort ();
+  SVN_ERR (svn_fs__fs_hotcopy (src_path, dest_path, pool));
 
   return SVN_NO_ERROR;
 }

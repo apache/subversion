@@ -24,6 +24,12 @@ svn_error_t *svn_fs__fs_open (svn_fs_t *fs,
                               const char *path,
                               apr_pool_t *pool);
 
+/* Copy the fs_fs filesystem at SRC_PATH into a new copy at DST_PATH.
+   Use POOL for temporary allocations. */
+svn_error_t *svn_fs__fs_hotcopy (const char *src_path,
+                                 const char *dst_path,
+                                 apr_pool_t *pool);
+
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any
    allocations in POOL. */
 svn_error_t *svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
