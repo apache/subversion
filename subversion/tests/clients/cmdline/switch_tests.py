@@ -841,6 +841,53 @@ def bad_intermediate_urls(sbox):
     raise svntest.Failure
   
 
+
+#----------------------------------------------------------------------
+# Regression test for issue #1825: failed switch may corrupt
+# working copy
+
+def obstructed_switch(sbox):
+  "obstructed switch"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E_url      = svntest.main.current_repo_url + '/A/B/E'
+  E_url2     = svntest.main.current_repo_url + '/A/B/Esave'
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp', '-m', 'msgcopy', E_url, E_url2)
+
+  E_path     = os.path.join(wc_dir, 'A', 'B', 'E')
+  alpha_path = os.path.join(E_path, 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E/alpha')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  svntest.main.file_append(alpha_path, "hello")
+  out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
+  for line in err:
+    if line.find("object of the same name already exists") != -1:
+      break
+  else:
+    raise svntest.Failure
+
+  os.remove(alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', E_url2, E_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', wc_rev=3)
+  expected_status.tweak('A/B/E', switched='S')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -860,6 +907,7 @@ test_list = [ None,
               nonrecursive_switching,
               failed_anchor_is_target,
               bad_intermediate_urls,
+              XFail(obstructed_switch),
              ]
 
 if __name__ == '__main__':
