@@ -201,6 +201,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
             (*diff_ref)->latest_start = latest_start - 1;
             (*diff_ref)->latest_length = lcs->position[1]->offset
                                          - latest_start;
+            (*diff_ref)->resolved_diff = NULL;
 
             diff_ref = &(*diff_ref)->next;
           }
@@ -221,6 +222,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
         (*diff_ref)->modified_length = lcs->length;
         (*diff_ref)->latest_start = latest_start - 1;
         (*diff_ref)->latest_length = lcs->length;
+        (*diff_ref)->resolved_diff = NULL;
 
         diff_ref = &(*diff_ref)->next;
 
