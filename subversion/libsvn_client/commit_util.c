@@ -167,7 +167,7 @@ harvest_committables (apr_hash_t *committables,
          entry for it (we were going to have to do this eventually to
          recurse anyway, so... ) */
       svn_wc_entry_t *e = NULL;
-      if (svn_wc_entries_read (&entries, path, subpool))
+      if (svn_wc_entries_read (&entries, path, FALSE, subpool))
         entries = NULL;
 
       if ((entries) 
@@ -420,7 +420,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                 (((svn_stringbuf_t **) targets->elts)[i]));
 
       /* No entry?  This TARGET isn't even under version control! */
-      SVN_ERR (svn_wc_entry (&entry, target, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
       if (! entry)
         return svn_error_create 
           (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, target->data);
@@ -454,7 +454,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           svn_path_split (target, &parent, &basename, pool);
           if (svn_path_is_empty (parent))
             parent = svn_stringbuf_create (".", pool);
-          SVN_ERR (svn_wc_entry (&p_entry, parent, pool));
+          SVN_ERR (svn_wc_entry (&p_entry, parent, FALSE, pool));
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, 0, NULL, pool, 
@@ -518,7 +518,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   *locked_dirs = apr_hash_make (pool);
 
   /* Read the entry for TARGET. */
-  SVN_ERR (svn_wc_entry (&entry, target, pool));
+  SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
   if (! entry)
     return svn_error_create 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, target->data);

@@ -45,7 +45,7 @@ svn_client_propset (const char *propname,
   /* ### be nice to avoid this */
   svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
 
-  SVN_ERR (svn_wc_entry (&node, target_buf, pool));
+  SVN_ERR (svn_wc_entry (&node, target_buf, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 
@@ -55,7 +55,7 @@ svn_client_propset (const char *propname,
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
-      SVN_ERR (svn_wc_entries_read (&entries, target_buf, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, target_buf, FALSE, pool));
 
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
@@ -114,7 +114,7 @@ recursive_propget (apr_hash_t *props,
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  SVN_ERR (svn_wc_entries_read (&entries, target, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, target, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
@@ -177,7 +177,7 @@ svn_client_propget (apr_hash_t **props,
   /* ### be nice to avoid this */
   svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
 
-  SVN_ERR (svn_wc_entry (&node, target_buf, pool));
+  SVN_ERR (svn_wc_entry (&node, target_buf, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", target);
@@ -230,7 +230,7 @@ recursive_proplist (apr_array_header_t *props,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
 
-  SVN_ERR (svn_wc_entries_read (&entries, target, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, target, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
@@ -279,7 +279,7 @@ svn_client_proplist (apr_array_header_t **props,
   /* ### be nice to avoid this */
   svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
 
-  SVN_ERR (svn_wc_entry (&entry, target_buf, pool));
+  SVN_ERR (svn_wc_entry (&entry, target_buf, FALSE, pool));
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 

@@ -74,7 +74,7 @@ svn_cl__propedit (apr_getopt_t *os,
         propval = svn_string_create ("", pool);
 
       /* Split the path if it is a file path. */
-      SVN_ERR (svn_wc_entry (&entry, target, pool));
+      SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
       if (! entry)
         return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                                  pool, target->data);

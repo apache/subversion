@@ -200,7 +200,7 @@ close_directory (void *dir_baton)
       svn_boolean_t merged, tc, pc;
       apr_pool_t *subpool = svn_pool_create (eb->pool);
 
-      SVN_ERR (svn_wc_entry (&entry, db->path, subpool));
+      SVN_ERR (svn_wc_entry (&entry, db->path, FALSE, subpool));
       SVN_ERR (svn_wc_conflicted_p (&tc, &pc, db->path, entry, subpool));
       if (! pc)
         SVN_ERR (svn_wc_props_modified_p (&merged, db->path, subpool));
@@ -243,7 +243,7 @@ close_file (void *file_baton)
     svn_stringbuf_t *pdir = svn_stringbuf_dup (fb->path, subpool);
     svn_path_remove_component (pdir);
 
-    SVN_ERR (svn_wc_entry (&entry, fb->path, subpool));
+    SVN_ERR (svn_wc_entry (&entry, fb->path, FALSE, subpool));
     if (entry)
       {
         SVN_ERR (svn_wc_conflicted_p (&tc, &pc, pdir, entry, subpool));

@@ -617,7 +617,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 
   /* Figure out if 'name' is a dir or a file */
   svn_path_add_component (full_path, sname);
-  svn_wc_entry (&entry, full_path, loggy->pool);
+  svn_wc_entry (&entry, full_path, FALSE, loggy->pool);
 
   if (! entry)
     /* Hmm....this entry is already absent from the revision control
@@ -688,7 +688,7 @@ log_do_committed (struct log_runner *loggy,
      entry, or if the entry states that our item is not either "this
      dir" or a file kind, perhaps this isn't really the entry our log
      creator was expecting.  */
-  SVN_ERR (svn_wc_entry (&entry, full_path, pool));
+  SVN_ERR (svn_wc_entry (&entry, full_path, TRUE, pool));
   if ((! entry) || ((! is_this_dir) && (entry->kind != svn_node_file)))
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, pool,
                               "log command for dir '%s' is mislocated", name);
@@ -739,7 +739,7 @@ log_do_committed (struct log_runner *loggy,
               
       /* Loop over all children entries, look for items scheduled for
          deletion. */
-      SVN_ERR (svn_wc_entries_read (&entries, loggy->path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, loggy->path, TRUE, pool));
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
@@ -977,10 +977,10 @@ log_do_committed (struct log_runner *loggy,
   if (wc_root)
     return SVN_NO_ERROR;
 
-  /* Make sure our entry exists in the parent (if the parent
-             is even a SVN working copy directory). */
+  /* Make sure our entry exists in the parent (if the parent is even a
+     SVN working copy directory). */
   svn_path_split (loggy->path, &pdir, &basename, pool);
-  SVN_ERR (svn_wc_entries_read (&entries, pdir, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, pdir, FALSE, pool));
   if (apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING))
     {
       if ((err = svn_wc__entry_modify (pdir, basename, entry,
@@ -1177,7 +1177,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   enum svn_node_kind kind;
 
   /* Recurse on versioned subdirs first, oddly enough. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {

@@ -56,7 +56,7 @@ svn_wc_merge (const char *left,
   svn_path_split (full_tgt_path, &mt_pt, &mt_bn, pool);
 
   /* Sanity check:  the merge target must be under revision control. */
-  SVN_ERR (svn_wc_entry (&entry, full_tgt_path, pool));
+  SVN_ERR (svn_wc_entry (&entry, full_tgt_path, FALSE, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,

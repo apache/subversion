@@ -53,7 +53,7 @@ svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool)
        "svn_wc__remove_wcprops: '%s' is not a directory.", path->data);
 
   /* Read PATH's entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
 
   /* Remove this_dir's wcprops */
   SVN_ERR (svn_wc__wcprop_path (&wcprop_path, path, 0, subpool));
@@ -141,7 +141,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an
      explanation. */
-  SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, FALSE, pool));
   if (! src_entry)
     {
       return svn_error_createf 
@@ -249,7 +249,7 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an
      explanation. */
-  SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, FALSE, pool));
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url))
     return svn_error_createf 

@@ -132,6 +132,9 @@ struct entries_accumulator
   /* The parser that's parsing it, for signal_expat_bailout(). */
   svn_xml_parser_t *parser;
 
+  /* Should we include 'deleted' entries in the hash? */
+  svn_boolean_t show_deleted;
+
   /* Don't leave home without one. */
   apr_pool_t *pool;
 };
@@ -295,6 +298,32 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     
   }
 
+  /* Is this entry deleted? */
+  {
+    svn_stringbuf_t *deletedstr;
+      
+    deletedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_DELETED, 
+                               APR_HASH_KEY_STRING);
+        
+    entry->deleted = FALSE;
+    if (deletedstr)
+      {
+        if (! strcmp (deletedstr->data, "true"))
+          entry->deleted = TRUE;
+        else if (! strcmp (deletedstr->data, "false"))
+          entry->deleted = FALSE;
+        else if (! strcmp (deletedstr->data, ""))
+          entry->deleted = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_DELETED);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
+      }
+  }
 
   /* Attempt to set up timestamps. */
   {
@@ -404,7 +433,10 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
   /* Find the name and set up the entry under that name.  This
      should *NOT* be NULL, since svn_wc__atts_to_entry() should
      have made it into SVN_WC_ENTRY_THIS_DIR.  */
-  apr_hash_set (accum->entries, entry->name->data, entry->name->len, entry);
+  if ((entry->deleted) && (! accum->show_deleted))
+    ;
+  else
+    apr_hash_set (accum->entries, entry->name->data, entry->name->len, entry);
 }
 
 
@@ -509,6 +541,7 @@ resolve_to_defaults (apr_hash_t *entries,
 static svn_error_t *
 read_entries (apr_hash_t *entries,
               svn_stringbuf_t *path,
+              svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -526,6 +559,7 @@ read_entries (apr_hash_t *entries,
   /* Set up userData for the XML parser. */
   accum = apr_palloc (pool, sizeof (*accum));
   accum->entries = entries;
+  accum->show_deleted = show_deleted;
   accum->pool = pool;
 
   /* Create the XML parser */
@@ -570,6 +604,7 @@ read_entries (apr_hash_t *entries,
 svn_error_t *
 svn_wc_entry (svn_wc_entry_t **entry,
               svn_stringbuf_t *path,
+              svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
   enum svn_node_kind kind;
@@ -596,7 +631,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
            "svn_wc_entry: %s is not a working copy directory", path->data);
 
 
-      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, path, show_deleted, pool));
 
       *entry
         = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
@@ -630,7 +665,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       /* ### it would be nice to avoid reading all of these. or maybe read
          ### them into a subpool and copy the one that we need up to the
          ### specified pool. */
-      SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, dir, show_deleted, pool));
       
       *entry = apr_hash_get (entries, basename->data, basename->len);
     }
@@ -747,13 +782,14 @@ check_entries (apr_hash_t *entries,
 svn_error_t *
 svn_wc_entries_read (apr_hash_t **entries,
                      svn_stringbuf_t *path,
+                     svn_boolean_t show_deleted,
                      apr_pool_t *pool)
 {
   apr_hash_t *new_entries;
 
   new_entries = apr_hash_make (pool);
 
-  SVN_ERR (read_entries (new_entries, path, pool));
+  SVN_ERR (read_entries (new_entries, path, show_deleted, pool));
 
   *entries = new_entries;
   return SVN_NO_ERROR;
@@ -865,6 +901,11 @@ write_entry (svn_stringbuf_t **output,
   if (entry->copyfrom_url)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
                   entry->copyfrom_url);
+
+  /* Deleted state */
+  valuestr = entry->deleted ? svn_stringbuf_create ("true", pool) : NULL;
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
+                valuestr);
 
   /* Timestamps */
   if (entry->text_time)
@@ -1104,6 +1145,10 @@ fold_entry (apr_hash_t *entries,
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_COPYFROM_REV)
     cur_entry->copyfrom_rev = entry->copyfrom_rev;
+
+  /* Deleted state */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
+    cur_entry->deleted = entry->deleted;
 
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
@@ -1400,7 +1445,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   assert (entry);
 
   /* Load PATH's whole entries file. */
-  SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+  SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
   /* Ensure that NAME is valid. */
   if (name == NULL)

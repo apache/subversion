@@ -1020,7 +1020,8 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
           /* If we haven't already read the entry in, do so now. */
           if (! entry)
             SVN_ERR (svn_wc_entry (&entry, 
-                                   svn_stringbuf_create (path, pool), pool));
+                                   svn_stringbuf_create (path, pool),
+                                   FALSE, pool));
 
           /* Now, try to expand the keyword. */
           SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,
