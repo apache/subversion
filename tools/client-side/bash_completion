@@ -22,7 +22,7 @@ _svn()
               list ls log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
-              status switch update --version'
+              status switch update version --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -58,7 +58,8 @@ _svn()
 		cmdOpts="$qOpts"
 		;;
 	add)
-		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
+		cmdOpts="--auto-props --no-auto-props --force --targets \
+		         $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose"
@@ -148,6 +149,9 @@ _svn()
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd"
+		;;
+	version)
+		cmdOpts="$qOpts"
 		;;
 	*)
 		;;
