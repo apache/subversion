@@ -249,31 +249,51 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
 
   It is an error to pass both a BRANCH_NAME and a TAG_NAME."""
 
+  # For a while, we treated each top-level subdir of the CVS
+  # repository as a "project root" and interpolated the appropriate
+  # genealogy (trunk|tag|branch) in according to the official
+  # recommended layout.  For example, the path '/foo/bar/baz.c' on
+  # branch 'Rel2' would become
+  #
+  #   /foo/branches/Rel2/bar/baz.c
+  #
+  # and on trunk it would become
+  #
+  #   /foo/trunk/bar/baz.c
+  #
+  # However, we went back to the older and simpler method of just
+  # prepending the genealogy to the front, instead of interpolating.
+  # So now we produce:
+  #
+  #   /branches/Rel2/foo/bar/baz.c
+  #   /trunk/foo/bar/baz.c
+  #
+  # Why?  Well, Jack Repenning pointed out that this way is much
+  # friendlier to "anonymously rooted subtrees" (that's a tree where
+  # the name of the top level dir doesn't matter, the point is that if
+  # you cd into it and, say, run 'make', something good will happen).
+  # By interpolating, we made it impossible to point cvs2svn at some
+  # subdir in the CVS repository and convert it as a project, because
+  # we'd treat every subdir underneath it as an independent project
+  # root, which is probably not what the user wanted.
+  #
+  # Also, see Blair Zajac's post
+  #
+  #    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=38965
+  #
+  # and the surrounding thread, for why what people really want is a
+  # way of specifying an in-repository prefix path, not interpolation.
+
   if branch_name and tag_name:
     sys.stderr.write('make_path() miscalled, both branch and tag given')
     sys.exit(1)
 
-  first_sep = path.find('/')
-
-  if first_sep == -1:
-    ret_path = ''
-    first_sep = 0
-    extra_sep = '/'
-  else:
-    ret_path = path[:first_sep] + '/'
-    extra_sep = ''
-
   if branch_name:
-    ret_path = ret_path + ctx.branches_base + '/' \
-               + branch_name + extra_sep + path[first_sep:]
+    return ctx.branches_base + '/' + branch_name + '/' + path
   elif tag_name:
-    ret_path = ret_path + ctx.tags_base + '/' \
-               + tag_name + extra_sep + path[first_sep:]
+    return ctx.tags_base + '/' + tag_name + '/' + path
   else:
-    ret_path = ret_path + ctx.trunk_base + extra_sep \
-               + path[first_sep:]
-
-  return ret_path
+    return ctx.trunk_base + '/' + path
 
 
 def relative_name(cvsroot, fname):
