@@ -1,18 +1,29 @@
 Version 0.29.0 (released ?? Sep 2003, revision ????)
-http://svn.collab.net/repos/svn/tags/0.28.0
+http://svn.collab.net/repos/svn/tags/0.29.0
 
  User-visible changes:
  * 'svn status' now streams its response.  (r6913, #1426)
  * 'svn status' now recurses into externals (r6913, #1428)
+ * new 'svnadmin verify' command to verify repository data (r6851, #1074)
  * SSL changes:  (r6958, #1371)
      - dropped support for PEM-encoded client certs, only accept PCKS12 now.
-     - ~/.subversion/'servers' file changed: 
-          'ssl-authority-files' is now list of CA files
-          no more 'ssl-client-cert-type' and 'ssl-client-key-file' variables.
+     - 'ssl-authority-files' is now a list of CA files
+     - no more 'ssl-client-cert-type' and 'ssl-client-key-file' variables.
+ * new svndumpfilter option: '--preserve-revprops' to keep props on empty revs
+ * mailer.py improvement:  handle multiple match groups (r6940)
+ * remove in-repos/on-disk repository template features, till post-1.0 (r6965)
+ * various cleanups to the Book
+ * other bugfixes: switch deletion bug (r6890, #1496), status
+   repos-delete bug (r6913, #1469), reversion of '.' (r6953, #854).
 
  Developer-visible changes:
  * GUI developers take note: prompting API changed (r6928, #1214)
- * we now compile against either neon 0.23.9 *or* neon 0.24.0 (r6958, #1371)
+ * now compile against neon-0.24; 0.23.9 support to be dropped soon. (r6958)
+ * various improvements to Perl/SWIG bindings
+ * tree re-org:  non-core utilities split into 'tools' and 'contrib' areas.
+ * some gen_make.py/gen-base.py improvements
+ * configure.in CFLAGS bugfix (r6963)
+ * stop caling deprecated APIs in APR, in preparation for upcoming APR-1.0.
 
 
 Version 0.28.2 (released 29 Aug 2003, revision 6946)
@@ -28,12 +39,14 @@ http://svn.collab.net/repos/svn/tags/0.28.2
       This is a temporary fix for a larger design problem.  See issue
       http://subversion.tigris.org/issues/show_bug.cgi?id=1499
 
+
 Version 0.28.1
 (released 28 Aug 2003,http://svn.collab.net/repos/svn/tags/0.28.1)
 
   There are no changes in this release.
   It is strictly an updated release, build with the correct version
   of autoconf; autconf-2.57
+
 
 Version 0.28.0 (released 27 August 2003, rev 6894, branches/release-0.28)
 (http://svn.collab.net/repos/svn/tags/0.28)
