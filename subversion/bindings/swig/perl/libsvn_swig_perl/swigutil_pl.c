@@ -34,7 +34,7 @@
 /* cache SWIG_TypeQuery results in a perl hash */
 static HV *type_cache = NULL;
 
-#define _SWIG_TYPE(name) _swig_perl_type_query(name, sizeof (name)-1)
+#define _SWIG_TYPE(name) _swig_perl_type_query(name, 0)
 #define POOLINFO         _SWIG_TYPE("apr_pool_t *")
 
 static swig_type_info *_swig_perl_type_query (const char *typename, U32 klen)
@@ -123,7 +123,7 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              const char *typename,
                                              apr_pool_t *pool)
 {
-    swig_type_info *tinfo = _swig_perl_type_query(typename, 0);
+    swig_type_info *tinfo = _SWIG_TYPE(typename);
     return svn_swig_pl_objs_to_hash (source, tinfo, pool);
 }
 
