@@ -1027,6 +1027,10 @@ svn_client_relocate (const char *dir,
  * If @a ctx->notify_func is non-null, then for each item reverted,
  * call @a ctx->notify_func with @a ctx->notify_baton and the path of
  * the reverted item.
+ *
+ * If an item specified for reversion is not under version control,
+ * then do not error, just invoke @a ctx->notify_func with @a
+ * ctx->notify_baton, using notification code @a svn_wc_notify_skip.
  */
 svn_error_t *
 svn_client_revert (const apr_array_header_t *paths,
