@@ -16,6 +16,7 @@
 #include <apr_pools.h>
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_path.h"
 
 #include "../../libsvn_fs/fs.h"
 #include "../../libsvn_fs/dag.h"
@@ -30,6 +31,7 @@ apr_pool_t *pool;
 /*-------------------------------------------------------------------*/
 
 /** Helper routines. **/
+
 
 
 static void
@@ -131,6 +133,149 @@ set_file_contents (svn_fs_root_t *root,
 
   return SVN_NO_ERROR;
 }
+
+
+/* The Helper Functions to End All Helper Functions */
+
+/* Structure used for testing integrity of the filesystem's revision
+   using validate_tree().  cmpilato todo: does this need namespace
+   protection? */
+typedef struct tree_test_entry_t
+{
+  const char *path;     /* full path of this node */
+  int is_dir;           /* is this node expected to be a directory? */
+  const char *contents; /* text contents (ignored for directories) */
+}
+tree_test_entry_t;
+  
+
+/* Read all the entries in directory PATH under transaction or
+   revision root ROOT, copying their full paths into the TREE_ENTRIES
+   hash, and recursing when those entries are directories */
+static svn_error_t *
+get_dir_entries (apr_hash_t *tree_entries,
+                 svn_fs_root_t *root,
+                 svn_string_t *path)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+
+  SVN_ERR (svn_fs_dir_entries (&entries, root, path->data, pool));
+  
+  /* Copy this list to the master list with the path prepended to the
+     names */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+      svn_string_t *full_path;
+      int is_dir;
+ 
+      apr_hash_this (hi, &key, &keylen, &val);
+      dirent = val;
+
+      /* Calculate the full path of this entry (by appending the name
+         to the path thus far) */
+      full_path = svn_string_dup (path, pool);
+      svn_path_add_component (full_path, 
+                              svn_string_create (dirent->name, pool),
+                              svn_path_repos_style); 
+
+      /* Now, copy this dirent to the master hash, but this time, use
+         the full path for the key */
+      apr_hash_set (tree_entries, full_path->data, 
+                    APR_HASH_KEY_STRING, dirent);
+
+      /* If this entry is a directory, recurse into the tree. */
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, full_path->data, pool));
+      if (is_dir)
+        SVN_ERR (get_dir_entries (tree_entries, root, full_path));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+validate_tree_entry (svn_fs_root_t *root,
+                     tree_test_entry_t *entry)
+{
+  svn_stream_t *rstream;
+  svn_string_t *rstring;
+  int is_dir;
+
+  /* Verify that this is the expected type of node */
+  SVN_ERR (svn_fs_is_dir (&is_dir, root, entry->path, pool));
+  if ((!is_dir && entry->is_dir) || (is_dir && !entry->is_dir))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "node `%s' in tree was of unexpected node type", 
+       entry->path);
+
+  /* Verify that the contents are as expected (files only) */
+  if (! is_dir)
+    {
+      SVN_ERR (svn_fs_file_contents (&rstream, root, entry->path, pool));  
+      SVN_ERR (stream_to_string (&rstring, rstream));
+      if (! svn_string_compare (rstring, 
+                                svn_string_create (entry->contents, pool)))
+        return svn_error_createf 
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "node `%s' in tree had unexpected contents",
+           entry->path);
+    }
+
+  return SVN_NO_ERROR;
+}
+                     
+
+/* Given a transaction or revision root (ROOT), check to see if the
+   tree that grows from that root has all the path entries, and only
+   those entries, passed in the array ENTRIES (which is an array of
+   NUM_ENTRIES tree_test_entry_t's) */
+static svn_error_t *
+validate_tree (svn_fs_root_t *root,
+               tree_test_entry_t *entries,
+               int num_entries)
+{
+  apr_hash_t *tree_entries;
+  int i;
+  svn_string_t *root_dir = svn_string_create ("", pool);
+  
+  /* Create our master hash for storing the entries */
+  tree_entries = apr_hash_make (pool);
+  
+  /* Begin the recursive directory entry dig */
+  SVN_ERR (get_dir_entries (tree_entries, root, root_dir));
+
+  if (! entries)
+    return svn_error_create
+      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+       "validation requested against non-existant control data");
+
+  if (num_entries != apr_hash_count (tree_entries))
+    return svn_error_create
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "unexpected number of items in tree");
+
+  for (i = 0; i < num_entries; i++)
+    {
+      void *val;
+      
+      /* Verify that the entry exists in our full list of entries. */
+      val = apr_hash_get (tree_entries, entries[i].path, APR_HASH_KEY_STRING);
+      if (! val)
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "failed to find expected node `%s' in tree", 
+           entries[i].path);
+      SVN_ERR (validate_tree_entry (root, &entries[i]));
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /*-----------------------------------------------------------------*/
 
@@ -506,18 +651,18 @@ check_greek_tree_under_root (svn_fs_root_t *rev_root)
 
   const char *file_contents[12][2] =
   {
-    { "iota", "This is the file 'iota'." },
-    { "A/mu", "This is the file 'mu'." },
-    { "A/B/lambda", "This is the file 'lambda'." },
-    { "A/B/E/alpha", "This is the file 'alpha'." },
-    { "A/B/E/beta", "This is the file 'beta'." },
-    { "A/D/gamma", "This is the file 'gamma'." },
-    { "A/D/G/pi", "This is the file 'pi'." },
-    { "A/D/G/rho", "This is the file 'rho'." },
-    { "A/D/G/tau", "This is the file 'tau'." },
-    { "A/D/H/chi", "This is the file 'chi'." },
-    { "A/D/H/psi", "This is the file 'psi'." },
-    { "A/D/H/omega", "This is the file 'omega'." }
+    { "iota", "This is the file 'iota'.\n" },
+    { "A/mu", "This is the file 'mu'.\n" },
+    { "A/B/lambda", "This is the file 'lambda'.\n" },
+    { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+    { "A/B/E/beta", "This is the file 'beta'.\n" },
+    { "A/D/gamma", "This is the file 'gamma'.\n" },
+    { "A/D/G/pi", "This is the file 'pi'.\n" },
+    { "A/D/G/rho", "This is the file 'rho'.\n" },
+    { "A/D/G/tau", "This is the file 'tau'.\n" },
+    { "A/D/H/chi", "This is the file 'chi'.\n" },
+    { "A/D/H/psi", "This is the file 'psi'.\n" },
+    { "A/D/H/omega", "This is the file 'omega'.\n" }
   };
 
   /* Loop through the list of files, checking for matching content. */
@@ -543,48 +688,48 @@ greek_tree_under_root (svn_fs_root_t *txn_root)
 {
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (set_file_contents (txn_root, "iota",
-                              "This is the file 'iota'."));
+                              "This is the file 'iota'.\n"));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
   SVN_ERR (set_file_contents (txn_root, "A/mu",
-                              "This is the file 'mu'."));
+                              "This is the file 'mu'.\n"));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/lambda",
-                              "This is the file 'lambda'."));
+                              "This is the file 'lambda'.\n"));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/alpha",
-                              "This is the file 'alpha'."));
+                              "This is the file 'alpha'.\n"));
   SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
   SVN_ERR (set_file_contents (txn_root, "A/B/E/beta",
-                              "This is the file 'beta'."));
+                              "This is the file 'beta'.\n"));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/F", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/C", pool));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/D", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/gamma", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/gamma",
-                              "This is the file 'gamma'."));
+                              "This is the file 'gamma'.\n"));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/G", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/pi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/pi",
-                              "This is the file 'pi'."));
+                              "This is the file 'pi'.\n"));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/rho", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/rho",
-                              "This is the file 'rho'."));
+                              "This is the file 'rho'.\n"));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/tau", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/G/tau",
-                              "This is the file 'tau'."));
+                              "This is the file 'tau'.\n"));
   SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/H", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/chi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/chi",
-                              "This is the file 'chi'."));
+                              "This is the file 'chi'.\n"));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/psi", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/psi",
-                              "This is the file 'psi'."));
+                              "This is the file 'psi'.\n"));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/omega", pool));
   SVN_ERR (set_file_contents (txn_root, "A/D/H/omega",
-                              "This is the file 'omega'."));
+                              "This is the file 'omega'.\n"));
   return SVN_NO_ERROR;
 }
 
@@ -1797,6 +1942,9 @@ basic_commit (const char **msg)
   /* Commit it. */
   SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn));
 
+  /* Close the transaction */
+  SVN_ERR (svn_fs_close_txn (txn));
+
   /* Make sure it's a different revision than before. */
   if (after_rev == before_rev)
     return svn_error_create
@@ -1809,12 +1957,74 @@ basic_commit (const char **msg)
   /* Check the tree. */
   SVN_ERR (check_greek_tree_under_root (revision_root));
 
-  /* Close the transaction and fs. */
-  SVN_ERR (svn_fs_close_txn (txn));
+  /* Close the fs. */
   SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
+
+
+
+static svn_error_t *
+test_tree_node_validation (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *revision_root;
+  svn_revnum_t after_rev;
+  const char *conflict;
+  tree_test_entry_t expected_entries[] = {
+    /* path, is_dir, contents */
+    { "iota",        0, "This is the file 'iota'.\n" },
+    { "A",           1, "" },
+    { "A/mu",        0, "This is the file 'mu'.\n" },
+    { "A/B",         1, "" },
+    { "A/B/lambda",  0, "This is the file 'lambda'.\n" },
+    { "A/B/E",       1, "" },
+    { "A/B/E/alpha", 0, "This is the file 'alpha'.\n" },
+    { "A/B/E/beta",  0, "This is the file 'beta'.\n" },
+    { "A/B/F",       1, "" },
+    { "A/C",         1, "" },
+    { "A/D",         1, "" },
+    { "A/D/gamma",   0, "This is the file 'gamma'.\n" },
+    { "A/D/G",       1, "" },
+    { "A/D/G/pi",    0, "This is the file 'pi'.\n" },
+    { "A/D/G/rho",   0, "This is the file 'rho'.\n" },
+    { "A/D/G/tau",   0, "This is the file 'tau'.\n" },
+    { "A/D/H",       1, "" },
+    { "A/D/H/chi",   0, "This is the file 'chi'.\n" },
+    { "A/D/H/psi",   0, "This is the file 'psi'.\n" },
+    { "A/D/H/omega", 0, "This is the file 'omega'.\n" }
+  };
+
+  *msg = "testing tree validation helper";
+
+  /* Prepare a filesystem. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-validate-tree-entries"));
+
+  /* In a txn, create the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (greek_tree_under_root (txn_root));
+
+  /* Carefully validate that tree in the transaction. */
+  SVN_ERR (validate_tree (txn_root, expected_entries, 20));
+
+  /* Go ahead and commit the tree */
+  SVN_ERR (svn_fs_commit_txn (&conflict, &after_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Carefully validate that tree in the new revision, now. */
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool));
+  SVN_ERR (check_greek_tree_under_root (revision_root));
+  SVN_ERR (validate_tree (revision_root, expected_entries, 20));
+
+  /* Close the filesystem. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Commit with merging (committing against non-youngest). */ 
@@ -1852,6 +2062,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   node_props,
   delete_mutables,
   abort_txn,
+  test_tree_node_validation,
   merge_trees,
   /* fetch_youngest_rev, */
   basic_commit,
