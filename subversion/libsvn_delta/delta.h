@@ -45,6 +45,14 @@ typedef struct svn_txdelta__ops_baton_t {
 } svn_txdelta__ops_baton_t;
 
 
+/* Context for composing windows. */
+typedef struct svn_txdelta__compose_ctx_t
+{
+  apr_off_t sview_offset;       /* Last source view offset */
+  svn_boolean_t trivial;        /* TRUE if the composition is trivial */
+} svn_txdelta__compose_ctx_t;
+
+
 /* Insert a delta op into the delta window being built via BUILD_BATON. If
    OPCODE is svn_delta_new, bytes from NEW_DATA are copied into the window
    data and OFFSET is ignored.  Otherwise NEW_DATA is ignored. All
@@ -77,7 +85,7 @@ void svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
-                              /*FIXME:*/apr_off_t *sview_offset,
+                              svn_txdelta__compose_ctx_t *context,
                               apr_pool_t *pool);
 
 

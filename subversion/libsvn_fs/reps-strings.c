@@ -245,6 +245,7 @@ rep_undeltify_range (svn_fs_t *fs,
     {
       svn_fs__representation_t *rep;
       svn_txdelta_window_t *window_B;
+      svn_txdelta__compose_ctx_t context;
       apr_pool_t *wpool_B;
       int cur_rep;
 
@@ -263,21 +264,21 @@ rep_undeltify_range (svn_fs_t *fs,
         {
           svn_txdelta_window_t *window_A, *composite;
           apr_pool_t *wpool_A, *wpool_composite;
-          apr_off_t sview_offset = window_B->sview_offset;
           rep = APR_ARRAY_IDX (deltas, cur_rep, svn_fs__representation_t*);
           SVN_ERR (get_one_window
                    (&window_A, &wpool_A, fs, rep, cur_chunk, trail));
 
           wpool_composite = svn_pool_create (trail->pool);
+          context.sview_offset = window_B->sview_offset;
           composite = svn_txdelta__compose_windows
-            (window_A, window_B, &sview_offset, wpool_composite);
+            (window_A, window_B, &context, wpool_composite);
 
           svn_pool_destroy (wpool_A);
           svn_pool_destroy (wpool_B);
           window_B = composite;
           wpool_B = wpool_composite;
 
-          if (window_B->sview_len == 0)
+          if (context.trivial || window_B->sview_len == 0)
             /* We'll undeltify without source data now. */
             break;
         }
@@ -285,7 +286,7 @@ rep_undeltify_range (svn_fs_t *fs,
       /* window_B is the combined delta window. Read the source text
          into a buffer. */
       source_len = window_B->sview_len;
-      if (fulltext && source_len > 0)
+      if (fulltext && source_len > 0 && !context.trivial)
         {
           source_buf = apr_palloc (wpool_B, source_len);
           SVN_ERR (svn_fs__string_read

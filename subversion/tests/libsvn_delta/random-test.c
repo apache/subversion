@@ -371,7 +371,7 @@ do_random_combine_test (const char **msg,
         svn_txdelta_window_t *window_B;
         svn_txdelta_window_t *composite;
         apr_pool_t *wpool = svn_pool_create (delta_pool);
-        apr_off_t sview_offset = 0;
+        svn_txdelta__compose_ctx_t context = { 0 };
 
         do
           {
@@ -384,7 +384,7 @@ do_random_combine_test (const char **msg,
             if (print_windows)
               delta_window_print (window_B, "B ", stdout);
             composite = svn_txdelta__compose_windows (window_A, window_B,
-                                                      &sview_offset, wpool);
+                                                      &context, wpool);
             if (print_windows)
               delta_window_print (composite, "AB", stdout);
 

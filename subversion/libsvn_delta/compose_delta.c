@@ -662,6 +662,7 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
               const apr_off_t ptn_length = off[0] - op->offset;
               const apr_off_t ptn_overlap = fix_offset % ptn_length;
               apr_off_t fix_off = fix_offset;
+              apr_off_t tgt_off = target_offset;
               assert(ptn_length > ptn_overlap);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -673,10 +674,10 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
                         ptn_length - ptn_overlap);
                   copy_source_ops(op->offset + ptn_overlap,
                                   op->offset + ptn_overlap + length,
-                                  target_offset,
+                                  tgt_off,
                                   build_baton, window, ndx, pool);
                   fix_off += length;
-                  target_offset += length;
+                  tgt_off += length;
                 }
 
               assert(fix_off + fix_limit <= op->length);
@@ -686,11 +687,12 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
                   /* Issue the first subrange in the pattern. */
                   const apr_size_t length =
                     MIN(op->length - fix_off - fix_limit, ptn_overlap);
-                  copy_source_ops(op->offset, op->offset + length,
-                                  target_offset,
+                  copy_source_ops(op->offset,
+                                  op->offset + length,
+                                  tgt_off,
                                   build_baton, window, ndx, pool);
                   fix_off += length;
-                  target_offset += length;
+                  tgt_off += length;
                 }
 #undef MIN
 
@@ -699,7 +701,7 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
                 {
                   /* Now multiply the pattern */
                   svn_txdelta__insert_op(build_baton, svn_txdelta_target,
-                                         target_offset - ptn_length,
+                                         tgt_off - ptn_length,
                                          op->length - fix_off - fix_limit,
                                          NULL, pool);
                 }
@@ -707,6 +709,8 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
               assert("Overlapping target copies are a pain in the ass.");
             }
         }
+
+      target_offset += op->length - fix_offset - fix_limit;
     }
 }
 
@@ -731,7 +735,7 @@ trivial_composition_p (const svn_txdelta_window_t *window)
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
-                              apr_off_t *next_sview_offset,
+                              svn_txdelta__compose_ctx_t *context,
                               apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
@@ -752,13 +756,17 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
       sview_len = window_A->sview_len;
     }
 
-  if (!window_A || trivial_composition_p(window_B))
+  context->trivial = trivial_composition_p(window_B);
+  if (!window_A || context->trivial)
     {
       /* Copy the second window, because the source view offset and length
          will have to be adjusted anyway. */
       composite = svn_txdelta__copy_window (window_B, pool);
-      sview_offset = *next_sview_offset;
-      sview_len = 0;
+      if (!window_A)
+        {
+          sview_offset = context->sview_offset;
+          sview_len = 0;
+        }
     }
   else
     {
@@ -795,6 +803,7 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
               const apr_off_t offset = op->offset;
               const apr_off_t limit = op->offset + op->length;
               range_list_node_t *range_list, *range;
+              apr_off_t tgt_off = target_offset;
 
               splay_range_index(offset, range_index);
               range_list = build_range_list(offset, limit, range_index);
@@ -807,10 +816,13 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                                            range->limit - range->offset,
                                            NULL, pool);
                   else
-                    copy_source_ops(range->offset, range->limit, target_offset,
+                    copy_source_ops(range->offset, range->limit, tgt_off,
                                     &build_baton, window_A, offset_index,
                                     pool);
+
+                  tgt_off += range->limit - range->offset;
                 }
+              assert (tgt_off == target_offset + op->length);
 
               free_range_list(range_list, range_index);
               insert_range(offset, limit, target_offset, range_index);
@@ -824,7 +836,7 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
       composite = svn_txdelta__make_window(&build_baton, pool);
     }
 
-  *next_sview_offset = sview_offset + sview_len;
+  context->sview_offset = sview_offset + sview_len;
 
   composite->sview_offset = sview_offset;
   composite->sview_len = sview_len;
