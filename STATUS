@@ -23,7 +23,7 @@ Candidate changes:
       Tiny fix, avoids build breakage, affects --enable-maintainer-mode only.
       Can go in without a resoak.
     Votes:
-      +1: maxb
+      +1: maxb, mbk
 
 
   * r10994 (fixes issue #2054)
