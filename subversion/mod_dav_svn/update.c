@@ -524,6 +524,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                 repos->repos, 
                                 resource->info->repos_path, target,
                                 switch_path->data,
+                                FALSE, /* not a switch operation */
                                 FALSE, /* don't send text-deltas */
                                 recurse,
                                 editor, &uc, resource->pool);

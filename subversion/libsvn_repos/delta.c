@@ -1156,6 +1156,66 @@ delta_dirs (struct context *c,
 
 
 
+
+svn_error_t *
+svn_repos_switch_file (svn_fs_root_t *src_root,
+                       const char *src_path,
+                       const char *src_name,
+                       apr_hash_t *src_revs,
+                       svn_fs_root_t *tgt_root,
+                       const char *tgt_path,                       
+                       const svn_delta_edit_fns_t *editor,
+                       void *edit_baton,
+                       apr_pool_t *pool)
+{
+  struct context c;
+  void *root_baton, *fb;
+  svn_stringbuf_t *src_full_path;
+  svn_revnum_t src_parent_rev, src_name_rev;
+
+  c.editor = editor;
+  c.source_root = src_root;
+  c.target_root = tgt_root;
+  c.target_is_rev = svn_fs_is_revision_root (tgt_root);
+  c.recurse = TRUE;
+  c.text_deltas = TRUE;
+  c.source_rev_diffs = src_revs;
+
+  /* Deduce revisions of src parent and child. */
+  src_full_path = svn_stringbuf_create (src_path, pool);
+  svn_path_add_component_nts (src_full_path, src_name);
+  src_parent_rev = get_revision_from_hash (src_revs,
+                                           src_full_path->data, pool);
+  src_name_rev = get_revision_from_hash (src_revs, src_name, pool);
+
+  /* ### do a sanity check that src_full_path and tgt_path are
+     actually existent files. */
+
+  /* Set the global target revision if the target is a revision. */
+  if (c.target_is_rev)
+    SVN_ERR (editor->set_target_revision 
+             (edit_baton, svn_fs_revision_root_revision (tgt_root)));
+
+  /* Start the edit. */
+  SVN_ERR (editor->open_root (edit_baton, src_parent_rev, &root_baton));
+
+  /* Send a txdelta and propdelta */
+  SVN_ERR (editor->open_file (svn_stringbuf_create (src_name, pool),
+                              root_baton, src_name_rev, &fb));
+  SVN_ERR (delta_files (&c, fb, src_full_path->data, tgt_path, pool));
+  SVN_ERR (editor->close_file (fb));
+
+  /* Finish. */
+  SVN_ERR (editor->close_directory (root_baton));
+  SVN_ERR (editor->close_edit (edit_baton));
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
 
 /* 
  * local variables:

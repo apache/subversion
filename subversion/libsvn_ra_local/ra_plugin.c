@@ -413,6 +413,7 @@ do_update (void *session_baton,
                                  sbaton->fs_path->data,
                                  target, 
                                  switch_path->data,
+                                 FALSE, /* not a switch */
                                  TRUE, /* send text-deltas */
                                  recurse,
                                  pipe_editor, pipe_edit_baton,
@@ -462,11 +463,26 @@ do_switch (void *session_baton,
 
   /* Make sure the pipe editor is anchored in the same way as the
      update editor. */
+
+  /* Assume that we should anchor the pipe editor on the switch path
+     directly.  This is normal when switching a directory, since
+     tgt-anchor is the directory itself, and tgt-target is NULL. */
   pipe_anchor = svn_stringbuf_create_from_string (switch_fs_path, 
                                                   sbaton->pool);
   if (update_target)
-    svn_path_remove_component (pipe_anchor);
-  
+    {
+      /* If the target is defined, then we must be switching a file.
+         
+         The pipe editor needs to be anchored on the target's parent
+         directory.  But here's the catch: the pipe-editor is going to
+         receive open_file(src-basename), because there's no
+         delete/add happening.  Somehow the pipe-editor needs to fetch
+         the CR from *tgt*-basename.  So we stash it in the
+         pipe-editor's own baton. ### do this.
+       */
+      svn_path_remove_component (pipe_anchor);
+    }  
+
   /* Wrap UPDATE_EDITOR with a custom "pipe" editor that pushes extra
      'entry' properties into the stream, whenever {open_root,
      open_file, open_dir, add_file, add_dir} are called.  */
@@ -490,6 +506,7 @@ do_switch (void *session_baton,
                                  sbaton->fs_path->data,
                                  target,
                                  switch_fs_path->data,
+                                 TRUE, /* is switch */
                                  TRUE, /* we want text-deltas */
                                  recurse,
                                  pipe_editor, pipe_edit_baton,
@@ -534,6 +551,7 @@ do_status (void *session_baton,
                                  sbaton->fs_path->data,
                                  target,
                                  switch_path->data,
+                                 FALSE, /* not a switch  */
                                  FALSE, /* don't send text-deltas */
                                  recurse,
                                  status_editor, status_baton,
