@@ -1103,9 +1103,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     {      
       /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_path_url_add_component (root_path, repos_name, r->pool);
+      root_path = svn_path_join(root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
-      fs_path = svn_path_join (fs_parent_path, repos_name, r->pool);
+      fs_path = svn_path_join(fs_parent_path, repos_name, r->pool);
     }
 
   /* Start building and filling a 'combination' object. */
@@ -1165,7 +1165,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* We are assuming the root_path will live at least as long as this
      resource. Considering that it typically comes from the per-dir
      config in mod_dav, this is valid for now. */
-  repos->root_path = root_path;
+  repos->root_path = svn_path_uri_encode(root_path, r->pool);
 
   /* where is the SVN FS for this resource? */
   repos->fs_path = fs_path;
