@@ -810,29 +810,32 @@ The following repository access (RA) modules are available:
         área administrativa <filename>.svn</filename>, vea <xref
         linkend="svn-ch-8-sect-3"/>en este capítulo.</para>
 
-      <para>The Subversion client library, libsvn_client, has the
-        broadest responsibility; its job is to mingle the
-        functionality of the working copy library with that of the
-        Repository Access Layer, and then to provide the highest-level
-        API to any application that wishes to perform general revision
-        control actions.  For example, the function
-        <function>svn_client_checkout</function> takes a URL as an
-        argument.  It passes this URL to the RA layer and opens an
-        authenticated session with a particular repository.  It then
-        asks the repository for a certain tree, and sends this tree
-        into the working copy library, which then writes a full
-        working copy to disk (<filename>.svn</filename> directories
-        and all).</para>
+      <para>La libería cliente de Subversion, libsvn_client, tiene
+        la más amplia responsabilidad; su trabajo es reunir la
+        funcionalidad de la librería de copia local de trabajo y la
+        de la capa de acceso al repositorio, y entonces proporcionar
+        la API de mayor nivel para cualquier aplicación que desee
+        realizar acciones generales de control de revisiones. Por
+        ejemplo, la función <function>svn_client_checkout</function>
+        recibe una URL como parámetro. La función pasa la URL a la
+        capa RA y abre una sesión autenticada con un repositorio en
+        particular. Entonces le pregunta al repositorio por un árbol
+        concreto y envía este árbol a la librería de copia local de
+        trabajo, la cual escribe entonces una copia local de trabajo
+        completa en el disco (directorios <filename>.svn</filename>
+        y demás incluidos).</para>
 
-      <para>The client library is designed to be used by any
-        application.  While the Subversion source code includes a
-        standard command-line client, it should be very easy to write
-        any number of GUI clients on top of the client library.  New
-        GUIs (or any new client, really) for Subversion need not be
-        clunky wrappers around the included command-line
-        client&mdash;they have full access via the libsvn_client API
-        to same functionality, data, and callback mechanisms that the
-        command-line client uses.</para>
+      <para>La librería cliente está diseñada para que pueda ser
+        usada por cualquier aplicación. Aunque el código fuente de
+        Subversion incluye un cliente estándar de línea de comando,
+        debería ser muy sencillo escribir cualquier número de
+        clientes gráficos sobre esta librería cliente. Nuevas
+        interfaces gráficas (o realmente, cualquier cliente)
+        para Subversion no tienen que ser envoltorios precarios
+        sobre el cliente incluído de línea de comando&mdash;tienen
+        acceso completo vía la API de libsvn_client a la misma
+        funcionalidad, datos, y mecanismos de retrollamada usados
+        por el cliente de línea de comando.</para>
 
       <sidebar>
         <title>Binding Directly&mdash;A Word About Correctness</title>
