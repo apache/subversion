@@ -737,15 +737,19 @@ unmarked - no matter if it is a directory or a file."
       (message "No file on this line - cannot unset a mark"))))
 
 (defun svn-status-unset-user-mark-backwards ()
-  "Remove a user mark from the current file.
-Afterwards move one line up."
+  "Remove a user mark from the previous file.
+Then move to that line."
+  ;; This is consistent with `dired-unmark-backward' and
+  ;; `cvs-mode-unmark-up'.
   (interactive)
-  (let ((info (svn-status-get-line-information)))
+  (let ((info (save-excursion
+                (svn-status-next-line -1)
+                (svn-status-get-line-information))))
     (if info
         (progn
-          (svn-status-apply-usermark nil t)
-          (svn-status-next-line -1))
-      (message "No file on this line - cannot unset a mark"))))
+          (svn-status-next-line -1)
+          (svn-status-apply-usermark nil t))
+      (message "No file on previous line - cannot unset a mark"))))
 
 (defun svn-status-apply-usermark (set-mark only-this-line)
   (let* ((st-info svn-status-info)
