@@ -356,7 +356,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
           SVN_ERR (authz_root_check (tgt_root, authz_root_path,
                                      authz_read_func, authz_read_baton, pool));
           SVN_ERR (editor->open_root (edit_baton, rootrev, pool, &root_baton));
-          SVN_ERR (delete (&c, root_baton, src_fullpath, pool));
+          SVN_ERR (delete (&c, root_baton, src_entry, pool));
 
           if (authz_read_func)
             {

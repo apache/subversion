@@ -686,7 +686,7 @@ def update_delete_modified_files(sbox):
     "Updating failed", None, SVNAnyOutput, 'up', wc_dir)
 
   for line in errput:
-    if re.match("svn: Won't delete locally modified file 'alpha'", line):
+    if re.match(".*Won't delete locally modified file.*", line):
       return
 
   # Else never matched the expected error output, so the test failed.
