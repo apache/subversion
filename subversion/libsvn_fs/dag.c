@@ -293,20 +293,15 @@ has_mutable_flag (skel_t *node_content)
   /* The node "header" is the first element of a node-revision skel,
      itself a list. */
   skel_t *header = node_content->children;
-  
-  /* The 3rd element of the header, IF it exists, is the header's
-     first `flag'.  It could be NULL.  */
-  skel_t *flag = header->children->next->next;
-  
-  while (flag)
-    {
-      /* Looking for the `mutable' flag, which is itself a list. */
-      if (svn_fs__matches_atom (flag->children, "mutable"))
-        return TRUE;
+  skel_t *flag;
 
-      /* Move to next header flag. */
-      flag = flag->next;
-    }
+  /* Search the list of flags (the 3rd and later elements of the
+     header, possibly empty) for a `mutable' flag.  */
+  for (flag = header->children->next->next; flag; flag = flag->next)
+    /* Looking for the `mutable' flag, which is itself a list. */
+    if (! flag->is_atom
+        && svn_fs__matches_atom (flag->children, "mutable"))
+      return TRUE;
   
   /* Reached the end of the header skel, no mutable flag was found. */
   return FALSE;
