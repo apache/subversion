@@ -41,16 +41,34 @@
  * the value is (void *) 'U', 'A', 'D', or 'R', for modified, added,
  * deleted, or replaced, respectively.
  * 
+ * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
+ * AUTHZ_READ_BATON and FS) to check whether each changed-path (and
+ * copyfrom_path) is readable:
+ *
+ *     - If some paths are readable and some are not, then silently
+ *     omit the unreadable paths from the CHANGED hash, and return
+ *     SVN_ERR_AUTHZ_PARTIALLY_READABLE.
+ *
+ *     - If absolutely every changed-path (and copyfrom_path) is
+ *     unreadable, then return an empty CHANGED hash and
+ *     SVN_ERR_AUTHZ_UNREADABLE.  (This is to distinguish a revision
+ *     which truly has no changed paths from a revision in which all
+ *     paths are unreadable.)
  */
 static svn_error_t *
 detect_changed (apr_hash_t **changed,
                 svn_fs_root_t *root,
+                svn_fs_t *fs,
+                svn_repos_authz_func_t authz_read_func,
+                void *authz_read_baton,
                 apr_pool_t *pool)
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
-  
+  svn_boolean_t found_readable = FALSE;
+  svn_boolean_t found_unreadable = FALSE;
+
   *changed = apr_hash_make (pool);
   SVN_ERR (svn_fs_paths_changed (&changes, root, pool));
   for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
@@ -68,6 +86,23 @@ detect_changed (apr_hash_t **changed,
       apr_hash_this (hi, &key, NULL, &val);
       path = (const char *) key;
       change = val;
+
+      /* Skip path if unreadable. */
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          SVN_ERR (authz_read_func (&readable,
+                                    root, path,
+                                    authz_read_baton, subpool));
+          if (! readable)
+            {
+              found_unreadable = TRUE;
+              continue;
+            }
+        }
+
+      /* At least one changed-path was readable. */
+      found_readable = TRUE;
 
       switch (change->change_kind)
         {
@@ -102,10 +137,29 @@ detect_changed (apr_hash_t **changed,
 
           SVN_ERR (svn_fs_copied_from (&copyfrom_rev, &copyfrom_path,
                                        root, path, subpool));
+
           if (copyfrom_path && SVN_IS_VALID_REVNUM (copyfrom_rev))
             {
-              item->copyfrom_path = apr_pstrdup (pool, copyfrom_path);
-              item->copyfrom_rev = copyfrom_rev;
+              svn_boolean_t readable = TRUE;
+
+              if (authz_read_func)
+                {
+                  svn_fs_root_t *copyfrom_root;
+                  
+                  SVN_ERR (svn_fs_revision_root (&copyfrom_root, fs,
+                                                 copyfrom_rev, subpool));
+                  SVN_ERR (authz_read_func (&readable,
+                                            copyfrom_root, copyfrom_path,
+                                            authz_read_baton, subpool));
+                  if (! readable)
+                    found_unreadable = TRUE;
+                }
+
+              if (readable)
+                {
+                  item->copyfrom_path = apr_pstrdup (pool, copyfrom_path);
+                  item->copyfrom_rev = copyfrom_rev;
+                }
             }
         }
       apr_hash_set (*changed, apr_pstrdup (pool, path), 
@@ -113,6 +167,18 @@ detect_changed (apr_hash_t **changed,
     }
 
   svn_pool_destroy (subpool);
+
+  if (! found_readable)
+    /* Every changed-path was unreadable. */
+    return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE,
+                             NULL, NULL);
+
+  if (found_unreadable)
+    /* At least one changed-path was unreadable. */
+    return svn_error_create (SVN_ERR_AUTHZ_PARTIALLY_READABLE,
+                             NULL, NULL);
+
+  /* Every changed-path was readable. */
   return SVN_NO_ERROR;
 }
 
@@ -133,15 +199,17 @@ history_to_revs_array (void *baton,
 
 
 svn_error_t *
-svn_repos_get_logs (svn_repos_t *repos,
-                    const apr_array_header_t *paths,
-                    svn_revnum_t start,
-                    svn_revnum_t end,
-                    svn_boolean_t discover_changed_paths,
-                    svn_boolean_t strict_node_history,
-                    svn_log_message_receiver_t receiver,
-                    void *receiver_baton,
-                    apr_pool_t *pool)
+svn_repos_get_logs2 (svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool)
 {
   svn_revnum_t this_rev, head = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -192,10 +260,12 @@ svn_repos_get_logs (svn_repos_t *repos,
           /* Get the changed revisions for this path. */
           const char *this_path = APR_ARRAY_IDX (paths, 0, const char *);
           revs = apr_array_make (pool, 64, sizeof (svn_revnum_t));
-          SVN_ERR (svn_repos_history (fs, this_path, history_to_revs_array, 
-                                      revs, start, end, 
-                                      strict_node_history ? FALSE : TRUE, 
-                                      pool));
+          SVN_ERR (svn_repos_history2 (fs, this_path,
+                                       history_to_revs_array, revs,
+                                       authz_read_func, authz_read_baton,
+                                       start, end, 
+                                       strict_node_history ? FALSE : TRUE, 
+                                       pool));
         }
       else
         {
@@ -213,10 +283,12 @@ svn_repos_get_logs (svn_repos_t *repos,
 
               /* Get the changed revisions for this path, and add them to
                  the hash (this will eliminate duplicates). */
-              SVN_ERR (svn_repos_history (fs, this_path, history_to_revs_array,
-                                          changed_revs, start, end, 
-                                          strict_node_history ? FALSE : TRUE, 
-                                          pool));
+              SVN_ERR (svn_repos_history2 (fs, this_path,
+                                           history_to_revs_array, changed_revs,
+                                           authz_read_func, authz_read_baton,
+                                           start, end, 
+                                           strict_node_history ? FALSE : TRUE, 
+                                           pool));
               for (j = 0; j < changed_revs->nelts; j++)
                 {
                   /* We're re-using the memory allocated for the array
@@ -289,11 +361,45 @@ svn_repos_get_logs (svn_repos_t *repos,
          them (i.e., "svn log -v" means `discover_changed_paths' will
          be non-zero here).  */
 
-      if ((this_rev > 0) && discover_changed_paths)
+
+      if ((this_rev > 0)        
+          && (authz_read_func || discover_changed_paths))
         {
           svn_fs_root_t *newroot;
+          svn_error_t *patherr;
+
           SVN_ERR (svn_fs_revision_root (&newroot, fs, this_rev, subpool));
-          SVN_ERR (detect_changed (&changed_paths, newroot, subpool));
+          patherr = detect_changed (&changed_paths,
+                                    newroot, fs,
+                                    authz_read_func, authz_read_baton,
+                                    subpool);
+
+          if (patherr
+              && patherr->apr_err == SVN_ERR_AUTHZ_UNREADABLE)
+            {
+              /* All changed-paths are unreadable, so clear all fields. */
+              svn_error_clear (patherr);              
+              changed_paths = NULL;
+              author = NULL;
+              date = NULL;
+              message = NULL;
+            }
+          else if (patherr
+                   && patherr->apr_err == SVN_ERR_AUTHZ_PARTIALLY_READABLE)
+            {
+              /* At least one changed-path was unreadable, so omit the
+                 log message.  (The unreadable paths are already
+                 missing from the hash.) */
+              svn_error_clear (patherr);
+              message = NULL;
+            }
+          else if (patherr)
+            return patherr;
+
+          /* It may be the case that an authz func was passed in, but
+             the user still doesn't want to see any changed-paths. */
+          if (! discover_changed_paths)
+            changed_paths = NULL;
         }
 
       SVN_ERR ((*receiver) (receiver_baton,
@@ -310,4 +416,23 @@ svn_repos_get_logs (svn_repos_t *repos,
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
+}
+
+
+/* The 1.0 version of the function.  ### Remove in 2.0. */
+svn_error_t *
+svn_repos_get_logs (svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_log_message_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool)
+{
+  return svn_repos_get_logs2 (repos, paths, start, end,
+                              discover_changed_paths, strict_node_history,
+                              NULL, NULL, /* no authz stuff */
+                              receiver, receiver_baton, pool);
 }
