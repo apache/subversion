@@ -24,6 +24,7 @@
 #include <apr_time.h>
 #include <apr_strings.h>
 #include "svn_time.h"
+#include "svn_utf.h"
 
 
 
@@ -226,7 +227,7 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
   apr_time_exp_t exploded_time;
   apr_size_t len, retlen;
   apr_status_t ret;
-  char *datestr, *curptr;
+  char *datestr, *curptr, human_datestr[SVN_TIME__MAX_LENGTH];
 
   /* Get the time into parts */
   apr_time_exp_lt (&exploded_time, when);
@@ -255,7 +256,7 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
   curptr = datestr + len;
 
   /* Put in human explanatory part */
-  ret = apr_strftime (curptr,
+  ret = apr_strftime (human_datestr,
                       &retlen,
                       SVN_TIME__MAX_LENGTH - len,
                       human_timestamp_format_suffix,
@@ -264,6 +265,20 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
   /* If there was an error, ensure that the string is zero-terminated. */
   if (ret || retlen == 0)
     *curptr = '\0';
+  else
+    {
+      const char *utf8_string;
+      svn_error_t *err;
+
+      err = svn_utf_cstring_to_utf8 (&utf8_string, human_datestr, pool);
+      if (err)
+        {
+          *curptr = '\0';
+          svn_error_clear (err);
+        }
+      else
+        apr_cpystrn (curptr, utf8_string, SVN_TIME__MAX_LENGTH - len);
+    }
 
   return datestr;
 }
