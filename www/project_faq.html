@@ -137,6 +137,22 @@ sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
 building with are completely up-to-date, and try again.
 </p>
 
+<h2>I'm running Subversion under windows and I can create a repository fine,
+but I get errors trying to import or check out from it.  What's wrong?</h2>
+
+<p>If the error looks something like:
+<pre>
+svn_error: #21085 : <URL is not a versioned resource>
+  svn_ra_local__split_URL: Unable to find valid repository
+</pre>
+Then the problem is that Subversion doesn't yet handle file URLs that have a
+drive specification.  Try changing to that drive then doing an import without
+the drive spec.  For example:
+<pre>
+d:
+svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
+</pre>
+
 <h2>I have other problems or questions about Subversion.  Where can I get
 more information?</h2>
 
