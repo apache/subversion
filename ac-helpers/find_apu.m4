@@ -6,12 +6,14 @@ dnl library. It provides a standardized mechanism for using APU. It supports
 dnl embedding APU into the application source, or locating an installed
 dnl copy of APU.
 dnl
-dnl APR_FIND_APU([srcdir, path])
+dnl APR_FIND_APU([srcdir, path, implicit-install-check])
 dnl
 dnl   where srcdir is the location of the bundled APU source directory, or
 dnl   empty if source is not bundled.
 dnl   where path is the prefix to the location where the bundled APU will
 dnl   will be built.
+dnl   where implicit-install-check set to 1 indicates if there is no
+dnl   --with-apr option specified, we will look for installed copies.
 dnl
 dnl Sets the following variables on exit:
 dnl
@@ -70,18 +72,20 @@ The directory given to --with-apr-util does not specify a prefix for an
 installed APU, nor an APR-util build directory.])
     fi
   ],[
-    if apu-config --help > /dev/null 2>&1 ; then
-      apu_found="yes"
-      apu_config="apu-config"
-    else
-      dnl look in the some standard places (apparently not in builtin/default)
-      for lookdir in /usr /usr/local /opt/apr /usr/local/apache2 ; do
-        if test -x "$lookdir/bin/apu-config"; then
-          apu_found="yes"
-          apu_config="$lookdir/bin/apu-config"
-          break
-        fi
-      done
+    if test -n "$3" && test "$3" = "1"; then
+      if apu-config --help > /dev/null 2>&1 ; then
+        apu_found="yes"
+        apu_config="apu-config"
+      else
+        dnl look in the some standard places (apparently not in builtin/default)
+        for lookdir in /usr /usr/local /opt/apr /usr/local/apache2 ; do
+          if test -x "$lookdir/bin/apu-config"; then
+            apu_found="yes"
+            apu_config="$lookdir/bin/apu-config"
+            break
+          fi
+        done
+      fi
     fi
     dnl if we have a bundled source directory, then we may have more work
     if test -d "$1"; then

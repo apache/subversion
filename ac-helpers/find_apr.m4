@@ -6,7 +6,7 @@ dnl library. It provides a standardized mechanism for using APR. It supports
 dnl embedding APR into the application source, or locating an installed
 dnl copy of APR.
 dnl
-dnl APR_FIND_APR([srcdir [, builddir]])
+dnl APR_FIND_APR([srcdir [, builddir, implicit-install-check]])
 dnl
 dnl   where srcdir is the location of the bundled APR source directory, or
 dnl   empty if source is not bundled.
@@ -14,6 +14,8 @@ dnl
 dnl   where blddir is the location where the bundled APR will will be built,
 dnl   or empty if the build will occur in the srcdir.
 dnl
+dnl   where implicit-install-check set to 1 indicates if there is no
+dnl   --with-apr option specified, we will look for installed copies.
 dnl
 dnl Sets the following variables on exit:
 dnl
@@ -71,19 +73,20 @@ AC_DEFUN(APR_FIND_APR, [
 build directory, or an apr-config file.])
     fi
   ],[
-    dnl always look in the builtin/default places
-    if apr-config --help > /dev/null 2>&1 ; then
-      apr_found="yes"
-      apr_config="apr-config"
-    else
-      dnl look in some standard places (apparently not in builtin/default)
-      for lookdir in /usr /usr/local /opt/apr /usr/local/apache2 ; do
-        if $TEST_X "$lookdir/bin/apr-config"; then
-          apr_found="yes"
-          apr_config="$lookdir/bin/apr-config"
-          break
-        fi
-      done
+    if test -n "$3" && test "$3" = "1"; then
+      if apr-config --help > /dev/null 2>&1 ; then
+        apr_found="yes"
+        apr_config="apr-config"
+      else
+        dnl look in some standard places (apparently not in builtin/default)
+        for lookdir in /usr /usr/local /opt/apr /usr/local/apache2 ; do
+          if $TEST_X "$lookdir/bin/apr-config"; then
+            apr_found="yes"
+            apr_config="$lookdir/bin/apr-config"
+            break
+          fi
+        done
+      fi
     fi
     dnl if we have a bundled source directory, then we may have more work
     if test -d "$1"; then
