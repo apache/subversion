@@ -518,9 +518,10 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 
 
 svn_error_t *svn_ra_dav__get_file(void *session_baton,
-                                  svn_stringbuf_t *path,
+                                  const char *path,
                                   svn_revnum_t revision,
-                                  svn_stream_t *stream)
+                                  svn_stream_t *stream,
+                                  svn_revnum_t *fetched_rev)
 {
   abort ();
   return SVN_NO_ERROR;

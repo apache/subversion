@@ -286,12 +286,18 @@ typedef struct svn_ra_plugin_t
                                      svn_ra_close_commit_func_t close_func,
                                      void *close_baton);
 
-  /* Feed the contents of PATH at REVISION into STREAM; PATH is
-     interpreted relative to the url in SESSION_BATON. */
+  /* Push the contents of PATH at REVISION into an existing STREAM;
+     PATH is interpreted relative to the url in SESSION_BATON.
+
+     If REVISION is SVN_INVALID_REVNUM (meaning 'head') and
+     *FETCHED_REV is not NULL, then this function will set
+     *FETCHED_REV to the actual revision that was retrieved.  (Some
+     callers want to know, and some don't.) */
   svn_error_t *(*get_file) (void *session_baton,
-                            svn_stringbuf_t *path,
+                            const char *path,
                             svn_revnum_t revision,
-                            svn_stream_t *stream);
+                            svn_stream_t *stream,
+                            svn_revnum_t *fetched_rev);
 
 
   /* Check out revision REVISION of the url specified in
@@ -392,18 +398,9 @@ typedef struct svn_ra_plugin_t
                            svn_log_message_receiver_t receiver,
                            void *receiver_baton);
 
-  /* Set *KIND to node kind associated with PATH at REVISION.  If PATH
-   * does not exist under REVISION, set *KIND to svn_node_none.  PATH
-   * is relative to the session's parent URL.
-   */
-  svn_error_t *(*check_path) (svn_node_kind_t *kind,
-                              void *session_baton,
-                              const char *path,
-                              svn_revnum_t revision);
-
   /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more
-   * generic way to support the above would be to have these two
-   * functions:
+   * generic way to support 'discover_changed__paths' in logs would be
+   * to have these two functions:
    *
    *     svn_error_t *(*get_rev_prop) (void *session_baton,
    *                                   svn_string_t **value,
@@ -420,6 +417,17 @@ typedef struct svn_ra_plugin_t
    * right now, as am concentrating on the log functionality, but
    * we will probably want them eventually, hence this start block.
    */
+
+
+  /* Set *KIND to node kind associated with PATH at REVISION.  If PATH
+   * does not exist under REVISION, set *KIND to svn_node_none.  PATH
+   * is relative to the session's parent URL.
+   */
+  svn_error_t *(*check_path) (svn_node_kind_t *kind,
+                              void *session_baton,
+                              const char *path,
+                              svn_revnum_t revision);
+
 
 } svn_ra_plugin_t;
 
