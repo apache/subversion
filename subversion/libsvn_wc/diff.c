@@ -553,7 +553,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
           && strcmp (dir_baton->edit_baton->target, name))
         continue;
 
-      path = svn_path_join (dir_baton->path, name, dir_baton->pool);
+      path = svn_path_join (dir_baton->path, name, subpool);
 
       /* Skip entry if it is in the list of entries already diff'd. */
       if (apr_hash_get (dir_baton->compared, path, APR_HASH_KEY_STRING))
@@ -583,7 +583,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
               subdir_baton = make_dir_baton (name, dir_baton,
                                              dir_baton->edit_baton,
                                              FALSE,
-                                             dir_baton->pool);
+                                             subpool);
 
               SVN_ERR (directory_elements_diff (subdir_baton, added));
               svn_pool_destroy (subdir_baton->pool);
