@@ -291,8 +291,7 @@
 }
 
 %apply unsigned char digest[ANY]
-    { unsigned char *result_digest,
-      unsigned char *digest
+    { unsigned char *digest
     };
 
 /* -----------------------------------------------------------------------
