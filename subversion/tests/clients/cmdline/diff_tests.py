@@ -849,8 +849,86 @@ def diff_head_of_moved_file(sbox):
   if diff_output == []:
     raise svntest.Failure
 
+
+#----------------------------------------------------------------------
+# Regression test for issue #977: make 'svn diff -r BASE:N' compare a
+# repository tree against the wc's text-bases, rather than the wc's
+# working files.
+
+def diff_base_to_repos(sbox):
+  "diff text-bases against repository"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
+
+  # Make changes to iota and mu, then commit revision 2.
+  svntest.main.file_append(iota_path, "some rev2 iota text.")
+  svntest.main.file_append(mu_path, "some rev2 mu text.")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/mu' : Item(verb='Sending'),
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', 'iota', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Now make local mods to iota and mu.
+  svntest.main.file_append(iota_path, "an iota local mod.")
+  svntest.main.file_append(mu_path, "a mu local mod.")
+
+  # If we run 'svn diff -r 1', we should see diffs that include *both*
+  # the rev2 changes and local mods.  That's because the working files
+  # are being compared to the repository.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  line1 = "+This is the file 'mu'.some rev2 mu text.a mu local mod.\n"
+  line2 = "+This is the file 'iota'.some rev2 iota text.an iota local mod.\n"
+
+  got_match = 0;
+  for line in diff_output:
+    if (line == line1):
+      got_match = 1;
+  if not got_match:
+    raise svntest.Failure
+
+  got_match = 0;
+  for line in diff_output:
+    if (line == line2):
+      got_match = 1;
+  if not got_match:
+    raise svntest.Failure
+
+  # If we run 'svn diff -r BASE:1', we should see diffs that only show
+  # the rev2 changes and NOT the local mods.  That's because the
+  # text-bases are being compared to the repository.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r',
+                                                 'BASE:1', wc_dir)
+  if err_output:
+    raise svntest.Failure
+
+  line1 = "-This is the file 'mu'.some rev2 mu text.\n"
+  line2 = "-This is the file 'iota'.some rev2 iota text.\n"
+
+  # ### TODO:  look for specific lines above.
+
+  
+
 ########################################################################
-# Run the tests
+#Run the tests
 
 
 # list all tests here, starting with None:
@@ -868,6 +946,7 @@ test_list = [ None,
               dont_diff_binary_file,
               diff_nonextant_urls,
               diff_head_of_moved_file,
+              XFail(diff_base_to_repos),
               ]
 
 if __name__ == '__main__':
