@@ -90,17 +90,17 @@ i688-pc-win32:
 
      Notes:
 
-powerpc-apple-darwin1.3:
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK
-     Last Check: 1 Mar 2001
+powerpc-apple-darwin1.4/5.1 (Mac OS X 10.1.[01]):
+     Client:     Build OK
+     Filesystem: Haven't gotten to it yet.
+     Last Check: 21 Nov 2001
      Porter:     Brian Fitzpatrick <fitz@apple.com>
 
      Notes: 
-     --cannot build apr with dso enabled.
-     --patched automake so that autogen would work. Patches submitted
-       to darwin maintainer, awaiting feedback. Contact me if you need
-       them before they get integrated. -Fitz
+     --haven't tried to build apr with dso enabled.
+     --haven't gotten around to building the svn server either.
+     --needs autoconf 2.52 (get from GNU)
+     --needs libtool 1.4.2 (get from Darwin CVS repository)
 
 rs6000-ibm-aix4.3.2.0:
      Client:     Build OK, Check OK.
