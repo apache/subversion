@@ -17,28 +17,20 @@ Subversion installs using the usual GNU procedure:
    $ make check
    # make install
 
-However, this is a development release, and therefore not as
-thoughtfully packaged as it might be.  So you'll need to do these
-things first:
+However, if you don't have Berkeley DB 3.2.9 installed on your system,
+you'll need that first.  Get it from
 
-   1. Subversion depends on Berkeley DB 3.2.9.  Get it from
-      http://www.sleepycat.com and install it on your system.  Note
-      that 3.2.9 is not the latest release of Berkeley DB; Subversion
-      probably works just fine with 3.3.11 too, but that combination
-      hasn't been tested as thoroughly yet.  We recommend 3.2.9.
+   http://www.sleepycat.com
 
-   2. Subversion depends the Apache Portable Runtime (APR) library.
-      Get it from xxx and unpack it into a subdirectory named "apr/"
-      at the same level as this INSTALL file.  [todo: should we
-      recommend cvs checkout or should we provide a tarball?  Tarball
-      is the standard answer, so we can guarantee which version of APR
-      people use, but it might be better for testers to stay at the
-      bleeding edge too...]
+and install it.  Note that 3.2.9 is not the latest release of Berkeley
+DB; Subversion probably works just fine with 3.3.11 too, but that
+combination hasn't been tested as thoroughly yet.  We recommend 3.2.9.
 
-   3. Subversion depends on Neon 0.15.3, an HTTP and WebDAV client
-      library.  Get it from http://www.webdav.org/neon and unpack it
-      into a subdirectory named "neon/" at the same level as this
-      INSTALL file.
+(Note: if you already have a higher version of Berkeley DB installed
+and don't want to downgrade, you can unpack the Berkeley 3.2.9
+distribution into a subdir named `db' in the Subversion working copy;
+then Subversion will ignore the system DB and use the one it found in
+its own source tree.)
 
 Now you can run the GNU install procedure given previously.  Please
 mail dev@subversion.tigris.org if you have any problems.
