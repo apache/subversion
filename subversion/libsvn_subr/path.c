@@ -701,23 +701,30 @@ svn_path_is_url (const char *path)
 
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | "," 
 */
-static svn_boolean_t
-char_is_uri_safe (int c)
-{
-  /* Is this an alphanumeric character? */
-  if (((c >= 'A') && (c <='Z'))
-      || ((c >= 'a') && (c <='z'))
-      || ((c >= '0') && (c <='9')))
-    return TRUE;
+static const int uri_char_validity[256] = {
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 1, 0, 0, 1, 0, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 0, 0, 1, 0, 0,
 
-  /* Is this a supported non-alphanumeric character? (these are sorted
-     by estimated usage, most-to-least commonly used) */
-  if (strchr ("/:.-_!~'()@=+$,&*", c) != NULL)
-    return TRUE;
+  /* 64 */
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 0, 0, 0, 0, 1,
+  0, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 0, 0, 0, 1, 0,
 
-  return FALSE;
-}
+  /* 128 */
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
 
+  /* 192 */
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
+};
 
 svn_boolean_t 
 svn_path_is_uri_safe (const char *path)
@@ -725,7 +732,7 @@ svn_path_is_uri_safe (const char *path)
   apr_size_t i;
 
   for (i = 0; path[i]; i++)
-    if (! char_is_uri_safe ((unsigned char)path[i]))
+    if (! uri_char_validity[((unsigned char)path[i])])
       return FALSE;
 
   return TRUE;
@@ -746,7 +753,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
   for (i = 0; path[i]; i++)
     {
       c = (unsigned char)path[i];
-      if (char_is_uri_safe (c))
+      if (uri_char_validity[c])
         continue;
 
       /* If we got here, we're looking at a character that isn't
