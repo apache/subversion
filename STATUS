@@ -110,9 +110,9 @@ Candidate changes:
       +0: nori
 
   * r11936
-    Handle missing subdirs in directories reported by the status editor.
+    Fixes a 'working copy not locked' error.
     Justification:
-      Fixes 'working copy not locked' error
+      It's a regression from 1.0.x.
     Votes:
+      +1: philip
       Nominated by: Chris AtLee <catlee@sidefx.com>
-
