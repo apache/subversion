@@ -72,6 +72,9 @@ SVN_TEST_NULL.  The first SVN_TEST_NULL is there to leave room for
 Buddha.  The standard `main' function searches for the final
 SVN_TEST_NULL to determine the size of the array.
 
+FIXME: Describe the SVN_TEST_XFAIL macro, and its difference from
+SVN_TEST_PASS.
+
 Each test function conforms to the svn_test_driver_t prototype:
 
 	svn_error_t *f (const char **MSG,
