@@ -15,14 +15,6 @@ Candidate changes:
     Votes:
       +1: cmpilato, dlr, sussman
 
-  * r8708
-    Use warnings pragma on perl hook-scripts.
-    Justification: Perl correctness issue.
-    Votes:
-       +1: sussman
-       -1: breser (Doesn't error out properly on older versions and 
-                   needs more discussion).
-
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
@@ -102,3 +94,17 @@ Candidate changes:
     Make mod_authz_svn less restrictive per issue #1821.
     Votes:
       +1: striker, dlr, sussman
+
+
+Status of 1.0.3:
+================
+
+  * r8708
+    Use warnings pragma on perl hook-scripts.
+    Justification: Perl correctness issue.
+    Votes:
+       +1: sussman
+       -1: breser (Doesn't error out properly on older versions and 
+                   needs more discussion).
+
+
