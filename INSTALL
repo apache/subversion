@@ -443,11 +443,27 @@ II.   INSTALLATION
       told where to get them from.  (See the 'Build Requirements' in
       section I.)
 
-      After all components are in place, follow the usual procedure:
+      Note: if the command "autoconf" on your machine does not run
+      autoconf 2.50 or later, but you do have a new enough autoconf
+      available, then you can specify the correct one with the
+      AUTOCONF variable.  (The AUTOHEADER variable is similar.)  This
+      may be required on Debian GNU/Linux, where "autoconf" is
+      actually a Perl script that attempts to guess which version is
+      required -- because of the interaction between Subversion's and
+      APR's configuration systems, the Perl script may get it wrong.
+      So for example, you might need to do:
+
+          $ AUTOCONF=autoconf2.50 sh ./autogen.sh
+
+      Once you've prepared the working copy by running autogen.sh,
+      just follow the usual configuration and build procedure:
 
           $ ./configure --enable-maintainer-mode
           $ make
           # make install
+
+      (We recommend `--enable-maintainer-mode' so you get a debuggable
+      Subversion.  See also section III.A for more about this.)
 
       Since the resulting binary depends on shared libraries, the
       destination library directory must be identified in your
