@@ -241,32 +241,35 @@ close_file (void *file_baton)
     svn_path_remove_component (pdir);
 
     SVN_ERR (svn_wc_entry (&entry, fb->path, subpool));
-    SVN_ERR (svn_wc_conflicted_p (&tc, &pc, pdir, entry, subpool));
-    if (fb->text_changed)
+    if (entry)
       {
-        if (! tc)
-          SVN_ERR (svn_wc_text_modified_p (&merged, fb->path, subpool));
+        SVN_ERR (svn_wc_conflicted_p (&tc, &pc, pdir, entry, subpool));
+        if (fb->text_changed)
+          {
+            if (! tc)
+              SVN_ERR (svn_wc_text_modified_p (&merged, fb->path, subpool));
         
-        if (tc)
-          statchar_buf[0] = 'C';
-        else if (merged)
-          statchar_buf[0] = 'G';
-        else if (! fb->added)
-          statchar_buf[0] = 'U';
-      }
-    if (fb->prop_changed)
-      {
-        if (! pc)
-          SVN_ERR (svn_wc_props_modified_p (&merged, fb->path, subpool));
+            if (tc)
+              statchar_buf[0] = 'C';
+            else if (merged)
+              statchar_buf[0] = 'G';
+            else if (! fb->added)
+              statchar_buf[0] = 'U';
+          }
+        if (fb->prop_changed)
+          {
+            if (! pc)
+              SVN_ERR (svn_wc_props_modified_p (&merged, fb->path, subpool));
         
-        if (pc)
-          statchar_buf[1] = 'C';
-        else if (merged)
-          statchar_buf[1] = 'G';
-        else if (! fb->added)
-          statchar_buf[1] = 'U';
+            if (pc)
+              statchar_buf[1] = 'C';
+            else if (merged)
+              statchar_buf[1] = 'G';
+            else if (! fb->added)
+              statchar_buf[1] = 'U';
+          }
       }
-    
+ 
     /* Destroy the subpool. */
     svn_pool_destroy (subpool);
   }
