@@ -32,6 +32,7 @@
 #include "svn_fs.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_time.h"
 
 #include "svn_private_config.h"
 
@@ -184,10 +185,13 @@ static svn_opt_subcommand_t
   subcommand_help,
   subcommand_hotcopy,
   subcommand_load,
+  subcommand_lock,
   subcommand_list_dblogs,
   subcommand_list_unused_dblogs,
+  subcommand_lslocks,
   subcommand_lstxns,
   subcommand_recover,
+  subcommand_rmlocks,
   subcommand_rmtxns,
   subcommand_setlog,
   subcommand_verify;
@@ -337,6 +341,17 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'q', svnadmin__ignore_uuid, svnadmin__force_uuid, 
       svnadmin__parent_dir} },
 
+    {"lock", subcommand_lock, {0},
+     N_("usage: svnadmin lock REPOS_PATH PATH_TO_LOCK OWNER\n\n"
+        "Create a lock on PATH (owned by OWNER) in the repository\n"
+        "located at REPOS_PATH.\n"),
+     {0} },
+
+    {"lslocks", subcommand_lslocks, {0},
+     N_("usage: svnadmin lslocks REPOS_PATH\n\n"
+     "Print descriptions of all locks.\n"),
+     {0} },
+
     {"lstxns", subcommand_lstxns, {0},
      N_("usage: svnadmin lstxns REPOS_PATH\n\n"
      "Print the names of all uncommitted transactions.\n"),
@@ -349,6 +364,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
         "ought to be run.  Recovery requires exclusive access and will\n"
         "exit if the repository is in use by another process.\n"),
      {svnadmin__wait} },
+
+    {"rmlocks", subcommand_rmlocks, {0},
+     N_("usage: svnadmin rmtlocks REPOS_PATH LOCKED_PATH...\n\n"
+        "Unconditionally remove lock from each LOCKED_PATH.\n"),
+     {0} },
 
     {"rmtxns", subcommand_rmtxns, {0},
      N_("usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
@@ -383,6 +403,8 @@ struct svnadmin_opt_state
 {
   const char *repository_path;
   const char *new_repository_path;                  /* hotcopy dest. path */
+  const char *path_to_lock;                         /* for 'lock' command */
+  const char *lock_owner;                           /* for 'lock' command */
   const char *fs_type;                              /* --fs-type */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
@@ -918,6 +940,177 @@ subcommand_hotcopy (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+
+static svn_error_t *
+subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_lock_t *lock;
+  svn_fs_access_t *access;
+ 
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs (repos);
+
+  if ((! opt_state->path_to_lock) || (! opt_state->lock_owner))
+    return subcommand_help (NULL, NULL, pool);
+
+  /* Create an access context describing the current user. */
+  SVN_ERR (svn_fs_create_access (&access, opt_state->lock_owner, pool));
+
+  /* Attach the access context to the filesystem. */
+  SVN_ERR (svn_fs_set_access (fs, access));
+
+  /* Create the lock. */
+  SVN_ERR (svn_fs_lock (&lock, fs,
+                        opt_state->path_to_lock,
+                        0,      /* don't steal an existing lock. */
+                        0,      /* no expiration time. */
+                        NULL,   /* we don't have a token to refresh. */
+                        pool));
+  
+  SVN_ERR (svn_cmdline_printf (pool, "Created lock on '%s', owned by %s.\n",
+                               lock->path, lock->owner));
+  SVN_ERR (svn_cmdline_printf (pool, "Lock token is '%s'.\n",
+                               lock->token));
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  apr_hash_t *locks;
+  apr_hash_index_t *hi;
+  
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs (repos);
+
+  /* Fetch all locks on or below the root directory. */
+  SVN_ERR (svn_fs_get_locks (&locks, fs, "/", pool));
+
+  SVN_ERR (svn_cmdline_printf (pool, "\n"));
+  
+  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *path, *cr_date, *exp_date;
+      svn_lock_t *lock;
+      
+      apr_hash_this (hi, &key, NULL, &val);
+      path = key;
+      lock = val;
+
+      cr_date = svn_time_to_human_cstring (lock->creation_date, pool);
+
+      if (lock->expiration_date)
+        exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
+      else
+        exp_date = "never";
+
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   "%s\n", path));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   "     UUID Token: %s\n", lock->token));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   "          Owner: %s\n", lock->owner));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   "        Created: %s\n", cr_date));
+      SVN_ERR (svn_cmdline_printf (pool,
+                                   "        Expires: %s\n\n", exp_date));      
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_access_t *access;
+  svn_error_t *err;
+  apr_array_header_t *args;
+  int i;
+  const char *username;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs (repos);
+
+  /* svn_fs_unlock() demands that some username be associated with the
+     filesystem, so just use the UID of the person running 'svnadmin'.*/
+  {
+    apr_uid_t uid;
+    apr_gid_t gid;
+    char *un;
+    if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
+        apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
+      {
+        err = svn_utf_cstring_to_utf8 (&username, un, pool);
+        svn_error_clear (err);
+        if (err)
+          username = "administrator";
+        }
+  }
+
+  /* Create an access context describing the current user. */
+  SVN_ERR (svn_fs_create_access (&access, username, pool));
+
+  /* Attach the access context to the filesystem. */
+  SVN_ERR (svn_fs_set_access (fs, access));
+
+  /* Parse out any options. */
+  SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
+  
+  /* All the rest of the arguments are lock names. */
+  for (i = 0; i < args->nelts; i++)
+    {
+      const char *lock_path = APR_ARRAY_IDX (args, i, const char *);
+      const char *lock_path_utf8;
+      svn_lock_t *lock;
+      
+      SVN_ERR (svn_utf_cstring_to_utf8 (&lock_path_utf8, lock_path, subpool));
+      
+      /* Fetch the path's svn_lock_t. */
+      err = svn_fs_get_lock_from_path (&lock, fs, lock_path_utf8, subpool);
+      if (err)
+        goto move_on;
+      
+      /* Now forcibly destroy the lock. */
+      err = svn_fs_unlock (fs, lock->token, 1 /* force */, subpool);
+      if (err)
+        goto move_on;
+      
+      SVN_ERR (svn_cmdline_printf (subpool,
+                                   "Removed lock on '%s'.\n", lock->path));
+      
+    move_on:      
+      if (err)
+        {
+          /* Print the error, but move on to the next lock. */
+          svn_handle_error (err, stderr, FALSE /* non-fatal */);
+          svn_error_clear (err);
+        }
+            
+      svn_pool_clear (subpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /** Main. **/
 
@@ -1179,6 +1372,32 @@ main (int argc, const char * const *argv)
                                     &(opt_state.new_repository_path), 
                                     pool);
       if(err)
+        {
+          svn_handle_error (err, stderr, 0);
+          svn_opt_subcommand_help (subcommand->name, cmd_table,
+                                   options_table, pool);
+          svn_error_clear (err);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+    }
+
+  /* If command is 'lock', the 3rd and 4th args are PATH and OWNER */
+  if (subcommand->cmd_func == subcommand_lock)
+    {
+      if (os->ind < os->argc)
+        {
+          const char *path = os->argv[os->ind++];
+          err = svn_utf_cstring_to_utf8 (&(opt_state.path_to_lock),
+                                         path, pool);
+        }
+      if (os->ind < os->argc)
+        {
+          const char *owner = os->argv[os->ind++];
+          err = svn_utf_cstring_to_utf8 (&(opt_state.lock_owner),
+                                         owner, pool);
+        }
+      if (err)
         {
           svn_handle_error (err, stderr, 0);
           svn_opt_subcommand_help (subcommand->name, cmd_table,
