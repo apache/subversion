@@ -396,6 +396,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/svnversion
 /usr/lib/libsvn_client*so*
 /usr/lib/libsvn_delta*so*
+/usr/lib/libsvn_diff*so*
 /usr/lib/libsvn_fs*so*
 /usr/lib/libsvn_ra*so*
 /usr/lib/libsvn_repos*so*
