@@ -5,16 +5,11 @@
 
 # Run tests to ensure that our build requirements are met
 RELEASE_MODE=""
-NEON_CHECK_CONTROL=""
 SKIP_DEPS=""
 while test $# != 0; do
   case "$1" in
     --release)
       RELEASE_MODE="$1"
-      shift
-      ;;
-    --disable-neon-version-check)
-      NEON_CHECK_CONTROL="$1"
       shift
       ;;
     -s)
@@ -34,7 +29,7 @@ done
 # ### we don't want to copy the fancy option parsing loop there. For the
 # ### same reason, all parameters should be quoted, so that buildcheck.sh
 # ### sees an empty arg rather than missing one.
-./build/buildcheck.sh "$RELEASE_MODE" "$NEON_CHECK_CONTROL" || exit 1
+./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
 (cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
