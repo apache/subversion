@@ -244,27 +244,6 @@ void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 /* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
 
-/* Modify the entry of working copy PATH, presumably after an update
-   completes.   If PATH doesn't exist, this routine does nothing.
-
-   Set the entry's 'url' and 'working revision' fields to BASE_URL and
-   NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
-   NEW_REVISION in invalid, the working revision field is untouched.
-   The modifications are mutually exclusive.
-
-   If PATH is a directory and RECURSIVE is set, then recursively walk
-   over all entries files below PATH.  While doing this, if
-   NEW_REVISION is valid, then tweak every entry to have this new
-   working revision (excluding files that are scheduled for addition
-   or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
-   all urls to be "telescoping" children of the base_url.
-*/
-svn_error_t *svn_wc__do_update_cleanup (svn_stringbuf_t *path,
-                                        const svn_boolean_t recursive,
-                                        const svn_stringbuf_t *base_url,
-                                        const svn_revnum_t new_revision,
-                                        apr_pool_t *pool);
-
 /* Helper for svn_wc__do_update_cleanup:
 
    Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
