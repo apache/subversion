@@ -136,6 +136,68 @@ test1 (const char **msg,
 }
 
 
+static const char *true_keys[] = {"true1", "true2", "true3", NULL};
+static const char *false_keys[] = {"false1", "false2", "false3", NULL};
+
+static svn_error_t *
+test2 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  int i;
+  const char *cfg_file;
+
+  *msg = "test svn_config boolean conversion";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", NULL);
+  SVN_ERR(svn_config_read(&cfg, cfg_file, TRUE, pool));
+
+  for (i = 0; true_keys[i] != NULL; i++)
+    {
+      svn_boolean_t value;
+      SVN_ERR(svn_config_get_bool(cfg, &value, "booleans", true_keys[i],
+                                  FALSE));
+      if (!value)
+        return fail(pool, "Value of option '%s' is not true", true_keys[i]);
+    }
+
+  for (i = 0; false_keys[i] != NULL; i++)
+    {
+      svn_boolean_t value;
+      SVN_ERR(svn_config_get_bool(cfg, &value, "booleans", false_keys[i],
+                                  TRUE));
+      if (value)
+        return fail(pool, "Value of option '%s' is not true", false_keys[i]);
+    }
+
+  {
+    svn_error_t *err;
+    svn_boolean_t value;
+
+    svn_error_clear((err = svn_config_get_bool(cfg, &value,
+                                               "booleans", "bad_true",
+                                               TRUE)));
+    if (!err)
+      return fail(pool, "No error on bad truth value");
+
+    svn_error_clear((err = svn_config_get_bool(cfg, &value,
+                                               "booleans", "bad_false",
+                                               FALSE)));
+    if (!err)
+      return fail(pool, "No error on bad truth value");
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -148,5 +210,6 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS (test1),
+    SVN_TEST_PASS (test2),
     SVN_TEST_NULL
   };

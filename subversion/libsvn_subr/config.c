@@ -22,6 +22,7 @@
 #define APR_WANT_MEMFUNC
 #include <apr_want.h>
 
+#include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_user.h>
 #include "svn_error.h"
@@ -604,6 +605,46 @@ svn_config_set (svn_config_t *cfg,
 
 
 
+svn_error_t *
+svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
+                     const char *section, const char *option,
+                     svn_boolean_t default_value)
+{
+  const char *tmp_value;
+
+  svn_config_get (cfg, &tmp_value, section, option, NULL);
+  if (tmp_value == NULL)
+    *valuep = default_value;
+  else if (0 == strcasecmp (tmp_value, SVN_CONFIG_TRUE)
+           || 0 == strcasecmp (tmp_value, "yes")
+           || 0 == strcasecmp (tmp_value, "on"))
+    *valuep = TRUE;
+  else if (0 == strcasecmp (tmp_value, SVN_CONFIG_FALSE)
+           || 0 == strcasecmp (tmp_value, "no")
+           || 0 == strcasecmp (tmp_value, "off"))
+    *valuep = FALSE;
+  else
+    return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                              "non-boolean '%s' in boolean option",
+                              tmp_value);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+void
+svn_config_set_bool (svn_config_t *cfg,
+                     const char *section, const char *option,
+                     svn_boolean_t value)
+{
+  svn_config_set (cfg, section, option,
+                  (value ? SVN_CONFIG_TRUE : SVN_CONFIG_FALSE));
+}
+
+
+
+
 int
 svn_config_enumerate (svn_config_t *cfg, const char *section,
                       svn_config_enumerator_t callback, void *baton)
@@ -710,20 +751,24 @@ svn_config_get_server_setting_int (svn_config_t *cfg,
 {
   const char* tmp_value;
   char *end_pos;
-  char *default_value_str = apr_psprintf (pool,
-                                          "%" APR_INT64_T_FMT,
-                                          default_value); 
-  tmp_value = svn_config_get_server_setting (cfg, server_group,
-                                             option_name, default_value_str);
 
-  /* read tmp_value as an int now */
-  *result_value = apr_strtoi64 (tmp_value, &end_pos, 0);
-  
-  if (*end_pos != 0) 
+  tmp_value = svn_config_get_server_setting (cfg, server_group,
+                                             option_name, NULL);
+  if (tmp_value == NULL)
+    *result_value = default_value;
+  else
     {
-      return svn_error_create (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                               "non-integer in integer option");
+      /* read tmp_value as an int now */
+      *result_value = apr_strtoi64 (tmp_value, &end_pos, 0);
+
+      if (*end_pos != 0)
+        {
+          return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                    "non-integer '%s' in integer option",
+                                    tmp_value);
+        }
     }
-  return NULL;
+
+  return SVN_NO_ERROR;
 }
 
