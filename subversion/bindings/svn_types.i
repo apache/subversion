@@ -16,11 +16,12 @@
  * ====================================================================
  */
 
-%module _types
+/* This interface file only defines types and their related information.
+   There is no module associated with this interface file. */
 
 %import apr.i
 
-// -----------------------------------------------------------------------
+/* ----------------------------------------------------------------------- */
 
 %typemap(python,except) svn_error_t * {
     $function
@@ -37,13 +38,13 @@
     $target = Py_None;
 }
 
-// -----------------------------------------------------------------------
+/* ----------------------------------------------------------------------- */
 
 /* 'svn_renum_t *' will always be an OUTPUT parameter */
 %typemap(in) svn_renum_t * = long *OUTPUT;
 %typemap(ignore) svn_revnum_t * = long *OUTPUT;
 %typemap(argout) svn_revnum_t * = long *OUTPUT;
 
-// -----------------------------------------------------------------------
+/* ----------------------------------------------------------------------- */
 
 %include svn_types.h
