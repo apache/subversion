@@ -317,7 +317,7 @@ static int auth_checker(request_rec *r)
     }
 
     dest_uri = parsed_dest_uri.path;
-    if (!strncmp(conf->base_path, dest_uri, strlen(conf->base_path))) {
+    if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
         /* If it is not the same location, then we don't allow it.
          * XXX: Instead we could compare repository uuids, but that
          * XXX: seems a bit over the top.
