@@ -169,7 +169,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         svn_lib_berkeley_db=yes
       ;;
       * )
-	CPPFLAGS="$LIBS -I$found/include"
+	CPPFLAGS="$CPPFLAGS -I$found/include"
 	LIBS="$LIBS -L$found/lib"
 	svn_lib_berkeley_db=yes
       ;;
