@@ -133,6 +133,7 @@ Greg:
      - switch dav_stream to buckets/brigades
 
    M3 ITEMS:
+   - VERSION stuff. VPATH builds.
    - get/set properties over the wire
    - cvs2svn
    - Python bindings
