@@ -1,0 +1,20 @@
+Subversion post installation notes
+==================================
+
+Some tips to get you started:
+-----------------------------
+* Read the documentation included with this distribution.
+* For more info - Fire up your browser and point it to:
+  http://subversion.tigris.org/ and look for documentation.
+* You can use the mod_dav_svn.so apache module found in the distro's
+  apache2\modules folder if you want to use Subversion as a server.
+
+Notes for Windows 9x and Millenium users:
+-----------------------------------------
+Please, remember to restart your machine if your path has changed.
+
+Thanks for using Subversion!
+
+Enjoy..
+
+The Subversion team
