@@ -494,8 +494,8 @@ class TargetSWIG(Target):
       abbrev = lang_abbrev[lang]
 
       # the .c file depends upon the .i file
-      cfile = os.path.join(dir, lang, cname)
-      graph.add(DT_SWIG_C, SWIGObject(cfile, lang), ifile)
+      cfile = SWIGObject(os.path.join(dir, lang, cname), lang)
+      graph.add(DT_SWIG_C, cfile, ifile)
 
       # the object depends upon the .c file
       ofile = SWIGObject(os.path.join(dir, lang, oname), lang)

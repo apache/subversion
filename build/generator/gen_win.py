@@ -276,6 +276,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       fakedefines.extend(["APR_DECLARE_STATIC","APU_DECLARE_STATIC"])
 
+    if isinstance(target, gen_base.SWIGLibrary):
+      fakedefines.append("SWIG_GLOBAL")
+      fakedefines.append("STATIC_LINKED")
+
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
@@ -296,6 +300,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.httpd_path + "/srclib/apr-util/xml/expat/lib",
         self.httpd_path + "/include"
         ])
+    elif isinstance(target, gen_base.SWIGLibrary):
+      fakeincludes = self.map_rootpath(["subversion/bindings/swig",
+                                        "subversion/include",
+                                        "apr/include"], rootpath)  
     else:
       fakeincludes = self.map_rootpath(["subversion/include",
                                         "apr/include",
@@ -346,6 +354,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                     'rpcrt4.lib',
                     'shfolder.lib' ])
       return libs
+
+    if isinstance(target, gen_base.SWIGLibrary):
+      return [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
+               'mswsock.lib',
+               'ws2_32.lib',
+               'advapi32.lib',
+               'rpcrt4.lib',
+               'shfolder.lib' ]
 
     if not isinstance(target, gen_base.TargetExe):
       return []

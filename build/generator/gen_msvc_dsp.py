@@ -43,6 +43,12 @@ class Generator(gen_win.WinGeneratorBase):
     elif isinstance(target, gen_base.TargetExternal):
       targtype = "Win32 (x86) External Target"
       targval = "0x0106"
+    elif isinstance(target, gen_base.SWIGLibrary):
+      targtype = "Win32 (x86) Dynamic-Link Library"
+      targval = "0x0102"
+      target.output_name = os.path.basename(target.fname)
+      target.desc = None
+      target.is_apache_mod = 0
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
@@ -61,7 +67,24 @@ class Generator(gen_win.WinGeneratorBase):
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if '-' in rsrc:
           rsrc = '"%s"' % rsrc
-        sources.append(_item(path=rsrc, reldir=reldir))
+        sources.append(_item(path=rsrc, reldir=reldir, swig_language=None,
+                             swig_output=None))
+
+    if isinstance(target, gen_base.SWIGLibrary):
+      for obj in self.graph.get_sources(gen_base.DT_LINK, target):
+        if isinstance(obj, gen_base.SWIGObject):
+          for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
+            if isinstance(cobj, gen_base.SWIGObject):
+              csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
+              sources.append(_item(path=csrc, reldir=None, swig_language=None,
+                                   swig_output=None))
+
+              for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
+                isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
+                sources.append(_item(path=isrc, reldir=None, 
+                                     swig_language=target.lang,
+                                     swig_output=csrc))
+        
     sources.sort(lambda x, y: cmp(x.path, y.path))
 
     data = {
@@ -80,7 +103,8 @@ class Generator(gen_win.WinGeneratorBase):
                                              gen_base.TargetExternal)),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetUtility)),
-      'is_apache_mod' : ezt.boolean(target.is_apache_mod),
+      'is_dll' : ezt.boolean(isinstance(target, gen_base.SWIGLibrary)
+                             or target.is_apache_mod),
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
@@ -100,23 +124,29 @@ class Generator(gen_win.WinGeneratorBase):
                                                       None, None, self.cfg,
                                                       None)
 
+    install_targets = unique(self.graph.get_all_sources(gen_base.DT_INSTALL)
+                             + self.targets.values())
+
+    # sort these for output stability, to watch out for regressions.
+    install_targets.sort()
+
     targets = [ ]
 
     # Generate .dsp file names for the targets: replace dashes with
     # underscores and replace *-test with test_* (so that the test
     # programs are visually separare from the rest of the projects)
-    for name in self.targets.keys():
+    for target in install_targets:
+      name = target.name
       pos = string.find(name, '-test')
       if pos >= 0:
         dsp_name = 'test_' + string.replace(name[:pos], '-', '_')
       else:
         dsp_name = string.replace(name, '-', '_')
-      self.targets[name].dsp_name = dsp_name
+      target.dsp_name = dsp_name
 
     # Traverse the targets and generate the project files
-    items = self.targets.items()
-    items.sort()
-    for name, target in items:
+    for target in install_targets:
+      name = target.name
       # These aren't working yet
       if isinstance(target, gen_base.TargetScript) \
          or isinstance(target, gen_base.TargetSWIG):
@@ -174,6 +204,11 @@ class Generator(gen_win.WinGeneratorBase):
           depends.extend(deps)
         else:
           depends.extend(self.get_unique_win_depends(target))
+      elif isinstance(target, gen_base.SWIGLibrary):
+        for lib in self.graph.get_sources(gen_base.DT_LINK, target):
+          if hasattr(lib, 'dsp_name'):
+            depends.append(lib)
+            depends.extend(self.get_win_depends(lib, 0))          
       else:
         assert 0
 
@@ -196,3 +231,9 @@ class Generator(gen_win.WinGeneratorBase):
 class _item:
   def __init__(self, **kw):
     vars(self).update(kw)
+
+def unique(seq):
+  d = {}
+  for i in seq:
+    d[i] = None
+  return d.keys()
