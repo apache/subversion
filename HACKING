@@ -35,7 +35,7 @@ TABLE OF CONTENTS
    * The configuration/build system under unix
    * How to release a distribution tarball
    * Release numbering, compatibility, and deprecation
-   * Stabilizing a release branch
+   * Stabilizing and maintaining releases
    * Localization (l10n)
 
 
