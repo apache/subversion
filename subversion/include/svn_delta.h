@@ -210,8 +210,9 @@ exclusive ways.
   the propname and propvalue gradually, and send off `chunks' to these
   handlers.  This is similar to the text-delta strategy.
       
-Again, note that these methods are non-mututally-exclusive.  The
-caller of svn_delta_parse() may actually want us to do both strategies.
+Again, note that these methods are non-mututally-exclusive.  It is
+unlikely that a caller would use both strategies, but libsvn_delta
+does not prohibit it.
 
 */
 
