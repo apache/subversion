@@ -118,7 +118,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
   else
     {
       svn_xml__stackframe_t *p = frame->previous;
-      svn_string_t *this_name = NULL;
+      svn_stringbuf_t *this_name = NULL;
 
       while (p)
         {
@@ -433,7 +433,7 @@ do_directory_callback (svn_xml__digger_t *digger,
 {
   svn_error_t *err;
   const char *ancestor, *ver;
-  svn_string_t *dir_name = NULL;
+  svn_stringbuf_t *dir_name = NULL;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
   dir_name = youngest_frame->previous->name;
@@ -487,7 +487,7 @@ static svn_error_t *
 do_delete_dirent (svn_xml__digger_t *digger, 
                   svn_xml__stackframe_t *youngest_frame)
 {
-  svn_string_t *dirent_name = NULL;
+  svn_stringbuf_t *dirent_name = NULL;
   svn_error_t *err;
 
   /* Retrieve the "name" field from the current <delete> tag */
@@ -519,7 +519,7 @@ do_file_callback (svn_xml__digger_t *digger,
 {
   svn_error_t *err;
   const char *ancestor, *ver;
-  svn_string_t *filename = NULL;
+  svn_stringbuf_t *filename = NULL;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
   filename = youngest_frame->previous->name;
@@ -613,7 +613,7 @@ do_close_file (svn_xml__digger_t *digger)
 static svn_error_t *
 lookup_file_baton (void **file_baton,
                    svn_xml__digger_t *digger,
-                   svn_string_t *ref_id)
+                   svn_stringbuf_t *ref_id)
 {
   *file_baton = apr_hash_get (digger->postfix_hash,
                               ref_id->data,
@@ -640,7 +640,7 @@ lookup_file_baton (void **file_baton,
    svndiff parser.  (The svndiff parser knows how to "push" windows of
    svndiff to the consumption routine.)  */
 static svn_error_t *
-do_begin_textdelta (svn_xml__digger_t *digger, svn_string_t *encoding)
+do_begin_textdelta (svn_xml__digger_t *digger, svn_stringbuf_t *encoding)
 {
   svn_error_t *err;
   svn_txdelta_window_handler_t window_consumer = NULL;
@@ -820,7 +820,7 @@ static svn_error_t *
 do_delete_prop (svn_xml__digger_t *digger, 
                 svn_xml__stackframe_t *youngest_frame)
 {
-  svn_string_t *dir_name = NULL;
+  svn_stringbuf_t *dir_name = NULL;
         
   if (! digger->current_propdelta)
     return SVN_NO_ERROR;
@@ -850,7 +850,7 @@ do_delete_prop (svn_xml__digger_t *digger,
 static svn_error_t *
 do_prop_delta_callback (svn_xml__digger_t *digger)
 {
-  svn_string_t *value_string;
+  svn_stringbuf_t *value_string;
   svn_error_t *err = SVN_NO_ERROR;
 
   if (! digger->current_propdelta)
@@ -1393,7 +1393,7 @@ svn_error_t *
 svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            const svn_delta_edit_fns_t *editor,
                            void *edit_baton,
-                           svn_string_t *base_path, 
+                           svn_stringbuf_t *base_path, 
                            svn_revnum_t base_revision,
                            apr_pool_t *pool)
 {
@@ -1487,7 +1487,7 @@ svn_error_t *
 svn_delta_xml_auto_parse (svn_stream_t *source,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
-                          svn_string_t *base_path,
+                          svn_stringbuf_t *base_path,
                           svn_revnum_t base_revision,
                           apr_pool_t *pool)
 {

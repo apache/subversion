@@ -45,8 +45,8 @@
  * and if the adm area is created, it is left in an unlocked state.
  */
 svn_error_t *
-svn_wc__ensure_wc (svn_string_t *path,
-                   svn_string_t *ancestor_path,
+svn_wc__ensure_wc (svn_stringbuf_t *path,
+                   svn_stringbuf_t *ancestor_path,
                    svn_revnum_t ancestor_revision,
                    apr_pool_t *pool)
 {
@@ -68,7 +68,7 @@ svn_wc__ensure_wc (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc__ensure_uniform_revision (svn_string_t *dir_path,
+svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
                                  svn_revnum_t revision,
                                  apr_pool_t *pool)
 {
@@ -90,9 +90,9 @@ svn_wc__ensure_uniform_revision (svn_string_t *dir_path,
       const char *keystring;
       apr_size_t klen;
       void *val;
-      svn_string_t *current_entry_name;
+      svn_stringbuf_t *current_entry_name;
       svn_wc_entry_t *current_entry; 
-      svn_string_t *full_entry_path;
+      svn_stringbuf_t *full_entry_path;
 
       /* Get the next entry */
       apr_hash_this (hi, &key, &klen, &val);
@@ -133,12 +133,12 @@ svn_wc__ensure_uniform_revision (svn_string_t *dir_path,
 
 svn_error_t *
 svn_wc_set_revision (void *baton,
-                     svn_string_t *target,
+                     svn_stringbuf_t *target,
                      svn_revnum_t new_revnum)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  svn_string_t *log_parent, *logtag, *basename;
+  svn_stringbuf_t *log_parent, *logtag, *basename;
   apr_file_t *log_fp = NULL;
   struct svn_wc_close_commit_baton *bumper =
     (struct svn_wc_close_commit_baton *) baton;
@@ -146,7 +146,7 @@ svn_wc_set_revision (void *baton,
   char *revstr = apr_psprintf (pool, "%ld", new_revnum);
 
   /* Construct the -full- path */
-  svn_string_t *path = svn_string_dup (bumper->prefix_path, pool);
+  svn_stringbuf_t *path = svn_string_dup (bumper->prefix_path, pool);
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* Write a log file in the adm dir of path. */
@@ -173,7 +173,7 @@ svn_wc_set_revision (void *baton,
   else
     {
       /* PATH must be a dir */
-      svn_string_t *pdir;
+      svn_stringbuf_t *pdir;
 
       if (svn_path_is_empty (log_parent, svn_path_local_style))
         {
@@ -244,15 +244,15 @@ svn_wc_set_revision (void *baton,
 
 
 svn_error_t *svn_wc_get_wc_prop (void *baton,
-                                 svn_string_t *target,
-                                 svn_string_t *name,
-                                 svn_string_t **value)
+                                 svn_stringbuf_t *target,
+                                 svn_stringbuf_t *name,
+                                 svn_stringbuf_t **value)
 {
   struct svn_wc_close_commit_baton *ccb =
     (struct svn_wc_close_commit_baton *) baton;
 
   /* Prepend the baton's prefix to the target. */
-  svn_string_t *path = svn_string_dup (ccb->prefix_path, ccb->pool);
+  svn_stringbuf_t *path = svn_string_dup (ccb->prefix_path, ccb->pool);
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* And use our public interface to get the property value. */
@@ -263,15 +263,15 @@ svn_error_t *svn_wc_get_wc_prop (void *baton,
 
 
 svn_error_t *svn_wc_set_wc_prop (void *baton,
-                                 svn_string_t *target,
-                                 svn_string_t *name,
-                                 svn_string_t *value)
+                                 svn_stringbuf_t *target,
+                                 svn_stringbuf_t *name,
+                                 svn_stringbuf_t *value)
 {
   struct svn_wc_close_commit_baton *ccb =
     (struct svn_wc_close_commit_baton *) baton;
 
   /* Prepend the baton's prefix to the target. */
-  svn_string_t *path = svn_string_dup (ccb->prefix_path, ccb->pool);
+  svn_stringbuf_t *path = svn_string_dup (ccb->prefix_path, ccb->pool);
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* And use our public interface to get the property value. */
@@ -291,7 +291,7 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
    the public header file that they exist. */
 
 svn_error_t *
-svn_wc_rename (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+svn_wc_rename (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 {
   /* kff todo */
   return SVN_NO_ERROR;
@@ -299,7 +299,7 @@ svn_wc_rename (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_copy (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+svn_wc_copy (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 {
   /* kff todo */
   return SVN_NO_ERROR;
@@ -315,12 +315,12 @@ enum mark_tree_state {
 
 /* Recursively mark a tree DIR for some STATE. */
 static svn_error_t *
-mark_tree (svn_string_t *dir, enum mark_tree_state state, apr_pool_t *pool)
+mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_string_t *fullpath = svn_string_dup (dir, pool);
+  svn_stringbuf_t *fullpath = svn_string_dup (dir, pool);
 
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
@@ -331,7 +331,7 @@ mark_tree (svn_string_t *dir, enum mark_tree_state state, apr_pool_t *pool)
       const void *key;
       apr_size_t klen;
       void *val;
-      svn_string_t *basename;
+      svn_stringbuf_t *basename;
       svn_wc_entry_t *entry; 
 
       /* Get the next entry */
@@ -397,9 +397,9 @@ mark_tree (svn_string_t *dir, enum mark_tree_state state, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
+svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 {
-  svn_string_t *dir, *basename;
+  svn_stringbuf_t *dir, *basename;
   svn_wc_entry_t *entry;
 
   /* Get the entry for the path we are deleting. */
@@ -430,11 +430,11 @@ svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
+svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
 {
-  svn_string_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *basename;
   svn_wc_entry_t *orig_entry, *entry;
-  svn_string_t *ancestor_path;
+  svn_stringbuf_t *ancestor_path;
 
   /* Get the original entry for this directory if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
@@ -495,9 +495,9 @@ svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
+svn_wc_add_file (svn_stringbuf_t *file, apr_pool_t *pool)
 {
-  svn_string_t *dir, *basename;
+  svn_stringbuf_t *dir, *basename;
   svn_wc_entry_t *orig_entry;
 
   /* Get the original entry for this directory if one exists (perhaps
@@ -529,11 +529,11 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc_unadd (svn_string_t *path, 
+svn_wc_unadd (svn_stringbuf_t *path, 
               apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
-  svn_string_t *dir, *basename;
+  svn_stringbuf_t *dir, *basename;
 
   /* Get the entry for PATH */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -566,12 +566,12 @@ svn_wc_unadd (svn_string_t *path,
    represents a directory, un-mark the entire tree under PATH for
    deletion.  */
 svn_error_t *
-svn_wc_undelete (svn_string_t *path, 
+svn_wc_undelete (svn_stringbuf_t *path, 
                  svn_boolean_t recursive,
                  apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
-  svn_string_t *dir, *basename;
+  svn_stringbuf_t *dir, *basename;
 
   /* Get the entry for PATH */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -615,8 +615,8 @@ svn_wc_undelete (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc_get_pristine_copy_path (svn_string_t *path,
-                               svn_string_t **pristine_path,
+svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
+                               svn_stringbuf_t **pristine_path,
                                apr_pool_t *pool)
 {
   *pristine_path = svn_wc__text_base_path (path, FALSE, pool);
@@ -626,8 +626,8 @@ svn_wc_get_pristine_copy_path (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc_remove_from_revision_control (svn_string_t *path, 
-                                     svn_string_t *name,
+svn_wc_remove_from_revision_control (svn_stringbuf_t *path, 
+                                     svn_stringbuf_t *name,
                                      svn_boolean_t destroy_wf,
                                      apr_pool_t *pool)
 {
@@ -637,7 +637,7 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
   svn_boolean_t left_a_file = FALSE;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries = NULL;
-  svn_string_t *full_path = svn_string_dup (path, pool);
+  svn_stringbuf_t *full_path = svn_string_dup (path, pool);
 
   /* NAME is either a file's basename or SVN_WC_ENTRY_THIS_DIR. */
   is_file = (strcmp (name->data, SVN_WC_ENTRY_THIS_DIR)) ? TRUE : FALSE;
@@ -680,7 +680,7 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
 
   else /* looking at THIS_DIR */
     {
-      svn_string_t *parent_dir, *basename;
+      svn_stringbuf_t *parent_dir, *basename;
       apr_hash_index_t *hi;
       /* ### sanity check:  check 2 places for DELETED flag? */
 
@@ -700,7 +700,7 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
           const void *key;
           apr_size_t klen;
           void *val;
-          svn_string_t *current_entry_name;
+          svn_stringbuf_t *current_entry_name;
           svn_wc_entry_t *current_entry; 
           
           apr_hash_this (hi, &key, &klen, &val);
@@ -722,9 +722,9 @@ svn_wc_remove_from_revision_control (svn_string_t *path,
             }
           else if (current_entry_name && (current_entry->kind == svn_node_dir))
             {
-              svn_string_t *this_dir = svn_string_create
+              svn_stringbuf_t *this_dir = svn_string_create
                 (SVN_WC_ENTRY_THIS_DIR, subpool);
-              svn_string_t *entrypath = svn_string_dup (path, subpool);
+              svn_stringbuf_t *entrypath = svn_string_dup (path, subpool);
               svn_path_add_component (entrypath, current_entry_name,
                                       svn_path_local_style);
               err = svn_wc_remove_from_revision_control (entrypath, this_dir,

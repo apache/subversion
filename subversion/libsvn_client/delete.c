@@ -32,7 +32,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_delete (svn_string_t *path,
+svn_client_delete (svn_stringbuf_t *path,
                    svn_boolean_t force, 
                    apr_pool_t *pool)
 {
@@ -59,7 +59,7 @@ svn_client_delete (svn_string_t *path,
 
 
 svn_error_t *
-svn_client_undelete (svn_string_t *path,
+svn_client_undelete (svn_stringbuf_t *path,
                      svn_boolean_t recursive,
                      apr_pool_t *pool)
 {

@@ -33,12 +33,12 @@ int main(int argc, char **argv)
   svn_txdelta_window_handler_t handler;
   svn_txdelta_window_t window;
   void *edit_baton, *root_baton, *dir_baton, *file_baton, *handler_baton;
-  svn_string_t *foo_string;
-  svn_string_t *bar_string;
-  svn_string_t *baz_string;
-  svn_string_t *aaa_string;
-  svn_string_t *bbb_string;
-  svn_string_t *ccc_string;
+  svn_stringbuf_t *foo_string;
+  svn_stringbuf_t *bar_string;
+  svn_stringbuf_t *baz_string;
+  svn_stringbuf_t *aaa_string;
+  svn_stringbuf_t *bbb_string;
+  svn_stringbuf_t *ccc_string;
 
   apr_initialize();
   pool = svn_pool_create (NULL);

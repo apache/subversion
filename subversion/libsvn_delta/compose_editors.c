@@ -96,7 +96,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision,
 
 
 static svn_error_t *
-delete_entry (svn_string_t *name, void *parent_baton)
+delete_entry (svn_stringbuf_t *name, void *parent_baton)
 {
   struct dir_baton *d = parent_baton;
   svn_error_t *err;
@@ -114,9 +114,9 @@ delete_entry (svn_string_t *name, void *parent_baton)
 
 
 static svn_error_t *
-add_directory (svn_string_t *name,
+add_directory (svn_stringbuf_t *name,
                void *parent_baton,
-               svn_string_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
@@ -146,7 +146,7 @@ add_directory (svn_string_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_string_t *name,
+replace_directory (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **child_baton)
@@ -288,9 +288,9 @@ apply_textdelta (void *file_baton,
 
 
 static svn_error_t *
-add_file (svn_string_t *name,
+add_file (svn_stringbuf_t *name,
           void *parent_baton,
-          svn_string_t *copyfrom_path,
+          svn_stringbuf_t *copyfrom_path,
           svn_revnum_t copyfrom_revision,
           void **file_baton)
 {
@@ -318,7 +318,7 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
-replace_file (svn_string_t *name,
+replace_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
@@ -346,8 +346,8 @@ replace_file (svn_string_t *name,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_string_t *name,
-                  svn_string_t *value)
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
   svn_error_t *err;
@@ -368,8 +368,8 @@ change_file_prop (void *file_baton,
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_string_t *name,
-                 svn_string_t *value)
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *value)
 {
   struct dir_baton *d = dir_baton;
   svn_error_t *err;

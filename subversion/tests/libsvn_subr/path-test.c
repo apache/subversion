@@ -46,9 +46,9 @@ test_path_is_child (const char **msg,
     {
       for (j = 0; j < 5; j++)
         {
-          svn_string_t *path1 = svn_string_create (paths[i], pool);
-          svn_string_t *path2 = svn_string_create (paths[j], pool);
-          svn_string_t *remainder;
+          svn_stringbuf_t *path1 = svn_string_create (paths[i], pool);
+          svn_stringbuf_t *path2 = svn_string_create (paths[j], pool);
+          svn_stringbuf_t *remainder;
 
           remainder = svn_path_is_child (path1, path2, 
                                          svn_path_repos_style,

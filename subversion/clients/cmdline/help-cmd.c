@@ -109,7 +109,7 @@ static svn_error_t *
 print_version_info (apr_pool_t *pool)
 {
   void *ra_baton;
-  svn_string_t *descriptions;
+  svn_stringbuf_t *descriptions;
   static const char info[] =
     "Copyright (C) 2000-2001 CollabNet.  All rights reserved.\n"
     "\n"
@@ -156,7 +156,7 @@ svn_cl__help (apr_getopt_t *os,
   if (os && targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_string_t *this = (((svn_string_t **) (targets)->elts))[i];
+        svn_stringbuf_t *this = (((svn_stringbuf_t **) (targets)->elts))[i];
 	svn_cl__subcommand_help (this->data, pool);
       }
   else

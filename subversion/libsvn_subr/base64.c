@@ -63,7 +63,7 @@ encode_group (const unsigned char *in, char *out)
    initialize *INBUFLEN and *LINELEN to 0.  Output will be appended to
    STR.  */
 static void
-encode_bytes (svn_string_t *str, const char *data, apr_size_t len,
+encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
               unsigned char *inbuf, int *inbuflen, int *linelen)
 {
   char group[4];
@@ -94,7 +94,7 @@ encode_bytes (svn_string_t *str, const char *data, apr_size_t len,
 /* Encode leftover data, if any, and possibly a final newline,
    appending to STR.  LEN must be in the range 0..2.  */
 static void
-encode_partial_group (svn_string_t *str, const char *extra, int len,
+encode_partial_group (svn_stringbuf_t *str, const char *extra, int len,
                       int linelen)
 {
   unsigned char ingroup[3];
@@ -120,7 +120,7 @@ encode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
   apr_pool_t *subpool = svn_pool_create (eb->pool);
-  svn_string_t *encoded = svn_string_create ("", subpool);
+  svn_stringbuf_t *encoded = svn_string_create ("", subpool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -139,7 +139,7 @@ static svn_error_t *
 finish_encoding_data (void *baton)
 {
   struct encode_baton *eb = baton;
-  svn_string_t *encoded = svn_string_create ("", eb->pool);
+  svn_stringbuf_t *encoded = svn_string_create ("", eb->pool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -175,10 +175,10 @@ svn_base64_encode (svn_stream_t *output, apr_pool_t *pool)
 }
 
 
-svn_string_t *
-svn_base64_encode_string (svn_string_t *str, apr_pool_t *pool)
+svn_stringbuf_t *
+svn_base64_encode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_string_t *encoded = svn_string_create ("", pool);
+  svn_stringbuf_t *encoded = svn_string_create ("", pool);
   char ingroup[3];
   int ingrouplen = 0, linelen = 0;
 
@@ -220,7 +220,7 @@ decode_group (const unsigned char *in, char *out)
    INBUF and initialize *INBUFLEN to 0 and *DONE to FALSE.  Output
    will be appended to STR.  */
 static void
-decode_bytes (svn_string_t *str, const char *data, apr_size_t len,
+decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
               unsigned char *inbuf, int *inbuflen, svn_boolean_t *done)
 {
   const char *p, *find;
@@ -261,7 +261,7 @@ decode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct decode_baton *db = baton;
   apr_pool_t *subpool;
-  svn_string_t *decoded;
+  svn_stringbuf_t *decoded;
   apr_size_t declen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -311,10 +311,10 @@ svn_base64_decode (svn_stream_t *output, apr_pool_t *pool)
 }
 
 
-svn_string_t *
-svn_base64_decode_string (svn_string_t *str, apr_pool_t *pool)
+svn_stringbuf_t *
+svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_string_t *decoded = svn_string_create ("", pool);
+  svn_stringbuf_t *decoded = svn_string_create ("", pool);
   unsigned char ingroup[4];
   int ingrouplen = 0;
   svn_boolean_t done = FALSE;

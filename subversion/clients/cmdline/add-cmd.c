@@ -45,7 +45,7 @@ svn_cl__add (apr_getopt_t *os,
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         err = svn_client_add (target, recursive, pool);
         if (err)
           {
@@ -78,7 +78,7 @@ svn_cl__unadd (apr_getopt_t *os,
   if (targets->nelts)
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+        svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         SVN_ERR (svn_client_unadd (target, pool));
       }
   else

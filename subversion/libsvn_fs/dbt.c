@@ -118,7 +118,7 @@ svn_fs__id_to_dbt (DBT *dbt,
                    const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  svn_string_t *unparsed_id = svn_fs_unparse_id (id, pool);
+  svn_stringbuf_t *unparsed_id = svn_fs_unparse_id (id, pool);
   svn_fs__set_dbt (dbt, unparsed_id->data, unparsed_id->len);
   return dbt;
 }
@@ -130,7 +130,7 @@ svn_fs__skel_to_dbt (DBT *dbt,
                      skel_t *skel,
                      apr_pool_t *pool)
 {
-  svn_string_t *unparsed_skel = svn_fs__unparse_skel (skel, pool);
+  svn_stringbuf_t *unparsed_skel = svn_fs__unparse_skel (skel, pool);
   svn_fs__set_dbt (dbt, unparsed_skel->data, unparsed_skel->len);
   return dbt;
 }

@@ -36,7 +36,7 @@ static apr_status_t cleanup_session(void *sess)
 }
 
 static svn_error_t * svn_ra_open (void **session_baton,
-                                  svn_string_t *repository_name,
+                                  svn_stringbuf_t *repository_name,
                                   apr_pool_t *pool)
 {
   const char *repository = repository_name->data;

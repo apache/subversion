@@ -57,7 +57,7 @@ main (int argc, char *argv[])
   const svn_delta_edit_fns_t *my_editor;
   void *my_edit_baton;
 
-  svn_string_t *rootdir;
+  svn_stringbuf_t *rootdir;
   apr_array_header_t *targets;
 
   svn_boolean_t use_xml = FALSE;
@@ -74,9 +74,9 @@ main (int argc, char *argv[])
   apr_initialize ();
   globalpool = svn_pool_create (NULL);
 
-  targets = apr_array_make (globalpool, 1, sizeof (svn_string_t *));
+  targets = apr_array_make (globalpool, 1, sizeof (svn_stringbuf_t *));
   rootdir = svn_string_create (argv[1], globalpool);
-  (*((svn_string_t**) apr_array_push (targets))) = rootdir;
+  (*((svn_stringbuf_t**) apr_array_push (targets))) = rootdir;
 
   for (i = 2; i < argc; i++)
     {

@@ -97,15 +97,15 @@ typedef struct {
 #define POP_SUBDIR(sds) (((subdir_t **)(sds)->elts)[--(sds)->nelts])
 #define PUSH_SUBDIR(sds,s) (*(subdir_t **)apr_array_push(sds) = (s))
 
-/* setting properties requires svn_string_t; this helps out */
+/* setting properties requires svn_stringbuf_t; this helps out */
 typedef struct {
-  svn_string_t *name;
-  svn_string_t *value;
+  svn_stringbuf_t *name;
+  svn_stringbuf_t *value;
 } vsn_url_helper;
 
 typedef svn_error_t * (*prop_setter_t)(void *baton,
-                                       svn_string_t *name,
-                                       svn_string_t *value);
+                                       svn_stringbuf_t *name,
+                                       svn_stringbuf_t *value);
 
 typedef struct {
   void *baton;
@@ -116,7 +116,7 @@ typedef struct {
   svn_ra_session_t *ras;
 
   apr_file_t *tmpfile;
-  svn_string_t *fname;
+  svn_stringbuf_t *fname;
 
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
@@ -126,9 +126,9 @@ typedef struct {
 #define PUSH_BATON(rb,b) (*(void **)apr_array_push((rb)->dirs) = (b))
 
   void *file_baton;
-  svn_string_t *namestr;
-  svn_string_t *cpathstr;
-  svn_string_t *href;
+  svn_stringbuf_t *namestr;
+  svn_stringbuf_t *cpathstr;
+  svn_stringbuf_t *href;
 
   vsn_url_helper vuh;
 
@@ -166,9 +166,9 @@ static const struct hip_xml_elm report_elements[] =
 };
 
 
-static svn_string_t *my_basename(const char *url, apr_pool_t *pool)
+static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
 {
-  svn_string_t *s = svn_string_create(url, pool);
+  svn_stringbuf_t *s = svn_string_create(url, pool);
 
   svn_path_canonicalize(s, svn_path_url_style);
 
@@ -277,7 +277,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
   file_read_ctx_t *frc = userdata;
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
-  svn_string_t data = { (char *)buf, len, len, frc->pool };
+  svn_stringbuf_t data = { (char *)buf, len, len, frc->pool };
   svn_error_t *err;
 
   if (len == 0)
@@ -353,7 +353,7 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   const char *bc_url = rsrc->url;    /* url in the Baseline Collection */
   svn_error_t *err;
   svn_error_t *err2;
-  svn_string_t *name;
+  svn_stringbuf_t *name;
   void *file_baton;
 
   name = my_basename(bc_url, pool);
@@ -382,7 +382,7 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
 
 static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                     svn_revnum_t revision,
-                                    svn_string_t **activity_url,
+                                    svn_stringbuf_t **activity_url,
                                     svn_revnum_t *target_rev,
                                     const char **bc_root)
 {
@@ -504,9 +504,9 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
   svn_error_t *err;
   void *root_baton;
-  svn_string_t *act_url_name;
+  svn_stringbuf_t *act_url_name;
   vsn_url_helper vuh;
-  svn_string_t *activity_url;
+  svn_stringbuf_t *activity_url;
   svn_revnum_t target_rev;
   const char *bc_root;
   subdir_t *subdir;
@@ -578,7 +578,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       if (strlen(url) > strlen(bc_root))
         {
-          svn_string_t *name;
+          svn_stringbuf_t *name;
 
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
@@ -805,7 +805,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   const char *att;
   svn_revnum_t base;
   const char *name;
-  svn_string_t *cpath;
+  svn_stringbuf_t *cpath;
   svn_revnum_t crev = SVN_INVALID_REVNUM;
   void *new_dir_baton;
   svn_error_t *err;
@@ -1013,7 +1013,7 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
 }
 
 static svn_error_t * reporter_set_path(void *report_baton,
-                                       svn_string_t *path,
+                                       svn_stringbuf_t *path,
                                        svn_revnum_t revision)
 {
   report_baton_t *rb = report_baton;
@@ -1039,7 +1039,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
 
 
 static svn_error_t * reporter_delete_path(void *report_baton,
-                                          svn_string_t *path)
+                                          svn_stringbuf_t *path)
 {
   return SVN_NO_ERROR;
 }
@@ -1108,7 +1108,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     void *wc_update_baton)
 {
   svn_ra_session_t *ras = session_baton;
-  svn_string_t *path;
+  svn_stringbuf_t *path;
   report_baton_t *rb;
   apr_status_t status;
   const char *s;
@@ -1131,7 +1131,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
      thread can block on the pipe, waiting for the other to complete its
      work.
   */
-  /* ### fucking svn_string_t */
+  /* ### fucking svn_stringbuf_t */
   path = svn_string_create(".svn_update", ras->pool);
   SVN_ERR( svn_io_open_unique_file(&rb->tmpfile, &rb->fname, path,
                                    ".ra_dav", ras->pool) );

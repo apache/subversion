@@ -33,7 +33,7 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
 {
   apr_dbm_t *dbm;
   apr_status_t status;
-  svn_string_t *pathname;
+  svn_stringbuf_t *pathname;
   apr_datum_t key;
   apr_datum_t value;
   const char *txn_name;
@@ -73,7 +73,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
 {
   apr_dbm_t *dbm;
   apr_status_t status;
-  svn_string_t *pathname;
+  svn_stringbuf_t *pathname;
   apr_datum_t key;
   apr_datum_t value;
 

@@ -34,8 +34,8 @@ svn_cl__propset (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_string_t *propname;
-  svn_string_t *propval;
+  svn_stringbuf_t *propname;
+  svn_stringbuf_t *propval;
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
@@ -53,9 +53,9 @@ svn_cl__propset (apr_getopt_t *os,
   if (err)
     return err;
 
-  propname  = ((svn_string_t **) (opt_state->args->elts))[0];
+  propname  = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
   if (num_args_wanted == 2)
-    propval = ((svn_string_t **) (opt_state->args->elts))[1];
+    propval = ((svn_stringbuf_t **) (opt_state->args->elts))[1];
 
   if (! strcmp (propval->data, ""))
     {
@@ -71,7 +71,7 @@ svn_cl__propset (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       err = svn_wc_prop_set (propname, propval, target, pool);
       if (err)
         return err;

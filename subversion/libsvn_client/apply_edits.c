@@ -37,8 +37,8 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              const svn_delta_edit_fns_t *after_editor,
              void *after_edit_baton,
              svn_stream_t *delta,
-             svn_string_t *dest,
-             svn_string_t *ancestor_path,    /* ignored if update */
+             svn_stringbuf_t *dest,
+             svn_stringbuf_t *ancestor_path,    /* ignored if update */
              svn_revnum_t ancestor_revision,  /* ignored if update */
              apr_pool_t *pool,
              svn_boolean_t is_update)
@@ -97,9 +97,9 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
           void *before_edit_baton,
           const svn_delta_edit_fns_t *after_editor,
           void *after_edit_baton,
-          svn_string_t *path,
-          svn_string_t *xml_src,
-          svn_string_t *URL,      /* ignored if update */
+          svn_stringbuf_t *path,
+          svn_stringbuf_t *xml_src,
+          svn_stringbuf_t *URL,      /* ignored if update */
           svn_revnum_t revision,  /* ignored if update */
           apr_pool_t *pool,
           svn_boolean_t is_update)
@@ -151,9 +151,9 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                void *before_edit_baton,
                                const svn_delta_edit_fns_t *after_editor,
                                void *after_edit_baton,
-                               svn_string_t *path,
-                               svn_string_t *xml_src,
-                               svn_string_t *URL,
+                               svn_stringbuf_t *path,
+                               svn_stringbuf_t *xml_src,
+                               svn_stringbuf_t *URL,
                                svn_revnum_t revision,
                                apr_pool_t *pool)
 {
@@ -169,8 +169,8 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              void *before_edit_baton,
                              const svn_delta_edit_fns_t *after_editor,
                              void *after_edit_baton,
-                             svn_string_t *path,
-                             svn_string_t *xml_src,
+                             svn_stringbuf_t *path,
+                             svn_stringbuf_t *xml_src,
                              svn_revnum_t ancestor_revision,
                              apr_pool_t *pool)
 {

@@ -39,7 +39,7 @@ main (int argc, char *argv[])
   void *edit_baton;
   svn_stream_t *out_stream;
 
-  svn_string_t *base_path;
+  svn_stringbuf_t *base_path;
 
 
   /* Process args */

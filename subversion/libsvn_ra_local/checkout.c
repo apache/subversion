@@ -24,7 +24,7 @@
    legos that all perfectly fit together. :) */
 static svn_error_t *
 send_file_contents (svn_fs_root_t *root,
-                    svn_string_t *path,
+                    svn_stringbuf_t *path,
                     void *file_baton,
                     const svn_delta_edit_fns_t *editor,
                     apr_pool_t *pool)
@@ -69,7 +69,7 @@ send_file_contents (svn_fs_root_t *root,
    using OBJECT_BATON.  IS_DIR indicates which editor func to call. */
 static svn_error_t *
 set_any_props (svn_fs_root_t *root,
-               svn_string_t *path,
+               svn_stringbuf_t *path,
                void *object_baton,
                const svn_delta_edit_fns_t *editor,
                int is_dir,
@@ -85,10 +85,10 @@ set_any_props (svn_fs_root_t *root,
       const void *key;
       void *val;
       apr_size_t klen;
-      svn_string_t *name, *value;
+      svn_stringbuf_t *name, *value;
 
       apr_hash_this (hi, &key, &klen, &val);
-      value = (svn_string_t *) val;
+      value = (svn_stringbuf_t *) val;
       name = svn_string_ncreate (key, klen, pool);
       
       if (is_dir)
@@ -116,11 +116,11 @@ set_any_props (svn_fs_root_t *root,
    however.  :) */
 static svn_error_t *
 walk_tree (svn_fs_root_t *root,
-           svn_string_t *dir_path,
+           svn_stringbuf_t *dir_path,
            void *dir_baton,
            const svn_delta_edit_fns_t *editor, 
            void *edit_baton,
-           svn_string_t *URL,
+           svn_stringbuf_t *URL,
            apr_pool_t *pool)
 {
   apr_hash_t *dirents;
@@ -137,9 +137,9 @@ walk_tree (svn_fs_root_t *root,
       void *val;
       apr_size_t klen;
       svn_fs_dirent_t *dirent;
-      svn_string_t *dirent_name;
-      svn_string_t *URL_path = svn_string_dup (URL, subpool);
-      svn_string_t *dirent_path = svn_string_dup (dir_path, subpool);
+      svn_stringbuf_t *dirent_name;
+      svn_stringbuf_t *URL_path = svn_string_dup (URL, subpool);
+      svn_stringbuf_t *dirent_path = svn_string_dup (dir_path, subpool);
 
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
@@ -205,8 +205,8 @@ walk_tree (svn_fs_root_t *root,
 svn_error_t *
 svn_ra_local__checkout (svn_fs_t *fs, 
                         svn_revnum_t revnum, 
-                        svn_string_t *URL,
-                        svn_string_t *fs_path,
+                        svn_stringbuf_t *URL,
+                        svn_stringbuf_t *fs_path,
                         const svn_delta_edit_fns_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool)

@@ -22,8 +22,8 @@ int main(int argc, char **argv)
   svn_error_t *err;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
-  svn_string_t *common_path = 0;
-  svn_string_t *common_path2 = 0;
+  svn_stringbuf_t *common_path = 0;
+  svn_stringbuf_t *common_path2 = 0;
   int i;
 
   if (argc < 2) {
@@ -35,11 +35,11 @@ int main(int argc, char **argv)
   pool = svn_pool_create(NULL);
 
   /* Create the target array */
-  targets = apr_array_make(pool, argc - 1, sizeof(svn_string_t*));
+  targets = apr_array_make(pool, argc - 1, sizeof(svn_stringbuf_t*));
   for (i = 1; i < argc; i++)
     {
-      svn_string_t * target = svn_string_create(argv[i], pool);
-      (*((svn_string_t **)apr_array_push(targets))) = target;
+      svn_stringbuf_t * target = svn_string_create(argv[i], pool);
+      (*((svn_stringbuf_t **)apr_array_push(targets))) = target;
     }
 
   /* Call the function */
@@ -52,10 +52,10 @@ int main(int argc, char **argv)
   printf("%s: ", common_path->data);
   for (i = 0; i < condensed_targets->nelts; i++)
     {
-      svn_string_t * target = ((svn_string_t**)condensed_targets->elts)[i];
+      svn_stringbuf_t * target = ((svn_stringbuf_t**)condensed_targets->elts)[i];
       if (target)
         printf("%s, ",
-               ((svn_string_t **)condensed_targets->elts)[i]->data);
+               ((svn_stringbuf_t **)condensed_targets->elts)[i]->data);
       else
         printf("NULL, "); 
     }

@@ -30,7 +30,7 @@
 
 /* kff todo: make this compare repository too?  Or do so in parallel code. */
 svn_error_t *
-svn_wc_check_wc (const svn_string_t *path,
+svn_wc_check_wc (const svn_stringbuf_t *path,
                  svn_boolean_t *is_wc,
                  apr_pool_t *pool)
 {
@@ -111,13 +111,13 @@ enum svn_wc__timestamp_kind
    should be one of the enumerated type above. */
 static svn_error_t *
 timestamps_equal_p (svn_boolean_t *equal_p,
-                    svn_string_t *path,
+                    svn_stringbuf_t *path,
                     const enum svn_wc__timestamp_kind timestamp_kind,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_time_t wfile_time, entrytime;
-  svn_string_t *dirpath, *entryname;
+  svn_stringbuf_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;
   enum svn_node_kind kind;
@@ -148,7 +148,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   
   else if (timestamp_kind == svn_wc__prop_time)
     {
-      svn_string_t *prop_path;
+      svn_stringbuf_t *prop_path;
 
       err = svn_wc__prop_path (&prop_path, path, 0, pool);
       if (err) return err;
@@ -171,7 +171,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   {
     /* Put the disk timestamp through a string conversion, so it's
        at the same resolution as entry timestamps. */
-    svn_string_t *tstr = svn_wc__time_to_string (wfile_time, pool);
+    svn_stringbuf_t *tstr = svn_wc__time_to_string (wfile_time, pool);
     wfile_time = svn_wc__string_to_time (tstr);
   }
   
@@ -192,8 +192,8 @@ timestamps_equal_p (svn_boolean_t *equal_p,
    different, so *DIFFERENT_P will be set to 0. */
 static svn_error_t *
 filesizes_definitely_different_p (svn_boolean_t *different_p,
-                                  svn_string_t *filename1,
-                                  svn_string_t *filename2,
+                                  svn_stringbuf_t *filename1,
+                                  svn_stringbuf_t *filename2,
                                   apr_pool_t *pool)
 {
   apr_finfo_t finfo1;
@@ -234,8 +234,8 @@ filesizes_definitely_different_p (svn_boolean_t *different_p,
 /* Do a byte-for-byte comparison of FILE1 and FILE2. */
 static svn_error_t *
 contents_identical_p (svn_boolean_t *identical_p,
-                      svn_string_t *file1,
-                      svn_string_t *file2,
+                      svn_stringbuf_t *file1,
+                      svn_stringbuf_t *file2,
                       apr_pool_t *pool)
 {
   apr_status_t status;
@@ -298,8 +298,8 @@ contents_identical_p (svn_boolean_t *identical_p,
 
 svn_error_t *
 svn_wc__files_contents_same_p (svn_boolean_t *same,
-                               svn_string_t *file1,
-                               svn_string_t *file2,
+                               svn_stringbuf_t *file1,
+                               svn_stringbuf_t *file2,
                                apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -328,12 +328,12 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 
 svn_error_t *
 svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                        svn_string_t *filename,
+                        svn_stringbuf_t *filename,
                         apr_pool_t *pool)
 {
   svn_boolean_t identical_p;
   svn_error_t *err;
-  svn_string_t *textbase_filename;
+  svn_stringbuf_t *textbase_filename;
   svn_boolean_t different_filesizes, equal_timestamps;
 
   /* Sanity check:  if the path doesn't exist, return FALSE. */
@@ -429,13 +429,13 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
 
 svn_error_t *
 svn_wc_props_modified_p (svn_boolean_t *modified_p,
-                         svn_string_t *path,
+                         svn_stringbuf_t *path,
                          apr_pool_t *pool)
 {
   enum svn_node_kind kind;
   svn_error_t *err;
-  svn_string_t *prop_path;
-  svn_string_t *prop_base_path;
+  svn_stringbuf_t *prop_path;
+  svn_stringbuf_t *prop_base_path;
   svn_boolean_t different_filesizes, equal_timestamps;
 
   /* First, get the prop_path from the original path */
@@ -547,13 +547,13 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_string_t *dir_path,
+                     svn_stringbuf_t *dir_path,
                      svn_wc_entry_t *entry,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_string_t *rej_file, *prej_file;
-  svn_string_t *rej_path, *prej_path;
+  svn_stringbuf_t *rej_file, *prej_file;
+  svn_stringbuf_t *rej_path, *prej_path;
 
   /* Note:  it's assumed that ENTRY is a particular entry inside
      DIR_PATH's entries file. */

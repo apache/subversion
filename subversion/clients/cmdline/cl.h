@@ -47,16 +47,16 @@ typedef enum {
 typedef struct svn_cl__opt_state_t
 {
   svn_revnum_t revision;
-  svn_string_t *message;
-  svn_string_t *xml_file;
-  svn_string_t *target;
-  svn_string_t *ancestor_path;
+  svn_stringbuf_t *message;
+  svn_stringbuf_t *xml_file;
+  svn_stringbuf_t *target;
+  svn_stringbuf_t *ancestor_path;
   svn_boolean_t force;
   svn_boolean_t recursive;
   svn_boolean_t version;
   apr_array_header_t *args;
   /* TODO fixme. This still doesn't handly binary data from a file! */
-  svn_string_t *filedata;
+  svn_stringbuf_t *filedata;
   svn_boolean_t help;
 } svn_cl__opt_state_t;
 
@@ -154,31 +154,31 @@ svn_cl__subcommand_help (const char *subcommand,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print PATH's status line using STATUS. */
-void svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status);
+void svn_cl__print_status (svn_stringbuf_t *path, svn_wc_status_t *status);
 
 /* Print a hash that maps names to status-structs to stdout for human
    consumption. */
 void svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
-   (svn_string_t *). */
+   (svn_stringbuf_t *). */
 void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Print a context diff showing local changes made to PATH */
-svn_error_t *svn_cl__print_file_diff (svn_string_t *path, apr_pool_t *pool);
+svn_error_t *svn_cl__print_file_diff (svn_stringbuf_t *path, apr_pool_t *pool);
 
 /* Returns an editor that prints out events in an update or checkout. */
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
                                  void **edit_baton,
-                                 svn_string_t *initial_path,
+                                 svn_stringbuf_t *initial_path,
                                  apr_pool_t *pool);
 
 /* Returns an editor that prints out events in a commit. */
 svn_error_t *
 svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
                                  void **edit_baton,
-                                 svn_string_t *initial_path,
+                                 svn_stringbuf_t *initial_path,
                                  apr_pool_t *pool);
 
 

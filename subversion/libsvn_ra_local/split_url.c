@@ -18,13 +18,13 @@
 
 
 svn_error_t *
-svn_ra_local__split_URL (svn_string_t **repos_path,
-                         svn_string_t **fs_path,
-                         svn_string_t *URL,
+svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
+                         svn_stringbuf_t **fs_path,
+                         svn_stringbuf_t *URL,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_string_t *url;
+  svn_stringbuf_t *url;
   char *hostname, *url_data, *path;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_fs_t *test_fs = svn_fs_new (subpool);

@@ -45,7 +45,7 @@ adm_subdir (void)
 }
 
 
-svn_string_t *
+svn_stringbuf_t *
 svn_wc__adm_subdir (apr_pool_t *pool)
 {
   return svn_string_create (adm_subdir (), pool);
@@ -72,7 +72,7 @@ svn_wc__adm_subdir (apr_pool_t *pool)
  * unconditional call to chop_admin_name().
  */
 static int
-v_extend_with_adm_name (svn_string_t *path,
+v_extend_with_adm_name (svn_stringbuf_t *path,
                         svn_boolean_t use_tmp,
                         apr_pool_t *pool,
                         va_list ap)
@@ -108,7 +108,7 @@ v_extend_with_adm_name (svn_string_t *path,
 
 /* See v_extend_with_adm_name() for details. */
 static int
-extend_with_adm_name (svn_string_t *path,
+extend_with_adm_name (svn_stringbuf_t *path,
                       svn_boolean_t use_tmp,
                       apr_pool_t *pool,
                       ...)
@@ -127,13 +127,13 @@ extend_with_adm_name (svn_string_t *path,
 }
 
 
-svn_string_t *
-svn_wc__adm_path (svn_string_t *path,
+svn_stringbuf_t *
+svn_wc__adm_path (svn_stringbuf_t *path,
                   svn_boolean_t tmp,
                   apr_pool_t *pool, 
                   ...)
 {
-  svn_string_t *newpath = svn_string_dup (path, pool);
+  svn_stringbuf_t *newpath = svn_string_dup (path, pool);
   va_list ap;
 
   va_start (ap, pool);
@@ -145,13 +145,13 @@ svn_wc__adm_path (svn_string_t *path,
 
 
 svn_boolean_t
-svn_wc__adm_path_exists (svn_string_t *path,
+svn_wc__adm_path_exists (svn_stringbuf_t *path,
                          svn_boolean_t tmp,
                          apr_pool_t *pool, 
                          ...)
 {
   enum svn_node_kind kind;
-  svn_string_t *newpath = svn_string_dup (path, pool);
+  svn_stringbuf_t *newpath = svn_string_dup (path, pool);
   va_list ap;
 
   va_start (ap, pool);
@@ -172,7 +172,7 @@ svn_wc__adm_path_exists (svn_string_t *path,
  * components.
  */
 static void
-chop_admin_name (svn_string_t *path, int num_components)
+chop_admin_name (svn_stringbuf_t *path, int num_components)
 {
   while (num_components-- > 0)
     svn_path_remove_component (path, svn_path_local_style);
@@ -190,7 +190,7 @@ chop_admin_name (svn_string_t *path, int num_components)
  * be empty after this no matter what.
  */
 svn_error_t *
-svn_wc__make_adm_thing (svn_string_t *path,
+svn_wc__make_adm_thing (svn_stringbuf_t *path,
                         const char *thing,
                         int type,
                         svn_boolean_t tmp,
@@ -245,7 +245,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
 
 /* Copy SRC to DST if SRC exists, else create DST empty. */
 static svn_error_t *
-maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+maybe_copy_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 {
   enum svn_node_kind kind;
   svn_error_t *err;
@@ -290,14 +290,14 @@ maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 /*** Syncing files in the adm area. ***/
 
 static svn_error_t *
-sync_adm_file (svn_string_t *path,
+sync_adm_file (svn_stringbuf_t *path,
                apr_pool_t *pool,
                ...)
 {
   /* Some code duplication with close_adm_file() seems unavoidable,
      given how C va_lists work. */
 
-  svn_string_t *tmp_path = svn_string_dup (path, pool);
+  svn_stringbuf_t *tmp_path = svn_string_dup (path, pool);
   apr_status_t apr_err;
   int components_added;
   va_list ap;
@@ -330,9 +330,9 @@ sync_adm_file (svn_string_t *path,
 /* Rename a tmp text-base file to its real text-base name.
    The file had better already be closed. */
 svn_error_t *
-svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
+svn_wc__sync_text_base (svn_stringbuf_t *path, apr_pool_t *pool)
 {
-  svn_string_t *newpath, *basename;
+  svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
   return sync_adm_file (newpath,
                         pool,
@@ -342,13 +342,13 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 }
 
 
-static svn_string_t *
-thing_path (const svn_string_t *path,
+static svn_stringbuf_t *
+thing_path (const svn_stringbuf_t *path,
             const char *thing,
             svn_boolean_t tmp,
             apr_pool_t *pool)
 {
-  svn_string_t *newpath, *basename;
+  svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
 
   extend_with_adm_name (newpath,
@@ -363,8 +363,8 @@ thing_path (const svn_string_t *path,
 }
 
 
-svn_string_t *
-svn_wc__text_base_path (const svn_string_t *path,
+svn_stringbuf_t *
+svn_wc__text_base_path (const svn_stringbuf_t *path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
@@ -373,8 +373,8 @@ svn_wc__text_base_path (const svn_string_t *path,
 
 
 static svn_error_t *
-prop_path_internal (svn_string_t **prop_path,
-                    const svn_string_t *path,
+prop_path_internal (svn_stringbuf_t **prop_path,
+                    const svn_stringbuf_t *path,
                     svn_boolean_t base,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
@@ -382,7 +382,7 @@ prop_path_internal (svn_string_t **prop_path,
   svn_error_t *err;
   enum svn_node_kind kind;
   svn_boolean_t is_wc;
-  svn_string_t *entry_name;
+  svn_stringbuf_t *entry_name;
 
   err = svn_io_check_path (path, &kind, pool);
   if (err)
@@ -443,15 +443,15 @@ prop_path_internal (svn_string_t **prop_path,
 
 /* Return a path to the 'wcprop' file for PATH, possibly in TMP area.  */
 svn_error_t *
-svn_wc__wcprop_path (svn_string_t **wcprop_path,
-                     const svn_string_t *path,
+svn_wc__wcprop_path (svn_stringbuf_t **wcprop_path,
+                     const svn_stringbuf_t *path,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
   enum svn_node_kind kind;
   svn_boolean_t is_wc;
-  svn_string_t *entry_name;
+  svn_stringbuf_t *entry_name;
 
   err = svn_io_check_path (path, &kind, pool);
   if (err)
@@ -510,8 +510,8 @@ svn_wc__wcprop_path (svn_string_t **wcprop_path,
 
 
 svn_error_t *
-svn_wc__prop_path (svn_string_t **prop_path,
-                   const svn_string_t *path,
+svn_wc__prop_path (svn_stringbuf_t **prop_path,
+                   const svn_stringbuf_t *path,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
@@ -520,8 +520,8 @@ svn_wc__prop_path (svn_string_t **prop_path,
 
 
 svn_error_t *
-svn_wc__prop_base_path (svn_string_t **prop_path,
-                        const svn_string_t *path,
+svn_wc__prop_base_path (svn_stringbuf_t **prop_path,
+                        const svn_stringbuf_t *path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
@@ -544,7 +544,7 @@ svn_wc__prop_base_path (svn_string_t **prop_path,
  */
 static svn_error_t *
 open_adm_file (apr_file_t **handle,
-               svn_string_t *path,
+               svn_stringbuf_t *path,
                apr_int32_t flags,
                apr_pool_t *pool,
                ...)
@@ -559,7 +559,7 @@ open_adm_file (apr_file_t **handle,
     {
       if (flags & APR_APPEND)
         {
-          svn_string_t *opath, *tmp_path;  /* just keep it all local */
+          svn_stringbuf_t *opath, *tmp_path;  /* just keep it all local */
 
           opath    = svn_string_dup (path, pool);
           tmp_path = svn_string_dup (path, pool);
@@ -618,7 +618,7 @@ open_adm_file (apr_file_t **handle,
  */
 static svn_error_t *
 close_adm_file (apr_file_t *fp,
-                svn_string_t *path,
+                svn_stringbuf_t *path,
                 svn_boolean_t sync,
                 apr_pool_t *pool,
                 ...)
@@ -647,7 +647,7 @@ close_adm_file (apr_file_t *fp,
       /* Some code duplication with sync_adm_file() seems unavoidable,
          given how C va_lists work. */
 
-      svn_string_t *tmp_path = svn_string_dup (path, pool);
+      svn_stringbuf_t *tmp_path = svn_string_dup (path, pool);
       
       /* Extend real name. */
       va_start (ap, pool);
@@ -679,35 +679,35 @@ close_adm_file (apr_file_t *fp,
 
 svn_error_t *
 svn_wc__open_adm_file (apr_file_t **handle,
-                       const svn_string_t *path,
+                       const svn_stringbuf_t *path,
                        const char *fname,
                        apr_int32_t flags,
                        apr_pool_t *pool)
 {
   *handle = NULL;  /* satisfy APR's bizarre requirement */
-  return open_adm_file (handle, (svn_string_t *) path, flags, pool,
+  return open_adm_file (handle, (svn_stringbuf_t *) path, flags, pool,
                         fname, NULL);
 }
 
 
 svn_error_t *
 svn_wc__close_adm_file (apr_file_t *fp,
-                        const svn_string_t *path,
+                        const svn_stringbuf_t *path,
                         const char *fname,
                         int sync,
                         apr_pool_t *pool)
 {
-  return close_adm_file (fp, (svn_string_t *) path, sync, pool, fname, NULL);
+  return close_adm_file (fp, (svn_stringbuf_t *) path, sync, pool, fname, NULL);
 }
 
 
 svn_error_t *
 svn_wc__open_text_base (apr_file_t **handle,
-                        svn_string_t *path,
+                        svn_stringbuf_t *path,
                         apr_int32_t flags,
                         apr_pool_t *pool)
 {
-  svn_string_t *newpath, *basename;
+  svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
   return open_adm_file (handle, newpath, flags, pool,
                         SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
@@ -716,11 +716,11 @@ svn_wc__open_text_base (apr_file_t **handle,
 
 svn_error_t *
 svn_wc__close_text_base (apr_file_t *fp,
-                         svn_string_t *path,
+                         svn_stringbuf_t *path,
                          int write,
                          apr_pool_t *pool)
 {
-  svn_string_t *newpath, *basename;
+  svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
   return close_adm_file (fp, newpath, write, pool,
                          SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
@@ -730,13 +730,13 @@ svn_wc__close_text_base (apr_file_t *fp,
 
 svn_error_t *
 svn_wc__open_props (apr_file_t **handle,
-                    svn_string_t *path,
+                    svn_stringbuf_t *path,
                     apr_int32_t flags,
                     svn_boolean_t base,
                     svn_boolean_t wcprops,
                     apr_pool_t *pool)
 {
-  svn_string_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *basename;
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
@@ -790,13 +790,13 @@ svn_wc__open_props (apr_file_t **handle,
 
 svn_error_t *
 svn_wc__close_props (apr_file_t *fp,
-                     svn_string_t *path,
+                     svn_stringbuf_t *path,
                      svn_boolean_t base,
                      svn_boolean_t wcprops,
                      int sync,
                      apr_pool_t *pool)
 {
-  svn_string_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *basename;
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
@@ -850,12 +850,12 @@ svn_wc__close_props (apr_file_t *fp,
 
 
 svn_error_t *
-svn_wc__sync_props (svn_string_t *path,
+svn_wc__sync_props (svn_stringbuf_t *path,
                     svn_boolean_t base,
                     svn_boolean_t wcprops,
                     apr_pool_t *pool)
 {
-  svn_string_t *parent_dir, *basename;
+  svn_stringbuf_t *parent_dir, *basename;
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
@@ -909,7 +909,7 @@ svn_wc__sync_props (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
+svn_wc__remove_adm_file (svn_stringbuf_t *path, apr_pool_t *pool, ...)
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
@@ -938,8 +938,8 @@ svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
    If an error occurs, just return error and don't touch *EXISTS. */
 static svn_error_t *
 check_adm_exists (int *exists,
-                  svn_string_t *path,
-                  svn_string_t *ancestor_path,
+                  svn_stringbuf_t *path,
+                  svn_stringbuf_t *ancestor_path,
                   svn_revnum_t ancestor_revision,
                   apr_pool_t *pool)
 {
@@ -1008,7 +1008,7 @@ check_adm_exists (int *exists,
 
 
 static svn_error_t *
-make_empty_adm (svn_string_t *path, apr_pool_t *pool)
+make_empty_adm (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -1029,9 +1029,9 @@ make_empty_adm (svn_string_t *path, apr_pool_t *pool)
 /* Init an adm file with some contents. 
    Don't call this until a tmp area exists in adm. */
 static svn_error_t *
-init_adm_file (svn_string_t *path,
+init_adm_file (svn_stringbuf_t *path,
                const char *thing,
-               svn_string_t *contents,
+               svn_stringbuf_t *contents,
                apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1059,8 +1059,8 @@ init_adm_file (svn_string_t *path,
 /* Set up a new adm area, with appropriate ancestry. 
    The adm area starts out locked; remember to unlock it when done. */
 static svn_error_t *
-init_adm (svn_string_t *path,
-          svn_string_t *ancestor_path,
+init_adm (svn_stringbuf_t *path,
+          svn_stringbuf_t *ancestor_path,
           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1209,8 +1209,8 @@ init_adm (svn_string_t *path,
  * revision 0.
  */
 svn_error_t *
-svn_wc__ensure_adm (svn_string_t *path,
-                    svn_string_t *ancestor_path,
+svn_wc__ensure_adm (svn_stringbuf_t *path,
+                    svn_stringbuf_t *ancestor_path,
                     svn_revnum_t ancestor_revision,
                     apr_pool_t *pool)
 {
@@ -1238,7 +1238,7 @@ svn_wc__ensure_adm (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
+svn_wc__adm_destroy (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   /* Try to lock the admin directory, hoping that this function will
      eject an error if we're already locked (which is fine, cause if
@@ -1249,7 +1249,7 @@ svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
      (which should also remove the lock file we created above) */
   {
     apr_status_t apr_err;
-    svn_string_t *adm_path = svn_string_dup (path, pool);
+    svn_stringbuf_t *adm_path = svn_string_dup (path, pool);
 
     svn_path_add_component (adm_path, svn_wc__adm_subdir (pool), 
                             svn_path_local_style);

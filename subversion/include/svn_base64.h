@@ -36,8 +36,8 @@ svn_stream_t *svn_base64_decode (svn_stream_t *output, apr_pool_t *pool);
 /* Simpler interfaces for encoding and decoding base64 data assuming
    we have all of it present at once.  The returned string will be
    allocated from POOL.  */
-svn_string_t *svn_base64_encode_string (svn_string_t *str, apr_pool_t *pool);
-svn_string_t *svn_base64_decode_string (svn_string_t *str, apr_pool_t *pool);
+svn_stringbuf_t *svn_base64_encode_string (svn_stringbuf_t *str, apr_pool_t *pool);
+svn_stringbuf_t *svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool);
 
 
 #endif /* SVN_BASE64_H */

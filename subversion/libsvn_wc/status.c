@@ -33,7 +33,7 @@
    ENTRY will be stored directly, not copied. */
 static svn_error_t *
 assemble_status (svn_wc_status_t *status,
-                 svn_string_t *path,
+                 svn_stringbuf_t *path,
                  svn_wc_entry_t *entry,
                  apr_pool_t *pool)
 {
@@ -50,7 +50,7 @@ assemble_status (svn_wc_status_t *status,
 
   if (status->entry)
     {
-      svn_string_t *prop_path;
+      svn_stringbuf_t *prop_path;
       enum svn_node_kind prop_kind;
       svn_boolean_t prop_exists = FALSE;
       
@@ -130,7 +130,7 @@ assemble_status (svn_wc_status_t *status,
              on whether reject files are mentioned and/or continue to
              exist.  Luckily, we have a function to do this.  :) */
           svn_boolean_t text_conflict_p, prop_conflict_p;
-          svn_string_t *parent_dir;
+          svn_stringbuf_t *parent_dir;
           
           if (entry->kind == svn_node_file)
             {
@@ -163,7 +163,7 @@ assemble_status (svn_wc_status_t *status,
    and store it in STATUSHASH.  */
 static svn_error_t *
 add_status_structure (apr_hash_t *statushash,
-                      svn_string_t *path,
+                      svn_stringbuf_t *path,
                       svn_wc_entry_t *entry,
                       apr_pool_t *pool)
 {
@@ -182,7 +182,7 @@ add_status_structure (apr_hash_t *statushash,
 
 svn_error_t *
 svn_wc_status (svn_wc_status_t **status,
-               svn_string_t *path,
+               svn_stringbuf_t *path,
                apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -204,7 +204,7 @@ svn_wc_status (svn_wc_status_t **status,
 
 svn_error_t *
 svn_wc_statuses (apr_hash_t *statushash,
-                 svn_string_t *path,
+                 svn_stringbuf_t *path,
                  svn_boolean_t descend,
                  apr_pool_t *pool)
 {
@@ -231,7 +231,7 @@ svn_wc_statuses (apr_hash_t *statushash,
      in the STATUSHASH */
   if (kind == svn_node_file)
     {
-      svn_string_t *dirpath, *basename;
+      svn_stringbuf_t *dirpath, *basename;
 
       /* Figure out file's parent dir */
       svn_path_split (path, &dirpath, &basename,
@@ -273,7 +273,7 @@ svn_wc_statuses (apr_hash_t *statushash,
           void *val;
           const char *basename;
           apr_size_t keylen;
-          svn_string_t *fullpath = svn_string_dup (path, pool);
+          svn_stringbuf_t *fullpath = svn_string_dup (path, pool);
 
           /* Get the next dirent */
           apr_hash_this (hi, &key, &keylen, &val);

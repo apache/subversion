@@ -41,8 +41,8 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
      for each. */
   for (i = 0; i < closer->target_array->nelts; i++)
     {
-      svn_string_t *target;
-      target = (((svn_string_t **)(closer->target_array)->elts)[i]);
+      svn_stringbuf_t *target;
+      target = (((svn_stringbuf_t **)(closer->target_array)->elts)[i]);
 
       if (closer->close_func)
         SVN_ERR (closer->close_func (closer->close_baton, target, new_rev));
@@ -71,7 +71,7 @@ static const svn_ra_reporter_t ra_local_reporter =
 
 static svn_error_t *
 open (void **session_baton,
-      svn_string_t *repository_URL,
+      svn_stringbuf_t *repository_URL,
       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton;
@@ -144,7 +144,7 @@ static svn_error_t *
 get_commit_editor (void *session_baton,
                    const svn_delta_edit_fns_t **editor,
                    void **edit_baton,
-                   svn_string_t *log_msg,
+                   svn_stringbuf_t *log_msg,
                    svn_ra_get_wc_prop_func_t get_func,
                    svn_ra_set_wc_prop_func_t set_func,
                    svn_ra_close_commit_func_t close_func,
@@ -166,7 +166,7 @@ get_commit_editor (void *session_baton,
   closer->set_func = set_func;
   closer->close_baton = close_baton;
   closer->target_array = apr_array_make (sess_baton->pool, 1,
-                                         sizeof(svn_string_t *));
+                                         sizeof(svn_stringbuf_t *));
                                          
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_editor (&commit_editor, &commit_editor_baton,

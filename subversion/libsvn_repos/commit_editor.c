@@ -32,7 +32,7 @@ struct edit_baton
   /* Supplied when the editor is created: */
 
   /* Commit message for this commit. */
-  svn_string_t *log_msg;
+  svn_stringbuf_t *log_msg;
 
   /* Hook to run when when the commit is done. */
   svn_repos_commit_hook_t *hook;
@@ -42,7 +42,7 @@ struct edit_baton
   svn_fs_t *fs;
 
   /* Location in fs where where the edit will begin. */
-  svn_string_t *base_path;
+  svn_stringbuf_t *base_path;
 
   /* Created during the edit: */
 
@@ -62,7 +62,7 @@ struct dir_baton
 
   svn_revnum_t base_rev;  /* the revision of this dir in the wc */
 
-  svn_string_t *path;  /* the -absolute- path to this dir in the fs */
+  svn_stringbuf_t *path;  /* the -absolute- path to this dir in the fs */
 
   apr_pool_t *subpool; /* my personal subpool, in which I am allocated. */
   int ref_count;       /* how many still-open batons depend on my pool. */
@@ -73,7 +73,7 @@ struct file_baton
 {
   struct dir_baton *parent;
 
-  svn_string_t *path;  /* the -absolute- path to this file in the fs */
+  svn_stringbuf_t *path;  /* the -absolute- path to this file in the fs */
 
   apr_pool_t *subpool;  /* used by apply_textdelta() */
 
@@ -153,12 +153,12 @@ replace_root (void *edit_baton,
 
 
 static svn_error_t *
-delete_entry (svn_string_t *name,
+delete_entry (svn_stringbuf_t *name,
               void *parent_baton)
 {
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
-  svn_string_t *path_to_kill = svn_string_dup (parent->path, parent->subpool);
+  svn_stringbuf_t *path_to_kill = svn_string_dup (parent->path, parent->subpool);
   svn_path_add_component (path_to_kill, name, svn_path_repos_style);
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
@@ -174,9 +174,9 @@ delete_entry (svn_string_t *name,
 
 
 static svn_error_t *
-add_directory (svn_string_t *name,
+add_directory (svn_stringbuf_t *name,
                void *parent_baton,
-               svn_string_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
@@ -240,7 +240,7 @@ add_directory (svn_string_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_string_t *name,
+replace_directory (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **child_baton)
@@ -333,9 +333,9 @@ apply_textdelta (void *file_baton,
 
 
 static svn_error_t *
-add_file (svn_string_t *name,
+add_file (svn_stringbuf_t *name,
           void *parent_baton,
-          svn_string_t *copy_path,
+          svn_stringbuf_t *copy_path,
           long int copy_revision,
           void **file_baton)
 {
@@ -391,7 +391,7 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
-replace_file (svn_string_t *name,
+replace_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
@@ -434,8 +434,8 @@ replace_file (svn_string_t *name,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_string_t *name,
-                  svn_string_t *value)
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->parent->edit_baton;
@@ -450,8 +450,8 @@ change_file_prop (void *file_baton,
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_string_t *name,
-                 svn_string_t *value)
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *value)
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
@@ -520,8 +520,8 @@ svn_error_t *
 svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                       void **edit_baton,
                       svn_fs_t *fs,
-                      svn_string_t *base_path,
-                      svn_string_t *log_msg,
+                      svn_stringbuf_t *base_path,
+                      svn_stringbuf_t *log_msg,
                       svn_repos_commit_hook_t *hook,
                       void *hook_baton,
                       apr_pool_t *pool)

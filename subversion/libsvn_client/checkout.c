@@ -64,10 +64,10 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
-                     svn_string_t *URL,
-                     svn_string_t *path,
+                     svn_stringbuf_t *URL,
+                     svn_stringbuf_t *path,
                      svn_revnum_t revision,
-                     svn_string_t *xml_src,
+                     svn_stringbuf_t *xml_src,
                      apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *checkout_editor;

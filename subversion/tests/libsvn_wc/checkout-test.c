@@ -33,8 +33,8 @@
 
 static svn_error_t *
 apply_delta (svn_stream_t *delta,
-             svn_string_t *dest,
-             svn_string_t *repos,
+             svn_stringbuf_t *dest,
+             svn_stringbuf_t *repos,
              svn_revnum_t revision,
              apr_pool_t *pool)
 {
@@ -70,7 +70,7 @@ main (int argc, char **argv)
   apr_status_t apr_err = 0;
   apr_file_t *src = NULL;     /* init to NULL very important! */
   svn_error_t *err = NULL;
-  svn_string_t *target = NULL;  /* init to NULL also important here,
+  svn_stringbuf_t *target = NULL;  /* init to NULL also important here,
                                    because NULL implies delta's top dir */
   char *src_file = NULL;
 

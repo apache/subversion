@@ -54,7 +54,7 @@ static svn_error_t *
 test1 (const char **msg, apr_pool_t *pool)
 {
   apr_status_t result;
-  svn_string_t *key;
+  svn_stringbuf_t *key;
   apr_file_t *f;
 
   *msg = "write a hash to a file";
@@ -146,14 +146,14 @@ test3 (const char **msg, apr_pool_t *pool)
       const void *key;
       size_t keylen;
       void *val;
-      svn_string_t *orig_str, *new_str;
+      svn_stringbuf_t *orig_str, *new_str;
       
       /* Get a key and val. */
       apr_hash_this (this, &key, &keylen, &val);
-      orig_str = (svn_string_t *) val;
+      orig_str = (svn_stringbuf_t *) val;
 
       /* Look up the key in the new hash */
-      new_str = (svn_string_t *) apr_hash_get (new_proplist, key, keylen);
+      new_str = (svn_stringbuf_t *) apr_hash_get (new_proplist, key, keylen);
 
       /* Does the new hash contain the key at all? */
       if (new_str == NULL)

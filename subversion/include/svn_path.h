@@ -52,18 +52,18 @@ enum svn_path_style {
    The separator character is chosen according to STYLE.  For
    svn_path_repos_style, it would be '/'.  For svn_path_local_style on
    a Unix system, it would also be '/'.  */
-void svn_path_add_component (svn_string_t *path,
-                             const svn_string_t *component,
+void svn_path_add_component (svn_stringbuf_t *path,
+                             const svn_stringbuf_t *component,
                              enum svn_path_style style);
 
 /* Same as `svn_path_add_component', except that the COMPONENT argument is 
-   a C-style '\0'-terminated string, not an svn_string_t.  */
-void svn_path_add_component_nts (svn_string_t *path, 
+   a C-style '\0'-terminated string, not an svn_stringbuf_t.  */
+void svn_path_add_component_nts (svn_stringbuf_t *path, 
                                  const char *component,
                                  enum svn_path_style style);
 
 /* Remove one component off the end of PATH. */
-void svn_path_remove_component (svn_string_t *path,
+void svn_path_remove_component (svn_stringbuf_t *path,
                                 enum svn_path_style style);
 
 
@@ -73,7 +73,7 @@ void svn_path_remove_component (svn_string_t *path,
  * root directory.  Else if PATH ends with a separator, then PATH's
  * last component is the empty string.
  */
-svn_string_t *svn_path_last_component (const svn_string_t *path,
+svn_stringbuf_t *svn_path_last_component (const svn_stringbuf_t *path,
                                        enum svn_path_style style,
                                        apr_pool_t *pool);
 
@@ -89,58 +89,58 @@ svn_string_t *svn_path_last_component (const svn_string_t *path,
  * The separator between DIRPATH and BASENAME is not included in
  * either of the new names.
  */
-void svn_path_split (const svn_string_t *path,
-                     svn_string_t **dirpath,
-                     svn_string_t **basename,
+void svn_path_split (const svn_stringbuf_t *path,
+                     svn_stringbuf_t **dirpath,
+                     svn_stringbuf_t **basename,
                      enum svn_path_style style,
                      apr_pool_t *pool);
 
 
 /* Return non-zero iff PATH represents the current directory */
-int svn_path_is_thisdir (const svn_string_t *path, enum svn_path_style style);
+int svn_path_is_thisdir (const svn_stringbuf_t *path, enum svn_path_style style);
 
 /* Return non-zero iff PATH is empty or represents the current
    directory -- that is, if it is NULL or if prepending it as a
    component to an existing path would result in no meaningful
    change. */
-int svn_path_is_empty (const svn_string_t *path, enum svn_path_style style);
+int svn_path_is_empty (const svn_stringbuf_t *path, enum svn_path_style style);
 
 
 /* Remove trailing separators that don't affect the meaning of the path.
    (At some future point, this may make other semantically inoperative
    transformations.) */
-void svn_path_canonicalize (svn_string_t *path,
+void svn_path_canonicalize (svn_stringbuf_t *path,
                             enum svn_path_style style);
 
 
 /* Return an integer greater than, equal to, or less than 0, according
    as PATH1 is greater than, equal to, or less than PATH2. */
-int svn_path_compare_paths (const svn_string_t *path1,
-                            const svn_string_t *path2,
+int svn_path_compare_paths (const svn_stringbuf_t *path1,
+                            const svn_stringbuf_t *path2,
                             enum svn_path_style style);
 
 
 /* Return the longest common path shared by both PATH1 and PATH2.  If
    there's no common ancestor, return NULL.  */
-svn_string_t *svn_path_get_longest_ancestor (const svn_string_t *path1,
-                                             const svn_string_t *path2,
+svn_stringbuf_t *svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
+                                             const svn_stringbuf_t *path2,
                                              enum svn_path_style style,
                                              apr_pool_t *pool);
 
 /* Convert RELATIVE path to an absolute path and return the results in
    *PABSOLUTE. */
 svn_error_t *
-svn_path_get_absolute(svn_string_t **pabsolute,
-                      const svn_string_t *relative,
+svn_path_get_absolute(svn_stringbuf_t **pabsolute,
+                      const svn_stringbuf_t *relative,
                       apr_pool_t *pool);
 
 /* Return the path part of PATH in *PDIRECTORY, and the file part in *PFILE.
    If PATH is a directory, it will be returned through PDIRECTORY, and *PFILE
    will be the empty string (not NULL). */
 svn_error_t *
-svn_path_split_if_file(svn_string_t *path,
-                       svn_string_t **pdirectory, 
-                       svn_string_t **pfile,
+svn_path_split_if_file(svn_stringbuf_t *path,
+                       svn_stringbuf_t **pdirectory, 
+                       svn_stringbuf_t **pfile,
                        apr_pool_t *pool);
 
 /* Find the common prefix of the paths in TARGETS, and remove redundancies.
@@ -177,7 +177,7 @@ svn_path_split_if_file(svn_string_t *path,
  * copy.
  */
 svn_error_t *
-svn_path_condense_targets (svn_string_t **pbasename,
+svn_path_condense_targets (svn_stringbuf_t **pbasename,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
                            enum svn_path_style style,
@@ -228,11 +228,11 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
                               apr_pool_t *pool);
 
 
-/* Decompose PATH into an array of svn_string_t components, allocated
+/* Decompose PATH into an array of svn_stringbuf_t components, allocated
    in POOL.  STYLE indicates the dir separator to split the string on.
    If PATH is absolute, the first component will be a lone dir
    separator (the root directory). */
-apr_array_header_t *svn_path_decompose (const svn_string_t *path,
+apr_array_header_t *svn_path_decompose (const svn_stringbuf_t *path,
                                         enum svn_path_style style,
                                         apr_pool_t *pool);
 
@@ -242,8 +242,8 @@ apr_array_header_t *svn_path_decompose (const svn_string_t *path,
    If not, return NULL.
    If so, return the "remainder" path.  (The substring which, when
    appended to PATH1, yields PATH2 -- minus the dirseparator. ) */
-svn_string_t * svn_path_is_child (const svn_string_t *path1,
-                                  const svn_string_t *path2,
+svn_stringbuf_t * svn_path_is_child (const svn_stringbuf_t *path1,
+                                  const svn_stringbuf_t *path2,
                                   enum svn_path_style style,
                                   apr_pool_t *pool);
 

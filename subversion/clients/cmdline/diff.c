@@ -31,12 +31,12 @@
 
 
 svn_error_t *
-svn_cl__print_file_diff (svn_string_t *path,
+svn_cl__print_file_diff (svn_stringbuf_t *path,
                          apr_pool_t *pool)
 {
   apr_status_t status;
   svn_error_t *err;
-  svn_string_t *pristine_copy_path;
+  svn_stringbuf_t *pristine_copy_path;
   svn_boolean_t text_is_modified = FALSE;
   const char *args[5];
 

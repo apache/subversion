@@ -193,7 +193,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       else
         {
           svn_fs_id_t *id;
-          svn_string_t *stable_id;
+          svn_stringbuf_t *stable_id;
 
           serr = svn_fs_node_id(&id, resource->info->root.root,
                                 resource->info->repos_path, p);
@@ -237,7 +237,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       else if (resource->info->node_id != NULL)
         {
-          svn_string_t *id = svn_fs_unparse_id(resource->info->node_id, p);
+          svn_stringbuf_t *id = svn_fs_unparse_id(resource->info->node_id, p);
 
           /* use ":ID" */
           value = apr_psprintf(p, ":%s", id->data);

@@ -51,7 +51,7 @@ extern "C" {
 /* Set *IS_WC to true iff PATH is a valid working copy directory, else
    set it to false.  PATH must exist, either as a file or directory,
    else an error will be returned. */
-svn_error_t *svn_wc_check_wc (const svn_string_t *path,
+svn_error_t *svn_wc_check_wc (const svn_stringbuf_t *path,
                               svn_boolean_t *is_wc,
                               apr_pool_t *pool);
 
@@ -63,14 +63,14 @@ svn_error_t *svn_wc_check_wc (const svn_string_t *path,
    w.r.t. the base revision, else set MODIFIED_P to zero.
    FILENAME is a path to the file, not just a basename. */
 svn_error_t *svn_wc_text_modified_p (svn_boolean_t *modified_p,
-                                     svn_string_t *filename,
+                                     svn_stringbuf_t *filename,
                                      apr_pool_t *pool);
 
 
 /* Set *MODIFIED_P to non-zero if PATH's properties are modified
    w.r.t. the base revision, else set MODIFIED_P to zero. */
 svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
-                                      svn_string_t *path,
+                                      svn_stringbuf_t *path,
                                       apr_pool_t *pool);
 
 
@@ -124,7 +124,7 @@ typedef struct svn_wc_entry_t
      you really need it, look in the attributes. */
 
   svn_revnum_t revision;       /* Base revision.  (Required) */
-  svn_string_t *ancestor;      /* Base path.  (Required) */
+  svn_stringbuf_t *ancestor;      /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
   /* State information. */
@@ -172,7 +172,7 @@ typedef struct svn_wc_entry_t
 
 /* Get the ENTRY structure for PATH, allocating from POOL. */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
-                           svn_string_t *path,
+                           svn_stringbuf_t *path,
                            apr_pool_t *pool);
 
 
@@ -186,7 +186,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    routine to open its PATH and read the SVN_WC_ENTRY_THIS_DIR
    structure, or call svn_wc_get_entry on its PATH.  */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
-                                  svn_string_t *path,
+                                  svn_stringbuf_t *path,
                                   apr_pool_t *pool);
 
 /* Given a DIR_PATH under version control, decide if one of its
@@ -197,7 +197,7 @@ svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
    both removed, assume the conflict has been resolved by the user.)  */
 svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   svn_boolean_t *prop_conflicted_p,
-                                  svn_string_t *dir_path,
+                                  svn_stringbuf_t *dir_path,
                                   svn_wc_entry_t *entry,
                                   apr_pool_t *pool);
 
@@ -261,7 +261,7 @@ typedef struct svn_wc_status_t
 /* Fill *STATUS for PATH, allocating in POOL, with the exception of
    the repos_rev field, which is normally filled in by the caller. */
 svn_error_t *svn_wc_status (svn_wc_status_t **status,
-                            svn_string_t *path,
+                            svn_stringbuf_t *path,
                             apr_pool_t *pool);
 
 
@@ -285,7 +285,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * words, a full recursion.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
-                              svn_string_t *path,
+                              svn_stringbuf_t *path,
                               svn_boolean_t descend,
                               apr_pool_t *pool);
 
@@ -294,43 +294,43 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
  * 
  *   apr_array_header_t *paths
  *
- * it means an array of (svn_string_t *) types, each one of which is
+ * it means an array of (svn_stringbuf_t *) types, each one of which is
  * a file or directory path.  This is so we can do atomic operations
  * on any random set of files and directories.
  */
 
 /* kff todo: these do nothing and return SVN_NO_ERROR right now. */
-svn_error_t *svn_wc_rename (svn_string_t *src,
-                            svn_string_t *dst,
+svn_error_t *svn_wc_rename (svn_stringbuf_t *src,
+                            svn_stringbuf_t *dst,
                             apr_pool_t *pool);
 
-svn_error_t *svn_wc_copy (svn_string_t *src,
-                          svn_string_t *dst,
+svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
+                          svn_stringbuf_t *dst,
                           apr_pool_t *pool);
 
-svn_error_t *svn_wc_delete (svn_string_t *path,
+svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
                             apr_pool_t *pool);
 
 /* Add an entry for DIR, and create an administrative directory for
    it.  Does not check that DIR exists on disk; caller should take
    care of that, if it cares. */
-svn_error_t *svn_wc_add_directory (svn_string_t *dir,
+svn_error_t *svn_wc_add_directory (svn_stringbuf_t *dir,
                                    apr_pool_t *pool);
 
 /* Add an entry for FILE.  Does not check that FILE exists on disk;
    caller should take care of that, if it cares. */
-svn_error_t *svn_wc_add_file (svn_string_t *file,
+svn_error_t *svn_wc_add_file (svn_stringbuf_t *file,
                               apr_pool_t *pool);
 
 /* Recursively un-mark a tree (beginning at a directory or a file
    PATH) for addition.  */
-svn_error_t *svn_wc_unadd (svn_string_t *path,
+svn_error_t *svn_wc_unadd (svn_stringbuf_t *path,
                            apr_pool_t *pool);
 
 /* Un-mark a PATH for deletion.  If RECURSE is TRUE and PATH
    represents a directory, un-mark the entire tree under PATH for
    deletion.  */
-svn_error_t *svn_wc_undelete (svn_string_t *path,
+svn_error_t *svn_wc_undelete (svn_stringbuf_t *path,
                               svn_boolean_t recurse,
                               apr_pool_t *pool);
 
@@ -353,8 +353,8 @@ svn_error_t *svn_wc_undelete (svn_string_t *path,
    WARNING:  This routine is exported for careful, measured use by
    libsvn_client.  Do *not* call this routine unless you really
    understand what the heck you're doing.  */
-svn_error_t *svn_wc_remove_from_revision_control (svn_string_t *path, 
-                                                  svn_string_t *name,
+svn_error_t *svn_wc_remove_from_revision_control (svn_stringbuf_t *path, 
+                                                  svn_stringbuf_t *name,
                                                   svn_boolean_t destroy_wf,
                                                   apr_pool_t *pool);
 
@@ -370,7 +370,7 @@ struct svn_wc_close_commit_baton
   /* The "prefix" path that must be prepended to each target that
      comes in here.  It's the original path that the user specified to
      the `svn commit' command. */
-  svn_string_t *prefix_path;
+  svn_stringbuf_t *prefix_path;
 
   /* Pool to use for all logging, running of logs, etc. */
   apr_pool_t *pool;
@@ -380,7 +380,7 @@ struct svn_wc_close_commit_baton
    committed TARGET to NEW_REVNUM, one-at-a-time.  It's a function of
    type svn_ra_close_commit_func_t.  */
 svn_error_t *svn_wc_set_revision (void *baton,
-                                  svn_string_t *target,
+                                  svn_stringbuf_t *target,
                                   svn_revnum_t new_revnum);
 
 
@@ -391,7 +391,7 @@ svn_error_t *svn_wc_set_revision (void *baton,
  * of the sort used by svn_wc__compose_paths(), as with all entries
  * recursers.
  */
-svn_error_t *svn_wc_close_commit (svn_string_t *path,
+svn_error_t *svn_wc_close_commit (svn_stringbuf_t *path,
                                   svn_revnum_t new_revision,
                                   apr_hash_t *targets,
                                   apr_pool_t *pool);
@@ -400,16 +400,16 @@ svn_error_t *svn_wc_close_commit (svn_string_t *path,
 /* This is a function of type svn_ra_get_wc_prop_t.  Return *VALUE for
    property NAME on TARGET.  */
 svn_error_t *svn_wc_get_wc_prop (void *baton,
-                                 svn_string_t *target,
-                                 svn_string_t *name,
-                                 svn_string_t **value);
+                                 svn_stringbuf_t *target,
+                                 svn_stringbuf_t *name,
+                                 svn_stringbuf_t **value);
 
 /* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
    to VALUE on TARGET. */
 svn_error_t *svn_wc_set_wc_prop (void *baton,
-                                 svn_string_t *target,
-                                 svn_string_t *name,
-                                 svn_string_t *value);
+                                 svn_stringbuf_t *target,
+                                 svn_stringbuf_t *name,
+                                 svn_stringbuf_t *value);
 
 
 /* Crawl a working copy tree depth-first, describing all local mods to
@@ -421,7 +421,7 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
    directories. (Use svn_path_condense_targets to create the target
    list).  If the target list is NULL or contains no elements, then a
    single crawl will be made from PARENT_DIR. */
-svn_error_t *svn_wc_crawl_local_mods (svn_string_t *parent_dir,
+svn_error_t *svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                                       apr_array_header_t *condensed_targets,
                                       const svn_delta_edit_fns_t *edit_fns,
                                       void *edit_baton,
@@ -441,7 +441,7 @@ svn_error_t *svn_wc_crawl_local_mods (svn_string_t *parent_dir,
    copy.  Thus the return value may very well reflect the result of
    the update!  */
 svn_error_t *
-svn_wc_crawl_revisions (svn_string_t *path,
+svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         apr_pool_t *pool);
@@ -463,7 +463,7 @@ svn_wc_crawl_revisions (svn_string_t *path,
  * and the latter two should be used as parameters to editor
  * functions.
  */
-svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
+svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *dest,
                                        svn_revnum_t target_revision,
                                        const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
@@ -482,9 +482,9 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
  *
  * Do all necessary allocations in POOL.
  */
-svn_error_t *svn_wc_get_actual_update_target (svn_string_t *path,
-                                              svn_string_t **parent_dir,
-                                              svn_string_t **entry,
+svn_error_t *svn_wc_get_actual_update_target (svn_stringbuf_t *path,
+                                              svn_stringbuf_t **parent_dir,
+                                              svn_stringbuf_t **entry,
                                               apr_pool_t *pool);
 
 
@@ -509,8 +509,8 @@ svn_error_t *svn_wc_get_actual_update_target (svn_string_t *path,
  * info, which aren't necessarily included in the repository string.
  * Thinking more on this question...
  */
-svn_error_t *svn_wc_get_checkout_editor (svn_string_t *dest,
-                                         svn_string_t *ancestor_path,
+svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
+                                         svn_stringbuf_t *ancestor_path,
                                          svn_revnum_t target_revision,
                                          const svn_delta_edit_fns_t **editor,
                                          void **edit_baton,
@@ -562,26 +562,26 @@ svn_error_t *svn_wc_make_delta (void *delta_src,
    properties in PROPS.  (If the node has no properties, an empty hash
    is returned.) */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
-                               svn_string_t *path,
+                               svn_stringbuf_t *path,
                                apr_pool_t *pool);
 
 
 /* Return local VALUE of property NAME for the file or directory PATH.
    If property name doesn't exist, VALUE is returned as NULL.  */
-svn_error_t *svn_wc_prop_get (svn_string_t **value,
-                              svn_string_t *name,
-                              svn_string_t *path,
+svn_error_t *svn_wc_prop_get (svn_stringbuf_t **value,
+                              svn_stringbuf_t *name,
+                              svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
 /* Set a local value of property NAME to VALUE for the file or
    directory PATH. */
-svn_error_t *svn_wc_prop_set (svn_string_t *name,
-                              svn_string_t *value,
-                              svn_string_t *path,
+svn_error_t *svn_wc_prop_set (svn_stringbuf_t *name,
+                              svn_stringbuf_t *value,
+                              svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
 /* Return TRUE iff NAME is a 'wc' property name. */
-svn_boolean_t svn_wc_is_wc_prop (svn_string_t *name);
+svn_boolean_t svn_wc_is_wc_prop (svn_stringbuf_t *name);
 
 
 
@@ -591,8 +591,8 @@ svn_boolean_t svn_wc_is_wc_prop (svn_string_t *name);
    pristine version of the file.  This is needed so clients can do
    diffs.  If the WC has no text-base, return a NULL instead of a
    path. */
-svn_error_t *svn_wc_get_pristine_copy_path (svn_string_t *path,
-                                            svn_string_t **pristine_path,
+svn_error_t *svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
+                                            svn_stringbuf_t **pristine_path,
                                             apr_pool_t *pool);
 
 
@@ -605,7 +605,7 @@ svn_error_t *svn_wc_get_pristine_copy_path (svn_string_t *path,
  * as CMD.
  */
 svn_error_t *
-svn_wc_run_cmd_in_directory (svn_string_t *path,
+svn_wc_run_cmd_in_directory (svn_stringbuf_t *path,
                              const char *cmd,
                              const char *const *args,
                              apr_file_t *infile,

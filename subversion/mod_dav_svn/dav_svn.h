@@ -137,7 +137,7 @@ struct dav_resource_private {
      NOTE: this path is from the URI and does NOT necessarily correspond
            to a path within the FS repository.
   */
-  svn_string_t *uri_path;
+  svn_stringbuf_t *uri_path;
 
   /* The FS repository path to this resource, with a leading "/". Note
      that this is "/" the root. This value will be NULL for resources

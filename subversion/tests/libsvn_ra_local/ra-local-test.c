@@ -195,7 +195,7 @@ get_youngest_rev (const char **msg)
 static svn_error_t *
 try_split_url (const char *url)
 {
-  svn_string_t *repos_path, *fs_path;
+  svn_stringbuf_t *repos_path, *fs_path;
 
   SVN_ERR (svn_ra_local__split_URL (&repos_path, &fs_path, 
                                     svn_string_create (url, pool),
@@ -272,7 +272,7 @@ check_split_url (const char *repos_path,
 {
   svn_fs_t *fs;
   char repos_loc[PATH_MAX], url[PATH_MAX];
-  svn_string_t *repos_part, *fs_part;
+  svn_stringbuf_t *repos_part, *fs_part;
 
   /* Because the URLs are absolute paths, we have to figure out where
      this system.   */

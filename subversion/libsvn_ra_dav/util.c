@@ -20,7 +20,7 @@
 
 
 
-void svn_ra_dav__copy_href(svn_string_t *dst, const char *src)
+void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
 {
   struct uri parsed_url;
 

@@ -45,8 +45,8 @@ enum svn_xml_open_tag_style {
    output as character data or as an attribute value.  *outstr must be
    NULL (in which case a new string is created), or it must point to
    an existing string to append to.  */
-void svn_xml_escape_string (svn_string_t **outstr,
-			    svn_string_t *string,
+void svn_xml_escape_string (svn_stringbuf_t **outstr,
+			    svn_stringbuf_t *string,
 			    apr_pool_t *pool);
 
 /*---------------------------------------------------------------*/
@@ -120,13 +120,13 @@ const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
 
 /* Create an attribute hash from va_list AP. 
- * The contents of AP are alternating char *'s and svn_string_t *'s,
+ * The contents of AP are alternating char *'s and svn_stringbuf_t *'s,
  * terminated by a final null falling on an odd index (zero-based).
  */
 apr_hash_t *svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool);
 
 /* Create a hash that corresponds to Expat xml attribute list ATTS.
- * The hash's keys will be char *'s, the values svn_string_t *'s.
+ * The hash's keys will be char *'s, the values svn_stringbuf_t *'s.
  *
  * ATTS may be null, in which case you just get an empty hash back
  * (this makes life more convenient for some callers).
@@ -158,15 +158,15 @@ void svn_xml_hash_atts_overlaying (const char **atts,
    This function returns such a header.  *STR must either be NULL, in
    which case a new string is created, or it must point to an existing
    string to be appended to.  */
-void svn_xml_make_header (svn_string_t **str, apr_pool_t *pool);
+void svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool);
 
 
 /* Makes an XML open tag named TAGNAME.  Varargs are used to specify a
    NULL-terminated list of alternating const char *Key and
-   svn_string_t *Val.
+   svn_stringbuf_t *Val.
 
    STYLE must be one of the enumerated styles in svn_xml_open_tag_style. */
-void svn_xml_make_open_tag (svn_string_t **str,
+void svn_xml_make_open_tag (svn_stringbuf_t **str,
 			    apr_pool_t *pool,
 			    enum svn_xml_open_tag_style style,
 			    const char *tagname,
@@ -175,7 +175,7 @@ void svn_xml_make_open_tag (svn_string_t **str,
 
 /* Like svn_xml_make_open_tag, but takes a va_list instead of being
    variadic. */
-void svn_xml_make_open_tag_v (svn_string_t **str,
+void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
 			      apr_pool_t *pool,
 			      enum svn_xml_open_tag_style style,
 			      const char *tagname,
@@ -199,7 +199,7 @@ void svn_xml_make_open_tag_v (svn_string_t **str,
  * svn_xml_make_att_hash_overlaying().  Callers should use those to
  * convert Expat attr lists into hashes when necessary.
  */
-void svn_xml_make_open_tag_hash (svn_string_t **str,
+void svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
 				 apr_pool_t *pool,
 				 enum svn_xml_open_tag_style style,
 				 const char *tagname,
@@ -207,7 +207,7 @@ void svn_xml_make_open_tag_hash (svn_string_t **str,
 
 
 /* Makes a close tag.  */
-void svn_xml_make_close_tag (svn_string_t **str,
+void svn_xml_make_close_tag (svn_stringbuf_t **str,
 			     apr_pool_t *pool,
 			     const char *tagname);
 

@@ -35,8 +35,8 @@
 /* Set *SAME to non-zero if file1 and file2 have the same contents,
    else set it to zero. */
 svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
-                                            svn_string_t *file1,
-                                            svn_string_t *file2,
+                                            svn_stringbuf_t *file1,
+                                            svn_stringbuf_t *file2,
                                             apr_pool_t *pool);
 
 
@@ -57,22 +57,22 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
    Wait for WAIT_FOR seconds if encounter another lock, trying again every
    second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
    failed to obtain the lock. */
-svn_error_t *svn_wc__lock (svn_string_t *path, int wait_for, apr_pool_t *pool);
+svn_error_t *svn_wc__lock (svn_stringbuf_t *path, int wait_for, apr_pool_t *pool);
 
 /* Unlock PATH, or error if can't. */
-svn_error_t *svn_wc__unlock (svn_string_t *path, apr_pool_t *pool);
+svn_error_t *svn_wc__unlock (svn_stringbuf_t *path, apr_pool_t *pool);
 
 /* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
 svn_error_t *svn_wc__locked (svn_boolean_t *locked, 
-                             svn_string_t *path,
+                             svn_stringbuf_t *path,
                              apr_pool_t *pool);
 
 
 /*** Names and file/dir operations in the administrative area. ***/
 
 /* Create DIR as a working copy directory. */
-svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
-                                     svn_string_t *ancestor_path,
+svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
+                                     svn_stringbuf_t *ancestor_path,
                                      svn_revnum_t ancestor_revnum,
                                      apr_pool_t *pool);
 
@@ -103,28 +103,28 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
 
 /* Return a string containing the admin subdir name. */
-svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
+svn_stringbuf_t *svn_wc__adm_subdir (apr_pool_t *pool);
 
 
 /* Return a path to something in PATH's administrative area.
  * Return path to the thing in the tmp area if TMP is non-zero.
  * Varargs are (const char *)'s, the final one must be NULL.
  */
-svn_string_t * svn_wc__adm_path (svn_string_t *path,
+svn_stringbuf_t * svn_wc__adm_path (svn_stringbuf_t *path,
                                  svn_boolean_t tmp,
                                  apr_pool_t *pool,
                                  ...);
 
 /* Return TRUE if a thing in the administratve area exists, FALSE
    otherwise. */
-svn_boolean_t svn_wc__adm_path_exists (svn_string_t *path,
+svn_boolean_t svn_wc__adm_path_exists (svn_stringbuf_t *path,
                                        svn_boolean_t tmp,
                                        apr_pool_t *pool,
                                        ...);
 
 
 /* Make `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
+svn_error_t *svn_wc__make_adm_thing (svn_stringbuf_t *path,
                                      const char *thing,
                                      int type,
                                      svn_boolean_t tmp,
@@ -153,7 +153,7 @@ svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
 
 /* Open `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
-                                    const svn_string_t *path,
+                                    const svn_stringbuf_t *path,
                                     const char *fname,
                                     apr_int32_t flags,
                                     apr_pool_t *pool);
@@ -161,13 +161,13 @@ svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
 
 /* Close `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
-                                     const svn_string_t *path,
+                                     const svn_stringbuf_t *path,
                                      const char *fname,
                                      int sync,
                                      apr_pool_t *pool);
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
+svn_error_t *svn_wc__remove_adm_file (svn_stringbuf_t *path,
                                       apr_pool_t *pool,
                                       ...);
 
@@ -176,7 +176,7 @@ svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
  * Behaves like svn_wc__open_adm_file(), which see.
  */
 svn_error_t *svn_wc__open_text_base (apr_file_t **handle,
-                                     svn_string_t *file,
+                                     svn_stringbuf_t *file,
                                      apr_int32_t flags,
                                      apr_pool_t *pool);
 
@@ -185,7 +185,7 @@ svn_error_t *svn_wc__open_text_base (apr_file_t **handle,
  * Behaves like svn_wc__close_adm_file(), which see.
  */
 svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
-                                      svn_string_t *file,
+                                      svn_stringbuf_t *file,
                                       int sync,
                                       apr_pool_t *pool);
 
@@ -198,7 +198,7 @@ svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
  * (Don't set BASE and WCPROPS at the same time; this is meaningless.)
  */
 svn_error_t *svn_wc__open_props (apr_file_t **handle,
-                                 svn_string_t *path,
+                                 svn_stringbuf_t *path,
                                  apr_int32_t flags,
                                  svn_boolean_t base,
                                  svn_boolean_t wcprops,
@@ -213,7 +213,7 @@ svn_error_t *svn_wc__open_props (apr_file_t **handle,
  * atomically written.
  */
 svn_error_t *svn_wc__close_props (apr_file_t *fp,
-                                  svn_string_t *path,
+                                  svn_stringbuf_t *path,
                                   svn_boolean_t base,
                                   svn_boolean_t wcprops,
                                   int sync,
@@ -225,7 +225,7 @@ svn_error_t *svn_wc__close_props (apr_file_t *fp,
    Again, BASE and WCPROPS flags should be identical to those used to
    open the file. */
 svn_error_t *
-svn_wc__sync_props (svn_string_t *path, 
+svn_wc__sync_props (svn_stringbuf_t *path, 
                     svn_boolean_t base,
                     svn_boolean_t wcprops,
                     apr_pool_t *pool);
@@ -234,12 +234,12 @@ svn_wc__sync_props (svn_string_t *path,
 /* Atomically rename a temporary text-base file to its canonical
    location.  The tmp file should be closed already. */
 svn_error_t *
-svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool);
+svn_wc__sync_text_base (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
 /* Return a path to PATH's text-base file.
    If TMP is set, return a path to the tmp text-base file. */
-svn_string_t *svn_wc__text_base_path (const svn_string_t *path,
+svn_stringbuf_t *svn_wc__text_base_path (const svn_stringbuf_t *path,
                                       svn_boolean_t tmp,
                                       apr_pool_t *pool);
 
@@ -248,8 +248,8 @@ svn_string_t *svn_wc__text_base_path (const svn_string_t *path,
    If TMP is set, return a path to the tmp working property file. 
    PATH can be a directory or file, and even have changed w.r.t. the
    working copy's adm knowledge. */
-svn_error_t *svn_wc__prop_path (svn_string_t **prop_path,
-                                const svn_string_t *path,
+svn_error_t *svn_wc__prop_path (svn_stringbuf_t **prop_path,
+                                const svn_stringbuf_t *path,
                                 svn_boolean_t tmp,
                                 apr_pool_t *pool);
 
@@ -258,15 +258,15 @@ svn_error_t *svn_wc__prop_path (svn_string_t **prop_path,
    If TMP is set, return a path to the tmp working property file. 
    PATH can be a directory or file, and even have changed w.r.t. the
    working copy's adm knowledge. */
-svn_error_t *svn_wc__prop_base_path (svn_string_t **prop_path,
-                                     const svn_string_t *path,
+svn_error_t *svn_wc__prop_base_path (svn_stringbuf_t **prop_path,
+                                     const svn_stringbuf_t *path,
                                      svn_boolean_t tmp,
                                      apr_pool_t *pool);
 
 
 /* Return a path to the 'wcprop' file for PATH, possibly in TMP area.  */
-svn_error_t *svn_wc__wcprop_path (svn_string_t **wcprop_path,
-                                  const svn_string_t *path,
+svn_error_t *svn_wc__wcprop_path (svn_stringbuf_t **wcprop_path,
+                                  const svn_stringbuf_t *path,
                                   svn_boolean_t tmp,
                                   apr_pool_t *pool);
 
@@ -281,8 +281,8 @@ svn_error_t *svn_wc__wcprop_path (svn_string_t **wcprop_path,
  *
  * REVISION is the revision for this directory.  kff todo: ancestor_path?
  */
-svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
-                                svn_string_t *ancestor_path,
+svn_error_t *svn_wc__ensure_wc (svn_stringbuf_t *path,
+                                svn_stringbuf_t *ancestor_path,
                                 svn_revnum_t ancestor_revision,
                                 apr_pool_t *pool);
 
@@ -295,15 +295,15 @@ svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
  * Does not ensure existence of PATH itself; if PATH does not exist,
  * an error will result. 
  */
-svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
-                                 svn_string_t *ancestor_path,
+svn_error_t *svn_wc__ensure_adm (svn_stringbuf_t *path,
+                                 svn_stringbuf_t *ancestor_path,
                                  svn_revnum_t ancestor_revision,
                                  apr_pool_t *pool);
 
 
 /* Blow away the admistrative directory associated with directory
    PATH, make sure beforehand that it isn't locked. */
-svn_error_t *svn_wc__adm_destroy (svn_string_t *path,
+svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
                                   apr_pool_t *pool);
 
 
@@ -408,7 +408,7 @@ svn_error_t *svn_wc__adm_destroy (svn_string_t *path,
  * of the sort used by svn_wc__compose_paths(), as with all entries
  * recursers.
  */
-svn_error_t *svn_wc__log_commit (svn_string_t *path,
+svn_error_t *svn_wc__log_commit (svn_stringbuf_t *path,
                                  apr_hash_t *targets,
                                  svn_revnum_t revision,
                                  apr_pool_t *pool);
@@ -434,13 +434,13 @@ svn_error_t *svn_wc__log_commit (svn_string_t *path,
  * todo: this, along with all other recursers, will want to use the
  * svn_wc__compose_paths() convention for TARGETS eventually. 
  */
-svn_error_t *svn_wc__cleanup (svn_string_t *path,
+svn_error_t *svn_wc__cleanup (svn_stringbuf_t *path,
                               apr_hash_t *targets,
                               svn_boolean_t bail_on_lock,
                               apr_pool_t *pool);
 
 /* Process the instructions in the log file for PATH. */
-svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
+svn_error_t *svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
 
@@ -455,15 +455,15 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
 
 /* Initialize contents of `entries' for a new adm area. */
-svn_error_t *svn_wc__entries_init (svn_string_t *path,
-                                   svn_string_t *ancestor_path,
+svn_error_t *svn_wc__entries_init (svn_stringbuf_t *path,
+                                   svn_stringbuf_t *ancestor_path,
                                    apr_pool_t *pool);
 
 
 /* Create or overwrite an `entries' file for PATH using the contents
    of ENTRIES.  See also svn_wc_entries_read() in the public api. */
 svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
-                                    svn_string_t *path,
+                                    svn_stringbuf_t *path,
                                     apr_pool_t *pool);
 
 
@@ -509,7 +509,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
    - PROP_TIME is the entry's property timestamp.
 
    - ATTRIBUTES is a hash of properties on the entry.  The keys are
-     (const char *) and the values are (svn_string_t *).  These
+     (const char *) and the values are (svn_stringbuf_t *).  These
      overwrite where they collide with existing attributes.
      
    Remaining (const char *) arguments are attributes to be removed
@@ -537,8 +537,8 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
    trying to protect me from myself on this one." */
 #define SVN_WC__ENTRY_MODIFY_FORCE         0x8000
 
-svn_error_t *svn_wc__entry_modify (svn_string_t *path,
-                                   svn_string_t *name,
+svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
+                                   svn_stringbuf_t *name,
                                    apr_uint16_t modify_flags,
                                    svn_revnum_t revision,
                                    enum svn_node_kind kind,
@@ -552,8 +552,8 @@ svn_error_t *svn_wc__entry_modify (svn_string_t *path,
                                    ...);
 
 #if 0 && THE_OLD_WAY_OF_DOING_THINGS
-svn_error_t *svn_wc__entry_fold_sync (svn_string_t *path,
-                                      svn_string_t *name,
+svn_error_t *svn_wc__entry_fold_sync (svn_stringbuf_t *path,
+                                      svn_stringbuf_t *name,
                                       svn_revnum_t revision,
                                       enum svn_node_kind kind,
                                       int state,
@@ -565,7 +565,7 @@ svn_error_t *svn_wc__entry_fold_sync (svn_string_t *path,
 
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
-void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
+void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 
 
 /* Return a duplicate of ENTRY, allocated in POOL.  No part of the new
@@ -578,13 +578,13 @@ svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 /*** General utilities that may get moved upstairs at some point. */
 
 /* Ensure that DIR exists. */
-svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
+svn_error_t *svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
 /* Ensure that every file or dir underneath PATH is at REVISION.  If
    not, bump it to exactly that value.  (Used at the end of an
    update.) */
-svn_error_t *svn_wc__ensure_uniform_revision (svn_string_t *path,
+svn_error_t *svn_wc__ensure_uniform_revision (svn_stringbuf_t *path,
                                               svn_revnum_t revision,
                                               apr_pool_t *pool);
 
@@ -592,12 +592,12 @@ svn_error_t *svn_wc__ensure_uniform_revision (svn_string_t *path,
 
 /* Convert WHEN to an svn string representation, which can be
    converted back by svn_wc__string_to_time(). */
-svn_string_t *svn_wc__time_to_string (apr_time_t when, apr_pool_t *pool);
+svn_stringbuf_t *svn_wc__time_to_string (apr_time_t when, apr_pool_t *pool);
 
 
 /* Convert TIMESTR to an apr_time_t.  TIMESTR should be of the form
    returned by svn_wc__time_to_string(). */
-apr_time_t svn_wc__string_to_time (svn_string_t *timestr);
+apr_time_t svn_wc__string_to_time (svn_stringbuf_t *timestr);
 
 
 
@@ -632,7 +632,7 @@ svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
 
 */
 svn_boolean_t
-svn_wc__conflicting_propchanges_p (svn_string_t **description,
+svn_wc__conflicting_propchanges_p (svn_stringbuf_t **description,
                                    svn_prop_t *local,
                                    svn_prop_t *update,
                                    apr_pool_t *pool);
@@ -642,16 +642,16 @@ svn_wc__conflicting_propchanges_p (svn_string_t **description,
    return the name of the file in REJECT_FILE.  If no such file exists,
    return (REJECT_FILE = NULL). */
 svn_error_t *
-svn_wc__get_existing_prop_reject_file (svn_string_t **reject_file,
-                                       svn_string_t *path,
-                                       const svn_string_t *name,
+svn_wc__get_existing_prop_reject_file (svn_stringbuf_t **reject_file,
+                                       svn_stringbuf_t *path,
+                                       const svn_stringbuf_t *name,
                                        apr_pool_t *pool);
 
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
    properties and load this file into HASH.  Otherwise, leave HASH
    untouched.  */
 svn_error_t *
-svn_wc__load_prop_file (svn_string_t *propfile_path,
+svn_wc__load_prop_file (svn_stringbuf_t *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool);
 
@@ -660,7 +660,7 @@ svn_wc__load_prop_file (svn_string_t *propfile_path,
 /* Given a HASH full of property name/values, write them to a file
    located at PROPFILE_PATH */
 svn_error_t *
-svn_wc__save_prop_file (svn_string_t *propfile_path,
+svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool);
 
@@ -677,24 +677,24 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
    move this file into PATH, or to append the conflicts to the file's
    already-existing .prej file in PATH.  */
 svn_error_t *
-svn_wc__do_property_merge (svn_string_t *path,
-                           const svn_string_t *name,
+svn_wc__do_property_merge (svn_stringbuf_t *path,
+                           const svn_stringbuf_t *name,
                            apr_array_header_t *propchanges,
                            apr_pool_t *pool,
-                           svn_string_t **entry_accum);
+                           svn_stringbuf_t **entry_accum);
 
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in
    *VALUE. */
-svn_error_t *svn_wc__wcprop_get (svn_string_t **value,
-                                 svn_string_t *name,
-                                 svn_string_t *path,
+svn_error_t *svn_wc__wcprop_get (svn_stringbuf_t **value,
+                                 svn_stringbuf_t *name,
+                                 svn_stringbuf_t *path,
                                  apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH. */
-svn_error_t * svn_wc__wcprop_set (svn_string_t *name,
-                                  svn_string_t *value,
-                                  svn_string_t *path,
+svn_error_t * svn_wc__wcprop_set (svn_stringbuf_t *name,
+                                  svn_stringbuf_t *value,
+                                  svn_stringbuf_t *path,
                                   apr_pool_t *pool);
 
 

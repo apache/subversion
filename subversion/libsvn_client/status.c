@@ -42,7 +42,7 @@
    this). */
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
-                   svn_string_t *path,
+                   svn_stringbuf_t *path,
                    svn_boolean_t descend,
                    apr_pool_t *pool)
 {

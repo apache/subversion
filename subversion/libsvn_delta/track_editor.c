@@ -50,16 +50,16 @@
 struct edit_baton
 {
   apr_pool_t *pool;
-  svn_string_t *initial_path;
+  svn_stringbuf_t *initial_path;
 
-  /* An already-intitialized array, ready to store (svn_string_t *)
+  /* An already-intitialized array, ready to store (svn_stringbuf_t *)
      objects */
   apr_array_header_t *array;
 
   /* These are defined only if the caller wants close_edit() to bump
      revisions */
   svn_revnum_t new_rev;
-  svn_error_t *(*bump_func) (void *baton, svn_string_t *path,
+  svn_error_t *(*bump_func) (void *baton, svn_stringbuf_t *path,
                              svn_revnum_t new_rev);
   void *bump_baton;
 };
@@ -69,7 +69,7 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
-  svn_string_t *path;
+  svn_stringbuf_t *path;
   
   /* Has this path been stored in the array already? */
   int stored;
@@ -79,7 +79,7 @@ struct dir_baton
 struct file_baton
 {
   struct dir_baton *parent_dir_baton;
-  svn_string_t *path;
+  svn_stringbuf_t *path;
 
   /* Has this path been stored in the array already? */
   int stored;
@@ -91,11 +91,11 @@ struct file_baton
 
 /* Store PATH in EB's array. */
 static void
-store_path (svn_string_t *path, struct edit_baton *eb)
+store_path (svn_stringbuf_t *path, struct edit_baton *eb)
 {
-  svn_string_t **receiver;
+  svn_stringbuf_t **receiver;
   
-  receiver = (svn_string_t **) apr_array_push (eb->array);
+  receiver = (svn_stringbuf_t **) apr_array_push (eb->array);
   *receiver = path;
 }
 
@@ -123,9 +123,9 @@ replace_root (void *edit_baton,
 
 
 static svn_error_t *
-add_directory (svn_string_t *name,
+add_directory (svn_stringbuf_t *name,
                void *parent_baton,
-               svn_string_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path,
                svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
@@ -148,7 +148,7 @@ add_directory (svn_string_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_string_t *name,
+replace_directory (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **child_baton)
@@ -171,9 +171,9 @@ replace_directory (svn_string_t *name,
 
 
 static svn_error_t *
-add_file (svn_string_t *name,
+add_file (svn_stringbuf_t *name,
           void *parent_baton,
-          svn_string_t *copy_path,
+          svn_stringbuf_t *copy_path,
           svn_revnum_t copy_revision,
           void **file_baton)
 {
@@ -195,7 +195,7 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
-replace_file (svn_string_t *name,
+replace_file (svn_stringbuf_t *name,
               void *parent_baton,
               svn_revnum_t base_revision,
               void **file_baton)
@@ -215,11 +215,11 @@ replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-delete_entry (svn_string_t *name,
+delete_entry (svn_stringbuf_t *name,
               void *parent_baton)
 {
   struct dir_baton *parent_d = parent_baton;
-  svn_string_t *path = svn_string_dup (parent_d->path,
+  svn_stringbuf_t *path = svn_string_dup (parent_d->path,
                                        parent_d->edit_baton->pool);
   svn_path_add_component (path, name, svn_path_local_style);
   
@@ -231,8 +231,8 @@ delete_entry (svn_string_t *name,
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_string_t *name,
-                 svn_string_t *value)
+                 svn_stringbuf_t *name,
+                 svn_stringbuf_t *value)
 {
   struct dir_baton *db = dir_baton;
 
@@ -248,8 +248,8 @@ change_dir_prop (void *dir_baton,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_string_t *name,
-                  svn_string_t *value)
+                  svn_stringbuf_t *name,
+                  svn_stringbuf_t *value)
 {
   struct file_baton *fb = file_baton;
 
@@ -301,8 +301,8 @@ close_edit (void *edit_baton)
   if (SVN_IS_VALID_REVNUM(eb->new_rev) && eb->bump_func)
     for (i = 0; i < eb->array->nelts; i++)
       {
-        svn_string_t *target;
-        target = (((svn_string_t **)(eb->array)->elts)[i]);
+        svn_stringbuf_t *target;
+        target = (((svn_stringbuf_t **)(eb->array)->elts)[i]);
         SVN_ERR (eb->bump_func (eb->bump_baton, target, eb->new_rev));
       }
   
@@ -321,7 +321,7 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    svn_revnum_t new_rev,
                                    svn_error_t *(*bump_func) 
                                      (void *baton,
-                                      svn_string_t *path,
+                                      svn_stringbuf_t *path,
                                       svn_revnum_t new_rev),
                                    void *bump_baton)
 {

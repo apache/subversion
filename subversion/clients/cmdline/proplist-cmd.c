@@ -45,7 +45,7 @@ svn_cl__proplist (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       apr_hash_t *prop_hash = apr_hash_make (pool);
 
       err = svn_wc_prop_list (&prop_hash, target, pool);

@@ -28,10 +28,10 @@ typedef struct svn_repos_report_baton_t
   svn_fs_root_t *txn_root;
 
   /* The location under which all reporting will happen (in the fs) */
-  svn_string_t *base_path;
+  svn_stringbuf_t *base_path;
 
   /* The actual target of the report */
-  svn_string_t *target;
+  svn_stringbuf_t *target;
 
   /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
      decide which revision to compare the transaction against. */
@@ -53,11 +53,11 @@ typedef struct svn_repos_report_baton_t
 
 svn_error_t *
 svn_repos_set_path (void *report_baton,
-                    svn_string_t *path,
+                    svn_stringbuf_t *path,
                     svn_revnum_t revision)
 {
   svn_fs_root_t *from_root;
-  svn_string_t *from_path;
+  svn_stringbuf_t *from_path;
   svn_repos_report_baton_t *rbaton = report_baton;
   svn_revnum_t *rev_ptr = apr_palloc (rbaton->pool, sizeof(*rev_ptr));
 
@@ -118,9 +118,9 @@ svn_repos_set_path (void *report_baton,
 
 svn_error_t *
 svn_repos_delete_path (void *report_baton,
-                       svn_string_t *path)
+                       svn_stringbuf_t *path)
 {
-  svn_string_t *delete_path;
+  svn_stringbuf_t *delete_path;
   svn_repos_report_baton_t *rbaton = report_baton;
   
   /* The path we are dealing with is the anchor (where the
@@ -174,7 +174,7 @@ svn_error_t *
 svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
                         svn_fs_t *fs,
-                        svn_string_t *fs_base,
+                        svn_stringbuf_t *fs_base,
                         const svn_delta_edit_fns_t *update_editor,
                         void *update_baton,
                         apr_pool_t *pool)

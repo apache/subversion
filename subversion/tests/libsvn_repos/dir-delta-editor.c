@@ -32,31 +32,31 @@ struct edit_baton
 {
   svn_fs_t *fs;
   svn_fs_root_t *txn_root;
-  svn_string_t *root_path;
+  svn_stringbuf_t *root_path;
   apr_pool_t *pool;
 };
 
 
 struct dir_baton
 {
-  svn_string_t *path;
+  svn_stringbuf_t *path;
   struct edit_baton *edit_baton;
 };
 
 
 struct file_baton
 {
-  svn_string_t *path;
+  svn_stringbuf_t *path;
   struct dir_baton *dir_baton;
 };
 
 
 
 static svn_error_t *
-test_delete_entry (svn_string_t *filename, void *parent_baton)
+test_delete_entry (svn_stringbuf_t *filename, void *parent_baton)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
-  svn_string_t *full_path;
+  svn_stringbuf_t *full_path;
 
   /* Construct the full path of this entry based on its parent. */
   full_path = svn_string_dup (d->path, d->edit_baton->pool);
@@ -77,7 +77,7 @@ test_replace_root (void *edit_baton,
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
 
-  d->path = (svn_string_t *) svn_string_dup (eb->root_path, eb->pool);
+  d->path = (svn_stringbuf_t *) svn_string_dup (eb->root_path, eb->pool);
   d->edit_baton = eb;
   *root_baton = d;
   
@@ -86,9 +86,9 @@ test_replace_root (void *edit_baton,
 
 
 static svn_error_t *
-add_or_replace_dir (svn_string_t *name,
+add_or_replace_dir (svn_stringbuf_t *name,
                     void *parent_baton,
-                    svn_string_t *base_path,
+                    svn_stringbuf_t *base_path,
                     svn_revnum_t base_revision,
                     void **child_baton,
                     svn_boolean_t is_replace)
@@ -135,7 +135,7 @@ add_or_replace_dir (svn_string_t *name,
 
 
 static svn_error_t *
-test_replace_directory (svn_string_t *name,
+test_replace_directory (svn_stringbuf_t *name,
                         void *parent_baton,
                         svn_revnum_t base_revision,
                         void **child_baton)
@@ -150,9 +150,9 @@ test_replace_directory (svn_string_t *name,
 
 
 static svn_error_t *
-test_add_directory (svn_string_t *name,
+test_add_directory (svn_stringbuf_t *name,
                     void *parent_baton,
-                    svn_string_t *copyfrom_path,
+                    svn_stringbuf_t *copyfrom_path,
                     svn_revnum_t copyfrom_revision,
                     void **child_baton)
 {
@@ -166,9 +166,9 @@ test_add_directory (svn_string_t *name,
 
 
 static svn_error_t *
-add_or_replace_file (svn_string_t *name,
+add_or_replace_file (svn_stringbuf_t *name,
                      void *parent_baton,
-                     svn_string_t *base_path,
+                     svn_stringbuf_t *base_path,
                      svn_revnum_t base_revision,
                      void **file_baton,
                      svn_boolean_t is_replace)
@@ -215,7 +215,7 @@ add_or_replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-test_replace_file (svn_string_t *name,
+test_replace_file (svn_stringbuf_t *name,
                    void *parent_baton,
                    svn_revnum_t base_revision,
                    void **file_baton)
@@ -230,9 +230,9 @@ test_replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-test_add_file (svn_string_t *name,
+test_add_file (svn_stringbuf_t *name,
                void *parent_baton,
-               svn_string_t *copyfrom_path,
+               svn_stringbuf_t *copyfrom_path,
                svn_revnum_t copyfrom_revision,
                void **file_baton)
 {
@@ -262,7 +262,7 @@ test_apply_textdelta (void *file_baton,
 
 static svn_error_t *
 test_change_file_prop (void *file_baton,
-                       svn_string_t *name, svn_string_t *value)
+                       svn_stringbuf_t *name, svn_stringbuf_t *value)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
 
@@ -276,7 +276,7 @@ test_change_file_prop (void *file_baton,
 
 static svn_error_t *
 test_change_dir_prop (void *parent_baton,
-                      svn_string_t *name, svn_string_t *value)
+                      svn_stringbuf_t *name, svn_stringbuf_t *value)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
 
@@ -297,7 +297,7 @@ dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
                       void **edit_baton,
                       svn_fs_t *fs,
                       svn_fs_root_t *txn_root,
-                      svn_string_t *path,
+                      svn_stringbuf_t *path,
                       apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;

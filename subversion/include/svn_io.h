@@ -44,7 +44,7 @@ extern "C" {
  * If intermediate directories on the way to PATH don't exist, an
  * error is returned, and *KIND's value is undefined.
  */
-svn_error_t *svn_io_check_path (const svn_string_t *path,
+svn_error_t *svn_io_check_path (const svn_stringbuf_t *path,
                                 enum svn_node_kind *kind,
                                 apr_pool_t *pool);
 
@@ -94,22 +94,22 @@ svn_error_t *svn_io_check_path (const svn_string_t *path,
  * against that case.
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
-                                      svn_string_t **unique_name,
-                                      const svn_string_t *path,
+                                      svn_stringbuf_t **unique_name,
+                                      const svn_stringbuf_t *path,
                                       const char *suffix,
                                       apr_pool_t *pool);
 
 
 /* Copy SRC to DST.  DST will be overwritten if it exists, else it
    will be created. */
-svn_error_t *svn_io_copy_file (svn_string_t *src,
-                               svn_string_t *dst,
+svn_error_t *svn_io_copy_file (svn_stringbuf_t *src,
+                               svn_stringbuf_t *dst,
                                apr_pool_t *pool);
 
 /* Append SRC to DST.  DST will be appended to if it exists, else it
    will be created. */
-svn_error_t *svn_io_append_file (svn_string_t *src,
-                                 svn_string_t *dst,
+svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
+                                 svn_stringbuf_t *dst,
                                  apr_pool_t *pool);
 
 
@@ -127,7 +127,7 @@ svn_error_t *svn_io_append_file (svn_string_t *src,
  * values, even on OS's that do things differently. (?)
  */
 svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
-                                        svn_string_t *path,
+                                        svn_stringbuf_t *path,
                                         apr_pool_t *pool);
 
 
@@ -214,7 +214,7 @@ svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
 svn_error_t *svn_stream_close (svn_stream_t *stream);
 
 /* Sets *RESULT to a string containing the contents of FILENAME. */
-svn_error_t *svn_string_from_file (svn_string_t **result, 
+svn_error_t *svn_string_from_file (svn_stringbuf_t **result, 
                                    const char *filename, 
                                    apr_pool_t *pool);
 

@@ -34,7 +34,7 @@ svn_cl__propget (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_string_t *propname;
+  svn_stringbuf_t *propname;
   apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_error_t *err;
   apr_array_header_t *targets;
@@ -47,7 +47,7 @@ svn_cl__propget (apr_getopt_t *os,
   if (err)
     return err;
 
-  propname = ((svn_string_t **) (opt_state->args->elts))[0];
+  propname = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
 
   /* suck up all the remaining arguments into a targets array */
   targets = svn_cl__args_to_target_array (os, pool);
@@ -57,8 +57,8 @@ svn_cl__propget (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_string_t *propval;
-      svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
+      svn_stringbuf_t *propval;
+      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       err = svn_wc_prop_get (&propval, propname, target, pool);
       if (err)
         return err;

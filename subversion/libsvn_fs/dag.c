@@ -132,7 +132,7 @@ set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
   else
     {
       skel_t *flag_skel = svn_fs__make_empty_list (pool);
-      svn_string_t *parent_id_string
+      svn_stringbuf_t *parent_id_string
         = (parent_id
            ? svn_fs_unparse_id (parent_id, pool)
            : svn_string_create ("", pool));
@@ -385,7 +385,7 @@ add_new_entry_skel (skel_t *parent,
                     trail_t *trail)
 {
   skel_t *new_entry_skel, *name_skel, *id_skel;
-  svn_string_t *id_str = svn_fs_unparse_id (id, trail->pool);
+  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
 
   /* Create the new entry. */
   new_entry_skel = svn_fs__make_empty_list (trail->pool);
@@ -550,7 +550,7 @@ make_entry (dag_node_t **child_p,
   {
     skel_t *header_skel;
     skel_t *flag_skel;
-    svn_string_t *id_str;
+    svn_stringbuf_t *id_str;
 
     /* Call .toString() on parent's id -- oops!  This isn't Java! */
     id_str = svn_fs_unparse_id (parent->id, trail->pool);
@@ -647,7 +647,7 @@ replace_dir_entry (dag_node_t *parent,
      into the PARENT_REV skel. */
   SVN_ERR (find_dir_entry_skel (&entry_skel, parent_rev, name, trail));
   {
-    svn_string_t *id_str;
+    svn_stringbuf_t *id_str;
     
     /* Make sure the entry exists. */
     if (entry_skel == NULL)
@@ -747,7 +747,7 @@ svn_fs__dag_set_entry (dag_node_t *node,
   skel_t *node_revision;
   skel_t *entry;
   svn_boolean_t is_mutable;
-  svn_string_t *id_str = svn_fs_unparse_id (id, trail->pool);
+  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, trail->pool);
 
   /* Check it's a directory. */
   if (! svn_fs__dag_is_directory (node))
@@ -826,7 +826,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
 
     if (! is_mutable)
       {
-        svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+        svn_stringbuf_t *idstr = svn_fs_unparse_id (node->id, node->pool);
         return 
           svn_error_createf 
           (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
@@ -1449,7 +1449,7 @@ svn_fs__dag_file_length (apr_off_t *length,
 
 svn_error_t *
 svn_fs__dag_set_contents (dag_node_t *file,
-                          svn_string_t *contents,
+                          svn_stringbuf_t *contents,
                           trail_t *trail)
 {
   /* This whole routine will have to be reincarnated as a "streamy"
@@ -1662,7 +1662,7 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
     skel_t *header_skel;
     skel_t *flag_skel;
     skel_t *base_path_skel;
-    svn_string_t *id_str;
+    svn_stringbuf_t *id_str;
     const char *rev;
 
     /* Create a string containing the SOURCE_REVISION */
@@ -1859,7 +1859,7 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   {
     /* Add rew revision entry to `revisions' table.  */
     skel_t *new_revision_skel;
-    svn_string_t *id_string = svn_fs_unparse_id (root->id, trail->pool);
+    svn_stringbuf_t *id_string = svn_fs_unparse_id (root->id, trail->pool);
     skel_t *txn_skel;
     
     new_revision_skel = svn_fs__make_empty_list (trail->pool);

@@ -67,15 +67,15 @@ apr_status_t svn_hash_write (apr_hash_t *hash,
 /*** Helper routines specific to Subversion proplists. ***/
 
 /* A helper for hash_write(): 
- * Input:   a hash value which points to an svn_string_t
- * Returns: the size of the svn_string_t, and (by indirection) the
+ * Input:   a hash value which points to an svn_stringbuf_t
+ * Returns: the size of the svn_stringbuf_t, and (by indirection) the
  *          string data itself 
  */
 apr_size_t svn_unpack_bytestring (char **returndata, void *value);
 
 /* A helper for hash_read():
  * Input:   some bytes, a length, a pool
- * Returns: an svn_string_t containing them, to store as a hash value.
+ * Returns: an svn_stringbuf_t containing them, to store as a hash value.
  *
  * Just copies the pointer, does not duplicate the data!
  */

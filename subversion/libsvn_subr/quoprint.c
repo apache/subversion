@@ -70,7 +70,7 @@ struct encode_baton {
    the current output line; initialize it to 0.  Output will be
    appended to STR.  */
 static void
-encode_bytes (svn_string_t *str, const char *data, apr_size_t len,
+encode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
 	      int *linelen)
 {
   char buf[3];
@@ -110,7 +110,7 @@ encode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct encode_baton *eb = baton;
   apr_pool_t *subpool = svn_pool_create (eb->pool);
-  svn_string_t *encoded = svn_string_create ("", subpool);
+  svn_stringbuf_t *encoded = svn_string_create ("", subpool);
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -164,10 +164,10 @@ svn_quoprint_encode (svn_stream_t *output, apr_pool_t *pool)
 }
 
 
-svn_string_t *
-svn_quoprint_encode_string (svn_string_t *str, apr_pool_t *pool)
+svn_stringbuf_t *
+svn_quoprint_encode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_string_t *encoded = svn_string_create ("", pool);
+  svn_stringbuf_t *encoded = svn_string_create ("", pool);
   int linelen = 0;
 
   encode_bytes (encoded, str->data, str->len, &linelen);
@@ -194,7 +194,7 @@ struct decode_baton {
    initialize *INBUFLEN to 0 and *DONE to FALSE.  Output will be
    appended to STR.  */
 static void
-decode_bytes (svn_string_t *str, const char *data, apr_size_t len,
+decode_bytes (svn_stringbuf_t *str, const char *data, apr_size_t len,
               unsigned char *inbuf, int *inbuflen)
 {
   const char *p, *find1, *find2;
@@ -238,7 +238,7 @@ decode_data (void *baton, const char *data, apr_size_t *len)
 {
   struct decode_baton *db = baton;
   apr_pool_t *subpool;
-  svn_string_t *decoded;
+  svn_stringbuf_t *decoded;
   apr_size_t declen;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -287,10 +287,10 @@ svn_quoprint_decode (svn_stream_t *output, apr_pool_t *pool)
 }
 
 
-svn_string_t *
-svn_quoprint_decode_string (svn_string_t *str, apr_pool_t *pool)
+svn_stringbuf_t *
+svn_quoprint_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 {
-  svn_string_t *decoded = svn_string_create ("", pool);
+  svn_stringbuf_t *decoded = svn_string_create ("", pool);
   unsigned char ingroup[4];
   int ingrouplen = 0;
 

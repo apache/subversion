@@ -125,8 +125,8 @@ typedef struct svn_xml__stackframe_t
 {
   svn_delta__XML_t tag;  /* this stackframe represents an open <tag> */
 
-  svn_string_t *name;    /* if the tag had a "name" attribute attached */
-  svn_string_t *ancestor_path;     /* Explicit, else inherited from parent */ 
+  svn_stringbuf_t *name;    /* if the tag had a "name" attribute attached */
+  svn_stringbuf_t *ancestor_path;     /* Explicit, else inherited from parent */ 
   svn_revnum_t ancestor_revision;   /* Explicit, else inherited from parent */ 
 
   void *baton;           /* holds caller data for the _current_ subdirectory */
@@ -136,9 +136,9 @@ typedef struct svn_xml__stackframe_t
                             hash to detect collisions in the
                             dirent-namespace */
 
-  svn_string_t *ref_id;  /* if this frame is a postfix text-delta,
+  svn_stringbuf_t *ref_id;  /* if this frame is a postfix text-delta,
                             here is its ID string */
-  svn_string_t *encoding; /* if this frame is a text-delta, here is
+  svn_stringbuf_t *encoding; /* if this frame is a text-delta, here is
                              encoding, if it specified one */
 
   svn_boolean_t hashed;  /* TRUE iff this is a <file> tag whose
@@ -162,11 +162,11 @@ typedef struct svn_delta__propdelta_t
   } kind;                    /* what kind of object does this
                                 prop-delta affect? */
 
-  svn_string_t *entity_name; /* The name of the file, dir, or dirent
+  svn_stringbuf_t *entity_name; /* The name of the file, dir, or dirent
                                 which is being patched. */
   
-  svn_string_t *name;        /* name of property to change */
-  svn_string_t *value;       /* new value of property; if NULL, then
+  svn_stringbuf_t *name;        /* name of property to change */
+  svn_stringbuf_t *value;       /* new value of property; if NULL, then
                                 this property should be deleted. */
 
 } svn_delta__propdelta_t;
@@ -202,7 +202,7 @@ typedef struct svn_xml__digger_t
   const svn_delta_edit_fns_t *editor;
 
   /* General "context variables" used when evaluating a tree-delta */
-  svn_string_t *base_path;
+  svn_stringbuf_t *base_path;
   svn_revnum_t base_revision;
 
   /* Userdata structures that we need to keep track of while we parse,
