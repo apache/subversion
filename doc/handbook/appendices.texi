@@ -5,11 +5,11 @@ A number of other useful documents relevant to Subversion.
 
 @menu
 * SVN for CVS users::                    
+* Directory versioning::
 * Compiling and installing::            
-* Command reference::           
+* Quick reference sheet::           
 * FAQ::
 * Contributing::                     
-* Links:: 
 * License::
 @end menu
 
@@ -32,10 +32,11 @@ begin with.
 * More disconnected operations:: 
 * Distinction between status and update::       
 * Meta-data properties::     
-* Directory versioning::     
+* Directory versions::     
 * Conflicts::                
 * Binary files::             
-* Authorization::            
+* Authorization::
+* Versioned Modules::            
 * Branches and tags::        
 @end menu
 
@@ -183,40 +184,11 @@ attached to each item in your working copy.
 To set or get a property name, use the 'svn propset' and 'svn propget'
 subcommands.  To list all properties on an object, use 'svn proplist'.
 
-Properties are @emph{versioned}, just like file contents.  This means
-that new properties can be merged into your working files, and can
-sometimes come into conflict too.
-
-Certain property names are standardized and used by Subversion to
-track important data; these property names all begin with an "svn:"
-prefix.  For example:  "svn:mime-type" indicates the file's mime-type,
-"svn:perms" describe what a file's permissions should be.  On a
-directory, the "svn:ignore" property contains a list of patterns that
-you would normally see in a .cvsignore file.  Of course they're
-editable by users;  just be sure you know what they do.
-
-Finally, we should point out that the 'svn status' and 'svn update'
-commands have ways of telling you about properties:
-
-@example
-     __
-     _M
-     _U
-     UU
-@end example
-
-The letter codes printed by these subcommands actually have two parts:
-file-contents and properties.  The first example indicates that the
-file has properties as well as text -- but that there's nothing
-special about either portion.  The second example is status's way of
-reminding you that you have some locally modified properties on a file
-(but the text is unchanged).  The third example is update's way of
-telling you that a file's properties were patched (but not its text).
-The fourth example means that both components were patched.
+For more information, @xref{Properties}.
 
 
-@node Directory versioning
-@subsection Directory versioning
+@node Directory versions
+@subsection Directory versions
 
 Subversion tracks tree structures, not just file contents.  It's one
 of the biggest reasons Subversion was written to replace CVS.
@@ -225,11 +197,12 @@ Here's what this means to you:
 
 @itemize @bullet
 @item
-the 'svn add' and 'svn rm' commands work on directories now, just
-as they work on files.  However, these commands do *not* cause
-any kind of immediate change in the repository.  Instead, the
-working directory is recursively "scheduled" for addition or
-deletion.  No repository changes happen until you commit.
+the 'svn add' and 'svn rm' commands work on directories now, just as
+they work on files.  So do 'svn cp' and 'svn mv'.  However, these
+commands do *not* cause any kind of immediate change in the
+repository.  Instead, the working directory is recursively "scheduled"
+for addition or deletion.  No repository changes happen until you
+commit.
 @item
 Directories aren't dumb containers anymore;  they have revision
 numbers like files.  (Or more properly, it's correct to talk
@@ -263,9 +236,7 @@ may be adds or deletes that the directory doesn't yet have, because no
 update has happened.  @b{Therefore, you are not allowed to commit
 property-changes on a directory unless the directory is up-to-date.}
 
-Go ahead and enjoy directory versioning; just file away those two
-warnings somewhere in the back of your mind.  Somewhere down the line,
-they may help you understand what's happening in your working copy.
+For more specific examples and discussion: @xref{Directory versioning}.
 
 
 @node Conflicts
@@ -277,36 +248,9 @@ forget about (or don't see) the 'C' after it whizzes by on their
 terminal.  They often forget that the conflict-markers are even
 present, and then accidentally commit garbaged files.
 
-Subversion solves this problem by making conflicts more tangible.  If
-a conflict happens during an update, three things happen:
-
-@itemize @bullet
-@item
-a 'C' is printed during the update, and the entry is marked as
-``conflicted'' in the @file{.svn/entries} file.
-@item
-3 fulltext files starting with @file{tmp} are created that contains
-the conflicting text;  @file{.svn/entries} tracks them as well.
-@item
-conflict markers are placed into the file.
-@end itemize
-
-At this point, Subversion will @emph{not} allow you to commit the file
-until the three temporary files are removed.  So it's potentially safe
-to forget about the conflict; 'svn ci' will remind you later on.
-
-If you get a conflict, you can hand-merge the conflicted text and then
-remove the three tmpfiles.  The @command{svn resolve} command, by the
-way, is a shortcut that does nothing but automatically remove the
-three tmpfiles for you.
-
-If you simply want to toss all of your local mods, the 'svn revert'
-command will do that for you -- along with deleting the three
-tmpfiles automatically.
-
-Finally, it's worth mentioning that properties can come into
-conflict.  If this happens, a description of the conflict will be
-dumped into a '.prej' file instead.
+Subversion solves this problem by making conflicts more tangible. 
+Read about it:  @xref{Basic Work Cycle}.  In particular, read the
+section about ``Merging others' changes''.
 
 
 @node Binary files
@@ -344,100 +288,282 @@ repository.  If the SVN server requests authorization when committing,
 the client should prompt you for your authorization (password).
 
 
+@node Versioned Modules
+@subsection Versioned Modules
+
+Unlike CVS, a Subversion working copy is aware that it has checked out
+a module.  That means that if somebody changes the definition of a
+module, then a call to @command{svn up} will update the working copy
+appropriately.
+
+Subversion defines modules as a list of directories within a directory
+property.  @xref{Modules}.
+
+
 @node Branches and tags
 @subsection Branches and tags
 
-Sit down and prepare yourself for this last topic.  It may take a
-minute to bend your mind around this idea.
+Subversion doesn't separate between filesystem space and ``branch''
+space; branches and tags are ordinary directories within the
+filesystem.  This is probably the single biggest mental hurdle a CVS
+user will need to climb.  Read all about it: @xref{Branches and Tags}.
 
-In the first section, we mentioned how each commit creates an entire
-new filesystem tree in the repository.  Really, as you may have
-suspected, the filesystem doesn't grow 652 new inodes each time this
-happens!  Instead, each new tree is mostly made of pointers to
-existing nodes; new nodes are created only for changed items.
 
-This technique demonstrates how the filesystem is able to make
-"cheap copies" of things.  Remember that nodes are never, ever deleted
-in the filesystem; at most, they're simply unlinked from the head tree
-(and they continue to stay linked to older trees).  These cheap copies
-are nothing more than directory entries that point to existing nodes.
-And this is the basis of tags and branches.
+@c ------------------------------------------------------------------
+@node Directory versioning
+@section Directory versioning
 
-Suppose we have a repository whose head tree is revision 82.  In
-this repository is a subdirectory 'mooIRC' that contains a software
-project that is ready to be tagged.  How do we tag it?  Very simple:
-make a cheap copy of this directory.  In other words, create a new
-directory entry (somewhere else in the filesystem) that points to this
-@emph{specfic} revision of the directory 'mooIRC'.  Of course, you can
-name that new directory entry whatever you want -- probably a tag-name
-like 'mooIRC-beta'.
+@quotation
+@emph{"The three cardinal virtues of a master technologist are:
+laziness, impatience, and hubris." -- Larry Wall}
+@end quotation
 
-Now, as long as you never touch the contents of the directory
-'mooIRC-beta', it will forever point to a directory that looks the way
-mooIRC/ did at a specific moment in time (however it looked in
-revision 82).  That's a tag.
+This appendix describes some of the theoretical pitfalls around the
+(possibly arrogant) notion that one can simply version directories
+just as one versions files.
 
-But what if you start making commits in mooIRC-beta?  And what if you
-also continue to make commits in the original mooIRC directory?  Then
-you have two directories that started out looking identical -- their
-common ancestor was mooIRC in revision 82 -- but now have diverged
-their contents over time.  In other words, they represent different
-branches of the project.
+@subsection Directory Revisions
 
-It's very important to note that the Subversion filesystem is not
-aware of "tags" or "branches".  It's only aware of directories, and
-all directories are equal.  The tag and branch concepts are purely
-@emph{human} meanings attached to particular directories.
+To begin, recall that the Subversion repository is an array of trees.
+Each tree represents the application of a new atomic commit, and is
+called a @dfn{revision}.  This is very different from a CVS repository,
+which stores file histories in a collection of RCS files (and doesn't
+track tree-structure.)
 
-For this reason, it's up to users (and the Subversion repository
-administrator) to choose sane policies that help elucidate these
-labels.  For example, here's a good way to lay out your repository:
+So when we refer to "revision 4 of foo.c" (written @dfn{foo.c:4}) in
+CVS, this means the fourth distinct version of @file{foo.c} -- but in
+Subversion this means "the version of foo.c in the fourth revision
+(tree)".  It's quite possible that @file{foo.c} has never changed at all
+since revision 1!  In other words, in Subversion, different revision
+numbers of the same versioned item do @emph{not} imply different
+contents.
 
-@example
-   /
-   /projectA
-   /projectA/trunk/
-   /projectA/branches/
-   /projectA/tags/
-   /projectB
-   /projectB/trunk/
-   /projectB/branches/
-   /projectB/tags/
-@end example
+Nevertheless, the contents of @samp{foo.c:4} is still well-defined.  The
+file @file{foo.c} in revision 4 has a specific text and properties.
 
-Each time /projectA/trunk reaches a taggable state, make a copy of the
-directory somewhere in /projectA/tags/, and set the copy to
-read-only.  Use the same procedure to create a branch in
-/projectA/branches/.  
+Suppose, now, that we extend this concept to directories.  If we have a
+directory @file{DIR}, define @dfn{DIR:N} to be "the directory DIR in the
+fourth revision."  The contents are defined to be a particular set of
+directory entries (@dfn{dirents}) and properties.
+
+So far, so good.  The concept of versioning directories seems fine in
+the repository -- the repository is very theoretically pure anyway.
+However, because working copies allow mixed revisions, it's easy to
+create problematic use-cases.  
+
+
+@subsection The Lagging Directory
+
+@subsubsection Problem
+
+@c This is the first part of of the "Greg Hudson" problem, so named
+@c because he was the first one to bring it up and define it well.  :-)
+
+Suppose our working copy has directory @samp{DIR:1} containing file
+@samp{foo:1}, along with some other files.  We remove @file{foo} and
+commit.
+
+Already, we have a problem: our working copy still claims to have
+@samp{DIR:1}.  But on the repository, revision 1 of DIR is
+@emph{defined} to contain @samp{foo} -- and our working copy DIR clearly
+does not have it anymore.  How can we truthfully say that we still have
+@samp{DIR:1}?
+
+One answer is to force DIR to be updated when we commit foo's deletion.
+Assuming that our commit created revision 2, we would immediately update
+our working copy to @samp{DIR:2}.  Then the client and server would both
+agree that @samp{DIR:2} does not contain foo, and that @samp{DIR:2} is
+indeed exactly what is in the working copy.
+
+This solution has nasty, un-user-friendly side effects, though.  It's
+likely that other people may have committed before us, possibly adding
+new properties to DIR, or adding a new file @file{bar}.  Now pretend our
+committed deletion creates revision 5 in the repository.  If we
+instantly update our local DIR to 5, that means unexpectedly receiving a
+copy of @file{bar} and some new propchanges.  This clearly violates a UI
+principle: "the client will never change your working copy until you ask
+it to."  Committing changes to the repository is a server-write
+operation only; it should @emph{not} modify your working data!
+
+Another solution is to do the naive thing:  after committing the
+deletion of @file{foo}, simply stop tracking the file in the @file{.svn}
+administrative directory.  The client then loses all knowledge of the
+file.
+
+But this doesn't work either: if we now update our working copy, the
+communication between client and server is incorrect.  The client still
+believes that it has @samp{DIR:1} -- which is false, since a "true"
+@samp{DIR:1} contains @file{foo}.  The client gives this incorrect
+report to the repository, and the repository decides that in order to
+update to revision 2, @file{foo} must be deleted.  Thus the repository
+sends a bogus (or at least unnecessary) deletion command.
+
+@subsubsection Solution
+
+After deleting @file{foo} and committing, the file is @emph{not}
+totally forgotten by the @file{.svn} directory.  While the file is no
+longer considered to be under revision control, it is still secretly
+remembered as having been `deleted'.
+
+When the user updates the working copy, the client correctly informs the
+server that the file is already missing from its local @samp{DIR:1};
+therefore the repository doesn't try to re-delete it when patching the
+client up to revision 2.
+
+@c Notes, for coders, about how the `deleted' flag works under the hood:
+
+@c   * the `svn status' command won't display a deleted item, unless
+@c     you make the deleted item the specific target of status.
+@c
+@c   * when a deleted item's parent is updated, one of two things will happen:
+@c
+@c       (1) the repository will re-add the item, thereby overwriting
+@c           the entire entry.  (no more `deleted' flag)
+@c
+@c       (2) the repository will say nothing about the item, which means
+@c           that it's fully aware that your item is gone, and this is 
+@c           the correct state to be in.  In this case, the entire entry
+@c           is removed.  (no more `deleted' flag)
+@c
+@c   * if a user schedules an item for addition that has the same name
+@c     as a `deleted' entry, then entry will have both flags
+@c     simultaneously.  This is perfectly fine:
+@c
+@c         * the commit-crawler will notice both flags and do a delete()
+@c           and then an add().  This ensures that the transaction is
+@c           built correctly. (without the delete(), the add() would be
+@c           on top of an already-existing  item.)
+@c
+@c         * when the commit completes, the client rewrites the entry as
+@c           normal.  (no more `deleted' flag)
+
+
+@subsection The Overeager Directory
+
+@c This is the 2nd part of the "Greg Hudson" problem.
+
+@subsubsection Problem
+
+Again, suppose our working copy has directory @samp{DIR:1} containing
+file @samp{foo:1}, along with some other files.  
+
+Now, unbeknownst to us, somebody else adds a new file @file{bar} to this
+directory, creating revision 2 (and @samp{DIR:2}).
+
+Now we add a property to @file{DIR} and commit, which creates revision
+3.  Our working-copy @file{DIR} is now marked as being at revision 3.
+
+Of course, this is false; our working copy does @emph{not} have
+@samp{DIR:3}, because the "true" @samp{DIR:3} on the repository contains
+the new file @file{bar}.  Our working copy has no knowledge of
+@file{bar} at all.
+
+Again, we can't follow our commit of @file{DIR} with an automatic update
+(and addition of @file{bar}).  As mentioned previously, commits are a
+one-way write operation; they must not change working copy data.
+
+
+@subsubsection Solution
+
+Let's enumerate exactly those times when a directory's local revision
+number changes:
+
+@itemize @bullet
+@item
+@b{when a directory is updated}:  if the directory is either the direct
+target of an update command, or is a child of an updated directory, it
+will be bumped (along with many other siblings and children) to a
+uniform revision number.
+@item
+@b{when a directory is committed}: a directory can only be considered a
+"committed object" if it has a new property change.  (Otherwise, to
+"commit a directory" really implies that its modified children are being
+committed, and only such children will have local revisions bumped.)
+@end itemize
+
+In this light, it's clear that our "overeager directory" problem only
+happens in the second situation -- those times when we're committing
+directory propchanges.  
+
+Thus the answer is simply not to allow property-commits on directories
+that are out-of-date.  It sounds a bit restrictive, but there's no other
+way to keep directory revisions accurate.
+
+@c  Note to developers:  this restriction is enforced by the filesystem
+@c  merge() routine.
+
+@c  Once merge() has established that {ancestor, source, target} are all
+@c  different node-rev-ids, it examines the property-keys of ancestor
+@c  and target.  If they're *different*, it returns a conflict error.
+
+
+@subsection User impact
+
+Really, the Subversion client seems to have two difficult---almost
+contradictory---goals.  
+
+First, it needs to make the user experience friendly, which generally
+means being a bit "sloppy" about deciding what a user can or cannot do.
+This is why it allows mixed-revision working copies, and why it tries to
+let users execute local tree-changing operations (delete, add, move,
+copy) in situations that aren't always perfectly, theoretically "safe"
+or pure.  
+
+Second, the client tries to keep the working copy in correctly in sync
+with the repository using as little communication as possible.  Of
+course, this is made much harder by the first goal!
+
+So in the end, there's a tension here, and the resolutions to problems
+can vary.  In one case (the "lagging directory"), the problem can be
+solved through a bit of clever entry tracking in the client.  In the
+other case ("the overeager directory"), the only solution is to
+restrict some of the theoretical laxness allowed by the client.
 
 
 @c ------------------------------------------------------------------
 @node Compiling and installing
 @section Compiling and installing
 
-Place most of the INSTALL file here, a bit edited.
+The latest instructions for compiling and installing Subversion (and
+httpd-2.0) are maintained in the @file{INSTALL} file at the top of the
+Subversion source tree.
+
+In general, you should also be able to find the latest version of this
+file by grabbing it directly from Subversion's own repository:
+@url{http://svn.collab.net/repos/svn/trunk/INSTALL}
 
 @c ------------------------------------------------------------------
-@node Command reference
-@section Command reference
+@node Quick reference sheet
+@section Quick reference sheet
 
-Can the latex quickref sheet be rewritten here as texi?
+A latex quick-reference sheet exists on Subversion's website for
+download, which is compiled from the source file in the
+@file{doc/user/quickref} directory.  Any volunteers to rewrite it here
+in texinfo?
+
 
 @c ------------------------------------------------------------------
 @node FAQ
 @section FAQ
 
-Grab the FAQ from the website, copy it here.
+The main FAQ for the project can viewed directly in Subversion's
+repository:
+
+@url{http://svn.collab.net/repos/svn/trunk/www/project_faq.html}
+
 
 @c ------------------------------------------------------------------
 @node Contributing
 @section Contributing
 
-From HACKING, describe how the project works.
+For a full description of how to contribute to Subversion, read the
+@file{HACKING} file at the top of Subversion's source tree.  It's also
+available at @url{http://svn.collab.net/repos/svn/trunk/HACKING}.
 
-@c ------------------------------------------------------------------
-@node Links
-@section Links
+In a nutshell: Subversion behaves like many open-source projects.  One
+begins by participating in discussion on mailing lists, then by
+submitting patches for review.  Eventually, rights are granted direct
+commit access to the repository.
 
 
 @c ------------------------------------------------------------------
