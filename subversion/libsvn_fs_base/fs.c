@@ -421,7 +421,7 @@ bdb_write_config  (svn_fs_t *fs)
     "set_lg_regionmax 131072\n"
     "#\n"
     /* ### Configure this with "svnadmin create --bdb-cache-size" */
-    "# The default cache size in BDB os only 256k. As explained in\n"
+    "# The default cache size in BDB is only 256k. As explained in\n"
     "# http://svn.haxx.se/dev/archive-2004-12/0369.shtml, this is too\n"
     "# small for most applications. Bump this number if \"db_stat -m\"\n"
     "# shows too many cache misses.\n"
