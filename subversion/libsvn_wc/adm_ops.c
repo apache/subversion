@@ -1104,7 +1104,7 @@ svn_wc_revert (svn_stringbuf_t *path,
     }
 
   /* If PATH was reverted, tell our client that. */
-  if (notify_revert != NULL && reverted)
+  if ((notify_revert != NULL) && reverted)
     (*notify_revert) (notify_baton, path->data);
 
   /* Finally, recurse if requested. */

@@ -61,11 +61,12 @@ svn_cl__mkdir (apr_getopt_t *os,
       {
         svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         commit_info = NULL;
-        SVN_ERR (svn_client_mkdir (&commit_info, target, auth_baton, 
-                                   message,
-                                   SVN_CL_NOTIFY(added, opt_state),
-                                   pool /* notify_baton */,
-                                   pool));
+        SVN_ERR (svn_client_mkdir
+                 (&commit_info, target, auth_baton, 
+                  message,
+                  (opt_state->quiet ? NULL : svn_cl__notify_added),
+                  pool,  /* notify_baton */
+                  pool));
         if (commit_info)
           svn_cl__print_commit_info (commit_info);
       }

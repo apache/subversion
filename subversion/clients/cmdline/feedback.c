@@ -35,27 +35,32 @@
 
 /* When the cmd-line client sees an unversioned item during an update,
    print a question mark (`?'), just like CVS does. */
-void svn_cl__notify_unversioned_item (void *baton, const char *path)
+void svn_cl__notify_unversioned (void *baton, const char *path)
 {
   printf ("?  %s\n", path);
 }
 
 
-void svn_cl__notify_added_item (void *baton, const char *path)
+void svn_cl__notify_added (void *baton, const char *path)
 {
   apr_pool_t *pool = baton;
   svn_stringbuf_t *spath = svn_stringbuf_create (path, pool);
   svn_wc_entry_t *entry;
   svn_error_t *err;
-  int binary = 0;
+  const char *type = "      ";  /* fill with "binary" if binary, etc */
 
   err = svn_wc_entry (&entry, spath, pool);
   if (err)
     {
-      /* ### what the hell to do with this error? */
+      printf ("WARNING: error fetching entry for %s\n", path);
       return;
     }
-
+  else if (! entry)
+    {
+      printf ("WARNING: apparently failed to add %s\n", path);
+      return;
+    }
+           
   if (entry->kind == svn_node_file)
     {
       const svn_string_t *value;
@@ -63,35 +68,34 @@ void svn_cl__notify_added_item (void *baton, const char *path)
       err = svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, pool);
       if (err)
         {
-          /* ### what the hell to do with this error? */
+          printf ("WARNING: error fetching %s property for %s\n",
+                  SVN_PROP_MIME_TYPE, path);
           return;
         }
 
       /* If the property exists and it doesn't start with `text/', we'll
          call it binary. */
       if ((value) && (value->len > 5) && (strncmp (value->data, "text/", 5)))
-        binary = 1;
+        type = "binary";
     }
 
-  printf ("A  %s  %s\n",
-          binary ? "binary" : "      ",
-          path);
+  printf ("A  %s  %s\n", type, path);
 }
 
 
-void svn_cl__notify_deleted_item (void *baton, const char *path)
+void svn_cl__notify_deleted (void *baton, const char *path)
 {
   printf ("D  %s\n", path);
 }
 
 
-void svn_cl__notify_restored_item (void *baton, const char *path)
+void svn_cl__notify_restored (void *baton, const char *path)
 {
   printf ("Restored %s\n", path);
 }
 
 
-void svn_cl__notify_reverted_item (void *baton, const char *path)
+void svn_cl__notify_reverted (void *baton, const char *path)
 {
   printf ("Reverted %s\n", path);
 }

@@ -94,16 +94,17 @@ svn_cl__switch (apr_getopt_t *os,
                                             parent_dir, pool));
 
   /* Do the 'switch' update. */
-  SVN_ERR (svn_client_switch (NULL, NULL, 
-                              trace_editor, trace_edit_baton,
-                              auth_baton,
-                              target,
-                              switch_url,
-                              opt_state->start_revision,
-                              opt_state->start_date,
-                              opt_state->nonrecursive ? FALSE : TRUE,
-                              SVN_CL_NOTIFY(restored, opt_state), NULL,
-                              pool));
+  SVN_ERR (svn_client_switch
+           (NULL, NULL, 
+            trace_editor, trace_edit_baton,
+            auth_baton,
+            target,
+            switch_url,
+            opt_state->start_revision,
+            opt_state->start_date,
+            opt_state->nonrecursive ? FALSE : TRUE,
+            (opt_state->quiet ? NULL : svn_cl__notify_restored), NULL,
+            pool));
 
   return SVN_NO_ERROR;
 }
