@@ -1,14 +1,5 @@
 --- ./doc/book/Makefile	2003/09/23 23:01:23	1.1
 +++ ./doc/book/Makefile	2003/09/23 23:03:26
-@@ -4,7 +4,7 @@
- 
- ## You shouldn't normally need to edit anything below here.
- SHELL = /bin/sh
--SVNVERSION = svnversion
-+#SVNVERSION = svnversion
- 
- BOOK_TOP = .
- BOOK_HTML_CHUNK_DIR = $(BOOK_DIR)/html-chunk
 @@ -68,16 +68,7 @@
  $(BOOK_VERSION_SOURCE): book-version
  
@@ -23,7 +14,7 @@
 -	else \
 -	mv $(BOOK_VERSION_SOURCE).tmp $(BOOK_VERSION_SOURCE); \
 -	fi
-+	echo '<!ENTITY svn.version "Draft Revision '`echo $(SVNVERSION)`'">' > $(BOOK_VERSION_SOURCE);
++	echo '<!ENTITY svn.version "Version '`cat book/package.version`'">' > $(BOOK_VERSION_SOURCE);
  
  book-html: $(BOOK_HTML_TARGET)
  

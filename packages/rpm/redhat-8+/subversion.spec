@@ -105,6 +105,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Wed Jan 28 2004 David Summers <david@summersoft.fay.ar.us> 0.37.0-8534
+- Change version number to new format based on dev list discussion.
+
 * Sun Jan 18 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8372
 - Switched to the Redhat way of doing the "swig" package where it is not
   separated into "swig" and "swig-runtime".
@@ -321,14 +324,28 @@ patch -p1 < packages/rpm/redhat-8+/install.patch
 # Fix documentation version generation.
 patch -p1 < packages/rpm/redhat-8+/doc.patch
 
-# Brand release number into the displayed version number.
-RELEASE_NAME="r%{release}"
+# Figure out version and release number for command and documentation display.
+case "%{release}" in
+   1)
+      # Build an official release
+      RELEASE_NAME="%{version}"
+      ;;
+   alpha*|beta*|gamma*)
+      # Build an alpha, beta, gamma release.
+      RELEASE_NAME="%{version} (%{release})"
+      ;;
+   *)
+      # Build a working copy release
+      RELEASE_NAME="%{version} (dev build, r%{release})"
+      ;;
+esac
 export RELEASE_NAME
 vsn_file="subversion/include/svn_version.h"
 sed -e \
- "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
+ "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
+echo "${RELEASE_NAME}" > doc/book/book/package.version
 
 # Configure static.
 %configure \
