@@ -640,7 +640,10 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
   if (err)
     {
       if (APR_STATUS_IS_ENOENT (err->apr_err))
-        return svn_fs__err_dangling_id (fs, id);
+        {
+          svn_error_clear (err);
+          return svn_fs__err_dangling_id (fs, id);
+        }
       
       return err;
     }
@@ -1788,9 +1791,10 @@ read_change (svn_fs__change_t **change_p,
   /* Check for a blank line. */
   if (err)
     {
-      if (err->apr_err == APR_EOF)
+      if (APR_STATUS_IS_EOF (err->apr_err))
         {
           *change_p = NULL;
+          svn_error_clear (err);
           return SVN_NO_ERROR;
         }
       return err;
@@ -2364,7 +2368,10 @@ svn_fs__fs_purge_txn (svn_fs_t *fs,
   err = svn_io_remove_dir (txn_dir, pool);
 
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
-    return svn_fs__err_txn_not_mutable (fs, txn_id);
+    {
+      svn_error_clear (err);
+      return svn_fs__err_txn_not_mutable (fs, txn_id);
+    }
   
   return err;
 }
