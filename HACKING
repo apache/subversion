@@ -351,6 +351,15 @@ change.  Please adhere to this format -- not only does consistency
 greatly aid readability, it also allows software to colorize log
 entries automatically.
 
+If your change is related to a specific issue in the issue tracker,
+then include a string like "issue #N" in the log message.  For
+example, if a patch resolves issue 1729, then the log message might
+be:
+
+   Fix issue #1729:
+
+   * get_editor.c (frobnicate_file): Check that file exists first.
+
 For large changes or change groups, group the log entry into
 paragraphs separated by blank lines.  Each paragraph should be a set
 of changes that accomplishes a single goal, and each group should
@@ -402,9 +411,6 @@ entries by being exhaustive.  Use your best judgement --- and be
 considerate of your fellow developers.  (Also, run "svn log" to see
 how others have been writing their log entries.)
 
-These guidelines are paraphrased from Jim Blandy's excellent essay
-"Maintaining the ChangeLog".  It is in `doc/WritingChangeLogs.txt'.
-
 
 
 Patch submission guidelines
@@ -424,13 +430,7 @@ feature completely in your mail; if the patch fixes a bug, describe
 the bug in detail and give a reproduction recipe.  An exception to
 these guidelines is when the patch addresses a specific issue in the
 issues database -- in that case, just make sure to refer to the issue
-number in your log message, with a string like "issue #N".  For
-example, if a patch resolves issue 1729, then the log message might
-be:
-
-   Fix issue #1729:
-
-   * get_editor.c (frobnicate_file): Check that file exists first.
+number in your log message, as described in "Writing log entries".
 
 It is normal for patches to undergo several rounds of feedback and
 change before being applied.  Don't be discouraged if your patch is
