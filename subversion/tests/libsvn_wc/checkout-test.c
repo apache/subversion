@@ -67,7 +67,6 @@ static svn_error_t *
 test_read_fn (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 {
   apr_file_t *src = (apr_file_t *) baton;
-  svn_error_t *err;
   apr_status_t stat;
 
   stat = apr_full_read (src, buffer, (apr_size_t) *len, (apr_size_t *) len);
@@ -140,7 +139,7 @@ main (int argc, char **argv)
 
   if (apr_err)
     {
-      fprintf (stderr, "error opening %s: %s",
+      fprintf (stderr, "error opening %s: %d",
                src_file, apr_canonical_error (apr_err));
       exit (1);
     }
