@@ -13,7 +13,7 @@ When you create an SVN tag, it makes a single new directory node that
 points to an existing tree.  It takes O(1) (constant) time.  The
 tradeoff, however, is that a version of a file is 'shared' by any
 number of directory paths.  That means it takes O(N) time to find
-every tag that contains the the specific file.
+every tag that contains the specific file.
 
 
 Why?

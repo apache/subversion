@@ -120,7 +120,7 @@ Using the svntest scripts                                 -*- Text -*-
    tmpfs           /home/brane/svn/obj-sh/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
    tmpfs           /home/brane/svn/obj-st/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
 
-   The minimum required size for ramdisk is appr. 450MB at the moment.  
+   The minimum required size for ramdisk is appr. 570 MB at the moment.  
    You should also set RAMDISK=yes, and check mount_ramdisk and umount_ramdisk 
    in the svntest-config.sh file if your system is not GNU/Linux.
    See http://subversion.tigris.org/project_faq.html#ramdisk-tests for 

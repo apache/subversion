@@ -404,7 +404,7 @@ If some components of $url do not exist then create parent directories
 as necessary.
 
 If $path is a directory, the contents of that directory are imported
-directly into the directory identifed by $url.  Note that the the directory 
+directly into the directory identifed by $url.  Note that the directory 
 $path itself is not imported; that is, the basename of $path is not part
 of the import.
 
@@ -576,7 +576,7 @@ of the new location of the node.
 
 Returns a reference to a hash containing paths or URLs, prefixed by $target (a
 working copy or URL), of items of which the property $propname is set, and
-whose values represent the the property value for $propname at that path.
+whose values represent the property value for $propname at that path.
 
 =item $ctx-E<gt>proplist($target, $revision, $recursive, $pool);
 
