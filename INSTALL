@@ -3,7 +3,7 @@
                           A Quick Guide
                ======================================
 
-$LastChangedDate$
+LastChangedDate: Thu 14 Feb 2002 15:23:07 $
 
    *** Note: Subversion is PRE-ALPHA code.  Don't use it on real data. ***
 
@@ -255,15 +255,18 @@ I.    BUILD REQUIREMENTS
       using the zlib library which a Subversion client can take
       advantage of.
 
-      With Unix-based systems, you can enable this support from the
+      With Unix-based systems, you can enable support for SSL from the
       Subversion build provided that you are building Neon in the
       "./neon/" directory as described above in section I.5.  You also
-      need the OpenSSL and/or zlib library installed on your system,
-      depending on which features you want.  Just add "--with-ssl" or
-      "--with-zlib" as parameters when you run Subversion's
-      "./configure", and they will be passed on to the Neon build
-      system.  Consult the Neon documentation for more information on
-      how to use these parameters and versions of libraries you need.
+      need OpenSSL installed on your system.  Just add "--with-ssl" as
+      a parameter when you run Subversion's "./configure", and it will
+      be passed on to the Neon build system.  If your OpenSSL
+      installation is hard for Neon to find, you may need to use
+      "--with-ssl=/path/to/lib" instead.  The zlib library is included
+      in Neon by default, but you can also specify a path to the
+      library using "--with-zlib".  Consult the Neon documentation for
+      more information on how to use these parameters and versions of
+      libraries you need.
 
       Under Windows, you have to edit a batch file available in your
       Subversion source tree (the root of which is labelled <SVN>
