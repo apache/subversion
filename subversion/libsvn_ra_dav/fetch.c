@@ -744,7 +744,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       const svn_string_t *expected_checksum = NULL;
       file_write_ctx_t fwc;
       ne_propname md5_propname = { SVN_DAV_PROP_NS_DAV, "md5-checksum" };
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
 
       /* Only request a checksum if we're getting the file contents. */

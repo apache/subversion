@@ -293,7 +293,7 @@ svn_wc_process_committed (const char *path,
              unexpected and hard-to-maintain dependencies.  Ick.
 
              So instead we just do the checksum from scratch.  Ick. */
-          unsigned char digest[MD5_DIGESTSIZE];
+          unsigned char digest[APR_MD5_DIGESTSIZE];
           SVN_ERR (svn_io_file_checksum (digest, latest_base, pool));
           hex_digest = svn_md5_digest_to_cstring (digest, pool);
         }

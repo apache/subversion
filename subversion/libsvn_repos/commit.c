@@ -468,7 +468,7 @@ close_file (void *file_baton,
 
   if (text_checksum)
     {
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
 
       SVN_ERR (svn_fs_file_md5_checksum

@@ -63,7 +63,7 @@ const svn_string_t *svn_base64_decode_string (const svn_string_t *str,
 
 /** Return a base64-encoded checksum for finalized @c digest.
  *
- * @c digest contains @c MD5_DIGESTSIZE bytes of finalized data.
+ * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.
  * Allocate the returned checksum in @c pool.
  */
 svn_stringbuf_t *svn_base64_from_md5 (unsigned char digest[],

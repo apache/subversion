@@ -47,7 +47,7 @@
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
 
    Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
-   at least MD5_DIGESTSIZE bytes long. */
+   at least APR_MD5_DIGESTSIZE bytes long. */
 static svn_error_t *
 send_file_contents (const char *path,
                     void *file_baton,
@@ -106,7 +106,7 @@ import_file (const svn_delta_editor_t *editor,
 {
   void *file_baton;
   const char *mimetype;
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;

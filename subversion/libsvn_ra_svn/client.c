@@ -766,7 +766,7 @@ static svn_error_t *ra_svn_get_file(void *baton, const char *path,
   svn_ra_svn_conn_t *conn = sess->conn;
   svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *expected_checksum, *hex_digest;
   apr_md5_ctx_t md5_context;
 

@@ -492,7 +492,7 @@ struct file_baton
      populated with the MD5 digest of the resultant fulltext after the
      last window is handled by the handler returned from
      apply_textdelta(). */ 
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
 };
 
 
@@ -1465,7 +1465,7 @@ apply_textdelta (void *file_baton,
      compatibility we assume that no checksum always matches. */
   if (ent && ent->checksum)
     {
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
       const char *tb;
       
@@ -2117,7 +2117,7 @@ install_file (svn_wc_notify_state_t *content_state,
                              NULL);
 
       {
-        unsigned char digest[MD5_DIGESTSIZE];
+        unsigned char digest[APR_MD5_DIGESTSIZE];
         SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
         svn_xml_make_open_tag (&log_accum,
                                pool,

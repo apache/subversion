@@ -1081,7 +1081,7 @@ svn_error_t *svn_fs_file_length (svn_filesize_t *length_p,
 
 
 /** Put the MD5 checksum of file @a path into @a digest, which points
- * to @c MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
+ * to @c APR_MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
  * allocations.
  *
  * If the filesystem does not have a prerecorded checksum for @a path,

@@ -1306,7 +1306,7 @@ svn_fs__dag_file_checksum (unsigned char digest[],
     SVN_ERR (svn_fs__rep_contents_checksum (digest, file->fs,
                                             noderev->data_key, trail));
   else
-    memset (digest, 0, MD5_DIGESTSIZE);
+    memset (digest, 0, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
@@ -1395,7 +1395,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
 
   if (checksum)
     {
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex;
 
       SVN_ERR (svn_fs__rep_contents_checksum

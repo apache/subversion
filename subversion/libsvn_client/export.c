@@ -309,7 +309,7 @@ struct file_baton
 
   /* The MD5 digest of the file's fulltext.  This is all zeros until
      the last textdelta window handler call returns. */
-  unsigned char text_digest[MD5_DIGESTSIZE];
+  unsigned char text_digest[APR_MD5_DIGESTSIZE];
 
   /* The three svn: properties we might actually care about. */
   const svn_string_t *eol_style_val;

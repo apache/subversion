@@ -3333,7 +3333,7 @@ struct file_checksum_args
 {
   svn_fs_root_t *root;
   const char *path;
-  unsigned char *digest;  /* OUT parameter, MD5_DIGESTSIZE bytes long */
+  unsigned char *digest;  /* OUT parameter, APR_MD5_DIGESTSIZE bytes long */
 };
 
 static svn_error_t *
@@ -3578,7 +3578,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
 
   if (tb->base_checksum)
     {
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex;
 
       /* Until we finalize the node, its data_key points to the old

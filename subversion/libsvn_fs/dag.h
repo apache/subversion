@@ -430,7 +430,7 @@ svn_error_t *svn_fs__dag_file_length (svn_filesize_t *length,
                                       trail_t *trail);
 
 /* Put the recorded MD5 checksum of FILE into DIGEST, as part of
- * TRAIL.  DIGEST must point to MD5_DIGESTSIZE bytes of storage.
+ * TRAIL.  DIGEST must point to APR_MD5_DIGESTSIZE bytes of storage.
  *
  * If no stored checksum is available, do not calculate the checksum,
  * just put all 0's into DIGEST.

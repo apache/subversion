@@ -47,7 +47,7 @@ struct svn_txdelta_stream_t {
   /* Calculated digest from MD5 operations.
      NOTE:  This is only valid after this stream has returned the NULL
      (final) window.  */
-  unsigned char digest[MD5_DIGESTSIZE]; 
+  unsigned char digest[APR_MD5_DIGESTSIZE]; 
 };
 
 
@@ -72,7 +72,7 @@ struct apply_baton {
 
   apr_md5_ctx_t md5_context;    /* Leads to result_digest below. */
   unsigned char *result_digest; /* MD5 digest of resultant fulltext;
-                                   must point to at least MD5_DIGESTSIZE
+                                   must point to at least APR_MD5_DIGESTSIZE
                                    bytes of storage. */
 
   const char *error_info;       /* Optional extra info for error returns. */
@@ -576,7 +576,7 @@ svn_error_t *svn_txdelta_send_stream (svn_stream_t *stream,
       const unsigned char *result_md5;
       result_md5 = svn_txdelta_md5_digest (txstream);
       /* Since err is null, result_md5 "cannot" be null. */
-      memcpy (digest, result_md5, MD5_DIGESTSIZE);
+      memcpy (digest, result_md5, APR_MD5_DIGESTSIZE);
     }
 
   return err;

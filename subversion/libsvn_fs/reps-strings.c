@@ -75,9 +75,9 @@ make_fulltext_rep (const char *str_key,
   rep->kind = svn_fs__rep_kind_fulltext;
 
   if (checksum)
-    memcpy (rep->checksum, checksum, MD5_DIGESTSIZE);
+    memcpy (rep->checksum, checksum, APR_MD5_DIGESTSIZE);
   else
-    memset (rep->checksum, 0, MD5_DIGESTSIZE);
+    memset (rep->checksum, 0, APR_MD5_DIGESTSIZE);
 
   rep->contents.fulltext.string_key 
     = str_key ? apr_pstrdup (pool, str_key) : NULL;
@@ -703,7 +703,7 @@ svn_fs__rep_contents_checksum (unsigned char digest[],
   svn_fs__representation_t *rep;
 
   SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
-  memcpy (digest, rep->checksum, MD5_DIGESTSIZE);
+  memcpy (digest, rep->checksum, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
@@ -746,7 +746,7 @@ svn_fs__rep_contents (svn_string_t *str,
   {
     svn_fs__representation_t *rep;
     apr_md5_ctx_t md5_context;
-    unsigned char checksum[MD5_DIGESTSIZE];
+    unsigned char checksum[APR_MD5_DIGESTSIZE];
     
     apr_md5_init (&md5_context);
     apr_md5_update (&md5_context, str->data, str->len);
@@ -830,7 +830,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
           if (args->rb->offset == args->rb->size)
             {
               svn_fs__representation_t *rep;
-              unsigned char checksum[MD5_DIGESTSIZE];
+              unsigned char checksum[APR_MD5_DIGESTSIZE];
               
               apr_md5_final (checksum, &(args->rb->md5_context));
               args->rb->checksum_finalized = TRUE;
@@ -917,7 +917,7 @@ struct rep_write_baton
      we write data, and finalized and stored when the stream is
      closed. */
   struct apr_md5_ctx_t md5_context;
-  unsigned char md5_digest[MD5_DIGESTSIZE];
+  unsigned char md5_digest[APR_MD5_DIGESTSIZE];
   svn_boolean_t finalized;
 
   /* Used for temporary allocations, iff `trail' (above) is null.  */
@@ -1068,7 +1068,7 @@ txn_body_write_close_rep (void *baton, trail_t *trail)
   svn_fs__representation_t *rep;
 
   SVN_ERR (svn_fs__bdb_read_rep (&rep, wb->fs, wb->rep_key, trail));
-  memcpy (rep->checksum, wb->md5_digest, MD5_DIGESTSIZE);
+  memcpy (rep->checksum, wb->md5_digest, APR_MD5_DIGESTSIZE);
   SVN_ERR (svn_fs__bdb_write_rep (wb->fs, wb->rep_key, rep, trail));
 
   return SVN_NO_ERROR;
@@ -1166,7 +1166,8 @@ rep_contents_clear (svn_fs_t *fs,
   if (str_key && *str_key)
     {
       SVN_ERR (svn_fs__bdb_string_clear (fs, str_key, trail));
-      memcpy (rep->checksum, svn_md5_empty_string_digest (), MD5_DIGESTSIZE);
+      memcpy (rep->checksum, svn_md5_empty_string_digest (),
+              APR_MD5_DIGESTSIZE);
       SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
     }
   return SVN_NO_ERROR;
@@ -1335,7 +1336,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   apr_array_header_t *orig_str_keys;
   
   /* The digest for the representation's fulltext contents. */
-  unsigned char rep_digest[MD5_DIGESTSIZE];
+  unsigned char rep_digest[APR_MD5_DIGESTSIZE];
 
   /* MD5 digest */
   const unsigned char *digest;
@@ -1457,7 +1458,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
       abort ();
 
     /* Save the checksum, since the new rep needs it. */
-    memcpy (rep_digest, old_rep->checksum, MD5_DIGESTSIZE);
+    memcpy (rep_digest, old_rep->checksum, APR_MD5_DIGESTSIZE);
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by
@@ -1472,7 +1473,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     new_rep.txn_id = NULL;
 
     /* Migrate the old rep's checksum to the new rep. */
-    memcpy (new_rep.checksum, rep_digest, MD5_DIGESTSIZE);
+    memcpy (new_rep.checksum, rep_digest, APR_MD5_DIGESTSIZE);
 
     chunks = apr_array_make (pool, windows->nelts, sizeof (chunk));
 

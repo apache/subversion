@@ -557,7 +557,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char buf[4096];
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
-  unsigned char digest[MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
   svn_error_t *err, *write_err;
 
   /* Parse arguments. */

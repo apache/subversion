@@ -582,7 +582,7 @@ delta_files (struct context *c,
   if (changed)
     {
       svn_txdelta_stream_t *delta_stream = NULL;
-      unsigned char source_digest[MD5_DIGESTSIZE];
+      unsigned char source_digest[APR_MD5_DIGESTSIZE];
       const char *source_hex_digest = NULL;
 
       if (c->text_deltas)
@@ -662,7 +662,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
   else
     {
       void *file_baton;
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
 
       SVN_ERR (context->editor->add_file (edit_path, dir_baton,
                                           NULL, SVN_INVALID_REVNUM, pool, 
@@ -712,7 +712,7 @@ replace_file_or_dir (struct context *c,
   else
     {
       void *file_baton;
-      unsigned char digest[MD5_DIGESTSIZE];
+      unsigned char digest[APR_MD5_DIGESTSIZE];
 
       SVN_ERR (c->editor->open_file (edit_path, dir_baton, base_revision, 
                                      pool, &file_baton));
