@@ -1,16 +1,12 @@
 .\" You can view this file with:
 .\" nroff -man [filename]
 .\"
-.TH svn 1 "22 Jan 2002" "svn 0.9" "Subversion Command Line Tool"
+.TH svn 1 "9 Sept 2002" "svn r3146" "Subversion Command Line Tool"
 .SH NAME
 svn \- Subversion command line tool
 .SH SYNOPSIS
 .TP
 \fBsvn\fP \fIcommand\fP [\fIoptions\fP] [\fIargs\fP]
-.SH NOTE
-This manpage should cover all the features of the \fBsvn\fP command line
-tool. This is still a very early version. It lacks documentation, it includes
-not yet support features and it is generally still in a bad shape.  Beware.
 .SH OVERVIEW
 Subversion is a version control system, which allows you to keep old versions
 of files (usually source code), keep a log of who, when, and why changes
@@ -19,82 +15,82 @@ of the master sources.  This copy is called the source ``repository''; it
 contains all the information to permit extracting previous software releases
 at any time.
 
-More about \fBSubversion\fP as a general version control system is documented
-elsewhere.
+This manpage provides a brief description of the \fBsvn\fP command.  Details as
+well as more about \fBSubversion\fP as a general version control system is
+documented in the \fBThe Subversion Handbook\fP.
+
 .SH OPTIONS
+These options are understood by \fBsvn\fP commands.  Not all options are
+available to every command.  See the individual command descriptions for
+details.
 .TP
-\fB-?\fP or \fB-h\fP or \fB-H\fP or \fB--help\fP
+\fB-?\fP, \fB-h\fP, \fB-H\fP, \fB--help\fP
 Show help text.
 .TP
-\fB-V\fP or \fB--verbose\fP [\fBquiet|progress|verbose|trace\fP]
-Determines the level of spewage that the client gives (progress is the
-default, --verbose without argument defaults to verbose)
+\fB-v\fP, \fB--verbose\fP
+Print additional information.
 .TP
-\fB-D\fP or \fB--date\fP \fBDATESPEC\fP
+\fB-D\fP, \fB--date\fP \fBDATESPEC\fP
 Specify which date to operate on.
 .TP
-\fB-r\fP or \fB--revision\fP \fBREV\fP
+\fB-r\fP, \fB--revision\fP \fBREV\fP
 Specify repository revision to operate on. Separate multiple revisons with `:'.
 .TP
-\fB-v\fP or \fB--version\fP
-The subversion and svn version is printed.
+\fB--version\fP
+Print client version info.
 .TP
-\fB-l\fP or \fB--local-dir\fP
+\fB-N\fB, \fB--nonrecursive\fP
 Local; run only in current working directory.
 .TP
-\fB--recursive\fP
+\fB-R\fP, \fB--recursive\fP
 Operate recursively (default).
 .TP
 \fB--force\fP
-Force. Don't ask any questions, I know what I'm doing.
+Force operation to run.
 .TP
-\fB-m\fP or \fB--message\fP \fBMSG\fP
-Specify log message
+\fB-m\fP, \fB--message\fP \fBMSG\fP
+Specify log message.
 .TP
-\fB-F\fP or \fB--msg-file\fP \fBFILE\fP
-Read the log message from \fBFILE\fP.
+\fB-F\fP, \fB--file ARG\fP
+Read data from file ARG.
 .TP
-\fB-p\fP or \fB--stdout\fP
-Check out/update/whatever files to standard output 
+\fB--xml-file ARG\fP
+Read/write xml to specified file ARG.
 .TP
-\fB-n\fP or \fB--dry-run\fP
-Don't actually do it, only show what would be done if the given command did
-run.
+\fB--message-encoding ARG\fP
+Take log message in charset encoding ARG.
 .TP
-\fB--no-rc\fP
-Suppress reading of .svnrc.
+\fB--show-updates\fP
+Display update information.
 .TP
-\fB-e\fP or \fB--editor\fP \fBEDITOR\fP
-Edit messages with EDITOR.
+\fB--username ARG\fP
+Specify a username ARG.
 .TP
-\fB--read-only\fP
-Make new working files read-only.
+\fB--password ARG\fP
+Specify a password ARG.
 .TP
-\fB--writable\fP
-Make new working files read-write (default)
-.TP
-\fB-I\fP or \fB--ignore GLOB\fP
-Ignore entities whose names match GLOB
-.TP
-\fB-K\fP or \fB--keywords GLOB\fB
-Expand keywords in files whose names match GLOB.
-.TP
-\fB-L\fP or \fB --line-conversion GLOB\fP
-Do line-end conversion for files matching GLOB.
+\fB-x\fP, \fB--extensions ARG\fB
+Pass ARG as bundled options to GNU diff.
 .TP
 \fB--targets\fP
 Supply a file used as entry and URL args for a given command. You can also
 supply '-' as the file to read from standard input. The file will be read
 as one argument for each line, even if given on standard input.
 .TP
-\fB--\fP
-End of option processing
-.TP
 \fB-q\fP or \fB--quiet\fP
-alias for --verbose=quiet
+Print as little as possible.
 .TP
-\fB-T\fP or \fB--text-defaults GLOB\fP
-alias for '-L GLOB -K GLOB'
+\fB--xml\fP
+Output in xml.
+.TP
+\fB--strict\fP
+Use strict semantics.
+.TP
+\fB--no-ignore\fP
+Disregard default and svn:ignore property ignores.
+.TP
+\fB--no-auth-cache\fP
+Do not cache authentication tokens.
 .SH COMMANDS
 svn has many options. Remember to run
 .B "svn help"
@@ -102,44 +98,42 @@ to display a list of all commands, and to request a help text for a particular
 command, run
 \fBsvn help command\fP.
 .TP
-\fBadd\fP \fIfile\fP\|.\|.\|.
+\fBadd\fP \fIfile\fP \fR[\fI--targets file\fR] [\fI-Rq\fR]\fI
 Use this command to enroll new files in \fBsvn\fP records of your working
 directory.  The files will be added to the repository the next time you run
-"svn commit". Note: You should use the "svn import" command to bootstrap new
+"svn commit". You should use the "svn import" command to bootstrap new
 sources into the source repository. "svn add" is only used for adding new
 files to an already checked-out module.
 
 \fBexample:\fP svn add foo.c bar.h baz/ bat/*.m
 .TP
-\fBcheckout\fP \fIrepository\fP\|.\|.\|.
+\fBcheckout\fP \fIrepository\fP \fR[\fIrepository\|.\|.\|.\fR] [\fIdestination\fR] [\fI--username name\fR] [\fI--password arg\fR] [\fI--no-auth-cache\fR] [\fI--xml-file file\fR] [\fI-rDqN\fR]
 (Alias: co)
 A necessary preliminary for most \fBsvn\fP work: creates your private copy of
 the source for \fIrepository\fP (the repository must be identified with a valid
 URL string). You can work with this copy without interfering with others'
 work.  At least one subdirectory level is always created.
 
-The second argument specifies the target dir, if the basename of the URL
-is not what you want.
+If \fBdestination\fP is omitted the basename of \fBrepository\fP will
+be used as the destination.  If multiple URLs are given each will be
+checked out into a sub-directory of \fbdestination\fP, with the name of the
+sub-directory being the basename of the URL.
 
 \fBexample:\fP svn checkout http://site.com/repo/svn targetdir
 .TP
-\fBcleanup\fP \fItarget\fP\|.\|.\|.
+\fBcleanup\fP \fItarget\fP
 Recursively clean up the working copy, removing locks, resuming
 unfinished operations, etc.
 .TP
-\fBcommit\fP \fIfile\fP\|.\|.\|.
+\fBcommit\fP \fIfile\fP \fR[\fI--force\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--xml-file\fR] [\fI--message-encoding\fR] [\fI-mFqN\fR]
 (Alias: ci)
 Use this command when you wish to ``post'' your changes to other
 developers, by incorporating them into the source repository.
 
--m/--message can be used to specify commit message on the command line.
-
--F/--msg-file can be used to specify from which file to read the pre-written
-commit message.
-
 \fBexample:\fP svn commit foo.c bar.h baz/ bat/*.m
 .TP
-\fBcopy\fP \fIsource destination\fP (Alias: cp) Where \fBsource\fP and
+\fBcopy\fP \fIsource destination\fP \fR[\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFrDq\fR]
+(Alias: cp) Where \fBsource\fP and
 \fBdestination\fP can be directories or files, local ones in a repository or
 remote ones specified as URLs. `copy' is used where you want to make a copy of
 \fBsource\fP so that \fBdestination\fP will share ancestry of
@@ -167,14 +161,15 @@ have no revision history beyond the initial import that you just did.
   $ svn cp http://rep.com/repo/path/bar.c foo.c
   $ svn ci -m "copied that remote bar.c here"
 .TP
-\fBdelete\fP \fIfile|dir\fP\|.\|.\|.
+\fBdelete\fP \fIfile|dir\fP \fR[\fI--force\fR] [\fI--targets file\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--xml-file\fR] [\fI--message-encoding\fR] [\fI-mFq\fR]\fI
 (Alias: del, remove, rm) Mark the given files/directories for deletion upon
 commit. When you commit, the entries will be removed from the head revision in
 the repository, and deleted from your working copy.
 
 \fBexample:\fP svn delete foo.c bar.h
 .TP
-\fBdiff\fP \fI[target...]\fP.
+\fBdiff\fP [\fItarget...\fP] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rDxN\fR]\fI
+(Alias: di)
 Display file changes as contextual diffs. The target can be a
 directory, in which it operates recursively. The target can be an URL,
 although this is only useful if two revisions are also given.
@@ -185,7 +180,7 @@ between the two specified repository revisions. If this option is not
 given the comparison is between the working copy and its current
 repository revision.
 
--n/--nonrecursive with a directory target will prevent recursive
+-N/--nonrecursive with a directory target will prevent recursive
 descent into subdirectories.
 
 \fBexample:\fP svn diff README
@@ -206,7 +201,16 @@ Compares revisions 123 and 456 of the file in the repository.
 
 Compare revisions 123 and 456 of the file in the repository without
 the need for a working copy.
-
+.TP
+\fBexport\fP \fIsource \fR[\fIdestination\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rDq\fR]
+If source is a URL exports a clean directory tree from the repository specified by
+URL, at revision REV if it is given, otherwise at HEAD, into
+destination.
+If source is a path exports a clean directory tree from the working copy specified by
+PATH.  All local changes will be preserved, but files
+not under revision control will not be copied.
+NOTE: If destination is omitted, the last component of the URL is used
+for the local directory name.
 .TP
 \fBhelp\fP [\fIcommand\fP]
 (Alias: ?, h)
@@ -214,13 +218,17 @@ Without a given command argument, this prints generic help. If a specific
 command is entered, a short description on how to use that command is
 presented.
 .TP
-\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP]
+\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--xml-file\fP] [\fI--message-encoding\fP] [\fI-FmqN\fP]
 Import a file or tree into the repository.
 .TP
-\fBinfo\fP \fItarget1\fP [\fItarget2\fP ...]
+\fBinfo\fP \fItarget1\fP [\fItarget2\fP ...] [\fI--targets file\fP] [\fI-R\fP]
 Print info about a versioned resource.
 .TP
-\fBlog\fP [\fIurl\fP] [\fIfile|dir\fP]
+\fBlist\fP \fIurl\fP [\fIurl\fP ...] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rDvR\fP]
+(Alias: ls)
+List directory entries of a URL.
+.TP
+\fBlog\fP [\fIurl\fP] [\fIfile|dir\fP] [\fINew-Repository-Entry\fP] [\fI--targets file\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--strict] [\fI--xml\fP] [\fI-rDv\fP]
 Show log messages (and affected entities) for commits in which any of the
 entities in question changed.  If none were specified, then recursive
 inclusion is the default.  The set of messages can be further restricted
@@ -253,16 +261,36 @@ Retrieve logs for both files in the remote repository without the need for
 a local checkout of the repository.
 
 .TP
-\fBmkdir\fP [\fIdirectory...\fP]
+\fBmerge\fP \fIPATH1\fP[\fI@N\fP] [\fIPATH2\fP[\fI@M\fP]] [\fIWCPATH\fP] [\fI--force\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rDNq\fP]
+Apply the differences between two paths to a working copy path.
+PATH1 and PATH2 are either working-copy paths or URLs, specified at
+revisions N and M.  These are the two sources to be compared.
+N and M default to HEAD if omitted.
+WCPATH is the working-copy path that will receive the changes.
+If omitted, a default value of '.' is assumed.  If PATH2 is omitted the revision
+option must be passed to identify two versions of PATH1, for example:
+.SP
+.in +0.2i
+.ft B
+.nf
+svn merge -r4:5 http://ex.com/repos/proj
+.fi
+.ft P
+.in -0.2i
+.SP
+
+.TP
+\fBmkdir\fP [\fIdirectory...\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--message-encoding\fP] [\fI-mFq\fP]
 Create the directory(ies), if they do not already exist. The directories can
 be specified as a local directory name, or as a URL.
 .TP
-\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP]
+\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP]  [\fI--force\fP] [\fI--message-encoding\fP] [\fI-mFrDq\fP]
+(alias: mv, rename, ren)
 Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY. Both source and dest
 can be specified either as a local file name, or as a URL in a possibly remote
 repository.
 .TP
-\fBpropdel\fP \fIpropname\fP [\fItargets\fP]
+\fBpropdel\fP \fIpropname\fP [\fItargets\fP] [\fI-qR\fP]
 (Alias: pdel)
 Remove property \fIpropname\fP on files and directories.
 .TP
@@ -270,34 +298,97 @@ Remove property \fIpropname\fP on files and directories.
 (Alias: pedit, pe)
 Edit property \fIpropname\fP with $EDITOR on files and directories.
 .TP
-\fBpropget\fP \fIpropname\fP [\fItargets\fP]
+\fBpropget\fP \fIpropname\fP [\fItargets\fP] [\fI-R\fP]
 (Alias: pget, pg)
 Get the value of \fIpropname\fP on files and directories.
 .TP
-\fBproplist\fP [\fItargets\fP]
+\fBproplist\fP [\fItargets\fP] [\fI-vR\fP]
 (Alias: plist, pl)
 List all properties for given files and directories.
 .TP
-\fBpropset\fP \fIpropname\fP [\fIvalue\fP | \fI--valfile file\fP ] [\fItargets\fP]
+\fBpropset\fP \fIpropname\fP [\fIpropval\fP] [\fItargets\fP] [\fI--targets file\fP] [\fI-FqR\fP]
 (Alias: pset, ps)
-Set property \fIpropname\fP to \fIvalue\fP on files and directories.
+Set property \fIpropname\fP to \fIpropval\fP on files and directories.
+
+Note: svn recognizes the following special properties but will 
+store any arbitrary properties set:
+.RS
+.IP svn:ignore
+A newline separated list of file patterns to ignore.
+.IP svn:keywords
+Keywords to be expanded.  Valid keywords are:
+.RS
+.IP "URL, HeadURL"
+The URL for the head version of the object.
+.IP "Author, LastChangedBy"
+The last person to modify the file.
+.IP "Date, LastChangedDate"
+The date/time the object was last modified.
+.IP "Rev, LastChangedRevision"
+The last revision the object changed.
+.RE
+.IP svn:executable
+If present, make the file executable. This property cannot be set on a
+directory.  A non-recursive attempt will fail, and a recursive attempt will set
+the property only on the file children of the directory.
+.IP svn:eol-style
+One of 'native', 'LF', 'CR', 'CRLF'. 
+.IP svn:mime-type
+The mimetype of the file.  Used to determine whether to merge the file, and how
+to serve it from Apache.  A mimetype beginning with 'text/' (or an absent
+mimetype) is treated as text.  Anything else is treated as binary.
+.IP svn:externals 
+A newline separated list of module specifiers, each of which consists of a
+relative directory path, optional revision flags, and an URL.  For example :
+.SP
+.in +0.2i
+.ft B
+.nf
+foo            http://ex.com/repos/zig
+foo/bar -r1234 http://ex.com/repos/zag
+.fi
+.ft P
+.in -0.2i
+.SP
+.RE
 .TP
-\fBrevert\fP [\fIfile\fP\|.\|.\|.]
+\fBrevert\fP [\fIfile\fP\|.\|.\|.] [\fI--targets file\fP] [\fI-Rq\fP]
 Restore a pristine working copy version of file, undoing all local changes.
 .TP
-\fBstatus\fP [\fItargets\fP]
+\fBresolve\fP \fItarget\fP [\fItarget\fP\|.\|.\|.] [\fI--targets file\fP] [\fI-Rq\fP]
+Remove 'conflicted' state on working copy files or directories.  Note:  this
+routine does not semantically resolve conflict markers; it merely removes
+conflict-related artifact files and allows TARGET to be committed again.
+.TP
+\fBstatus\fP [\fItargets\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--no-ignore\fP] [\fI-uvNq\fP]
 (Alias: stat, st)
 Print the status of working copy files and directories.
-
-Options available for status include: -u/--show-updates, -v/--verbose and
--n/--nonrecursive.
 .TP
-\fBupdate\fP [\fIfile\fP\|.\|.\|.]
+\fBswitch url\fP [\fItarget\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rDNq\fP]
+(Alias: sw)
+Update working copy to mirror a new URL. This is the way to move a working copy
+to a new branch.
+.TP
+\fBupdate\fP [\fIfile\fP\|.\|.\|.] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--xml-file\fP] [\fI-rDNq\fP]
 (Alias: up)
-Execute this command from \fIwithin\fP your private source directory when you
-wish to update your copies of source files from changes that other developers
-have made to the source in the repository. Without a given argument, this
-command will update everything, recursively.
+Bring changes from the repository into the working copy.  If no revision given,
+bring working copy up-to-date with HEAD rev.  Else synchronize working copy to
+revision given by -r or -D.  For each updated item a line will start with a
+character reporting the action taken.  These characters have the following
+meaning:
+.RS
+.IP A
+Added
+.IP D
+Deleted
+.IP U
+Updated
+.IP C
+Conflict
+.IP G
+Merged
+.RE
+.RS
 
 \fBexample:\fP svn update foo.c bar.h baz/ bat/*.m 
 .SH WWW
