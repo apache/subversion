@@ -430,7 +430,7 @@ log_do_file_timestamp (struct log_runner *loggy,
                        const char **atts)
 {
   apr_time_t timestamp;
-  svn_boolean_t special;
+  svn_node_kind_t kind;
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
                      loggy->pool);
@@ -443,10 +443,9 @@ log_do_file_timestamp (struct log_runner *loggy,
                               svn_wc_adm_access_path (loggy->adm_access));
 
   /* Do not set the timestamp on special files. */
-  SVN_ERR (svn_wc__get_special (&special, name, loggy->adm_access,
-                                loggy->pool));
+  SVN_ERR (svn_io_check_special_path (name, &kind, loggy->pool));
   
-  if (! special)
+  if (kind != svn_node_special)
     {
       SVN_ERR (svn_time_from_cstring (&timestamp, timestamp_string,
                                       loggy->pool));
