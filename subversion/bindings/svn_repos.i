@@ -18,6 +18,23 @@
 
 %module _repos
 
+%import apr.i
+%import svn_types.i
+%import svn_string.i
+%import svn_fs.i
+/* -----------------------------------------------------------------------
+   these types (as 'type **') will always be an OUT param
+*/
+OUT_PARAM(svn_repos_t);
+
+/* -----------------------------------------------------------------------
+   handle the 'paths' parameter appropriately
+*/
+%typemap(in) const apr_array_header_t *paths =
+    const apr_array_header_t *STRINGLIST;
+
+/* ----------------------------------------------------------------------- */
+
 %include svn_repos.h
 %{
 #include "svn_repos.h"
