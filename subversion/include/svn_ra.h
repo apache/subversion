@@ -151,27 +151,28 @@ typedef struct svn_ra_plugin_t
                                void *edit_baton);
 
 
-  /* Ask the network layer to update part (or all) of a working copy.
+  /* Ask the network layer to update a working copy.
 
-     The client initially provides an UPDATE_EDITOR and UPDATE_BATON
-     to the RA layer, and receives a REPORTER structure and
-     REPORT_BATON in return.
+     The client initially provides an UPDATE_EDITOR/BATON to the RA
+     layer; this editor contains knowledge of where the change will
+     begin in the working copy (when replace_root() is called).
+     BASE_REVISION is the revision of this working-copy starting place.
 
-     The client describes its working-copy revision numbers (of items
-     relevant to TARGETS only!) by making calls into the REPORTER
-     structure, starting at the top-most directory it wishes to be
-     updated.  When finished, it calls REPORTER->finish_report().
+     In return, the client receives a REPORTER/REPORT_BATON. The
+     client then describes its working-copy revision numbers by making
+     calls into the REPORTER structure; the RA layer assumes that all
+     paths are relative to the URL used to create SESSION_BATON.
 
-     The RA layer then uses UPDATE_EDITOR to update each target in
-     TARGETS.
+     When finished, the client calls REPORTER->finish_report(). The RA
+     layer then drives UPDATE_EDITOR to update the working copy.
 
-     Note: after the update completes (update_editor->close_edit()),
-     it is the responsibility of the *client* to bump WC revision
-     numbers appropriately.  */
+     The working copy will be updated to REVISION_TO_UPDATE_TO, or the
+     "latest" revision if this arg is invalid. */
   svn_error_t *(*do_update) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
-                             apr_array_header_t *targets,
+                             svn_revnum_t base_revision,
+                             svn_revnum_t revision_to_update_to,
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);
 

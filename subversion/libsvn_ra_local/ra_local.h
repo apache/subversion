@@ -47,10 +47,10 @@ typedef struct svn_ra_local__session_baton_t
 
 
 
-/* A device for record the targets of commits, and ensuring that
-   proper commit closure happens on them (namely, revision setting and
-   wc property setting).  This is passed to the `commit hook' routine
-   by svn_fs_get_editor.  kff question: what routine is that? */
+/* A device to record the targets of commits, and ensuring that proper
+   commit closure happens on them (namely, revision setting and wc
+   property setting).  This is passed to the `commit hook' routine by
+   svn_fs_get_editor.  (   ) */
 typedef struct svn_ra_local__commit_closer_t
 {
   /* Allocation for this baton, as well as all committed_targets */
@@ -72,6 +72,34 @@ typedef struct svn_ra_local__commit_closer_t
 
 } svn_ra_local__commit_closer_t;
 
+
+
+
+/* A structure used by the routines within the `reporter' vtable,
+   driven by the client as it describes its working copy revisions. */
+typedef struct svn_ra_local__report_baton_t
+{
+  /* The transaction being built in the repository, a mirror of the
+     working copy. */
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  /* The location under which all reporting will happen. */
+  svn_string_t *base_path;
+
+  /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
+     decide which revision to compare the transaction against. */
+  svn_revnum_t revnum_to_update_to;
+
+  /* The working copy editor driven by svn_fs_dir_delta(). */
+  const svn_delta_edit_fns_t *update_editor;
+  void *update_edit_baton;
+
+  /* Pool from the session baton. */
+  apr_pool_t *pool;
+
+} svn_ra_local__report_baton_t;
 
 
 
@@ -108,6 +136,28 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         const svn_delta_edit_fns_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool);
+
+
+
+/* The implementations of the `reporter' vtable routines (for
+   updates). */
+
+svn_error_t *
+svn_ra_local__set_directory (void *report_baton,
+                            svn_string_t *dir_path,
+                            svn_revnum_t revision);
+  
+
+svn_error_t *
+svn_ra_local__set_file (void *report_baton,
+                        svn_string_t *file_path,
+                        svn_revnum_t revision);
+
+
+svn_error_t *
+svn_ra_local__finish_report (void *report_baton);
+
+
 
 
 
