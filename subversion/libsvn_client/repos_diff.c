@@ -33,6 +33,8 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 
+#include "client.h"
+
 /* Overall crawler editor baton.
  */
 struct edit_baton {
