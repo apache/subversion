@@ -155,7 +155,7 @@ log: changelog
 ChangeLog: changelog
 
 changelog:
-	cvs2cl.pl --fsf -r -S -U ./AUTHORS            \
+	cvs2cl.pl --fsf -b -t -r -S -U ./AUTHORS      \
             subversion doc www expat-lite notes tools \
             `find . -type f -maxdepth 1`
 
