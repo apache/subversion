@@ -41,6 +41,9 @@
 static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "update-report" },
   { SVN_XML_NAMESPACE, "log-report" },
+  { SVN_XML_NAMESPACE, "dated-rev-report" },
+  { SVN_XML_NAMESPACE, "get-locations" },
+  { SVN_XML_NAMESPACE, "file-revs-report" },
   { NULL },
 };
 
@@ -1067,6 +1070,9 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
         {
           return dav_svn__file_revs_report(resource, doc, output);
         }
+      /* NOTE: if you add a report, don't forget to add it to the
+       *       avail_reports[] array at the top of this file.
+       */
     }
 
   /* ### what is a good error for an unknown report? */
