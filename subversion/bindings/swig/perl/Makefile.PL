@@ -28,11 +28,9 @@ my %config = (
                      `perl -MExtUtils::Embed -e ccopts`,
                      ' -I.. -I../../../include -g'),
     OBJECT => q/$(O_FILES)/,
-    dynamic_lib => {
-	OTHERLDFLAGS => join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
-			     @ldmodules, '-lsvn_swig_perl-1',
-			     `swig -perl -ldflags`),
-    },
+    LIBS => [join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
+                  @ldmodules, '-lsvn_swig_perl-1',
+                  `swig -perl -ldflags`)],
 );
 
 sub perlish {
