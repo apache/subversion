@@ -85,16 +85,17 @@ typedef enum svn_diff_datasource_e
 typedef struct svn_diff_fns_t
 {
   /* Open the datasource of type DATASOURCE. */
-  apr_status_t (*datasource_open) (void *diff_baton,
+  svn_error_t *(*datasource_open) (void *diff_baton,
                                    svn_diff_datasource_e datasource);
 
   /* Close the datasource of type DATASOURCE. */
-  void (*datasource_close) (void *diff_baton,
-                            svn_diff_datasource_e datasource);
+  svn_error_t *(*datasource_close) (void *diff_baton,
+                                    svn_diff_datasource_e datasource);
 
   /* Get the next "token" from the datasource of type DATASOURCE. */
-  void *(*datasource_get_next_token) (void *diff_baton,
-                                      svn_diff_datasource_e datasource);
+  svn_error_t *(*datasource_get_next_token) (void **token,
+                                             void *diff_baton,
+                                             svn_diff_datasource_e datasource);
 
   /* A function for ordering the tokens with the same interface as
      'strcmp': If LTOKEN and RTOKEN are "equal", return 0.  If LTOKEN
@@ -111,7 +112,6 @@ typedef struct svn_diff_fns_t
 
   /* Free *all* tokens from memory, they're no longer needed. */
   void (*token_discard_all) (void *diff_baton);
-
 } svn_diff_fns_t;
 
 
@@ -121,7 +121,7 @@ typedef struct svn_diff_fns_t
  * return a diff object in *DIFF that represents a difference between
  * an "original" and "modified" datasource.  Do all allocation in POOL.
  */
-apr_status_t svn_diff (svn_diff_t **diff,
+svn_error_t *svn_diff (svn_diff_t **diff,
                        void *diff_baton,
                        svn_diff_fns_t *diff_fns,
                        apr_pool_t *pool);
@@ -131,7 +131,7 @@ apr_status_t svn_diff (svn_diff_t **diff,
  * three datasources: "original", "modified", and "latest". Do all
  * allocation in POOL.
  */
-apr_status_t svn_diff3 (svn_diff_t **diff,
+svn_error_t *svn_diff3 (svn_diff_t **diff,
                         void *diff_baton,
                         svn_diff_fns_t *diff_fns,
                         apr_pool_t *pool);
@@ -181,13 +181,13 @@ typedef struct svn_diff_output_fns_t
      to ORIGINAL_END in the original data, and is also identical to
      the range MODIFIED_START to MODIFIED_END in the modified
      data.  */
-  void (*output_common) (void *output_baton,
-                         apr_off_t original_start,
-                         apr_off_t original_end,
-                         apr_off_t modified_start,
-                         apr_off_t modified_end,
-                         apr_off_t latest_start,
-                         apr_off_t latest_end);
+  svn_error_t *(*output_common) (void *output_baton,
+                                apr_off_t original_start,
+                                apr_off_t original_end,
+                                apr_off_t modified_start,
+                                apr_off_t modified_end,
+                                apr_off_t latest_start,
+                                apr_off_t latest_end);
 
   /* If doing a two-way diff, then an *conflicting* data range was found
      between the "original" and "modified" datasources.  Specifically,
@@ -200,52 +200,54 @@ typedef struct svn_diff_output_fns_t
      the "latest" datasource conflicts with the range ORIGINAL_START
      to ORIGINAL_END in the original data, and also conflicts with the
      range MODIFIED_START to MODIFIED_END in the modified data.  */
-  void (*output_conflict) (void *output_baton,
-                           apr_off_t original_start,
-                           apr_off_t original_end,
-                           apr_off_t modified_start,
-                           apr_off_t modified_end,
-                           apr_off_t latest_start,
-                           apr_off_t latest_end);
+  svn_error_t *(*output_conflict) (void *output_baton,
+                                   apr_off_t original_start,
+                                   apr_off_t original_end,
+                                   apr_off_t modified_start,
+                                   apr_off_t modified_end,
+                                   apr_off_t latest_start,
+                                   apr_off_t latest_end);
 
   /* ------ The following callbacks are used by three-way diffs only --- */
 
   /* An identical data range was discovered between the "original" and
      "latest" datasources, but this conflicts with a range in the
      "modified" datasource. */
-  void (*output_diff_modified) (void *output_baton,
-                                apr_off_t original_start,
-                                apr_off_t original_end,
-                                apr_off_t modified_start,
-                                apr_off_t modified_end,
-                                apr_off_t latest_start,
-                                apr_off_t latest_end);
+  svn_error_t *(*output_diff_modified) (void *output_baton,
+                                        apr_off_t original_start,
+                                        apr_off_t original_end,
+                                        apr_off_t modified_start,
+                                        apr_off_t modified_end,
+                                        apr_off_t latest_start,
+                                        apr_off_t latest_end);
   
   /* An identical data range was discovered between the "original" and
      "modified" datasources, but this conflicts with a range in the
      "latest" datasource. */
-  void (*output_diff_latest) (void *output_baton,
-                              apr_off_t original_start,
-                              apr_off_t original_end,
-                              apr_off_t modified_start,
-                              apr_off_t modified_end,
-                              apr_off_t latest_start,
-                              apr_off_t latest_end);
+  svn_error_t *(*output_diff_latest) (void *output_baton,
+                                      apr_off_t original_start,
+                                      apr_off_t original_end,
+                                      apr_off_t modified_start,
+                                      apr_off_t modified_end,
+                                      apr_off_t latest_start,
+                                      apr_off_t latest_end);
 
-  /* All three datasources have ranges that conflict. */
-  void (*output_diff_common) (void *output_baton,
-                              apr_off_t original_start,
-                              apr_off_t original_end,
-                              apr_off_t modified_start,
-                              apr_off_t modified_end,
-                              apr_off_t latest_start,
-                              apr_off_t latest_end);
+  /* An identical data range was discovered between the "modified" and
+     "latest" datasources, but this conflicts with a range in the
+     "original" datasource. */
+  svn_error_t *(*output_diff_common) (void *output_baton,
+                                      apr_off_t original_start,
+                                      apr_off_t original_end,
+                                      apr_off_t modified_start,
+                                      apr_off_t modified_end,
+                                      apr_off_t latest_start,
+                                      apr_off_t latest_end);
 } svn_diff_output_fns_t;
 
 
 /* Given a vtable of OUTPUT_FNS/OUTPUT_BATON for consuming
    differences, output the differences in DIFF. */
-void
+svn_error_t *
 svn_diff_output (svn_diff_t *diff,
                  void *output_baton,
                  svn_diff_output_fns_t *output_fns);
@@ -260,7 +262,7 @@ svn_diff_output (svn_diff_t *diff,
    the difference between an ORIGINAL file and MODIFIED file.  
    (The file arguments must be full paths to the files.)
  */
-apr_status_t
+svn_error_t *
 svn_diff_file(svn_diff_t **diff,
               const char *original,
               const char *modified,
@@ -273,7 +275,7 @@ svn_diff_file(svn_diff_t **diff,
    the difference between an ORIGINAL file, MODIFIED file, and LATEST file.
    (The file arguments must be full paths to the files.)
  */
-apr_status_t
+svn_error_t *
 svn_diff3_file(svn_diff_t **diff,
                const char *original,
                const char *modified,

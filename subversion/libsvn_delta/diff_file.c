@@ -54,7 +54,7 @@ typedef struct svn_diff__file_baton_t
 
 static
 int
-datasource_to_index(svn_diff_datasource_e datasource)
+svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
 {
   switch (datasource)
     {
@@ -72,52 +72,59 @@ datasource_to_index(svn_diff_datasource_e datasource)
 }
 
 static
-apr_status_t
+svn_error_t *
 svn_diff__file_datasource_open(void *baton,
                                svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
   int idx;
+  apr_status_t rv;
 
-  idx = datasource_to_index(datasource);
-  if (idx == -1)
-    {
-      return APR_EGENERAL;
-    }
+  idx = svn_diff__file_datasource_to_index(datasource);
 
   file_baton->length[idx] = 0;
 
-  return apr_file_open(&file_baton->file[idx],
-                       file_baton->path[idx],
-                       APR_READ,
-                       APR_OS_DEFAULT,
-                       file_baton->pool);
+  rv = apr_file_open(&file_baton->file[idx], file_baton->path[idx],
+                     APR_READ, APR_OS_DEFAULT, file_baton->pool);
+  if (rv != APR_SUCCESS)
+    {
+      return svn_error_createf(rv, 0, NULL, file_baton->pool, 
+                               "failed to open file '%s'.",
+                               file_baton->path[idx]);
+    }
+
+  return NULL;
 }
 
 static
-void
+svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
   int idx;
+  apr_status_t rv;
 
-  idx = datasource_to_index(datasource);
-  if (idx == -1)
+  idx = svn_diff__file_datasource_to_index(datasource);
+
+  rv = apr_file_close(file_baton->file[idx]);
+  if (rv != APR_SUCCESS)
     {
-      return;
+      return svn_error_createf(rv, 0, NULL, file_baton->pool, 
+                               "failed to close file '%s'.",
+                               file_baton->path[idx]);
     }
 
-  apr_file_close(file_baton->file[idx]);
+  return NULL;
 }
 
 static
-void *
-svn_diff__file_datasource_get_token(void *baton,
+svn_error_t *
+svn_diff__file_datasource_get_token(void **token, void *baton,
                                     svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
-  svn_diff__file_token_t *token;
+  svn_diff__file_token_t *file_token;
   apr_md5_ctx_t md5_ctx;
   apr_status_t rv;
   int idx;
@@ -126,11 +133,9 @@ svn_diff__file_datasource_get_token(void *baton,
   char *curp;
   char *eol;
 
-  idx = datasource_to_index(datasource);
-  if (idx == -1)
-    {
-      return NULL;
-    }
+  *token = NULL;
+
+  idx = svn_diff__file_datasource_to_index(datasource);
 
   length = file_baton->length[idx];
   file = file_baton->file[idx];
@@ -143,16 +148,16 @@ svn_diff__file_datasource_get_token(void *baton,
 
   if (!file_baton->reuse_token)
     {
-      token = apr_palloc(file_baton->pool, sizeof(*token));
-      file_baton->token = token;
+      file_token = apr_palloc(file_baton->pool, sizeof(*file_token));
+      file_baton->token = file_token;
     }
   else
     {
-      token = file_baton->token;
+      file_token = file_baton->token;
       file_baton->reuse_token = FALSE;
     }
 
-  token->length = 0;
+  file_token->length = 0;
 
   apr_md5_init(&md5_ctx);
 
@@ -173,17 +178,18 @@ svn_diff__file_datasource_get_token(void *baton,
             {
               apr_size_t len = (apr_size_t)(eol - curp);
               
-              token->length += len;
+              file_token->length += len;
               length -= len;
               apr_md5_update(&md5_ctx, curp, len);
 
               file_baton->curp[idx] = eol;
               file_baton->length[idx] = length;
 
+              rv = APR_SUCCESS;
               break;
             }
 
-          token->length += length;
+          file_token->length += length;
           apr_md5_update(&md5_ctx, curp, length);
         }
 
@@ -194,9 +200,17 @@ svn_diff__file_datasource_get_token(void *baton,
     }
   while (rv == APR_SUCCESS);
 
-  apr_md5_final(token->md5, &md5_ctx);
+  if (rv != APR_SUCCESS && rv != APR_EOF)
+    {
+      return svn_error_createf(rv, 0, NULL, file_baton->pool, 
+                               "error reading from '%s'.",
+                               file_baton->path[idx]);
+    }
 
-  return token;
+  apr_md5_final(file_token->md5, &md5_ctx);
+  *token = file_token;
+
+  return NULL;
 }
 
 static
@@ -227,7 +241,7 @@ svn_diff__file_token_discard(void *baton,
   file_baton->reuse_token = file_baton->token == token;
 }
 
-apr_status_t
+svn_error_t *
 svn_diff_file(svn_diff_t **diff,
               const char *original,
               const char *modified,
@@ -251,7 +265,7 @@ svn_diff_file(svn_diff_t **diff,
   return svn_diff(diff, &baton, &vtable, pool);
 }
 
-apr_status_t
+svn_error_t *
 svn_diff3_file(svn_diff_t **diff,
                const char *original,
                const char *modified1,
