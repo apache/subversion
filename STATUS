@@ -53,3 +53,10 @@ Candidate changes:
       It's a regression.
     Votes:
       +1: dionisos, lundblad
+
+  * r11202
+    Fix eol-style translation error for propget.
+    Justification:
+      Simple fix.
+    Votes:
+      +1: lundblad
