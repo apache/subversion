@@ -46,35 +46,20 @@
 
 
 
-/*** Helpers for svn_wc_copy_and_translate ***/
+/*** Helpers for svn_wc_translate_stream ***/
 
-/* Return an SVN error for status ERR, using VERB and PATH to describe
-   the error, and allocating the svn_error_t in POOL.  */
-static svn_error_t *
-translate_err (apr_status_t err, 
-               const char *verb, 
-               const char *path,
-               apr_pool_t *pool)
-{
-  return svn_error_createf 
-    (err, 0, NULL,
-     "svn_wc_copy_and_translate: error %s `%s'", verb, path);
-}
 
-/* Write out LEN bytes of BUF into FILE (whose path is PATH), using
-   POOL to allocate any svn_error_t errors that might occur along the
-   way. */
+/* Write out LEN bytes of BUF into STREAM, using POOL to allocate any
+   svn_error_t errors that might occur along the way. */
 static svn_error_t *
-translate_write (apr_file_t *file,
-                 const char *path,
+translate_write (svn_stream_t *stream,
                  const void *buf,
-                 apr_size_t len,
-                 apr_pool_t *pool)
+                 apr_size_t len)
 {
   apr_size_t wrote = len;
-  apr_status_t write_err = apr_file_write (file, buf, &wrote);
+  svn_error_t *write_err = svn_stream_write (stream, buf, &wrote);
   if ((write_err) || (len != wrote))
-    return translate_err (write_err, "writing", path, pool);
+    return write_err;
 
   return SVN_NO_ERROR;
 }
@@ -315,11 +300,8 @@ translate_newline (const char *eol_str,
                    apr_size_t *src_format_len,
                    char *newline_buf,
                    apr_size_t newline_len,
-                   const char *src_path,
-                   const char *dst_path,
-                   apr_file_t *dst,
-                   svn_boolean_t repair,
-                   apr_pool_t *pool)
+                   svn_stream_t *dst,
+                   svn_boolean_t repair)
 {
   /* If this is the first newline we've seen, cache it
      future comparisons, else compare it with our cache to
@@ -332,7 +314,8 @@ translate_newline (const char *eol_str,
           ((*src_format_len != newline_len) ||
            (strncmp (src_format, newline_buf, newline_len)))) 
         return svn_error_create
-          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, src_path);
+          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL,
+           "inconsistent line-endings in source stream, repair flag is off.");
     }
   else
     {
@@ -342,7 +325,7 @@ translate_newline (const char *eol_str,
       *src_format_len = newline_len;
     }
   /* Translate the newline */
-  return translate_write (dst, dst_path, eol_str, eol_str_len, pool);
+  return translate_write (dst, eol_str, eol_str_len);
 }
 
 
@@ -362,8 +345,7 @@ svn_wc_keywords_differ (const svn_wc_keywords_t *a,
           && (b->author == NULL)
           && (b->url == NULL))
       /* no B, and A has no contents */
-      || ((b == NULL) 
-          && (a->revision == NULL)
+      || ((b == NULL)           && (a->revision == NULL)
           && (a->date == NULL)
           && (a->author == NULL)
           && (a->url == NULL))
@@ -415,23 +397,19 @@ svn_wc_keywords_differ (const svn_wc_keywords_t *a,
 }
 
 
+/* ### for docstring:  a translation request MUST be set! */
 svn_error_t *
-svn_wc_copy_and_translate (const char *src,
-                           const char *dst,
-                           const char *eol_str,
-                           svn_boolean_t repair,
-                           const svn_wc_keywords_t *keywords,
-                           svn_boolean_t expand,
-                           apr_pool_t *pool)
+svn_wc_translate_stream (svn_stream_t *s, /* src stream */
+                         svn_stream_t *d, /* dst stream */
+                         const char *eol_str,
+                         svn_boolean_t repair,
+                         const svn_wc_keywords_t *keywords,
+                         svn_boolean_t expand)
 {
-  const char *src_native, *dst_native;
-  const char *dst_tmp;
-  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
-  apr_status_t apr_err;
-  svn_error_t *err = SVN_NO_ERROR, *err2;
-  apr_status_t read_err;
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *read_err, *close_err;
   char c;
-  apr_size_t len;
+  apr_size_t len, readlen;
   apr_size_t eol_str_len = eol_str ? strlen (eol_str) : 0;
   char       newline_buf[2] = { 0 };
   apr_size_t newline_off = 0;
@@ -440,25 +418,9 @@ svn_wc_copy_and_translate (const char *src,
   char       src_format[2] = { 0 };
   apr_size_t src_format_len = 0;
 
-  if (! (eol_str || keywords))
-    return svn_io_copy_file (src, dst, FALSE, pool);
+  /* The docstring requires that *some* translation be requested. */
+  assert (eol_str || keywords);
 
-  /* Else, translate.  For atomicity, we translate to a tmp file and
-     then rename the tmp file over the real destination. */
-
-  SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
-
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst_native,
-                                    ".tmp", FALSE, pool));
-
-  /* Open source file. */
-  SVN_ERR (svn_io_file_open (&s, src_native, APR_READ | APR_BUFFERED,
-                             APR_OS_DEFAULT, pool));
-
-  /*** Any errors after this point require us to close the two files and
-       remove dst_tmp. */
-  
   /* Copy bytes till the cows come home (or until one of them breaks a
      leg, at which point you should trot out to the range with your
      trusty sidearm, put her down, and consider steak dinners for the
@@ -466,62 +428,47 @@ svn_wc_copy_and_translate (const char *src,
   while (err == SVN_NO_ERROR)
     {
       /* Read a byte from SRC */
-      read_err = apr_file_getc (&c, s);
+      readlen = 1;
+      read_err = svn_stream_read (s, &c, &readlen);
 
-      /* Check for read errors.  The docstring for apr_file_read
-         states that we cannot *both* read bytes AND get an error
-         while doing so (include APR_EOF).  Since apr_file_getc is simply a
-         wrapper around apr_file_read, we know that if we get any
-         error at all, we haven't read any bytes.  */
       if (read_err)
         {
-          if (!APR_STATUS_IS_EOF(read_err))
-            {
-              /* This was some error other than EOF! */
-              err = translate_err (read_err, "reading", src_native, pool);
-              goto cleanup;
-            }
-          else
-            {
-              /* We've reached the end of the file.  Close up shop.
-                 This means flushing our temporary streams.  Since we
-                 shouldn't have data in *both* temporary streams,
-                 order doesn't matter here.  However, the newline
-                 buffer will need to be translated.  */
-              if (newline_off)
-                {
-                  if ((err = translate_newline (eol_str, eol_str_len, 
-                                                src_format, &src_format_len,
-                                                newline_buf, newline_off,
-                                                src_native, dst_tmp, d, repair,
-                                                pool)))
-                    goto cleanup;
-                }
-              if (((len = keyword_off)) && 
-                  ((err = translate_write (d, dst_tmp, keyword_buf,
-                                           len, pool))))
-                goto cleanup;
-
-              /* Close the source and destination files. */
-              apr_err = apr_file_close (s);
-              if (apr_err)
-                {
-                  s = NULL;
-                  err = translate_err (apr_err, "closing", src_native, pool);
-                  goto cleanup;
-                }
-              apr_err = apr_file_close (d);
-              if (apr_err)
-                {
-                  d = NULL;
-                  err = translate_err (apr_err, "closing", dst_tmp, pool);
-                  goto cleanup;
-                }
-
-              /* All done, all files closed, all is well, and all that. */
-              return svn_io_file_rename (dst_tmp, dst_native, pool);
-            }
+          /* Oops, something bad happened. */
+          err = read_err;
+          goto cleanup;
         }
+      else if (readlen < 1)
+        {
+          /* A short read means we've reached the end of the stream.
+             Close up shop.  This means flushing our temporary
+             streams.  Since we shouldn't have data in *both*
+             temporary streams, order doesn't matter here.  However,
+             the newline buffer will need to be translated.  */
+          if (newline_off)
+            {
+              if ((err = translate_newline (eol_str, eol_str_len, 
+                                            src_format, &src_format_len,
+                                            newline_buf, newline_off,
+                                            d, repair)))
+                goto cleanup;
+            }
+          if (((len = keyword_off)) && 
+              ((err = translate_write (d, keyword_buf, len))))
+            goto cleanup;
+          
+          /* Close the source and destination streams. */
+          close_err = svn_stream_close (s);
+          if (close_err)
+            goto cleanup;
+
+          close_err = svn_stream_close (d);
+          if (close_err)
+            goto cleanup;
+          
+          /* All done, all streams closed, all is well, and all that. */
+          return SVN_NO_ERROR;
+        }
+    
 
       /* Handle the byte. */
       switch (c)
@@ -538,8 +485,7 @@ svn_wc_copy_and_translate (const char *src,
               if ((err = translate_newline (eol_str, eol_str_len, 
                                             src_format, &src_format_len,
                                             newline_buf, newline_off,
-                                            src_native, dst_tmp, d, repair,
-                                            pool)))
+                                            d, repair)))
                 goto cleanup;
               newline_off = 0;
             }
@@ -548,8 +494,7 @@ svn_wc_copy_and_translate (const char *src,
              rest of this stuff. */
           if (! keywords)
             {
-              if ((err = translate_write (d, dst_tmp, (const void *)&c,
-                                          1, pool)))
+              if ((err = translate_write (d, (const void *)&c, 1)))
                 goto cleanup;
               break;
             }
@@ -569,7 +514,7 @@ svn_wc_copy_and_translate (const char *src,
             {
               /* We successfully found and translated a keyword.  We
                  can write out this buffer now. */
-              if ((err = translate_write (d, dst_tmp, keyword_buf, len, pool)))
+              if ((err = translate_write (d, keyword_buf, len)))
                 goto cleanup;
               keyword_off = 0;
             }
@@ -579,8 +524,7 @@ svn_wc_copy_and_translate (const char *src,
                  "terminating `$'" become a "beginning `$'" now.  That
                  means, write out all the keyword buffer (except for
                  this `$') and reset it to hold only this `$'.  */
-              if ((err = translate_write (d, dst_tmp, keyword_buf, 
-                                          keyword_off - 1, pool)))
+              if ((err = translate_write (d, keyword_buf, keyword_off - 1)))
                 goto cleanup;
               keyword_buf[0] = c;
               keyword_off = 1;
@@ -594,7 +538,7 @@ svn_wc_copy_and_translate (const char *src,
              keyword buffer, then handle the newline. */
           if ((len = keyword_off))
             {
-              if ((err = translate_write (d, dst_tmp, keyword_buf, len, pool)))
+              if ((err = translate_write (d, keyword_buf, len)))
                 goto cleanup;
               keyword_off = 0;
             }
@@ -602,8 +546,7 @@ svn_wc_copy_and_translate (const char *src,
           if (! eol_str)
             {
               /* Not doing newline translation...just write out the char. */
-              if ((err = translate_write (d, dst_tmp, (const void *)&c,
-                                          1, pool)))
+              if ((err = translate_write (d, (const void *)&c, 1)))
                 goto cleanup;
               break;
             }
@@ -628,8 +571,7 @@ svn_wc_copy_and_translate (const char *src,
                   if ((err = translate_newline (eol_str, eol_str_len, 
                                                 src_format, &src_format_len,
                                                 newline_buf, 1,
-                                                src_native, dst_tmp, d, repair,
-                                                pool)))
+                                                d, repair)))
                     goto cleanup;
 
                   /* ...the second '\n' (or '\r') is at least part of our next
@@ -644,8 +586,7 @@ svn_wc_copy_and_translate (const char *src,
                   if ((err = translate_newline (eol_str, eol_str_len, 
                                                 src_format, &src_format_len,
                                                 newline_buf, 2,
-                                                src_native, dst_tmp, d, repair,
-                                                pool)))
+                                                d, repair)))
                     goto cleanup;
                   newline_off = 0;
                 }
@@ -664,8 +605,7 @@ svn_wc_copy_and_translate (const char *src,
                  and continue on. */
               if (keyword_off >= SVN_KEYWORD_MAX_LEN)
                 {
-                  if ((err = translate_write (d, dst_tmp, keyword_buf, 
-                                              keyword_off, pool)))
+                  if ((err = translate_write (d, keyword_buf, keyword_off)))
                     goto cleanup;
                   keyword_off = 0;
                 }
@@ -681,14 +621,13 @@ svn_wc_copy_and_translate (const char *src,
               if ((err = translate_newline (eol_str, eol_str_len, 
                                             src_format, &src_format_len,
                                             newline_buf, newline_off,
-                                            src_native, dst_tmp, d, repair,
-                                            pool)))
+                                            d, repair)))
                 goto cleanup;
               newline_off = 0;
             }
 
           /* Write out this character. */
-          if ((err = translate_write (d, dst_tmp, (const void *)&c, 1, pool)))
+          if ((err = translate_write (d, (const void *)&c, 1)))
             goto cleanup;
           break; 
 
@@ -698,14 +637,88 @@ svn_wc_copy_and_translate (const char *src,
   return SVN_NO_ERROR;
 
  cleanup:
-  if (s)
-    apr_file_close (s); /* toss error */
-  if (d)
-    apr_file_close (d); /* toss error */
-  err2 = svn_io_remove_file (dst_tmp, pool); /* toss error */
-  if (err2)
-    svn_error_clear (err2);
   return err;
+}
+
+
+svn_error_t *
+svn_wc_copy_and_translate (const char *src,
+                           const char *dst,
+                           const char *eol_str,
+                           svn_boolean_t repair,
+                           const svn_wc_keywords_t *keywords,
+                           svn_boolean_t expand,
+                           apr_pool_t *pool)
+{
+  const char *src_native, *dst_native;
+  const char *dst_tmp;
+  apr_status_t apr_err;
+  svn_stream_t *src_stream, *dst_stream;
+  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
+  svn_error_t *err, *err2;
+
+  /* The easy way out:  no translation needed, just copy. */
+  if (! (eol_str || keywords))
+    return svn_io_copy_file (src, dst, FALSE, pool);
+
+  /* Else, translate.  For atomicity, we translate to a tmp file and
+     then rename the tmp file over the real destination. */
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
+
+  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst_native,
+                                    ".tmp", FALSE, pool));
+
+  /* Open source file. */
+  SVN_ERR (svn_io_file_open (&s, src_native, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
+
+  /* Now convert our two open files into streams. */
+  src_stream = svn_stream_from_aprfile (s, pool);
+  dst_stream = svn_stream_from_aprfile (d, pool);
+
+  /* Translate src stream into dst stream. */
+  err = svn_wc_translate_stream (src_stream, dst_stream,
+                                 eol_str, repair, keywords, expand);
+
+  if (err)
+    {
+      /* ignore closure errors if we're bailing. */
+      svn_stream_close (src_stream);
+      svn_stream_close (dst_stream);      
+      if (s)
+        apr_file_close (s);
+      if (d)
+        apr_file_close (d);      
+
+      err2 = svn_io_remove_file (dst_tmp, pool);      
+      if (err2)
+        svn_error_clear (err2);
+      return 
+        svn_error_createf (err->apr_err, 0, err,
+                           "file translation failed when copying '%s' to '%s'",
+                           src_native, dst_native);
+    }
+
+  /* clean up nicely. */
+  SVN_ERR (svn_stream_close (src_stream));
+  SVN_ERR (svn_stream_close (dst_stream));
+
+  apr_err = apr_file_close(s);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL,
+                              "error closing %s", src_native);
+
+  apr_err = apr_file_close(d);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL,
+                              "error closing %s", dst_native);
+
+  /* Now that dst_tmp contains the translated data, do the atomic rename. */
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst_native, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
