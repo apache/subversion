@@ -406,7 +406,7 @@
         sizable subset of DeltaV methods.  It accesses data in the
         Subversion repository, rather than in the real filesystem.
         Subversion 1.0 doesn't support locking, because it would
-        actually quite difficult to implement, since Subversion uses
+        actually be quite difficult to implement, since Subversion uses
         the copy-modify-merge model.<footnote><para>Subversion may
         someday develop a reserved-checkout locking model that can
         live peaceably with copy-modify-merge, but it probably won't
