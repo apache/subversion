@@ -184,24 +184,20 @@ svn_error_t *svn_cl__check_cancel (void *baton);
 void svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
 
 
-/* Print a hash that maps (char *) names to (svn_wc_status_t *)
-   structs to stdout for human consumption.  Prints in abbreviated
-   format by default, or DETAILED format if flag is set.
+/* Print STATUS for PATH to stdout for human consumption.  Prints in
+   abbreviated format by default, or DETAILED format if flag is set.
 
    When DETAILED is set, use SHOW_LAST_COMMITTED to toggle display of
-   the last-committed-revision and last-committed-author.  Also, print
-   YOUNGEST as the youngest revision in the repository, unless it is
-   SVN_INVALID_REVNUM, in which case don't print anything about the
-   youngest revision.
+   the last-committed-revision and last-committed-author.
 
    If SKIP_UNRECOGNIZED is TRUE, this function will not print out
    unversioned items found in the working copy. */
-void svn_cl__print_status_list (apr_hash_t *statushash,
-                                svn_revnum_t youngest,
-                                svn_boolean_t detailed,
-                                svn_boolean_t show_last_committed,
-                                svn_boolean_t skip_unrecognized,
-                                apr_pool_t *pool);
+void svn_cl__print_status (const char *path,
+                           svn_wc_status_t *status,
+                           svn_boolean_t detailed,
+                           svn_boolean_t show_last_committed,
+                           svn_boolean_t skip_unrecognized,
+                           apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
    (svn_string_t *).  The names are assumed to be in UTF-8 format;

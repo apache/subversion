@@ -262,6 +262,7 @@ svn_error_t * svn_ra_dav__do_status(
   const svn_ra_reporter_t **reporter,
   void **report_baton,
   const char *status_target,
+  svn_revnum_t revision,
   svn_boolean_t recurse,
   const svn_delta_editor_t *wc_status,
   void *wc_status_baton,

@@ -649,11 +649,12 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t recurse;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &target, &recurse));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb(?r)", 
+                                 &target, &recurse, &rev));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
-
-  SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   return accept_report(conn, pool, b, rev, target, NULL, FALSE, recurse,
                        FALSE);
 }

@@ -506,7 +506,8 @@ typedef struct svn_ra_plugin_t
                              apr_pool_t *pool);
 
   /** Ask the network layer to describe the status of a working copy
-   * with respect to the @a head revision of the repository.
+   * with respect to @a revision of the repository (or HEAD, if @a
+   * revision is invalid).
    *
    * The client initially provides an @a status_editor/@a baton to the RA
    * layer; this editor contains knowledge of where the change will
@@ -537,6 +538,7 @@ typedef struct svn_ra_plugin_t
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
                              const char *status_target,
+                             svn_revnum_t revision,
                              svn_boolean_t recurse,
                              const svn_delta_editor_t *status_editor,
                              void *status_baton,

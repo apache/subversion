@@ -609,6 +609,13 @@ def build_tree_from_status(lines):
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
   rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)(.)  .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
   for line in lines:
+
+    # Quit when we hit an externals status announcement (### someday we can fix
+    # the externals tests to expect the additional flood of externals status
+    # data).
+    if re.match(r'^Performing', line):
+      break
+    
     match = rm.search(line)
     if match and match.groups():
       if match.group(6) != '-': # ignore items that only exist on repos

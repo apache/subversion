@@ -36,78 +36,57 @@
 
 /*** Code. ***/
 
+struct status_baton
+{
+  svn_error_t *err; /* the error generated for an undeletable path. */
+};
+
+
+/* An svn_wc_status_func_t callback function for finding
+   status structures which are not safely deletable. */
+static void
+find_undeletables (void *baton,
+                   const char *path,
+                   svn_wc_status_t *status)
+{
+  struct status_baton *sb = baton;
+
+  /* If we already have an error, don't lose that fact. */
+  if (sb->err)
+    return;
+
+  /* Check for error-ful states. */
+  if (status->text_status == svn_wc_status_obstructed)
+    sb->err = svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                                 "'%s' is in the way of the resource "
+                                 "actually under revision control.", path);
+  else if (! status->entry)
+    sb->err = svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED, NULL,
+                                 "'%s' is not under revision control", path);
+  
+  else if ((status->text_status != svn_wc_status_normal
+            && status->text_status != svn_wc_status_deleted
+            && status->text_status != svn_wc_status_absent)
+           ||
+           (status->prop_status != svn_wc_status_none
+            && status->prop_status != svn_wc_status_normal))
+    sb->err = svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
+                             "'%s' has local modifications", path);
+}
+
+
 svn_error_t *
 svn_client__can_delete (const char *path,
-                        svn_wc_adm_access_t *adm_access,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  apr_hash_t *hash = apr_hash_make (pool);
-  apr_hash_index_t *hi;
-  svn_node_kind_t kind;
-  svn_wc_adm_access_t *dir_access;
-
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind == svn_node_dir)
-    {
-      svn_error_t *err = svn_wc_adm_retrieve (&dir_access, adm_access, path,
-                                              pool);
-      if (err)
-        {
-          svn_error_clear (err);
-          SVN_ERR (svn_wc_adm_open (&dir_access, adm_access,
-                                    path, TRUE, TRUE, pool));
-        }
-    }
-  else
-    {
-      dir_access = adm_access;
-    }
-
-  SVN_ERR (svn_wc_statuses (hash, path, dir_access, TRUE, FALSE, FALSE,
-                            NULL, NULL, ctx->cancel_func, ctx->cancel_baton,
-                            ctx->config, NULL, pool));
-  for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      const char *name;
-      const svn_wc_status_t *statstruct;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      name = key;
-      statstruct = val;
-
-
-      if (statstruct->text_status == svn_wc_status_obstructed)
-        {
-          return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                    "'%s' is in the way of the resource "
-                                    "actually under revision control.",
-                                    name);
-        }
-
-      if (!statstruct->entry)
-        {
-          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED, NULL,
-                                    "'%s' is not under revision control",
-                                    name);
-        }
-
-      if ((statstruct->text_status != svn_wc_status_normal
-           && statstruct->text_status != svn_wc_status_deleted
-           && statstruct->text_status != svn_wc_status_absent)
-          ||
-          (statstruct->prop_status != svn_wc_status_none
-           && statstruct->prop_status != svn_wc_status_normal))
-        {
-          return svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
-                                    "'%s' has local modifications",
-                                    name);
-        }
-    }
-
-  return SVN_NO_ERROR;
+  struct status_baton sb;
+  svn_opt_revision_t revision;
+  revision.kind = svn_opt_revision_unspecified;
+  sb.err = SVN_NO_ERROR;
+  SVN_ERR (svn_client_status (NULL, path, &revision, find_undeletables, &sb,
+                              TRUE, FALSE, FALSE, FALSE, ctx, pool));
+  return sb.err;
 }
 
 
@@ -240,7 +219,7 @@ svn_client__wc_delete (const char *path,
 
   if (!force)
     /* Verify that there are no "awkward" files */
-    SVN_ERR (svn_client__can_delete (path, adm_access, ctx, pool));
+    SVN_ERR (svn_client__can_delete (path, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
