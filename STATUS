@@ -16,14 +16,7 @@ and mention the thread below.
 Ben thinks that the following things should probably be forcibly
 synchronized between the trunk and 1.0 lines, before we roll a 1.0 tarball:
 
-     - all top-level capitalized files:  README, INSTALL, HACKING,
-       COMMITTERS, etc.
-
      - www/ area
-
-     - doc/ area, especially the book.
-
-     - bash_completion
 
      - all the cvs2svn.py stuff.
 
