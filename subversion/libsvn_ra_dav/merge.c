@@ -130,7 +130,10 @@ static svn_boolean_t okay_to_bump_path (const char *path,
   parent_path = svn_stringbuf_create (path, pool);
   
   do {
+    apr_size_t len = parent_path->len;
     svn_path_remove_component (parent_path);
+    if (len == parent_path->len)
+      break;
     r = (enum svn_recurse_kind) apr_hash_get (valid_targets,
                                               parent_path->data,
                                               APR_HASH_KEY_STRING);
