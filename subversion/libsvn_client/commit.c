@@ -173,8 +173,11 @@ import_dir (apr_hash_t *files,
   apr_status_t apr_err;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   svn_error_t *err;
+  apr_array_header_t *ignores;
 
   SVN_ERR (svn_io_dir_open (&dir, path, pool));
+
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
 
   for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
        err == SVN_NO_ERROR;
@@ -263,6 +266,9 @@ import_dir (apr_hash_t *files,
         }
       else if (finfo.filetype == APR_REG)
         {
+          if (svn_wc_is_ignored (finfo.name, ignores))
+            continue;
+
           /* Import a file. */
           SVN_ERR (import_file (files,
                                 editor, dir_baton, 
@@ -329,6 +335,7 @@ import (const char *path,
   svn_node_kind_t kind;
   apr_hash_t *files = apr_hash_make (pool);
   apr_hash_index_t *hi;
+  apr_array_header_t *ignores;
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
@@ -348,14 +355,18 @@ import (const char *path,
 
   if (kind == svn_node_file)
     {
-      if (! new_entry)
-        return svn_error_create
-          (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-           "new entry name required when importing a file");
+      SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
+      if (!svn_wc_is_ignored (path, ignores))
+        {
+          if (! new_entry)
+            return svn_error_create
+                (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                 "new entry name required when importing a file");
 
-      SVN_ERR (import_file (files,
-                            editor, root_baton, 
-                            path, new_entry, ctx, pool));
+          SVN_ERR (import_file (files,
+                                editor, root_baton,
+                                path, new_entry, ctx, pool));
+        }
     }
   else if (kind == svn_node_dir)
     {
