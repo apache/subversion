@@ -176,8 +176,8 @@ int svn_path_is_empty (const char *path);
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
  *
- * This involves collapsing redundant "/./" and "/../" elements,
- * removing multiple adjacent separator characters, removing trailing
+ * This involves collapsing redundant "/./" elements, removing
+ * multiple adjacent separator characters, removing trailing
  * separator characters, and possibly other semantically inoperative
  * transformations.
  *
