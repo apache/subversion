@@ -54,7 +54,7 @@ struct svn_stream_t {
 
 svn_error_t *
 svn_io_check_path (const char *path,
-                   enum svn_node_kind *kind,
+                   svn_node_kind_t *kind,
                    apr_pool_t *pool)
 {
   apr_finfo_t finfo;
@@ -285,7 +285,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                           svn_boolean_t copy_perms,
                                           apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_status_t status;
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
@@ -337,7 +337,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
       const void *key;
       void *val;
       const char *entryname;
-      enum svn_node_kind *entrykind;
+      svn_node_kind_t *entrykind;
       const char *src_target;
 
       /* Get next entry and its kind */
@@ -1195,9 +1195,9 @@ svn_io_get_dirents (apr_hash_t **dirents,
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
   /* These exist so we can use their addresses as hash values! */
-  static const enum svn_node_kind static_svn_node_file = svn_node_file;
-  static const enum svn_node_kind static_svn_node_dir = svn_node_dir;
-  static const enum svn_node_kind static_svn_node_unknown = svn_node_unknown;
+  static const svn_node_kind_t static_svn_node_file = svn_node_file;
+  static const svn_node_kind_t static_svn_node_dir = svn_node_dir;
+  static const svn_node_kind_t static_svn_node_unknown = svn_node_unknown;
 
   *dirents = apr_hash_make (pool);
   
@@ -1584,7 +1584,7 @@ svn_io_detect_mimetype (const char **mimetype,
 {
   static const char * const generic_binary = "application/octet-stream";
 
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_file_t *fh;
   apr_status_t apr_err;
   unsigned char block[1024];

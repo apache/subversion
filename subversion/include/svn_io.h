@@ -60,7 +60,7 @@ extern "C" {
  * error is returned, and *KIND's value is undefined.
  */
 svn_error_t *svn_io_check_path (const char *path,
-                                enum svn_node_kind *kind,
+                                svn_node_kind_t *kind,
                                 apr_pool_t *pool);
 
 
@@ -407,7 +407,7 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
 /* Read all of the disk entries in directory PATH, a utf8-encoded
    path.  Return a DIRENTS hash mapping dirent names (char *) to
-   enumerated dirent filetypes (enum svn_node_kind *).
+   enumerated dirent filetypes (svn_node_kind_t *).
 
    Note:  the `.' and `..' directories normally returned by
    apr_dir_read are NOT returned in the hash. */

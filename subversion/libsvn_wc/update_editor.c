@@ -971,7 +971,7 @@ add_or_open_file (const char *path,
   struct file_baton *fb;
   const svn_wc_entry_t *entry;
   int is_wc;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
 
   /* the file_pool can stick around for a *long* time, so we want to use
@@ -1554,7 +1554,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   
       else   /* working file is locally modified... */
         {
-          enum svn_node_kind wfile_kind = svn_node_unknown;
+          svn_node_kind_t wfile_kind = svn_node_unknown;
           
           SVN_ERR (svn_io_check_path (file_path, &wfile_kind, pool));
           if (wfile_kind == svn_node_none) /* working file is missing?! */

@@ -392,7 +392,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *copyfrom_url;
   const char *child;
 
@@ -458,7 +458,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
 
@@ -496,7 +496,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
   const char *copyfrom_url, *child;
 
@@ -548,7 +548,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
   
@@ -1077,7 +1077,7 @@ do_diff (const apr_array_header_t *options,
       const char *URL1, *URL2;
       const char *anchor1, *target1, *anchor2, *target2;
       svn_boolean_t path1_is_url, path2_is_url;
-      enum svn_node_kind path2_kind;
+      svn_node_kind_t path2_kind;
       void *session2;
 
       /* The paths could be *either* wcpaths or urls... */

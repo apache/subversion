@@ -59,7 +59,7 @@ struct revision_baton
 struct node_baton
 {
   const char *path;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   enum svn_node_action action;
 
   svn_revnum_t copyfrom_rev;

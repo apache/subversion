@@ -610,7 +610,7 @@ svn_wc_entry (const svn_wc_entry_t **entry,
               svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_hash_t *entries;
   int is_wc;
 

@@ -512,7 +512,7 @@ svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
 typedef struct svn_repos_node_t
 {
   /* Node type (file, dir, etc.) */
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   /* How this node entered the node tree: 'A'dd, 'D'elete, 'R'eplace */
   char action; 

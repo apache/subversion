@@ -55,7 +55,7 @@ svn_boolean_t svn_wc__adm_path_exists (const char *path,
 /* Make `PATH/<adminstrative_subdir>/THING'. */
 svn_error_t *svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                                      const char *thing,
-                                     enum svn_node_kind type,
+                                     svn_node_kind_t type,
                                      apr_fileperms_t perms,
                                      svn_boolean_t tmp,
                                      apr_pool_t *pool);

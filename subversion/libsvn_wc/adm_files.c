@@ -139,7 +139,7 @@ svn_wc__adm_path_exists (const char *path,
                          apr_pool_t *pool, 
                          ...)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   va_list ap;
 
   va_start (ap, pool);
@@ -167,7 +167,7 @@ svn_wc__adm_path_exists (const char *path,
 svn_error_t *
 svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
                         const char *thing,
-                        enum svn_node_kind type,
+                        svn_node_kind_t type,
                         apr_fileperms_t perms,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
@@ -219,7 +219,7 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
   apr_status_t apr_err;
 
@@ -330,7 +330,7 @@ prop_path_internal (const char **prop_path,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   int wc_format_version;
   const char *entry_name;
 
@@ -410,7 +410,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   int is_wc;
   const char *entry_name;
 
@@ -742,7 +742,7 @@ svn_wc__open_props (apr_file_t **handle,
                     apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   int wc_format_version;
   svn_error_t *err;
 
@@ -830,7 +830,7 @@ svn_wc__close_props (apr_file_t *fp,
                      apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   int wc_format_version;
   svn_error_t *err;
 
@@ -903,7 +903,7 @@ svn_wc__sync_props (const char *path,
                     apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -974,7 +974,7 @@ check_adm_exists (svn_boolean_t *exists,
                   apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_boolean_t dir_exists = FALSE, wc_exists = FALSE;
   const char *tmp_path;
 

@@ -46,7 +46,7 @@ remove_admin_dirs (const char *dir, apr_pool_t *pool)
 
   for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
-      const enum svn_node_kind *type;
+      const svn_node_kind_t *type;
       const char *item;
       const void *key;
       void *val;
@@ -110,7 +110,7 @@ copy_versioned_files (const char *from,
 
       for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
         {
-          const enum svn_node_kind *type;
+          const svn_node_kind_t *type;
           const char *item;
           const void *key;
           void *val;

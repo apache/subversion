@@ -69,7 +69,7 @@ END_COM_MAP()
 
 	EWCStatus text_status;
     EWCStatus prop_status;
-    enum svn_node_kind kind;     /* Is it a file, a dir, or... ?  */
+    svn_node_kind_t kind;     /* Is it a file, a dir, or... ?  */
 	CHAR *pszName;
 
 // ISupportsErrorInfo

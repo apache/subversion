@@ -229,7 +229,7 @@ svn_wc__load_prop_file (const char *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (propfile_path, &kind, pool));
 
@@ -853,7 +853,7 @@ wcprop_list (apr_hash_t **props,
              const char *path,
              apr_pool_t *pool)
 {
-  enum svn_node_kind kind, pkind;
+  svn_node_kind_t kind, pkind;
   const char *prop_path;
   
   *props = apr_hash_make (pool);
@@ -966,7 +966,7 @@ svn_wc_prop_list (apr_hash_t **props,
                   const char *path,
                   apr_pool_t *pool)
 {
-  enum svn_node_kind pkind;
+  svn_node_kind_t pkind;
   const char *prop_path;
 
   *props = apr_hash_make (pool);
@@ -1221,7 +1221,7 @@ empty_props_p (svn_boolean_t *empty_p,
                const char *path_to_prop_file,
                apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (path_to_prop_file, &kind, pool));
 

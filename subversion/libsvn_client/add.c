@@ -128,7 +128,7 @@ svn_client_add (const char *path,
                 void *notify_baton,
                 apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_remove_component_nts (path, pool);

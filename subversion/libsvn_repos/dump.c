@@ -210,7 +210,7 @@ make_dir_baton (const char *path,
 static svn_error_t *
 dump_node (struct edit_baton *eb,
            const char *path,    /* an absolute path. */
-           enum svn_node_kind kind,
+           svn_node_kind_t kind,
            enum svn_node_action action,
            svn_boolean_t is_copy,
            const char *cmp_path,

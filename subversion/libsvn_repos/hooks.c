@@ -118,7 +118,7 @@ run_start_commit_hook (svn_repos_t *repos,
                        const char *user,
                        apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *hook = svn_repos_start_commit_hook (repos, pool);
 
   if ((! svn_io_check_path (hook, &kind, pool)) 
@@ -145,7 +145,7 @@ run_pre_commit_hook (svn_repos_t *repos,
                      const char *txn_name,
                      apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *hook = svn_repos_pre_commit_hook (repos, pool);
 
   if ((! svn_io_check_path (hook, &kind, pool)) 
@@ -172,7 +172,7 @@ run_post_commit_hook (svn_repos_t *repos,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *hook = svn_repos_post_commit_hook (repos, pool);
 
   if ((! svn_io_check_path (hook, &kind, pool)) 
@@ -203,7 +203,7 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
                              const svn_string_t *value,
                              apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *hook = svn_repos_pre_revprop_change_hook(repos, pool);
 
   if ((! svn_io_check_path (hook, &kind, pool)) 
@@ -249,7 +249,7 @@ run_post_revprop_change_hook (svn_repos_t *repos,
                               const char *name,
                               apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
   
   if ((! svn_io_check_path (hook, &kind, pool)) 

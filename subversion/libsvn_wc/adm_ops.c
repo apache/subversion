@@ -500,7 +500,7 @@ static svn_error_t *
 erase_unversioned_from_wc (const char *path,
                            apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   switch (kind)
@@ -544,7 +544,7 @@ erase_from_wc (const char *path,
                apr_pool_t *pool)
 {
   /* Check that the item exists in the wc. */
-  enum svn_node_kind wc_kind;
+  svn_node_kind_t wc_kind;
   SVN_ERR (svn_io_check_path (path, &wc_kind, pool));
   if (wc_kind == svn_node_none)
     return SVN_NO_ERROR;
@@ -744,7 +744,7 @@ svn_wc_add (const char *path,
   const svn_wc_entry_t *orig_entry, *parent_entry;
   svn_wc_entry_t tmp_entry;
   svn_boolean_t is_replace = FALSE;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_uint32_t modify_flags = 0;
   const char *mimetype = NULL;
   svn_boolean_t executable = FALSE;
@@ -1045,7 +1045,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
   const char *fullpath, *thing, *base_thing;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_boolean_t modified_p;
   svn_error_t *err;
   apr_time_t tstamp;
@@ -1213,7 +1213,7 @@ svn_wc_revert (const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *p_dir = NULL, *bname = NULL;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t *tmp_entry;
