@@ -692,6 +692,36 @@ svn_ra_dav__open (void **session_baton,
 }
 
 
+static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
+                                               const char **url,
+                                               apr_pool_t *pool)
+{
+  svn_ra_session_t *ras = session_baton;
+
+  if (! ras->repos_root)
+    {
+      svn_string_t bc_relative;
+      apr_size_t len;
+      char *tmp;
+      SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
+                                            NULL, ras->sess, ras->url,
+                                            SVN_INVALID_REVNUM, pool));
+
+      len = strlen(ras->url);
+      if (len <= bc_relative.len)
+        return svn_error_create(APR_EGENERAL, NULL,
+                                "Impossibly long relative url.");
+      len = len - bc_relative.len - 1;
+      tmp = apr_palloc(ras->pool, len + 1);
+      memcpy(tmp, ras->url, len);
+      tmp[len] = '\0';
+      ras->repos_root = tmp;
+    }
+
+  *url = ras->repos_root;
+  return SVN_NO_ERROR; 
+}
+
 
 static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
                                             const char **uuid,
@@ -749,7 +779,8 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__do_diff,
   svn_ra_dav__get_log,
   svn_ra_dav__do_check_path,
-  svn_ra_dav__do_get_uuid
+  svn_ra_dav__do_get_uuid,
+  svn_ra_dav__get_repos_root
 };
 
 

@@ -42,6 +42,7 @@ struct svn_ra_svn_conn_st {
   char write_buf[4096];
   int write_pos;
   const char *uuid;
+  const char *repos_root;
 };
 
 #ifdef __cplusplus

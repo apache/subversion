@@ -997,7 +997,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   b.read_only = read_only;
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
-  svn_ra_svn_write_cmd_response(conn, pool, "c", uuid);
+  svn_ra_svn_write_cmd_response(conn, pool, "cc", uuid, repos_url);
 
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
 }

@@ -140,6 +140,7 @@ typedef struct {
 
   const char *url;                      /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
+  const char *repos_root;               /* URL for repository root */
 
   ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
