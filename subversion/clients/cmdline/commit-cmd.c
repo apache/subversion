@@ -280,7 +280,7 @@ message_from_editor (apr_pool_t *pool,
   apr_finfo_t finfo_after;
   apr_size_t size;
   apr_size_t written;
-  svn_error_t *error;
+  svn_error_t *error=NULL;
   int exitcode;
   apr_exit_why_e exitwhy;
 
@@ -496,7 +496,6 @@ store_message (svn_stringbuf_t *message,
   /* Store the message in a temporary file name and display the
      file name to the user */
   apr_file_t *tempfile;
-  apr_size_t size;
   apr_size_t written;
   apr_status_t rc;
   const char *fullfile;
@@ -511,13 +510,13 @@ store_message (svn_stringbuf_t *message,
 
   if (APR_SUCCESS == rc)
     {
-      size = message->len;
-      rc = apr_file_write_full (tempfile, message->data, size, &written);
+      rc = apr_file_write_full (tempfile, message->data,
+                                message->len, &written);
     }
 
   apr_file_close (tempfile);
 
-  if ((APR_SUCCESS == rc) && (size == written))
+  if ((APR_SUCCESS == rc) && (message->len == written))
     {
       printf ("The commit message has been stored in this location:\n%s\n",
               fullfile);
