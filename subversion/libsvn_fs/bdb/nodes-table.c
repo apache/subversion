@@ -59,9 +59,8 @@ svn_fs__bdb_open_nodes_table (DB **nodes_p,
     DBT key, value;
 
     BDB_ERR (nodes->put (nodes, 0,
-                        svn_fs__str_to_dbt (&key, 
-                                            (char *) svn_fs__next_key_key),
-                        svn_fs__str_to_dbt (&value, (char *) "1"),
+                        svn_fs__str_to_dbt (&key, svn_fs__next_key_key),
+                        svn_fs__str_to_dbt (&value, "1"),
                         SVN_BDB_AUTO_COMMIT));
   }
 
@@ -90,7 +89,7 @@ svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
   assert (txn_id);
 
   /* Get the current value associated with the `next-key' key in the table.  */
-  svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+  svn_fs__str_to_dbt (&query, svn_fs__next_key_key);
   svn_fs__trail_debug (trail, "nodes", "get");
   SVN_ERR (BDB_WRAP (fs, "allocating new node ID (getting 'next-key')",
                     fs->nodes->get (fs->nodes, trail->db_txn,
@@ -107,9 +106,8 @@ svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
   svn_fs__next_key (result.data, &len, next_key);
   svn_fs__trail_debug (trail, "nodes", "put");
   db_err = fs->nodes->put (fs->nodes, trail->db_txn,
-                           svn_fs__str_to_dbt (&query, 
-                                               (char *) svn_fs__next_key_key),
-                           svn_fs__str_to_dbt (&result, (char *) next_key), 
+                           svn_fs__str_to_dbt (&query, svn_fs__next_key_key),
+                           svn_fs__str_to_dbt (&result, next_key), 
                            0);
   SVN_ERR (BDB_WRAP (fs, "bumping next node ID key", db_err));
 

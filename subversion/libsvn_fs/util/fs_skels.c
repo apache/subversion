@@ -362,7 +362,7 @@ svn_fs__parse_proplist_skel (apr_hash_t **proplist_p,
       apr_hash_set (proplist, 
                     apr_pstrmemdup (pool, elt->data, elt->len), 
                     elt->len,
-                    (void *)value);
+                    value);
     }
 
   /* Return the structure. */
@@ -718,7 +718,7 @@ svn_fs__parse_entries_skel (apr_hash_t **entries_p,
                                 elt->children->next->len, pool);
 
           /* Add the entry to the hash. */
-          apr_hash_set (entries, name, elt->children->len, (void *) id);
+          apr_hash_set (entries, name, elt->children->len, id);
         }
     }
 
