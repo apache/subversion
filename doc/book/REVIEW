@@ -53,6 +53,14 @@ Chapter 3
 
 Chapter 5
 
+    Section svn-ch-5-sect-3.4
+
+	#1) bliss
+
+	    The section on repository recovery could use some text on
+	    permission problems.  It's a common problem as admitted in
+	    svn-ch-6-sect-5 ("The most common problem").
+
     Section svn-ch-5-sect-6
 
         #1) Blair
@@ -72,3 +80,23 @@ Chapter 5
             could well be merged into.  If that doesn't work, I would
             consider moving it up to the front of this chapter.
 
+Chapter 6
+
+    Section svn-ch-6-sect-5
+
+	#1) bliss
+
+	    The paragraph that begins with "The most common
+	    problem..." says that you may need to put all users in a
+	    common group and make sure that the repository is wholly
+	    owned by that group and that the umask must be correct. It
+	    fails to explain that you most likely need to set the
+	    group set-ID bit on the directories for this to work.
+
+        #2) bliss
+
+            The name of the section is Using Multiple Servers, but the
+            issues discussed are important even if you don't have a
+            server at all (i.e. file://) or if you use tunnel mode.
+            Some of it is important only when you don't have a server.
+            Not terribly important, but the name could be better.
