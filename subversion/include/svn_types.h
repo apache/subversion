@@ -230,6 +230,25 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 
 
+/* If MIME_TYPE does not contain a "/", or ends with non-alphanumeric
+   data, return SVN_ERR_BAD_MIME_TYPE, else return success.  Use POOL
+   only to find error allocation.
+
+   Goal: to match both "foo/bar" and "foo/bar; charset=blah", without
+   being too strict about it, but to disallow mime types that have
+   quotes, newlines, or other garbage on the end, such as might be
+   unsafe in an HTTP header.
+
+   ### Note: despite being about mime-TYPES, this probably doesn't
+   ### belong in svn_types.h.  However, no other header is more
+   ### appropriate, and didn't feel like creating svn_validate.h for
+   ### this one function.
+ */
+svn_error_t *svn_validate_mime_type (const char *mime_type,
+                                     apr_pool_t *pool);
+
+
+
 
 #ifdef __cplusplus
 }

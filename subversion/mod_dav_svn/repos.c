@@ -1387,6 +1387,17 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
       mimetype = value ? value->data : "text/plain";
 
+      serr = svn_validate_mime_type (mimetype, resource->pool);
+      if (serr)
+        {
+          /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
+             there's no point even checking.  No matter what the
+             error is, we can't derive the mime type from the
+             svn:mime-type property.  So we resort to the infamous
+             "mime type of last resort." */
+          mimetype = "application/octet-stream";
+        }
+
       /* if we aren't sending a diff, then we know the length of the file,
          so set up the Content-Length header */
       serr = svn_fs_file_length(&length,
