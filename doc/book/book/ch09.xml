@@ -3646,7 +3646,7 @@ Updated to revision 30.
         <!-- TODO config-dir? Is it really used? -->
 
         <varlistentry>
-          <term><option>--force--uuid</option></term>
+          <term><option>--force-uuid</option></term>
           <listitem>
             <para>By default, when loading data into repository that
             already contains revisions, <command>svnadmin</command>
@@ -3657,7 +3657,7 @@ Updated to revision 30.
         </varlistentry>
 
         <varlistentry>
-          <term><option>--ignore--uuid</option></term>
+          <term><option>--ignore-uuid</option></term>
           <listitem>
             <para>By default, when loading an empty repository,
             <command>svnadmin</command> will use the
@@ -3931,7 +3931,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
           <screen>
 --quiet (-q)
 --ignore-uuid
---force--uuid
+--force-uuid
 --parent-dir
           </screen>
         </refsect1>

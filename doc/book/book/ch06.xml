@@ -1547,7 +1547,7 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
             
               # try anonymous access first, resort to real 
               # authentication if necessary.
-              Sasisfy Any
+              Satisfy Any
               Require valid-user
             
               # how to authenticate a user
@@ -1565,7 +1565,7 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
         <para>The syntax of the access file is the same familiar one
           used by <command>svnserve.conf</command> and the runtime
           configuration files.  Lines that start with hash
-          (<literal>#</literal>)) are ignored.  In its simplest form,
+          (<literal>#</literal>) are ignored.  In its simplest form,
           each <quote>section</quote> names a repository and path
           within it, and the authenticated usernames are the
           <quote>variables</quote> within each section.  The value of
