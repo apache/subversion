@@ -191,11 +191,8 @@ rep_is_fulltext (skel_t *rep)
 {
   return svn_fs__matches_atom (rep->children->children, "fulltext");
 }
-  
 
 
-/* Set STRKEY->data to the strings-table key pointed to by REP in FS,
-   as part of TRAIL.  */
 svn_error_t *
 svn_fs__string_key_from_rep (const char **strkey,
                              skel_t *rep)
@@ -209,9 +206,6 @@ svn_fs__string_key_from_rep (const char **strkey,
 }
 
 
-/* Set STR->data to the fulltext string for REP in FS, and STR->len to
-   the string's length, as part of TRAIL.  The data is allocated in
-   TRAIL->pool.  */
 svn_error_t *
 svn_fs__string_from_rep (svn_string_t *str,
                          svn_fs_t *fs,
@@ -230,7 +224,6 @@ svn_fs__string_from_rep (svn_string_t *str,
 }
 
 
-/* Is this representation skel mutable?  */
 int
 svn_fs__rep_is_mutable (skel_t *rep)
 {
