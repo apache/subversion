@@ -601,12 +601,10 @@ svn_error_t * svn_ra_dav__merge_activity(
     *new_rev = mc.rev;
   if (committed_date)
     *committed_date = mc.committed_date->len
-                      ? apr_pstrdup(ras->pool, mc.committed_date->data)
-                      : NULL;
+                      ? apr_pstrdup(pool, mc.committed_date->data) : NULL;
   if (committed_author)
     *committed_author = mc.last_author->len 
-                        ? apr_pstrdup(ras->pool, mc.last_author->data)
-                        : NULL;
+                        ? apr_pstrdup(pool, mc.last_author->data) : NULL;
 
   svn_pool_destroy(mc.scratchpool);
 
