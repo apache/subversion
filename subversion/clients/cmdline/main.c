@@ -99,6 +99,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "try operation but make no changes"},
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
                        "do not print differences for deleted files"},
+    {"ignore-ancestry", svn_cl__ignore_ancestry_opt, 0,
+                       "ignore ancestry when calculating differences"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                       "Use ARG as diff command"},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
@@ -211,7 +213,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "     at revisions N and M respectively.  If either N or M are ommitted,\n"
     "     a value of HEAD is assumed.\n",
     {'r', 'x', 'N', svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
-    SVN_CL__AUTH_OPTIONS} },
+     svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS} },
 
   { "export", svn_cl__export, {0},
     "export stuff.\n"
@@ -293,7 +295,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  the sources have identical basenames that match a file within '.':\n"
     "  in which case, the differences will be applied to that file.\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
-     svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS} },
+     svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt, 
+     SVN_CL__AUTH_OPTIONS} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -752,6 +755,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__no_diff_deleted:
         opt_state.no_diff_deleted = TRUE;
+        break;
+      case svn_cl__ignore_ancestry_opt:
+        opt_state.ignore_ancestry = TRUE;
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,

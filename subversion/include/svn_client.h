@@ -779,6 +779,12 @@ svn_client_log (const apr_array_header_t *targets,
  * If @a recurse is true (and the @a paths are directories) this will be a
  * recursive operation.
  *
+ * Use @a ignore_ancestry to control whether or not items being
+ * diffed will be checked for relatedness first.  Unrelated items
+ * are typically transmitted to the editor as a deletion of one thing
+ * and the addition of another, but if this flag is @c TRUE,
+ * unrelated items will be diffed as if they were related.
+ *
  * If @a no_diff_deleted is true, then no diff output will be
  * generated on deleted files.
  * 
@@ -795,6 +801,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               const char *path2,
                               const svn_opt_revision_t *revision2,
                               svn_boolean_t recurse,
+                              svn_boolean_t ignore_ancestry,
                               svn_boolean_t no_diff_deleted,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
@@ -819,6 +826,12 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * recursively; otherwise, only apply changes in the current
  * directory.
  *
+ * Use @a ignore_ancestry to control whether or not items being
+ * diffed will be checked for relatedness first.  Unrelated items
+ * are typically transmitted to the editor as a deletion of one thing
+ * and the addition of another, but if this flag is @c TRUE,
+ * unrelated items will be diffed as if they were related.
+ *
  * If @a force is not set and the merge involves deleting locally modified or
  * unversioned items the operation will fail.  If @a force is set such items
  * will be deleted.
@@ -840,6 +853,7 @@ svn_client_merge (const char *URL1,
                   const svn_opt_revision_t *revision2,
                   const char *target_wcpath,
                   svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
                   svn_boolean_t force,
                   svn_boolean_t dry_run,
                   svn_client_ctx_t *ctx,

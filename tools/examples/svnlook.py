@@ -130,7 +130,7 @@ class SVNLook:
 
     # compute the delta, printing as we go
     _repos.svn_repos_dir_delta(base_root, '', None, root, '',
-                               e_ptr, e_baton, 0, 1, 0, 1, self.pool)
+                               e_ptr, e_baton, 0, 1, 0, 1, 0, self.pool)
 
 
 class Editor(delta.Editor):
@@ -277,10 +277,14 @@ class DiffEditor(delta.Editor):
       label = path
     print "===============================================================" + \
           "==============="
-    differ = fs.FileDiff(self.base_root, base_path, self.root, path, pool,
-                         "-L '" + label + "\t(original)' " + \
-                         "-L '" + label + "\t(new)' " + \
-                         "-u")
+    args = []
+    args.append("-L")
+    args.append(label + "\t(original)")
+    args.append("-L")
+    args.append(label + "\t(new)")
+    args.append("-u")
+    differ = fs.FileDiff(self.base_root, base_path, self.root,
+                         path, pool, args)
     pobj = differ.get_pipe()
     while 1:
       line = pobj.readline()
@@ -296,7 +300,7 @@ class DiffEditor(delta.Editor):
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    self._do_diff(None, path, pool)
+    self._do_diff(None, path, file_pool)
     return [ '_', ' ', None, file_pool ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):

@@ -2386,6 +2386,7 @@ make_reporter (void *session_baton,
                const char *target,
                const char *dst_path,
                svn_boolean_t recurse,
+               svn_boolean_t ignore_ancestry,
                svn_boolean_t resource_walk,
                const svn_delta_editor_t *editor,
                void *edit_baton,
@@ -2496,6 +2497,18 @@ make_reporter (void *session_baton,
         }
     }
 
+  /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
+  if (ignore_ancestry)
+    {
+      const char * data = "<S:ignore-ancestry>yes</S:ignore-ancestry>";
+      status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
+      if (status)
+        {
+          msg = "Failed writing the ignore_ancestry flag to the "
+                "report tempfile.";
+          goto error;
+        }
+    }
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
@@ -2537,6 +2550,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         NULL,
                         recurse,
                         FALSE,
+                        FALSE,
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
@@ -2560,6 +2574,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         status_target,
                         NULL,
                         recurse,
+                        FALSE,
                         FALSE,
                         wc_status,
                         wc_status_baton,
@@ -2586,6 +2601,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         update_target,
                         switch_url,
                         recurse,
+                        FALSE,
                         TRUE,
                         wc_update,
                         wc_update_baton,
@@ -2600,6 +2616,7 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   svn_revnum_t revision,
                                   const char *diff_target,
                                   svn_boolean_t recurse,
+                                  svn_boolean_t ignore_ancestry,
                                   const char *versus_url,
                                   const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton,
@@ -2612,6 +2629,7 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         diff_target,
                         versus_url,
                         recurse,
+                        ignore_ancestry,
                         FALSE,
                         wc_diff,
                         wc_diff_baton,
