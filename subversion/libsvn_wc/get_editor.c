@@ -207,16 +207,16 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 {
   int i;
   struct file_baton *fb = (struct file_baton *) baton;
-  apr_file_t *dest = NULL;
-  apr_status_t apr_err;
+  apr_file_t *dest = NULL;  /* always init to null for APR */
+  svn_error_t *err = NULL;
 
   /* kff todo: get more sophisticated when we can handle more ops. */
-  apr_err = apr_open (&dest, fb->path->data,
-                      (APR_WRITE | APR_APPEND | APR_CREATE),
-                      APR_OS_DEFAULT,
-                      window->pool);
-  if (apr_err)
-    return svn_create_error (apr_err, 0, fb->path->data, NULL, window->pool);
+  err = svn_wc__open_text_base (&dest,
+                                fb->path,
+                                (APR_WRITE | APR_APPEND | APR_CREATE),
+                                window->pool);
+  if (err)
+    return err;
   
   /* else */
 
@@ -250,9 +250,12 @@ window_handler (svn_txdelta_window_t *window, void *baton)
         }
     }
 
-  apr_err = apr_close (dest);
-  if (apr_err)
-    return svn_create_error (apr_err, 0, fb->path->data, NULL, window->pool);
+  /* Close the file after each window, but pass 0 so it stays in the
+     tmp area.  When close_file() is called it will take care of
+     syncing it back into the real location. */
+  err = svn_wc__close_text_base (dest, fb->path, 0, window->pool);
+  if (err)
+    return err;
 
   /* else */
 

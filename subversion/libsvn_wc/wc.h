@@ -186,7 +186,7 @@ svn_error_t *svn_wc__open_text_base (apr_file_t **handle,
  */
 svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
                                       svn_string_t *file,
-                                      int write,
+                                      int sync,
                                       apr_pool_t *pool);
 
 

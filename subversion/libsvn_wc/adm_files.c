@@ -238,7 +238,7 @@ svn_wc__make_adm_thing (svn_string_t *path,
 static apr_status_t
 apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 {
-  apr_file_t *s, *d;
+  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
   apr_status_t read_err, write_err;
   apr_finfo_t finfo;
@@ -315,20 +315,53 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 #endif /* apr_copy_file */
 
 
+/* Copy SRC to DST if SRC exists, else create DST empty. */
 static svn_error_t *
-copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+maybe_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
   apr_status_t apr_err;
+  apr_file_t *f = NULL;
 
+  /* First test if SRC exists. */
+  apr_err = apr_open (&f, src->data, (APR_READ), APR_OS_DEFAULT, pool);
+
+  if (apr_err)    /* DST doesn't exist, so create it. */
+    {
+      f = NULL;
+      apr_err = apr_open (&f,
+                          dst->data,
+                          (APR_WRITE | APR_CREATE),
+                          APR_OS_DEFAULT,
+                          pool);
+      if (apr_err)
+        return svn_create_error (apr_err, 0, dst->data, NULL, pool);
+      else
+        {
+          apr_err = apr_close (f);
+          if (apr_err)
+            return svn_create_error (apr_err, 0, dst->data, NULL, pool);
+          else
+            return SVN_NO_ERROR;
+        }
+    }
+
+  /* Else SRC exists, so copy it to DST. */
+
+  /* close... */ 
+  apr_err = apr_close (f);
+  if (apr_err)
+    return svn_create_error (apr_err, 0, dst->data, NULL, pool);
+
+  /* ...then copy */
   apr_err = apr_copy_file (src->data, dst->data, pool);
   if (apr_err)
     {
-      const char *msg = apr_psprintf(pool, "copying %s to %s", src, dst);
-
+      const char *msg
+        = apr_psprintf (pool, "copying %s to %s", src->data, dst->data);
       return svn_create_error (apr_err, 0, msg, NULL, pool);
     }
-  else
-    return SVN_NO_ERROR;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -425,7 +458,7 @@ open_adm_file (apr_file_t **handle,
           va_end (ap);
 
           /* Copy the original thing to the tmp location. */
-          err = copy_file (opath, tmp_path, pool);
+          err = maybe_copy_file (opath, tmp_path, pool);
           if (err)
             return err;
         }
