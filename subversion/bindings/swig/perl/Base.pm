@@ -48,6 +48,7 @@ will need extra handling.
 
 sub import {
     my (undef, $pkg, $prefix) = @_;
+    no warnings 'uninitialized';
     unless (${"SVN::_${pkg}::ISA"}[0] eq 'DynaLoader') {
 	@{"SVN::_${pkg}::ISA"} = qw(DynaLoader);
 	eval qq'
