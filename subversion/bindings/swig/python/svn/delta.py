@@ -47,13 +47,13 @@ class Editor:
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return None
 
-  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
+  def apply_textdelta(self, file_baton, base_checksum):
     return None
 
   def change_file_prop(self, file_baton, name, value, pool):
     pass
 
-  def close_file(self, file_baton):
+  def close_file(self, text_checksum, file_baton):
     pass
 
   def close_edit(self):
