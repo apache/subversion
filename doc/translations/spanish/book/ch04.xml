@@ -678,24 +678,24 @@ done
 
       </sidebar>
       
-      <para>A word of warning: while <command>svn diff</command> and
-        <command>svn merge</command> are very similar in concept, they
-        do have different syntax in many cases.  Be sure to read about
-        them in Chapter 8 for details, or ask <command>svn
-        help</command>.  For example, <command>svn merge</command>
-        requires a working-copy path as a target, i.e. a place where
-        it should apply the tree-changes.  If the target isn't
-        specified, it assumes you are trying to perform one of the
-        following common operations:</para>
+      <para>Aviso: aunque los comandos <command>svn diff</command> y
+        <command>svn merge</command> son similares en concepto,
+        tienen una diferente sintaxis en muchos casos. Asegúrese de
+        leer en el capítulo 8 los detalles, o pregunte a <command>svn
+        help</command>.  Por ejemplo, <command>svn merge</command>
+        requiere una ruta a una copia local como destino, es decir,
+        un lugar donde debe aplicar los cambios del árbol. Si
+        el destino no es especificado, asume que está intentando
+        realizar una de las siguientes operaciones comunes:</para>
 
       <orderedlist>
-        <listitem> <para>You want to merge directory changes into your
-            current working directory.</para>
+        <listitem> <para>Quiere fusionar cambios de directorio
+            directamente en su copia local.</para>
         </listitem>
         <listitem>
-          <para>You want to merge the changes in a specific file into
-            a file by the same name which exists in your current working 
-            directory.</para>
+          <para>Quiere fusionar los cambios de un fichero específico
+            en un fichero que existe con el mismo nombre en su
+            directorio de trabajo actual.</para>
         </listitem>
       </orderedlist>
 
