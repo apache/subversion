@@ -366,15 +366,13 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
+  const char *cmd;
   apr_file_t *tmp_file;
   svn_stringbuf_t *tmpfile_name;
   apr_status_t apr_err;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
   svn_error_t *err = SVN_NO_ERROR;
-  const char *cmd_args[3] = { 0 };
-  int exit_code = 0;
-  apr_exit_why_e exit_why;
 
   /* Try to find an editor in the environment. */
   editor = getenv ("SVN_EDITOR");
@@ -429,10 +427,9 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   /* Now, run the editor command line.  Ignore the return values; all
      we really care about (for now) is whether or not our tmpfile
      contents have changed. */
-  cmd_args[0] = editor;
-  cmd_args[1] = tmpfile_name->data;
-  SVN_ERR (svn_io_run_cmd (".", editor, cmd_args, &exit_code, &exit_why,
-                           TRUE, NULL, NULL, NULL, pool));
+  cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_name->data);
+
+  system (cmd);
   
   /* Get information about the temporary file after the assumed editing. */
   apr_stat (&finfo_after, tmpfile_name->data, 
