@@ -792,18 +792,6 @@ svn_wc_translated_file (const char **xlated_p,
 }
 
 
-
-svn_string_t *svn_wc__friendly_date (const char *date, apr_pool_t *pool)
-{
-  char *dot_spot = strchr (date, '.');
-
-  if (dot_spot)
-    return svn_string_ncreate (date, dot_spot - date, pool);
-  else
-    return svn_string_create (date, pool);
-}
-
-
 svn_error_t *
 svn_wc__get_eol_style (enum svn_wc__eol_style *style,
                        const char **eol,
@@ -922,8 +910,8 @@ expand_keyword (svn_wc_keywords_t *keywords,
            || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
       if (entry && (entry->cmt_date))
-        keywords->date = svn_wc__friendly_date 
-          (svn_time_to_nts (entry->cmt_date, pool), pool);
+        keywords->date = svn_string_create
+          (svn_time_to_human_nts (entry->cmt_date, pool), pool);
       else
         keywords->date = svn_string_create ("", pool);
     }
