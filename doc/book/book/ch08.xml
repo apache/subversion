@@ -1079,7 +1079,7 @@ if __name__ == '__main__':
       </listitem>
       <listitem>
         <para>Pristine (un-edited) copies of the working copy
-        files.</para>
+          files.</para>
       </listitem>
     </itemizedlist>
 

@@ -477,14 +477,15 @@ $               # svnserve is now running, listening on port 3690
           not careful, this can lead to a number of headaches.  Be
           sure to read <xref linkend="svn-ch-6-sect-5"/>.</para>
 
-      <para>Secondly, when configuring <command>svnserve</command>, Apache
-          <command>httpd</command>, or any other server process, keep in
-          mind that you might not want to launch the server process as
-          the user <literal>root</literal> (or as any other user with
-          unlimited permissions).  Depending on the ownership and
-          permissions of the repositories you're exporting, it's often
-          prudent to use a different&mdash;perhaps custom&mdash;user.
-          For example, many administrators create a new user named
+        <para>Secondly, when configuring <command>svnserve</command>,
+          Apache <command>httpd</command>, or any other server
+          process, keep in mind that you might not want to launch the
+          server process as the user <literal>root</literal> (or as
+          any other user with unlimited permissions).  Depending on
+          the ownership and permissions of the repositories you're
+          exporting, it's often prudent to use a
+          different&mdash;perhaps custom&mdash;user.  For example,
+          many administrators create a new user named
           <literal>svn</literal>, grant that user exclusive ownership
           and rights to the exported Subversion repositories, and only
           run their server processes as that user.</para>
@@ -599,16 +600,15 @@ realm = example realm
 </screen>
 
         <para>The <literal>realm</literal> is a name that you define.
-            It tells clients which sort of <quote>authentication
-            namespace</quote> they're connecting to; the Subversion
-            client displays it in the authentication prompt, and uses
-            it as a key (along with the server's hostname and port)
-            for caching credentials on disk (see <xref
-            linkend="svn-ch-6-sect-2.2"/>.)  The
-            <literal>password-db</literal> variable points to a
-            separate file that contains a list of usernames and
-            passwords, using the same familiar format.  For
-            example:</para>
+          It tells clients which sort of <quote>authentication
+          namespace</quote> they're connecting to; the Subversion
+          client displays it in the authentication prompt, and uses it
+          as a key (along with the server's hostname and port) for
+          caching credentials on disk (see <xref
+          linkend="svn-ch-6-sect-2.2"/>.)  The
+          <literal>password-db</literal> variable points to a separate
+          file that contains a list of usernames and passwords, using
+          the same familiar format.  For example:</para>
 
 <screen>
 [users]
@@ -637,16 +637,16 @@ sally = barpassword
         <title>Set access controls</title>
 
         <para>There are two more variables to set in the
-        <filename>svnserve.conf</filename> file: they determine what
-        unauthenticated (anonymous) and authenticated users are
-        allowed to do.  The variables <literal>anon-access</literal>
-        and <literal>auth-access</literal> can be set to the values
-        <literal>none</literal>, <literal>read</literal>, or
-        <literal>write</literal>.  Setting the value to
-        <literal>none</literal> restricts all access of any kind;
-        <literal>read</literal> allows read-only access to the
-        repository, and <literal>write</literal> allows complete
-        read/write access to the repository.  For example:</para>
+          <filename>svnserve.conf</filename> file: they determine what
+          unauthenticated (anonymous) and authenticated users are
+          allowed to do.  The variables <literal>anon-access</literal>
+          and <literal>auth-access</literal> can be set to the values
+          <literal>none</literal>, <literal>read</literal>, or
+          <literal>write</literal>.  Setting the value to
+          <literal>none</literal> restricts all access of any kind;
+          <literal>read</literal> allows read-only access to the
+          repository, and <literal>write</literal> allows complete
+          read/write access to the repository.  For example:</para>
 
 <screen>
 [general]
@@ -703,8 +703,8 @@ auth-access = write
         into</quote> the server machine.</para>
 
       <para>It's easy to use SSH in conjunction with
-      <command>svnserve</command>.  The client simply uses the
-      <literal>svn+ssh://</literal> URL schema to connect:</para>
+        <command>svnserve</command>.  The client simply uses the
+        <literal>svn+ssh://</literal> URL schema to connect:</para>
 
 <screen>
 $ whoami
@@ -1103,7 +1103,7 @@ ServerName svn.example.com
       <title>Authentication Options</title>
 
       <para>At this point, if you configured
-      <filename>httpd.conf</filename> to contain something like</para>
+        <filename>httpd.conf</filename> to contain something like</para>
 
       <screen>
 &lt;Location /svn&gt;
@@ -1113,11 +1113,11 @@ ServerName svn.example.com
 </screen>
 
       <para>...then your repository is <quote>anonymously</quote>
-         accessible to the world.  Until you configure some
-         authentication and authorization policies, the Subversion
-         repositories you make available via the
-         <literal>Location</literal> directive will be generally
-         accessible to everyone.  In other words,</para>
+        accessible to the world.  Until you configure some
+        authentication and authorization policies, the Subversion
+        repositories you make available via the
+        <literal>Location</literal> directive will be generally
+        accessible to everyone.  In other words,</para>
       
       <itemizedlist>
         <listitem>

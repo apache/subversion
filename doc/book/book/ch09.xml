@@ -6,8 +6,8 @@
       Subversion. This includes the command line client
       (<command>svn</command>) and all its subcommands, as well as the
       repository administration programs (<command>svnadmin</command>
-      and <command>svnlook</command>) and their respective subcommands.
-    </para>
+      and <command>svnlook</command>) and their respective
+      subcommands.</para>
   </simplesect>
   
   <!-- ================================================================= -->
@@ -54,8 +54,8 @@ $ svn status -v myfile
           <term><option>--auto-props</option></term>
           <listitem>
             <para>Enables auto-props, overriding the
-            <literal>enable-auto-props</literal> directive in the
-            <filename>config</filename> file.</para>
+              <literal>enable-auto-props</literal> directive in the
+              <filename>config</filename> file.</para>
           </listitem>
         </varlistentry>
         
@@ -64,9 +64,9 @@ $ svn status -v myfile
             <replaceable>DIR</replaceable></term>
           <listitem>
             <para>Instructs Subversion to read configuration
-            information from the specified directory instead
-            of the default location (<filename>.subversion</filename>
-            in the user's home directory).</para>
+              information from the specified directory instead of the
+              default location (<filename>.subversion</filename> in
+              the user's home directory).</para>
           </listitem>
         </varlistentry>
 
@@ -75,13 +75,13 @@ $ svn status -v myfile
             <replaceable>CMD</replaceable></term>
           <listitem>
             <para>Specifies an external program to use to show
-            differences between files.  When <command>svn
-            diff</command> is invoked, it uses Subversion's internal
-            diff engine, which provides unified diffs by default.  If
-            you want to use an external diff program, use
-            <option>--diff-cmd</option>.  You can pass switches to the
-            diff program with the <option>--extensions</option>
-            switch (more on that later in this section).</para>
+              differences between files.  When <command>svn
+              diff</command> is invoked, it uses Subversion's internal
+              diff engine, which provides unified diffs by default.
+              If you want to use an external diff program, use
+              <option>--diff-cmd</option>.  You can pass switches to
+              the diff program with the <option>--extensions</option>
+              switch (more on that later in this section).</para>
           </listitem>
         </varlistentry>
       
@@ -198,7 +198,7 @@ $ svn status -v myfile
           <term><option>--ignore-ancestry</option></term>
           <listitem>
             <para>Tells Subversion to ignore ancestry when calculating
-            differences (rely on path contents alone).</para>
+              differences (rely on path contents alone).</para>
           </listitem>
         </varlistentry>
       
@@ -228,7 +228,8 @@ $ svn commit -m "They don't make Sunday."
         <varlistentry>
           <term><option>--new</option> <replaceable>ARG</replaceable></term>
           <listitem>
-            <para>Uses <replaceable>ARG</replaceable> as the newer target.</para>
+            <para>Uses <replaceable>ARG</replaceable> as the newer
+              target.</para>
           </listitem>
         </varlistentry>
       
@@ -245,8 +246,8 @@ $ svn commit -m "They don't make Sunday."
           <term><option>--no-auto-props</option></term>
           <listitem>
             <para>Disables auto-props, overriding the
-            <literal>enable-auto-props</literal> directive in the
-            <filename>config</filename> file.</para>
+              <literal>enable-auto-props</literal> directive in the
+              <filename>config</filename> file.</para>
           </listitem>
         </varlistentry>
 
@@ -278,11 +279,11 @@ $ svn commit -m "They don't make Sunday."
           <term><option>--non-interactive</option></term>
           <listitem>
             <para>In the case of an authentication failure, or
-            insufficient credentials, prevents prompting for credentials
-            (e.g. username or password).  This is useful if you're
-            running Subversion inside of an automated script and it's
-            more appropriate to have Subversion fail than to prompt
-            for more information.</para>
+              insufficient credentials, prevents prompting for
+              credentials (e.g. username or password).  This is useful
+              if you're running Subversion inside of an automated
+              script and it's more appropriate to have Subversion fail
+              than to prompt for more information.</para>
           </listitem>
         </varlistentry>
       
@@ -308,7 +309,8 @@ $ svn commit -m "They don't make Sunday."
         <varlistentry>
           <term><option>--old</option> <replaceable>ARG</replaceable></term>
           <listitem>
-            <para>Uses <replaceable>ARG</replaceable> as the older target.</para>
+            <para>Uses <replaceable>ARG</replaceable> as the older
+              target.</para>
           </listitem>
         </varlistentry>
       
@@ -408,11 +410,11 @@ $ svn log -r 1729:{2002-02-17}
           <term><option>--stop-on-copy</option></term>
           <listitem>
             <para>Causes a Subversion subcommand which is traversing
-            the history of a versioned resource to stop harvesting
-            that historical information when a copy&mdash;that is, a
-            location in history where that resource was copied from
-            another location in the repository&mdash;is
-            encountered.</para>
+              the history of a versioned resource to stop harvesting
+              that historical information when a copy&mdash;that is, a
+              location in history where that resource was copied from
+              another location in the repository&mdash;is
+              encountered.</para>
           </listitem>
         </varlistentry>
         
@@ -420,8 +422,8 @@ $ svn log -r 1729:{2002-02-17}
           <term><option>--strict</option></term>
           <listitem>
             <para>Causes Subversion to use strict semantics, a notion
-            which is rather vague unless talking about specific
-            subcommands.</para>
+              which is rather vague unless talking about specific
+              subcommands.</para>
           </listitem>
         </varlistentry>
         
@@ -634,7 +636,7 @@ A         otherdir/docs/baz.doc
           <title>Examples</title>
 
           <para>If you want to see blame annotated source for
-          readme.txt in your test repository:</para>
+            readme.txt in your test repository:</para>
           <screen>
 $ svn blame http://svn.red-bean.com/repos/test/readme.txt
      3      sally This is a README file.
@@ -704,11 +706,11 @@ You should read this.
 
           <tip>
             <para>If your working copy is out of date (or you have
-            local modifications) and you want to see the
-            <literal>HEAD</literal> revision of a file in your working
-            copy, <command>svn cat</command> will automatically fetch
-            the <literal>HEAD</literal> revision when you give it a
-            path:</para>
+              local modifications) and you want to see the
+              <literal>HEAD</literal> revision of a file in your
+              working copy, <command>svn cat</command> will
+              automatically fetch the <literal>HEAD</literal> revision
+              when you give it a path:</para>
           </tip>
 
           <screen>
@@ -950,12 +952,12 @@ $ svn cleanup /path/to/working-copy
 
           <tip>
             <para>If you begin a commit and Subversion launches your
-            editor to compose the commit message, you can still abort
-            without committing your changes.  If you want to cancel
-            your commit, just quit your editor without saving your
-            commit message and Subversion will prompt you to either
-            abort the commit, continue with no message, or edit the
-            message again.</para>
+              editor to compose the commit message, you can still
+              abort without committing your changes.  If you want to
+              cancel your commit, just quit your editor without saving
+              your commit message and Subversion will prompt you to
+              either abort the commit, continue with no message, or
+              edit the message again.</para>
           </tip>
 
         </refsect1>
@@ -1003,7 +1005,8 @@ $ svn cleanup /path/to/working-copy
 
           <para>Commit a simple modification to a file with the
             commit message on the command line and an implicit
-            target of your current directory (<quote><filename>.</filename></quote>):</para>
+            target of your current directory
+            (<quote><filename>.</filename></quote>):</para>
           
           <screen>
 $ svn commit -m "added howto section."
@@ -1093,7 +1096,8 @@ Committed revision 7.
               <varlistentry>
                 <term>URL -&gt; WC</term>
                 <listitem>
-                  <para>Check out URL into WC, and schedule it for addition.</para>
+                  <para>Check out URL into WC, and schedule it for
+                    addition.</para>
                 </listitem>
               </varlistentry>
 
@@ -1255,7 +1259,8 @@ Committed revision 13.
 
         <refsect1>
           <title>Changes</title>
-          <para>Working copy if operating on files, Repository if operating on URLs</para>
+          <para>Working copy if operating on files, Repository if
+            operating on URLs</para>
         </refsect1>
 
         <refsect1>
@@ -1302,7 +1307,7 @@ Committed revision 14.
 </screen>
 
           <para>Deleting a URL, however, is immediate, so you have
-          to supply a log message:</para>
+            to supply a log message:</para>
 
           <screen>
 $ svn delete -m "Deleting file 'yourfile'" file:///tmp/repos/test/yourfile
@@ -1397,9 +1402,9 @@ D         over-there
               <term><option>--revision N:M</option></term>
               <listitem>
                 <para>The server compares
-                <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
-                and
-                <replaceable>TARGET</replaceable>@<replaceable>M</replaceable>.</para>
+                  <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
+                  and
+                  <replaceable>TARGET</replaceable>@<replaceable>M</replaceable>.</para>
               </listitem>
             </varlistentry>
 
@@ -1408,7 +1413,7 @@ D         over-there
               <listitem>
                 <para>The client compares
                   <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
-                against working copy.</para>
+                  against working copy.</para>
               </listitem>
             </varlistentry>
 
@@ -1530,7 +1535,7 @@ Index: COMMITTERS
 
 
           <para>Compare revision 3000 to revision 3500 of all files in
-          <filename>trunk</filename> using range notation:</para>
+            <filename>trunk</filename> using range notation:</para>
 
           <screen>
 $ svn diff -r 3000:3500 http://svn.collab.net/repos/svn/trunk
@@ -1829,7 +1834,7 @@ Committed revision 19.
           <title>Description</title>
 
           <para>Print information about paths in your working copy,
-          including:</para>
+            including:</para>
 
           <itemizedlist>
             <listitem><para>Path</para></listitem>
@@ -1993,8 +1998,8 @@ examples/
 </screen>
 
           <para>Like UNIX <command>ls</command>, you can also pass
-          the <option>--verbose</option> switch for additional
-          information:</para>
+            the <option>--verbose</option> switch for additional
+            information:</para>
 
           <screen>
 $ svn list --verbose file:///tmp/repos
@@ -2004,7 +2009,7 @@ $ svn list --verbose file:///tmp/repos
 </screen>
 
           <para>For further details, see <xref
-              linkend="svn-ch-3-sect-5.4"/>.</para>
+            linkend="svn-ch-3-sect-5.4"/>.</para>
 
         </refsect1>
       </refentry>
@@ -2286,8 +2291,7 @@ Made a change.
             takes the ancestry of a file into consideration when
             performing a merge operation.  This is very important when
             you're merging changes from one branch into another and
-            you've renamed a file on one branch but not the other.
-          </para>
+            you've renamed a file on one branch but not the other.</para>
 
         </refsect1>
         <refsect1>
@@ -2464,9 +2468,9 @@ Committed revision 26.
 
           <note>
             <para>Subversion does not support moving between working
-            copies and URLs.  In addition, you can only move files
-            within a single repository&mdash;Subversion does not
-            support cross-repository moving.</para>
+              copies and URLs.  In addition, you can only move files
+              within a single repository&mdash;Subversion does not
+              support cross-repository moving.</para>
           </note>
 
           <variablelist>
@@ -2950,7 +2954,7 @@ property 'svn:log' set on repository revision '25'
 </screen>
 
           <para>Or, if you don't have a working copy, you can
-          provide a URL.</para>
+            provide a URL.</para>
           
           <screen>
 $ svn propset --revprop -r 26 svn:log "Document nap." http://svn.red-bean.com/repos
@@ -2958,8 +2962,8 @@ property 'svn:log' set on repository revision '25'
 </screen>
 
           <para>Lastly, you can tell propset to take its input from
-          a file.  You could even use this to set the contents of a
-          property to something binary:</para>
+            a file.  You could even use this to set the contents of a
+            property to something binary:</para>
 
           <screen>
 $ svn propset owner-pic -F sally.jpg moo.c 
@@ -3224,7 +3228,7 @@ $ svn status
               <term>'C'</term>
               <listitem>
                 <para>Item is in conflict with updates received from
-                the repository.</para>
+                  the repository.</para>
               </listitem>
             </varlistentry>
 
@@ -3254,9 +3258,9 @@ $ svn status
               <term>'!'</term>
               <listitem>
                 <para>Item is missing (e.g. you moved or deleted it
-                without using <command>svn</command>).  This also
-                indicates that a directory is incomplete (a checkout
-                or update was interrupted).</para>
+                  without using <command>svn</command>).  This also
+                  indicates that a directory is incomplete (a checkout
+                  or update was interrupted).</para>
               </listitem>
             </varlistentry>
 
@@ -3294,8 +3298,8 @@ $ svn status
               <term>'C'</term>
               <listitem>
                 <para>Properties for this item are in conflict with
-                property updates received from the
-                repository.</para>
+                  property updates received from the
+                  repository.</para>
               </listitem>
             </varlistentry>
 
@@ -3465,12 +3469,12 @@ Status against revision:    981
 
           <note>
             <para><option>--show-updates</option>
-            <emphasis>only</emphasis> places an asterisk next to items
-            that are out of date (that is, items that will be updated
-            from the repository if you run <command>svn
-            update</command>).  <option>--show-updates</option> does
-            <emphasis>not</emphasis> cause the status listing to
-            reflect the repository's version of the item.</para>
+              <emphasis>only</emphasis> places an asterisk next to
+              items that are out of date (that is, items that will be
+              updated from the repository if you run <command>svn
+              update</command>).  <option>--show-updates</option> does
+              <emphasis>not</emphasis> cause the status listing to
+              reflect the repository's version of the item.</para>
           </note>
 
           <para>And finally, the most information you can get out of
@@ -3582,20 +3586,20 @@ Updated to revision 31.
           </tip>
 
           <para>Sometimes an administrator might change the "base
-             location" of your repository&mdash;in other words,
-             the contents of the repository doesn't change, but the
-             main URL used to reach the root of the repository does.
-             For example, the hostname may change, or the URL schema,
-             or perhaps just the path which leads to the repository.
-             Rather than checkout a new working copy, you can have the
-             <command>svn switch</command> command "rewrite" the
-             beginnings of all the URLs in your working copy.  Use the
-             <option>--relocate</option> command to do the
-             substitution.  No file contents are changed, nor is the
-             repository contacted.  It's similar to running a Perl
-             script over your working copy <filename>.svn/</filename>
-             directories which runs
-             <command>s/OldRoot/NewRoot/</command>.</para>
+            location" of your repository&mdash;in other words, the
+            contents of the repository doesn't change, but the main
+            URL used to reach the root of the repository does.  For
+            example, the hostname may change, or the URL schema, or
+            perhaps just the path which leads to the repository.
+            Rather than checkout a new working copy, you can have the
+            <command>svn switch</command> command "rewrite" the
+            beginnings of all the URLs in your working copy.  Use the
+            <option>--relocate</option> command to do the
+            substitution.  No file contents are changed, nor is the
+            repository contacted.  It's similar to running a Perl
+            script over your working copy <filename>.svn/</filename>
+            directories which runs
+            <command>s/OldRoot/NewRoot/</command>.</para>
 
           <screen>
 $ svn checkout file:///tmp/repos test
@@ -3768,7 +3772,7 @@ Updated to revision 30.
     <para><command>svnadmin</command> is the administrative tool for
       monitoring and repairing your Subversion repository.  For
       detailed information, see <xref
-        linkend="svn-ch-5-sect-3.1.2"/>.</para>
+      linkend="svn-ch-5-sect-3.1.2"/>.</para>
 
     <para>Since <command>svnadmin</command> works via direct repository access
       (and thus can only be used on the machine that holds the
@@ -3815,11 +3819,11 @@ Updated to revision 30.
           <term><option>--force-uuid</option></term>
           <listitem>
             <para>By default, when loading data into repository that
-            already contains revisions, <command>svnadmin</command>
-            will ignore the <literal>UUID</literal> from the dump
-            stream.  This switch will cause the repository's
-            <literal>UUID</literal> to be set to the
-            <literal>UUID</literal> from the stream.</para>
+              already contains revisions, <command>svnadmin</command>
+              will ignore the <literal>UUID</literal> from the dump
+              stream.  This switch will cause the repository's
+              <literal>UUID</literal> to be set to the
+              <literal>UUID</literal> from the stream.</para>
           </listitem>
         </varlistentry>
 
@@ -3827,9 +3831,9 @@ Updated to revision 30.
           <term><option>--ignore-uuid</option></term>
           <listitem>
             <para>By default, when loading an empty repository,
-            <command>svnadmin</command> will use the
-            <literal>UUID</literal> from the dump stream.  This switch
-            will cause that UUID to be ignored.</para>
+              <command>svnadmin</command> will use the
+              <literal>UUID</literal> from the dump stream.  This
+              switch will cause that UUID to be ignored.</para>
           </listitem>
         </varlistentry>
 
@@ -3847,8 +3851,8 @@ Updated to revision 30.
           <replaceable>DIR</replaceable></option></term>
           <listitem>
             <para>When loading a dumpfile, root paths at
-            <replaceable>DIR</replaceable> instead of
-            <filename>/</filename>.</para>
+              <replaceable>DIR</replaceable> instead of
+              <filename>/</filename>.</para>
           </listitem>
         </varlistentry>
 
@@ -3865,7 +3869,7 @@ Updated to revision 30.
           <term><option>--quiet</option></term>
           <listitem>
             <para>Do not show normal progress&mdash;show only
-            errors.</para>
+              errors.</para>
           </listitem>
         </varlistentry>
       </variablelist>
@@ -3917,9 +3921,10 @@ $ svnadmin create /usr/local/svn/repos
 </screen>
           
           <para>In Subversion 1.0, a Berkeley DB repository is always
-          created.  In Subversion 1.1, a Berkeley DB repository is the
-          default repository type, but an FSFS repository can be
-          created using the <option>--fs-type</option> option:</para>
+            created.  In Subversion 1.1, a Berkeley DB repository is
+            the default repository type, but an FSFS repository can be
+            created using the <option>--fs-type</option>
+            option:</para>
 
           <screen>
 $ svnadmin create /usr/local/svn/repos --fs-type fsfs
@@ -3950,8 +3955,6 @@ $ svnadmin create /usr/local/svn/repos --fs-type fsfs
             in the repository.  This turned out to be a lot of
             complexity for <emphasis>very</emphasis> little gain, and
             this <quote>feature</quote> was deprecated.</para>
-
-          <para></para>
 
             </refsect1>
         <refsect1>
@@ -4070,14 +4073,14 @@ Content-length: 101
           <title>Description</title>
 
           <para>This subcommand makes a full <quote>hot</quote> backup
-          of your repository, including all hooks, configuration
-          files, and, of course, database files.  If you pass the
-          <option>--clean-logs</option> switch,
-          <command>svnadmin</command> will perform a hotcopy of your
-          repository, and then remove unused Berkeley DB logs from the
-          original repository.  You can run this command at any time and make
-          a safe copy of the repository, regardless of whether other processes
-          are using the repository.</para>
+            of your repository, including all hooks, configuration
+            files, and, of course, database files.  If you pass the
+            <option>--clean-logs</option> switch,
+            <command>svnadmin</command> will perform a hotcopy of your
+            repository, and then remove unused Berkeley DB logs from
+            the original repository.  You can run this command at any
+            time and make a safe copy of the repository, regardless of
+            whether other processes are using the repository.</para>
 
         </refsect1>
 
@@ -4105,7 +4108,7 @@ Content-length: 101
         <refsect1>
           <title>Description</title>
 
-            <para>Berkeley DB creates logs of all changes to the
+          <para>Berkeley DB creates logs of all changes to the
             repository, which allow it to recover in the face of
             catastrophe.  Unless you enable
             <literal>DB_LOGS_AUTOREMOVE</literal>, the log files
@@ -4113,7 +4116,7 @@ Content-length: 101
             deleted to reclaim disk space. See <xref
             linkend="svn-ch-5-sect-3.3"/> for more
             information.</para>
-          </refsect1>
+        </refsect1>
 
       </refentry>
 
@@ -4131,7 +4134,7 @@ Content-length: 101
         <refsect1>
           <title>Description</title>
 
-            <para>Berkeley DB creates logs of all changes to the
+          <para>Berkeley DB creates logs of all changes to the
             repository, which allow it to recover in the face of
             catastrophe.  Unless you enable
             <literal>DB_LOGS_AUTOREMOVE</literal>, the log files
@@ -4139,7 +4142,7 @@ Content-length: 101
             deleted to reclaim disk space. See <xref
             linkend="svn-ch-5-sect-3.3"/> for more
             information.</para>
-          </refsect1>
+        </refsect1>
 
         <refsect1>
           <title>Examples</title>
@@ -4289,8 +4292,9 @@ The latest repos revision is 34.
 </screen>
 
           <para>Recovering the database requires an exclusive lock on
-          the repository.  If another process is accessing the
-          repository, then <command>svnadmin recover</command> will error:</para>
+            the repository.  If another process is accessing the
+            repository, then <command>svnadmin recover</command> will
+            error:</para>
           <screen>
 $ svnadmin recover /usr/local/svn/repos
 svn: Failed to get exclusive repository access; perhaps another process
@@ -4300,8 +4304,8 @@ $
 </screen>
 
           <para>The <option>--wait</option> option, however, will
-          cause <command>svnadmin recover</command> to wait
-          indefinitely for other processes to disconnect:</para>
+            cause <command>svnadmin recover</command> to wait
+            indefinitely for other processes to disconnect:</para>
 
           <screen>
 $ svnadmin recover /usr/local/svn/repos --wait
@@ -4437,9 +4441,9 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
           <title>Description</title>
 
           <para>Run this command if you wish to verify the integrity
-          of your repository.  This basically iterates through all
-          revisions in the repository by internally dumping all
-          revisions and discarding the output.</para>
+            of your repository.  This basically iterates through all
+            revisions in the repository by internally dumping all
+            revisions and discarding the output.</para>
         </refsect1>
 
         <refsect1>
@@ -4567,7 +4571,7 @@ $ svnadmin verify /usr/local/svn/repos/
           <title>Examples</title>
 
         <para><command>svnlook author</command> is handy, but not
-            very exciting:</para>
+          very exciting:</para>
 
           <screen>
 $ svnlook author -r 40 /usr/local/svn/repos 
@@ -4748,7 +4752,7 @@ $ svnlook date -r 40 /tmp/repos/
           <title>Examples</title>
           
           <para>This shows a newly added (empty) file, a deleted
-          file, and a copied file:</para>
+            file, and a copied file:</para>
 
           <screen>
 $ svnlook diff -r 40 /usr/local/svn/repos/
@@ -4775,10 +4779,9 @@ Deleted: trunk/vendors/deli/pickle.txt
 ==============================================================================
 </screen>
           
-       <para>
-       If a file has a non-textual <literal>svn:mime-type</literal>
-       property, then the differences are not explicitly shown.
-       </para>
+          <para>If a file has a non-textual
+            <literal>svn:mime-type</literal> property, then the
+            differences are not explicitly shown.</para>
         </refsect1>
       </refentry>
 
@@ -4981,7 +4984,7 @@ Rearrange lunch.
           <title>Examples</title>
           
           <para>This shows the log output for revision 40 in our sample
-          repository:</para>
+            repository:</para>
 
           <screen>
 $ svnlook log /tmp/repos/
@@ -5199,7 +5202,7 @@ e7fe1b91-8cd5-0310-98dd-2f12e793c5e8
           <title>Examples</title>
 
         <para>This shows the youngest revision of our sample
-            repository:</para>
+          repository:</para>
 
           <screen>          
 $ svnlook youngest /tmp/repos/ 

@@ -48,7 +48,7 @@
       6.</para>
 
     <para>For more details on this topic, see <xref
-    linkend="svn-ch-2-sect-3.2" />.</para>
+      linkend="svn-ch-2-sect-3.2" />.</para>
 
   </sect1>
 
@@ -149,7 +149,7 @@
         <term><command>svn status</command></term>
         <listitem>
           <para>Shows you any local changes you've made (see <xref
-              linkend="svn-ch-3-sect-4.3.1"/>)</para>
+            linkend="svn-ch-3-sect-4.3.1"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -157,7 +157,7 @@
         <term><command>svn diff</command></term>
         <listitem>
           <para>Shows you the details of your changes (see <xref
-              linkend="svn-ch-3-sect-4.3.2"/>)</para>
+            linkend="svn-ch-3-sect-4.3.2"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -165,7 +165,7 @@
         <term><command>svn revert</command></term>
         <listitem>
           <para>Removes your local changes (see <xref
-              linkend="svn-ch-3-sect-4.3.3"/>)</para>
+            linkend="svn-ch-3-sect-4.3.3"/>)</para>
         </listitem>
       </varlistentry>
 
@@ -310,7 +310,7 @@ X    Resource is external to this working copy (comes from another
       whole sentence about it.</para>
 
     <para>For a more detailed discussion of <command>svn
-    status</command>, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+      status</command>, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
 
 
   </sect1>
@@ -330,16 +330,17 @@ X    Resource is external to this working copy (comes from another
 
     <warning>
       <para>Since Subversion treats branches and tags as ordinary
-      directories, always remember to check out the
-      <literal>trunk</literal>
-      (<literal>http://svn.example.com/repos/calc/trunk/</literal>) of
-      your project, and not the project itself
-      (<literal>http://svn.example.com/repos/calc/</literal>).  If you
-      make the mistake of checking out the project itself, you'll wind
-      up with a working copy that contains a copy of your project for
-      every branch and tag you have.<footnote><para>That is, providing
-      you don't run out of disk space before your checkout
-      finishes.</para></footnote></para>
+        directories, always remember to check out the
+        <literal>trunk</literal>
+        (<literal>http://svn.example.com/repos/calc/trunk/</literal>)
+        of your project, and not the project itself
+        (<literal>http://svn.example.com/repos/calc/</literal>).  If
+        you make the mistake of checking out the project itself,
+        you'll wind up with a working copy that contains a copy of
+        your project for every branch and tag you
+        have.<footnote><para>That is, providing you don't run out of
+        disk space before your checkout
+        finishes.</para></footnote></para>
     </warning>
 
   </sect1>
