@@ -17,6 +17,8 @@ Everyone:
      convenient enough way to pass content?  Well, probably... after
      all, they're good enough for the rest of Subversion.]
 
+     This needs a more formal writeup, then to the list.
+
 Ben and Karl XML factorization todo:
    - generalize signal_expat_bailout
 
