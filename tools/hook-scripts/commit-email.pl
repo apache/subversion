@@ -239,7 +239,7 @@ if (scalar @mods) {
 push(@body, "Log:\n");
 push(@body, @log);
 push(@body, "\n");
-push(@body, map{ "$_\n" } @difflines);
+push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines);
 
 # Go through each project and see if there are any matches for this
 # project.  If so, send the log out.
