@@ -99,7 +99,11 @@ typedef enum svn_errno_t {
   /* Trying to unlock when there's non-empty unwind stack. */
   SVN_ERR_WC_UNWIND_NOT_EMPTY,
 
-  /* A bogus working copy logfile (?) */
+  /* What happens if a non-blocking call to svn_wc__lock() encounters
+     another lock. */
+  SVN_ERR_WC_LOCKED,
+
+  /* Something's wrong with the log file format. */
   SVN_ERR_WC_BAD_ADM_LOG,
 
   /* A general filesystem error.  */
@@ -119,10 +123,6 @@ typedef enum svn_errno_t {
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
-
-  /* What happens if a non-blocking call to svn_wc__lock() encounters
-     another lock. */
-  SVN_ERR_WC_LOCKED,
 
   /* a bad URL was passed to the repository access layer */
   SVN_ERR_ILLEGAL_URL,
