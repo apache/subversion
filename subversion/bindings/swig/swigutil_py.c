@@ -608,13 +608,13 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 /*** Other Wrappers for SVN Functions ***/
 
-static svn_error_t * log_receiver(void *baton,
-                                  apr_hash_t *changed_paths,
-                                  svn_revnum_t rev,
-                                  const char *author,
-                                  const char *date,
-                                  const char *msg,
-                                  apr_pool_t *pool)
+svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
+                                             apr_hash_t *changed_paths,
+                                             svn_revnum_t rev,
+                                             const char *author,
+                                             const char *date,
+                                             const char *msg,
+                                             apr_pool_t *pool)
 {
   PyObject *receiver = baton;
   PyObject *result;
@@ -633,21 +633,6 @@ static svn_error_t * log_receiver(void *baton,
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
   return SVN_NO_ERROR;
-}
-
-svn_error_t * svn_swig_py_repos_get_logs(svn_repos_t *repos,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t start,
-                                         svn_revnum_t end,
-                                         svn_boolean_t discover_changed_paths,
-                                         svn_boolean_t strict_node_history,
-                                         PyObject *py_receiver,
-                                         apr_pool_t *pool)
-{
-  return svn_repos_get_logs(repos, paths, start, end, 
-                            FALSE /* discover_changed_paths */,
-                            strict_node_history, 
-                            log_receiver, py_receiver, pool);
 }
 
 /* ----------------------------------------------------------------
