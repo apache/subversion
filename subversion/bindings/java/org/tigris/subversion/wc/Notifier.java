@@ -25,6 +25,9 @@ import org.tigris.subversion.Revision;
  */
 public interface Notifier
 {
-    void notify(int action, NodeKind kind, String mimeType, int notifyState,
-                int propState, Revision revision);
+    /**
+     * <code>notify()</code> has Java-specific semantics.
+     */
+    void notifyWC(int action, NodeKind kind, String mimeType, int notifyState,
+                  int propState, Revision revision);
 }
