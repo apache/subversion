@@ -1371,8 +1371,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   /* Fetch the rootdir_baton by calling into the editor */
   if (editor->replace_root) 
     {
-      err = (* (editor->replace_root)) (base_path, base_version,
-                                        edit_baton, &rootdir_baton);
+      err = (* (editor->replace_root)) (edit_baton, &rootdir_baton);
       if (err)
         return
           svn_error_quick_wrap 

@@ -544,6 +544,8 @@ replace_file (svn_string_t *name,
               svn_vernum_t ancestor_version,
               void **file_baton)
 {
+  svn_error_t *err;
+
 #if 0
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
 #endif /* 0 */
