@@ -418,35 +418,36 @@ following forms:
         a clone in TXN, since its contents have been modified.
 
 Thus, we can use the following algorithm to clone a node in TXN whose
-name in the base revision is BASE-NAME:
+name in the base revision is BASE-PATH:
 
-If BASE-NAME is empty:
+If BASE-PATH is empty:
   We're trying to clone the root.  The transaction's record in
   `transactions' tells us whether its root has been cloned yet; that's
   where we record things.
 Otherwise:
-  Check the `clones' table for an entry for (TXN BASE-NAME).
+  Check the `clones' table for an entry for (TXN BASE-PATH).
   If there is an entry of the form (cloned CLONE):
     Our node has already been cloned, and CLONE is the clone's ID.
   If there is an entry of the form (moved PARENT-CLONE ENTRY),
-    Create our own clone of BASE-NAME, CLONE.
-    Change the entry named ENTRY in PARENT-CLONE to point to CLONE.
+    Create our own clone of BASE-PATH, CLONE.
     Change the entry in `clones' to (cloned CLONE).
+    Change the entry named ENTRY in PARENT-CLONE to point to CLONE.
   If there is no entry in `clones':
-    The directory path BASE-NAME contains at least one component;
+    The directory path BASE-PATH contains at least one component;
     divide it into its rightmost component, LAST, and the path leading
     up to that, BASE-PARENT.
     Recurse on this process to create a clone of BASE-PARENT, whose ID
     is PARENT-CLONE.
     Create a clone of our node, CLONE.
+    Add an entry in `clones' for (TXN BASE-PATH) whose value is (cloned CLONE).
     Change the entry named LAST in PARENT-CLONE to point to CLONE.
-    Add an entry in `clones' for (TXN BASE-NAME) whose value is (cloned CLONE).
 
 Since clone tracking is based on nodes' names in the base revision, we
 must always be able to find a node's base name, even if we reached
 that node through cloned nodes.  To this end, whenever we move an
 uncloned node, we record its original base name in the new directory
-entry referring to it.
+entry referring to it.  This is the BASE-PATH element of the directory
+entry, described above.
 
 
 Merge rules
