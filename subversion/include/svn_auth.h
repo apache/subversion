@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_auth.h
- * @brief Support for user authentication
+ * @brief Interface to Subversion authentication system
  */
 
 #ifndef SVN_AUTH_H
@@ -30,72 +30,86 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/*  Overview of the svn authentication system:
+/** Overview of the svn authentication system.
+ *    
+ * We define an authentication "provider" as a module that is able to
+ * return a specific set of credentials. (e.g. username/password,
+ * certificate, etc.)  Each provider implements a vtable that
+ *
+ * - can fetch initial credentials
+ * - can retry the fetch (or try to fetch something different)
+ * - can store the credentials for future use
+ *
+ * For any given type of credentials, there can exist any number of
+ * separate providers -- each provider has a different method of
+ * fetching. (i.e. from a disk store, by prompting the user, etc.)
+ *
+ * The application begins by creating an auth baton object, and
+ * "registers" some number of providers with the auth baton, in a
+ * specific order.  (For example, it may first register a
+ * username/password provider that looks in disk store, then register
+ * a username/password provider that prompts the user.)
+ *
+ * Later on, when any svn library is challenged, it asks the auth
+ * baton for the specific credentials.  If the initial credentials
+ * fail to authenticate, the caller keeps requesting new credentials.
+ * Under the hood, libsvn_auth effectively "walks" over each provider
+ * (in order of registry), one at a time, until all the providers have
+ * exhausted all their retry options.
+ *
+ * This system allows an application to flexibly define authentication
+ * behaviors (by changing registration order), and very easily write
+ * new authentication providers.
+ *
+ * @defgroup auth_fns authentication functions
+ * @{
+ */
 
-    We define an authentication "provider" as a module that is able to
-    return a specific set of credentials. (e.g. username/password,
-    certificate, etc.)  Each provider implements a vtable that
 
-      1. can fetch initial credentials
-      2. can retry the fetch (or try to fetch something different)
-      3. can store the credentials for future use
-
-    For any given type of credentials, there can exist any number of
-    separate providers -- each provider has a different method of
-    fetching. (i.e. from a disk store, by prompting the user, etc.)
-
-    The application begins by creating an auth baton object, and
-    "registers" some number of providers with the auth baton, in a
-    specific order.  (For example, it may first register a
-    username/password provider that looks in disk store, then register
-    a username/password provider that prompts the user.)
-
-    Later on, when any svn library is challenged, it asks the auth
-    baton for the specific credentials.  If the initial credentials
-    fail to authenticate, the caller keeps requesting new credentials.
-    Under the hood, libsvn_auth effectively "walks" over each provider
-    (in order of registry), one at a time, until all the providers
-    have exhausted all their retry options.
-
-    This system allows an application to flexibly define
-    authentication behaviors (by changing registration order), and
-    very easily write new authentication providers.
-*/
-
-
+/** The type of a Subversion authentication object */
 typedef struct svn_auth_baton_t svn_auth_baton_t;
+
+/** The type of a Subversion authentication-iteration object */
 typedef struct svn_auth_iterstate_t svn_auth_iterstate_t;
 
 
-/* The main authentication provider vtable. */
+/** The main authentication "provider" vtable. */
 typedef struct
 {
-  /* A string that describes the kind of credentials this provider
-     understands. */
+  /** The kind of credentials this provider knows how to retrieve. */
   const char *cred_kind;
   
-  /* Set *CREDENTIALS to a set of valid credentials, or NULL if no
-     credentials are available.  Set *ITER_BATON to context that
-     allows a subsequent call to next_credentials(), in case the first
-     credentials fail to authenticate.  PROVIDER_BATON is general
-     context for the vtable. */
+  /** Get an initial set of credentials.
+   *
+   * Set @a *credentials to a set of valid credentials, or NULL if no
+   * credentials are available.  Set @a *iter_baton to context that
+   * allows a subsequent call to @c next_credentials, in case the
+   * first credentials fail to authenticate.  @a provider_baton is
+   * general context for the vtable.
+   */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
                                       apr_pool_t *pool);
 
-  /* Set *CREDENTIALS to another set of valid credentials, (using
-     ITER_BATON as the context from previous call to first_credentials
-     or next_credentials).  If no more credentials are available,
-     set *CREDENITALS to NULL. */
+  /** Get a different set of credentials.
+   *
+   * Set @a *credentials to another set of valid credentials, (using
+   * @a iter_baton as the context from previous call to first_credentials
+   * or next_credentials).  If no more credentials are available, set
+   * @a **credenitals to NULL.
+   */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
                                      apr_pool_t *pool);
   
-  /* Store CREDENTIALS for future use.  PROVIDER_BATON is general
-     context for the vtable.  Set *SAVED to true if the save happened,
-     or false if not.  (The provider is not required to save;  if it
-     refuses or is unable to save, return false.) */
+  /** Save credentials.
+   *
+   * Store @a credentials for future use.  @a provider_baton is
+   * general context for the vtable.  Set @a *saved to true if the
+   * save happened, or false if not.  (The provider is not required to
+   * save; if it refuses or is unable to save, return false.)
+   */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
                                      void *provider_baton,
@@ -103,9 +117,10 @@ typedef struct
   
 } svn_auth_provider_t;
 
+
 /** Specific types of credentials **/
 
-/* A type of credentials:  a simple username/password pair. */
+/** A simple username/password pair. */
 #define SVN_AUTH_CRED_SIMPLE "svn:simple"
 typedef struct
 {
@@ -114,7 +129,7 @@ typedef struct
   
 } svn_auth_cred_simple_t;
 
-/* A type of credentials:  just a username. */
+/** Just a username. */
 #define SVN_AUTH_CRED_USERNAME "svn:username"
 typedef struct
 {
@@ -123,65 +138,82 @@ typedef struct
 } svn_auth_cred_username_t;
 
 
-/** Public Interface **/
+
 
-/* Return an authentication object in *AUTH_BATON (allocated in POOL)
-   that represents a particular instance of the svn authentication
-   system.  *AUTH_BATON will remember POOL, and use it to store
-   registered providers. */
+/** Initialize an authentication system.
+ *
+ * Return an authentication object in @a *auth_baton (allocated in @a
+ * pool) that represents a particular instance of the svn
+ * authentication system.  @a *auth_baton will remember @a pool, and
+ * use it to store registered providers.
+ */
 svn_error_t * svn_auth_open(svn_auth_baton_t **auth_baton,
                             apr_pool_t *pool);
 
-/* Register an authentication provider (defined by
-   VTABLE/PROVIDER_BATON) with AUTH_BATON, in the order specified by
-   ORDER.  Use POOL for any temporary allocation. */
+/** Register an authentication provider.
+ *
+ * Register an authentication provider (defined by @a vtable and @a
+ * provider_baton) with @a auth_baton, in the order specified by
+ * @a order.  Use @a pool for any temporary allocation.
+ */
 svn_error_t * svn_auth_register_provider(svn_auth_baton_t *auth_baton,
                                          int order,
                                          const svn_auth_provider_t *vtable,
                                          void *provider_baton,
                                          apr_pool_t *pool);
 
-/* Ask AUTH_BATON to set *CREDENTIALS to a set of credentials defined
-   by CRED_KIND, or NULL if no credentials are available.  Otherwise,
-   return an iteration state in *STATE, so that the caller can call
-   svn_auth_next_credentials(), in case the first set of credentials
-   fails to authenticate.
-
-   Use POOL to allocate *STATE, and for temporary allocation.  Note
-   that there is no guarantee about where *CREDENTIALS will be
-   allocated: it might be in POOL, or it might be in AUTH_BATON->POOL,
-   depending on the provider.  So safe callers should duplicate the
-   credentials to safe place if they plan to free POOL.
-*/
+/** Get an initial set of credentials.
+ *
+ * Ask @a auth_baton to set @a *credentials to a set of credentials
+ * defined by @a cred_kind, or NULL if no credentials are available.
+ * Otherwise, return an iteration state in @a *state, so that the
+ * caller can call @c svn_auth_next_credentials, in case the first set
+ * of credentials fails to authenticate.
+ *
+ * Use @a pool to allocate @a *state, and for temporary allocation.
+ * Note that there is no guarantee about where @a *credentials will be
+ * allocated: it might be in @a pool, or it might be in @a
+ * auth_baton->pool, depending on the provider.  So safe callers
+ * should duplicate the credentials to safe place if they plan to free
+ * @a pool.
+ */
 svn_error_t * svn_auth_first_credentials(void **credentials,
                                          svn_auth_iterstate_t **state,
                                          const char *cred_kind,
                                          svn_auth_baton_t *auth_baton,
                                          apr_pool_t *pool);
 
-/* Use STATE to fetch a different set of *CREDENTIALS, as a follow-up
-   to svn_auth_first_credentials() or svn_auth_next_credentials().
-   If no more credentials are available, set *CREDENTIALS to NULL.
-
-   Use POOL for temporary allocation.  Note that there is no guarantee
-   about where *CREDENTIALS will be allocated: it might be in POOL, or
-   it might be in AUTH_BATON->POOL, depending on the provider.  So
-   safe callers should duplicate the credentials to safe place if they
-   plan to free POOL.
-*/
+/** Get another set of credentials, assuming previous ones failed to
+ * authenticate.
+ *
+ * Use @a state to fetch a different set of @a *credentials, as a
+ * follow-up to @c svn_auth_first_credentials or @c
+ * svn_auth_next_credentials.  If no more credentials are available,
+ * set @a *credentials to NULL.
+ *
+ * Use @a pool for temporary allocation.  Note that there is no
+ * guarantee about where @a *credentials will be allocated: it might
+ * be in @a pool, or it might be in @a auth_baton->pool, depending on
+ * the provider.  So safe callers should duplicate the credentials to
+ * safe place if they plan to free @a pool.
+ */
 svn_error_t * svn_auth_next_credentials(void **credentials,
                                         svn_auth_iterstate_t *state,
                                         apr_pool_t *pool);
 
-/* Ask AUTH_BATON to store CREDENTIALS (of type CRED_KIND) for future
-   use.  Presumably these credentials authenticated successfully.  Use
-   POOL for temporary allocation.  If no provider is able to store the
-   credentials, return error. */
+/** Save a set of credentials.
+ *
+ * Ask @a auth_baton to store @a credentials (of type @a cred_kind)
+ * for future use.  Presumably these credentials authenticated
+ * successfully.  Use @a pool for temporary allocation.  If no
+ * provider is able to store the credentials, return error.
+ */
 svn_error_t * svn_auth_save_credentials(const char *cred_kind,
                                         void *credentials,
                                         svn_auth_baton_t *auth_baton,
                                         apr_pool_t *pool);
 
+/** @} */
 
 #ifdef __cplusplus
 }
