@@ -403,8 +403,8 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
 #if APR_HAS_THREADS
 /* Cleanup function to reset the allocator mutex so that apr_alloctor_free
-   doesn't try to lock a destroyed mutex during pool cleanup.*/
-
+   doesn't try to lock a destroyed mutex during pool cleanup or destruction.
+ */
 static apr_status_t
 allocator_reset_mutex (void *allocator)
 {
@@ -474,7 +474,8 @@ SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
 
         apr_allocator_mutex_set (allocator, mutex);
         apr_pool_cleanup_register (ret_pool, allocator,
-                                   allocator_reset_mutex, NULL);
+                                   allocator_reset_mutex,
+                                   apr_pool_cleanup_null);
       }
 #endif /* APR_HAS_THREADS */
 
@@ -524,19 +525,23 @@ SVN_POOL_FUNC_DEFINE(void, svn_pool_clear)
     {
 #if APR_HAS_THREADS
       /* At this point, the mutex we set on our own allocator will have
-	 been destroyed.  Better create a new one.
+         been destroyed.  Better create a new one.
        */
       apr_allocator_t *allocator;
       apr_thread_mutex_t *mutex;
+      apr_status_t apr_err;
 
       allocator = apr_pool_allocator_get (pool);
-      apr_allocator_mutex_set (allocator, NULL);
-      (void) apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
+      apr_err = apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                         pool);
+      if (apr_err)
+          abort_on_pool_failure (apr_err);
+
       apr_allocator_mutex_set (allocator, mutex);
       apr_pool_cleanup_register (pool, allocator,
-                                 allocator_reset_mutex, NULL);
+                                 allocator_reset_mutex, apr_pool_cleanup_null);
 #endif /* APR_HAS_THREADS */
-	
+
       /* Here we have a problematic situation.  We cleared the pool P,
          which invalidated all its userdata.  The problem is that as
          far as we can tell, the error pool on this pool isn't a copy
