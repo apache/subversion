@@ -87,6 +87,9 @@ typedef struct {
   /* The URI of the XSL transform for directory indexes */
   const char *xslt_uri;
 
+  /* Whether autoversioning is active for this repository. */
+  svn_boolean_t autoversioning;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -196,6 +199,9 @@ struct dav_resource_private {
   /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
   const char *svn_client_options;
 
+  /* was this resource auto-checked-out? */
+  svn_boolean_t auto_checked_out;
+
   /* Pool to allocate temporary data from */
   apr_pool_t *pool;
 };
@@ -238,6 +244,9 @@ extern const dav_hooks_vsn dav_svn_hooks_vsn;
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn_get_fs_path(request_rec *r);
 const char *dav_svn_get_fs_parent_path(request_rec *r);
+
+/* for the repository referred to by this request, is autoversioning active? */
+svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r);
 
 /* SPECIAL URI
 
@@ -298,10 +307,46 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
   ACTIVITY_ID, and the name of the transaction is specified by
   TXN_NAME. These will be assembled into a new dav_resource and
   returned.
+
+  If TWEAK_IN_PLACE is non-zero, then directly tweak BASE into a
+  working resource and return NULL.
 */
-dav_resource *dav_svn_create_working_resource(const dav_resource *base,
+dav_resource *dav_svn_create_working_resource(dav_resource *base,
                                               const char *activity_id,
-                                              const char *txn_name);
+                                              const char *txn_name,
+                                              int tweak_in_place);
+/* 
+   Convert a working RESOURCE back into a regular one, in-place.
+
+   In particular: change the resource type to regular, removing the
+   'working' flag, change the fs root from a txn-root to a rev-root,
+   and set the URL back into either a public URL or bc URL.
+*/
+dav_error *dav_svn_working_to_regular_resource(dav_resource *resource);
+
+/* 
+   Given a version-resource URI, construct a new version-resource in
+   POOL and return it in  *VERSION_RES.
+*/
+dav_error *dav_svn_create_version_resource(dav_resource **version_res,
+                                           const char *uri,
+                                           apr_pool_t *pool);
+
+
+/* 
+   Hook function of types 'checkout' and 'checkin', as defined in
+   mod_dav.h's versioning provider hooks table (see dav_hooks_vsn).
+*/
+dav_error *dav_svn_checkout(dav_resource *resource,
+                            int auto_checkout,
+                            int is_unreserved, int is_fork_ok,
+                            int create_activity,
+                            apr_array_header_t *activities,
+                            dav_resource **working_resource);
+
+dav_error *dav_svn_checkin(dav_resource *resource,
+                           int keep_checked_out,
+                           dav_resource **version_resource);
 
 
 enum dav_svn_build_what {
