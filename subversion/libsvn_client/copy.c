@@ -298,7 +298,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       
       base_name = svn_path_basename (src_url, pool);
       hypothetical_repos_path 
-        = svn_path_join (dst_rel, svn_path_uri_decode (base_name, pool), pool);
+        = svn_path_join (dst_rel ? dst_rel : "", 
+                         svn_path_uri_decode (base_name, pool), pool);
       SVN_ERR (ra_lib->check_path (&some_kind, sess,
                                    hypothetical_repos_path, youngest));
       if (some_kind != svn_node_none)
