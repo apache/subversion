@@ -785,6 +785,11 @@ change_dir_prop (void *dir_baton,
           entry.cmt_author = apr_pstrdup (pool, value->data);
           modify_flags = SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
         }
+      else if ((! strcmp (name, SVN_PROP_ENTRY_UUID)) && value)
+        {
+          entry.uuid = apr_pstrdup (pool, value->data);
+          modify_flags = SVN_WC__ENTRY_MODIFY_UUID;
+        }
 
       if (modify_flags)
         {
@@ -1512,6 +1517,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
             entry_field = SVN_WC__ENTRY_ATTR_CMT_REV;
           else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
             entry_field = SVN_WC__ENTRY_ATTR_CMT_DATE;
+          else if (! strcmp (prop->name, SVN_PROP_ENTRY_UUID))
+            entry_field = SVN_WC__ENTRY_ATTR_UUID;
           else
             continue;
 

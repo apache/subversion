@@ -43,6 +43,7 @@
 #include "bdb/changes-table.h"
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
+#include "bdb/uuids-table.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -160,6 +161,7 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &fs->changes, "changes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->uuids, "uuids"));
 
   /* Checkpoint any changes.  */
   {
@@ -508,6 +510,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__bdb_open_strings_table (&fs->strings,
                                                      fs->env, 1));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating `uuids' table",
+                     svn_fs__bdb_open_uuids_table (&fs->uuids,
+                                                   fs->env, 1));
+  if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
   svn_err = svn_fs__dag_init_fs (fs);
@@ -571,12 +577,16 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__bdb_open_changes_table (&fs->changes,
                                                      fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `representations' table",
+  svn_err = BDB_WRAP (fs, "opening `representations' table",
                      svn_fs__bdb_open_reps_table (&fs->representations,
                                                   fs->env, 0));
   if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating `strings' table",
+  svn_err = BDB_WRAP (fs, "opening `strings' table",
                      svn_fs__bdb_open_strings_table (&fs->strings,
+                                                     fs->env, 0));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening `uuids' table",
+                     svn_fs__bdb_open_uuids_table (&fs->uuids,
                                                      fs->env, 0));
   if (svn_err) goto error;
 
