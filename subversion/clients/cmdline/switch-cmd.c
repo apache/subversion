@@ -44,8 +44,10 @@ svn_cl__switch (apr_getopt_t *os,
   svn_string_t str;
   svn_wc_entry_t *entry;
   svn_client_auth_baton_t *auth_baton;
-  const svn_delta_edit_fns_t *trace_editor;
+  const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
   svn_stringbuf_t *parent_dir, *base_tgt;
 
   /* ### REMOVE ME when commits and updates learn how to deal with
@@ -104,10 +106,15 @@ svn_cl__switch (apr_getopt_t *os,
                                             &trace_edit_baton,
                                             parent_dir, pool));
 
+  /* ### todo: This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         trace_editor, trace_edit_baton, pool);
+
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch
            (NULL, NULL, 
-            trace_editor, trace_edit_baton,
+            wrap_editor, wrap_edit_baton,
             auth_baton,
             target,
             switch_url,
