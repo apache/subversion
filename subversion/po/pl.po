@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-08-24 11:36+0200\n"
-"PO-Revision-Date: 2004-08-24 11:37+0200\n"
+"PO-Revision-Date: 2004-08-25 23:36+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3274,6 +3274,8 @@ msgstr "Błędne dane svndiff w tablicy reprezentacji"
 #: libsvn_fs_fs/fs_fs.c:1257
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr ""
+"Podczas czytania danych okna svndiff przekroczono koniec \n"
+"tablicy reprezentacji"
 
 #: libsvn_fs_fs/fs_fs.c:1346
 msgid "svndiff data requested non-existent source"
@@ -3312,15 +3314,15 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:1934
 msgid "Invalid change kind in rev file"
-msgstr ""
+msgstr "Niewłaściwy rodzaj modyfikacji w pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:1954
 msgid "Invalid text-mod flag in rev-file"
-msgstr ""
+msgstr "Niewłaściwa flaga text-mod w pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:1974
 msgid "Invalid prop-mod flag in rev-file"
-msgstr ""
+msgstr "Niewłaściwa flaga prop-mod w pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:2150
 msgid "Copying from transactions not allowed"
@@ -5135,9 +5137,9 @@ msgstr ""
 "Użyj 'svnadmin help %s' by uzyskać więcej informacji..\n"
 
 #: svndumpfilter/main.c:363
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid copy source path '%s'"
-msgstr "Błędna składnia ścieżki"
+msgstr "Błędna składnia ścieżki '%s'"
 
 #: svndumpfilter/main.c:414
 msgid "Node with dropped parent sneaked in"
@@ -5171,7 +5173,7 @@ msgstr ""
 
 #: svndumpfilter/main.c:713
 msgid "Don't filter revision properties."
-msgstr ""
+msgstr "Nie filtruj atrybutów wersji."
 
 #: svndumpfilter/main.c:724
 msgid ""
@@ -5186,7 +5188,6 @@ msgid ""
 msgstr ""
 
 #: svndumpfilter/main.c:736
-#, fuzzy
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
@@ -5195,7 +5196,6 @@ msgstr ""
 "Wykorzystanie: help [POLECENIE...]\n"
 
 #: svndumpfilter/main.c:799
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
@@ -5254,7 +5254,7 @@ msgid "Dropped %d node(s):\n"
 msgstr "Opuszczono %d obiekt(y):\n"
 
 #: svndumpfilter/main.c:1125
-#, fuzzy, c-format
+#, c-format
 msgid "unknown command: '%s'\n"
 msgstr "Nieznane polecenie: '%s'\n"
 
