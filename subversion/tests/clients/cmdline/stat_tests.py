@@ -158,6 +158,17 @@ def status_missing_file(sbox):
     for line in output:
       if not re.match("! +iota", line):
         raise svntest.Failure
+
+    # This invocation is for issue #2127.
+    output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status', '-u', 'iota')
+    found_it = 0
+    for line in output:
+      if re.match("! +1 +iota", line):
+        found_it = 1
+    if not found_it:
+      raise svntest.Failure
+
   finally:
     os.chdir(was_cwd)
 
@@ -495,7 +506,7 @@ def status_on_forward_deletion(sbox):
   saved_cwd = os.getcwd()
   os.chdir(wc_dir)
   try:
-    svntest.main.run_svn(None, 'co', '-r1', top_url, 'wc')
+    svntest.main.run_svn(None, 'co', '-r1', top_url + "@1", 'wc')
     # If the bug is present, this will error with
     #
     #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
@@ -515,7 +526,7 @@ def status_on_forward_deletion(sbox):
     # (Dang!  Hope a user never has to see that :-) ).
     #
     svntest.main.safe_rmtree('wc')
-    svntest.main.run_svn(None, 'co', '-r1', A_url, 'wc')
+    svntest.main.run_svn(None, 'co', '-r1', A_url + "@1", 'wc')
     svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
     
   finally:

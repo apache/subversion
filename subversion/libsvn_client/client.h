@@ -344,6 +344,7 @@ svn_error_t *
 svn_client__checkout_internal (svn_revnum_t *result_rev,
                                const char *URL,
                                const char *path,
+                               const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
                                svn_boolean_t *timestamp_sleep,

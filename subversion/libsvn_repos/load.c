@@ -197,6 +197,9 @@ stream_malformed (void)
    PARSE_FNS->set_*_property on RECORD_BATON (depending on the value
    of IS_NODE.)
 
+   Set *ACTUAL_LENGTH to the number of bytes consumed from STREAM.
+   If an error is returned, the value of *ACTUAL_LENGTH is undefined.
+
    Use POOL for all allocations.  */
 static svn_error_t *
 parse_property_block (svn_stream_t *stream,
@@ -637,20 +640,51 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
         }
 
       /* Is there a text content-block to parse? */
-      if (text_cl || old_v1_with_cl)
+      if (text_cl)
         {
           const char *delta = apr_hash_get (headers,
                                             SVN_REPOS_DUMPFILE_TEXT_DELTA,
                                             APR_HASH_KEY_STRING);
           svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
-          svn_filesize_t cl_value = (old_v1_with_cl) ?
-            svn__atoui64 (content_length) - actual_prop_length :
-            svn__atoui64 (text_cl);
 
-          if (! (old_v1_with_cl && ! cl_value))
+          SVN_ERR (parse_text_block (stream,
+                                     svn__atoui64 (text_cl),
+                                     is_delta,
+                                     parse_fns,
+                                     found_node ? node_baton : rev_baton,
+                                     buffer,
+                                     buflen,
+                                     found_node ? nodepool : revpool));
+        }
+      else if (old_v1_with_cl)
+        {
+          /* An old-v1 block with a Content-length might have a text block.
+             If the property block did not consume all the bytes of the
+             Content-length, then it clearly does have a text block.
+             If not, then we must deduce whether we have an *empty* text
+             block or an *absent* text block.  The rules are:
+             - "Node-kind: file" blocks have an empty (i.e. present, but
+               zero-length) text block, since they represent a file
+               modification.  Note that file-copied-text-unmodified blocks
+               have no Content-length - even if they should have contained
+               a modified property block, the pre-0.14 dumper forgets to
+               dump the modified properties. 
+             - If it is not a file node, then it is a revision or directory,
+               and so has an absent text block.
+          */
+          const char *node_kind;
+          svn_filesize_t cl_value = svn__atoui64 (content_length)
+                                    - actual_prop_length;
+
+          if (cl_value || 
+              ((node_kind = apr_hash_get (headers,
+                                          SVN_REPOS_DUMPFILE_NODE_KIND,
+                                          APR_HASH_KEY_STRING))
+               && strcmp (node_kind, "file") == 0)
+             )
             SVN_ERR (parse_text_block (stream,
                                        cl_value,
-                                       is_delta,
+                                       FALSE,
                                        parse_fns,
                                        found_node ? node_baton : rev_baton,
                                        buffer,
@@ -801,22 +835,16 @@ new_revision_record (void **revision_baton,
   struct parse_baton *pb = parse_baton;
   struct revision_baton *rb;
   svn_revnum_t head_rev;
-  svn_revnum_t *old_rev, *new_rev;
 
   rb = make_revision_baton (headers, pb, pool);
   SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
 
-  /* Calculate the revision 'offset' for finding copyfrom sources.
+  /* FIXME: This is a lame fallback loading multiple segments of dump in
+     several seperate operations. It is highly susceptible to race conditions.
+     Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
   rb->rev_offset = (rb->rev) - (head_rev + 1);
  
-  /* Store the new revision for finding copyfrom sources. */
-  old_rev = apr_palloc (pb->pool, sizeof(svn_revnum_t) * 2);
-  new_rev = old_rev + 1;
-  *old_rev = rb->rev;
-  *new_rev = head_rev + 1;
-  apr_hash_set (pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
-
   if (rb->rev > 0)
     {
       /* Create a new fs txn. */
@@ -1110,13 +1138,18 @@ close_revision (void *baton)
   struct revision_baton *rb = baton;
   struct parse_baton *pb = rb->pb;
   const char *conflict_msg = NULL;
-  svn_revnum_t new_rev;
+  svn_revnum_t *old_rev, *new_rev;
   svn_error_t *err;
 
   if (rb->rev <= 0)
     return SVN_NO_ERROR;
 
-  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn, rb->pool);
+  /* Prepare memory for saving dump-rev -> in-repos-rev mapping. */
+  old_rev = apr_palloc (pb->pool, sizeof(svn_revnum_t) * 2);
+  new_rev = old_rev + 1;
+  *old_rev = rb->rev;
+
+  err = svn_fs_commit_txn (&conflict_msg, &(*new_rev), rb->txn, rb->pool);
 
   if (err)
     {
@@ -1127,29 +1160,34 @@ close_revision (void *baton)
         return err;
     }
 
+  /* After a successful commit, must record the dump-rev -> in-repos-rev
+     mapping, so that copyfrom instructions in the dump file can look up the
+     correct repository revision to copy from. */
+  apr_hash_set (pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
+
   /* Deltify the predecessors of paths changed in this revision. */
-  SVN_ERR (svn_fs_deltify_revision (pb->fs, new_rev, rb->pool));
+  SVN_ERR (svn_fs_deltify_revision (pb->fs, *new_rev, rb->pool));
 
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
      history exactly.  Good thing revision props aren't versioned! */
   if (rb->datestamp)
-    SVN_ERR (svn_fs_change_rev_prop (pb->fs, new_rev,
+    SVN_ERR (svn_fs_change_rev_prop (pb->fs, *new_rev,
                                      SVN_PROP_REVISION_DATE, rb->datestamp,
                                      rb->pool));
 
-  if (new_rev == rb->rev)
+  if (*new_rev == rb->rev)
     {
       SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
                                   _("\n------- Committed revision %ld"
-                                    " >>>\n\n"), new_rev));
+                                    " >>>\n\n"), *new_rev));
     }
   else
     {
       SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
                                   _("\n------- Committed new rev %ld"
                                     " (loaded from original rev %ld"
-                                    ") >>>\n\n"), new_rev, rb->rev));
+                                    ") >>>\n\n"), *new_rev, rb->rev));
     }
 
   return SVN_NO_ERROR;

@@ -107,7 +107,7 @@ trunk -> tronco
     en particular. Traducción obtenida del manual de CVS en español.
 
 log, log message -> informe de cambios, mensaje del informe de cambios
-    Traducción estraída del manual de CVS en españól. La traducción
+    Traducción extraída del manual de CVS en español. La traducción
     de "log message" es muy larga, pero únicamente porque no se
     tiene contexto alguno. Con contexto suele ser posible omitir
     la palabra informe si se considera apropiado.
@@ -128,9 +128,9 @@ ancestry -> ascendencia
     La traducción literal concuerda con el significado que se le
     da al mismo término en la jerga de Subversion.
 
-Harry, Sally -> Juan, Carmen
+Harry, Sally, Joe, Ira, User, (no author) -> Juan, Carmen, José, Ira, Usuario (sin autor)
     Estos nombres se traducen en todos los sitios en los que
-    aparecen, incluída la salida de texto de los comandos de
+    aparecen, incluida la salida de texto de los comandos de
     svn, como por ejemplo nombres de usuario que se ven al hacer
     "svn log".
 
@@ -138,3 +138,30 @@ click -> haga clic, pulse
     Traducción obtenida del glosario. Parece ser que click sólo se
     deja tal cual cuando se refiere a un sonido mecánico. Cuando
     se refiere a pulsar el botón del ratón se traduce como clic.
+
+switch -> cambiar
+    Únicamente cuando se habla del comando svn switch, no como la
+    palabra switch aislada, que significa parámetro o interruptor.
+    En el contexto de svn switch, traducirlo como cambiar. Quizás
+    traducir como relocalizar una vez haya suficiente material
+    traducido y una lectura final sugiera una u otra traducción.
+
+API, GUI -> no se traduce
+    La primera vez que aparecen, poner nota del traductor indicando
+    qué significan las siglas y su traducción al castellano. De
+    hecho, verificar la aparición de las notas de traductor en el
+    sitio correcto debería ser una entrada del fichero TODO...
+
+plugins -> módulos
+    El término fue extraído del glosario de ORCA.
+
+repository layout -> estructura de repositorio
+
+backup -> copia de seguridad
+    Obtenido del glosario ORCA.
+
+back-end -> ???
+    Se refiere al término opuesto de front-end. En el octavo
+    capítulo se usa al menos tres veces para referirse al "motor"
+    que hay detrás de la capa de base de datos. Hmmm... pero motor
+    suena raro...

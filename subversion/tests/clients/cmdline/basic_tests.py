@@ -208,6 +208,16 @@ def basic_update(sbox):
                                         expected_disk,
                                         expected_status)
 
+  # Unversioned paths, those that are not immediate children of a versioned
+  # path, are skipped and do not raise an error
+  xx_path = os.path.join(wc_dir, 'xx', 'xx')
+  out, err = svntest.actions.run_and_verify_svn("update xx/xx",
+                                                ["Skipped '"+xx_path+"'\n"], [],
+                                                'update', xx_path)
+  out, err = svntest.actions.run_and_verify_svn("update xx/xx",
+                                                [], [],
+                                                'update', '--quiet', xx_path)
+
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
   "basic mkdir URL"
@@ -1081,7 +1091,7 @@ def basic_checkout_deleted(sbox):
                                      svntest.main.wc_author,
                                      '--password',
                                      svntest.main.wc_passwd,
-                                     url, wc2)
+                                     url + "@1", wc2)
   
 #----------------------------------------------------------------------
 

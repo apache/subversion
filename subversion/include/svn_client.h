@@ -419,11 +419,12 @@ svn_error_t *
 svn_client_create_context (svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
-/** Checkout a working copy of @a URL at @a revision, using @a path as
- * the root directory of the newly checked out working copy, and
- * authenticating with the authentication baton cached in @a ctx.  If
- * @a result_rev is not @c NULL, set @a *result_rev to the value of
- * the revision actually checked out from the repository.
+/** Checkout a working copy of @a URL at @a revision, looked up at @a
+ * peg_revision, using @a path as the root directory of the newly
+ * checked out working copy, and authenticating with the
+ * authentication baton cached in @a ctx.  If @a result_rev is not @c
+ * NULL, set @a *result_rev to the value of the revision actually
+ * checked out from the repository.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
@@ -436,6 +437,23 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
+svn_client_checkout2 (svn_revnum_t *result_rev,
+                      const char *URL,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *revision,
+                      svn_boolean_t recurse,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_checkout2(), but with the @a peg_revision
+ * parameter always set to @c svn_opt_revision_unspecified.
+ */
+svn_error_t *
 svn_client_checkout (svn_revnum_t *result_rev,
                      const char *URL,
                      const char *path,
@@ -445,23 +463,48 @@ svn_client_checkout (svn_revnum_t *result_rev,
                      apr_pool_t *pool);
 
 
-/** Update working tree @a path to @a revision, authenticating with
- * the authentication baton cached in @a ctx.  If @a result_rev is not
- * @c NULL, set @a *result_rev to the value of the revision to which
- * the working copy was actually updated.
+/**
+ * @since New in 1.2.
+ *
+ * Update working trees @a paths to @a revision, authenticating with the
+ * authentication baton cached in @a ctx.  @a paths is an array of const
+ * char * paths to be updated.  Unversioned paths that are direct children
+ * of a versioned path will cause an update that attempts to add that path,
+ * other unversioned paths are skipped.  If @a result_revs is not
+ * @c NULL an array of svn_revnum_t will be returned with each element set
+ * to the revision to which @a revision was resolved.
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If @a 
  * revision does not meet these requirements, return the error
  * @c SVN_ERR_CLIENT_BAD_REVISION.
  *
- * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with 
- * @a ctx->notify_baton for each item handled by the update, and also for 
- * files restored from text-base.
+ * The paths in @a paths can be from multiple working copies from multiple
+ * repositories, but even if they all come from the same repository there
+ * is no guarantee that revision represented by @c svn_opt_revision_head
+ * will remain the same as each path is updated.
  *
- * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with
+ * @a ctx->notify_baton for each item handled by the update, and also for
+ * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
+ * it passing @a ctx->cancel_baton at various places during the update.
  *
  * Use @a pool for any temporary allocation.
+ */
+svn_error_t *
+svn_client_update2 (apr_array_header_t **result_revs,
+                    const apr_array_header_t *paths,
+                    const svn_opt_revision_t *revision,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_update2 except that it accepts only a single
+ * target in @a path and returns a single revision if @a result_rev is not
+ * NULL.
  */
 svn_error_t *
 svn_client_update (svn_revnum_t *result_rev,
@@ -1506,8 +1549,8 @@ svn_error_t *
 svn_client_export3 (svn_revnum_t *result_rev,
                     const char *from,
                     const char *to,
-                    svn_opt_revision_t *peg_revision,
-                    svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     const char *native_eol,
                     svn_client_ctx_t *ctx,
@@ -1574,8 +1617,8 @@ svn_client_export (svn_revnum_t *result_rev,
 svn_error_t *
 svn_client_ls2 (apr_hash_t **dirents,
                 const char *path_or_url,
-                svn_opt_revision_t *peg_revision,
-                svn_opt_revision_t *revision,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
                 svn_boolean_t recurse,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);

@@ -217,7 +217,9 @@
 
       then edit the www/project_status.html file appropriately.
 
-   b) Commit the modifications of www/project_status.html
+   b) Update the best available version at the top of www/project_packages.html
+
+   c) Commit the modifications.
 
 15. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
     and send an announcement to dev@, users@, and announce@ lists.

@@ -1131,7 +1131,7 @@ if __name__ == '__main__':
    xmlns="svn:"&gt;
 &lt;entry
    committed-rev="1"
-   name="svn:this_dir"
+   name=""
    committed-date="2002-09-24T17:12:44.064475Z"
    url="http://svn.red-bean.com/tests/.greek-repo/A/D"
    kind="dir"

@@ -241,11 +241,13 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
            exist before the parent export process unless a versioned
            directory above it did, which means the user would have
            already had to force these creations to occur. */
-        SVN_ERR (svn_client_export (NULL, new_item->url, path,
-                                    &(new_item->revision),
-                                    TRUE, ib->ctx, ib->pool));
+        SVN_ERR (svn_client_export3 (NULL, new_item->url, path,
+                                     &(new_item->revision),
+                                     &(new_item->revision),
+                                     TRUE, NULL, ib->ctx, ib->pool));
       else
         SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
+                                                &(new_item->revision),
                                                 &(new_item->revision),
                                                 TRUE, /* recurse */
                                                 ib->timestamp_sleep,
@@ -306,6 +308,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
       SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                               &(new_item->revision),
+                                              &(new_item->revision),
                                               TRUE, /* recurse */
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
@@ -364,6 +367,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
               SVN_ERR (svn_client__checkout_internal (NULL, new_item->url,
                                                       path,
                                                       &(new_item->revision),
+                                                      &(new_item->revision),
                                                       TRUE, /* recurse */
                                                       ib->timestamp_sleep,
                                                       ib->ctx, ib->pool));
@@ -378,6 +382,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 
           /* Checking out... */
           SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
+                                                  &(new_item->revision),
                                                   &(new_item->revision),
                                                   TRUE, /* recurse */
                                                   ib->timestamp_sleep,

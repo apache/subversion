@@ -27,7 +27,7 @@ para aclarar detalles en la traducción realizada.
 
 Cuando varios autores han colaborado en un mismo fichero, se
 escribirá su nombre separado por comas, sin tener relevancia el
-órden de los nombres. Como caso especial para los ficheros en
+orden de los nombres. Como caso especial para los ficheros en
 proceso de traducción, se indica primero el nombre de la persona
 que está trabajando de forma activa en el fichero.
 
@@ -47,9 +47,10 @@ ch02.xml: beerfrick
 
 Ficheros en proceso de traducción:
 ----------------------------------
-ch03.xml: ruben
-ch04.xml: gradha
 ch05.xml: dbrouard
+ch06.xml: Federico Edelman
+ch08.xml: gradha
+appa.xml: ruben
 
 
 Ficheros que han completado al menos una traducción básica:
@@ -58,6 +59,8 @@ book.xml: gradha
 foreword.xml: gradha
 ch00.xml: gradha
 ch01.xml: ruben
+ch03.xml: ruben
+ch04.xml: gradha
 
 
 Ficheros revisados sin verificar el original:

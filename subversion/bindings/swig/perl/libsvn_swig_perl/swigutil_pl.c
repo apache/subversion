@@ -34,7 +34,7 @@
 /* cache SWIG_TypeQuery results in a perl hash */
 static HV *type_cache = NULL;
 
-#define _SWIG_TYPE(name) _swig_perl_type_query(name, sizeof (name)-1)
+#define _SWIG_TYPE(name) _swig_perl_type_query(name, 0)
 #define POOLINFO         _SWIG_TYPE("apr_pool_t *")
 
 static swig_type_info *_swig_perl_type_query (const char *typename, U32 klen)
@@ -123,7 +123,7 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              const char *typename,
                                              apr_pool_t *pool)
 {
-    swig_type_info *tinfo = _swig_perl_type_query(typename, 0);
+    swig_type_info *tinfo = _SWIG_TYPE(typename);
     return svn_swig_pl_objs_to_hash (source, tinfo, pool);
 }
 
@@ -852,7 +852,7 @@ static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
     swig_type_info *tinfo = _SWIG_TYPE("apr_file_t *");
 
     svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"open_tmp_file",
-			        &result, "O", callback_baton);
+			        &result, "OS", callback_baton, pool, POOLINFO);
 
     if (SWIG_ConvertPtr(result, (void *)fp, tinfo,0) < 0) {
 	croak("Unable to convert from SWIG Type");
@@ -869,11 +869,10 @@ svn_error_t *thunk_get_wc_prop (void *baton,
 				apr_pool_t *pool)
 {
     SV *result;
-    swig_type_info *tinfo = _SWIG_TYPE("apr_pool_t *");
 
     svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"get_wc_prop",
 			        &result, "OssS", baton, relpath, name,
-			       	pool, tinfo);
+			       	pool, POOLINFO);
 
     /* this is svn_string_t * typemap in */
     if (!SvOK (result) || result == &PL_sv_undef) {

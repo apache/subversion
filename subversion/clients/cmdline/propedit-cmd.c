@@ -176,6 +176,7 @@ svn_cl__propedit (apr_getopt_t *os,
           const char *target_local;
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
+          svn_opt_revision_t peg_revision;
           
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
@@ -191,12 +192,17 @@ svn_cl__propedit (apr_getopt_t *os,
                  "not yet supported"), target);
             }
 
+          /* Propedits can only happen on HEAD or the working copy, so
+             the peg revision can be as unspecified. */
+          peg_revision.kind = svn_opt_revision_unspecified;
+          
           /* Fetch the current property. */
-          SVN_ERR (svn_client_propget (&props, pname_utf8, target,
-                                       &(opt_state->start_revision),
-                                       FALSE,
-                                       NULL,  /* ### pass ctx here */
-                                       subpool));
+          SVN_ERR (svn_client_propget2 (&props, pname_utf8, target,
+                                        &peg_revision,
+                                        &(opt_state->start_revision),
+                                        FALSE,
+                                        NULL,  /* ### pass ctx here */
+                                        subpool));
           
           /* Get the property value. */
           propval = apr_hash_get (props, target, APR_HASH_KEY_STRING);

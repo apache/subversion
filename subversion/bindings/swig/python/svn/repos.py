@@ -1,6 +1,9 @@
 #
-# repos.py : various utilities for interacting with the _repos module
+# repos.py: public Python interface for repos components
 #
+# Subversion is a tool for revision control. 
+# See http://subversion.tigris.org for more information.
+#    
 ######################################################################
 #
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -12,28 +15,16 @@
 # newer version instead, at your option.
 #
 ######################################################################
-#
 
-### hide these names?
-import string
-import svn.fs
-import svn.core
-import svn.delta
-from types import StringType, IntType, FloatType, LongType
+from libsvn.repos import *
+from core import _unprefix_names
+_unprefix_names(locals(), 'svn_repos_')
+_unprefix_names(locals(), 'SVN_REPOS_')
+del _unprefix_names
 
-import libsvn.repos
 
-# copy the wrapper functions out of the extension module, dropping the
-# 'svn_repos_' prefix.
-for name in dir(libsvn.repos):
-  if name[:10] == 'svn_repos_':
-    vars()[name[10:]] = getattr(libsvn.repos, name)
-
-  # XXX: For compatibility reasons, also include the prefixed name
-  vars()[name] = getattr(libsvn.repos, name)
-
-# we don't want these symbols exported
-del name, libsvn
+# Names that are not to be exported - del-ed at end
+import svn.core, svn.fs, svn.delta
 
 
 class ChangedPath:
@@ -62,7 +53,7 @@ class ChangedPath:
 
 
 class ChangeCollector(svn.delta.Editor):
-  """
+  """Available Since: 1.2.0
   """
   
   # BATON FORMAT: [path, base_path, base_rev]
@@ -76,12 +67,6 @@ class ChangeCollector(svn.delta.Editor):
     self.props = { }
     self.fs_root = root
 
-    ### COMPATIBILITY CODE: If we get an Int or Long for the ROOT,
-    ### assume it is a revision number coming through the deprecated
-    ### RevisionChangeCollector interface.
-    if isinstance(root, IntType) or isinstance(root, LongType):
-      self.fs_root = svn.fs.revision_root(self.fs_ptr, root, pool)
-      
     # Figger out the base revision and root properties.
     subpool = svn.core.svn_pool_create(self.pool)
     if svn.fs.is_revision_root(self.fs_root):
@@ -108,7 +93,7 @@ class ChangeCollector(svn.delta.Editor):
         self.notify_cb(change)
     
   def _make_base_path(self, parent_path, path):
-    idx = string.rfind(path, '/')
+    idx = path.rfind('/')
     if parent_path:
       parent_path = parent_path + '/'
     if idx == -1:
@@ -240,13 +225,32 @@ class ChangeCollector(svn.delta.Editor):
     self._send_change(file_baton[0])
     
 
-### for compatibility 
-RevisionChangeCollector = ChangeCollector
+class RevisionChangeCollector(ChangeCollector):
+  """Deprecated: Use ChangeCollector.
+  This is a compatibility wrapper providing the interface of the
+  Subversion 1.1.x and earlier bindings.
+  
+  Important difference: base_path members have a leading '/' character in
+  this interface."""
+
+  def __init__(self, fs_ptr, root, pool, notify_cb=None):
+    root = svn.fs.revision_root(fs_ptr, root, pool)
+    ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
+
+  def _make_base_path(self, parent_path, path):
+    idx = path.rfind('/')
+    if idx == -1:
+      return parent_path + '/' + path
+    return parent_path + path[idx:]
 
 
 # enable True/False in older vsns of Python
 try:
-  _unused = True
+  True
 except NameError:
   True = 1
   False = 0
+
+
+# Do not export these names
+del svn

@@ -183,14 +183,16 @@ BOOKFILES = appa.xml appb.xml appc.xml appd.xml book.xml ch00.xml \
             ch07.xml ch08.xml ch09.xml colo.xml copyright.xml \
             foreword.xml glossary.xml
 
-build: htmlbook copytobuild
+build: dircheck htmlbook copytobuild
+
+dircheck:
+	mkdir $(BUILDTMP_DIR)
+	rmdir $(BUILDTMP_DIR)
 
 htmlbook:
 	$(MAKE) clean && $(MAKE) all-html
 
 copytobuild:
-	mkdir $(BUILDTMP_DIR)
-	rmdir $(BUILDTMP_DIR)
 	svn co http://svn.sunbase.org/repos/svnbook_nb/build $(BUILDTMP_DIR)
 	find $(BUILDTMP_DIR) -type f | grep -v '/\.svn/' | xargs rm
 	cp -a $(BOOK_HTML_CHUNK_DIR) $(BUILDTMP_DIR)/

@@ -28,7 +28,7 @@
     <title>¿Qué es una rama?</title>
 
     <para>Supongamos que su trabajo es mantener un documento para
-      una de las divisiones de su companía, una especie de
+      una de las divisiones de su compañía, una especie de
       manual. Un día una división diferente le pide ese manual,
       pero con algunas partes 'retocadas' para ellos, dado que
       <!-- TODO tweak. Puede ser retocado, modificado, personalizado,
@@ -37,7 +37,7 @@
 
     <para>¿Qué hace en esta situación? Lo más obvio: realiza
       una segunda copia de su documento, y comienza a mantener
-      ambas copias de forma separada. A medida que cada departamente
+      ambas copias de forma separada. A medida que cada departamento
       solicita pequeños cambios, usted los incorpora en una de las
       copias o la otra.</para>
 
@@ -52,7 +52,7 @@
       <firstterm>rama</firstterm>&mdash; una línea de desarrollo
       que existe de forma independiente a otra, pero comparte
       una historia común si mira suficientemente atrás en el
-      tiempo. Una rama siempre nace como una copia d ealgo, y a
+      tiempo. Una rama siempre nace como una copia de algo, y a
       partir de ahí, pasa a generar su propia historia (vea <xref
       linkend="svn-ch-4-dia-1"/>).</para>
 
@@ -85,7 +85,7 @@
       de ficheros (llamado <!-- TODO en efecto, hay que ponerse
       de acuerdo con traducir revision.  Por ahora usaré revision
       sin acento para indicar que es una palabra que he decidido
-      no traducir --> <quote>revision</quote>). Si no es así,
+      no traducir --> <quote>revisión</quote>). Si no es así,
       debería volver atrás y leer información sobre revisiones en
       <xref linkend="svn-ch-2-sect-3.2"/>.</para>
 
@@ -118,10 +118,10 @@
       reorganización radical del proyecto. Le tomará un largo
       tiempo realizar la modificación, y ésta afectará a todos
       los ficheros del proyecto. En esta situación el problema
-      es que no quiere intereferir con Carmen, quien sigue en
+      es que no quiere interferir con Carmen, quien sigue en
       el proceso de corregir pequeños fallos aquí y allá. Ella
       depende del hecho que la última versión del proyecto (en
-      <filename>/calc/trunk</filename>) siempre es usable. Si
+      <filename>/calc/trunk</filename>) siempre sea usable. Si
       comienza a enviar cambios al repositorio poco a poco,
       seguramente fastidiará la tarea de Carmen.</para>
 
@@ -139,7 +139,7 @@
       <filename>/calc/trunk</filename> en dos máquinas diferentes),
       necesitará copiar manualmente sus cambios de un lado a otro,
       o realizar todo el trabajo en un solo ordenador. Del mismo
-      modo, es dificil compartir sus cambios a mitad del desarrollo
+      modo, es difícil compartir sus cambios a mitad del desarrollo
       con otras personas. Una <quote>práctica ideal</quote> común
       en el desarrollo de software es permitir que sus compañeros
       puedan revisar su trabajo a medida que progresa. Si nadie
@@ -156,13 +156,13 @@
       desarrollo, en el repositorio. Esto le permite guardar su
       trabajo a medio hacer con frecuencia sin interferir con otros,
       permitiendo a su vez compartir de forma selectiva información
-      con sus colaboradores. Más adelante verá exáctamente como
+      con sus colaboradores. Más adelante verá exactamente como
       funciona esto.</para>
 
   <sect2 id="svn-ch-4-sect-2.1">
     <title>Creando una rama</title>
 
-      <para>Crear una rama es muy simple&mdash;realize una copia
+      <para>Crear una rama es muy simple&mdash;realice una copia
         del proyecto en el repositorio usando el comando
         <command>svn copy</command>. Subversion no sólo es
         capaz de copiar ficheros individuales, sino también
@@ -170,7 +170,7 @@
         directorio <filename>/calc/trunk</filename>. ¿Dónde debería
         colocar la nueva copia? Donde desee&mdash;es una cuestión
         de política de su proyecto. Digamos que su equipo tiene
-        la política de crear ramas en el area de repositorio
+        la política de crear ramas en el área de repositorio
         <filename>/calc/branches</filename>, y quiere nombrar
         la rama <literal>my-calc-branch</literal>. Entonces
         querrá crear un nuevo directorio
@@ -281,7 +281,7 @@ Committed revision 341.
       
         <para>Por esta razón escuchará a los usuarios de Subversion
           hablar con frecuencia sobre <quote>copias ligeras</quote>.
-          No importa cuán grande sea el directorio&mdash;sólo
+          No importa cuan grande sea el directorio&mdash;sólo
           requiere un tiempo constante muy pequeño realizar una
           copia del mismo.  De hecho, esta es la característica en
           la que se basan los cambios realizados en Subversion:
@@ -295,7 +295,7 @@ Committed revision 341.
           y compartir datos está oculto al usuario, que simplemente
           ve copias de árboles de ficheros. Lo importante es saber
           que las copias son ligeras, tanto en tiempo como espacio.
-          Crée tantas ramas como desee.  <!-- TODO, aquí quizás cheap
+          Cree tantas ramas como desee.  <!-- TODO, aquí quizás cheap
           debería traducirse tal cual.  Aparte, "crée" quizás pueda
           reemplazarse por algo mejor--></para>
       </sidebar>
@@ -363,18 +363,18 @@ Checked out revision 341.
 
 <screen>
 $ pwd
-/home/user/my-calc-branch
+/home/usuario/my-calc-branch
 
 $ svn log --verbose integer.c
 ------------------------------------------------------------------------
-r343 | user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r343 | usuario | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    M /calc/branches/my-calc-branch/integer.c
 
 * integer.c:  frozzled the wazjub.
 
 ------------------------------------------------------------------------
-r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r341 | usuario | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    A /calc/branches/my-calc-branch (from /calc/trunk:340)
 
@@ -587,7 +587,7 @@ Index: integer.c
 </screen>
       
       <para>El comando <command>svn merge</command> es casi
-        exáctamente idéntico.  En lugar de mostrar las diferencias
+        exactamente idéntico.  En lugar de mostrar las diferencias
         en su terminal, no obstante, las aplica directamente
         a su copia local como <emphasis>modificaciones
         locales</emphasis>:</para>
@@ -635,8 +635,9 @@ Transmitting file data .
 Committed revision 360.
 </screen>
 
-      <para>As you'll see in the next sections, this is a very
-        important <quote>best practice</quote> to follow.</para>
+      <para>Tal y como verá en las siguientes secciones, es muy
+        importante seguir esta <quote>práctica
+        recomendada</quote>.</para>
 
       <sidebar>
         <title>¿Por qué no usar parches?</title>
@@ -831,9 +832,9 @@ $ svn status
           tener <quote>características de changeset</quote>.
           Para nuestros propósitos, digamos que un changeset es una
           colección de cambios con nombre único. Los cambios pueden
-          incluír ediciones textuales a los contenidos de un fichero,
+          incluir ediciones textuales a los contenidos de un fichero,
           modificaciones a la estructura de un directorio, o cambios
-          en los metadatos. En el habla habitual, un changeset es
+          en los meta datos. En el habla habitual, un changeset es
           un parche con un nombre al que se puede referir.</para>
 
         <para>En Subversion, un número global de revisión N nombra el
@@ -906,7 +907,7 @@ $ svn status
           por defecto. No obstante, ocasionalmente puede querer
           que el comando de fusionado compare dos árboles no
           relacionados. Por ejemplo, puede haber importado
-          dos árboles de código fuente representando diferenes
+          dos árboles de código fuente representando diferentes
           versiones <!-- TODO vendor release, no veo traducción
           sencilla --> de un proyecto de software (lea <xref
           linkend="svn-ch-7-sect-4"/>).  ¡Si usase <command>svn
@@ -958,7 +959,7 @@ $ svn status
       <para>¿Cómo usamos <command>svn merge</command> en esta
         situación? Recuerde que este comando compara dos árboles,
         y aplica las diferencias en una copia local. Así que para
-        recivir los cambios, necesita tener una copia local del
+        recibir los cambios, necesita tener una copia local del
         tronco. Asumiremos que todavía tiene una copia original
         del tronco por alguna parte (completamente actualizada),
         o que recientemente ha obtenido una copia local fresca de
@@ -993,7 +994,7 @@ $ svn status
         <para>Un buen método para encontrar la revisión en
         la cual fue creada una rama (la "base" de la misma)
         es usar la opción <option>--stop-on-copy</option> con
-        <command>svn log</command>. El subcomando log normalmente
+        <command>svn log</command>. El sub comando log normalmente
         muestra todo cambio realizado en la rama, incluyendo
         los de la copia a partir de la cual fue creada. Así que
         normalmente verá también la historia del tronco. La opción
@@ -1001,14 +1002,14 @@ $ svn status
         comando en cuanto <command>svn log</command> detecte que
         la rama fue copiada o renombrada.</para>
 
-        <para>Así que en nuestro ejemplo contínuo:</para>
+        <para>Así que en nuestro ejemplo continuo:</para>
 
 <screen>
 $ svn log --verbose --stop-on-copy \
           http://svn.example.com/repos/calc/branches/my-calc-branch
 &hellip;
 ------------------------------------------------------------------------
-r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r341 | usuario | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    A /calc/branches/my-calc-branch (from /calc/trunk:340)
 
@@ -1051,7 +1052,7 @@ Committed revision 406.
 </screen>
 
       <para>De nuevo, fíjese que el mensaje de cambios menciona de
-        forma expecífica el rango de cambios que fue fusionado en el
+        forma explícita el rango de cambios que fue fusionado en el
         tronco. Recuerde siempre hacer esto, porque es información
         crítica que necesitará más adelante.</para>
 
@@ -1075,14 +1076,14 @@ $ cd calc/trunk
 $ svn log
 &hellip;
 ------------------------------------------------------------------------
-r406 | user | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
+r406 | usuario | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
 
 Merged my-calc-branch changes r341:405 into the trunk.
 ------------------------------------------------------------------------
 &hellip;
 </screen>
       
-      <para>¡Ahá! Dado que todos los cambios que ocurrieron en la
+      <para>¡Ajá! Dado que todos los cambios que ocurrieron en la
         rama entre las revisiones 341 y 405 fueron fusionados
         con el tronco como la revisión 406, ahora sabe que sólo
         quiere fusionar los cambios de la rama posteriores
@@ -1162,7 +1163,7 @@ Committed revision 350.
         <command>svn merge</command> para aplicar el changeset #303
         a nuestra copia local <emphasis>al revés</emphasis>.</para>
     
-      <para>Tenga presente que reshacer un cambio de esta manera es
+      <para>Tenga presente que deshacer un cambio de esta manera es
         como realizar cualquier otra operación <command>svn
         merge</command>, así que debería usar <command>svn
         status</command> y <command>svn diff</command> para
@@ -1219,7 +1220,7 @@ Committed revision 350.
         es, <quote>¿Cómo puedo recuperar mi fichero o directorio
         antiguo?</quote></para>
 
-      <para>El primer paso es definir exáctamente<emphasis
+      <para>El primer paso es definir exactamente<emphasis
         role="bold">qué</emphasis> elemento está intentando
         resucitar.  Aquí tiene una metáfora útil: puede pensar
         que todo objeto en el repositorio existe en una especie de
@@ -1249,7 +1250,7 @@ Committed revision 350.
         necesita hacer es encontrar la revisión en la cual borró
         el fichero o directorio. Puede hacer esto visualmente, o
         usando otra herramienta para examinar el informe de cambios
-        (via <command>grep</command>, o quizás con una búsqueda
+        (vía <command>grep</command>, o quizás con una búsqueda
         incremental en un editor.)</para>
 
       <screen>
@@ -1257,7 +1258,7 @@ $ cd parent-dir
 $ svn log --verbose
 &hellip;
 ------------------------------------------------------------------------
-r808 | joe | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
+r808 | jose | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
 Changed paths:
    D /calc/trunk/real.c
    M /calc/trunk/integer.c
@@ -1293,7 +1294,7 @@ Removed real.c because code now in double.c.
         probablemente no es la mejor estrategia. Aplicar al revés
         la revisión 808 no solamente programaría la adición
         de <filename>real.c</filename>, ya que el mensaje de
-        cambios indica que también se deshacerían ciertos cambios
+        cambios indica que también se desharían ciertos cambios
         a <filename>integer.c</filename>, cosa que no desea.
         Ciertamente, podría fusionar al revés la revisión 808
         y entonces ejecutar <command>svn revert</command> sobre
@@ -1409,7 +1410,7 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       un único fichero de su copia local a la rama!) De ese modo,
       sigue pudiendo recibir modificaciones normales del 'tronco'
       en su copia local, pero las porciones que cambió a otra rama
-      quedarán inmunes (a no ser que alguien envie un cambio a
+      quedarán inmunes (a no ser que alguien envíe un cambio a
       esa rama).  Esta característica añade una nueva dimensión al
       concepto de <quote>copia local mezclada</quote>&mdash;no sólo
       pueden tener las copias locales una mezcla de revisiones,
@@ -1437,50 +1438,53 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       más información y un ejemplo.</para> </footnote></para>
     
     <sidebar>
-      <title>Switches and Updates</title>
+      <title>Cambios y actualizaciones</title>
       
-      <para>Have you noticed that the output of <command>svn
-          switch</command> and <command>svn update</command> look the
-        same?  The switch command is actually a superset of the
-        update command.</para>
+      <para>¿Se ha dado cuenta de que la salida de los comandos
+        <command>svn switch</command> y <command>svn update</command>
+        parecen iguales?  El comando de cambio es de hecho un
+        superconjunto del comando de actualización.</para>
 
-      <para>When you run <command>svn update</command>, you're asking
-        the repository to compare two trees.  The repository does so,
-        and then sends a description of the differences back to the
-        client. The only difference between <command>svn
-        switch</command> and <command>svn update</command> is that the
-        update command always compares two identical paths.</para>
+      <para>Cuando ejecuta <command>svn update</command>, está
+        preguntándole al repositorio que compare dos árboles. El
+        repositorio lo hace, y entonces envía una descripción
+        de las diferencias al cliente.  La única diferencia entre
+        <command>svn switch</command> y <command>svn update</command>
+        es que el comando de actualización siempre compara dos
+        rutas idénticas.</para>
       
-       <para>That is, if your working copy is a mirror of
-        <filename>/calc/trunk</filename>, then <command>svn
-        update</command> will automatically compare your working copy
-        of <filename>/calc/trunk</filename> to
-        <filename>/calc/trunk</filename> in the
-        <literal>HEAD</literal> revision.  If you're switching your
-        working copy to a branch, then <command>svn switch</command>
-        will compare your working copy of
-        <filename>/calc/trunk</filename> to some
-        <emphasis>other</emphasis> branch-directory in the
-        <literal>HEAD</literal> revision.</para>
+      <para>Es decir, si su copia local es una réplica de
+        <filename>/calc/trunk</filename>, entonces <command>svn
+        update</command> comparará automáticamente su
+        copia local de <filename>/calc/trunk</filename>
+        con <filename>/calc/trunk</filename> en la revisión
+        <literal>HEAD</literal>.  Si está cambiando su copia local a
+        una rama, entonces <command>svn switch</command> comparará
+        su copia local de <filename>/calc/trunk</filename> a algún
+        <emphasis>otro</emphasis> directorio rama en la revisión
+        <literal>HEAD</literal>.</para>
 
-      <para>In other words, an update moves your working copy through
-        time.  A switch moves your working copy through time
-        <emphasis>and</emphasis> space.</para>
+      <para>En otras palabras, una actualización mueve su copia
+        de trabajo local a través del tiempo. Un cambio
+        mueve su copia de trabajo local a través del tiempo
+        <emphasis>y</emphasis> el espacio.</para>
     </sidebar>
 
-    <para>Because <command>svn switch</command> is essentially a
-      variant of <command>svn update</command>, it shares the same
-      behaviors; any local modifications in your working copy are
-      preserved when new data arrives from the repository.  This
-      allows you to perform all sorts of clever tricks.</para>
+    <para>Dado que <command>svn switch</command> es esencialmente
+      una variante de <command>svn update</command>, comparte el
+      mismo comportamiento; cualquier modificación local en su
+      copia de trabajo es preservada cuando obtiene nuevos datos
+      del repositorio. Esto le permite realizar toda una variedad
+      de trucos ingeniosos.</para>
 
-    <para>For example, suppose you have a working copy of
-      <filename>/calc/trunk</filename> and make a number of changes to
-      it.  Then you suddenly realize that you meant to make the
-      changes to a branch instead.  No problem!  When you <command>svn
-      switch</command> your working copy to the branch, the local
-      changes will remain.  You can then test and commit them to the
-      branch.</para>
+    <para>Por ejemplo, suponga que tiene una copia local de
+      <filename>/calc/trunk</filename> y realiza un número de
+      cambios sobre ella. De repente se da cuenta de que se suponía
+      que tenía que realizar esos cambios en una rama. ¡No hay
+      problema! Cambie su copia local del tronco a la rama con
+      <command>svn switch</command>, y seguirá manteniendo sus
+      cambios locales. Ahora puede probarlos y enviar los cambios
+      a la rama del repositorio.</para>
 
   </sect1>
 
@@ -1489,29 +1493,32 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-6">
-    <title>Tags</title>
+    <title>Etiquetas</title>
 
-    <para>Another common version control concept is a
-      <firstterm>tag</firstterm>.  A tag is just a
-      <quote>snapshot</quote> of a project in time.  In Subversion,
-      this idea already seems to be everywhere.  Each repository
-      revision is exactly that&mdash;a snapshot of the filesystem
-      after each commit.</para>
+    <para>Otro concepto común en el control de versiones es la
+      <firstterm>etiqueta</firstterm>.  Una etiqueta no es
+      más que una <quote>instantánea</quote> del proyecto en
+      el tiempo. En Subversion, esta idea ya está presente en
+      todas partes. Cada revisión del repositorio es exactamente
+      eso&mdash;una instantánea del sistema de ficheros tras cada
+      envío al repositorio.</para>
 
-    <para>However, people often want to give more human-friendly names
-      to tags, like <literal>release-1.0</literal>.  And they want to
-      make snapshots of smaller subdirectories of the filesystem.
-      After all, it's not so easy to remember that release-1.0 of a
-      piece of software is a particular subdirectory of revision
-      4822.</para>
+    <para>No obstante, las personas prefieren dar nombres más
+      familiares a las etiquetas, como <!-- TODO release
+      == lanzamiento? --> <literal>lanzamiento-1.0</literal>.
+      Y quieren hacer instantáneas de subdirectorios menores
+      del sistema de archivos. Después de todo, no es tan fácil
+      recordar que lanzamiento-1.0 de una parte del software es un
+      subdirectorio particular de la revisión 4822.</para>
 
     <sect2 id="svn-ch-4-sect-6.1">
-      <title>Creating a Simple Tag</title>
+      <title>Creando una etiqueta simple</title>
 
-      <para>Once again, <command>svn copy</command> comes to the
-        rescue.  If you want to create a snapshot of
-        <filename>/calc/trunk</filename> exactly as it looks in the
-        <literal>HEAD</literal> revision, then make a copy of it:</para>
+      <para>De nuevo, <command>svn copy</command> viene al
+        rescate. Si desea crear una instantánea de
+        <filename>/calc/trunk</filename> exactamente tal y como
+        se ve en la revisión <literal>HEAD</literal>, haga una
+        copia:</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
@@ -1521,77 +1528,84 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 351.
 </screen>
 
-      <para>This example assumes that a
-        <filename>/calc/tags</filename> directory already exists.  (If it
-        doesn't, see <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
-        After the copy completes, the new
-        <filename>release-1.0</filename> directory is forever a
-        snapshot of how the project looked in the
-        <literal>HEAD</literal> revision at the time you made the
-        copy.  Of course you might want to be more precise about
-        exactly which revision you copy, in case somebody else may
-        have committed changes to the project when you weren't
-        looking.  So if you know that revision 350 of
-        <filename>/calc/trunk</filename> is exactly the snapshot you
-        want, you can specify it by passing <option>-r 350</option> to
-        the <command>svn copy</command> command.</para>
+      <para>Este ejemplo asume que ya existe un directorio
+        <filename>/calc/tags</filename>.  (Si no existe,
+        vea <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
+        Tras finalizar la copia, el nuevo directorio
+        <filename>lanzamiento-1.0</filename> será para siempre
+        una instantánea del aspecto que tenía la revisión
+        <literal>HEAD</literal> del proyecto en el momento que
+        realizó la copia. Por supuesto puede querer ser más
+        preciso sobre qué revisión exacta copiar, en caso de
+        que alguien realice un cambio al proyecto mientras no
+        está observando. Así que si sabe que la revisión 350
+        de <filename>/calc/trunk</filename> es exactamente la
+        instantánea que desea, puede especificarla pasando <option>-r
+        350</option> al comando <command>svn copy</command>.</para>
 
-      <para>But wait a moment: isn't this tag-creation procedure the
-        same procedure we used to create a branch?  Yes, in fact, it
-        is.  In Subversion, there's no difference between a tag and a
-        branch.  Both are just ordinary directories that are created
-        by copying.  Just as with branches, the only reason a copied
-        directory is a <quote>tag</quote> is because
-        <emphasis>humans</emphasis> have decided to treat it that way:
-        as long as nobody ever commits to the directory, it forever
-        remains a snapshot.  If people start committing to it, it
-        becomes a branch.</para>
+      <para>Pero espere un momento: ¿no es este procedimiento para
+        crear etiquetas el mismo que usamos para crear una rama? Si,
+        de hecho, así es. En Subversion no hay diferencia entre
+        una etiqueta y una rama.  Ambas son directorios ordinarios
+        que son creados a partir de una copia.  Igual que con
+        las ramas, la única razón por la que un directorio
+        copiado es una <quote>etiqueta</quote> es porque los
+        <emphasis>humanos</emphasis> han decidido tratarlo de ese
+        modo: mientras nadie envíe cambios usando ese directorio,
+        seguirá siendo siempre una instantánea. Si la gente comienza
+        a realizar cambios, se convierte en una rama.</para>
 
-      <para>If you are administering a repository, there are two
-        approaches you can take to managing tags.  The first approach
-        is <quote>hands off</quote>: as a matter of project policy,
-        decide where your tags will live, and make sure all users know
-        how to treat the directories they copy in there.  (That is,
-        make sure they know not to commit to them.)  The second
-        approach is more paranoid: you can use one of the
-        access-control scripts provided with Subversion to prevent
-        anyone from doing anything but creating new copies in the
-        tags-area (See <xref linkend="svn-ch-6"/>.)  The paranoid
-        approach, however, isn't usually necessary.  If a user
-        accidentally commits a change to a tag-directory, you can
-        simply undo the change as discussed in the previous section.
-        This is version control, after all.</para>
+      <para>Si está administrando un repositorio, hay dos formas de
+        de gestionar etiquetas. La primera es <quote>manos
+        fuera</quote>: según la política de su proyecto, decida
+        dónde pondrá sus etiquetas, y asegúrese de que todos
+        los usuarios saben cómo tratar los directorios que copian
+        ahí. (En otras palabras, asegúrese de que no cambian nada en
+        esos directorios.) La segunda forma es más paranoica: puede
+        usar uno de los scripts de control de acceso proporcionados
+        con Subversion para prevenir cualquier cosa que no sea
+        la creación de nuevas copias en el área de etiquetado
+        (Vea <xref linkend="svn-ch-6"/>.)  No obstante, el método
+        paranoico normalmente no es necesario. Si un usuario envía
+        un cambio accidentalmente al directorio de etiquetas,
+        puede simplemente deshacer el cambio tal y como discutimos
+        en la sección anterior. Después de todo, esto es control
+        de versiones.</para>
 
     </sect2>
     
     <sect2 id="svn-ch-4-sect-6.2">
-      <title>Creating a Complex Tag</title>
+      <title>Creando una etiqueta compleja</title>
       
-      <para>Sometimes you may want your <quote>snapshot</quote> to be
-        more complicated than a single directory at a single
-        revision.</para>
+      <para>A veces quiere que su <quote>instantánea</quote> sea
+        más complicada que un solo directorio de una revisión
+        concreta.</para>
       
-      <para>For example, pretend your project is much larger than our
-        <filename>calc</filename> example: suppose it contains a
-        number of subdirectories and many more files.  In the course
-        of your work, you may decide that you need to create a working
-        copy that is designed to have specific features and bugfixes.
-        You can accomplish this by selectively backdating files or
-        directories to particular revisions (using <command>svn update
-        -r</command> liberally), or by switching files and directories
-        to particular branches (making use of <command>svn
-        switch</command>).  When you're done, your working copy is a
-        hodgepodge of repository locations from different revisions.
-        But after testing, you know it's the precise combination of
-        data you need.</para>
+      <para>Por ejemplo, pretendamos que su proyecto es mucho más
+        grande que nuestro ejemplo <filename>calc</filename>:
+        suponga que contiene un número de subdirectorios y muchos más
+        ficheros. Realizando su trabajo, puede decidir que necesita
+        crear una copia de trabajo local diseñada para contener
+        características o correcciones de fallos específicas. Puede
+        conseguir esto modificando ficheros o directorios de forma
+        selectiva para que reflejen una revisión particular (usando
+        <command>svn update -r</command> liberalmente), o cambiando
+        ficheros y directorios a ramas particulares (haciendo uso
+        de <command>svn switch</command>). Cuando ha finalizado,
+        su copia local es un batiburrillo de localizaciones del
+        repositorio de diferentes versiones.  Pero tras hacer unas
+        pruebas, sabe que es la combinación precisa de datos que
+        necesita.</para>
 
-      <para>Time to make a snapshot.  Copying one URL to another won't
-        work here. In this case, you want to make a snapshot of your
-        exact working copy arrangement and store it in the repository.
-        Luckily, <command>svn copy</command> actually has four
-        different uses (which you can read about in Chapter 9),
-        including the ability to copy a working-copy tree to the
-        repository:</para>
+      <para>Hora de tomar una instantánea.  Copiar una URL en otra
+        no funcionará esta vez. <!-- TODO: Revisar el significado
+        de la frase original --> En este caso, quiere hacer una
+        instantánea de la configuración exacta de su copia local y
+        almacenarla en el repositorio. Afortunadamente, <command>svn
+        copy</command> tiene en realidad cuatro usos diferentes
+        (sobre los cuales puede leer en el noveno capítulo),
+        incluyendo la habilidad para copiar el árbol de una copia
+        local al repositorio:</para>
 
 <screen>
 $ ls
@@ -1602,21 +1616,22 @@ $ svn copy my-working-copy http://svn.example.com/repos/calc/tags/mytag
 Committed revision 352.
 </screen>
 
-      <para>Now there is a new directory in the repository,
-        <filename>/calc/tags/mytag</filename>, which is an exact
-        snapshot of your working copy&mdash;mixed revisions, urls,
-        and all.</para>
+      <para>Ahora existe un nuevo directorio en el repositorio,
+        <filename>/calc/tags/mytag</filename>, el cual
+        es una instantánea exacta de su copia local de
+        trabajo&mdash;revisiones mezcladas, urls, y todo eso.</para>
 
-      <para>Other users have found interesting uses for this feature.
-        Sometimes there are situations where you have a bunch of local
-        changes made to your working copy, and you'd like a
-        collaborator to see them.  Instead of running <command>svn
-        diff</command> and sending a patchfile (which won't capture
-        tree changes), you can instead use <command>svn copy</command>
-        to <quote>upload</quote> your working copy to a private area
-        of the repository.  Your collaborator can then either checkout
-        a verbatim copy of your working copy, or use <command>svn
-        merge</command> to receive your exact changes.</para>
+      <para>Otros usuarios han encontrado usos interesantes de
+        esta característica.  A veces hay situaciones en las que
+        acaba de enviar al repositorio un grupo de cambios locales,
+        y querría que los viese un colaborador. En lugar de ejecutar
+        <command>svn diff</command> y enviar el fichero de parche
+        (el cual no captura cambios en el árbol), puede usar en su
+        lugar <command>svn copy</command> para <quote>subir</quote>
+        su copia local a un área privada del repositorio.  Entonces
+        su colaborador puede o bien obtener una copia tal cual de
+        su copia local, o bien usar <command>svn merge</command>
+        para recibir sus cambios exactos.</para>
 
     </sect2>
 
@@ -1626,26 +1641,30 @@ Committed revision 352.
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-7">
-    <title>Branch Maintenance</title>
+    <title>Mantenimiento de ramas</title>
 
-    <para>You may have noticed by now that Subversion is extremely
-      flexible.  Because it implements branches and tags with the same
-      underlying mechanism (directory copies), and because branches
-      and tags appear in normal filesystem space, many people find
-      Subversion intimidating.  It's almost <emphasis>too</emphasis>
-      flexible.  In this section, we'll offer some suggestions for
-      arranging and managing your data over time.</para>
+    <para>Habrá notado que Subversion es extremadamente
+      flexible. Dado que implementa ramas y etiquetas mediante el
+      mismo mecanismo (copias de directorio), y tanto las ramas como
+      las etiquetas aparecen en el espacio normal del sistema de
+      archivos, mucha gente encuentra Subversion intimidante. Es
+      incluso <emphasis>demasiado</emphasis> flexible.  En esta
+      sección le ofrecemos algunas sugerencias para agrupar <!--
+      TODO arrange != agrupar --> y gestionar sus datos a lo largo
+      del tiempo.</para>
 
     <sect2 id="svn-ch-4-sect-7.1">
-      <title>Repository Layout</title>
+      <title>Estructura del repositorio</title>
       
-      <para>There are some standard, recommended ways to organize a
-        repository.  Most people create a <filename>trunk</filename>
-        directory to hold the <quote>main line</quote> of development,
-        a <filename>branches</filename> directory to contain branch
-        copies, and a <filename>tags</filename> directory to contain
-        tag copies.  If a repository holds only one project, then
-        often people create these top-level directories:</para>
+      <para>Hay maneras estándar recomendadas para organizar un
+        repositorio.  La mayoría de las personas crean un
+        directorio <filename>trunk</filename> que contendrá la
+        <quote>línea principal</quote> de desarrollo, un directorio
+        <filename>branches</filename> que contendrá copias de
+        las ramas, y un directorio <filename>tags</filename> que
+        contendrá copias de las etiquetas. Si un repositorio sólo
+        almacena un proyecto, entonces la gente a menudo crea estos
+        directorios en el directorio raíz:</para>
 
 <screen>
 /trunk
@@ -1653,10 +1672,10 @@ Committed revision 352.
 /tags
 </screen>
 
-      <para>If a repository contains multiple projects, admins
-        typically index their layout by project (see <xref
-        linkend="svn-ch-5-sect-6.1"/> to read more about
-        <quote>project roots</quote>):</para>
+      <para>Si un repositorio contiene múltiples proyectos, los
+        administradores normalmente indexan la estructura por
+        proyecto (vea <xref linkend="svn-ch-5-sect-6.1"/> para leer
+        más sobre <quote>raíces de proyecto</quote>):</para>
 
 <screen>
 /paint/trunk
@@ -1667,42 +1686,47 @@ Committed revision 352.
 /calc/tags
 </screen>
 
-      <para>Of course, you're free to ignore these common layouts.
-        You can create any sort of variation, whatever works best for
-        you or your team.  Remember that whatever you choose, it's not
-        a permanent commitment.  You can reorganize your repository at
-        any time.  Because branches and tags are ordinary directories,
-        the <command>svn move</command> command can move or rename
-        them however you wish.  Switching from one layout to another
-        is just a matter of issuing a series of server-side moves; if
-        you don't like the way things are organized in the repository,
-        just juggle the directories around.</para>
+      <para>Por supuesto, es libre de ignorar estas estructuras
+        comunes. Puede crear cualquier tipo de variación, lo que
+        sea mejor para usted y su equipo. Recuerde que sea lo
+        que sea lo que elija, no es una decisión final. Puede
+        reorganizar su repositorio en cualquier momento. Dado
+        que las ramas y etiquetas son directorios ordinarios,
+        el comando <command>svn move</command> puede moverlos o
+        renombrarlos como desee. Cambiar de una estructura a otra
+        es una cuestión de ejecutar una serie de movimientos en el
+        servidor; si no le gusta cómo se organizan las cosas en el
+        repositorio, simplemente juegue un poco con los directorios.
+        <!-- TODO en efecto, esa última frase no veo cómo traducirla
+        literalmente.--></para>
 
-      <para>Remember, though, that while moving directories may be
-        easy to do, you need to be considerate of your users as well.
-        Your juggling can be disorienting to users with existing
-        working copies.  If a user has a working copy of a particular
-        repository directory, your <command>svn move</command>
-        operation might remove the path from the latest revision.
-        When the user next runs <command>svn update</command>, they'll
-        be told that their working copy represents a path that no
-        longer exists, and the user will be forced to <command>svn
-        switch</command> to the new location.
-        </para>
+      <para>Recuerde, no obstante, que aunque mover directorios
+        puede ser fácil, necesita ser considerado <!-- TODO:
+        considerate == considerado? --> con sus usuarios. Sus
+        movimientos pueden desorientar a los usuarios que tengan
+        copias locales de trabajo. Si un usuario tiene una copia
+        local de un directorio particular del repositorio, su
+        operación <command>svn move</command> quizás elimine la
+        ruta de la última revisión.  Cuando el usuario ejecute
+        <command>svn update</command>, se le informará que su
+        copia local usa una ruta que ya no existe, y el usuario
+        se verá forzado a hacer <command>svn switch</command>
+        a otra localización.</para>
       
     </sect2>
     
     <sect2 id="svn-ch-4-sect-7.2">
-      <title>Data Lifetimes</title>
+      <title>Longevidad de los datos</title>
 
-      <para>Another nice feature of Subversion's model is that
-        branches and tags can have finite lifetimes, just like any
-        other versioned item.  For example, suppose you eventually
-        finish all your work on your personal branch of the
-        <filename>calc</filename> project.  After merging all of your
-        changes back into <filename>/calc/trunk</filename>, there's
-        no need for your private branch directory to stick around
-        anymore:</para>
+      <para>Otra buena característica del modelo de Subversion es
+        que las ramas y las etiquetas pueden tener vidas
+        infinitas, igual que cualquier otro elemento
+        versionado. Por ejemplo, suponga que finalmente
+        termina todo su trabajo en una rama personal del proyecto
+        <filename>calc</filename>. Tras fusionar todos sus cambios de
+        vuelta en <filename>/calc/trunk</filename>, ya no hace falta
+        que el directorio de su rama privada permanezca visible:<!--
+        TODO stick around != permanezca visible--></para>
 
 <screen>
 $ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
@@ -1711,20 +1735,20 @@ $ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
 Committed revision 375.
 </screen>
 
-      <para>And now your branch is gone.  Of course it's not really
-        gone: the directory is simply missing from the
-        <literal>HEAD</literal> revision, no longer distracting
-        anyone.  If you use <command>svn checkout</command>,
-        <command>svn switch</command>, or <command>svn list</command>
-        to examine an earlier revision, you'll still be able to see
-        your old branch.</para>
+      <para>Y desapareció su rama. Por supuesto no ha desaparecido
+        realmente: el directorio simplemente falta en la revisión
+        <literal>HEAD</literal>, y ya no distrae a nadie más. Si
+        usa <command>svn checkout</command>, <command>svn
+        switch</command>, o <command>svn list</command> para
+        examinar una revisión anterior, seguirá pudiendo ver su
+        antigua rama.</para>
 
-      <para>If browsing your deleted directory isn't enough, you can
-        always bring it back.  Resurrecting data is very easy in
-        Subversion.  If there's a deleted directory (or file) that
-        you'd like to bring back into <literal>HEAD</literal>, simply
-        use <command>svn copy -r</command> to copy it from the old
-        revision:</para>
+      <para>Si navegar por su directorio borrado no es suficiente,
+        siempre puede devolverle la vida. Resucitar datos es muy
+        fácil en Subversion. Si hay un directorio (o fichero) borrado
+        que querría volver a poner en <literal>HEAD</literal>,
+        simplemente cópielo con <command>svn copy -r</command>
+        de la revisión antigua:</para>
 
 <screen>
 $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
@@ -1733,19 +1757,20 @@ $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
 Committed revision 376.
 </screen>
 
-      <para>In our example, your personal branch had a relatively
-        short lifetime: you may have created it to fix a bug or
-        implement a new feature.  When your task is done, so is the
-        branch.  In software development, though, it's also common to
-        have two <quote>main</quote> branches running side-by-side for
-        very long periods.  For example, suppose it's time to release
-        a stable <filename>calc</filename> project to the public, and
-        you know it's going to take a couple of months to shake bugs
-        out of the software.  You don't want people to add new
-        features to the project, but you don't want to tell all
-        developers to stop programming either.  So instead, you create
-        a <quote>stable</quote> branch of the software that won't
-        change much:</para>
+      <para>En nuestro ejemplo, su rama personal tuvo un periodo
+        de actividad relativamente corto: puede haberla
+        creado para corregir un fallo o implementar una nueva
+        característica. Cuando su tarea está terminada, así lo está
+        su rama. No obstante, en el desarrollo de software también es
+        común tener dos ramas <quote>principales</quote> que viven en
+        paralelo por largos periodos de tiempo. Por ejemplo, suponga
+        que es el momento de hacer público el proyecto estable
+        <filename>calc</filename>, y sabe que va a necesitar un par
+        de meses corregir posibles fallos del mismo. No quiere que
+        la gente añada nuevas características al proyecto, pero
+        tampoco quiere decirle a los desarrolladores que dejen de
+        programar. Así que crea una rama <quote>estable</quote>
+        del software que no cambiará mucho:</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
@@ -1755,16 +1780,18 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 377.
 </screen>
 
-      <para>And now developers are free to continue adding
-        cutting-edge (or experimental) features to
-        <filename>/calc/trunk</filename>, and you can declare a
-        project policy that only bugfixes are to be committed to
-        <filename>/calc/branches/stable-1.0</filename>.  That is, as
-        people continue to work on the trunk, a human selectively
-        ports bugfixes over to the stable branch.  Even after the
-        stable branch has shipped, you'll probably continue to
-        maintain the branch for a long time&mdash;that is, as long
-        as you continue to support that release for customers.</para>
+      <para>Y ahora los desarrolladores son libres de continuar
+        añadiendo características novísimas (o experimentales)
+        a <filename>/calc/trunk</filename>, y usted
+        puede declarar como política del proyecto que
+        sólo las correcciones de fallos serán realizadas en
+        <filename>/calc/branches/stable-1.0</filename>.  Es decir,
+        a medida que la gente continúa su trabajo en el tronco, un
+        humano portará selectivamente las correcciones de fallos
+        a la rama estable. Incluso después de haber lanzado la
+        rama estable, probablemente continuará manteniéndola por
+        un largo tiempo&mdash;es decir, tanto como desee continuar
+        el soporte de esa versión para sus usuarios.</para>
 
     </sect2>
 
@@ -1775,21 +1802,22 @@ Committed revision 377.
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-8">
-    <title>Summary</title>
+    <title>Sumario</title>
 
-    <para>We've covered a lot of ground in this chapter.  We've
-      discussed the concepts of tags and branches, and demonstrated
-      how Subversion implements these concepts by copying directories
-      with the <command>svn copy</command> command.  We've shown how
-      to use <command>svn merge</command> to copy changes from one
-      branch to another, or roll back bad changes.  We've gone over
-      the use of <command>svn switch</command> to create
-      mixed-location working copies.  And we've talked about how one
-      might manage the organization and lifetimes of branches in a
-      repository.</para>
+    <para>Hemos cubierto mucho terreno en este capítulo. Hemos
+      discutido los conceptos de las etiquetas y ramas, y
+      demostrado como Subversion implementa estos conceptos por
+      medio de la copia de directorios y el comando <command>svn
+      copy</command>.  Hemos mostrado cómo usar <command>svn
+      merge</command> para copiar cambios de una rama a otra,
+      o deshacer cambios erróneos. Hemos revisado el uso de
+      <command>svn switch</command> para crear copias de trabajo
+      con mezcla de localizaciones del repositorio. Y hemos hablado
+      sobre cómo podría gestionar la organización y tiempos de vida
+      de las ramas en un repositorio.</para>
 
-    <para>Remember the Subversion mantra: branches and tags are cheap.
-      So use them liberally!</para>
+    <para>Recuerde el mantra de subversion: las ramas y etiquetas
+      son ligeras. ¡Úselas sin pudor!</para>
 
   </sect1>
 

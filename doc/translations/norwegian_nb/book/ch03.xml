@@ -1485,7 +1485,7 @@ M      bar.c               # the content in bar.c has local modifications
 X      3rd_party           # this dir is part of an externals definition
 ?      foo.o               # svn doesn't manage foo.o
 !      some_dir            # svn manages this, but it's either missing or incomplete
-~      qux                 # versioned as dir, but is file, or vice versa
+~      qux                 # versioned as file/dir/link, but type has changed
 I      .screenrc           # svn doesn't manage this, and is configured to ignore it
 A  +   moved_dir           # added with history of where it came from
 M  +   moved_dir/README    # added with history and has local modifications
@@ -1505,8 +1505,8 @@ X      3rd_party           # denne katalogen er del av en
 ?      foo.o               # svn kjenner ikke til foo.o
 !      some_dir            # svn kontrollerer ikke denne, og er satt opp 
                            # til &#229; ignorere den
-~      qux                 # versjonert som katalog, men er en fil 
-                           # eller omvendt
+~      qux                 # versjonert som fil/katalog/lenke, men 
+                           # elementtypen er forandret
 I      .screenrc           # denne filen er ignorert
 A  +   moved_dir           # lagt til med historien til der den kom fra
 M  +   moved_dir/README    # lagt til med historie og inneholder lokale 

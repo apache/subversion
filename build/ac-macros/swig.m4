@@ -108,7 +108,8 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/mandrake-9.0/subversion.spec
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/redhat-8.x/subversion.spec
-    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103019"; then
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103019" -a \
+                                       "$SWIG_VERSION" -lt "103022"; then
         SWIG_SUITABLE=yes
         AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
                         ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
@@ -125,7 +126,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       fi
     else
         SWIG_SUITABLE=no
-        AC_MSG_WARN([swig bindings version 1.3.19 or newer needed for swig support.])
+        AC_MSG_WARN([swig versions 1.3.19, 1.3.20 or 1.3.21 are needed for swig support.])
     fi
 
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then

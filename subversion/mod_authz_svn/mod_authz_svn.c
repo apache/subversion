@@ -105,8 +105,9 @@ static const command_rec authz_svn_cmds[] =
  * Access checking
  */
 
-static int group_contains_user(svn_config_t *cfg,
-    const char *group, const char *user, apr_pool_t *pool)
+static int group_contains_user_internal(svn_config_t *cfg,
+    const char *group, const char *user, apr_hash_t *checked_groups,
+    apr_pool_t *pool)
 {
     const char *value;
     apr_array_header_t *list;
@@ -117,11 +118,36 @@ static int group_contains_user(svn_config_t *cfg,
 
     for (i = 0; i < list->nelts; i++) {
        const char *group_user = APR_ARRAY_IDX(list, i, char *);
-       if (!strcmp(user, group_user))
+
+       if (*group_user == '@') {
+           /* Guard against circular dependencies by checking group
+            * name against hash.
+            */
+           if (apr_hash_get(checked_groups, &group_user[1],
+                            APR_HASH_KEY_STRING))
+               continue;
+	   
+           /* Add group to hash of checked groups. */
+           apr_hash_set(checked_groups, &group_user[1],
+                        APR_HASH_KEY_STRING, "");
+
+           if (group_contains_user_internal(cfg, &group_user[1], user,
+                                            checked_groups, pool))
+               return 1;
+
+       } else if (!strcmp(user, group_user)) {
            return 1;
+       }
     }
 
     return 0;
+}
+
+static int group_contains_user(svn_config_t *cfg,
+    const char *group, const char *user, apr_pool_t *pool)
+{
+    return group_contains_user_internal(cfg, group, user,
+                                        apr_hash_make(pool), pool);
 }
 
 static svn_boolean_t parse_authz_line(const char *name, const char *value,

@@ -101,6 +101,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Wed Dec 29 2004 David Summers <david@summersoft.fay.ar.us> 1.1.2-12531
+- Added "noreplace" option to subversion.conf to not replace it if it has
+  been changed.  This (hopefully) prevents the server from failing when doing
+  an upgrade.  Thanks to Peter Holzleitner for the suggestion.
+
 * Wed Jul 07 2004 David Summers <david@summersoft.fay.ar.us> 1.1.0-10174
 - Require neon-0.24.7 to fix invalid XML (compression) bug.
 
@@ -540,7 +545,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files server
 %defattr(-,root,root)
-%config /etc/httpd/conf.d/subversion.conf
+%config(noreplace) /etc/httpd/conf.d/subversion.conf
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
 %{apache_dir}/lib/httpd/modules/mod_authz_svn.la

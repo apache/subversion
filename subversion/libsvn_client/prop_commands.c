@@ -91,6 +91,24 @@ is_revision_prop_name (const char *name)
   return FALSE;
 }
 
+
+/* Return an SVN_ERR_CLIENT_PROPERTY_NAME error if NAME is a wcprop,
+   else return SVN_NO_ERROR. */
+static svn_error_t *
+error_if_wcprop_name (const char *name)
+{
+  if (svn_property_kind (NULL, name) == svn_prop_wc_kind)
+    {
+      return svn_error_createf
+        (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+         _("'%s' is a wcprop, thus not accessible to clients"),
+         name);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* A baton for propset_walk_cb. */
 struct propset_walk_baton
 {
@@ -164,6 +182,8 @@ svn_client_propset2 (const char *propname,
                                 _("Revision property '%s' not allowed "
                                   "in this context"), propname);
     }
+
+  SVN_ERR (error_if_wcprop_name (propname));
 
   if (svn_path_is_url (target))
     {
@@ -531,6 +551,8 @@ svn_client_propget2 (apr_hash_t **props,
   const char *utarget;  /* target, or the url for target */
   const char *url;
   svn_revnum_t revnum;
+
+  SVN_ERR (error_if_wcprop_name (propname));
 
   *props = apr_hash_make (pool);
 

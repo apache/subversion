@@ -104,6 +104,8 @@ I avoid having to type it so often?</a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
+<li><a href="#divining-bdb-version">How do I determine which version of
+Berkeley DB a repository is using?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -183,6 +185,8 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#bdb41-tabletype-bug">I'm getting the error "svn: bdb: call
     implies an access method which is inconsistent with previous
     calls". How do I fix this?</a></li>
+<li><a href="#hotcopy-large-repos">I can't hotbackup my repository, svnadmin
+    fails on files larger than 2Gb!</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -923,6 +927,10 @@ operations by comparing two trees.  One tree is the usually the HEAD
 revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
+<p>This limitation only applies to the bdb backend; the <a
+href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
+backend</a> does not exhibit this behaviour.</p>
+
 <![CDATA[=========================================================]]>
 
 <h3><a name="removal">
@@ -1465,7 +1473,33 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue
 1974</a>), though this feature is still being debated by developers,
 and isn't being worked on yet.</p>
 
+<![CDATA[=========================================================]]>
 
+<h3><a name="divining-bdb-version">How do I determine which version of
+Berkeley DB a repository is using?</a></h3>
+
+<p>If it's a live repository, then the easy answer is "Whatever version
+of BDB you have installed".  If, however, it is a repository from a
+backup, or some unknown source, and you have no idea which version of
+BDB it was made with, here's how you find out:</p>
+
+<p>Run some command to view the two 4-byte integers at offsets 12 and 16
+(decimal) in the highest-numbered db/log.* file in the repository.  Here
+is an example using GNU od: "<tt>od -j12 -N8 -tx4
+  log.<i>&lt;number&gt;</i></tt>".  Here is an example using Mac OS X
+hexdump: "<tt>hexdump -s12 -n8 -x log.<i>&lt;number&gt;</i></tt>".  The
+first integer should be the magic number 0x00040988, which identifies
+the file as a BDB logfile.  The second number is the log format version
+- match it to a BDB program version
+using the table below:</p>
+
+<table>
+  <tr><th>Log format version</th><th>BDB program version</th></tr>
+  <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
+  <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
+  <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
+  <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
+</table>
 
 <![CDATA[=========================================================]]>
 
@@ -2283,6 +2317,17 @@ contact the Subversion Users <a
   should be.</li>
 </ul>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="hotcopy-large-repos">I can't hotbackup my repository,
+    svnadmin fails on files larger than 2Gb!</a></h3>
+
+<p>Early versions of APR on its 0.9 branch, which Apache 2.0.x and
+Subversion 1.x use, have no support for copying large files (2Gb+).
+A fix which solves the 'svnadmin hotcopy' problem has been applied and
+is included in APR 0.9.5+ and Apache 2.0.50+.  The fix doesn't work
+on all platforms, but works on Linux.
+</p>
 
 
 <![CDATA[=========================================================]]>

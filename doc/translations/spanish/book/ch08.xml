@@ -1,28 +1,30 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
 <!-- originated from English revision 10817 -->
 <chapter id="svn-ch-8">
-  <title>Developer Information</title>
+  <title>Información para desarrolladores</title>
   
   <simplesect id="svn-ch-8-sect-0">
-    <para>Subversion is an open-source software project developed
-      under an Apache-style software license.  The project is
-      financially backed by CollabNet, Inc., a California-based
-      software development company.  The community that has formed
-      around the development of Subversion always welcomes new members
-      who can donate their time and attention to the project.
-      Volunteers are encouraged to assist in any way they can, whether
-      that means finding and diagnosing bugs, refining existing source
-      code, or fleshing out whole new features.</para>
+    <para>Subversion es un proyecto de software open-source
+      desarrollado bajo una licencia de software estilo Apache. El
+      proyecto está respaldado económicamente por CollabNet, Inc.,
+      una compañía de desarrollo de software con sede en California.
+      La comunidad que se ha formado alrededor del desarrollo
+      de Subversion siempre da la bienvenida a nuevos miembros
+      que pueden conar su tiempo y atención al proyecto. A los
+      voluntarios se les anima a ayudar de cualquier modo, ya sea
+      encontrando y diagnosticando fallos, refinando el código fuente
+      existente, o implementando por nuevas características.</para>
     
-    <para>This chapter is for those who wish to assist in the
-      continued evolution of Subversion by actually getting their
-      hands dirty with the source code.  We will cover some of the
-      software's more intimate details, the kind of technical
-      nitty-gritty that those developing Subversion itself&mdash;or
-      writing entirely new tools based on the Subversion
-      libraries&mdash;should be aware of.  If you don't foresee
-      yourself participating with the software at such a level, feel
-      free to skip this chapter with confidence that your experience
-      as a Subversion user will not be affected.</para>
+    <para>Este capítulo es para aquellos que desean asistir en
+      la evolución continua de Subversion ensuciándose las manos
+      con el código fuente.  Cubriremos algunos detalles íntimos
+      del software, ese tipo de conocimiento técnico específico
+      necesario por aquellos que desarrollan Subversion&mdash;o
+      herramientas completamente nuevas basadas en las librerías
+      de Subversion.  Si no prevee participar con el software a
+      tal nivel, siéntase libre de ignorar este capítulo con la
+      certeza de que su experiencia como usuario de Subversion no
+      se verá afectada.</para>
 
   </simplesect>
 
@@ -30,159 +32,178 @@
   <!-- *** SECTION 1:  LAYERED LIBRARY DESIGN                          *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-1">
-    <title>Layered Library Design</title>
+    <title>Diseño de librería por capas</title>
 
-    <para>Subversion has a modular design, implemented as a collection
-      of C libraries.  Each library has a well-defined purpose and
-      interface, and most modules are said to exist in one of three
-      main layers&mdash;the Repository Layer, the Repository Access
-      (RA) Layer, or the Client Layer.  We will examine these layers
-      shortly, but first, see our brief inventory of Subversion's
-      libraries in <xref linkend="svn-ch-8-table-1"/>.  For the sake
-      of consistency, we will refer to the libraries by their
-      extensionless Unix library names (e.g.: libsvn_fs, libsvn_wc,
+    <para>Subversion tiene un diseño modular, implementado como un
+      grupo de librerías en C. Cada librería tiene un
+      propósito e interfaz bien definidos, y la mayoría
+      de los módulos se puede decir que existen en una
+      de tres posibles capas&mdash;capa de repositorio,
+      capa de acceso al repositorio (RA<footnote><para>N.T.:
+      <quote>repository access</quote>.</para></footnote>), o capa
+      de cliente. Examinaremos en breve estas capas, pero antes, vea
+      un corto inventario de las librerías de Subversion en <xref
+      linkend="svn-ch-8-table-1"/>.  En aras de la consistencia,
+      nos referiremos a estas librerías por sus nombres de librería
+      Unix sin extensión (por ejemplo: libsvn_fs, libsvn_wc,
       mod_dav_svn).</para>
 
     <table id="svn-ch-8-table-1">
-      <title>A Brief Inventory of the Subversion Libraries</title>
+      <title>Un corto inventario de las librerías de Subversion</title>
       <tgroup cols="2">
         <thead>
           <row>
-            <entry>Library</entry>
-            <entry>Description</entry>
+            <entry>Librería</entry>
+            <entry>Descripción</entry>
           </row>
         </thead>
         <tbody>
           <row>
             <entry>libsvn_client</entry> 
-            <entry>Primary interface for client programs</entry>
+            <entry>Interfaz principal para programas cliente</entry>
           </row>
           <row>
             <entry>libsvn_delta</entry>
-            <entry>Tree and text differencing routines</entry>
+            <entry>Rutinas de diferenciado de árboles y texto</entry>
           </row>
           <row>
             <entry>libsvn_fs</entry>
-            <entry>The Subversion filesystem library</entry>
+            <entry>Librería del sistema de archivos de
+              Subversion</entry>
           </row>
           <row>
             <entry>libsvn_ra</entry>
-            <entry>Repository Access commons and module loader</entry>
+            <entry>Utilidades comunes de acceso al repositorio y
+              módulo cargador</entry>
           </row>
           <row>
             <entry>libsvn_ra_dav</entry>
-            <entry>The WebDAV Repository Access module</entry>
+            <entry>Módulo de acceso WebDav al repositorio</entry>
           </row>
           <row>
             <entry>libsvn_ra_local</entry>
-            <entry>The local Repository Access module</entry>
+            <entry>Módulo de acceso local al repositorio</entry>
           </row>
           <row>
             <entry>libsvn_ra_svn</entry>
-            <entry>A custom protocol Repository Access module</entry>
+            <entry>Módulo de acceso al repositorio mediante protocolo
+              personalizable</entry>
           </row>
           <row>
             <entry>libsvn_repos</entry>
-            <entry>Repository interface</entry>
+            <entry>Interfaz del repositorio</entry>
           </row>
           <row>
             <entry>libsvn_subr</entry>
-            <entry>Miscellaneous helpful subroutines</entry>
+            <entry>Miscelánea de subrutinas útiles</entry>
           </row>
           <row>
             <entry>libsvn_wc</entry>
-            <entry>The working copy management library</entry>
+            <entry>Librería para la gestión de la copia local de
+              trabajo</entry>
           </row>
           <row>
             <entry>mod_authz_svn</entry>
-            <entry>Apache authorization module for Subversion
-            repositories access via WebDAV.</entry>
+            <entry>Módulo de autorización de Apache para acceso a
+              repositorios Subversion vía WebDAV</entry>
           </row>
           <row>
             <entry>mod_dav_svn</entry>
-            <entry>Apache module for mapping WebDAV operations to
-            Subversion ones</entry>
+            <entry>Módulo Apache para relacionar operaciones WebDAV
+              con operaciones Subversion</entry>
           </row>
         </tbody>
       </tgroup>
     </table>
 
-    <para>The fact that the word <quote>miscellaneous</quote> only
-      appears once in <xref linkend="svn-ch-8-table-1"/> is a good
-      sign.  The Subversion development team is serious about making
-      sure that functionality lives in the right layer and libraries.
-      Perhaps the greatest advantage of the modular design is its lack
-      of complexity from a developer's point of view.  As a developer,
-      you can quickly formulate that kind of <quote>big
-      picture</quote> that allows you to pinpoint the location of
-      certain pieces of functionality with relative ease.</para>
+    <para>El hecho de que la palabra <quote>miscelánea</quote>
+      sólo aparezca una vez en <xref linkend="svn-ch-8-table-1"/>
+      es una buena señal. El equipo de desarrollo de Subversion está
+      seriamente dedicado a que las funcionalidades vivan en la
+      capa y librería correctas.  Quizás la mayor de las ventajas
+      del diseño modular es su falta de complejidad desde el punto
+      de vista de un desarrollador. Como desarrollador, usted puede
+      formular rápidamente este <quote>gran mapa</quote> <!-- TODO
+      buscar traducción adecuada de big picture --> que le permite
+      marcar la localización de ciertas partes de la funcionalidad
+      con relativa facilidad.</para>
 
-    <para>Another benefit of modularity is the ability to replace a
-      given module with a whole new library that implements the same
-      API without affecting the rest of the code base.  In some sense,
-      this happens within Subversion already.  The libsvn_ra_dav,
-      libsvn_ra_local, and libsvn_ra_svn all implement the same
-      interface.  And all three communicate with the Repository
-      Layer&mdash;libsvn_ra_dav and libsvn_ra_svn do so across a
-      network, and libsvn_ra_local connects to it directly.</para>
+    <para>Otro gran beneficio de la modularidad es la posibilidad
+      de reemplazar un módulo concreto con una nueva librería
+      que implementa la misma API sin afectar al resto del código
+      fuente. En cierto sentido, esto ya ocurre dentro de Subversion.
+      Las librerías libsvn_ra_dav, libsvn_ra_local, y libsvn_ra_svn
+      implementan la misma interfaz. Y las tres se comunican con la
+      capa de repositorio;libsvn_ra_dav y libsvn_ra_svn lo hacen
+      a través de la red, mientras que libsvn_ra_local accede
+      directamente.</para>
 
-    <para>The client itself also highlights modularity in the
-      Subversion design.  While Subversion currently comes with only a
-      command-line client program, there are already a few other
-      programs being developed by third parties to act as GUIs for
-      Subversion.  Again, these GUIs use the same APIs that the stock
-      command-line client does.  Subversion's libsvn_client library is
-      the one-stop shop for most of the functionality necessary for
-      designing a working Subversion client (see <xref
-      linkend="svn-ch-8-sect-1.3"/>).</para>
+    <para>El propio cliente es una muestra de la modularidad del
+      diseño de Subversion.  A pesar de que Subversion por ahora
+      sólo viene con un programa cliente de línea de comando, ya
+      hay en desarrollo unos cuantos programas por parte de terceros
+      que actúan como interfaces gráficas de Subversion. De nuevo,
+      estos GUIs usan las mismas APIs que el cliente de línea
+      de comando que viene de serie. La librería de Subversion
+      libsvn_client es como una tienda de paso con la mayor parte
+      de la funcionalidad necesaria para diseñar un cliente de
+      Subversion (vea <xref linkend="svn-ch-8-sect-1.3"/>).</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-1.1">
-      <title>Repository Layer</title>
+      <title>Capa de repositorio</title>
 
-      <para>When referring to Subversion's Repository Layer, we're
-        generally talking about two libraries&mdash;the repository
-        library, and the filesystem library.  These libraries provide
-        the storage and reporting mechanisms for the various revisions
-        of your version-controlled data.  This layer is connected to
-        the Client Layer via the Repository Access Layer, and is, from
-        the perspective of the Subversion user, the stuff at the
-        <quote>other end of the line.</quote></para>
+      <para>Cuando nos referimos a la capa de respositorio de
+        Subversion, en general estamos hablando de dos
+        librerías&mdash;la librería de repositorio, y la librería
+        del sistema de ficheros. Estas librerías proporcionan
+        los mecanismos de almacenamiento e informe <!--TODO
+        reporting? --> para las varias revisiones de sus datos
+        bajo control de versiones. Esta capa está conectada a la
+        capa cliente vía capa de acceso al repositorio, y son,
+        desde el punto de vista del usuario de Subversion, las
+        cosas <quote>al otro lado de la línea.</quote></para>
 
-      <para>The Subversion Filesystem is accessed via the libsvn_fs
-        API, and is not a kernel-level filesystem that one would
-        install in an operating system (like the Linux ext2 or NTFS),
-        but a virtual filesystem.  Rather than storing
-        <quote>files</quote> and <quote>directories</quote> as real
-        files and directories (as in, the kind you can navigate
-        through using your favorite shell program), it uses a database
-        system for its back-end storage mechanism.  Currently, the
-        database system in use is Berkeley DB.
+      <para>Al sistema de ficheros de Subversion se accede vía la
+        API de libsvn_fs, y no se trata de un sistema de
+        ficheros que uno instalaría en un sistema operativo
+        (como ext2 de Linux o NTFS), sino un sistema de ficheros
+        virtual. En lugar de almacenar <quote>ficheros</quote>
+        y <quote>directorios</quote> como ficheros y directorios
+        reales (vamos, el tipo que puede explorar usando su
+        programa favorito de shell), usa un sistema de base de
+        datos para sus mecanismos back-end <!-- TODO back-end? -->
+        de almacenamiento.  Actualmente el sistema de base de datos
+        que usa es la base de datos de Berkeley.
         <footnote>
-          <para>The choice of Berkeley DB brought several automatic
-            features that Subversion needed, such as data integrity,
-            atomic writes, recoverability, and hot backups.</para>
+          <para>La elección de la base de datos de Berkeley trajo
+            varias características de forma automática que
+            Subversion necesitaba, como integridad de datos,
+            escrituras atómicas, recuperabilidad, y copias de
+            seguridad en caliente.</para>
         </footnote>
-        However, there has been considerable interest by the
-        development community in giving future releases of Subversion
-        the ability to use other back-end database systems, perhaps
-        through a mechanism such as Open Database Connectivity
-        (ODBC).</para>
+        No obstante, en la comunidad de desarrolladores ha habido
+        un considerable interés para que futuras versiones de
+        Subversion tengan la capacidad para usar otros sistemas
+        back-ends de base de datos, quizás a través de mecanismos
+        como la Open Database Connectivity (ODBC).</para>
 
-      <para>The filesystem API exported by libsvn_fs contains the
-        kinds of functionality you would expect from any other
-        filesystem API: you can create and remove files and
-        directories, copy and move them around, modify file contents,
-        and so on.  It also has features that are not quite as common,
-        such as the ability to add, modify, and remove metadata
-        (<quote>properties</quote>) on each file or directory.
-        Furthermore, the Subversion Filesystem is a versioning
-        filesystem, which means that as you make changes to your
-        directory tree, Subversion remembers what your tree looked
-        like before those changes.  And before the previous changes.
-        And the previous ones.  And so on, all the way back through
-        versioning time to (and just beyond) the moment you first
-        started adding things to the filesystem.</para>
+      <para>La API de sistema de ficheros exportada por libsvn_fs
+        contiene el tipo de funcionalidad que esperaría de
+        cualquier otro API de sistema de ficheros: puede crear
+        y borrar ficheros y directorios, copiarlos y moverlos,
+        modificar el contenido de ficheros, y un largo etcétera.
+        También tiene características que no son tan comunes, como
+        la habilidad de añadir, modificar o eliminar meta datos
+        (<quote>propiedades</quote>) sobre cualquier fichero o
+        directorio.  Además, el sistema de archivos de Subversion
+        es versionado, lo que significa que a medida que realiza
+        cambios a su árbol de directorios, Subversion recuerda el
+        aspecto que tenía el árbol antes de esos cambios. Y antes
+        que los cambios anteriores. Y que los anteriores a los
+        anteriores. Y así todo el camino de vuelta por el tiempo
+        de versionado hasta el momento inicial en el cual comenzó
+        a añadir cosas al sistema de archivos.</para>
 
       <para>All the modifications you make to your tree are done
         within the context of a Subversion transaction.  The following

@@ -425,7 +425,7 @@
           the repository isn't affected at all.  At worst, some
           transaction data is left behind.</para>
 
-        <para>The only real argument against an FSFS is its relative
+        <para>The only real argument against FSFS is its relative
           immaturity compared to Berkeley DB.  It hasn't been used or
           stress-tested nearly as much, and so a lot of these
           assertions about speed and scalability are just that:
@@ -780,6 +780,24 @@ pre-commit.tmpl
           </listitem>
         </varlistentry>
       </variablelist>
+
+      <warning>
+        <para>Do not attempt to modify the transaction using hook
+        scripts. A common example of this would be to automatically
+        set properties such as <literal>svn:eol-style</literal> or
+        <literal>svn:mime-type</literal> during the
+        commit. While this might seem like a good idea, it causes
+        problems. The main problem is that the client does not know
+        about the change made by the hook script, and there is no way
+        to inform the client that it is out-of-date.  This
+        inconsistency can lead to surprising and unexpected
+        behavior.</para>
+
+        <para>Instead of attempting to modify the transaction, it is
+        much better to <emphasis>check</emphasis> the transaction in
+        the <filename>pre-commit</filename> hook and reject the commit
+        if it does not meet the desired requirements.</para>
+      </warning>
 
       <para>Subversion will attempt to execute hooks as the same user
         who owns the process which is accessing the Subversion
