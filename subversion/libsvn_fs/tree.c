@@ -4247,7 +4247,9 @@ txn_body_history_prev (void *baton, trail_t *trail)
   *prev_history = NULL;
 
   /* If our last history report left us hints about where to pickup
-     the chase, start from those locations. */
+     the chase, then our last report was on the destination of a
+     copy.  If we are crossing copies, start from those locations,
+     otherwise, we're all done here.  */
   if (history->path_hint && SVN_IS_VALID_REVNUM (history->rev_hint))
     {
       reported = 0;
