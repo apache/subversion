@@ -112,10 +112,8 @@ AC_DEFUN(SVN_FIND_SWIG,
       dnl include SWIG runtime functions (used for creating multi-module
       dnl packages)" in favor of the -noruntime flag.
       if test "$SWIG_VERSION" -ge "103020"; then
-          SWIG_RUNTIME_FLAG='-runtime'
           SWIG_NORUNTIME_FLAG='-noruntime'
       else
-          SWIG_RUNTIME_FLAG=''
           SWIG_NORUNTIME_FLAG='-c'
       fi
     else
@@ -181,7 +179,6 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   fi
   AC_SUBST(SWIG_CLEAN_RULES)
-  AC_SUBST(SWIG_RUNTIME_FLAG)
   AC_SUBST(SWIG_NORUNTIME_FLAG)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)

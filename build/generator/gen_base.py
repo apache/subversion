@@ -237,12 +237,12 @@ class ObjectFile(DependencyNode):
     self.source_generated = 0
 
 class SWIGObject(ObjectFile):
-  def __init__(self, filename, target):
+  def __init__(self, filename, lang):
     ObjectFile.__init__(self, filename)
-    self.target = target
+    self.lang = lang
+    self.lang_abbrev = lang_abbrev[lang]
     ### hmm. this is Makefile-specific
-    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' \
-                       % string.upper(lang_abbrev[target.lang])
+    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
     self.source_generated = 1
 
 class HeaderFile(DependencyNode):
@@ -521,8 +521,8 @@ class TargetSWIG(TargetLib):
       self.filename = build_path_join(self.path, libfile)
 
     ifile = SWIGSource(ipath)
-    cfile = SWIGObject(build_path_join(self.path, cname), self)
-    ofile = SWIGObject(build_path_join(self.path, oname), self)
+    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
+    ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
 
     # the .c file depends upon the .i file
     graph.add(DT_SWIG_C, cfile, ifile)
@@ -532,6 +532,10 @@ class TargetSWIG(TargetLib):
 
     # the library depends upon the object
     graph.add(DT_LINK, self.name, ofile)
+
+    # non-java modules depend on swig runtime libraries
+    if self.lang != "java":
+      graph.add(DT_LINK, self.name, TargetSWIGRuntime(self.lang))
 
     abbrev = lang_abbrev[self.lang]
 
@@ -552,6 +556,11 @@ class TargetSWIG(TargetLib):
     def get_dep_targets(self, target):
       target = self.targets.get(target.lang, None)
       return target and [target] or [ ]
+
+class TargetSWIGRuntime(TargetLinked):
+  def __init__(self, lang):
+    self.name = None
+    self.external_lib = "-lswig" + lang_abbrev[lang]
 
 class TargetSWIGLib(TargetLib):
   def __init__(self, name, options, cfg, extmap):
