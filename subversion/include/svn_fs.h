@@ -46,6 +46,7 @@ typedef struct svn_fs_t svn_fs_t;
 
 /** Filesystem configuration options. */
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
+#define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
 
 /** Create a new filesystem object in @a pool.

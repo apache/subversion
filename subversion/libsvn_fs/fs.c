@@ -362,6 +362,160 @@ svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 }
 
 
+/* Write the DB_CONFIG file. */
+static svn_error_t *
+bdb_write_config  (svn_fs_t *fs)
+{
+  const char *dbconfig_file_name =
+    svn_path_join (fs->path, "DB_CONFIG", fs->pool);
+  apr_file_t *dbconfig_file = NULL;
+  apr_status_t apr_err;
+  int i;
+
+  static const char dbconfig_contents[] =
+    "# This is the configuration file for the Berkeley DB environment\n"
+    "# used by your Subversion repository.\n"
+    "# You must run 'svnadmin recover' whenever you modify this file,\n"
+    "# for your changes to take effect.\n"
+    "\n"
+    "### Lock subsystem\n"
+    "#\n"
+    "# Make sure you read the documentation at:\n"
+    "#\n"
+    "#   http://www.sleepycat.com/docs/ref/lock/max.html\n"
+    "#\n"
+    "# before tweaking these values.\n"
+    "set_lk_max_locks   2000\n"
+    "set_lk_max_lockers 2000\n"
+    "set_lk_max_objects 2000\n"
+    "\n"
+    "### Log file subsystem\n"
+    "#\n"
+    "# Make sure you read the documentation at:\n"
+    "#\n"
+    "#   http://www.sleepycat.com/docs/api_c/env_set_lg_bsize.html\n"
+    "#   http://www.sleepycat.com/docs/api_c/env_set_lg_max.html\n"
+    "#   http://www.sleepycat.com/docs/ref/log/limits.html\n"
+    "#\n"
+    "# Increase the size of the in-memory log buffer from the default\n"
+    "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
+    "# 10 Mbytes to 1 Mbyte.  This will help reduce the amount of disk\n"
+    "# space required for hot backups.  The size of the log file must be\n"
+    "# at least four times the size of the in-memory log buffer.\n"
+    "#\n"
+    "# Note: Decreasing the in-memory buffer size below 256 Kbytes\n"
+    "# will hurt commit performance. For details, see this post from\n"
+    "# Daniel Berlin <dan@dberlin.org>:\n"
+    "#\n"
+    "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
+    "set_lg_bsize     262144\n"
+    "set_lg_max      1048576\n";
+
+  /* Run-time configurable options.
+     Each option set consists of a minimum required BDB version, a
+     config hash key, a header, an inactive form and an active
+     form. We always write the header; then, depending on the
+     run-time configuration and the BDB version we're compiling
+     against, we write either the active or inactive form of teh
+     value. */
+  static const struct
+  {
+    int bdb_major;
+    int bdb_minor;
+    const char *config_key;
+    const char *header;
+    const char *inactive;
+    const char *active;
+  } dbconfig_options[] = {
+    /* Controlled by "svnadmin create --bdb-txn-nosync" */
+    { 4, 0, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+      /* header */
+      "#\n"
+      "# Disable fsync of log files on transaction commit. Read the\n"
+      "# documentation about DB_TXN_NOSYNC at:\n"
+      "#\n"
+      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
+      "#\n"
+      "# [requires Berkeley DB 4.0]\n",
+      /* inactive */
+      "# set_flags DB_TXN_NOSYNC\n",
+      /* active */
+      "set_flags DB_TXN_NOSYNC\n" },
+    /* Controlled by "svnadmin create --bdb-log-keep" */
+    { 4, 2, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
+      /* header */
+      "#\n"
+      "# Enable automatic removal of unused transaction log files.\n"
+      "# Read the documentation about DB_LOG_AUTOREMOVE at:\n"
+      "#\n"
+      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
+      "#\n"
+      "# [requires Berkeley DB 4.2]\n",
+      /* inactive */
+      "# set_flags DB_LOG_AUTOREMOVE\n",
+      /* active */
+      "set_flags DB_LOG_AUTOREMOVE\n" },
+  };
+  static const int dbconfig_options_length =
+    sizeof (dbconfig_options)/sizeof (*dbconfig_options);
+
+
+  SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
+                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
+                             fs->pool));
+
+  apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
+                                 sizeof (dbconfig_contents) - 1, NULL);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_createf (apr_err, 0,
+                              "writing to '%s'", dbconfig_file_name);
+
+  /* Write the variable DB_CONFIG flags. */
+  for (i = 0; i < dbconfig_options_length; ++i)
+    {
+      void *value = NULL;
+      const char *choice;
+
+      if (fs->config)
+        {
+          value = apr_hash_get (fs->config,
+                                dbconfig_options[i].config_key,
+                                APR_HASH_KEY_STRING);
+        }
+
+      apr_err = apr_file_write_full (dbconfig_file,
+                                     dbconfig_options[i].header,
+                                     strlen (dbconfig_options[i].header),
+                                     NULL);
+      if (apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (apr_err, 0, "writing to '%s'",
+                                    dbconfig_file_name);
+        }
+
+      if ((DB_VERSION_MAJOR == dbconfig_options[i].bdb_major
+           && DB_VERSION_MINOR >= dbconfig_options[i].bdb_minor
+           || DB_VERSION_MAJOR > dbconfig_options[i].bdb_major)
+          && value != NULL && strcmp (value, "0") != 0)
+        choice = dbconfig_options[i].active;
+      else
+        choice = dbconfig_options[i].inactive;
+
+      apr_err = apr_file_write_full (dbconfig_file,
+                                     choice, strlen (choice), NULL);
+      if (apr_err != APR_SUCCESS)
+        {
+          return svn_error_createf (apr_err, 0, "writing to '%s'",
+                                    dbconfig_file_name);
+        }
+    }
+
+  SVN_ERR (svn_io_file_close (dbconfig_file, fs->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
@@ -384,115 +538,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                               "creating Berkeley DB environment dir '%s'",
                               fs->path);
 
-  /* Write the DB_CONFIG file. */
-  {
-    apr_file_t *dbconfig_file = NULL;
-    const char *dbconfig_file_name
-      = svn_path_join (path, "DB_CONFIG", fs->pool);
-
-    static const char dbconfig_contents[] =
-      "# This is the configuration file for the Berkeley DB environment\n"
-      "# used by your Subversion repository.\n"
-      "# You must run 'svnadmin recover' whenever you modify this file,\n"
-      "# for your changes to take effect.\n"
-      "\n"
-      "### Lock subsystem\n"
-      "#\n"
-      "# Make sure you read the documentation at:\n"
-      "#\n"
-      "#   http://www.sleepycat.com/docs/ref/lock/max.html\n"
-      "#\n"
-      "# before tweaking these values.\n"
-      "set_lk_max_locks   2000\n"
-      "set_lk_max_lockers 2000\n"
-      "set_lk_max_objects 2000\n"
-      "\n"
-      "### Log file subsystem\n"
-      "#\n"
-      "# Make sure you read the documentation at:\n"
-      "#\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_lg_bsize.html\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_lg_max.html\n"
-      "#   http://www.sleepycat.com/docs/ref/log/limits.html\n"
-      "#\n"
-      "# Increase the size of the in-memory log buffer from the default\n"
-      "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
-      "# 10 Mbytes to 1 Mbyte.  This will help reduce the amount of disk\n"
-      "# space required for hot backups.  The size of the log file must be\n"
-      "# at least four times the size of the in-memory log buffer.\n"
-      "#\n"
-      "# Note: Decreasing the in-memory buffer size below 256 Kbytes\n"
-      "# will hurt commit performance. For details, see this post from\n"
-      "# Daniel Berlin <dan@dberlin.org>:\n"
-      "#\n"
-      "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
-      "set_lg_bsize     262144\n"
-      "set_lg_max      1048576\n";
-
-    /* We always output this header.  Then, depending on a run-time
-       argument, we output either the active or inactive form of the
-       value line. */
-    static const char dbconfig_txn_nosync_header[] =
-      "#\n"
-      "# Disable fsync of log files on transaction commit. Read the\n"
-      "# documentation about DB_TXN_NOSYNC at:\n"
-      "#\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
-      "#\n";
-    const char *dbconfig_txn_nosync_val_inactive =
-      "# set_flags DB_TXN_NOSYNC\n";
-    const char *dbconfig_txn_nosync_val_active =
-      "set_flags DB_TXN_NOSYNC\n";
-
-
-    SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
-                               APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                               fs->pool));
-
-    apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
-                                   sizeof (dbconfig_contents) - 1, NULL);
-    if (apr_err != APR_SUCCESS)
-      return svn_error_createf (apr_err, 0,
-                                "writing to '%s'", dbconfig_file_name);
-
-    /* The DB_CONFIG flag, in either active or inactive form. */
-    {
-      void *value = NULL;
-      const char *choice;
-      
-      if (fs->config)
-        {
-          value = apr_hash_get (fs->config,
-                                SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                                APR_HASH_KEY_STRING);
-        }
-      
-      apr_err = apr_file_write_full (dbconfig_file,
-                                     dbconfig_txn_nosync_header,
-                                     sizeof (dbconfig_txn_nosync_header) - 1,
-                                     NULL);
-      if (apr_err != APR_SUCCESS)
-        {
-          return svn_error_createf (apr_err, 0, "writing to '%s'",
-                                    dbconfig_file_name);
-        }
-      
-      if (value != NULL)
-        choice = dbconfig_txn_nosync_val_active;
-      else
-        choice = dbconfig_txn_nosync_val_inactive;
-      
-      apr_err = apr_file_write_full (dbconfig_file,
-                                     choice, strlen (choice), NULL); 
-      if (apr_err != APR_SUCCESS)
-        {
-          return svn_error_createf (apr_err, 0, "writing to '%s'",
-                                    dbconfig_file_name);
-        }
-    }
-
-    SVN_ERR (svn_io_file_close (dbconfig_file, fs->pool));
-  }
+  SVN_ERR (bdb_write_config (fs));
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;

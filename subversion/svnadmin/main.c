@@ -112,6 +112,7 @@ enum
     svnadmin__force_uuid,
     svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync,
+    svnadmin__bdb_log_keep,
     svnadmin__config_dir,
     svnadmin__bypass_hooks,
     svnadmin__clean_logs
@@ -159,6 +160,9 @@ static const apr_getopt_option_t options_table[] =
     {"bdb-txn-nosync", svnadmin__bdb_txn_nosync, 0,
      "disable fsync at transaction commit [Berkeley DB]"},
 
+    {"bdb-log-keep", svnadmin__bdb_log_keep, 0,
+     "disable automatic log file removal [Berkeley DB]"},
+
     {"config-dir", svnadmin__config_dir, 1,
      "read user configuration files from directory ARG"},
 
@@ -177,7 +181,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
-     {svnadmin__bdb_txn_nosync, svnadmin__config_dir} },
+     {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
+      svnadmin__config_dir} },
 
     {"deltify", subcommand_deltify, {0},
      "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -278,6 +283,7 @@ struct svnadmin_opt_state
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
+  svn_boolean_t bdb_log_keep;                       /* --bdb-log-keep */
   svn_boolean_t clean_logs;                         /* --clean-logs */
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
@@ -295,14 +301,15 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   apr_hash_t *config;
-  apr_hash_t *fs_config = NULL;
+  apr_hash_t *fs_config = apr_hash_make (pool);;
 
-  if (opt_state->bdb_txn_nosync)
-    {
-      fs_config = apr_hash_make (pool);
-      apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                    APR_HASH_KEY_STRING, "1");
-    }
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                APR_HASH_KEY_STRING,
+                (opt_state->bdb_txn_nosync ? "1" : "0"));
+
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
+                APR_HASH_KEY_STRING,
+                (opt_state->bdb_log_keep ? "0" : "1"));
 
   SVN_ERR (svn_config_get_config (&config, opt_state->config_dir, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
@@ -883,6 +890,9 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
+        break;
+      case svnadmin__bdb_log_keep:
+        opt_state.bdb_log_keep = TRUE;
         break;
       case svnadmin__bypass_hooks:
         opt_state.bypass_hooks = TRUE;
