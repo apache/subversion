@@ -22,7 +22,6 @@
 /*** Defines ***/
 #define SVN_JNI__SUBVERSION_EXCEPTION \
 "org/tigris/subversion/SubversionException"
-#define SVN_JNI__VERBOSE
 #define SVN_JNI__ERROR_CREATE_STRINGBUF "error while creating stringbuf_t"
 #define SVN_JNI__ERROR_CLIENT_STATUS "error in svn_client_status()"
 
