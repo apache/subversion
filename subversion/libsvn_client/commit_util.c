@@ -674,7 +674,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           {
             return svn_error_createf 
               (SVN_ERR_ILLEGAL_TARGET, NULL, 
-               "'%s' is not versioned in the repository "
+               "'%s' is not under version control "
                "and is not part of the commit, "
                "yet its child '%s' is part of the commit.",
                dangling_parent, dangling_child);

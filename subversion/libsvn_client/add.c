@@ -302,7 +302,7 @@ add_dir_recursive (const char *dirname,
     {
       return svn_error_createf
         (err->apr_err, err,
-         "error during recursive add of '%s'", dirname);
+         "Error during recursive add of '%s'", dirname);
     }
   else  /* Yes, it exited cleanly, so close the dir. */
     {
@@ -312,7 +312,7 @@ add_dir_recursive (const char *dirname,
       apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_createf
-          (apr_err, NULL, "error closing directory '%s'", dirname);
+          (apr_err, NULL, "Error closing directory '%s'", dirname);
     }
 
   /* Opened by svn_wc_add */

@@ -146,7 +146,7 @@ svn_client_propset (const char *propname,
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not a versioned resource", 
+                              "'%s' is not under version control", 
                               target);
 
   if (recurse && node->kind == svn_node_dir)
@@ -375,7 +375,7 @@ maybe_convert_to_url (const char **new_target,
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  "'%s' is not a versioned resource", 
+                                  "'%s' is not under version control", 
                                   target);
       *new_target = entry->url;
     }
@@ -563,7 +563,7 @@ svn_client_propget (apr_hash_t **props,
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  "'%s' is not a versioned resource", target);
+                                  "'%s' is not under version control", target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
@@ -934,7 +934,7 @@ svn_client_proplist (apr_array_header_t **props,
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  "'%s' is not a versioned resource", target);
+                                  "'%s' is not under version control", target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));

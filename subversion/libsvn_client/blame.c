@@ -394,7 +394,7 @@ svn_client_blame (const char *target,
 
   if (kind == svn_node_dir)
     return svn_error_createf (SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                              "URL '%s' refers to directory", url);
+                              "URL '%s' refers to a directory", url);
 
   condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
   (*((const char **)apr_array_push (condensed_targets))) = "";

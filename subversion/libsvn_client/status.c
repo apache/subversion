@@ -115,7 +115,7 @@ svn_client_status (svn_revnum_t *youngest,
     svn_path_split (path, &anchor, &target, pool);
   else
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not a versioned resource", path);
+                              "'%s' is not under version control", path);
   
   /* Close up our ADM area.  We'll be re-opening soon. */
   SVN_ERR (svn_wc_adm_close (adm_access));

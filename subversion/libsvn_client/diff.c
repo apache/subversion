@@ -1169,7 +1169,7 @@ convert_to_url (const char **url,
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not versioned", path);
+                              "'%s' is not under version control", path);
 
   if (entry->url)  
     *url = apr_pstrdup (pool, entry->url);
