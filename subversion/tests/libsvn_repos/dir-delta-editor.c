@@ -63,7 +63,7 @@ test_delete_entry (const char *path,
 
   /* Construct the full path of this entry and delete it from the txn. */
   full_path = svn_path_join (eb->root_path, path, pool);
-  return svn_fs_delete_tree (eb->txn_root, full_path, pool);
+  return svn_fs_delete (eb->txn_root, full_path, pool);
 }
 
 

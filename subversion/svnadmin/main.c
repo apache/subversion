@@ -534,11 +534,11 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (i = 0; i < args->nelts; i++)
     {
       const char *txn_name_utf8;
-      SVN_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, 
-                                        APR_ARRAY_IDX (args, i, const char *),
-                                        subpool));
+      SVN_ERR (svn_utf_cstring_to_utf8 
+               (&txn_name_utf8, APR_ARRAY_IDX (args, i, const char *), 
+                subpool));
       SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name_utf8, subpool));
-      SVN_ERR (svn_fs_abort_txn (txn));
+      SVN_ERR (svn_fs_abort_txn (txn, subpool));
       svn_pool_clear (subpool);
     }
 

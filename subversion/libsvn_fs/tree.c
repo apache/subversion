@@ -357,8 +357,8 @@ txn_body_txn_root (void *baton,
   struct txn_root_args *args = baton;
   svn_fs_root_t **root_p = args->root_p;
   svn_fs_txn_t *txn = args->txn;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-  const char *svn_txn_id = svn_fs__txn_id (txn);
+  svn_fs_t *fs = txn->fs;
+  const char *svn_txn_id = txn->id;
   const svn_fs_id_t *root_id, *base_root_id;
   svn_fs_root_t *root;
 
@@ -382,9 +382,8 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
   struct txn_root_args args;
 
   args.root_p = &root;
-  args.txn    = txn;
-  SVN_ERR (svn_fs__retry_txn (svn_fs_txn_fs (txn), txn_body_txn_root,
-                              &args, pool));
+  args.txn = txn;
+  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_txn_root, &args, pool));
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -943,7 +942,7 @@ open_path (parent_path_t **parent_path_p,
         break;
       
       /* The path isn't finished yet; we'd better be in a directory.  */
-      if (! svn_fs__dag_is_directory (child))
+      if (svn_fs__dag_node_kind (child) != svn_node_dir)
         SVN_ERR_W (svn_fs__err_not_directory (fs, path_so_far),
                    apr_pstrcat (pool, "Failure opening '", path, "'", NULL));
       
@@ -2093,9 +2092,9 @@ merge (svn_stringbuf_t *conflict_p,
    * See the following message for the full details:
    * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=166183 */
 
-  if ((! svn_fs__dag_is_directory (source))
-      || (! svn_fs__dag_is_directory (target))
-      || (! svn_fs__dag_is_directory (ancestor)))
+  if ((svn_fs__dag_node_kind (source) != svn_node_dir)
+      || (svn_fs__dag_node_kind (target) != svn_node_dir)
+      || (svn_fs__dag_node_kind (ancestor) != svn_node_dir))
     {
       return conflict_err (conflict_p, target_path);
     }
@@ -2218,16 +2217,6 @@ merge (svn_stringbuf_t *conflict_p,
                  from target... (Case 1) */
               if (logic_case == 1)
                 {
-                  /* ### kff todo: what about svn_fs__dag_link()
-                     instead of svn_fs__dag_set_entry()?  The cycle
-                     protection guaranteed by the former would be
-                     guaranteed "for free" anyway, if this function
-                     demanded that SOURCE and ANCESTOR always be
-                     immutable nodes.  But we don't demand that,
-                     although it happens to be true of our only caller
-                     right now, since merges are only done as part of
-                     commits. */
-
                   /* ... target takes source. */
                   if (! svn_fs__dag_check_mutable (target, txn_id))
                     return svn_error_createf
@@ -2254,9 +2243,9 @@ merge (svn_stringbuf_t *conflict_p,
                   SVN_ERR (svn_fs__dag_get_node (&a_ent_node, fs,
                                                  a_entry->id, trail));
                       
-                  if ((! svn_fs__dag_is_directory (s_ent_node))
-                      || (! svn_fs__dag_is_directory (t_ent_node))
-                      || (! svn_fs__dag_is_directory (a_ent_node)))
+                  if ((svn_fs__dag_node_kind (s_ent_node) != svn_node_dir)
+                      || (svn_fs__dag_node_kind (t_ent_node) != svn_node_dir)
+                      || (svn_fs__dag_node_kind (a_ent_node) != svn_node_dir))
                     {
                       /* Not all of these entries is a directory. Conflict. */
                       return conflict_err (conflict_p,
@@ -2322,8 +2311,8 @@ merge (svn_stringbuf_t *conflict_p,
                   (SVN_ERR_FS_NOT_MUTABLE, NULL,
                    "unexpected immutable node at \"%s\"", target_path);
               
-              SVN_ERR (svn_fs__dag_delete_tree (target, t_entry->name, 
-                                                txn_id, trail));
+              SVN_ERR (svn_fs__dag_delete (target, t_entry->name, 
+                                           txn_id, trail));
 
               /* Seems cleanest to remove it from the target entries
                  hash now, even though no code would break if we
@@ -2480,8 +2469,8 @@ txn_body_merge (void *baton, trail_t *trail)
   struct merge_args *args = baton;
   dag_node_t *source_node, *txn_root_node, *ancestor_node;
   const svn_fs_id_t *source_id;
-  svn_fs_t *fs = svn_fs__txn_fs (args->txn);
-  const char *txn_id = svn_fs__txn_id (args->txn);
+  svn_fs_t *fs = args->txn->fs;
+  const char *txn_id = args->txn->id;
 
   source_node = args->source_node;
   ancestor_node = args->ancestor_node;
@@ -2557,8 +2546,8 @@ txn_body_commit (void *baton, trail_t *trail)
   struct commit_args *args = baton;
 
   svn_fs_txn_t *txn = args->txn;
-  svn_fs_t *fs = svn_fs__txn_fs (txn);
-  const char *txn_name = svn_fs__txn_id (txn);
+  svn_fs_t *fs = txn->fs;
+  const char *txn_name = txn->id;
 
   svn_revnum_t youngest_rev;
   const svn_fs_id_t *y_rev_root_id;
@@ -2598,7 +2587,8 @@ txn_body_commit (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_commit_txn (const char **conflict_p,
                    svn_revnum_t *new_rev, 
-                   svn_fs_txn_t *txn)
+                   svn_fs_txn_t *txn,
+                   apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
    *
@@ -2641,17 +2631,12 @@ svn_fs_commit_txn (const char **conflict_p,
    */
 
   svn_error_t *err;
-  svn_fs_t *fs = svn_fs__txn_fs (txn);
-  apr_pool_t *pool = svn_fs__txn_pool (txn);
-  const char *txn_id;
+  svn_fs_t *fs = txn->fs;
 
   /* Initialize output params. */
   *new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
-
-  /* Get the transaction's name.  We'll need it later. */
-  SVN_ERR (svn_fs_txn_name (&txn_id, txn, pool));
 
   while (1729)
     {
@@ -2717,22 +2702,13 @@ svn_fs_commit_txn (const char **conflict_p,
             svn_error_clear (err);
         }
       else if (err)
-        return err;
+        {
+          return err;
+        }
       else
         {
-          svn_fs_root_t *rev_root;
-
           /* Set the return value -- our brand spankin' new revision! */
           *new_rev = commit_args.new_rev;
-
-          /* Get the new revision root. */
-          SVN_ERR_W (svn_fs_revision_root (&rev_root, fs, *new_rev, pool),
-                     "Commit succeeded, but error getting new revision root");
-
-          /* Now...deltify! */
-          SVN_ERR_W (deltify_mutable (fs, rev_root, "/", txn_id, pool),
-                     "Commit succeeded; deltification failed");
-
           return SVN_NO_ERROR;
         }
     }
@@ -2811,6 +2787,43 @@ svn_fs_merge (const char **conflict_p,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+struct rev_get_txn_id_args
+{
+  const char **txn_id;
+  svn_fs_t *fs;
+  svn_revnum_t revision;
+};
+
+
+static svn_error_t *
+txn_body_rev_get_txn_id (void *baton, trail_t *trail)
+{
+  struct rev_get_txn_id_args *args = baton;
+  return svn_fs__rev_get_txn_id (args->txn_id, args->fs, 
+                                 args->revision, trail);
+}
+
+
+svn_error_t *
+svn_fs_deltify_revision (svn_fs_t *fs,
+                         svn_revnum_t revision,
+                         apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  const char *txn_id;
+  struct rev_get_txn_id_args args;
+
+  SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
+
+  args.txn_id = &txn_id;
+  args.fs = fs;
+  args.revision = revision;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_rev_get_txn_id, &args, pool));
+
+  return deltify_mutable (fs, root, "/", txn_id, pool);
 }
 
 
@@ -2957,7 +2970,6 @@ struct delete_args
 {
   svn_fs_root_t *root;
   const char *path;
-  svn_boolean_t delete_tree;
 };
 
 
@@ -2974,31 +2986,21 @@ txn_body_delete (void *baton,
   parent_path_t *parent_path;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, trail));
-
   if (! svn_fs_is_txn_root (root))
     return not_txn (root);
+
+  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, trail));
 
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
     return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
                              "the root directory cannot be deleted");
 
-  /* Make the parent directory mutable.  */
+  /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
-
-  if (args->delete_tree)
-    {
-      SVN_ERR (svn_fs__dag_delete_tree (parent_path->parent->node,
-                                        parent_path->entry,
-                                        txn_id, trail));
-    }
-  else
-    {
-      SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
-                                   parent_path->entry,
-                                   txn_id, trail));
-    }
+  SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
+                               parent_path->entry,
+                               txn_id, trail));
   
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
@@ -3018,32 +3020,7 @@ svn_fs_delete (svn_fs_root_t *root,
 
   args.root        = root;
   args.path        = path;
-  args.delete_tree = FALSE;
   return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
-}
-
-
-svn_error_t *
-svn_fs_delete_tree (svn_fs_root_t *root,
-                    const char *path,
-                    apr_pool_t *pool)
-{
-  struct delete_args args;
-
-  args.root        = root;
-  args.path        = path;
-  args.delete_tree = TRUE;
-  return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
-}
-
-
-svn_error_t *
-svn_fs_rename (svn_fs_root_t *root,
-               const char *from,
-               const char *to,
-               apr_pool_t *pool)
-{
-  abort ();
 }
 
 
@@ -3515,8 +3492,6 @@ static svn_error_t *
 txn_body_txdelta_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-
-  SVN_ERR (svn_stream_close (tb->target_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
                                      tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root,
@@ -3533,10 +3508,7 @@ static svn_error_t *
 write_to_string (void *baton, const char *data, apr_size_t *len)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-
-
   svn_stringbuf_appendbytes (tb->target_string, data, *len);
-
   return SVN_NO_ERROR;
 }
 
@@ -3584,13 +3556,19 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
       svn_stringbuf_set (tb->target_string, "");
     }
 
-  /* Is the window NULL?  If so, we're done, and we need to tell the
-     dag subsystem that we're finished with our edits. */
+  /* Is the window NULL?  If so, we're done. */
   if (! window)
-    SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
-                                txn_body_txdelta_finalize_edits, tb,
-                                tb->pool));
+    {
+      /* Close the internal-use stream.  ### This used to be inside of
+         txn_body_fulltext_finalize_edits(), but that invoked a nested
+         Berkeley DB transaction -- scandalous! */
+      SVN_ERR (svn_stream_close (tb->target_stream));
 
+      /* Tell the dag subsystem that we're finished with our edits. */
+      SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                                  txn_body_txdelta_finalize_edits, tb,
+                                  tb->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3739,8 +3717,6 @@ static svn_error_t *
 txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
-
-  SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
                                      tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root, 
@@ -3765,6 +3741,11 @@ static svn_error_t *
 text_stream_closer (void *baton)
 {
   struct text_baton_t *tb = baton;
+
+  /* Close the internal-use stream.  ### This used to be inside of
+     txn_body_fulltext_finalize_edits(), but that invoked a nested
+     Berkeley DB transaction -- scandalous! */
+  SVN_ERR (svn_stream_close (tb->file_stream));
 
   /* Need to tell fs that we're done sending text */
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (tb->root),

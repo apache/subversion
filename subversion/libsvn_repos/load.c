@@ -776,7 +776,7 @@ new_node_record (void **node_baton,
         if (pb->outstream)
           svn_stream_printf (pb->outstream, pool,
                              "     * deleting path : %s ...", nb->path);
-        SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
+        SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
         break;
       }
     case svn_node_action_add:
@@ -794,7 +794,7 @@ new_node_record (void **node_baton,
           svn_stream_printf (pb->outstream, pool,
                              "     * replacing path : %s ...", nb->path);
 
-        SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
+        SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
 
         SVN_ERR (maybe_add_with_history (nb, rb, pool));
         break;
@@ -929,11 +929,11 @@ close_revision (void *baton)
   if (rb->rev <= 0)
     return SVN_NO_ERROR;
 
-  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn);
+  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn, rb->pool);
 
   if (err)
     {
-      svn_error_clear (svn_fs_abort_txn (rb->txn));
+      svn_error_clear (svn_fs_abort_txn (rb->txn, rb->pool));
       if (conflict_msg)
         return svn_error_quick_wrap (err, conflict_msg);
       else

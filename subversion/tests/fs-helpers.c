@@ -462,7 +462,7 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
           break;
 
         case 'd':
-          SVN_ERR (svn_fs_delete_tree (txn_root, path, pool));
+          SVN_ERR (svn_fs_delete (txn_root, path, pool));
           break;
 
         case 'e':

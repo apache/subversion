@@ -57,6 +57,10 @@ struct svn_fs_t
   DB *transactions;
   DB *uuids;
 
+  /* A boolean for tracking when we have a live Berkeley DB
+     transaction trail alive. */
+  svn_boolean_t in_txn_trail;
+
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
   svn_fs_warning_callback_t warning;

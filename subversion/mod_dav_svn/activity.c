@@ -117,7 +117,7 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
   serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool);
   if (! serr)
     {
-      if ((serr = svn_fs_abort_txn (txn)))
+      if ((serr = svn_fs_abort_txn (txn, repos->pool)))
         {
           apr_dbm_freedatum(dbm, value);
           apr_dbm_close(dbm);

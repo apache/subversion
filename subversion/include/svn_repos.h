@@ -556,7 +556,7 @@ svn_repos_get_logs (svn_repos_t *repos,
  */
 
 /** Like @c svn_fs_commit_txn(), but invoke the @a repos's pre- and
- * post-commit hooks around the commit.  Use @a txn's pool for temporary
+ * post-commit hooks around the commit.  Use @a pool for any necessary
  * allocations.
  *
  * If the pre-commit hook or svn_fs_commit_txn() fails, throw the
@@ -570,7 +570,8 @@ svn_repos_get_logs (svn_repos_t *repos,
 svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
                                       svn_repos_t *repos,
                                       svn_revnum_t *new_rev,
-                                      svn_fs_txn_t *txn);
+                                      svn_fs_txn_t *txn,
+                                      apr_pool_t *pool);
 
 /** Like @c svn_fs_begin_txn(), but use @a author and @a log_msg to set the
  * corresponding properties on transaction @a *txn_p.  @a repos is the

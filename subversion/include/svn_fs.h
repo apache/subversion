@@ -429,7 +429,8 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  */
 svn_error_t *svn_fs_commit_txn (const char **conflict_p,
                                 svn_revnum_t *new_rev,
-                                svn_fs_txn_t *txn);
+                                svn_fs_txn_t *txn,
+                                apr_pool_t *pool);
 
 
 /** Abort the transaction @a txn.  Any changes made in @a txn are discarded,
@@ -439,8 +440,11 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * it holds.  Any root objects referring to @a txn's root directory
  * become invalid; performing any operation on them other than closing
  * them will produce an @c SVN_ERR_FS_DEAD_TRANSACTION error.
+ *
+ * Use @a pool for any necessary allocations.
  */
-svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
+svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
+                               apr_pool_t *pool);
 
 
 /** Set @a *name_p to the name of the transaction @a txn, as a
@@ -449,14 +453,6 @@ svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
 svn_error_t *svn_fs_txn_name (const char **name_p,
                               svn_fs_txn_t *txn,
                               apr_pool_t *pool);
-
-
-/** Return the filesystem to which @a txn belongs.  */
-svn_fs_t *svn_fs_txn_fs (svn_fs_txn_t *txn);
-
-
-/** Return @a txn's pool.  */
-apr_pool_t *svn_fs_txn_pool (svn_fs_txn_t *txn);
 
 
 /** Return @a txn's base revision.  If @a txn's base root id is an mutable
@@ -481,13 +477,6 @@ svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
                               svn_fs_t *fs,
                               const char *name,
                               apr_pool_t *pool);
-
-
-/** Close the transaction @a txn.  This is neither an abort nor a commit;
- * the state of the transaction so far is stored in the filesystem, to
- * be opened again later.
- */
-svn_error_t *svn_fs_close_txn (svn_fs_txn_t *txn);
 
 
 /** Set @a *names_p to an array of <tt>const char *</tt> @a ids which are the 
@@ -982,21 +971,6 @@ svn_error_t *svn_fs_make_dir (svn_fs_root_t *root,
                               apr_pool_t *pool);
                               
 
-/** Delete the node named @a path in @a root.  @a root must be the root of
- * a transaction, not a revision.  Do any necessary temporary allocation
- * in @a pool.
- *
- * If the node being deleted is a directory, it must be empty, else
- * the error @c SVN_ERR_DIR_NOT_EMPTY is returned.
- *
- * Attempting to remove the root dir also results in an error,
- * @c SVN_ERR_FS_ROOT_DIR, even if the dir is empty.
- */
-svn_error_t *svn_fs_delete (svn_fs_root_t *root,
-                            const char *path,
-                            apr_pool_t *pool);
-
-
 /** Delete the node named @a path in @a root.  If the node being deleted is
  * a directory, its contents will be deleted recursively.  @a root must be
  * the root of a transaction, not of a revision.  Use @a pool for
@@ -1012,20 +986,12 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * If return @c SVN_ERR_FS_NO_SUCH_ENTRY, then the basename of @a path is
  * missing from its parent, that is, the final target of the deletion
  * is missing.
- */
-svn_error_t *svn_fs_delete_tree (svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool);
-
-
-/** Move the node named @a from to @a to, both in @a root.  @a root must be 
- * the root of a transaction, not a revision.
  *
- * Do any necessary temporary allocation in @a pool.
+ * Attempting to remove the root dir also results in an error,
+ * @c SVN_ERR_FS_ROOT_DIR, even if the dir is empty.
  */
-svn_error_t *svn_fs_rename (svn_fs_root_t *root,
-                            const char *from,
-                            const char *to,
+svn_error_t *svn_fs_delete (svn_fs_root_t *root,
+                            const char *path,
                             apr_pool_t *pool);
 
 
@@ -1247,6 +1213,18 @@ svn_error_t *svn_fs_contents_changed (svn_boolean_t *changed_p,
 svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
                                   svn_fs_t *fs,
                                   apr_pool_t *pool);
+
+
+/** Deltify predecessors of paths modified in @a revision in
+ * filesystem @a fs.  Use @a pool for all allocations. 
+ * 
+ * NOTE:  This can be a time-consuming process, depending the breadth
+ * of the changes made in @a revision, and the depth of the history of
+ * those changed paths. 
+ */
+svn_error_t *svn_fs_deltify_revision (svn_fs_t *fs,
+                                      svn_revnum_t revision,
+                                      apr_pool_t *pool);
 
 
 /** Set @a *value_p to the value of the property named @a propname on
