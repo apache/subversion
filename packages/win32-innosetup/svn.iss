@@ -32,7 +32,7 @@ UninstallDisplayName=Subversion {#= svn_version}-r{#= svn_release} (Uninstall)
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 InfoAfterFile=Post.txt
-InfoBeforeFile=Pre.txt
+InfoBeforeFile=Pre.rtf
 DisableStartupPrompt=true
 UseSetupLdr=false
 InternalCompressLevel=0
@@ -59,7 +59,7 @@ Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svndumpfilter}\svndumpfilter.exe; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_brkdb_dll}\libdb40.dll; DestDir: {app}\bin
+Source: {#= path_brkdb_dll}\libdb42.dll; DestDir: {app}\bin
 Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
