@@ -439,6 +439,8 @@ def add_with_history(sbox):
       print "Merge got unexpected singleton '" + a.name + "'"
       raise svntest.main.SVNTreeUnequal
 
+  # FIXME: No idea why working_copies shows up as a singleton, when it
+  # isn't even a WC dir.
   def other_singleton_handler(a, ignored_baton):
     print "Merge got unexpected other singleton '" + a.name + "'"
 
