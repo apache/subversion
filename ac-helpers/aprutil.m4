@@ -1,4 +1,6 @@
-dnl  SVN_LIB_APRUTIL(version)
+dnl  SVN_LIB_APRUTIL(wanted_regex)
+dnl
+dnl  'wanted_regex' is a regex that the aprutil version string must match.
 dnl
 dnl  Check configure options and assign variables related to
 dnl  the Apache Portable Runtime Utilities (APRUTIL) library.
@@ -12,6 +14,8 @@ dnl
 
 AC_DEFUN(SVN_LIB_APRUTIL,
 [
+  APRUTIL_WANTED_REGEX="$1"
+
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
   APR_FIND_APU("$srcdir/apr-util", "./apr-util", 1)
@@ -24,6 +28,20 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   if test $apu_found = "reconfig"; then
     SVN_SUBDIR_CONFIG(apr-util, --with-apr=../apr)
     SVN_SUBDIRS="$SVN_SUBDIRS apr-util"
+  fi
+
+  dnl check APRUTIL version number against regex  
+
+  AC_MSG_CHECKING([APR-UTIL version])    
+  apu_version="`$apu_config --version`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apu-config --version failed])
+  fi
+  AC_MSG_RESULT([$apu_version])
+
+  if test `expr $apu_version : $APRUTIL_WANTED_REGEX` -eq 0; then
+    echo "wanted regex is $APRUTIL_WANTED_REGEX"
+    AC_MSG_ERROR([invalid apr-util version found])
   fi
 
   dnl Get libraries and thread flags from APRUTIL ---------------------
