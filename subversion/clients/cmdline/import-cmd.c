@@ -137,6 +137,6 @@ svn_cl__import (apr_getopt_t *os,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */

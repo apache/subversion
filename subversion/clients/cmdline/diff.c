@@ -103,7 +103,7 @@ svn_cl__print_file_diff (svn_stringbuf_t *path,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */
 

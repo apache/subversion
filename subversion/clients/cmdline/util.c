@@ -187,6 +187,6 @@ svn_cl__get_canonical_command (const char *cmd)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */

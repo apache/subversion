@@ -157,6 +157,6 @@ svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */
