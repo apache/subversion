@@ -125,7 +125,7 @@ done
 
 echo "Copying images into sandbox..."
 cp -r "doc/book/book/images/" "$DISTPATH/doc/book/book/images/"
-rm -rf "$DISTPATH/doc/book/book/images/.svn"
+find "$DISTPATH" -type d -name .svn | xargs rm -rf
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
 The old CVS ChangeLog is kept at 

@@ -3,6 +3,11 @@
 
 1. Tweak trunk/CHANGES to contain all the latest changes.  Commit.
 
+   Begin a new section at the top of the file with:
+
+   Version X.YY.Z (released XX Month 200X, revision XXXX)
+   http://svn.collab.net/repos/svn/tags/X.YY.Z
+
 2. Bump the version numbers in svn_version.h and CHANGES.  Commit.
 
 3. Create the release branch for building the release:
@@ -95,10 +100,13 @@
         Make sure, that if you maintain a development installation of
         apache, that you check the config file and update it for the
         new release area where you're testing the tar-ball.
-     
+	(Unless you rename the tree which gets extracted from the
+	tarball to match what's in httpd.conf, you will need to edit
+	httpd.conf)
+
      g) make svncheck
 
-        For this step, start up svnserve with these args:
+        First, start up svnserve with these args:
 
          $ subversion/svnserve/svnserve -d -r \
            `pwd`/subversion/tests/clients/cmdline
@@ -135,7 +143,8 @@
       Name: subversion-X.YY.Z.tar.gz (replace X.YY.Z with the release number)
       Status: Stable
       Description: Subversion release X.YY.Z (MD5: <md5sum of tarball>)
-      Contents:  (select 'Attachment', hit Browse or enter path to tarball)
+      Contents:  (select 'Link, 
+		  enter http://svn.collab.net/repos/svn/tags/X.YY.Z)
 
     f. Click Submit
 
@@ -176,22 +185,14 @@
 
       then edit the www/project_status.html file appropriately.
 
-   b. Edit the www/latest_tarball.html file (again, in /trunk),
-      replacing the redirection URL with the "file sharing" URL of the
-      new tarball.
+   b. Commit the modifications of www/project_status.html 
 
-   c. Commit the modifications of www/project_status.html and
-      www/latest_tarball.html.
-
-   d. Remind someone with an @collab.net address to update the live
+   c. Remind someone with an @collab.net address to update the live
       web site (we used to have a servlet for this, but at the moment
       we don't).
 
 10. Post news item <http://subversion.tigris.org/servlets/ProjectNewsAdd>,
-    and send an announcement to dev@ and announce@ lists.
+    and send an announcement to dev@, users@, and announce@ lists.
 
-11. If necessary, post newest versions of docs to web sites.
-
-12. [OPTIONAL] Upgrade svn.collab.net to head, then repeat step 5e.
-    Someone with administrative access should do this, usually not the
-    release manager.
+11. Someone with administrative access upgrade svn.collab.net to head,
+    then repeat step 5e.  This is *NOT* usually the release manager.
