@@ -23,11 +23,12 @@
 
       <screen>
 $ svn --version
-svn, version 0.29.0 (r6976)
-   compiled Sep  6 2003, 19:19:59
+svn, version 1.0.4 (r9844)
+   compiled May 23 2004, 14:04:22
 
-Copyright (C) 2000-2003 CollabNet.
+Copyright (C) 2000-2004 CollabNet.
 Subversion is open source software, see @uref{http://subversion.tigris.org/}
+This product includes software developed by CollabNet (@uref{http://www.Collab.Net/}).
 
 The following repository access (RA) modules are available:
 
@@ -69,14 +70,15 @@ someproject/foo
       a <quote>file</quote> URL):</para>
 
     <screen>
-$ svn import file:///absolute/path/to/myrepos someproject myproj    
+$ svn import someproject file:///absolute/path/to/myrepos/trunk/someproject
 &hellip;
 Committed revision 1.
     </screen>
 
-    <para>The example above creates a new directory
-      <filename>myproj</filename> in the root of the repository's filesystem,
-      and copies all the data from <filename>someproject</filename> into it.</para>
+    <para>The example above creates a new directory tree
+      <filename>trunk/myproj</filename> in the root of the repository's
+      filesystem, and copies all the data from
+      <filename>someproject</filename> into it.</para>
 
     <sect2 id="misc-docs-quick_walkthrough-sect-1.1">
       <title>Make Some Working Copies</title>
@@ -87,7 +89,7 @@ Committed revision 1.
         URL allows us to name the working copy we check out.</para>
 
       <screen>
-$ svn co file:///usr/local/svn/repos/myproj wc
+$ svn co file:///absolute/path/to/myrepos/trunk/someproject wc
 A  wc/foo
 A  wc/bar
 A  wc/baz
@@ -97,9 +99,9 @@ A  wc/baz/bloo
 
       <para>Now we have a working copy in a local directory called
         <filename>wc</filename>, which represents the location
-        <filename>/myproj</filename> in the repository (assuming the
-        repository's root is <systemitem
-        class="url">file:///usr/local/svn/repos</systemitem>.)</para>
+        <filename>/trunk/someproject</filename> in the repository (assuming
+        the repository's root is <systemitem
+        class="url">file:///absolute/path/to/myrepos</systemitem>.)</para>
 
       <para>For the sake of example, let's duplicate the working copy,
         and pretend it belongs to someone else:</para>
