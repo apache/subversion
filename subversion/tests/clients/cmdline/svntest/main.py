@@ -25,6 +25,8 @@ import string  # for atof()
 import copy    # for deepcopy()
 import traceback # for print_exc()
 
+from svntest import wc
+
 ######################################################################
 #
 #  HOW TO USE THIS MODULE:
@@ -161,6 +163,36 @@ greek_tree = ( ('iota', "This is the file 'iota'.", {}, {}),
                ('A/D/H/chi', "This is the file 'chi'.", {}, {}),
                ('A/D/H/psi', "This is the file 'psi'.", {}, {}),
                ('A/D/H/omega', "This is the file 'omega'.", {}, {}) )
+
+_item = wc.StateItem
+greek_state = wc.State('', {
+  'iota'        : _item("This is the file 'iota'."),
+  'A'           : _item(),
+  'A/mu'        : _item("This is the file 'mu'."),
+  'A/B'         : _item(),
+  'A/B/lambda'  : _item("This is the file 'lambda'."),
+  'A/B/E'       : _item(),
+  'A/B/E/alpha' : _item("This is the file 'alpha'."),
+  'A/B/E/beta'  : _item("This is the file 'beta'."),
+  'A/B/F'       : _item(),
+  'A/C'         : _item(),
+  'A/D'         : _item(),
+  'A/D/gamma'   : _item("This is the file 'gamma'."),
+  'A/D/G'       : _item(),
+  'A/D/G/pi'    : _item("This is the file 'pi'."),
+  'A/D/G/rho'   : _item("This is the file 'rho'."),
+  'A/D/G/tau'   : _item("This is the file 'tau'."),
+  'A/D/H'       : _item(),
+  'A/D/H/chi'   : _item("This is the file 'chi'."),
+  'A/D/H/psi'   : _item("This is the file 'psi'."),
+  'A/D/H/omega' : _item("This is the file 'omega'."),
+  })
+
+### ran this interactively to verify tree equality:
+###
+### t1 = svntest.main.greek_state.old_tree()
+### t2 = svntest.tree.build_generic_tree(svntest.main.greek_tree)
+### assert not svntest.tree.compare_trees(t1, t2)
 
 
 ######################################################################

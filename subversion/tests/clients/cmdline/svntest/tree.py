@@ -272,14 +272,6 @@ def create_from_path(path, contents=None, props={}, atts={}):
   return root_node
 
 
-# a regexp machine for matching the name of the administrative dir.
-admin_dir = main.get_admin_name()
-rm = re.compile("^" + admin_dir + "/"
-                + "|/" + admin_dir + "/"
-                + "|/" + admin_dir + "$"
-                + "|^/" + admin_dir + "/"
-                + "|^" + admin_dir + "$")
-
 # helper for handle_dir(), which is a helper for build_tree_from_wc()
 def get_props(path):
   "Return a hash of props for PATH, using the svn client."
