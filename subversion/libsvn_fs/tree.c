@@ -1593,6 +1593,8 @@ txn_body_merge (void *baton, trail_t *trail)
       ancestor_id = svn_fs__dag_get_id (ancestor_node);
       target_id = svn_fs__dag_get_id (txn_root_node);
 
+      /* Re-ID the txn following a successful merge; see Dostoyevskian
+         comment in merge() about this for the full explanation. */
       if ((svn_fs_id_distance (ancestor_id, target_id) == 1)
           && (svn_fs_id_distance (ancestor_id, source_id) >= 1))
         {
@@ -1616,6 +1618,10 @@ txn_body_merge (void *baton, trail_t *trail)
           SVN_ERR (svn_fs__delete_nodes_entry (fs, target_id, trail));
         }
 
+      /* After the merge, txn's new "ancestor" is now really the node
+         at source_id, so record that fact.  Think of this as
+         ratcheting the txn forward in time, so it can't backslide and
+         forget the merging work that's already been done. */
       SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
     }
   
