@@ -27,7 +27,7 @@ Step 1:  Build & install the proper version of SWIG (which is
 
        to the configure script.  You need Perl 5.8.0 or above.
 
-    * run 'make && make install'
+    * run 'make && make runtime && make install && make install-runtime'
 
     * To verify you have the goodz installed, check that these things
       were created, assuming your $PREFIX was /usr/local/lib:
@@ -39,15 +39,6 @@ Step 1:  Build & install the proper version of SWIG (which is
       In particular, you want to make sure that libswigpy.so was
       built and installed, since the python bindings are the most-used
       ones at the moment.
-
-    * If you are using 1.3.21 then the libswig*so will only be built
-      when you run
-
-            make runtime
-            make install-runtime
-
-      This may apply to 1.3.20 as well (and perhaps later, as yet
-      unreleased, versions as well.)
 
 
 Step 2:  Build and Install Subversion.
