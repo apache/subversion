@@ -264,6 +264,12 @@
 }
 
 /* -----------------------------------------------------------------------
+   result of check_path
+*/
+
+%apply long *OUTPUT { svn_node_kind_t * };
+
+/* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
    svn_ra get_log()
