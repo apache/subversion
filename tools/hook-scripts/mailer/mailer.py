@@ -49,12 +49,11 @@ def main(pool, config_fname, repos_dir, rev):
   # collect the set of groups and the unique sets of params for the options
   groups = { }
   for path, change in changelist:
-    group, params = cfg.which_group(path)
-
-    # turn the params into a hashable object and stash it away
-    param_list = params.items()
-    param_list.sort()
-    groups[group, tuple(param_list)] = params
+    for (group, params) in cfg.which_groups(path):
+      # turn the params into a hashable object and stash it away
+      param_list = params.items()
+      param_list.sort()
+      groups[group, tuple(param_list)] = params
 
   output = determine_output(cfg, repos, changelist)
   output.generate(groups, pool)
@@ -733,15 +732,18 @@ class Config:
       # there is no self.defaults.for_paths
       pass
 
-  def which_group(self, path):
-    "Return the path's associated group."
+  def which_groups(self, path):
+    "Return the path's associated groups."
+    groups = []
     for group, pattern, repos_params in self._group_re:
       match = pattern.match(path)
       if match:
         params = repos_params.copy()
         params.update(match.groupdict())
-        return group, params
-    return None, self._global_params
+        groups.append((group, params))
+    if not groups:
+      groups.append((None, self._global_params))
+    return groups
 
 
 class _sub_section:
