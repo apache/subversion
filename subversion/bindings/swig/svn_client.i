@@ -29,6 +29,12 @@
 */
 %ignore svn_client_proplist_item_s;
 
+/* ### these take an 'apr_array_header_t *' which requires a pool, which
+   ### we don't have immediately handy. just eliminate these funcs for now. */
+%ignore svn_client_commit;
+%ignore svn_client_log;
+%ignore svn_client_diff;
+
 /* -----------------------------------------------------------------------
    all "targets" and "diff_options" arrays are constant inputs of
    svn_stringbuf_t *
@@ -54,7 +60,7 @@
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
-    PyObject *list = PyList_New(i);
+    PyObject *list = PyList_New(nelts);
     if (list == NULL)
         return NULL;
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
@@ -89,9 +95,19 @@
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
 
+/* -----------------------------------------------------------------------
+   We use 'svn_wc_status_t *' in some custom code, but it isn't in the
+   API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
+   adding a simple declaration here, SWIG will insert a name for it.
+*/
+%types(svn_wc_status_t *);
+
 /* ----------------------------------------------------------------------- */
 
-%include svn_client.h
+/* Include the headers before we swig-include the svn_client.h header file.
+   SWIG will split the nested svn_client_revision_t structure, and we need
+   the types declared *before* the split structure is encountered.  */
+
 %header %{
 #include "svn_client.h"
 
@@ -99,3 +115,5 @@
 #include "swigutil_py.h"
 #endif
 %}
+
+%include svn_client.h

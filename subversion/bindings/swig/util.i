@@ -27,6 +27,12 @@
 */
 %ignore svn_error;
 
+/* ### for now, let's not try to handle these structures. swig complains
+   ### about setting the 'const char *' inside the struct might leak mem  */
+%ignore svn_log_changed_path_t;
+%ignore svn_dirent;
+
+
 %include svn_types.h
 
 
@@ -58,12 +64,9 @@
 %ignore svn_io_set_file_read_write;
 %ignore svn_io_set_file_executable;
 %ignore svn_io_filesizes_different_p;
+%ignore svn_io_file_printf;
 
 %ignore apr_check_dir_empty;
-
-/* ### probably want to keep this one. disabling for now cuz of the
-   ### input stringbuf and its "which pool?" problem. */
-%ignore svn_io_open_unique_file;
 
 /* scripts can do the printf, then write to a stream. we can't really
    handle the variadic, so ignore it. */
@@ -97,6 +100,9 @@
     $1 = malloc(temp);
     $2 = ($2_ltype)&temp;
 }
+
+/* ### need to use freearg or somesuch to ensure the string is freed.
+   ### watch out for 'return' anywhere in the binding code. */
 
 %typemap(python, argout) (char *buffer, apr_size_t *len) {
     $result = t_output_helper($result, PyString_FromStringAndSize($1, *$2));
