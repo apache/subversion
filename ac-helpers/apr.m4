@@ -119,7 +119,7 @@ AC_DEFUN(SVN_FIND_APR,
   fi
 
   CPPFLAGS=$CPPFLAGS_save
-  if test -z $APRVARS ; then
+  if test -z "$APRVARS" ; then
     dirs="/etc /usr/lib /usr/local/lib /opt/apr/lib"
     for dir in $dirs; do
       if test -f $dir/APRVARS ; then
