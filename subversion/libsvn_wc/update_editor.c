@@ -73,6 +73,9 @@ struct edit_baton
   /* Whether this edit will descend into subdirs */
   svn_boolean_t recurse;
 
+  /* Was the root actually opened (was this a non-empty edit)? */
+  svn_boolean_t root_opened;
+
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
   const char *ancestor_url;
@@ -583,6 +586,10 @@ open_root (void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
+
+  /* Note that something interesting is actually happening in this
+     edit run. */
+  eb->root_opened = TRUE;
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
   if (eb->is_checkout)
@@ -1906,7 +1913,7 @@ close_edit (void *edit_baton,
 
   /* Do nothing for checkout;  all urls and working revs are fine.
      Updates and switches, though, have to be cleaned up.  */
-  if (! eb->is_checkout)
+  if ((! eb->is_checkout) && eb->root_opened)
     {
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
@@ -1983,7 +1990,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
     assert (ancestor_url != NULL);
 
   /* Construct an edit baton. */
-  eb = apr_palloc (subpool, sizeof (*eb));
+  eb = apr_pcalloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
