@@ -5,17 +5,15 @@
 
 
 # List of libraries to build and install in `libdir'
-lib_LTLIBRARIES = libsvn_client.la
+lib_LTLIBRARIES = libsvn_ra.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_client_la_SOURCES = checkout.c update.c apply_edits.c \
-                           add.c delete.c                    \
-                           commit.c status.c diff.c          \
-                           client.h
+libsvn_ra_la_SOURCES = ra_loader.c
 
 ## Build flags ---------
 
-INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@ 
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
+

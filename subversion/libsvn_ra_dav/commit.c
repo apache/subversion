@@ -134,8 +134,10 @@ create_activity (commit_ctx_t *cc)
   svn_string_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
   int code;
 
+#if 0
   /* get the URL where we should create activities */
   SVN_ERR( svn_wc_prop_get(&activity_url, propname, path, cc->ras->pool) );
+#endif
 
   /* the URL for our activity will be ACTIVITY_URL/UUID */
   apr_uuid_get(&uuid);

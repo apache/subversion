@@ -29,6 +29,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+
+
+
 /* A function type for "cleaning up" after a commit.  The client layer
    supplies this routine to an RA layer.  RA calls this routine on
    each PATH that was committed, allowing the client to bump revision
@@ -219,6 +222,33 @@ typedef svn_error_t *svn_ra_init_func_t (int abi_version,
 
 svn_ra_init_func_t svn_ra_dav_init;
 svn_ra_init_func_t svn_ra_local_init;
+
+
+
+
+/*** Public Interface for Loading RA libs ***/
+
+/* Every user of the client library *must* call this routine and hold
+   on to the RA_BATON returned.  This baton contains all known methods
+   of accessing a repository, and will be required by most
+   svn_client_* routines below. */
+svn_error_t *
+svn_client_init_ra_libs (void **ra_baton,
+                         apr_pool_t *pool);
+
+
+/* Return an ra vtable-LIBRARY (already within RA_BATON) which can
+   handle URL.  A number of svn_client_* routines will call this
+   internally, but client apps might use it too. */
+svn_error_t *
+svn_client_get_ra_library (svn_ra_plugin_t **library,
+                           void *ra_baton,
+                           const char *URL,
+                           apr_pool_t *pool);
+
+
+
+
 
 
 

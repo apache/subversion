@@ -22,6 +22,8 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
+#include "svn_client.h"
+
 
 /* Notice that we're including the FS API above.  This isn't because
    the RA API needs to know about it;  rather, it's so our tests can
@@ -97,23 +99,17 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
 
 /* Utility:  return the vtable for ra_local.  */
 static svn_error_t *
-get_ra_local_plugin (const svn_ra_plugin_t **plugin)
+
+get_ra_local_plugin (svn_ra_plugin_t **plugin)
 {
-  /* Someday, we need to rewrite svn_client_init_ra_libs() so that it
-     returns a hash of loaded vtables *regardless* of whether the
-     application is statically or dynamically linked!  
+  void *ra_baton;
 
-     When that happens, call that function here, then do a simple
-     apr_hash_get() on the "file" key.  Voila.
+  /* Load all available RA implementations. */
+  SVN_ERR (svn_client_init_ra_libs (&ra_baton, pool));
 
-     Instead, for now, we assume that ra-local-test is statically
-     linked, and thus that svn_ra_local_init() is already in our
-     address space. */
+  /* Get the plugin which handles "file:" URLs */
+  SVN_ERR (svn_client_get_ra_library (plugin, ra_baton, "file:", pool));
 
-  const char *url_scheme;
-
-  SVN_ERR (svn_ra_local_init (1, /* abi version 1 */
-                              pool, &url_scheme, plugin));
   return SVN_NO_ERROR;
 }
 
@@ -128,7 +124,7 @@ static svn_error_t *
 open_ra_session (const char **msg)
 {
   svn_fs_t *fs;
-  const svn_ra_plugin_t *plugin;
+  svn_ra_plugin_t *plugin;
   void *session;
 
   *msg = "open an ra session to a local repository.";
@@ -156,7 +152,7 @@ static svn_error_t *
 get_youngest_rev (const char **msg)
 {
   svn_fs_t *fs;
-  const svn_ra_plugin_t *plugin;
+  svn_ra_plugin_t *plugin;
   void *session;
   svn_revnum_t latest_rev;
 
@@ -195,7 +191,7 @@ get_youngest_rev (const char **msg)
 
 svn_error_t * (*test_funcs[]) (const char **msg) = {
   0,
-#ifdef 0
+#if 0
   open_ra_session,
   get_youngest_rev,
 #endif /* 0 */
