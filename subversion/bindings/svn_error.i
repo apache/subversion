@@ -26,11 +26,12 @@
     }
 }
 %typemap(python,out) svn_error_t * {
-    /* we checked for non-NULL with the 'except' typemap, so result will
+    /* we checked for non-NULL with the 'except' typemap, so $target will
        always be NULL at this point. */
     Py_INCREF(Py_None);
     $target = Py_None;
 }
+
 
 %include svn_error.h
 

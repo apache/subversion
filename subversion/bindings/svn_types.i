@@ -14,6 +14,8 @@
 
 %import apr.i
 
-%include svn_types.h
+//%include svn_types.h
+
+typedef long svn_revnum_t;
 
 // ### nothing to do right now

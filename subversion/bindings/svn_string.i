@@ -18,6 +18,8 @@
 %import apr.i
 %import svn_types.i
 
+typedef struct svn_string_t svn_string_t;
+
 %typemap(python,in) svn_string_t * {
     if (!PyString_Check($source)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
@@ -33,10 +35,15 @@
     $target = PyString_FromStringAndSize($source->data, $source->len);
 }
 
-
-%include svn_string.h
-
-
-
+// ### doesn't seem to work
+//svn_string_t **OUTPUT;
+%typemap(ignore) svn_string_t ** (svn_string_t *temp) {
+    $target = &temp;
+}
+%typemap(python, argout) svn_string_t ** {
+    $target = t_output_helper($target,
+                              PyString_FromStringAndSize((*$source)->data,
+							 (*$source)->len));
+}
 
 // ### nothing to do right now
