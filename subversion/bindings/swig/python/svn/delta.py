@@ -47,7 +47,7 @@ class Editor:
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return None
 
-  def apply_textdelta(self, file_baton):
+  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
     return None
 
   def change_file_prop(self, file_baton, name, value, pool):

@@ -714,6 +714,8 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 
 static svn_error_t *
 thunk_apply_textdelta(void *file_baton, 
+                      const char *base_checksum,
+                      const char *result_checksum,
                       apr_pool_t *pool,
                       svn_txdelta_window_handler_t *handler,
                       void **h_baton)
@@ -726,7 +728,8 @@ thunk_apply_textdelta(void *file_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
-                                    (char *)"(O)", ib->baton)) == NULL)
+                                    (char *)"(Oss)", ib->baton,
+                                    base_checksum, result_checksum)) == NULL)
     {
       err = convert_python_error(ib->pool);
       goto finished;

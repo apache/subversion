@@ -242,7 +242,7 @@ class ChangedEditor(delta.Editor):
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path ]
 
-  def apply_textdelta(self, file_baton):
+  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
     file_baton[0] = 'U'
 
     # no handler
@@ -303,7 +303,7 @@ class DiffEditor(delta.Editor):
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path, file_pool ]
 
-  def apply_textdelta(self, file_baton):
+  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
     if file_baton[2] is not None:
       self._do_diff(file_baton[2], file_baton[2], file_baton[3])
     return None
