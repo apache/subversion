@@ -1193,7 +1193,7 @@ def commit_deleted_edited(sbox):
   return 0
   
 def commit_in_dir_scheduled_for_addition(sbox):
-  "commit a file inside a directory that's already scheduled to be added"
+  "commit a file inside dir scheduled for addition"
 
   if sbox.build():
     return 1
@@ -1210,6 +1210,30 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   if len(err) == 0: 
     return 1 
+
+  return 0
+
+#----------------------------------------------------------------------
+
+def commit_rmd_and_deleted_file(sbox):
+  "commit deleted (and missing) file"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # 'svn remove' mu
+  svntest.main.run_svn(None, 'rm', mu_path)
+
+  # Now, physically remove mu from disk
+  os.unlink(mu_path)
+
+  # Commit, hoping to see no errors
+  out, err = svntest.main.run_svn(None, 'commit', '-m', '"logmsg"', mu_path)
+  if len(err) != 0:
+    return 1
 
   return 0
 
@@ -1236,6 +1260,7 @@ test_list = [ None,
               commit_uri_unsafe,
               commit_deleted_edited,
               commit_in_dir_scheduled_for_addition,
+              commit_rmd_and_deleted_file,
              ]
 
 if __name__ == '__main__':
