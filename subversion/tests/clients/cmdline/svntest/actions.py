@@ -96,17 +96,6 @@ def guarantee_greek_repository(path):
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
-  if main.windows:
-    # FIXME: All this copying stuff around is a pain.
-    if os.path.exists(main.current_repo_dir):
-      shutil.rmtree(main.current_repo_dir)
-    shutil.copytree(path, main.current_repo_dir)
-    main.chmod_tree(main.current_repo_dir, 0666, 0666)
-  else:
-    if os.path.exists(main.current_repo_dir):
-      os.unlink(main.current_repo_dir)
-    os.symlink(os.path.basename(path), main.current_repo_dir)
-
 
 ######################################################################
 # Subversion Actions
@@ -578,11 +567,11 @@ def make_repo_and_wc(test_name):
   wc_dir = os.path.join(main.general_wc_dir, test_name)
   repo_dir = os.path.join(main.general_repo_dir, test_name)
 
+  # Store the path to the current repository
+  main.set_repos_paths(repo_dir)
+
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(repo_dir)
-
-  # make url for checkout
-  url = main.test_area_url + '/' + main.current_repo_dir
 
   # Generate the expected output tree.
   expected_output = main.greek_state.copy()
@@ -593,7 +582,8 @@ def make_repo_and_wc(test_name):
   expected_wc = main.greek_state
 
   # Do a checkout, and verify the resulting output and disk contents.
-  return run_and_verify_checkout(url, wc_dir,
+  return run_and_verify_checkout(main.current_repo_url,
+                                 wc_dir,
                                  expected_output,
                                  expected_wc)
 
