@@ -88,9 +88,9 @@ add_component_internal (svn_string_t *path,
   char dirsep = SVN_PATH_REPOS_SEPARATOR;
 
   if (! svn_string_isempty (path))
-    svn_string_appendbytes (path, &dirsep, sizeof (dirsep), pool);
+    svn_string_appendbytes (path, &dirsep, sizeof (dirsep));
 
-  svn_string_appendbytes (path, component, len, pool);
+  svn_string_appendbytes (path, component, len);
   canonicalize (path, style);
 }
 

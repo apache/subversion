@@ -1304,8 +1304,7 @@ xml_handle_data (void *userData, const char *data, int len)
 
       if (digger->current_propdelta)
         svn_string_appendbytes (digger->current_propdelta->value,
-                                data, length,
-                                digger->pool);
+                                data, length);
     }
 
   else

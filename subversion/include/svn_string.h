@@ -63,6 +63,10 @@ typedef struct svn_string_t
   char *data;                /* pointer to the bytestring */
   apr_size_t len;            /* length of bytestring */
   apr_size_t blocksize;      /* total size of buffer allocated */
+  /* pool from which this string was originally allocated, and is not
+     necessarily specific to this string.  This is used only for
+     allocating more memory from when the string needs to grow.  */
+  apr_pool_t *pool;          
 } svn_string_t;
 
 
@@ -77,11 +81,9 @@ svn_string_t * svn_string_ncreate (const char *bytes, const apr_size_t size,
 
 /* Make sure that the string STR has at least MINIMUM_SIZE bytes of
    space available in the memory block.  (MINIMUM_SIZE should include
-   space for the terminating null character.)  If we need more memory,
-   get it from POOL.  */
+   space for the terminating null character.)  */
 void svn_string_ensure (svn_string_t *str,
-                        apr_size_t minimum_size,
-                        apr_pool_t *pool);
+                        apr_size_t minimum_size);
 
 /* Set/get  a bytestring empty */
 
@@ -97,14 +99,11 @@ void svn_string_fillchar (svn_string_t *str, const unsigned char c);
    onto a svn_string_t.  reallocs() if necessary. */
 
 void svn_string_appendbytes (svn_string_t *str, const char *bytes, 
-                             const size_t count, apr_pool_t *pool);
+                             const size_t count);
 void svn_string_appendstr (svn_string_t *targetstr, 
-                           const svn_string_t *appendstr,
-                           apr_pool_t *pool);
+                           const svn_string_t *appendstr);
 void svn_string_appendcstr (svn_string_t *targetstr,
-                            const char *cstr,
-                            apr_pool_t *pool);
-
+                            const char *cstr);
 
 /* Duplicate a bytestring;  returns freshly malloc'd copy.  */
 

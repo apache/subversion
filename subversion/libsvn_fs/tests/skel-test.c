@@ -178,8 +178,8 @@ put_implicit_length_byte (svn_string_t *str, char byte, char space)
     abort ();
   if (! skel_is_space (space))
     abort ();
-  svn_string_appendbytes (str, &byte, 1, pool);
-  svn_string_appendbytes (str, &space, 1, pool);
+  svn_string_appendbytes (str, &byte, 1);
+  svn_string_appendbytes (str, &space, 1);
 }
 
 
@@ -229,8 +229,8 @@ put_implicit_length_all_chars (svn_string_t *str, char space)
   if (! skel_is_space (space))
     abort ();
 
-  svn_string_appendbytes (str, name, len, pool);
-  svn_string_appendbytes (str, &space, 1, pool);
+  svn_string_appendbytes (str, name, len);
+  svn_string_appendbytes (str, &space, 1);
 }
 
 
@@ -313,7 +313,7 @@ put_explicit_length (svn_string_t *str, char *data, int len, char sep)
   /* Copy in the real data (which may contain nulls).  */
   memcpy (buf + length_len, data, len);
 
-  svn_string_appendbytes (str, buf, length_len + len, pool);
+  svn_string_appendbytes (str, buf, length_len + len);
 }
 
 
@@ -409,9 +409,9 @@ put_list_start (svn_string_t *str, char space, int len)
   if (len > 0 && ! skel_is_space (space))
     abort ();
 
-  svn_string_appendcstr (str, "(", pool);
+  svn_string_appendcstr (str, "(");
   for (i = 0; i < len; i++)
-    svn_string_appendbytes (str, &space, 1, pool);
+    svn_string_appendbytes (str, &space, 1);
 }
 
 
@@ -426,8 +426,8 @@ put_list_end (svn_string_t *str, char space, int len)
     abort ();
 
   for (i = 0; i < len; i++)
-    svn_string_appendbytes (str, &space, 1, pool);
-  svn_string_appendcstr (str, ")", pool);
+    svn_string_appendbytes (str, &space, 1);
+  svn_string_appendcstr (str, ")");
 }
 
 
@@ -621,7 +621,7 @@ parse_list (const char **msg)
 	      /* A list containing an invalid element.  */
 	      str = get_empty_string ();
 	      put_list_start (str, sep, sep_count);
-	      svn_string_appendcstr (str, "100 ", pool);
+	      svn_string_appendcstr (str, "100 ");
 	      put_list_end (str, sep, sep_count);
 	      if (parse_str (str))
 		return fail ();

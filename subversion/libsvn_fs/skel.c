@@ -395,8 +395,8 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
       /* Append an atom to STR.  */
       if (use_implicit (skel))
 	{
-	  svn_string_appendbytes (str, skel->data, skel->len, pool);
-	  svn_string_appendbytes (str, " ", 1, pool);
+	  svn_string_appendbytes (str, skel->data, skel->len);
+	  svn_string_appendbytes (str, " ", 1);
 	}
       else
 	{
@@ -411,11 +411,10 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 	  /* Make sure we have room for the length, the space, and the
              atom's contents.  */
 	  svn_string_ensure (str,
-			     str->len + length_len + 1 + skel->len,
-			     pool);
-	  svn_string_appendbytes (str, buf, length_len, pool);
+			     str->len + length_len + 1 + skel->len);
+	  svn_string_appendbytes (str, buf, length_len);
 	  str->data[str->len++] = '\n';
-	  svn_string_appendbytes (str, skel->data, skel->len, pool);
+	  svn_string_appendbytes (str, skel->data, skel->len);
 	}
     }
   else
@@ -425,7 +424,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
       int i;
 
       /* The opening paren has been indented by the parent, if necessary.  */
-      svn_string_ensure (str, str->len + 1, pool);
+      svn_string_ensure (str, str->len + 1);
       str->data[str->len++] = '(';
       
       depth++;
@@ -434,7 +433,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
       for (child = skel->children; child; child = child->next)
 	{
 	  /* Add a newline, and indentation.  */
-	  svn_string_ensure (str, str->len + 1 + depth * 2, pool);
+	  svn_string_ensure (str, str->len + 1 + depth * 2);
 	  str->data[str->len++] = '\n';
 	  for (i = 0; i < depth * 2; i++)
 	    str->data[str->len++] = ' ';
@@ -448,7 +447,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 	 There should be no newline after a closing paren; a skel must
 	 entirely fill its string.  If we're part of a parent list,
 	 the parent will take care of adding that.  */
-      svn_string_ensure (str, str->len + 1 + depth * 2 + 1, pool);
+      svn_string_ensure (str, str->len + 1 + depth * 2 + 1);
       str->data[str->len++] = '\n';
       for (i = 0; i < depth * 2; i++)
 	str->data[str->len++] = ' ';
