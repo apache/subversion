@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path
+import string, sys, os.path, re
 
 # Our testing module
 import svntest
@@ -251,6 +251,9 @@ def disable_translation():
 # This is a slight rewrite of his test, to use the run_and_verify_* API.
 # This is for issue #631.
 
+def do_nothing(x, y):
+  return 0
+
 def update_modified_with_translation(sbox):
   "update locally modified file with eol-style 'native'"
 
@@ -311,12 +314,37 @@ def update_modified_with_translation(sbox):
   f.close()
 
   # Prepare trees for an update to rev 1.
-  output_list = [ [rho_path, None, {}, {'status' : 'GU' }] ]
+  output_list = [ [rho_path, None, {}, {'status' : 'CU' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   my_greek_tree = svntest.main.copy_greek_tree()
   for item in my_greek_tree:
     if item[0] == 'A/D/G/rho':
-      item[1] = "This is the file 'rho'.\n10\n"  # local mod still present
+      item[1] = """<<<<<<< .mine
+1
+2
+3
+4
+4.5
+5
+6
+7
+8
+9
+10
+||||||| .r3
+1
+2
+3
+4
+4.5
+5
+6
+7
+8
+9
+=======
+This is the file 'rho'.>>>>>>> .r1
+"""
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Updating back to revision 1 should not error; the merge should
@@ -325,8 +353,9 @@ def update_modified_with_translation(sbox):
                                                expected_output_tree,
                                                expected_disk_tree,
                                                None,
-                                               None, None, None, None, 0,
-                                               '-r', '1')
+                                               do_nothing, None,
+                                               None, None,
+                                               0, '-r', '1')
 
   
 
