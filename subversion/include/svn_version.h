@@ -55,8 +55,8 @@ extern "C" {
    Typical values are "alpha", "beta", or "rcN", for release candidate N.
    This symbol may be #undef'd for major releases; for development
    snapshots, it should be the number of the snapshot's revision. */
-/* #undef SVN_VER_TAG */
-#define SVN_VER_TAG        "rc2"
+#undef SVN_VER_TAG
+/* #define SVN_VER_TAG        "rc2" */
 
 
 
