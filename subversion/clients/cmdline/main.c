@@ -157,7 +157,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "revision and author information in-line.\n"
     "usage: blame TARGET...\n"
     "\n"
-    "  Blame will cross copy history by default; use --strict to disable.\n",
+    "  Blame will follow copy history by default; use --strict to disable.\n",
     {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__strict_opt} },
 
   { "cat", svn_cl__cat, {0},
@@ -328,7 +328,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "  Each log message is printed just once, even if more than one of the\n"
     "  affected paths for that revision were explicitly requested.  Logs\n"
-    "  cross copy history by default; use --strict to disable this.\n"
+    "  follow copy history by default; use --strict to disable this.\n"
     "  For example:\n"
     "\n"
     "    svn log\n"
