@@ -18,6 +18,13 @@
 import junit.framework.*;
 import java.util.Vector;
 
+/**
+ * Units Tests for the native functions in
+ * the class NativeWrapper.vector*
+ *
+ * @see NativeWrapper
+ * @see java.util.Vector
+ */
 public class VectorTests extends TestCase 
 {
     public VectorTests(String name)
@@ -25,20 +32,27 @@ public class VectorTests extends TestCase
 	    super(name);
 	}
 
-    public void testFail()
-	{
-	    assertTrue(true);
-	}
-    public void testCreateVector()
+    /**
+     * Test case that tries to create a Vector.
+     *
+     * @see NativeWrapper.vectorCreate
+     */
+    public void testVectorCreate()
 	{
 	    // this is a native call
 	    Vector vector=NativeWrapper.vectorCreate();
 	    assertTrue(vector != null);
 	}
+
+    /**
+     * Test case that tries to add a String to a Vector
+     *
+     * @see java.lang.String
+     * @see NativeWrapper.vectorAdd
+     */
     public void testVectorAddString()
 	{
-	    // first: create a vector
-	    Vector vector=NativeWrapper.vectorCreate();
+	    Vector vector=new Vector();
 	    String value=new String("secret question");
 
 	    // second: add the string to the vector
@@ -47,6 +61,13 @@ public class VectorTests extends TestCase
 	    // now, check for the string
 	    assertTrue(vector.firstElement() == value);
 	}
+
+    /**
+     * Test case that tries to add a "null" value to a
+     * Vector
+     *
+     * @see NativeWrapper.vectorAdd
+     */
     public void testVectorAddNull()
 	{
 	    Vector vector=NativeWrapper.vectorCreate();
@@ -54,6 +75,14 @@ public class VectorTests extends TestCase
 	    NativeWrapper.vectorAdd(vector, null);
 	    assertTrue(true);
 	}
+
+    /**
+     * Test case that adds more than just one values to
+     * a Vector and then checks afterwards if the count
+     * is OK
+     *
+     * @see NativeWrapper.vectorAdd
+     */
     public void TestVectorAddMany()
 	{
 	    Vector vector=NativeWrapper.vectorCreate();
@@ -70,6 +99,30 @@ public class VectorTests extends TestCase
 	    }
 
 	    assertTrue(count == vector.size());
+	}
+
+    /**
+     * Test case that uses a null value as Vector parameter.
+     * This should produce a NullPointer exception.
+     *
+     * @see NativeWrapper.vectorAdd
+     */
+    public void testVectorAddInvalid()
+	{
+	    try
+	    {
+		// this is an invalid call
+		NativeWrapper.vectorAdd(null, null);
+		
+		// shouldnt be reached
+		assertTrue(false);
+	    }
+	    catch( NullPointerException e )
+	    {
+		// a nullpointer exception is
+		// what should happen
+		assertTrue(true);
+	    }
 	}
 }
 
