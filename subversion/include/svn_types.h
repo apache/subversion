@@ -141,12 +141,6 @@ typedef int svn_boolean_t;
 
 
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-
-
 /*** Shared function types ***/
 
 /* The callback invoked by log message loopers, such as
@@ -175,6 +169,11 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
       const char *message,  /* use svn_string_t if we ever have binary... */
       svn_boolean_t last_call);
 
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_TYPES_H */
 
