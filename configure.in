@@ -159,8 +159,6 @@ AC_OUTPUT([Makefile                                           \
            expat-lite/Makefile                                \
            subversion/Makefile                                \
            subversion/tests-common/Makefile                   \
-           subversion/libsvn_string/Makefile                  \
-           subversion/libsvn_string/tests/Makefile            \
            subversion/libsvn_subr/Makefile                    \
            subversion/libsvn_subr/tests/Makefile              \
            subversion/libsvn_delta/Makefile                   \
