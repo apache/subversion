@@ -138,11 +138,7 @@ Bindings changes that affect the build system:
 
 Bindings changes that don't affect the build system:
 
-    * r8398, r8432
-     Use LIBS rather than OTHERLDFLAGS in Makefile.PL.
-     Votes:
-      +1: epg, breser
-
+[none pending]
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 

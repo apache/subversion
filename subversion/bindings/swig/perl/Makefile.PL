@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use ExtUtils::MakeMaker;
+use Cwd 'abs_path';
 
 my @modules = qw/client delta fs ra repos wc/;
 my @ldpaths = ('../.libs',
@@ -28,11 +29,10 @@ my %config = (
                      `perl -MExtUtils::Embed -e ccopts`,
                      ' -I.. -I../../../include -g'),
     OBJECT => q/$(O_FILES)/,
-    dynamic_lib => {
-	OTHERLDFLAGS => join(' ', $apr_ldflags, (map {"-L$_"} @ldpaths),
-			     @ldmodules, '-lsvn_swig_perl-1',
-			     `swig -perl -ldflags`),
-    },
+    LIBS => [join(' ', $apr_ldflags,
+                  (map {$_ = abs_path($_); "-L$_"} @ldpaths),
+                  @ldmodules, '-lsvn_swig_perl-1',
+                  `swig -perl -ldflags`)],
 );
 
 sub perlish {
