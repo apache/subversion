@@ -406,49 +406,28 @@ def add_with_history(sbox):
                                         None, None,
                                         wc_dir)
 
-  ### Full-to-dry-run automatic comparison disabled since --dry-run
-  ### skips added files in an added directory
   expected_output = wc.State(C_path, {
     'Q'      : Item(status='A '),
+    'Q/bar'  : Item(status='A '),
     'foo'    : Item(status='A '),
     })
-  expected_disk = wc.State('', { })
-  expected_status = wc.State(C_path, {
-    ''       : Item(status='  ', wc_rev=1, repos_rev=2),
-    })
-  expected_skip = wc.State(C_path, {
-    'Q/bar' : Item(),
-    })
-  svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, 0,
-                                       '--dry-run')
-
-  expected_output.add({
-    'Q/bar'  : Item(status='A '),
-    })
-  expected_disk.add({
+  expected_disk = wc.State('', {
     'Q'      : Item(),
     'Q/bar'  : Item("bar"),
     'foo'    : Item("foo"),
     })
-  expected_status.add({
+  expected_status = wc.State(C_path, {
+    ''       : Item(status='  ', wc_rev=1, repos_rev=2),
     'Q'      : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     'foo'    : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
     })
-  expected_skip.remove('Q/bar')
+  expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, 0)
+                                       expected_skip)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/Q'     : Item(verb='Adding'),

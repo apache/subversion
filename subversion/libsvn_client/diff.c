@@ -624,6 +624,9 @@ diff_props_changed (svn_wc_adm_access_t *adm_access,
 struct merge_cmd_baton {
   svn_boolean_t force;
   svn_boolean_t dry_run;
+  const char *added_path;             /* Set to the dir path whenever the
+                                         added dir is not a child of the
+                                         current added_path (dry-run only) */
   const char *target;                 /* Working copy target of merge */
   const char *url;                    /* The second URL in the merge */
   const char *path;                   /* The wc path of the second target, this
@@ -786,7 +789,13 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
   if (! adm_access)
     {
       if (state)
-        *state = svn_wc_notify_state_missing;
+        {
+          if (merge_b->dry_run && merge_b->added_path
+              && svn_path_is_child (merge_b->added_path, mine, subpool))
+            *state = svn_wc_notify_state_changed;
+          else
+            *state = svn_wc_notify_state_missing;
+        }
       return SVN_NO_ERROR;
     }
 
@@ -964,7 +973,13 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   if (! adm_access)
     {
       if (state)
-        *state = svn_wc_notify_state_missing;
+        {
+          if (merge_b->dry_run && merge_b->added_path
+              && svn_path_is_child (merge_b->added_path, path, subpool))
+            *state = svn_wc_notify_state_changed;
+          else
+            *state = svn_wc_notify_state_missing;
+        }
       return SVN_NO_ERROR;
     }
 
@@ -996,6 +1011,10 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                merge_b->pool));
 
         }
+      if (merge_b->dry_run
+          && (! merge_b->added_path
+              || ! svn_path_is_child (merge_b->added_path, path, subpool)))
+        merge_b->added_path = apr_pstrdup (merge_b->pool, path);
       if (state)
         *state = svn_wc_notify_state_changed;
       break;
@@ -1012,6 +1031,10 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                  merge_b->ctx->cancel_baton,
                                  NULL, NULL, /* no notification func! */
                                  merge_b->pool));
+          if (merge_b->dry_run
+              && (! merge_b->added_path
+                  || ! svn_path_is_child (merge_b->added_path, path, subpool)))
+            merge_b->added_path = apr_pstrdup (merge_b->pool, path);
           if (state)
             *state = svn_wc_notify_state_changed;
         }
@@ -1022,10 +1045,14 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         }
       break;
     case svn_node_file:
+      if (merge_b->dry_run)
+        merge_b->added_path = NULL;
       if (state)
         *state = svn_wc_notify_state_obstructed;
       break;
     default:
+      if (merge_b->dry_run)
+        merge_b->added_path = NULL;
       if (state)
         *state = svn_wc_notify_state_unknown;
       break;
@@ -2297,6 +2324,7 @@ svn_client_merge (const char *source1,
   merge_cmd_baton.url = URL2;
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = path2;
+  merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 
@@ -2402,6 +2430,7 @@ svn_client_merge_peg (const char *source,
   merge_cmd_baton.url = URL;
   merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = path;
+  merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 
