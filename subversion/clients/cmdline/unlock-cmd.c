@@ -55,7 +55,7 @@ print_unlock_info (void *baton,
   struct lock_baton *lb = baton;
 
   if (ra_err)
-    err = svn_cmdline_printf (lb->pool, _("Error: %s\n"), ra_err->message);
+    svn_handle_error (ra_err, stderr, FALSE);
   else
     err = svn_cmdline_printf (lb->pool, _("Unlocked '%s'.\n"), path);
 
