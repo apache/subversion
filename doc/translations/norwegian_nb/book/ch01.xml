@@ -64,7 +64,7 @@
     @ENGLISH }}} -->
     <para>Subversion er et fritt/opensource versjonskontrollsystem.
       Det betyr: Subversion behandler filer og kataloger over tid.
-      Et tre av filer er plassert i i et sentralt 
+      Et tre av filer er plassert i et sentralt 
       <firstterm>depot</firstterm>.
       Depotet ligner mye p&#229; en vanlig filtjener, med det unntaket at den 
       husker hver eneste forandring noensinne gjort p&#229; filene og 
