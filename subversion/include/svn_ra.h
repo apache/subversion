@@ -99,19 +99,6 @@ typedef struct svn_ra_plugin_t
 } svn_ra_plugin_t;
 
 
-
-
-/* The client will keep a private hash that maps
-   names->svn_ra_library_t objects. */
-/* ### this will probably become internal to libsvn_client */
-typedef struct svn_ra_library_t
-{
-  const svn_ra_plugin_t *plugin;  /* the vtable to use */
-  apr_dso_handle_t *dso;          /* handle on the actual library loaded */
-
-} svn_ra_library_t;
-
-
 /* libsvn_client will be reponsible for loading each RA DSO it needs.
    However, all "ra_FOO" implementations *must* export a function named
    `svn_ra_FOO_init()':
