@@ -68,12 +68,11 @@ typedef struct dag_node_t dag_node_t;
 
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
    allocating in POOL.  */
-svn_error_t *
-svn_fs_base__dag_get_node (dag_node_t **node,
-                           svn_fs_t *fs,
-                           const svn_fs_id_t *id,
-                           trail_t *trail,
-                           apr_pool_t *pool);
+svn_error_t *svn_fs_base__dag_get_node (dag_node_t **node,
+                                        svn_fs_t *fs,
+                                        const svn_fs_id_t *id,
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Return a new dag_node_t object referring to the same node as NODE,
