@@ -565,7 +565,7 @@ class ChangeCollector(svn.delta.Editor):
     base_path = _svn_join(parent_baton[1], _svn_basename(path))
     return (path, base_path, base_revision)  # file_baton
 
-  def apply_textdelta(self, file_baton, base_checksum, result_checksum):
+  def apply_textdelta(self, file_baton, base_checksum):
     file_path = file_baton[0]
     if self.changes.has_key(file_path):
       self.changes[file_path].text_changed = True
