@@ -891,6 +891,9 @@ main (int argc, const char * const *argv)
   ctx.prompt_func = svn_cl__prompt_user; 
   ctx.prompt_baton = NULL;
 
+  ctx.log_msg_func = svn_cl__get_log_message;
+  ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, pool);
+
   /* Place any default --username or --password credentials into the cxt. */
   if (opt_state.auth_username || opt_state.auth_password)
     {

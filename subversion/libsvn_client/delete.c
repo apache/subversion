@@ -101,8 +101,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
                    svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force, 
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -125,7 +123,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *auth_dir;
 
       /* Create a new commit item and add it to the array. */
-      if (log_msg_func)
+      if (ctx->log_msg_func)
         {
           svn_client_commit_item_t *item;
           const char *tmp_file;
@@ -138,8 +136,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
           (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
             = item;
           
-          SVN_ERR ((*log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                    log_msg_baton, pool));
+          SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                         ctx->log_msg_baton, pool));
           if (! log_msg)
             return SVN_NO_ERROR;
         }

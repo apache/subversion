@@ -46,7 +46,6 @@ svn_cl__copy (apr_getopt_t *os,
   const char *src_path, *dst_path;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
-  void *log_msg_baton;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -98,15 +97,12 @@ svn_cl__copy (apr_getopt_t *os,
     /* URL->URL : No notification needed. */
     ;
 
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   SVN_ERR (svn_cl__cleanup_log_msg
-           (log_msg_baton, svn_client_copy (&commit_info,
-                                            src_path, 
-                                            &(opt_state->start_revision), 
-                                            dst_path, NULL, 
-                                            &svn_cl__get_log_message,
-                                            log_msg_baton,
-                                            ctx, pool)));
+           (ctx->log_msg_baton, svn_client_copy (&commit_info,
+                                                 src_path, 
+                                                 &(opt_state->start_revision), 
+                                                 dst_path, NULL, 
+                                                 ctx, pool)));
 
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);

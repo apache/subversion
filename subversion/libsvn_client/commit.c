@@ -503,8 +503,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                    const char *path,
                    const char *url,
                    const char *new_entry,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -534,7 +532,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
        SVN_WC_ADM_DIR_NAME);
 
   /* Create a new commit item and add it to the array. */
-  if (log_msg_func)
+  if (ctx->log_msg_func)
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
@@ -550,8 +548,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
       
-      SVN_ERR ((*log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                log_msg_baton, pool));
+      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
       if (! log_msg)
         return SVN_NO_ERROR;
       if (tmp_file)
@@ -716,8 +714,6 @@ have_processed_parent (apr_array_header_t *commit_items,
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -810,11 +806,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (log_msg_func)
+  if (ctx->log_msg_func)
     {
       const char *tmp_file;
-      cmt_err = (*log_msg_func)(&log_msg, &tmp_file, commit_items, 
-                                log_msg_baton, pool);
+      cmt_err = (*ctx->log_msg_func)(&log_msg, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool);
       if (cmt_err || (! log_msg))
         goto cleanup;
     }

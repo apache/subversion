@@ -910,8 +910,6 @@ setup_copy (svn_client_commit_info_t **commit_info,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
             svn_wc_adm_access_t *optional_adm_access,
-            svn_client_get_commit_log_t log_msg_func,
-            void *log_msg_baton,
             svn_boolean_t is_move,
             svn_boolean_t force,
             svn_client_ctx_t *ctx,
@@ -986,7 +984,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (dst_is_url && log_msg_func)
+  if (dst_is_url && ctx->log_msg_func)
     {
       svn_client_commit_item_t *item;
       const char *tmp_file;
@@ -999,8 +997,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
       
-      SVN_ERR ((*log_msg_func) (&message, &tmp_file, commit_items, 
-                                log_msg_baton, pool));
+      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
       if (! message)
         return SVN_NO_ERROR;
     }
@@ -1051,14 +1049,11 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
-                 svn_client_get_commit_log_t log_msg_func,
-                 void *log_msg_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
                      src_path, src_revision, dst_path, optional_adm_access,
-                     log_msg_func, log_msg_baton,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
                      ctx,
@@ -1072,14 +1067,11 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
-                 svn_client_get_commit_log_t log_msg_func,
-                 void *log_msg_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
                      src_path, src_revision, dst_path, NULL,
-                     log_msg_func, log_msg_baton,
                      TRUE /* is_move */,
                      force,
                      ctx,

@@ -62,14 +62,11 @@ svn_cl__mkdir (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      void *lmb = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
 
       commit_info = NULL;
       SVN_ERR (svn_cl__cleanup_log_msg
-               (lmb, svn_client_mkdir (&commit_info, target, 
-                                       &svn_cl__get_log_message,
-                                       lmb,
-                                       ctx, pool)));
+               (ctx->log_msg_baton, svn_client_mkdir (&commit_info, target, 
+                                                      ctx, pool)));
 
       if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);

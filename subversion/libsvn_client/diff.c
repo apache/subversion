@@ -470,9 +470,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           /* ### 838 When 838 stops using svn_client_copy the adm_access
              parameter can be removed from the function. */
           SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
-                                    adm_access,
-                                    NULL, NULL, merge_b->ctx,
-                                    merge_b->pool));
+                                    adm_access, merge_b->ctx, merge_b->pool));
         }
       break;
     case svn_node_dir:
@@ -530,7 +528,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, mine, parent_access, merge_b->force,
-                                  NULL, NULL, merge_b->ctx, subpool));
+                                  merge_b->ctx, subpool));
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
@@ -571,9 +569,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       if (! merge_b->dry_run)
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                  adm_access,
-                                  NULL, NULL, merge_b->ctx,
-                                  subpool));
+                                  adm_access, merge_b->ctx, subpool));
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
@@ -582,9 +578,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
           && (! entry || (entry && entry->schedule == svn_wc_schedule_delete)))
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
-                                  adm_access,
-                                  NULL, NULL, merge_b->ctx,
-                                  subpool));
+                                  adm_access, merge_b->ctx, subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
@@ -620,7 +614,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, path, parent_access, merge_b->force,
-                                  NULL, NULL, merge_b->ctx, subpool));
+                                  merge_b->ctx, subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
