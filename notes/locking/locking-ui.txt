@@ -420,11 +420,11 @@ III. New Server Behaviors
 
       2. Unconditional release of locks
 
-         A new 'svnadmin release' subcommand to unconditionally
+         A new 'svnadmin unlock' subcommand to unconditionally
          release a lock.  Note that this command circumvents hook
          scripts, much like other svnadmin actions:
 
-           $ svnadmin release /usr/local/svn/repos /trunk/doc/foo.doc
+           $ svnadmin unlock /usr/local/svn/repos /trunk/doc/foo.doc
            Lock on '/trunk/doc/foo.doc' has been released.
 
 
