@@ -59,6 +59,8 @@
     sometimes talk about when upgrading a Subversion server?</a></li> 
 <li><a href="#sspi">How do I allow clients to authenticate against a
     Windows domain controller using SSPI Authentication?</a></li>
+<li><a href="#deltification">How do I enable repository deltification,
+    and why?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -886,6 +888,50 @@ asks for credentials, any action that requires authentication will fail.
 Adding this line tells <tt>mod_auth_sspi</tt> to use basic authentication with
 the client, but to use the Windows domain controller to authenticate
 the credentials.</p>
+
+<![CDATA[=========================================================]]>
+ 
+<h3><a name="deltification">How do I enable repository deltification,
+    and why?</h3>
+
+<p>The simple answer is, deltification can make your repository take
+up less space, and you should set it up by putting a line like this in
+your <tt>REPOSITORY/hooks/post-commit</tt> file:</p>
+
+<p>
+<pre>
+   nice -2 /path/to/installed/svnadmin deltify "$REPOS" -r "$REV" &
+</pre>
+</p>
+
+<p>(The above example is for Unix, Windows would be different.)</p>
+
+<p>The long answer is a bit more complex.  If you do deltification,
+you'll also want to clean up repository db logfiles on a regular
+basis, otherwise deltification won't result in any actual space
+savings.  See "<a href="#bdblogs">Why is my repository taking up so
+much disk space?</a>" to learn how to clean up Berkeley DB logfiles.
+</p>
+
+<p>For general information about deltification, see:</p>
+
+<p>
+<blockquote>
+<a href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=2946"
+  >http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=2946</a>
+</blockquote>
+</p>
+
+<p>For more on the current deltification situation, and our long term
+plan to improve it, see:</p>
+
+<p>
+<blockquote>
+<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=49401"
+  >http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=49401</a>
+</blockquote>
+</p>
+
 
 <![CDATA[=========================================================]]>
 
