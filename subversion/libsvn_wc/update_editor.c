@@ -476,7 +476,7 @@ prep_directory (struct dir_baton *db,
       apr_pool_t *adm_access_pool
         = db->edit_baton->adm_access
         ? svn_wc_adm_access_pool (db->edit_baton->adm_access)
-        : pool;
+        : db->edit_baton->pool;
 
       SVN_ERR (svn_wc_adm_open (&adm_access, db->edit_baton->adm_access,
                                 db->path, TRUE, FALSE, adm_access_pool));
