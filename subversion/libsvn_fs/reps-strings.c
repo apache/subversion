@@ -141,14 +141,16 @@ delete_strings (apr_array_header_t *keys,
 struct window_handler_baton
 {
   svn_txdelta_window_t *window;
+  apr_pool_t *window_pool;
 };
 
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct window_handler_baton *wb = baton;
-  assert (wb->window == NULL);
-  wb->window = window;
+  assert ((window == NULL) != (wb->window == NULL));
+  if (window)
+    wb->window = svn_txdelta__copy_window(window, wb->window_pool);
   return SVN_NO_ERROR;
 }
 
@@ -173,15 +175,15 @@ get_one_window (svn_txdelta_window_t **window,
   apr_array_header_t *chunks = rep->contents.delta.chunks;
   svn_fs__rep_delta_chunk_t *this_chunk;
 
-  if (chunks->nelts < cur_chunk)
+  if (chunks->nelts <= cur_chunk)
     {
       *window = NULL;
       *window_pool = NULL;
       return SVN_NO_ERROR;
     }
 
-  *window_pool = svn_pool_create (trail->pool);
   wb.window = NULL;
+  wb.window_pool = *window_pool = svn_pool_create (trail->pool);
 
  /* Set up a window handling stream for the svndiff data. */
   wstream = svn_txdelta_parse_svndiff (window_handler, &wb, TRUE,
@@ -195,7 +197,7 @@ get_one_window (svn_txdelta_window_t **window,
   diffdata[3] = '\0';
   amt = 4;
   SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
-  assert (amt == 4);
+  /* FIXME: The stream write handler is borked; assert (amt == 4); */
 
   /* Get this string key which holds this window's data.
      ### todo: make sure this is an `svndiff' DIFF skel here. */
@@ -215,6 +217,7 @@ get_one_window (svn_txdelta_window_t **window,
   while (amt != 0);
   SVN_ERR (svn_stream_close (wstream));
 
+  assert (wb.window != NULL);
   *window = wb.window;
   return SVN_NO_ERROR;
 }
@@ -240,9 +243,9 @@ rep_undeltify_range (svn_fs_t *fs,
 
   do
     {
-      svn_txdelta_window_t *window_A, *window_B, *composite;
-      apr_pool_t *wpool_A, *wpool_B, *wpool_composite;
       svn_fs__representation_t *rep;
+      svn_txdelta_window_t *window_B;
+      apr_pool_t *wpool_B;
       int cur_rep;
 
       apr_size_t source_len, target_len;
@@ -256,9 +259,10 @@ rep_undeltify_range (svn_fs_t *fs,
           /* That's it, no more source data is available. */
           break;
 
-      window_A = composite = NULL;
       for (cur_rep = 1; cur_rep < deltas->nelts; ++cur_rep)
         {
+          svn_txdelta_window_t *window_A, *composite;
+          apr_pool_t *wpool_A, *wpool_composite;
           apr_off_t sview_offset = window_B->sview_offset;
           rep = APR_ARRAY_IDX (deltas, cur_rep, svn_fs__representation_t*);
           SVN_ERR (get_one_window
@@ -268,10 +272,10 @@ rep_undeltify_range (svn_fs_t *fs,
           composite = svn_txdelta__compose_windows
             (window_A, window_B, &sview_offset, wpool_composite);
 
-          window_B = composite;
-          wpool_B = wpool_composite;
           svn_pool_destroy (wpool_A);
           svn_pool_destroy (wpool_B);
+          window_B = composite;
+          wpool_B = wpool_composite;
 
           if (window_B->sview_len == 0)
             /* We'll undeltify without source data now. */

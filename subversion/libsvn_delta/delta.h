@@ -81,6 +81,11 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               apr_pool_t *pool);
 
 
+/* Return a copy of WINDOW, allocated from POOL. */
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
+                          apr_pool_t *pool);
+
 /* Apply the instructions from WINDOW to a source view SBUF to produce
    a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
    bytes of data and TBUF is assumed to have room for TLEN bytes of
