@@ -47,6 +47,14 @@
  * individuals on behalf of Collab.Net.
  */
 
+
+#include <apr_pools.h>
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_error.h"
+#include "svn_path.h"
+
+
 
 
 /* Lock the working copy administrative area.
@@ -72,11 +80,6 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
    the global namespace, right?  Because they'd silently override any
    other #define with the same name. */
 
-/* Default name for working copy administrative subdirectories, but
-   never use this raw, use svn_wc__adm_subdir() instead, since that
-   will incorporate user preferences. */
-#define SVN_WC__ADM_DIR_DEFAULT   "SVN"
-
 /* The files within the administrative subdir. */
 #define SVN_WC__ADM_VERSIONS            "versions"
 #define SVN_WC__ADM_PROPERTIES          "properties"
@@ -87,16 +90,45 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
 
-/* kff todo: not sure all of this is going to be used... */
-#define SVN_WC__ADM_DOING               "doing-"
-#define SVN_WC__ADM_DOING_CHECKOUT      SVN_WC__ADM_DOING  "co"
-#define SVN_WC__ADM_DOING_COMMIT        SVN_WC__ADM_DOING  "ci"
-#define SVN_WC__ADM_DOING_UPDATE        SVN_WC__ADM_DOING  "up"
-#define SVN_WC__ADM_DOING_LOCAL_CHANGE  SVN_WC__ADM_DOING  "lc"
+/* The directory that does bookkeeping during an operation. */
+#define SVN_WC__ADM_DOING               "doing"
+#define SVN_WC__ADM_DOING_ACTION        SVN_WC__ADM_DOING  "action"
+#define SVN_WC__ADM_DOING_FILES         SVN_WC__ADM_DOING  "files"
+#define SVN_WC__ADM_DOING_STARTED       SVN_WC__ADM_DOING  "started"
+#define SVN_WC__ADM_DOING_FINISHED      SVN_WC__ADM_DOING  "finished"
 
 /* Return a string containing the admin subdir name. */
 svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
 
+
+/* Make `PATH/<adminstrative_subdir>/THING'. */
+svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
+                                     char *thing,
+                                     int type,
+                                     apr_pool_t *pool);
+
+
+/* Open `PATH/<adminstrative_subdir>/FNAME'.  *HANDLE must be NULL, as
+   with apr_open(). */
+svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
+                                    svn_string_t *path,
+                                    char *fname,
+                                    apr_int32_t flags,
+                                    apr_pool_t *pool);
+
+
+/* Close `PATH/<adminstrative_subdir>/FNAME'.  The only reason this
+   takes PATH and FNAME is so any error will have the correct path. */
+svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
+                                     svn_string_t *path,
+                                     char *fname,
+                                     apr_pool_t *pool);
+
+/* Remove `PATH/<adminstrative_subdir>/THING'. 
+   kff todo: just using it for files, not dirs, at the moment. */
+svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
+                                       char *thing,
+                                       apr_pool_t *pool);
 
 
 /* 

@@ -1,5 +1,5 @@
 /*
- * update.c :  routines for update and checkout
+ * apply_delta.c :  routines for update and checkout
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
