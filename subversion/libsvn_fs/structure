@@ -254,7 +254,7 @@ strings are.
 
 At the moment, there is only one form of DELTA allowed:
 
-("vcdiff" DATA)
+("svndiff" DATA)
     DATA is an atom whose contents are a VCDIFF-form diff.
 
 
@@ -345,12 +345,12 @@ where:
 - PROPLIST is the revision's property list.
 
 The database contains a table called "revisions", which is a
-record-number table mapping revision numbers onto REVISION skels.  Since
-Berkeley DB record numbers start with 1, whereas Subversion revision
-numbers start at zero, revision V is stored as record number V-1 in the
-`revisions' table.  Revision zero always has node revision 0.0 as its
-root directory; that node revision is guaranteed to be an empty
-directory.
+record-number table mapping revision numbers onto REVISION skels.
+Since Berkeley DB record numbers start with 1, whereas Subversion
+filesystem revision numbers start at zero, revision V is stored as
+record number V-1 in the `revisions' table.  Filesystem reevision zero
+always has node revision 0.0 as its root directory; that node revision
+is guaranteed to be an empty directory.
 
 
 Transactions
@@ -394,7 +394,7 @@ done by the other processes.
 
 In particular, if process A holds a reference to an uncloned node, and
 then process B clones that node, or some of its parents, process A
-must be able to find the clones created by A in order to correctly
+must be able to find the clones created by B in order to correctly
 make its own changes to the node.
 
 The Berkeley DB `clones' table provides enough information to do this
@@ -494,7 +494,7 @@ ANCESTOR:
     - (6) E exists in neither ANCESTOR nor A:
       - (1) E exists in neither ANCESTOR nor B.  Can't occur, by assumption
 	   that E exists in either A, B, or ancestor.
-      - (1) E has been added to B.  Add B in the merged result. ***
+      - (1) E has been added to B.  Add E in the merged result. ***
       - (1) E has been deleted from B.  Can't occur, by assumption that E
 	doesn't exist in ANCESTOR.
       - (3) E exists in both ANCESTOR and B.  Can't occur, by assumption that
