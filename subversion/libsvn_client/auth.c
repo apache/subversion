@@ -43,15 +43,14 @@
 
 static svn_error_t *
 get_username (char **username,
-              void *auth_baton,
+              void *baton,
               svn_boolean_t force_prompt,
               apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stringbuf_t *uname;
-
-  svn_client_auth_baton_t *ab = 
-    (svn_client_auth_baton_t *) auth_baton;
+  svn_client__callback_baton_t *cb = baton;
+  svn_client_auth_baton_t *ab = cb->auth_baton;
 
   if (force_prompt)
     {
@@ -84,7 +83,7 @@ get_username (char **username,
 
   else  /* else get it from file cached in working copy. */
     {
-      err = svn_wc_get_auth_file (ab->path, 
+      err = svn_wc_get_auth_file (cb->base_dir, 
                                   SVN_CLIENT_AUTH_USERNAME,
                                   &uname, pool);
       if (! err)
@@ -123,15 +122,15 @@ get_username (char **username,
 static svn_error_t *
 get_password (char **password,
               char *username,
-              void *auth_baton,
+              void *baton,
               svn_boolean_t force_prompt,
               apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stringbuf_t *pword;
   char *prompt;
-  svn_client_auth_baton_t *ab = 
-    (svn_client_auth_baton_t *) auth_baton;
+  svn_client__callback_baton_t *cb = baton;
+  svn_client_auth_baton_t *ab = cb->auth_baton;
 
   if (strlen(username) > 0)
     prompt = apr_psprintf (pool, "%s's password: ", username);
@@ -168,7 +167,7 @@ get_password (char **password,
 
   else  /* else get it from file cached in working copy. */
     {
-      err = svn_wc_get_auth_file (ab->path, 
+      err = svn_wc_get_auth_file (cb->base_dir, 
                                   SVN_CLIENT_AUTH_PASSWORD,
                                   &pword, pool);
       if (! err)
@@ -198,12 +197,12 @@ get_password (char **password,
 static svn_error_t *
 get_user_and_pass (char **username,
                    char **password,
-                   void *auth_baton,
+                   void *baton,
                    svn_boolean_t force_prompt,
                    apr_pool_t *pool)
 {
-  SVN_ERR (get_username (username, auth_baton, force_prompt, pool));
-  SVN_ERR (get_password (password, *username, auth_baton, force_prompt, pool));
+  SVN_ERR (get_username (username, baton, force_prompt, pool));
+  SVN_ERR (get_password (password, *username, baton, force_prompt, pool));
 
   return SVN_NO_ERROR;
 }
@@ -233,16 +232,16 @@ store_auth_info (const char *filename,
 
 static svn_error_t *
 store_username (const char *username,
-                void *auth_baton)
+                void *baton)
 {
-  svn_client_auth_baton_t *ab = (svn_client_auth_baton_t *) auth_baton;
+  svn_client__callback_baton_t *cb = baton;
   
   /* Sanity check:  only store auth info if the `overwrite' flag is
      set.  This flag is set if the user was either prompted or
      specified new info on the commandline. */
-  if (ab->overwrite)
+  if (cb->auth_baton->overwrite)
     return store_auth_info (SVN_CLIENT_AUTH_USERNAME, username,
-                            ab->path, ab->pool);
+                            cb->base_dir, cb->pool);
   else
     return SVN_NO_ERROR;
 }
@@ -250,16 +249,16 @@ store_username (const char *username,
 
 static svn_error_t *
 store_password (const char *password,
-                void *auth_baton)
+                void *baton)
 {
-  svn_client_auth_baton_t *ab = (svn_client_auth_baton_t *) auth_baton;
+  svn_client__callback_baton_t *cb = baton;
   
   /* Sanity check:  only store auth info if the `overwrite' flag is
      set.  This flag is set if the user was either prompted or
      specified new info on the commandline. */
-  if (ab->overwrite)
+  if (cb->auth_baton->overwrite)
     return store_auth_info (SVN_CLIENT_AUTH_PASSWORD, password,
-                            ab->path, ab->pool);
+                            cb->base_dir, cb->pool);
   else
     return SVN_NO_ERROR;
 }
@@ -267,15 +266,15 @@ store_password (const char *password,
 
 
 static svn_error_t *
-store_user_and_pass (void *auth_baton)
+store_user_and_pass (void *baton)
 {
-  svn_client_auth_baton_t *ab = (svn_client_auth_baton_t *) auth_baton;
+  svn_client__callback_baton_t *cb = baton;
   
-  if (ab->username)
-    SVN_ERR (store_username (ab->username, auth_baton));
+  if (cb->auth_baton->username)
+    SVN_ERR (store_username (cb->auth_baton->username, baton));
 
-  if (ab->password)
-    SVN_ERR (store_password (ab->password, auth_baton));
+  if (cb->auth_baton->password)
+    SVN_ERR (store_password (cb->auth_baton->password, baton));
   
   return SVN_NO_ERROR;
 }
@@ -287,7 +286,7 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
                                              void *callback_baton,
                                              apr_pool_t *pool)
 {
-  svn_client_auth_baton_t *cb = (svn_client_auth_baton_t *) callback_baton;
+  svn_client__callback_baton_t *cb = callback_baton;
 
   /* At the moment, the callback_baton *is* the baton needed by the
      authenticator objects.  This may change. */

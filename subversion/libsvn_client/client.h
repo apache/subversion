@@ -41,12 +41,18 @@ typedef struct
 {
   /* This is provided by the calling application for handling authentication
      information for this session. */
-  void *auth_baton;
+  svn_client_auth_baton_t *auth_baton;
 
   /* Holds the directory that corresponds to the REPOS_URL at RA->open()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
-  svn_string_t base_dir;
+  svn_stringbuf_t *base_dir;
+
+  /* Record whether we should store the user/pass into the WC */
+  svn_boolean_t do_store;
+
+  /* The pool to use for session-related items. */
+  apr_pool_t *pool;
 
 } svn_client__callback_baton_t;
 
