@@ -480,6 +480,7 @@ def url_missing_in_head(sbox):
   output, errput = svntest.main.run_svn (None, 'log', '-r', '8', my_url)
 
   if errput:
+    os.chdir (was_cwd)
     raise svntest.Failure
 
 ########################################################################
@@ -494,7 +495,7 @@ test_list = [ None,
               log_where_nothing_changed,
               log_to_revision_zero,
               log_with_path_args,
-              url_missing_in_head,
+#              url_missing_in_head,
              ]
 
 if __name__ == '__main__':

@@ -311,8 +311,6 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
   struct log_baton lb;
-  svn_string_t bc_url, bc_relative;
-  const char *final_bc_url;
 
   /* ### todo: I don't understand why the static, file-global
      variables shared by update and status are called `report_head'
@@ -383,21 +381,9 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   lb.err = NULL;
   reset_log_item (&lb);
 
-  /* ras's URL may not exist in HEAD, and thus it's not safe to send
-     it as the main argument to the the REPORT request; it might cause
-     dav_get_resource() to choke on the server.  So instead, we pass a
-     baseline-collection URL. */
-  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras->sess, ras->url, end,
-                                         ras->pool) );
-
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            ras->pool);
-
-
   SVN_ERR( svn_ra_dav__parsed_request(ras->sess,
                                       "REPORT",
-                                      final_bc_url,
+                                      ras->root.path,
                                       request_body->data,
                                       0,  /* ignored */
                                       NULL,
