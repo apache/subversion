@@ -261,8 +261,6 @@ fs_revision_proplist (VALUE self, VALUE aRev)
     return obj;
   }
 }
-  
-  
 
 static VALUE
 fs_change_rev_prop (VALUE self, VALUE aRev, VALUE aName, VALUE aValue)
@@ -286,7 +284,8 @@ fs_change_rev_prop (VALUE self, VALUE aRev, VALUE aName, VALUE aValue)
   if (aValue == Qnil)
     value = NULL;
   else
-    value = svn_string_create (StringValuePtr (aValue), pool);
+    value = svn_string_ncreate (StringValuePtr (aValue),
+                                RSTRING (aValue)->len, pool);
 
   err = svn_fs_change_rev_prop (fs->fs, rev,
 				StringValuePtr (aName), value, pool);
