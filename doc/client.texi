@@ -30,23 +30,46 @@ copies.
 @node Terminology
 @subsection Terminology
 
-TODO: this should go somewhere else in the document
+This chapter uses a few fundamental concepts that have not been
+introduced previously.  Here they are briefly defined, but see
+@xref{Protocol} for more complete descriptions.
 
-@example
-   "diff"              ===> a textual diff, like the output of GNU diff
+@table @b
+@item vdelta, vdiff 
+A generic format for expressing the differences between two files.
+Unlike traditional @code{diff} format, vdeltas can express differences
+between non-text files.  Vdeltas are not human-readable and can only be
+used as patches if the base file is absolutely unmodified -- they have
+no concept of context.
 
-   "vdelta", "vdiff"   ===> you know what this is
+@item diff 
+A line-based text diff, like the output of the GNU diff program.
 
-   "pdelta", "pdiff"   ===> deltas for property lists.  
-                            May include vdeltas. 
+@item pdelta, pdiff
+Deltas for property lists..
+May include vdeltas. 
 
-   "delta"             ===> the lispy encapsulating data structure.
-                            May include vdeltas and pdeltas.
+@item delta
+A data structure capable of representing changes to directory trees.
+Handles not only vdeltas between files, but also adds, deletes, renames,
+and permission changes.
 
-   "skelta"            ===> a skeleton delta, holds everything but the
-                            actual vdeltas and pdeltas.
+A deltas uses vdeltas and pdeltas to express changes to file contents
+and metadata.
 
-@end example
+@item skelta 
+A "skeleton delta".  That is, a delta with empty slots where the pdeltas
+and vdeltas would be.  A skelta is used to @emph{list} the changes that
+happened to a directory tree, omitting the changes to file contents
+
+FOOO working here
+
+
+@item node" 
+File or directory.
+
+
+@end table
 
 @c -----------------------------------------------------------------------
 @node The working copy management library
@@ -278,24 +301,26 @@ of "CVS":
 
 @end example
 
-Each SVN/ directory records the files in its parent, their version
-numbers and property lists, and any local changes (such as uncommitted
-adds, deletes, and renames) that have happened
-
+Each @file{dir/SVN/} directory records the files in @file{dir}, their
+version numbers and property lists, pristine versions of all the files
+for client-side delta generation, the repository from which @file{dir}
+came, and any local changes (such as uncommitted adds, deletes, and
+renames) that affect @file{dir}.
 
 Although often it would often be possible to deduce certain information
-by examining parent directories, this is avoided in favor of making each
-directory be as much a self-contained unit as possible (this will make
-it easier to mix subtrees of different projects later on).
+(such as the origin repository) by examining parent directories, this is
+avoided in favor of making each directory be as much a self-contained
+unit as possible.
 
 For example, immediately after a checkout the administrative information
 for the entire working tree @emph{could} be stored in one top-level
-file.  But the subdirectories also keep track of their own version and
-repository information; this would be necessary anyway once the user
-starts committing new versions of particular files, but Subversion does
-it right from the beginning, for consistency.
+file.  But subdirectories instead keep track of their own version
+information.  This would be necessary anyway once the user starts
+committing new versions for particular files, and it also makes it
+easier for the user to prune a big, complete tree into a small subtree
+and still have a valid working copy.
 
-The SVN subdir stores:
+Specifically, the SVN subdir holds:
 
 @itemize @bullet
 
@@ -313,17 +338,25 @@ record version information for files here which are at some version
 other than the default.
 
 It may help to think of this file as the functional equivalent of the
-CVS/Entries file.  Like Entries, it also holds file metadata that can't
-always be stored in the filesystem (properties).
+CVS/Entries file.
+
+@item
+A @file{properties} file, recording properties for this directory and
+all directory entries and files it contains.  Although this information
+could be stored in the @file{versions} file, it is sufficiently
+separable to warrant its own file; very often one wants to look up a
+version without looking up a property, and vice-versa.
 
 @item
 A @file{changes} file, recording uncommitted changes to and from this
 directory (adds, removes, renames).
 
 @item
-A @file{lock} file, whose presence implies that a CVS client is
-currently operating on the adminstrative area.
+A @file{lock} file, whose presence implies that some client is currently
+operating on the adminstrative area.
 
 @item
 
 @end itemize
+
+The formats of these files are not specified yet.
