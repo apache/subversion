@@ -80,8 +80,7 @@ svn_cl__checkout (apr_getopt_t *os,
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than silently exiting.  */
   if (targets->nelts < 1)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
-                             "" /* message is unused */);
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   /* Add a path if the user only specified URLs */
   local_dir = ((const char **) (targets->elts))[targets->nelts - 1];
@@ -103,8 +102,7 @@ svn_cl__checkout (apr_getopt_t *os,
     {
       /* What?  They gave us one target, and it wasn't a URL. */
       if (targets->nelts == 1)
-        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
-                                 "" /* message is unused */);
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
     }
 
   if (! opt_state->quiet)

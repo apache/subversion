@@ -70,7 +70,7 @@ svn_cl__delete (apr_getopt_t *os,
                                          FALSE, pool));
 
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,

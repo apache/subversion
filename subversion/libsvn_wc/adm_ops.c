@@ -1459,9 +1459,9 @@ svn_wc_revert (const char *path,
            * */
           if (path[0] == '\0')
             {
-              return svn_error_createf (SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                "%s", "Cannot revert addition of current directory; "
-                      "please try again from the parent directory");
+              return svn_error_create (SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+                "Cannot revert addition of current directory; "
+                "please try again from the parent directory");
             }
               
           SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));

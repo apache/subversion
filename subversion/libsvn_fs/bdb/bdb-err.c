@@ -58,7 +58,7 @@ svn_fs__bdb_dberrf (int db_err, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
-  svn_error_t *err = svn_error_create (bdb_err_to_apr_err (db_err), 0, "");
+  svn_error_t *err = svn_error_create (bdb_err_to_apr_err (db_err), 0, NULL);
 
   va_start (ap, fmt);
   msg = apr_pvsprintf (err->pool, fmt, ap);

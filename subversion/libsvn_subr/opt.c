@@ -431,7 +431,7 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
 
   if (os->ind > os->argc)
     {
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
+      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
     }
   while (os->ind < os->argc)
     {

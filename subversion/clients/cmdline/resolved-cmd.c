@@ -56,7 +56,7 @@ svn_cl__resolved (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
     
   subpool = svn_pool_create (pool);
   if (! opt_state->quiet)
