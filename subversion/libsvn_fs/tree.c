@@ -1074,24 +1074,12 @@ merge (const char **conflict_p,
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs_id_eq (ancestor_id, target_id))
     {
-      svn_string_t *id_str = svn_fs_unparse_id (ancestor_id, trail->pool);
-      return svn_error_createf
-        (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
-         "Bad merge call -- ancestor and target are the same id (`%s')",
-         id_str->data);
-    }
-
-
-  /* If target has not changed since ancestor, it's an error. */
-  if (svn_fs_id_eq (ancestor_id, target_id))
-    {
       svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
          "Bad merge call -- target `%s' has id `%s', same as ancestor.",
          target_path, id_str->data);
     }
-
 
   *conflict_p = NULL;
 
