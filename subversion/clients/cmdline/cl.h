@@ -236,6 +236,17 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
                                  apr_pool_t *pool);
 
 
+/* Search for a text editor command in standard environment variables,
+   and invoke it to edit CONTENTS (using a temporary file based on
+   working copy directory BASE_DIR).  Return the new contents in
+   EDITED_CONTENTS, or set EDITED_CONTENTS to NULL if no edit was
+   performed.  Use POOL for all allocations. */
+svn_error_t *
+svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
+                         svn_stringbuf_t *base_dir,
+                         const svn_string_t *contents,
+                         apr_pool_t *pool);
+
 
 /* Our implementation of the 'auth info callback' routine, 
    as defined in svn_client.h.   This callback is passed to any

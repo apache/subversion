@@ -177,12 +177,10 @@ svn_client_propget (apr_hash_t **props,
   /* ### be nice to avoid this */
   svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
 
-  SVN_ERR (svn_wc_entry(&node, target_buf, pool));
+  SVN_ERR (svn_wc_entry (&node, target_buf, pool));
   if (!node)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "'%s' -- not a versioned resource", target);
-
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "'%s' -- not a versioned resource", target);
 
   if (recurse && node->kind == svn_node_dir)
     {
