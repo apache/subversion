@@ -1201,7 +1201,8 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       svn_wc__entry_remove (entries, name);
       SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
-      /* Remove text-base/NAME, prop/NAME, prop-base/NAME, wcprops/NAME */
+      /* Remove text-base/NAME.svn-base, prop/NAME, prop-base/NAME.svn-base,
+         wcprops/NAME */
       {
         svn_stringbuf_t *svn_thang;
 
@@ -1293,7 +1294,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       /* At this point, every directory below this one has been
          removed from revision control. */
 
-      /* Remove the entire administrative SVN area, thereby removing
+      /* Remove the entire administrative .svn area, thereby removing
          _this_ dir from revision control too. */
       SVN_ERR (svn_wc__adm_destroy (path, subpool));
       
@@ -1303,7 +1304,7 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       if (destroy_wf && (! left_a_file))
         {
           /* If the dir is *truly* empty (i.e. has no unversioned
-             resources, all versioned files are gone, all SVN dirs are
+             resources, all versioned files are gone, all .svn dirs are
              gone, and contains nothing but empty dirs), then a
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
@@ -1364,7 +1365,7 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
   svn_stringbuf_t *file = svn_stringbuf_create (filename, pool);
 
   /* Create/overwrite the file in PATH's administrative area.
-     (In reality, this opens a file 'path/SVN/tmp/auth/filename'.) */
+     (In reality, this opens a file 'path/.svn/tmp/auth/filename'.) */
   SVN_ERR (svn_wc__open_auth_file (&fp, path, file,
                                    (APR_WRITE | APR_CREATE | APR_TRUNCATE),
                                    pool));

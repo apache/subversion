@@ -31,6 +31,7 @@
 #define SVN_WC__TMP_EXT       ".tmp"
 #define SVN_WC__TEXT_REJ_EXT  ".rej"
 #define SVN_WC__PROP_REJ_EXT  ".prej"
+#define SVN_WC__BASE_EXT      ".svn-base"
 
 
 

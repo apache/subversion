@@ -868,7 +868,7 @@ add_or_replace_file (svn_stringbuf_t *name,
      it's a hash; and we know that we won't lose any local mods.  Let
      the existing entry be overwritten. */
 
-  /* If replacing, make sure the SVN entry already exists. */
+  /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
                               parent_dir_baton->pool,
@@ -1065,23 +1065,23 @@ close_file (void *file_baton)
      true:
 
          - The new pristine text of F, if any, is present in
-           SVN/tmp/text-base/F, and the file_baton->text_changed is
-           set if necessary.
+           .svn/tmp/text-base/F.svn-base, and the file_baton->text_changed
+           is set if necessary.
 
          - The new pristine props for F, if any, are present in
            the file_baton->propchanges array, and
            file_baton->prop_changed is set.
 
-         - The SVN/entries file still reflects the old F.
+         - The .svn/entries file still reflects the old F.
 
-         - SVN/text-base/F is the old pristine F.
+         - .svn/text-base/F.svn-base is the old pristine F.
 
-         - SVN/prop-base/F is the old pristine F props.
+         - .svn/prop-base/F.svn-base is the old pristine F props.
 
       The goal is to update the local working copy of F to reflect
       the changes received from the repository, preserving any local
       modifications, in an interrupt-safe way.  So we first write our
-      intentions to SVN/log, then run over the log file doing each
+      intentions to .svn/log, then run over the log file doing each
       operation in turn.  For a given operation, you can tell by
       inspection whether or not it has already been done; thus, those
       that have already been done are no-ops, and when we reach the
@@ -1091,10 +1091,12 @@ close_file (void *file_baton)
       operations to update F is this:
 
          1. receive svndiff data D
-         2. svnpatch SVN/text-base/F < D > SVN/tmp/text-base/F
-         3. gdiff -c SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.tmp
-         4. cp SVN/tmp/text-base/F SVN/text-base/F
-         5. gpatch F < SVN/tmp/F.tmpfile
+         2. svnpatch .svn/text-base/F.svn-base < D >
+            .svn/tmp/text-base/F.svn-base
+         3. gdiff -c .svn/text-base/F.svn-base .svn/tmp/text-base/F.svn-base
+            > .svn/tmp/F.blah.tmp
+         4. cp .svn/tmp/text-base/F.svn-base .svn/text-base/F.svn-base
+         5. gpatch F < .svn/tmp/F.tmpfile
               ==> possibly producing F.blah.rej
 
   */

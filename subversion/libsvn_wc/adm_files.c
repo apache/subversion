@@ -339,6 +339,7 @@ svn_wc__sync_text_base (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
+  svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
   return sync_adm_file (newpath,
                         pool,
                         SVN_WC__ADM_TEXT_BASE,
@@ -346,34 +347,23 @@ svn_wc__sync_text_base (svn_stringbuf_t *path, apr_pool_t *pool)
                         NULL);
 }
 
-
-static svn_stringbuf_t *
-thing_path (const svn_stringbuf_t *path,
-            const char *thing,
-            svn_boolean_t tmp,
-            apr_pool_t *pool)
-{
-  svn_stringbuf_t *newpath, *basename;
-  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
-
-  extend_with_adm_name (newpath,
-                        0,
-                        pool,
-                        tmp ? SVN_WC__ADM_TMP : "",
-                        thing,
-                        basename->data,
-                        NULL);
-    
-  return newpath;
-}
-
-
 svn_stringbuf_t *
 svn_wc__text_base_path (const svn_stringbuf_t *path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return thing_path (path, SVN_WC__ADM_TEXT_BASE, tmp, pool);
+  svn_stringbuf_t *newpath, *basename;
+  svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
+  svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
+  extend_with_adm_name (newpath,
+                        0,
+                        pool,
+                        tmp ? SVN_WC__ADM_TMP : "",
+                        SVN_WC__ADM_TEXT_BASE,
+                        basename->data,
+                        NULL);
+    
+  return newpath;
 }
 
 
@@ -431,6 +421,9 @@ prop_path_internal (svn_stringbuf_t **prop_path,
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
            "svn_wc__prop_path: %s is not a working copy directory",
            (*prop_path)->data);
+
+      if (base)
+        svn_stringbuf_appendcstr (entry_name, SVN_WC__BASE_EXT);
 
       extend_with_adm_name (*prop_path,
                             0,
@@ -714,6 +707,7 @@ svn_wc__open_text_base (apr_file_t **handle,
 {
   svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
+  svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
   return open_adm_file (handle, newpath, flags, pool,
                         SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
 }
@@ -727,6 +721,7 @@ svn_wc__close_text_base (apr_file_t *fp,
 {
   svn_stringbuf_t *newpath, *basename;
   svn_path_split (path, &newpath, &basename, svn_path_local_style, pool);
+  svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
   return close_adm_file (fp, newpath, write, pool,
                          SVN_WC__ADM_TEXT_BASE, basename->data, NULL);
 }
@@ -790,8 +785,11 @@ svn_wc__open_props (apr_file_t **handle,
         return open_adm_file (handle, parent_dir, flags, pool,
                               SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
-        return open_adm_file (handle, parent_dir, flags, pool,
-                              SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+        {
+          svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
+          return open_adm_file (handle, parent_dir, flags, pool,
+                                  SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+        }
     }
   else if (wcprops)
     {
@@ -850,8 +848,11 @@ svn_wc__close_props (apr_file_t *fp,
         return close_adm_file (fp, parent_dir, sync, pool,
                                SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
-        return close_adm_file (fp, parent_dir, sync, pool,
-                               SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+        {
+          svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
+          return close_adm_file (fp, parent_dir, sync, pool,
+                                 SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+        }
     }
   else if (wcprops)
     {
@@ -909,8 +910,11 @@ svn_wc__sync_props (svn_stringbuf_t *path,
         return sync_adm_file (parent_dir, pool,
                               SVN_WC__ADM_DIR_PROP_BASE, NULL);
       else
-        return sync_adm_file (parent_dir, pool,
-                              SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+        {
+          svn_stringbuf_appendcstr (basename, SVN_WC__BASE_EXT);
+          return sync_adm_file (parent_dir, pool,
+                                SVN_WC__ADM_PROP_BASE, basename->data, NULL);
+        }
     }
   else if (wcprops)
     {

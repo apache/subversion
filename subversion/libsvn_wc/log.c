@@ -755,7 +755,7 @@ log_do_committed (struct log_runner *loggy,
 
               if (is_this_dir)
                 /* Drop a 'killme' file into my own adminstrative dir;
-                   this signals the svn_wc__run_log() to blow away SVN/
+                   this signals the svn_wc__run_log() to blow away .svn/
                    after its done with this logfile.  */
                 SVN_ERR (svn_wc__make_adm_thing (loggy->path,
                                                  SVN_WC__ADM_KILLME,
