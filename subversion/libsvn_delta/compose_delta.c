@@ -59,15 +59,19 @@ enum range_kind
 typedef struct range_list_node_t range_list_node_t;
 struct range_list_node_t
 {
+  /* Where does the range come from?
+     'offset' and 'limit' always refer to the "virtual" source data
+     for the second delta window. For a target range, the actual
+     offset to use for generating the target op is 'target_offset';
+     that field isn't used by source ranges. */
+  enum range_kind kind;
+
   /* 'offset' and 'limit' define the range. */
   apr_off_t offset;
   apr_off_t limit;
 
-  /* Where does the range come from?
-     If range_from_target, 'offset' and 'limit' refer to target data;
-     otherwise they refer to the "virtual" source data for the second
-     delta window. */
-  enum range_kind kind;
+  /* 'target_offset' is the start of the range in the target. */
+  apr_off_t target_offset;
 
   /* 'prev' and 'next' link the node into an ordered, doubly-linked list. */
   range_list_node_t *prev, *next;
@@ -354,8 +358,8 @@ splay_range_index (apr_off_t offset, range_index_t *ndx)
     }
 
   /* Sanity check ... */
-  assert ((offset >= tree->offset) 
-          || ((tree->left == NULL) 
+  assert ((offset >= tree->offset)
+          || ((tree->left == NULL)
               && (tree->prev == NULL)));
   ndx->tree = tree;
 }
@@ -514,14 +518,16 @@ static range_list_node_t *
 alloc_range_list (range_list_node_t **list,
                   range_list_node_t **tail,
                   range_index_t *ndx,
+                  enum range_kind kind,
                   apr_off_t offset,
                   apr_off_t limit,
-                  enum range_kind kind)
+                  apr_off_t target_offset)
 {
   range_list_node_t *const node = alloc_block(ndx->pool, &ndx->free_list);
+  node->kind = kind;
   node->offset = offset;
   node->limit = limit;
-  node->kind = kind;
+  node->target_offset = target_offset;
   if (*list == NULL)
     {
       node->prev = node->next = NULL;
@@ -565,20 +571,20 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
     {
       if (node == NULL)
         return alloc_range_list(&range_list, &last_range, ndx,
-                                offset, limit,
-                                range_from_source);
+                                range_from_source,
+                                offset, limit, -1);
 
       if (offset < node->offset)
         {
           if (limit < node->offset)
             return alloc_range_list(&range_list, &last_range, ndx,
-                                    offset, limit,
-                                    range_from_source);
+                                    range_from_source,
+                                    offset, limit, -1);
           else
             {
               alloc_range_list(&range_list, &last_range, ndx,
-                               offset, node->offset - 1,
-                               range_from_source);
+                               range_from_source,
+                               offset, node->offset - 1, -1);
               offset = node->offset;
             }
         }
@@ -590,13 +596,13 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
             {
               if (limit <= node->limit)
                 return alloc_range_list(&range_list, &last_range, ndx,
-                                        offset, limit,
-                                        range_from_target);
+                                        range_from_target,
+                                        offset, limit, node->target_offset);
               else
                 {
                   alloc_range_list(&range_list, &last_range, ndx,
-                                   offset, node->limit,
-                                   range_from_target);
+                                   range_from_target,
+                                   offset, node->limit, node->target_offset);
                   offset = node->limit + 1;
                   node = node->next;
                 }
@@ -698,7 +704,7 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                 {
                   if (range->kind == range_from_target)
                     svn_txdelta__insert_op(&build_baton, svn_txdelta_target,
-                                           range->offset,
+                                           range->target_offset,
                                            range->limit - range->offset + 1,
                                            NULL, pool);
                   else
