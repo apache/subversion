@@ -25,7 +25,5 @@ long svn_ruby_get_refcount (apr_pool_t *pool);
 VALUE svn_ruby_str_hash (apr_hash_t *hash, apr_pool_t *pool);
 VALUE svn_ruby_strbuf_hash (apr_hash_t *hash, apr_pool_t *pool);
 
-svn_client_revision_t svn_ruby_parse_revision (VALUE revOrDate);
-
 #endif /* UTIL_H */
 

@@ -18,7 +18,6 @@
 #include <svn_error.h>
 #include <svn_string.h>
 #include <svn_fs.h>
-#include <svn_client.h>
 
 #include "svn_ruby.h"
 #include "fs.h"
