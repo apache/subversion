@@ -115,12 +115,35 @@ analogous to CVS/ sudirs:
    The versions of child directories are not recorded, because they
    have their own `SVN/versions' files.
 
+
+[Ben sez:  remember that our audience here is CVS users, and we can't
+assume that all of them have read about "bubble-up" in the design
+doc.  When those folks read the above section, they're going to think
+we're talking about per-file RCS revision numbers.  We need to make it
+*explicit* that the line "17 foo.c" does not mean "the 17th revision
+of foo.c", but instead "foo.c is identical to the blah/foo.c found in
+tree #17 in the repository."  And while we're at it, since we're
+discussing merges in general, it may be good to remind folks that "17
+foo.c" and "18 foo.c" *might* be exactly identical in contents -- just
+to drive the point home.]
+
+
+
+
 fooo working here
 
       [todo: should list all files, so one can know what files this
       dir contains even if user removed them all with Unix `rm' and
       not a word to subversion?  Or should it list only the ones that
       are different from top version?]
+
+[Ben sez:  um, I think we do need to list all files under version
+control *somewhere* in the SVN/ subdir, maybe not necessarily in the
+Versions file, though.  I mean, we still need the "Entries" file
+functionality in order to send our magic 'black box' list to the
+server when reporting on the working copy's status -- this needs to be
+a complete list of all files under version control.]
+
 
    Anything asserted by a `versions' file is known to the repository;
    for example, if the user does "svn rename foo.c qux.c", the
@@ -144,6 +167,12 @@ fooo working here
       Operation oVersion oName [nVersion or "L"] [nName]
 
    All names are full paths, so we can identify unambiguously.
+
+[Again, this is where 'svn {add|rm|mv}' would queue changes to be sent
+to the repository the next time 'svn ci' is run.  But doesn't the
+status-black-box still need to contain a list of *all* files and
+associated base-revisions?]
+
 
 `lock'
 
