@@ -67,7 +67,7 @@ Candidate changes:
     Justification: users have been bitten by this a few times already.
     Notes:  just some internal changes to svnlook's main.c.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
   * r8302, 8304
     Fix issue #1694:  can't checkout repos with space in path.
