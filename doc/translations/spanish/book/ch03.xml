@@ -1489,9 +1489,9 @@ sandwich.txt.r2
 </screen>
       <!-- ###TODO What happens if the revnum is gt 99999?-->
       
-      <para>At this point, Subversion will <emphasis>not</emphasis>
-        allow you to commit the file <filename>sandwich.txt</filename>
-        until the three temporary files are removed.</para>
+      <para>En este punto, Subversion <emphasis>no</emphasis> le
+        permitirá enviar el fichero <filename>sandwich.txt</filename>
+        hasta que los tres ficheros temporales sean borrados.</para>
 
       <screen>
 $ svn commit --message "Add a few more things"
@@ -1499,39 +1499,43 @@ svn: Commit failed (details follow):
 svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict
 </screen>
 
-      <para>If you get a conflict, you need to do one of three
-        things:</para>
+      <para>Si obtiene un conflicto, necesita hacer una de tres
+        cosas:</para>
 
         <itemizedlist>
 
           <listitem>
-            <para>Merge the conflicted text <quote>by hand</quote> (by
-              examining and editing the conflict markers within the
-              file).
+            <para>Fusionar el texto en conflicto <quote>a mano</quote>
+              (examinando y editando las marcas de conflicto dentro
+              del fichero).
             </para>
           </listitem>
 
           <listitem>
-            <para>Copy one of the temporary files on top of your
-        working file.
+            <para>Copiar uno de los ficheros temporales sobre su fichero
+              de trabajo<!--TODO:copy...on top of your working copy-->.
             </para>
           </listitem>
 
           <listitem>
-            <para>Run <command>svn revert &lt;filename&gt;</command>
-              to throw away all of your local changes.</para>
+            <para>Ejecutar <command>svn revert &lt;filename&gt;</command>
+              para eliminar<!--TODO:throw away--> todos sus cambios
+              locales.</para>
           </listitem>
 
         </itemizedlist>
 
-      <para>Once you've resolved the conflict, you need to let
-        Subversion know by running <command>svn resolved</command>.
-        This removes the three temporary files and Subversion no
-        longer considers the file to be in a state of
-        conflict.<footnote><para>You can always remove the temporary
-        files yourself, but would you really want to do that when
-        Subversion can do it for you?  We didn't think so.</para>
-        </footnote></para>
+      <para>Una vez que usted haya resuelto el conflico, necesita dejar que
+        Subversion lo sepa<!--TODO:you need to let Subversion know-->
+        ejecutando <command>svn resolved</command>. Esto borrará los
+        tres ficheros temporales y Subversion no considerará por más<!--TODO:
+        no longer considers--> tiempo que el fichero está en estado de
+        conflicto.<footnote><para>Siempre puede borrar los ficheros
+        temporales usted mismo, pero ¿realmente querría hacer eso cuando
+        Subversion puede hacerlo para usted?<!--TODO:can do it for you?...
+        quizá quede mejor poner "hacerlo por usted"?--> No lo creemos.
+        </para></footnote>
+      </para>
 
       <screen>
 $ svn resolved sandwich.txt
