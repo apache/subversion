@@ -47,7 +47,6 @@ get_username (char **username,
               svn_boolean_t force_prompt,
               apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_stringbuf_t *uname;
   svn_client__callback_baton_t *cb = baton;
   svn_client_auth_baton_t *ab = cb->auth_baton;
@@ -81,14 +80,18 @@ get_username (char **username,
       ab->overwrite = TRUE;
     }
 
-  else  /* else get it from file cached in working copy. */
+  /* Else, try to get it from file cached in working copy. */
+  else  
     {
-      err = svn_wc_get_auth_file (cb->base_dir, 
-                                  SVN_CLIENT_AUTH_USERNAME,
-                                  &uname, pool);
-      if (! err)
+      /* If there is a base_dir, and we don't have any problems
+         getting the cached username from it, that's the result we'll
+         go with.  */
+      if ((cb->base_dir)
+          && (! svn_wc_get_auth_file (cb->base_dir, 
+                                      SVN_CLIENT_AUTH_USERNAME,
+                                      &uname, pool)))
         *username = uname->data;
-        
+
       else
         {
           /* No file cache?  Then just use the process owner. */
@@ -126,7 +129,6 @@ get_password (char **password,
               svn_boolean_t force_prompt,
               apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_stringbuf_t *pword;
   char *prompt;
   svn_client__callback_baton_t *cb = baton;
@@ -165,12 +167,16 @@ get_password (char **password,
       ab->overwrite = TRUE;
     }
 
-  else  /* else get it from file cached in working copy. */
+  /* Else, try to get it from file cached in working copy. */
+  else  
     {
-      err = svn_wc_get_auth_file (cb->base_dir, 
-                                  SVN_CLIENT_AUTH_PASSWORD,
-                                  &pword, pool);
-      if (! err)
+      /* If there is a base_dir, and we don't have any problems
+         getting the cached password from it, that's the result we'll
+         go with.  */
+      if ((cb->base_dir)
+          && (! svn_wc_get_auth_file (cb->base_dir, 
+                                      SVN_CLIENT_AUTH_PASSWORD,
+                                      &pword, pool)))
         *password = pword->data;
       
       else
