@@ -17,8 +17,8 @@ See the 1.1 release notes for a more verbose overview of the changes since
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
      - now able to compare working copy with URL: 'svn diff --old WC --new URL'
  * new framework for localized error/info/help messages, initial translations:
-     - German, Spanish, Polish, Swedish, Norwegian Bokmål,
-       Traditional Chinese, Japanese, Brazilian Portuguese.
+     - German, Polish, Swedish, Norwegian Bokmål, Traditional Chinese,
+       Japanese, Brazilian Portuguese.
  * speed improvements:
      - faster 'svn up' on complex working copies -- no more repos txns (r8840)
      - faster 'svn status' -- fewer stat() calls (r9182)
@@ -120,6 +120,9 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: better 'svnadmin verify  verification (r10508, r10509)
  * fixed: encoding of get_repos_url_result (r10353, 10375)
  * fixed: prevent canonicalized URIs from ending in '/' (r10317)
+ * stop using -std=c89 gcc flag (r11054)
+ * sync with apr 1.0's find_apr.m4 and find_apu.m4 files (r10560)
+ * win32 installer improvements (r10978)
  * huge improvements to python, perl, java bindings
  * huge changes to win32 build system
 
