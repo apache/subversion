@@ -38,16 +38,22 @@ def extract_funcs(fname):
   for line in open(fname).readlines():
     match = _funcs.match(line)
     if match:
-      if match.group(1):
-        funcs.append(match.group(1))
-      elif match.group(2):
-        funcs.append(match.group(2))
-      else:
+      name = match.group(1) or match.group(2)
+      if not name:
         print 'WTF?', match.groups()
+      elif name not in _filter_names:
+        funcs.append(name)
   return funcs
+
+_filter_names = [
+  'svn_boolean_t',  # svn_config_enumerator_t looks like (to our regex) a
+                    # function declaration for svn_boolean_t
+  ]
 
 if __name__ == '__main__':
   # run the extractor over each file mentioned
   import sys
   for fname in sys.argv[1:]:
-    print string.join(extract_funcs(fname), '\n')
+    funcs = extract_funcs(fname)
+    if funcs:
+      print string.join(funcs, '\n')
