@@ -15,6 +15,16 @@ import getopt
 import stat
 import md5
 import shutil
+import anydbm
+import marshal
+
+# Don't settle for less.
+if anydbm._defaultmod.__name__ == 'dumbdbm':
+  print 'ERROR: your installation of Python does not contain a proper'
+  print '  DBM module. This script cannot continue.'
+  print '  to solve: see http://python.org/doc/current/lib/module-anydbm.html'
+  print '  for details.'
+  sys.exit(1)
 
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
 branch_tag = re.compile('^[0-9.]+\\.0\\.[0-9]+$')
@@ -253,32 +263,115 @@ class RevInfoParser(rcsparse.Sink):
     rcsparse.Parser().parse(rcsfile, self)
 
 
-def ensure_directories(path, root, dumpfile):
-  """Output to DUMPFILE any intermediate directories in PATH that are
-  not already present under directory ROOT, adding them to ROOT's tree as
-  we go.  PATH may not have a leading slash."""
-  path_so_far = None
-  components = string.split(path, '/')
+# Return a string that has not been returned by gen_key() before.
+gen_key_base = 0L
+def gen_key():
+  global gen_key_base
+  key = '%x' % gen_key_base
+  gen_key_base = gen_key_base + 1
+  return key
 
-  for component in components[:-1]:
 
-    if path_so_far:
-      path_so_far = path_so_far + '/' + component
+class TreeMirror:
+  def __init__(self, parent_dir):
+    'Open a tree mirror, by means of a new db file in PARENT_DIR'
+    self.db_file = os.path.join(parent_dir, 'cvs2svn-head-mirror.db')
+    self.db = anydbm.open(self.db_file, 'n')
+    self.root_key = gen_key()
+    self.db[self.root_key] = marshal.dumps({}) # Init as a dir with no entries
+
+  def ensure_path(self, path, dumpfile):
+    """Add PATH to the tree.  PATH may not have a leading slash.
+    If any of PATH's intermediate directories are missing, create them
+    in the tree, and output the appropriate dir adds to DUMPFILE.
+    Return None if PATH already existed, else return 1."""
+    components = string.split(path, '/')
+    path_so_far = None
+
+    parent_dir_key = self.root_key
+    parent_dir = marshal.loads(self.db[parent_dir_key])
+
+    for component in components[:-1]:
+      if path_so_far:
+        path_so_far = path_so_far + '/' + component
+      else:
+        path_so_far = component
+
+      if not parent_dir.has_key(component):
+        child_key = gen_key()
+        parent_dir[component] = child_key
+        self.db[parent_dir_key] = marshal.dumps(parent_dir)
+        self.db[child_key] = marshal.dumps({})
+        ### FIXME: Abstract the writing knowledge back into the
+        ### dumper, as a callback or something.
+        dumpfile.write("Node-path: %s\n" 
+                       "Node-kind: dir\n"
+                       "Node-action: add\n"
+                       "Prop-content-length: 10\n"
+                       "Content-length: 10\n"
+                       "\n"
+                       "PROPS-END\n"
+                       "\n"
+                       "\n" % path_so_far)
+      else:
+        child_key = parent_dir[component]
+
+      parent_dir_key = child_key
+      parent_dir = marshal.loads(self.db[parent_dir_key])
+
+    # Now add the last node, probably the versioned file.
+    basename = components[-1]
+    if parent_dir.has_key(basename):
+      return None
     else:
-      path_so_far = component
+      leaf_key = gen_key()
+      parent_dir[basename] = leaf_key
+      self.db[parent_dir_key] = marshal.dumps(parent_dir)
+      self.db[leaf_key] = marshal.dumps({})
+      return 1
 
-    if not os.path.exists(os.path.join(root, path_so_far)):
-      os.mkdir(os.path.join(root, path_so_far))
-      dumpfile.write("Node-path: %s\n" 
-                     "Node-kind: dir\n"
-                     "Node-action: add\n"
-                     "Prop-content-length: 10\n"
-                     "Content-length: 10\n"
-                     "\n"
-                     "PROPS-END\n"
-                     "\n"
-                     "\n"
-                     % path_so_far)
+  def _delete_tree(self, key):
+    "Delete KEY and everything underneath it."
+    directory = marshal.loads(self.db[key])
+    for entry in directory.keys():
+      self._delete_tree(directory[entry])
+    del self.db[key]
+
+  def delete_path(self, path):
+    """Delete PATH from the tree.  PATH may not have a leading slash.
+    Return the deleted path.
+
+    ### FIXME: Right now, the path deleted is always PATH.  But later,
+    this will delete the highest possible directory, since that's how
+    CVS behaves (hence the -d flag to 'cvs checkout', to counteract
+    said behavior), and return that directory.  If callers always
+    use the return value, they won't need to change a thing."""
+    components = string.split(path, '/')
+
+    parent_dir_key = self.root_key
+    parent_dir = marshal.loads(self.db[parent_dir_key])
+
+    # Find the target of the delete.
+    for component in components[:-1]:
+      parent_dir_key = parent_dir[component]
+      parent_dir = marshal.loads(self.db[parent_dir_key])
+
+    # Save the target, as it may have its own subtree.
+    basename = components[-1]
+    child_key = parent_dir[basename]
+
+    # Delete the target from its parent.
+    del parent_dir[basename]
+    self.db[parent_dir_key] = marshal.dumps(parent_dir)
+
+    # Remove the subtree (if any) from the mirror.
+    self._delete_tree(child_key)
+    
+    return path
+
+  def close(self):
+    self.db.close()
+    os.remove(self.db_file)
 
 
 class Dump:
@@ -288,18 +381,8 @@ class Dump:
     self.revision = revision
     self.dumpfile = open(dumpfile_path, 'wb')
     self.tmpdir = os.tempnam('.', 'cvs2svn-tmp-')
-    self.svn_head_root = os.path.join(self.tmpdir, 'svnroot')
-
-    # Make the dumper's temp directory for this run.
-    #
-    # Under the tmp directory is a directory tree ('svnroot/') that
-    # represents the current HEAD tree of the Subversion repository at
-    # all times.  When a path is added to the dumpfile, it is added
-    # there too; when a path is deleted from the dumpfile, it is
-    # deleted there too.  We inspect this tree to determine when we
-    # need to output intermediate dirs before outputting a leaf node.
     os.mkdir(self.tmpdir)
-    os.mkdir(self.svn_head_root)
+    self.head_mirror = TreeMirror(self.tmpdir)
 
     # Initialize the dumpfile with the standard headers:
     #
@@ -396,10 +479,11 @@ class Dump:
       # just "PROPS-END\n"
       props_len = 10
 
+    ### FIXME: We ought to notice the -kb flag set on the RCS file and
+    ### use it to set svn:mime-type.
+
     basename = os.path.basename(rcs_file[:-2])
     pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
-
-    ensure_directories(svn_path, self.svn_head_root, self.dumpfile)
 
     # You might think we could just test
     #
@@ -408,12 +492,7 @@ class Dump:
     # to determine if this path exists in head yet.  But that wouldn't
     # be perfectly reliable, both because of 'cvs commit -r', and also
     # the possibility of file resurrection.
-    head_mirror = os.path.join(self.svn_head_root, svn_path)
-    if not os.path.exists(head_mirror):
-      # Mirror it in the head tree skeleton.  Use mkdir() even though
-      # it's a file in Subversion, because we don't care about the
-      # type -- the mirror is only for existence questions.
-      os.mkdir(head_mirror)
+    if self.head_mirror.ensure_path(svn_path, self.dumpfile):
       action = 'add'
     else:
       action = 'change'
@@ -471,18 +550,14 @@ class Dump:
     self.dumpfile.write('\n')
 
   def delete_path(self, svn_path):
-    ### FIXME: After we reimplement the head tree mirror sanely, this
-    ### should check for empty directory in the head tree and move
-    ### the deletion up as far as it can go.  (It's okay to output a
-    ### bunch of deletes only to override them later in the same
-    ### revision by deleting their parent directory -- that's a
-    ### perfectly valid series of moves in a Subversion txn.)
+    deleted_path = self.head_mirror.delete_path(svn_path)
     self.dumpfile.write('Node-path: %s\n'
                         'Node-action: delete\n'
-                        '\n' % svn_path)
+                        '\n' % deleted_path)
 
   def close(self):
     self.dumpfile.close()
+    self.head_mirror.close()
     ### os.removedirs() didn't work.  (What is it for, anyway?)
     shutil.rmtree(self.tmpdir)
 
