@@ -223,38 +223,41 @@ read_entries_file (apr_hash_t **entries,
                    apr_file_t *fd,
                    apr_pool_t *pool)
 {
-  apr_status_t status;
+  svn_error_t *err;
   apr_size_t buf_len = (APR_MD5_DIGESTSIZE * 2) + 1; /* Add room for "\n". */
 
   *entries = apr_hash_make (pool);
 
   if (!fd) /* Only open PATH if fd is NULL. */
     {
-      status = apr_file_open (&fd, path, APR_READ, APR_OS_DEFAULT, pool);
-
-      /* If we didn't find the file, then just return an empty entries file. */
-      if (APR_STATUS_IS_ENOENT (status))
-        return SVN_NO_ERROR;
-      if (status)
-        return svn_error_wrap_apr (status, 
-                                   _("Can't open '%s' to read lock entries."),
-                                   path);
+      err = svn_io_file_open (&fd, path, APR_READ, APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+        {
+          /* If we didn't find the file, then just return an empty
+             entries file. */
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
+      if (err)
+        return err;
     }
 
   while (1729)
     {
       apr_size_t nbytes = buf_len;
       char *buf = apr_palloc (pool, buf_len);
-      status = apr_file_read_full (fd, buf, nbytes, &nbytes);
 
-      if (status == APR_EOF)
-        break;
-      if (status)
+      err = svn_io_file_read_full (fd, buf, nbytes, &nbytes, pool);
+
+      if (err && APR_STATUS_IS_EOF (err->apr_err))
         {
-          apr_file_close(fd);
-          return svn_error_wrap_apr (status, 
-                                     _("Error reading lock entries file '%s.'"),
-                                     path);
+          svn_error_clear (err);
+          break;
+        }
+      if (err)
+        {
+          SVN_ERR (svn_io_file_close (fd, pool));
+          return err;
         }
 
       buf[buf_len - 1] = '\0'; /* Strip '\n' off the end. */
@@ -262,13 +265,9 @@ read_entries_file (apr_hash_t **entries,
                     APR_HASH_KEY_STRING, &(buf[0])); /* Grab a byte for val.*/
 
     }
+  
+  SVN_ERR (svn_io_file_close (fd, pool));
 
-  status = apr_file_close (fd);
-  if (status)
-    return svn_error_wrap_apr (status, 
-                               _("Error closing lock entries file '%s'."),
-                               path);
-  apr_file_close(fd);
   return SVN_NO_ERROR;
 }
 
@@ -394,12 +393,9 @@ write_lock_to_file (svn_fs_t *fs,
   digest_str = make_digest (path, pool);
 
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
-  
-  status = apr_file_open (&fd, abs_path, APR_WRITE | APR_CREATE, 
-                          APR_OS_DEFAULT, pool);
-  if (status && !APR_STATUS_IS_ENOENT (status))
-    return svn_error_wrap_apr (status, _("Can't open '%s' to write lock"),
-                               abs_path);
+
+  SVN_ERR (svn_io_file_open (&fd, abs_path, APR_WRITE | APR_CREATE, 
+                          APR_OS_DEFAULT, pool));
   
   stream = svn_stream_from_aprfile (fd, pool);
   
@@ -433,12 +429,9 @@ write_lock_token_to_file (svn_fs_t *fs,
                                _("Can't create lock token directory '%s'"),
                                dir);
 
-  status = apr_file_open (&fd, abs_path, APR_WRITE | APR_CREATE,
-                          APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't open '%s' to write lock token"),
-                               abs_path);
-
+  SVN_ERR (svn_io_file_open (&fd, abs_path, APR_WRITE | APR_CREATE,
+                             APR_OS_DEFAULT, pool));
+  
   /* The token file contains only the relative path to the lock file. */
   SVN_ERR (svn_io_file_write_full (fd, lock->path, 
                                    strlen (lock->path), NULL, pool));
@@ -485,7 +478,6 @@ delete_lock (svn_fs_t *fs,
              svn_lock_t *lock,
              apr_pool_t *pool)
 {
-  apr_status_t status = APR_SUCCESS;
   apr_array_header_t *nodes;
   char *abs_path, *child_path, *parent_path, *node;
   const char *digest_str, *path;
@@ -517,13 +509,7 @@ delete_lock (svn_fs_t *fs,
                     APR_HASH_KEY_STRING, NULL); /* Delete from hash.*/
 
       if (apr_hash_count (entries) == 0) /* We just removed the last entry. */
-        {
-          status = apr_file_remove (abs_path, pool);
-          if (status)
-            return svn_error_wrap_apr (status, 
-                                       _("Can't delete lock entries file '%s'"),
-                                       abs_path);
-        }
+        SVN_ERR (svn_io_remove_file (abs_path, pool));
       else
         {
           SVN_ERR (write_entries_file (entries, abs_path, pool));
@@ -535,11 +521,7 @@ delete_lock (svn_fs_t *fs,
   digest_str = make_digest (path, pool);
   
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
-  status = apr_file_remove (abs_path, pool);
-  if (status)
-    return svn_error_wrap_apr (status, 
-                               _("Can't delete lock file '%s'."),
-                               abs_path);
+  SVN_ERR (svn_io_remove_file (abs_path, pool));
 
   /* Delete lock from tokens area */
   SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, lock->token, pool));
@@ -637,10 +619,7 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
     return svn_error_wrap_apr (status, _("Can't stat '%s'"), abs_path);
 
   if (!fd) /* Only open the file if we haven't been passed an apr_file_t. */
-    status = apr_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't open '%s' to read lock"),
-                               abs_path);
+    SVN_ERR (svn_io_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool));
 
   hash = apr_hash_make (pool);
 
@@ -785,7 +764,6 @@ get_locks_under_path (apr_hash_t **locks,
   apr_hash_index_t *hi;
   const char *child;
   apr_off_t offset = 0;
-  apr_status_t status;
   
   SVN_ERR (read_entries_file (&entries, path, fd, pool));
       
@@ -799,12 +777,7 @@ get_locks_under_path (apr_hash_t **locks,
 
       SVN_ERR (abs_path_to_lock_digest_file (&abs_path, fs, child, pool));
 
-      status = apr_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool);
-      if (status)
-        return svn_error_wrap_apr (status, 
-                                   _("Can't open '%s' to read lock info."),
-                                   abs_path);
-
+      SVN_ERR (svn_io_file_open (&fd, abs_path, APR_READ, APR_OS_DEFAULT, pool));
       SVN_ERR (svn_io_file_read_full (fd, buf, nbytes, &nbytes, pool));
       SVN_ERR (svn_io_file_seek (fd, APR_SET, &offset, pool));
 
@@ -1248,4 +1221,3 @@ svn_fs_fs__allow_locked_operation (const char *path,
       return verify_lock (fs, lock, pool);
     }
 }
-
