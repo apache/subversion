@@ -8,15 +8,12 @@ Contents:
 
   Some Known Issues
   Troubleshooting
-  Build Info
 
 
 Some Known Issues:
 ==================
 
-  Subversion is still in an early development stage (..and so is the
-  installation setup too).
-  This means that some issues will come up (and be solved) from time to time:
+  Some of the following issues come up from time to time:
 
   * Problems with Apache and mod_dav_svn.so and mod_authz_svn.so:
 
