@@ -74,6 +74,7 @@ typedef enum {
   svn_cl__help_command,
   svn_cl__proplist_command,
   svn_cl__propget_command,
+  svn_cl__propset_command,
   svn_cl__status_command,
   svn_cl__update_command
 } svn_cl__command_t;
@@ -105,6 +106,8 @@ typedef struct svn_cl__opt_state_t
   svn_string_t *ancestor_path;
   svn_boolean_t force;
   svn_string_t *name;
+  svn_string_t *value;
+  svn_string_t *filename;
 } svn_cl__opt_state_t;
 
 /* This "silly" macro will change when the above is changed to use an
@@ -156,6 +159,7 @@ svn_cl__cmd_proc_t
   svn_cl__help,
   svn_cl__proplist,
   svn_cl__propget,
+  svn_cl__propset,
   svn_cl__status,
   svn_cl__update;
 

@@ -88,6 +88,10 @@ static svn_cl__cmd_opts_t propget_opts = {
   svn_cl__propget_command,
   "Get the value of a file or directory property." };
 
+static svn_cl__cmd_opts_t propset_opts = {
+  svn_cl__propset_command,
+  "Set the value of a file or directory property." };
+
 static svn_cl__cmd_opts_t status_opts = {
   svn_cl__status_command,
   "Print the status of working copy files and directories." };
@@ -124,6 +128,10 @@ static svn_cl__cmd_desc_t cmd_table[] = {
   { "propget",    FALSE,  svn_cl__propget,  &propget_opts },
   { "pget",       TRUE,   svn_cl__propget,  &propget_opts },
   { "pg",         TRUE,   svn_cl__propget,  &propget_opts },
+
+  { "propset",    FALSE,  svn_cl__propset,  &propset_opts },
+  { "pset",       TRUE,   svn_cl__propset,  &propset_opts },
+  { "ps",         TRUE,   svn_cl__propset,  &propset_opts },
 
   { "status",     FALSE,  svn_cl__status,   &status_opts },
   { "stat",       TRUE,   svn_cl__status,   &status_opts },
@@ -246,6 +254,26 @@ parse_command_options (int argc,
           else
             p_opt_st->name = svn_string_create (argv[i], pool);
         }
+      else if (strcmp (argv[i], "--value") == 0)
+        {
+          if (++i >= argc)
+            {
+              fprintf (stderr, needs_arg, cmdname, "value");
+              exit (EXIT_FAILURE);
+            }
+          else
+            p_opt_st->value = svn_string_create (argv[i], pool);
+        }
+      else if (strcmp (argv[i], "--filename") == 0)
+        {
+          if (++i >= argc)
+            {
+              fprintf (stderr, needs_arg, cmdname, "filename");
+              exit (EXIT_FAILURE);
+            }
+          else
+            p_opt_st->filename = svn_string_create (argv[i], pool);
+        }
       else if (strcmp (argv[i], "--force") == 0)
         p_opt_st->force = 1;
       else if (*(argv[i]) == '-')
@@ -314,10 +342,24 @@ parse_command_options (int argc,
     switch (cmd_code)
       {
       case svn_cl__propget_command:
+      case svn_cl__propset_command:
         fprintf (stderr, "svn %s: need \"--name PROPERTY_NAME\"\n", cmdname);
         exit (EXIT_FAILURE);
       default:
       }
+
+  /* Check the need for a property value OR filename */
+  if ((p_opt_st->value == NULL) && (p_opt_st->filename == NULL))
+    switch (cmd_code)
+      {
+      case svn_cl__propset_command:
+        fprintf
+          (stderr,
+           "svn %s: need one of \"--value\" or \"--filename\"\n", cmdname);
+        exit (EXIT_FAILURE);
+      default:
+      }
+
 
   return i;
 }
