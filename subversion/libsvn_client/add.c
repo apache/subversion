@@ -147,8 +147,8 @@ svn_client_add (const char *path,
     err = err2;
 
   if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS))
-    return svn_error_quick_wrap 
-      (err, "svn warning: Cannot add because entry already exists.");
+    return svn_error_quick_wrap
+      (err, "cannot add because entry already exists.");
 
   return err;
 }
