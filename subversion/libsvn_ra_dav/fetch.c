@@ -911,7 +911,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       push_dir(rb, new_dir_baton);
 
       /* Property fetching is NOT implied in replacement. */
-      TOP_DIR(rb).fetch_props = TRUE;
+      TOP_DIR(rb).fetch_props = FALSE;
       break;
 
     case ELEM_add_directory:
@@ -976,7 +976,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                       cpath, crev, &rb->file_baton) );
 
       /* Property fetching is implied in addition. */
-      rb->fetch_props = FALSE;
+      rb->fetch_props = TRUE;
       break;
 
     case ELEM_remove_prop:
@@ -1064,6 +1064,9 @@ add_node_props (report_baton_t *rb)
      on hand currently). */
   if (rb->file_baton)
     {
+      if (! rb->fetch_props)
+        return SVN_NO_ERROR;
+
       if (rb->href->data == NULL)
         return SVN_NO_ERROR;
 
@@ -1081,6 +1084,9 @@ add_node_props (report_baton_t *rb)
     }
   else
     {
+      if (! TOP_DIR(rb).fetch_props)
+        return SVN_NO_ERROR;
+
       if (TOP_DIR(rb).vsn_url == NULL)
         return SVN_NO_ERROR;
 
