@@ -228,9 +228,9 @@ substitute_and_verify (const char *test_name,
   err = svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
                                    rev, date, author, url, pool);
 
-  /* Conversion should have failed, if src has mixed eol and the repair
-     flag was not set. */
-  if ((! src_eol) && (! repair))
+  /* Conversion should have failed, if src has mixed eol, and the
+     repair flag was not set, and we requested eol translation. */
+  if ((! src_eol) && dst_eol && (! repair))
     {
       if (! err)
         {
@@ -405,24 +405,33 @@ substitute_and_verify (const char *test_name,
     {
       if (contents->len < idx)
         return svn_error_createf
-          (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has short contents: \"%s\"", dst_fname, contents->data);
+          (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
+           "%s has short contents", dst_fname);
 
       if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has wrong contents: \"%s\"", dst_fname, contents->data + idx);
+           "%s has wrong contents", dst_fname);
 
       /* Else, the data is correct, at least up to the next eol. */
 
       idx += strlen (expect[i]);
 
-      if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
-        return svn_error_createf
-          (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
-           "%s has wrong eol: \"%s\"", dst_fname, contents->data + idx);
-
-      idx += strlen (dst_eol);
+      if (dst_eol)  /* verify the promised consistent eol style */
+        {
+          if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
+            return svn_error_createf
+              (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
+               "%s has wrong eol style", dst_fname);
+          else
+            idx += strlen (dst_eol);
+        }
+      else  /* allow any eol style, even inconsistent ones, loosely */
+        {
+          while ((*(contents->data + idx) == '\r')
+                 || (*(contents->data + idx) == '\n'))
+            idx++;
+        }
     }
 
   /* Clean up this test, since successful. */
@@ -434,7 +443,38 @@ substitute_and_verify (const char *test_name,
 
 
 
-/*** EOL Tests ***/
+static svn_error_t *
+noop (const char **msg,
+      svn_boolean_t msg_only,
+      apr_pool_t *pool)
+{
+  *msg = "no conversions";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("noop", NULL, NULL, 0, NULL, NULL, NULL, NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("noop", "\r", NULL, 0, NULL, NULL, NULL, NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("noop", "\n", NULL, 0, NULL, NULL, NULL, NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("noop", "\r\n", NULL, 0, NULL, NULL, NULL, NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("noop", "\n\r", NULL, 0, NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/** EOL Tests **/
 
 static svn_error_t *
 crlf_to_crlf (const char **msg,
@@ -735,6 +775,8 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
+  /* The no-op conversion. */
+  noop,
   /* Conversions resulting in crlf, no keywords involved. */
   crlf_to_crlf,
   lf_to_crlf,
@@ -757,7 +799,15 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_to_lfcr,
   /* Random eol stuff. */
   mixed_no_repair,
-  /* Keywords. */
+#if 0
+  /* Keywords alone, no eol conversion involved. */
+  author,
+  author_date,
+  author_rev,
+  rev_url,
+  author_date_rev_url,
+  /* Keywords and eol conversion together. */
+#endif /* 0 */
   0
 };
 
