@@ -2394,7 +2394,7 @@ $ svn checkout svn://example.com/repos/project
           authenticated username is stored as the author of any
           repository changes.</para>
 
-        <para>A subversion client can perform SSH tunneling by using
+        <para>A Subversion client can perform SSH tunneling by using
           the <literal>svn+ssh://</literal> schema, and specifying the
           absolute path to the repository, like so:</para>
 
@@ -2414,7 +2414,7 @@ Password:
         <literal>[tunnels]</literal> section of your client's run-time
         <filename>config</filename> file.</para>
 
-        <para>For example, the <command>ssh</command> will use your
+        <para>For example, the <command>ssh</command> process will use your
         current username when attempting to authenticate with the
         server machine.  You may want <command>ssh</command> to use a
         different username instead.  To do this, you can either run
@@ -2461,24 +2461,34 @@ ssh = ssh -l username
           <listitem>
             <itemizedlist>
               <listitem>
-                <para>No need to create system accounts</para>
+                <para>Authentication: http basic/digest auth,
+                certificates, LDAP, etc.  Apache has a large
+                collection of authentication modules.  No need to
+                create real system accounts for users.</para>
               </listitem>
               <listitem>
-                <para>No need to open a new firewall port</para>
+                <para>Authorization: read/write access can be
+                restricted per-repository (using httpd.conf
+                directives), or per-directory (using
+                mod_authz_svn).</para>
               </listitem>
               <listitem>
-                <para>Built-in repository web browsing (limited)</para>
+                <para>No need to open a new firewall port.</para>
               </listitem>
               <listitem>
-                <para>Limited interoperability with other WebDAV clients</para>
+                <para>Built-in (limited) repository web browsing.</para>
               </listitem>
               <listitem>
-                <para>Ability to use caching HTTP proxies</para>
+                <para>Limited interoperability with other WebDAV clients.
+                </para>
               </listitem>
               <listitem>
-                <para>Vastly expandable:  access to numerous existing
-                  authentication and authorization methods, encryption,
-                  compression, etc.</para>
+                <para>Ability to use caching HTTP proxies.</para>
+              </listitem>
+              <listitem>
+                <para>Vastly expandable: access to numerous existing
+                  authentication and authorization methods,
+                  encryption, compression, etc.</para>
               </listitem>
             </itemizedlist>
           </listitem>
@@ -2489,10 +2499,18 @@ ssh = ssh -l username
           <listitem>
             <itemizedlist>
               <listitem>
-                <para>Much easier to configure and run than Apache</para>
+                <para>Authentication: only via SSH tunnel.  Users
+                require system accounts.</para>
               </listitem>
               <listitem>
-                <para>Can use existing SSH security infrastructure</para>
+                <para>Authorization: via shared ownership/permissions
+                on repository DB files.</para>
+              </listitem>
+              <listitem>
+                <para>Much easier to configure and run than Apache.</para>
+              </listitem>
+              <listitem>
+                <para>Can use existing SSH security infrastructure.</para>
               </listitem>
             </itemizedlist>
           </listitem>
