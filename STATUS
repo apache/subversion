@@ -91,6 +91,12 @@ section for approved changes.)
       +0: cmpilato
       -0: gstein, sussman
 
+   * Issue #1682
+     'svn blame' should adjust to max username width
+     Justification: Improved blame display, API change, low risk.
+     Notes: bindings would need updating
+     Votes:
+      +1: mbk
      
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
