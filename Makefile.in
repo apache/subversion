@@ -57,9 +57,9 @@ LIBTOOL = $(SHELL) $(abs_builddir)/libtool
 LTFLAGS = --silent
 LT_LDFLAGS = @LT_LDFLAGS@
 
-INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@ \
-		@SVN_DB_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ \
-		@SVN_XMLRPC_INCLUDES@
+INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@                    \
+           @SVN_DB_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ \
+           @SVN_XMLRPC_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -122,23 +122,23 @@ local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
 # clean everything but the bulky test output, returning the system back
 # to before 'make' was run.
 fast-clean: doc-clean
-	@list='$(BUILD_DIRS)'; for i in $$list; do \
-	    echo "Cleaning $$i ..." ; \
-	    (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
-	done
+	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
+            echo "Cleaning $$i ..." ;                                \
+            (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
+        done
 	rm -f $(CLEAN_FILES)
 
 # clean all but bulky test output, returning to before './configure' was run.
 fast-distclean: fast-clean
 	rm -f Makefile config.cache config.log config.status libtool \
-		svn_private_config.h
+              svn_private_config.h
 
 # clean everything out, returning to before './autogen.sh' was run.
 local-extraclean: local-distclean
 	rm -f build-outputs.mk svn_private_config.h.in configure \
-		ac-helpers/config.guess ac-helpers/config.sub \
-		ac-helpers/libtool.m4 ac-helpers/ltconfig \
-		ac-helpers/ltmain.sh
+              ac-helpers/config.guess ac-helpers/config.sub      \
+              ac-helpers/libtool.m4 ac-helpers/ltconfig          \
+              ac-helpers/ltmain.sh
 
 # clean everything, including test output.
 local-clean: fast-clean check-clean
@@ -146,62 +146,63 @@ local-clean: fast-clean check-clean
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
 
-local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@ \
-	@SVN_RA_PIPE_INSTALL_RULES@ @SVNPIPE_INSTALL_RULES@
+local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@                 \
+               @SVN_RA_PIPE_INSTALL_RULES@ @SVNPIPE_INSTALL_RULES@
 
 install-static: @INSTALL_STATIC_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
-	@$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
-	if test "$(BASE_URL)" != ""; then \
-	    base_url="--url $(BASE_URL)"; \
-	else \
-	    base_url=""; \
-	fi; \
-	$(PYTHON) $(top_srcdir)/build/run_tests.py $$base_url \
-		'$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-		$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
+	@$(PYTHON) $(top_srcdir)/build/pycheck.py ;                        \
+        if test "$(BASE_URL)" != ""; then                                  \
+           base_url="--url $(BASE_URL)";                                   \
+        else                                                               \
+           base_url="";                                                    \
+        fi;                                                                \
+        $(PYTHON) $(top_srcdir)/build/run_tests.py $$base_url              \
+                  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
+                  $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
 check-clean:
-	rm -rf subversion/tests/clients/cmdline/repositories \
-		subversion/tests/clients/cmdline/working_copies \
-		subversion/tests/clients/cmdline/local_tmp \
-		subversion/tests/libsvn_fs/test-repo-* \
-		subversion/tests/libsvn_repos/test-repo-* \
-		subversion/tests/libsvn_subr/z \
-		tests.log
+	rm -rf subversion/tests/clients/cmdline/repositories   \
+               subversion/tests/clients/cmdline/working_copies \
+               subversion/tests/clients/cmdline/local_tmp      \
+               subversion/tests/libsvn_fs/test-repo-*          \
+               subversion/tests/libsvn_repos/test-repo-*       \
+               subversion/tests/libsvn_subr/z                  \
+               tests.log
 
 mkdir-init:
-	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SWIG_DIRS)'; for i in $$list doc; do \
-	    echo "mkdir $$i" ; \
-	    $(MKDIR) $$i ; \
-	done
+	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SWIG_DIRS)'; \
+        for i in $$list doc; do                         \
+            echo "mkdir $$i" ;                          \
+            $(MKDIR) $$i ;                              \
+        done
 
 # recursive targets to handle external projects (e.g. APR, Neon)
 external-all external-clean external-distclean external-install:
-	@target=`echo $@ | sed s/external-//`; \
-	list='$(EXTERNAL_PROJECT_DIRS)'; \
-	for i in $$list; do \
-	    echo "------ making $$target in $$i"; \
-	    (cd $$i && $(MAKE) $$target) || exit 1; \
-	    echo "------ completed $$target in $$i"; \
-	done;
+	@target=`echo $@ | sed s/external-//`;          \
+        list='$(EXTERNAL_PROJECT_DIRS)';                \
+        for i in $$list; do                             \
+            echo "------ making $$target in $$i";       \
+            (cd $$i && $(MAKE) $$target) || exit 1;     \
+            echo "------ completed $$target in $$i";    \
+        done;
 
 ### temporary hack. Neon does not have an "extraclean" and neither does db
 ### If we don't have extraclean -- do the next best thing.
 external-extraclean:
-	@list='$(EXTERNAL_PROJECT_DIRS)'; \
-	for i in $$list; do \
-	    if test "$$i" = "neon" || test "$$i" = "db/dist"; then \
-		echo "------ making distclean(no extraclean) in $$i"; \
-		(cd $$i && $(MAKE) distclean) || exit 1; \
-		echo "------ completed distclean(no extraclean) in $$i"; \
-	    else \
-		echo "------ making extraclean in $$i"; \
-		(cd $$i && $(MAKE) extraclean) || exit 1; \
-		echo "------ completed extraclean in $$i"; \
-	    fi; \
-	done;
+        @list='$(EXTERNAL_PROJECT_DIRS)';                                \
+        for i in $$list; do                                              \
+            if test "$$i" = "neon" || test "$$i" = "db/dist"; then       \
+                echo "------ making distclean(no extraclean) in $$i";    \
+                (cd $$i && $(MAKE) distclean) || exit 1;                 \
+                echo "------ completed distclean(no extraclean) in $$i"; \
+            else                                                         \
+                echo "------ making extraclean in $$i";                  \
+                (cd $$i && $(MAKE) extraclean) || exit 1;                \
+                echo "------ completed extraclean in $$i";               \
+            fi;                                                          \
+        done;
 
 
 # DOCUMENTATION RULES
@@ -260,17 +261,17 @@ doc-clean:
 
 swig-py-ext:
 	(cd $(SWIG_SRC_DIR)/python;                                \
-	 $(PYTHON) setup.py                                        \
-	    -I$(SWIG_SRC_DIR)                                      \
-	    -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-	    -S$(SWIG_SRC_DIR)                                      \
-	    -L$(DESTDIR)$(prefix)/lib -L$(SVN_APR_PREFIX)/lib      \
+         $(PYTHON) setup.py                                        \
+            -I$(SWIG_SRC_DIR)                                      \
+            -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
+            -S$(SWIG_SRC_DIR)                                      \
+            -L$(DESTDIR)$(prefix)/lib -L$(SVN_APR_PREFIX)/lib      \
             build --build-base=$(SWIG_BUILD_DIR)/python/build)
 
 install-swig-py-ext:
 	(cd $(SWIG_BUILD_DIR)/python;                       \
-	 $(PYTHON) $(SWIG_SRC_DIR)/python/setup.py          \
-	    -S$(SWIG_SRC_DIR)                               \
+         $(PYTHON) $(SWIG_SRC_DIR)/python/setup.py          \
+            -S$(SWIG_SRC_DIR)                               \
             install --prefix $(DESTDIR)$(prefix))
 
 ### Build a tarball.
@@ -316,26 +317,26 @@ install-docs: install-man @INSTALL_INFO@
 
 manroot = $(mandir)/man
 install-man:
-	@list='$(MANPAGES)'; \
-	for i in $$list; do \
-	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
-	  else file=$$i; fi; \
-	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
-	  $(MKDIR) $(DESTDIR)$(manroot)$$ext; \
-	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
-	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
-	  inst=`echo $$inst`.$$ext; \
-	  echo "$(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst"; \
-	  $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst; \
-	done
+	@list='$(MANPAGES)';                                               \
+        for i in $$list; do                                                \
+          if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i;               \
+          else file=$$i; fi;                                               \
+          ext=`echo $$i | sed -e 's/^.*\\.//'`;                            \
+          $(MKDIR) $(DESTDIR)$(manroot)$$ext;                              \
+          inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`;                   \
+          inst=`echo $$inst | sed -e 's/^.*\///'`;                         \
+          inst=`echo $$inst`.$$ext;                                        \
+          echo "$(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst";  \
+          $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst;         \
+        done
 
 install-info: doc-all-info
 	$(MKDIR) $(DESTDIR)$(infodir)
-	@list='$(INFOPAGES)'; \
-	for i in $$list; do \
-	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
-	  else file=$$i; fi; \
-	  inst=`echo $$file | sed -e 's/^.*\///'`; \
-	  echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst"; \
-	  $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst; \
-	done
+	@list='$(INFOPAGES)';                                         \
+        for i in $$list; do                                           \
+          if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i;          \
+          else file=$$i; fi;                                          \
+          inst=`echo $$file | sed -e 's/^.*\///'`;                    \
+          echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst";  \
+          $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
+        done
