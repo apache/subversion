@@ -29,6 +29,7 @@
 
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_ra.h"
 
 #include "ra_dav.h"
@@ -120,6 +121,37 @@ static void add_ignored(merge_ctx_t *mc, const char *cdata)
   /* ### remember the file and issue a report/warning later */
 }
 
+
+static svn_boolean_t okay_to_bump_path (const char *path,
+                                        apr_hash_t *valid_targets,
+                                        apr_pool_t *pool)
+{
+  svn_stringbuf_t *parent_path;
+  enum svn_recurse_kind r;
+
+  /* Easy check:  if path itself is in the hash, then it's legit. */
+  if (apr_hash_get (valid_targets, path, APR_HASH_KEY_STRING))
+    return TRUE;
+
+  /* Otherwise, this path is bumpable IFF one of its parents in in the
+     hash and marked with a 'recursion' flag. */
+  parent_path = svn_stringbuf_create (path, pool);
+  
+  do {
+    svn_path_remove_component (parent_path, svn_path_local_style);
+    if (r = (enum svn_recurse_kind) apr_hash_get (valid_targets,
+                                                  parent_path->data,
+                                                  APR_HASH_KEY_STRING))
+      if (r == svn_recursive)
+        return TRUE;
+
+  } while (! svn_path_is_empty (parent_path, svn_path_local_style));
+
+  /* Default answer: if we get here, don't allow the bumping. */
+  return FALSE;
+}
+
+
 static svn_error_t *bump_resource(merge_ctx_t *mc,
                                   const char *path,
                                   char *vsn_url)
@@ -135,7 +167,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
      committed target.  The commit-tracking editor built this list for
      us, and took care not to include directories unless they were
      directly committed (i.e., received a property change). */
-  if (! apr_hash_get (mc->valid_targets, path, APR_HASH_KEY_STRING))
+  if (! okay_to_bump_path (path, mc->valid_targets, mc->pool))
     return NULL;
 
   /* set up two svn_stringbuf_t values around the path and vsn_url. */
@@ -147,7 +179,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
                            mc->vsn_url_name, vsn_url_str) );
       
   /* bump the revision and commit the file */
-  return (*mc->close_commit)(mc->close_baton, path_str, mc->rev);
+  return (*mc->close_commit)(mc->close_baton, path_str, FALSE, mc->rev);
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)
@@ -570,7 +602,7 @@ svn_error_t * svn_ra_dav__merge_activity(
       svn_stringbuf_set(path_str,
                      APR_ARRAY_IDX(deleted_entries, i, const char *));
 
-      SVN_ERR( (*close_commit)(close_baton, path_str, mc.rev) );
+      SVN_ERR( (*close_commit)(close_baton, path_str, FALSE, mc.rev) );
     }
 
   return NULL;

@@ -1563,6 +1563,59 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
 
 
 
+svn_error_t *
+svn_wc_get_version_controlled_paths (apr_hash_t *paths,
+                                     svn_stringbuf_t *path,
+                                     apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_wc_entry_t *this_dir;
+  
+  /* Read PATH's entries. */
+  SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+
+  /* Add PATH to the hash. */
+  apr_hash_set (paths, path->data, APR_HASH_KEY_STRING, (void *) 1);
+
+  /* Recursively loop over all children. */
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      const char *name;
+      svn_wc_entry_t *current_entry;
+      svn_stringbuf_t *child_path;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      name = (const char *) key;
+      current_entry = (svn_wc_entry_t *) val;
+
+      /* Ignore the "this dir" entry. */
+      if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+        continue;
+
+      /* Derive the path of the current entry */
+      child_path = svn_stringbuf_dup (path, pool);
+      svn_path_add_component_nts (child_path, name, svn_path_local_style);
+
+      /* If a file, add its path to the hash. */
+      if (current_entry->kind == svn_node_file)
+        apr_hash_set (paths, child_path->data,
+                      APR_HASH_KEY_STRING, (void *) 1);
+
+      /* If a dir, recurse. */
+      else if (current_entry->kind == svn_node_dir)
+        SVN_ERR (svn_wc_get_version_controlled_paths (paths,
+                                                      child_path,
+                                                      pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 
 #if 0
