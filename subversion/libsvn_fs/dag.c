@@ -998,7 +998,7 @@ delete_entry (dag_node_t *parent,
       SVN_ERR (svn_fs__dag_dir_entries (&entries_here, node, trail));
       if (require_empty && entries_here && apr_hash_count (entries_here))
         return svn_error_createf
-          (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+          (SVN_ERR_DIR_NOT_EMPTY, 0, NULL, parent->pool,
            "Attempt to delete non-empty directory `%s'.", name);
     }
 
