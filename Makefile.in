@@ -115,7 +115,7 @@ SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
 SWIG_PL_COMPILE = @SWIG_PL_COMPILE@
 SWIG_PL_LINK = @SWIG_PL_LINK@
 
-JAVAHL_INCLUDES=$(SWIG_JAVA_INCLUDES) -I$(abs_builddir)/subversion/bindings/java/javahl/include
+JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/java/javahl/include
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
