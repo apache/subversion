@@ -69,10 +69,10 @@ Each node in our generic trees have these fields:
     svntest.tree.* provides functions to parse commandline output into
     a tree.  meta-information in stored in each treenode's `atts' hash:
 
-         checkout/update:  a 'status' property is set to a two-character
+         checkout/update:  a 'status' attribute is set to a two-character
                            value (from the set (A, D, G, U, C, _, ' '))
 
-         status:           a 'status' property (as above), plus two props
+         status:           a 'status' attribute (as above), plus two props
                            to hold the WC and Repos revision numbers.
 
          commit/import:    a 'verb' attribute is set to one of
@@ -92,13 +92,52 @@ Each node in our generic trees have these fields:
 
 ------------------------------------------------------------------
 
-The contents of this directory:
+>>> Running a test script
+
+   *  Just run the script, and all of its tests will execute:
+
+              ./basic_tests.py
+
+   *  To see a list of tests within a script:
+
+              ./basic_tests.py list
+
+   *  To run a specific test within a script, specify its number:
+
+              ./basic_tests.py 7
+
+
+>>> To make a script run over ra_DAV instead of ra_local: 
+
+   * use global switch to python test scripts:  'dav'
+
+               ./basic_tests.py dav
+               ./basic_tests.py 3 dav
+
+     ASSUMPTIONS MADE BY THIS MODE:
+
+       - an svn-aware httpd is running locally on port 80.
+
+       - httpd.conf maps /svn/repositories to the 'repositories'
+         subdirectory, right below these python tests.
+
+       - httpd.conf maps /svn/tmp/repo to the 'local_tmp/repo'
+         directory that is temporarily created during a test run.
+
+
+------------------------------------------------------------------
+
+>>>>> The contents of this directory:
 
 
 * basic_tests.py:        tests: general client operations using ra_local.
 
 * commit_tests.py:       tests: fancy commit cases and scenarios, as
                                 well as regression tests. (uses ra_local)
+
+* prop_tests.py:         tests: operations on properties.
+
+* svnadmin_tests.py:     tests:  svnadmin tool.
  
 * svntest/               subversion test framework, as a python package.
 
@@ -118,7 +157,7 @@ The contents of this directory:
     * actions.py:            main API for driving subversion client and
                              using trees to verify results.
 
-    * entry.py               parse an `entries' file (### not used yet)
+    * entry.py:              parse an `entries' file (### not used yet)
 
 
 

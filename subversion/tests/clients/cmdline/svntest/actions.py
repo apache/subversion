@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os.path, shutil, string, re
+import os.path, shutil, string, re, sys
 
 import main, tree  # general svntest routines in this module.
 
@@ -36,7 +36,7 @@ def guarantee_greek_repository(path):
 
   if path == main.pristine_dir:
     print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
-    exit(1)
+    sys.exit(1)
 
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_dir):
@@ -46,8 +46,18 @@ def guarantee_greek_repository(path):
     main.write_tree(main.greek_dump_dir,
                     [[x[0], x[1]] for x in main.greek_tree])
 
-    # figger out the "file:" url needed to run import
-    url = "file://" + os.path.abspath(main.pristine_dir)
+    if main.DAV_mode:      
+      # figger out the "http:" url needed to run import
+      url = "http://localhost/svn/tmp/repo"
+      # this is the first test in the run, so create an empty .htaccess file
+      if os.path.exists(main.htaccess_file):
+        unlink(main.htaccess_file)
+      fp = open(main.htaccess_file, 'w')
+      fp.close()
+    else:
+      # figger out the "file:" url needed to run import
+      url = "file://" + os.path.abspath(main.pristine_dir)
+
     # import the greek tree.
     output, errput = main.run_svn("import", url, main.greek_dump_dir)
 
@@ -63,7 +73,7 @@ def guarantee_greek_repository(path):
       print "ERROR:  import did not 'succeed', while creating greek repos."
       print "The final line from 'svn import' was:"
       print lastline
-      exit(1)
+      sys.exit(1)
     output_tree = tree.build_tree_from_commit(output)
 
     output_list = []
@@ -289,6 +299,18 @@ def make_repo_and_wc(test_name):
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(repo_dir)
 
+  if main.DAV_mode:
+    url = 'http://localhost/svn/repositories/' + test_name
+
+    # append the new repository to the .htaccess file.
+    location  = "<Location /svn/repositories/" + test_name + "\n"
+    location += "   DAV svn\n"
+    location += "   SVNPath " + os.path.abspath(repo_dir) + "\n"
+    location += "</Location>\n\n"
+    main.file_append(main.htaccess_file, location)
+  else:
+    url = 'file://' + os.path.abspath(repo_dir)
+
   # Generate the expected output tree.
   output_list = []
   path_list = [x[0] for x in main.greek_tree]
@@ -301,7 +323,6 @@ def make_repo_and_wc(test_name):
   expected_wc_tree = tree.build_generic_tree(main.greek_tree)
 
   # Do a checkout, and verify the resulting output and disk contents.
-  url = 'file://' + os.path.abspath(repo_dir)
   return run_and_verify_checkout(url, wc_dir,
                                  expected_output_tree,
                                  expected_wc_tree)
