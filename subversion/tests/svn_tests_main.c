@@ -132,7 +132,7 @@ do_test_num (const char *progname,
              apr_pool_t *pool)
 {
   svn_test_driver_t func;
-  int xfail;
+  svn_boolean_t skip, xfail;
   svn_error_t *err;
   int array_size = get_array_size();
   const char *msg = 0;  /* the message this individual test prints out */
@@ -146,11 +146,12 @@ do_test_num (const char *progname,
   else
     {
       func = test_funcs[test_num].func;
-      xfail = test_funcs[test_num].xfail;
+      skip = (test_funcs[test_num].mode == svn_test_skip);
+      xfail = (test_funcs[test_num].mode == svn_test_xfail);
     }
 
   /* Do test */
-  err = func(&msg, msg_only, pool);
+  err = func(&msg, msg_only || skip, pool);
 
   /* If we got an error, print it out.  */
   if (err)
@@ -161,9 +162,9 @@ do_test_num (const char *progname,
 
   if (msg_only)
     {
-      printf (" %2d     %5s  %s\n",
+      printf (" %2d     %-5s  %s\n",
               test_num,
-              xfail ? "XFAIL" : "",
+              (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
               msg ? msg : "(test did not provide name)");
     }
   else
@@ -171,7 +172,7 @@ do_test_num (const char *progname,
       printf ("%s %s %d: %s\n", 
               (err
                ? (xfail ? "XFAIL:" : "FAIL: ")
-               : (xfail ? "XPASS:" : "PASS: ")),
+               : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
               progname,
               test_num, 
               msg ? msg : "(test did not provide name)");
