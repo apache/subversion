@@ -104,6 +104,9 @@ wc_split_path (svn_string_t *path,
  * of the varargs in AP (char *'s) is appended as a path component.
  * The list must be terminated with a NULL argument.
  *
+ * Adding an empty component results in no effect (i.e., the separator
+ * char is not doubled).
+ *
  * Important: chances are you will want to call chop_admin_name() to
  * restore PATH to its original value before exiting anything that
  * calls this.  If you exit, say by returning an error, before calling
@@ -137,6 +140,9 @@ v_extend_with_adm_name (svn_string_t *path,
   /* Tack on everything else. */
   while ((this = va_arg (ap, const char *)) != NULL)
     {
+      if (this[0] == '\0')
+        continue;
+
       svn_path_add_component_nts (path, this, SVN_PATH_LOCAL_STYLE, pool);
       components_added++;
     }
@@ -442,16 +448,21 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 
 
 svn_string_t *
-svn_wc__text_base_path (svn_string_t *path, apr_pool_t *pool)
+svn_wc__text_base_path (svn_string_t *path,
+                        svn_boolean_t tmp,
+                        apr_pool_t *pool)
 {
   svn_string_t *newpath, *basename;
   wc_split_path (path, &newpath, &basename, pool);
+
   extend_with_adm_name (newpath,
                         0,
                         pool,
+                        tmp ? SVN_WC__ADM_TMP : "",
                         SVN_WC__ADM_TEXT_BASE,
                         basename->data,
                         NULL);
+    
   return newpath;
 }
 

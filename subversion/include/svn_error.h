@@ -223,7 +223,7 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 
 /* Free ERROR by destroying its pool; note that the pool may be shared
    with wrapped child errors inside this error. */
-void svn_free_error (svn_error_t *error);
+void svn_error_free (svn_error_t *error);
 
 
 /* Very dumb "default" error handler that anyone can use if they wish. */

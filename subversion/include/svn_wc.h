@@ -162,15 +162,16 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
  * *RESULT, which should be the USER_DATA for a matching call to
  * svn_wc_patcher().
  */
-typedef svn_error_t *svn_wc_diff_fn_t (void *user_data,
-                                       void **result,
+typedef svn_error_t *svn_wc_diff_fn_t (void **result,
                                        svn_string_t *src,
-                                       svn_string_t *target);
+                                       svn_string_t *target,
+                                       apr_pool_t *pool);
 
 /* Apply the diff in USER_DATA to SRC to obtain TARGET. */
 typedef svn_error_t *svn_wc_patch_fn_t (void *user_data,
                                         svn_string_t *src,
-                                        svn_string_t *target);
+                                        svn_string_t *target,
+                                        apr_pool_t *pool);
 
 
 
