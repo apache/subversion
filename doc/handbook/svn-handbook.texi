@@ -1,0 +1,107 @@
+\input texinfo  @c -*-texinfo-*-
+
+@comment Subversion Handbook
+@comment Copyright (C) 2002 CollabNet
+
+@c  ================================================================
+@c  Copyright (c) 2002 CollabNet.  All rights reserved.
+@c  
+@c  Redistribution and use in source and binary forms, with or without
+@c  modification, are permitted provided that the following conditions are
+@c  met:
+@c  
+@c  1. Redistributions of source code must retain the above copyright
+@c  notice, this list of conditions and the following disclaimer.
+@c  
+@c  2. Redistributions in binary form must reproduce the above copyright
+@c  notice, this list of conditions and the following disclaimer in the
+@c  documentation and/or other materials provided with the distribution.
+@c  
+@c  3. The end-user documentation included with the redistribution, if
+@c  any, must include the following acknowlegement: "This product includes
+@c  software developed by CollabNet (http://www.Collab.Net/)."
+@c  Alternately, this acknowlegement may appear in the software itself, if
+@c  and wherever such third-party acknowlegements normally appear.
+@c  
+@c  4. The hosted project names must not be used to endorse or promote
+@c  products derived from this software without prior written
+@c  permission. For written permission, please contact info@collab.net.
+@c  
+@c  5. Products derived from this software may not use the "Tigris" name
+@c  nor may "Tigris" appear in their names without prior written
+@c  permission of CollabNet.
+@c  
+@c  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+@c  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+@c  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+@c  IN NO EVENT SHALL COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+@c  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+@c  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+@c  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+@c  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+@c  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+@c  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+@c  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@c 
+@c  ====================================================================
+@c  
+@c  This software consists of voluntary contributions made by many
+@c  individuals on behalf of CollabNet.
+
+
+@c %**start of header
+@setfilename svn-handbook.info
+@settitle The Subversion Handbook
+@setchapternewpage odd
+@c %**end of header
+
+@paragraphindent 0
+
+@c @finalout
+
+@c Browser defaults lose.  Let's go for black text on white background.
+@ifhtml
+@html
+<body bgcolor="#FFFFFF" fgcolor="#000000">
+@end html
+@end ifhtml
+
+@c -----------------------------------------------------------------
+@titlepage
+@title @titlefont{The Subversion Handbook}
+@author Subversion Development Project @url{http://subversion.tigris.org}
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2002 CollabNet, Inc. @*
+See @xref{License} for details. @*
+First version: June 2002. @*
+$LastChangedDate$
+
+@end titlepage
+@c -----------------------------------------------------------------
+
+@c @summarycontents
+@c @contents
+
+@node Top
+@top
+
+@ifinfo
+This manual is a general guide to the Subversion revision control system.
+
+@end ifinfo
+
+@c Here is our logical table of contents.
+
+@menu
+* Getting Started::           History, installation and overview of Subversion.
+* Client Cookbook::           How to use the Subversion client.
+* Repository Administration:: Managing a repository.
+* Appendices::                Other useful documents and pointers.
+@end menu
+
+@include getting_started.texi
+
+
+@bye
