@@ -331,10 +331,27 @@ svn_cl__generate_status_codes (char *str_status,
 
 /*** Notification functions to display results on the terminal. */
 
+/* This implements `svn_wc_notify_func_t'. 
+   A notifier for non-update operations, and its baton. */
 void svn_cl__notify_func (void *baton, 
+                          const char *path,
                           svn_wc_notify_action_t action,
-                          const char *path);
+                          svn_node_kind_t kind,
+                          svn_wc_notify_state_t text_state,
+                          svn_wc_notify_state_t prop_state,
+                          svn_revnum_t revision);
+
 void *svn_cl__make_notify_baton (apr_pool_t *pool);
+
+/* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for
+   checkouts, updates, and switches.  The notifier will use POOL for
+   temporary allocations. */
+void svn_cl__get_checkout_notifier (svn_wc_notify_func_t *notify_func_p,
+                                    void **notify_baton_p,
+                                    svn_boolean_t is_checkout,
+                                    svn_boolean_t suppress_final_line,
+                                    apr_pool_t *pool);
+
 
 /* This macro is used to specify a notification function, or NULL if the
    user has requested "quiet" mode. */

@@ -765,17 +765,33 @@ do_item_commit (const char *url,
 
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
-        (*notify_func) (notify_baton, svn_wc_notify_commit_replaced, path);
+        (*notify_func) (notify_baton, path, svn_wc_notify_commit_replaced,
+                        svn_node_unknown,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-        (*notify_func) (notify_baton, svn_wc_notify_commit_deleted, path);
+        (*notify_func) (notify_baton, path, svn_wc_notify_commit_deleted,
+                        svn_node_unknown,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
-        (*notify_func) (notify_baton, svn_wc_notify_commit_added, path);
+        (*notify_func) (notify_baton, path, svn_wc_notify_commit_added,
+                        svn_node_unknown,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
       else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
                || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
-        (*notify_func) (notify_baton, svn_wc_notify_commit_modified, path);
+        (*notify_func) (notify_baton, path, svn_wc_notify_commit_modified,
+                        svn_node_unknown,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
     }
 
   /* If this item is supposed to be deleted, do so. */
@@ -1027,8 +1043,12 @@ svn_client__do_commit (const char *base_url,
       file_baton = mod->file_baton;
 
       if (notify_func)
-        (*notify_func) (notify_baton, svn_wc_notify_commit_postfix_txdelta, 
-                        item->path);
+        (*notify_func) (notify_baton, item->path,
+                        svn_wc_notify_commit_postfix_txdelta, 
+                        svn_node_unknown,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
 
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;

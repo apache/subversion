@@ -98,18 +98,23 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
    move this file into PATH, or to append the conflicts to the file's
    already-existing .prej file in PATH.
 
+   If MERGED is non-null, set *MERGED to true if there were local
+   propchanges before this call, or false if the local props were
+   unmodified.
+
    Any conflicts are also returned in a hash that maps (const char *)
    propnames -> conflicting (const svn_prop_t *) ptrs from the PROPCHANGES
    array.  In this case, *CONFLICTS will be allocated in POOL.  If no
    conflicts occurred, then *CONFLICTS is simply allocated as an empty
    hash.
 */
-svn_error_t *svn_wc__merge_prop_diffs (const char *path,
+svn_error_t *svn_wc__merge_prop_diffs (svn_boolean_t *merged,
+                                       apr_hash_t **conflicts,
+                                       const char *path,
                                        const char *name,
                                        const apr_array_header_t *propchanges,
                                        apr_pool_t *pool,
-                                       svn_stringbuf_t **entry_accum,
-                                       apr_hash_t **conflicts);
+                                       svn_stringbuf_t **entry_accum);
 
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in

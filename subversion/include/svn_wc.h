@@ -74,6 +74,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_revert,
   svn_wc_notify_resolve,
   svn_wc_notify_update,
+  svn_wc_notify_update_completed,  /* The last notification in an update */
   svn_wc_notify_commit_modified,
   svn_wc_notify_commit_added,
   svn_wc_notify_commit_deleted,
@@ -81,9 +82,60 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_postfix_txdelta
 } svn_wc_notify_action_t;
 
-typedef void (*svn_wc_notify_func_t) (void *baton, 
+
+typedef enum svn_wc_notify_state_t
+{
+  svn_wc_notify_state_unknown = 0, /* Notifier doesn't know or isn't saying. */
+  svn_wc_notify_state_unchanged,   /* This state did not change. */
+  svn_wc_notify_state_modified,    /* Pristine state was modified. */
+  svn_wc_notify_state_merged,      /* Modified state had mods merged in. */
+  svn_wc_notify_state_conflicted   /* Modified state got conflicting mods. */
+} svn_wc_notify_state_t;
+
+
+/* Notify the world that ACTION has happened to PATH.  PATH is either
+ * absolute or relative to cwd (i.e., not relative to an anchor).
+ *
+ * KIND, TEXT_STATE and PROP_STATE are from after ACTION, not before.
+ *
+ * REVISION is SVN_INVALID_REVNUM, except when when ACTION is
+ * svn_wc_notify_update_completed, in which case REVISION is the
+ * target revision of the update if available, else it is still
+ * SVN_INVALID_REVNUM.
+ *
+ * Note that if ACTION is svn_wc_notify_update, then PATH has already
+ * been installed, so it is legitimate for an implementation of
+ * svn_wc_notify_func_t to examine PATH in the working copy.
+ *
+ * Design Notes:
+ *
+ * The purpose of the KIND, TEXT_STATE, and PROP_STATE fields is to
+ * provide "for free" information that this function is likely to
+ * want, and which it would otherwise be forced to deduce via
+ * expensive operations such as reading entries and properties.
+ * However, if the caller does not have this information, it will
+ * simply pass the corresponding `*_unknown' values, and it is up to
+ * the implementation how to handle that (i.e., whether or not to
+ * attempt deduction, or just to punt and give a less informative
+ * notification).
+ *
+ * Recommendation: callers of svn_wc_notify_func_t should avoid
+ * invoking it multiple times on the same PATH within a given
+ * operation, and implementations should not bother checking for such
+ * duplicate calls.  For example, in an update, the caller should not
+ * invoke the notify func on receiving a prop change and then again
+ * on receiving a text change.  Instead, wait until all changes have
+ * been received, and then invoke the notify func once (from within
+ * an svn_delta_editor_t's close_file(), for example), passing the
+ * appropriate text_state and prop_state flags.
+ */
+typedef void (*svn_wc_notify_func_t) (void *baton,
+                                      const char *path,
                                       svn_wc_notify_action_t action,
-                                      const char *path);
+                                      svn_node_kind_t kind,
+                                      svn_wc_notify_state_t text_state,
+                                      svn_wc_notify_state_t prop_state,
+                                      svn_revnum_t revision);
 
 
 
@@ -728,6 +780,9 @@ svn_error_t *svn_wc_get_update_editor (const char *anchor,
  * such a case and do as little damage as possible, but makes no
  * promises.
  *
+ * Invoke NOTIFY_FUNC with NOTIFY_BATON as the checkout progresses, if
+ * NOTIFY_FUNC is non-null.
+ *
  * ANCESTOR_URL is the repository string to be recorded in this
  * working copy.
  */
@@ -735,6 +790,8 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
                                          const char *ancestor_url,
                                          svn_revnum_t target_revision,
                                          svn_boolean_t recurse,
+                                         svn_wc_notify_func_t notify_func,
+                                         void *notify_baton,
                                          const svn_delta_editor_t **editor,
                                          void **edit_baton,
                                          svn_wc_traversal_info_t **ti_p,
@@ -828,13 +885,23 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
    props, not just 'regular' ones that the user sees.  (See 'enum
    svn_prop_kind').
 
+   If TEXT_STATE is non-null, set *TEXT_STATE to the state of the
+   file contents after the installation; if return error, the value
+   of *TEXT_STATE is undefined.
+
+   If PROP_STATE is non-null, set *PROP_STATE to the state of the
+   properties after the installation; if return error, the value of
+   *PROP_STATE is undefined.
+
    If NEW_URL is non-NULL, then this URL will be attached to the file
    in the 'entries' file.  Otherwise, the file will simply "inherit"
    its URL from the parent dir.
 
    POOL is used for all bookkeeping work during the installation.
  */
-svn_error_t *svn_wc_install_file (const char *file_path,
+svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *text_state,
+                                  svn_wc_notify_state_t *prop_state,
+                                  const char *file_path,
                                   svn_revnum_t new_revision,
                                   const char *new_text_path,
                                   const apr_array_header_t *props,

@@ -81,8 +81,8 @@ apply_delta (const svn_delta_editor_t *before_editor,
                                         ancestor_path,
                                         ancestor_revision,
                                         recurse,
-                                        &editor,
-                                        &edit_baton,
+                                        NULL, NULL,
+                                        &editor, &edit_baton,
                                         NULL,
                                         pool);
     }
