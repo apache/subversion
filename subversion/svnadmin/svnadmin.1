@@ -78,16 +78,8 @@ to cross copy history while searching for revisions.
 (For directories, this is, for now, almost guaranteed to be
 uninteresting.  Also, path must exist in the HEAD of the repository.)
 .TP
-.BI lsrevs " repos-path"  " \fR[\fI -rlower-rev\fR[\fI:upper-rev\fR] ]"
-If no revision is given, all revision trees are printed.  If just 
-.IR lower-rev
-is given, that revision tree is printed.
-If two revisions are given, that range is printed, inclusive.
-.TP
-.BI lstxns " repos_path \fR[ \fB--long\fP ]\fI"
-Print all txn names and, if 
-.BI --long
-is specified, their metadata and trees.
+.BI lstxns " repos_path"
+Print all txn names.
 .TP
 .BI recover " repos_path"
 Run the Berkeley DB recovery procedure on a repository.
@@ -135,8 +127,6 @@ representing past changes to the file.  Undeltification is an optimization that
 speeds some repository operations.  One might, for example, undelitfy all
 releases to speed checkout of those releases.
 .TP
-.BI youngest " repos-path"
-Print the latest revision number.
 .SH NOTES
 .PP
 When \fBsvnadmin\fP displays a directory entry it is of the form:
