@@ -77,13 +77,6 @@ struct w_baton
 
 
 
-static svn_error_t *
-delete (svn_string_t *name, void *walk_baton, void *parent_baton)
-{
-  return 0;
-}
-
-
 static void
 maybe_prepend_dest (svn_string_t **name,
                     struct w_baton *wb,
@@ -105,6 +98,18 @@ maybe_prepend_dest (svn_string_t **name,
       svn_path_add_component (tmp, *name, SVN_PATH_LOCAL_STYLE, wb->pool);
       *name = tmp;
     }
+}
+
+
+
+static svn_error_t *
+delete (svn_string_t *name, void *walk_baton, void *parent_baton)
+{
+  maybe_prepend_dest (&name,
+                      (struct w_baton *) walk_baton,
+                      (svn_string_t *) parent_baton);
+
+  return 0;
 }
 
 
