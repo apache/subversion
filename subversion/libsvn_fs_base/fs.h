@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_H
-#define SVN_LIBSVN_FS_FS_H
+#ifndef SVN_LIBSVN_FS_BASE_H
+#define SVN_LIBSVN_FS_BASE_H
 
 #define APU_WANT_DB
 #include <apu_want.h>
@@ -304,4 +304,4 @@ typedef struct
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_H */
+#endif /* SVN_LIBSVN_FS_BASE_H */
