@@ -71,7 +71,7 @@ is_revision_prop_name (const char *name)
       SVN_PROP_REVISION_ALL_PROPS
     };
 
-  for (i = 0; i < sizeof (revision_props) / sizeof (char *); i++)
+  for (i = 0; i < sizeof (revision_props) / sizeof (revision_props[0]); i++)
     {
       if (strcmp (name, revision_props[i]) == 0)
         return TRUE;
