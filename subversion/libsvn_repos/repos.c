@@ -688,7 +688,6 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
-  repos->pool = pool;
 
   /* Create the top-level repository directory. */
   err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
@@ -832,7 +831,6 @@ get_repos (svn_repos_t **repos_p,
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
-  repos->pool = pool;
 
   /* Initialize the repository paths. */
   repos->path = apr_pstrdup (pool, path);
@@ -966,7 +964,6 @@ svn_repos_recover (const char *path,
        here: */
     SVN_ERR (check_repos_version (path, subpool));
     locked_repos = apr_pcalloc (subpool, sizeof (*locked_repos));
-    locked_repos->pool = subpool;
     locked_repos->path = apr_pstrdup (subpool, path);
     init_repos_dirs (locked_repos, subpool);
     

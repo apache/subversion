@@ -86,10 +86,6 @@ struct svn_repos_t
 
   /* The path to the Berkeley DB filesystem environment. */
   char *db_path;
-
-  /* A pool, filled with allocated memory, a diving board, and a tube
-     slide. */
-  apr_pool_t *pool;
 };
 
 
