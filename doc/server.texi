@@ -1,4 +1,30 @@
 @node Server
 @chapter Server
 
-@c whee!
+@c Ben is hacking on this.
+
+@c ----------------------------------------------------------------
+
+@node Filesystem
+@section Filesystem
+
+Here are some examples of the API offered by Subversion's Filesystem:
+
+@itemize *
+@item
+        latest ()
+@item
+        read (version, path)
+@item
+        read_node_prop (version, path, propname)
+@item
+        read_version_prop (version, propname)
+@item
+        delta (from_version, from_path, to_version, to_path)
+@item
+        submit (delta)
+@item
+        write (delta, token)
+@item
+        abandon (token)
+@end itemize        
