@@ -44,9 +44,9 @@ svn_cl__update (svn_cl__opt_state_t *opt_state,
         const svn_delta_edit_fns_t *trace_editor;
         void *trace_edit_baton;
 
-        err = svn_cl__get_trace_editor (&trace_editor,
-                                        &trace_edit_baton,
-                                        target, pool);
+        err = svn_cl__get_trace_update_editor (&trace_editor,
+                                               &trace_edit_baton,
+                                               target, pool);
         if (err)
           return err;
 

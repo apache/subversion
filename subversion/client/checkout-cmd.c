@@ -38,10 +38,10 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
   void *trace_edit_baton;
   svn_error_t *err;
 
-  err = svn_cl__get_trace_editor (&trace_editor,
-				  &trace_edit_baton,
-				  opt_state->target,
-				  pool);
+  err = svn_cl__get_trace_update_editor (&trace_editor,
+                                         &trace_edit_baton,
+                                         opt_state->target,
+                                         pool);
   if (err)
     return err;
 
