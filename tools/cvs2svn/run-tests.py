@@ -335,6 +335,145 @@ def prune_with_care():
     raise svntest.Failure
 
 
+def simple_commits():
+  "simple trunk commits"
+  # See test-data/main-cvsrepos/proj/README.
+  repos, wc, logs = ensure_conversion('main')
+
+  # The initial import.
+  for path in ('/trunk/proj', '/trunk/proj/default', '/trunk/proj/sub1',
+               '/trunk/proj/sub1/default', '/trunk/proj/sub1/subsubA',
+               '/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub1/subsubB',
+               '/trunk/proj/sub1/subsubB/default', '/trunk/proj/sub2',
+               '/trunk/proj/sub2/default', '/trunk/proj/sub2/subsubA',
+               '/trunk/proj/sub2/subsubA/default', '/trunk/proj/sub3',
+               '/trunk/proj/sub3/default'):
+    if not (logs[10].changed_paths.has_key(path)
+            and logs[10].changed_paths[path] == 'A'):
+      raise svntest.Failure
+
+  if logs[10].msg.find('Initial revision') != 0:
+    raise svntest.Failure
+    
+  # The first commit.
+  for path in ('/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub3/default'):
+    if not (logs[11].changed_paths.has_key(path)
+            and logs[11].changed_paths[path] == 'M'):
+      raise svntest.Failure
+
+  if logs[11].msg.find('First commit to proj, affecting two files.') != 0:
+    raise svntest.Failure
+
+  # The second commit.
+  for path in ('/trunk/proj/default', '/trunk/proj/sub1/default',
+               '/trunk/proj/sub1/subsubA/default',
+               '/trunk/proj/sub1/subsubB/default',
+               '/trunk/proj/sub2/default',
+               '/trunk/proj/sub2/subsubA/default',
+               '/trunk/proj/sub3/default'):
+    if not (logs[12].changed_paths.has_key(path)
+            and logs[12].changed_paths[path] == 'M'):
+      raise svntest.Failure
+
+  if logs[12].msg.find('Second commit to proj, affecting all 7 files.') != 0:
+    raise svntest.Failure
+
+
+def simple_tags():
+  "simple tags"
+  # See test-data/main-cvsrepos/proj/README.
+  repos, wc, logs = ensure_conversion('main')
+
+  ### The actual revision number here (and in other tests) will have
+  ### to change when tags and branches are recognized.
+  if not logs.has_key(14):
+    raise svntest.Failure
+
+  for path in ('/tags/T_ALL_INITIAL_FILES/proj',
+               '/tags/T_ALL_INITIAL_FILES/proj/default',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub1',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub1/default',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubA',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubA/default',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubB',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub1/subsubB/default',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub2',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub2/default',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub2/subsubA',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub2/subsubA/default',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub3',
+               '/tags/T_ALL_INITIAL_FILES/proj/sub3/default'):
+    if not (logs[14].changed_paths.has_key(path)
+            and logs[14].changed_paths[path] == 'A'):
+      raise svntest.Failure
+
+  for path in ('/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/default',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/default',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubA',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubA/default',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2/default',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2/subsubA',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub2/subsubA/default',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub3',
+               '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub3/default'):
+    if not (logs[14].changed_paths.has_key(path)
+            and logs[14].changed_paths[path] == 'A'):
+      raise svntest.Failure
+
+  # Make sure that other tag does *not* have the missing file:
+  but_one = '/tags/T_ALL_INITIAL_FILES_BUT_ONE/proj/sub1/subsubB/default'
+  if logs[14].has_key(but_one):
+    raise svntest.Failure
+
+  ### TODO: we also need to check copy history.
+
+  ### What will the log message be, hmm?
+  if logs[14].msg.find('') != 0:
+    raise svntest.Failure
+
+
+
+def simple_branch_commits():
+  "simple branch commits"
+  # See test-data/main-cvsrepos/proj/README.
+  repos, wc, logs = ensure_conversion('main')
+
+  ### The actual revision number here (and in other tests) will have
+  ### to change when tags and branches are recognized.
+  if not logs.has_key(14):
+    raise svntest.Failure
+
+  for path in ('/branches/B_MIXED/proj/default',
+               '/branches/B_MIXED/proj/sub1/default',
+               '/branches/B_MIXED/proj/sub2/subsubA/default'):
+    if not (logs[14].changed_paths.has_key(path)
+            and logs[14].changed_paths[path] == 'M'):
+      raise svntest.Failure
+
+  if logs[14].msg.find('Modify three files, on branch B_MIXED.') != 0:
+    raise svntest.Failure
+
+
+def mixed_commit():
+  "a commit affecting both trunk and a branch"
+  # See test-data/main-cvsrepos/proj/README.
+  repos, wc, logs = ensure_conversion('main')
+
+  for path in ('/trunk/proj/sub2/default', 
+               '/branches/B_MIXED/proj/sub2/branch_B_MIXED_only'):
+    if not (logs[13].changed_paths.has_key(path)
+            and logs[13].changed_paths[path] == 'M'):
+      raise svntest.Failure
+
+  if logs[13].msg.find('A single commit affecting one file on branch B_MIXED '
+                       'and one on trunk.') != 0:
+    raise svntest.Failure
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -347,6 +486,10 @@ test_list = [ None,
               space_fname,
               two_quick,
               prune_with_care,
+              simple_commits,
+              XFail(simple_tags),
+              XFail(simple_branch_commits),
+              XFail(mixed_commit),
              ]
 
 if __name__ == '__main__':
