@@ -696,8 +696,10 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
-  SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
-  SVN_ERR (svn_fs_revision_root (&root, fs, youngest, pool));
+  /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
+     library dependencies, which are not portable. */
+  SVN_ERR (fs->vtable->youngest_rev (&youngest, fs, pool));
+  SVN_ERR (fs->vtable->revision_root (&root, fs, youngest, pool));
   SVN_ERR (svn_fs_fs__check_path (&kind, root, path, pool));
   if (kind == svn_node_dir)
     return svn_fs_fs__err_not_file (fs, path);
@@ -795,8 +797,10 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
-  SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
-  SVN_ERR (svn_fs_revision_root (&root, fs, youngest, pool));
+  /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
+     library dependencies, which are not portable. */
+  SVN_ERR (fs->vtable->youngest_rev (&youngest, fs, pool));
+  SVN_ERR (fs->vtable->revision_root (&root, fs, youngest, pool));
   SVN_ERR (svn_fs_fs__check_path (&kind, root, lock->path, pool));
   if (kind == svn_node_dir)
     return svn_fs_fs__err_not_file (fs, lock->path);
