@@ -170,6 +170,18 @@ svn_error_t * svn_svr_init (svn_svr_policies_t **policy,
 svn_error_t * svn_svr_load_policy (svn_svr_policies_t *policy, 
                                    const char *filename);
 
+
+/* Utility : load a single plugin and call its init routine, which
+   causes the plugin to register itself.
+
+   Ultimately, a new plugin structure ends up snugly nestled in the
+   policy. */
+
+svn_error_t * svn_svr_load_plugin (svn_svr_policies_t *policy,
+                                   const svn_string_t *path,
+                                   const svn_string_t *init_routine);
+
+
 /* Routine which each plugin's init() routine uses to register itself
    in the server's policy structure.  */
 

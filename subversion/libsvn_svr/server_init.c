@@ -55,7 +55,8 @@
 
 
 /* 
-   svn_svr_load_plugin() : Utility to load/register a server plugin
+   svn_svr_load_plugin() : 
+         Utility to load & register a server plugin into a policy
 
    Input:    * a policy in which to register the plugin
              * pathname of the shared library to load
@@ -69,12 +70,58 @@
 
 svn_error_t *
 svn_svr_load_plugin (svn_svr_policies_t *policy,
-                     svn_string_t *path,
-                     svn_string_t *init_routine)
+                     const svn_string_t *path,
+                     const svn_string_t *init_routine)
 {
+  ap_dso_handle_t *library;
+  ap_dso_handle_sym_t initfunc;
+  ap_status_t result;
+  svn_error_t *error;
+
+  char *my_path   = svn_string_2cstring (path, policy->pool);
+  char *my_sym    = svn_string_2cstring (init_routine, policy->pool);
+
+  /* Load the plugin */
+  result = ap_dso_load (&library, my_path, policy->pool);
+
+  if (result != APR_SUCCESS)
+    {
+      char *msg =
+        ap_psprintf (policy->pool,
+                     "svn_svr_load_plugin(): can't load DSO %s", my_path); 
+      return svn_create_error (result, NULL, msg, NULL, policy->pool);
+    }
+  
+
+  /* Find the plugin's initialization routine. */
+  
+  result = ap_dso_sym (&initfunc, library, my_sym);
+
+  if (result != APR_SUCCESS)
+    {
+      char *msg =
+        ap_psprintf (policy->pool,
+                     "svn_svr_load_plugin(): can't find symbol %s", my_sym); 
+      return svn_create_error (result, NULL, msg, NULL, policy->pool);
+    }
+
+  /* Call the plugin's initialization routine.  
+
+     This causes the plugin to call svn_svr_register_plugin(), the end
+     result of which is a new plugin structure safely nestled within
+     our policy structure.  */
+
+  error = (*initfunc) (policy, library);
+
+  if (error)
+    {
+      return svn_quick_wrap_error
+        (error, "svn_svr_load_plugin(): plugin initialization failed.");
+    }
   
   return SVN_SUCCESS;
 }
+
 
 
 
@@ -83,8 +130,7 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
 
     Loops through hash of plugins, loads each using APR's DSO
     routines.  Each plugin ultimately registers (appends) itself into
-    the policy structure.  
-*/
+    the policy structure.  */
 
 svn_error_t *
 svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
@@ -92,8 +138,9 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
   ap_hash_index_t *hash_index;
   void *key, *val;
   size_t keylen;
+  svn_error_t *err, *latesterr;
+  err = latesterr = NULL;
   
-
   /* Initialize the APR DSO mechanism*/
   ap_status_t result = ap_dso_init();
 
@@ -109,15 +156,30 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
        hash_index;                              /* NULL if out of entries */
        hash_index = ap_hash_next (hash_index))  /* get next hash entry */
     {
-      void *key, *val;
-      size_t keylen;
+      svn_string_t keystring, *valstring;
 
       ap_hash_this (hash_index, &key, &keylen, &val);
-            
-      svn_error_t *err = svn_svr_load_plugin (policy,
-                                              
-                                              
+
+      keystring.data = key;
+      keystring.len = keylen;
+      keystring.blocksize = keylen;
+      valstring = val;
+
+      err = svn_svr_load_plugin (policy, &keystring, val);
+      if (err)
+        {
+          /* Nest all errors returned from failed plugins, 
+             but DON'T RETURN yet!  */
+          err->child = latesterr;
+          latesterr = err;
+        }
     }
+
+  /* If no plugins failed, this will be NULL, which still means
+     "success".  If one or more plugins failed to load, this will
+     contain a nesty list of each plugin's error structure. */
+  return latesterr;
+
 }
 
 
@@ -268,11 +330,10 @@ svn_error_t *
 svn_svr_register_plugin (svn_svr_policies_t *policy,
                          svn_svr_plugin_t *new_plugin)
 {
-  /* just need to push the new plugin pointer onto the policy's
-     array of plugin pointers.  */
-
-  /* Store in policy->plugins hashtable : 
-     KEY = new_plugin->name, val = new_plugin */
+  ap_hash_set (policy->plugins,         /* the policy's plugin hashtable */
+               new_plugin->name->data,  /* key = name of the plugin */
+               new_plugin->name->len,   /* length of this name */
+               new_plugin);             /* val = ptr to the plugin itself */
 
   /* Hm... how would this routine fail? :)  */
 
