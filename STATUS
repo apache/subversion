@@ -13,6 +13,21 @@ candidate tarball, and that code will become 1.0.0 on February 23rd,
 is important enough to delay 1.0.0, please start a dev@ list thread
 and mention the thread below.
 
+Ben thinks that the following things should probably be forcibly
+synchronized between the trunk and 1.0 lines, before we roll a 1.0 tarball:
+
+     - all top-level capitalized files:  README, INSTALL, HACKING,
+       COMMITTERS, etc.
+
+     - www/ area
+
+     - doc/ area, especially the book.
+
+     - bash_completion
+
+     - all the cvs2svn.py stuff.
+
+
 Candidate changes:
 
   * r8066, r8376, r8515 and r8516
@@ -25,10 +40,77 @@ Candidate changes:
       +1: josander
 
 
+  * r8561
+    Clarify help text for 'svn switch'.
+    Justification:  Multiple people were recently confused by '--relocate';
+                    this change only affects 'svn help' output.
+    Notes:  the book should help this common confusion, but 'svn help switch'
+            should also help prevent the confusion as much as it can.
+    Votes:
+      +1: sussman
+
+
 Status of 1.0.1:
 ================
 
 Candidate changes:
 
-  [none pending]
+  * r8550
+    Make failed direct-URL commits clean up their fs txns (issue #1726)
+    Justification:  users have noticed extra fs txns lying around.
+    Notes:  just add 3 calls to abort_edit() to cleanup the sloppiness.
+    Votes:
+      +1: sussman
+
+  * r8553
+    Fix invalid REPORT response when updating a deleted wc. (issue #1721)
+    Justification:  users have noticed unintelligible XML parse error.
+    Notes:  one-line change to mod_dav_svn allows a real error to get through.
+    Votes:
+      +1: sussman
+
+  * r8253
+    Make svnlook use apr_tempdir(), instead of trying to write in '.'
+    Justification: users have been bitten by this a few times already.
+    Notes:  just some internal changes to svnlook's main.c.
+    Votes:
+      +1: sussman
+
+  * r8302, 8304
+    Fix issue #1694:  can't checkout repos with space in path.
+    Justification: users (especially on win32) have reported this.
+    Notes:  whoops, we forgot to uri-encode the root_path.  duh.
+    Votes:
+      +1: sussman
+
+  * r8562
+    Allow 'svnadmin setlog' to use propchange hooks correctly.
+    Justification:  user reported that this command can't run the hook at all.
+    Notes:  one line change, use "svnadmin" as username instead of NULL.
+    Votes:
+      +1: sussman
+
+  * r8431
+    Bugfix to commits: allow deletions below schedule-add-with-history dirs.
+    Justification:  reported by a user, an unnecessary restriction.
+    Notes:  change just sets a flag differently for this case.
+    Votes:
+      +1: sussman
+
+  * r8256
+    Improve presentation of directory property conflicts.
+    Justification:  already bit kfogel;  his dir_conflicts.prej looked awful.
+    Notes:  just adds some newlines to printed strings.
+    Votes:
+      +1: sussman
+
+  * r8539
+    Fix shebang line in propchange-email.pl.in.
+    Justification:  propchange-email.pl doesn't run at all!
+    Notes: 
+    Votes:
+      +1: sussman
+
+
+
 
