@@ -1260,10 +1260,15 @@ apply_textdelta (void *file_baton,
     }
   
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
-                     svn_stream_from_aprfile (hb->dest, subpool),
-                     result_checksum, subpool,
-                     &hb->apply_handler, &hb->apply_baton);
+  {
+    const char *tmp_path;
+
+    apr_file_name_get (&tmp_path, hb->dest);
+    svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
+                       svn_stream_from_aprfile (hb->dest, subpool),
+                       result_checksum, tmp_path, subpool,
+                       &hb->apply_handler, &hb->apply_baton);
+  }
   
   hb->pool = subpool;
   hb->fb = fb;

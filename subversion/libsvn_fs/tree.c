@@ -3217,6 +3217,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   svn_txdelta_apply (tb->source_stream,
                      tb->string_stream,
                      NULL,
+                     tb->path,
                      tb->pool,
                      &(tb->interpreter),
                      &(tb->interpreter_baton));
