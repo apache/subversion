@@ -301,6 +301,19 @@ typedef struct
 
 } change_t;
 
+
+/*** Lock node ***/
+typedef struct
+{
+  /* entries list, maps (const char *) name --> (const char *) lock-node-id */
+  apr_hash_t *entries;
+
+  /* optional lock-token, might be NULL. */
+  const char *lock_token;
+
+} lock_node_t;
+
+
 
 #ifdef __cplusplus
 }

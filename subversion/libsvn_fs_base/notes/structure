@@ -802,7 +802,8 @@ Berkeley DB tables
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
                 "uuids" : recno(UUID)
                 "locks" : btree(LOCK-TOKEN -> LOCK)
-           "lock-nodes" : btree(LOCK-NODE-ID -> LOCK-NODE)
+           "lock-nodes" : btree(LOCK-NODE-ID -> LOCK-NODE,
+                               "next-id" -> LOCK_NODE_ID)
 
 Syntactic elements
 ------------------
@@ -920,7 +921,7 @@ UUIDs:
 
 Locks:
 
-                   LOCK ::= ("lock" PATH LOCK-TOKEN OWNER CR-DATE EXP-DATE) ;
+                   LOCK ::= ("lock" PATH LOCK-TOKEN OWNER CR-DATE [EXP-DATE]) ;
                    PATH ::= atom ;
                   OWNER ::= atom ;
                 CR-DATE ::= atom ;
@@ -928,9 +929,9 @@ Locks:
 
 Lock nodes:
 
-              LOCK-NODE ::= ("lock-node" ENTRIES [LOCK])
-                ENTRIES ::= (ENTRY ...) ;
-                  ENTRY ::= (NAME LOCK-NODE-ID) ;
+              LOCK-NODE ::= ("lock-node" LOCK-ENTRIES [LOCK-TOKEN])
+           LOCK-ENTRIES ::= (LOCK-ENTRY ...) ;
+             LOCK-ENTRY ::= (NAME LOCK-NODE-ID) ;
                    NAME ::= atom ;
 
         

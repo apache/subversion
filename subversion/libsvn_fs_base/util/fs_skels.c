@@ -355,6 +355,30 @@ is_valid_lock_skel (skel_t *skel)
 }
 
 
+static svn_boolean_t
+is_valid_lock_node_skel (skel_t *skel)
+{
+  if (! ((svn_fs_base__list_length (skel) == 3)
+         && svn_fs_base__matches_atom (skel->children, "lock-node")
+         && (! skel->children->next->is_atom)
+         && skel->children->next->next->is_atom) )
+    return FALSE;
+  
+  skel = skel->children->next->children;
+  while (skel)
+    {
+      if (! ((svn_fs_base__list_length (skel) == 2)
+             && skel->children->is_atom
+             && skel->children->next->is_atom) )
+        return FALSE;
+      
+      skel = skel->next;
+    }
+
+  return TRUE;
+}
+
+
 
 
 /*** Parsing (conversion from skeleton to native FS type) ***/
@@ -840,6 +864,51 @@ svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
   *lock_p = lock;
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs_base__parse_lock_node_skel (lock_node_t **lock_node_p,
+                                   skel_t *skel,
+                                   apr_pool_t *pool)
+{
+  lock_node_t *lock_node;
+  skel_t *entries_skel, *entry_skel;
+
+  /* Validate the skel. */
+  if (! is_valid_lock_node_skel (skel))
+    return skel_err ("lock-node");
+  
+  /* Create the returned structure */
+  lock_node = apr_pcalloc (pool, sizeof (*lock_node));
+
+  /* LOCK-ENTRIES */
+  lock_node->entries = apr_hash_make (pool);
+  entries_skel = skel->children->next;
+  
+  entry_skel = entries_skel->children;
+  while (entry_skel)
+    {
+      const char *key = apr_pstrmemdup (pool,
+                                        entry_skel->children->data,
+                                        entry_skel->children->len);
+      const char *val = apr_pstrmemdup (pool,
+                                        entry_skel->children->next->data,
+                                        entry_skel->children->next->len);      
+      apr_hash_set(lock_node->entries, key, APR_HASH_KEY_STRING, val);     
+      entry_skel = entry_skel->next;
+    }
+  
+  /* LOCK-TOKEN  (could be just an empty atom) */
+  if (skel->children->next->next->len)
+    lock_node->lock_token =
+      apr_pstrmemdup (pool, skel->children->next->next->data,
+                      skel->children->next->next->len);
+
+  /* Return the structure. */
+  *lock_node_p = lock_node;
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -1407,6 +1476,57 @@ svn_fs_base__unparse_lock_skel (skel_t **skel_p,
   /* Validate and return the skel. */
   if (! is_valid_lock_skel (skel))
     return skel_err ("lock");
+
+  *skel_p = skel;
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_fs_base__unparse_lock_node_skel (skel_t **skel_p,
+                                     const lock_node_t *lock_node,
+                                     apr_pool_t *pool)
+{
+  skel_t *skel, *entries_skel;
+  apr_hash_index_t *hi;
+
+  /* Create the skels. */
+  skel = svn_fs_base__make_empty_list (pool);
+
+  /* LOCK-TOKEN is optional.  If not present, just use an empty atom. */
+  if (lock_node->lock_token)
+    svn_fs_base__prepend
+      (svn_fs_base__str_atom (lock_node->lock_token, pool), skel);
+  else
+    svn_fs_base__prepend (svn_fs_base__mem_atom (NULL, 0, pool), skel);
+
+  /* Build a sub-skel that contains a bunch child entry skels */
+  entries_skel = svn_fs_base__make_empty_list (pool);
+  for (hi = apr_hash_first (pool, lock_node->entries);
+       hi;
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t keylen;
+      skel_t *entry_skel = svn_fs_base__make_empty_list (pool);
+
+      apr_hash_this (hi, &key, &keylen, &val);
+
+      svn_fs_base__prepend (svn_fs_base__str_atom (val, pool), entry_skel);
+      svn_fs_base__prepend (svn_fs_base__str_atom (key, pool), entry_skel);
+      
+      svn_fs_base__prepend (entry_skel, entries_skel);
+    }
+  svn_fs_base__prepend (entries_skel, skel);
+
+  /* "lock-node" */
+  svn_fs_base__prepend (svn_fs_base__str_atom ("lock-node", pool), skel);
+
+  /* Validate and return the skel. */
+  if (! is_valid_lock_node_skel (skel))
+    return skel_err ("lock-node");
 
   *skel_p = skel;
   return SVN_NO_ERROR;
