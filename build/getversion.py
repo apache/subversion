@@ -28,7 +28,7 @@ class Parser:
       if match:
         try: name = self.patterns[match.group(1)]
         except: continue
-        result.__dict__[name] = int(match.group(2))
+        setattr(result, name, int(match.group(2)))
     return result
 
 
