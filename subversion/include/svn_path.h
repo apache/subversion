@@ -341,12 +341,10 @@ svn_boolean_t svn_path_is_url (const char *path);
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */
 svn_boolean_t svn_path_is_uri_safe (const char *path);
 
-/** Return a URI-encoded copy of @a path, allocated in @a pool.  If
-    @a path is NULL, just return NULL. */
+/** Return a URI-encoded copy of @a path, allocated in @a pool. */
 const char *svn_path_uri_encode (const char *path, apr_pool_t *pool);
 
-/** Return a URI-decoded copy of @a path, allocated in @a pool.  If
-    @a path is NULL, just return NULL. */
+/** Return a URI-decoded copy of @a path, allocated in @a pool. */
 const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
 
 /** Extend @a url by a single @a component, URI-encoding that @a component
