@@ -169,8 +169,8 @@ copy_file_administratively (svn_stringbuf_t *src_path,
     /* Discover the paths to the four prop files */
     SVN_ERR (svn_wc__prop_path (&src_wprop, src_path, 0, pool));
     SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path, 0, pool));
-    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_basename, 0, pool));
-    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_basename, 0, pool));
+    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path, 0, pool));
+    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, 0, pool));
 
     /* Copy the text-base over unconditionally. */
     SVN_ERR (svn_io_copy_file (src_txtb, dst_txtb, pool));
