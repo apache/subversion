@@ -38,6 +38,26 @@ extern "C" {
 /* ---------------------------------------------------------------*/
 
 
+/** Callback type for checking read authorization on paths produced by
+ * (at least) svn_repos_dir_delta() and svn_repos_replay().
+ *
+ * Set @a *allowed to TRUE to indicate that @a path in @a root is
+ * readable, or to FALSE to indicate unreadable (presumably according
+ * to authorization state stored in @a baton).
+ *
+ * Do not assume @a pool has any lifetime beyond this call.
+ *
+ * Note: If someday we want more sophisticated authorization states,
+ * @a allowed can become an enum type.
+ */
+typedef svn_error_t *(*svn_repos_authz_read_func_t) (svn_boolean_t *allowed,
+                                                     svn_fs_root_t *root,
+                                                     const char *path,
+                                                     void *baton,
+                                                     apr_pool_t *pool);
+
+
+
 /** The repository object. */
 typedef struct svn_repos_t svn_repos_t;
 
@@ -211,6 +231,9 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
  *
+ * The @a authz_read_func and @a authz_read_baton are passed along to
+ * @c svn_repos_dir_delta(); see that function for how they are used.
+ *
  * All allocation for the context and collected state will occur in
  * @a pool.
  */
@@ -227,6 +250,8 @@ svn_repos_begin_report (void **report_baton,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
+                        svn_repos_authz_read_func_t authz_read_func,
+                        void *authz_read_baton,
                         apr_pool_t *pool);
 
 
@@ -305,25 +330,6 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
 /* ---------------------------------------------------------------*/
 
 /* The magical dir_delta update routines. */
-
-/** Callback type for checking read authorization on paths produced by
- * (at least) svn_repos_dir_delta() and svn_repos_replay().
- *
- * Set @a *allowed to TRUE to indicate that @a path in @a root is
- * readable, or to FALSE to indicate unreadable (presumably according
- * to authorization state stored in @a baton).
- *
- * Do not assume @a pool has any lifetime beyond this call.
- *
- * Note: If someday we want more sophisticated authorization states,
- * @a allowed can become an enum type.
- */
-typedef svn_error_t *(*svn_repos_authz_read_func_t) (svn_boolean_t *allowed,
-                                                     svn_fs_root_t *root,
-                                                     const char *path,
-                                                     void *baton,
-                                                     apr_pool_t *pool);
-
 
 /** Use the provided @a editor and @a edit_baton to describe the changes
  * necessary for making a given node (and its descendants, if it is a

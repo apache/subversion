@@ -96,6 +96,25 @@ typedef struct {
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
 
 
+/* This implements 'svn_repos_authz_read_func_t'. */
+static svn_error_t *authz_read(svn_boolean_t *allowed,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               void *baton,
+                               apr_pool_t *pool)
+{
+  /* See page 554 of Apache book about httpd subrequests. */
+
+  /* For now, a silly test implementation. */
+  if (strstr ((char *) path, "/pi"))
+    *allowed = FALSE;
+  else
+    *allowed = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
    if LINKPATH is NULL, PATH will map to itself. */
 static void add_to_path_map(apr_hash_t *hash,
@@ -221,6 +240,42 @@ static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
            "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 
            apr_xml_quote_string (pool, href, 1));
 }
+
+static svn_error_t * absent_helper(svn_boolean_t is_dir,
+                                   const char *path,
+                                   item_baton_t *parent,
+                                   apr_pool_t *pool)
+{
+  update_ctx_t *uc = parent->uc;
+
+  if (! uc->resource_walk)
+    {
+      const char *elt = apr_psprintf(pool,
+                                     "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
+                                     DIR_OR_FILE(is_dir),
+                                     svn_path_basename(path, pool));
+      send_xml(uc, "%s", elt);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t * upd_absent_directory(const char *path,
+                                          void *parent_baton,
+                                          apr_pool_t *pool)
+{
+  return absent_helper(TRUE, path, parent_baton, pool);
+}
+
+
+static svn_error_t * upd_absent_file(const char *path,
+                                     void *parent_baton,
+                                     apr_pool_t *pool)
+{
+  return absent_helper(FALSE, path, parent_baton, pool);
+}
+
 
 static svn_error_t * add_helper(svn_boolean_t is_dir,
                                 const char *path,
@@ -812,11 +867,13 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->open_directory = upd_open_directory;
   editor->change_dir_prop = upd_change_xxx_prop;
   editor->close_directory = upd_close_directory;
+  editor->absent_directory = upd_absent_directory;
   editor->add_file = upd_add_file;
   editor->open_file = upd_open_file;
   editor->apply_textdelta = upd_apply_textdelta;
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
+  editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
 
   /* If the client never sent a <src-path> element, it's old and
@@ -878,7 +935,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      FALSE, /* don't send text-deltas */
                                      recurse,
                                      ignore_ancestry,
-                                     editor, &uc, resource->pool)))
+                                     editor, &uc,
+                                     authz_read, NULL,
+                                     resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The state report gatherer could not be "
@@ -1019,7 +1078,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
                                      editor, &uc,
-                                     NULL,
+                                     authz_read,
                                      NULL,
                                      FALSE, /* no text deltas */
                                      recurse,
