@@ -290,7 +290,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	CComObject<CSVNStatus> *com_status = NULL;
 	svn_boolean_t fLockedSA = FALSE;
 
-	hash = apr_make_hash(g_pool);
+	hash = apr_hash_make(g_pool);
 	path = svn_string_create(W2A(bstrPath), g_pool);
 	error = svn_wc_statuses(hash, path, FALSE, g_pool);
 	if (error) {
