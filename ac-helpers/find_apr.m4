@@ -78,13 +78,23 @@ build directory, or an apr-config file.])
         fi
       done
     fi
-    dnl We could not find an apr-config; is there a bundled source directory?
-    if test "$apr_found" = "no" && test -n "$1"; then
-      apr_found="reconfig"
-      if test -n "$2"; then
-        apr_config="$2/apr-config"
-      else
-        apr_config="$1/apr-config"
+    dnl if we have a bundled source directory, then we may have more work
+    if test -n "$1"; then
+      apr_temp_abs_srcdir="`cd $1 && pwd`"
+      if test "$apr_found" = "yes" \
+              -a "`$apr_config --srcdir`" = "$apr_temp_abs_srcdir"; then
+        dnl the installed apr-config represents our source directory, so
+        dnl pretend we didn't see it and just use our bundled source
+        apr_found="no"
+      fi
+      dnl We could not find an apr-config; use the bundled one
+      if test "$apr_found" = "no"; then
+        apr_found="reconfig"
+        if test -n "$2"; then
+          apr_config="$2/apr-config"
+        else
+          apr_config="$1/apr-config"
+        fi
       fi
     fi
   ])
