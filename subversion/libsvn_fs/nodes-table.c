@@ -383,8 +383,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
            "root directory missing from `nodes' table, in filesystem `%s'",
            fs->env_path);
       
-      SVN_ERR (DB_WRAP (fs, "choosing new node ID (finding last entry)",
-                        db_err));
+      return DB_WRAP (fs, "choosing new node ID (finding last entry)", db_err);
     }
 
   /* Try to parse the key as a node revision ID.  */
