@@ -207,11 +207,14 @@ svn_wc_process_committed (const char *path,
      checksum if a file. */
 
   /* Open a log file in the administrative directory */
-  SVN_ERR (svn_wc__open_adm_file (&log_fp, adm_access->path, SVN_WC__ADM_LOG,
+  SVN_ERR (svn_wc__open_adm_file (&log_fp,
+                                  svn_wc_adm_access_path (adm_access),
+                                  SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_APPEND | APR_CREATE),
                                   pool));
 
-  base_name = svn_path_is_child (adm_access->path, path, pool);
+  base_name = svn_path_is_child (svn_wc_adm_access_path (adm_access), path,
+                                 pool);
   if (base_name)
     {
       /* PATH must be some sort of file */
@@ -315,7 +318,8 @@ svn_wc_process_committed (const char *path,
                                 path);
     }
       
-  SVN_ERR (svn_wc__close_adm_file (log_fp, adm_access->path, SVN_WC__ADM_LOG,
+  SVN_ERR (svn_wc__close_adm_file (log_fp, svn_wc_adm_access_path (adm_access),
+                                   SVN_WC__ADM_LOG,
                                    TRUE, /* sync */
                                    pool));
 
@@ -1393,7 +1397,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
   svn_boolean_t left_something = FALSE;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries = NULL;
-  const char *full_path = apr_pstrdup (pool, adm_access->path);
+  const char *full_path = apr_pstrdup (pool,
+                                       svn_wc_adm_access_path (adm_access));
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
@@ -1411,9 +1416,13 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                          subpool));
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access->path, FALSE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries,
+                                    svn_wc_adm_access_path (adm_access),
+                                    FALSE, pool));
       svn_wc__entry_remove (entries, name);
-      SVN_ERR (svn_wc__entries_write (entries, adm_access->path, pool));
+      SVN_ERR (svn_wc__entries_write (entries,
+                                      svn_wc_adm_access_path (adm_access),
+                                      pool));
 
       /* Remove text-base/NAME.svn-base, prop/NAME, prop-base/NAME.svn-base,
          wcprops/NAME */
@@ -1481,7 +1490,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
       }
       
       /* Recurse on each file and dir entry. */
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access->path, FALSE,
+      SVN_ERR (svn_wc_entries_read (&entries,
+                                    svn_wc_adm_access_path (adm_access), FALSE,
                                     subpool));
       
       for (hi = apr_hash_first (subpool, entries); 
@@ -1516,9 +1526,10 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           else if (current_entry_name && (current_entry->kind == svn_node_dir))
             {
               svn_wc_adm_access_t *entry_access;
-              const char *entrypath = svn_path_join (adm_access->path,
-                                                     current_entry_name,
-                                                     subpool);
+              const char *entrypath
+                = svn_path_join (svn_wc_adm_access_path(adm_access),
+                                 current_entry_name,
+                                 subpool);
               SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
                                             entrypath, pool));
               err = svn_wc_remove_from_revision_control (entry_access,
@@ -1538,7 +1549,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
          removed from revision control. */
 
       /* Remove the entire administrative .svn area, thereby removing
-         _this_ dir from revision control too. */
+         _this_ dir from revision control too.  Note: be careful with the
+         batons for this function. */
       SVN_ERR (svn_wc__adm_destroy (adm_access, subpool));
       
       /* If caller wants us to recursively nuke everything on disk, go
@@ -1552,7 +1564,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
              there and set "left_something" */
-          err = svn_io_dir_remove_nonrecursive (adm_access->path, subpool);
+          err = svn_io_dir_remove_nonrecursive
+            (svn_wc_adm_access_path (adm_access), subpool);
           if (err)
             left_something = TRUE;
         }

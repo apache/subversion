@@ -62,11 +62,12 @@ extern "C" {
  */
 typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
-/* Return an access baton in ADM_ACCESS for the working copy administrative
-   area associated with the directory PATH.  If WRITE_LOCK is set the baton
-   will include a write lock, otherwise the baton can only be used for read
-   access.  If PATH refers to a directory that is already locked then the
-   error SVN_ERR_WC_LOCKED will be returned.
+/* Return, in *ADM_ACCESS, a pointer to a new access baton for the working
+   copy administrative area associated with the directory PATH.  If
+   WRITE_LOCK is set the baton will include a write lock, otherwise the
+   baton can only be used for read access.  If PATH refers to a directory
+   that is already locked then the error SVN_ERR_WC_LOCKED will be
+   returned.
 
    If ASSOCIATED is an open access baton then ADM_ACCESS will be added to
    the set containing ASSOCIATED.  ASSOCIATED can be NULL, in which case
@@ -91,9 +92,9 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               apr_pool_t *pool);
 
 
-/* Return an access baton in ADM_ACCESS associated with PATH.  PATH must be
-   a directory that is locked and part of the set containing the ASSOCIATED
-   access baton.
+/* Return, in *ADM_ACCESS, a pointer to an existing access baton associated
+   with PATH.  PATH must be a directory that is locked as part of the set
+   containing the ASSOCIATED access baton.
 
    POOL is used only for local processing it is not used for the batons. */
 svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
@@ -107,6 +108,10 @@ svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
    ADM_ACCESS.  Any physical locks will be removed from the working
    copy. */
 svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
+
+/* Return the (canonicalized) path used to open the access baton
+   ADM_ACCESS */
+const char *svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access);
 
 
 /* Ensure ADM_ACCESS has a write lock, and that it is still valid. Returns
