@@ -257,41 +257,6 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 
 /* compare a bytestring with a traditional null-terminated C string */
 
-svn_boolean_t
-svn_string_compare_2cstring (const svn_string_t *str, const char *cstr)
-{
-  size_t l = strlen (cstr);
-
-  /* easy way out :)  */
-  if (str->len != l)
-    return FALSE;
-
-  /* now that we know they have identical lengths... */
-  
-  if (memcmp (str->data, cstr, l))
-    return FALSE;
-  else
-    return TRUE;
-}
-
-
-/* return an allocated C string from a bytestring */
-
-char *
-svn_string_dup2cstring (const svn_string_t *str, apr_pool_t *pool)
-{
-  /* allocate memory for C string, +1 for \0 */
-  char *cstring = apr_palloc (pool, (str->len + 1));
-
-  /* copy bytes over */
-  memcpy (cstring, str->data, str->len);
-
-  /* add the trailing NULL */
-  cstring[str->len] = '\0';
-
-  return cstring;
-}
-
 
 /* 
    Handy routine.

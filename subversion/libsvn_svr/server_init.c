@@ -78,30 +78,28 @@ svn_svr_load_plugin (svn_svr_policies_t *policy,
   apr_status_t result;
   svn_error_t *error;
 
-  char *my_path   = svn_string_dup2cstring (path, policy->pool);
-  char *my_sym    = svn_string_dup2cstring (init_routine, policy->pool);
-
   /* Load the plugin */
-  result = apr_dso_load (&library, my_path, policy->pool);
+  result = apr_dso_load (&library, path->data, policy->pool);
 
   if (result != APR_SUCCESS)
     {
       char *msg =
         apr_psprintf (policy->pool,
-                     "svn_svr_load_plugin(): can't load DSO %s", my_path); 
+                     "svn_svr_load_plugin(): can't load DSO %s", path->data); 
       return svn_create_error (result, NULL, msg, NULL, policy->pool);
     }
   
 
   /* Find the plugin's initialization routine. */
   
-  result = apr_dso_sym (&initfunc, library, my_sym);
+  result = apr_dso_sym (&initfunc, library, init_routine->data);
 
   if (result != APR_SUCCESS)
     {
       char *msg =
         apr_psprintf (policy->pool,
-                     "svn_svr_load_plugin(): can't find symbol %s", my_sym); 
+                     "svn_svr_load_plugin(): can't find symbol %s",
+                      init_routine->data); 
       return svn_create_error (result, NULL, msg, NULL, policy->pool);
     }
 
@@ -261,8 +259,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
 
         /* Figure out which `section' of svn.conf we're looking at */
 
-        if (svn_string_compare_2cstring ((svn_string_t *) key,
-                                         "repos_aliases"))
+        if (strcmp ((((svn_string_t *) key)->data), "repos_aliases") == 0)
           {
             /* The "val" is a pointer to a hash full of repository
                aliases, alrady as we want them.  Just store this value
@@ -271,8 +268,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
             policy->repos_aliases = (apr_hash_t *) val;
           }
 
-        else if (svn_string_compare_2cstring ((svn_string_t *) key,
-                                              "security"))
+        else if (strcmp ((((svn_string_t *) key)->data), "security") == 0)
           {
             /* The "val" is a pointer to a hash full of security
                commands; again, we just store a pointer to this hash
@@ -281,8 +277,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
             policy->global_restrictions = (apr_hash_t *) val;
           }
 
-        else if (svn_string_compare_2cstring ((svn_string_t *) key,
-                                              "plugins"))
+        else if (strcmp ((((svn_string_t *) key)->data), "plugins") == 0)
           {
             /* The "val" is a pointer to a hash containing plugin
                libraries to load up.  We'll definitely do that here
@@ -296,7 +291,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
             policy->warning 
               (policy->data, 
                "svn_parse():  ignoring unknown section: `%s'",
-               svn_string_dup2cstring, ((svn_string_t *) key, pool));
+               ((svn_string_t *) key)->data);
           }
       }    /* for (hash_index...)  */
        

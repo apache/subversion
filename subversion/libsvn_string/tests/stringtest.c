@@ -8,10 +8,16 @@
 int
 main ()
 {
-  svn_string_t *a, *b, *c;
+  svn_string_t *a = NULL, *b = NULL, *c = NULL;
+  const char *phrase_1 = "hello, ";
+  const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
   char *msg;
   apr_pool_t *pglobal;
   int e, f;
+  int test_number = 1;
+  int written;
+  int max_pad = 52;
+  int i;
 
   /* Initialize APR (Apache pools) */
   if (apr_initialize () != APR_SUCCESS)
@@ -26,97 +32,205 @@ main ()
     }
 
 
-  /* Create a bytestring from a null-terminated C string */
-  a = svn_string_create ("hello", pglobal);
-  svn_string_print (a, stdout, TRUE, TRUE);
+  printf ("Testing libsvn_string...\n");
 
-  /* Alternate: create a bytestring from a part of an array */
-  b = svn_string_ncreate ("a longish phrase of sorts", 16, pglobal);
-  svn_string_print (b, stdout, TRUE, TRUE);
+  {
+    printf ("   %d. svn_string from cstring %n",
+            test_number, &written);
+    a = svn_string_create (phrase_1, pglobal);
 
-  /* Append b to a, growing a's storage if necessary */
-  svn_string_appendstr (a, b, pglobal);
-  svn_string_print (a, stdout, TRUE, TRUE);
+    /* Test that length, data, and null-termination are correct. */
+    if ((a->len == strlen (phrase_1)) && ((strcmp (a->data, phrase_1)) == 0))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
 
-  /* Do it again, with an inline string creation for kicks. */
-  svn_string_appendstr (a, svn_string_create(" xtra", pglobal), pglobal);
-  svn_string_print (a, stdout, TRUE, TRUE);
+    test_number++;
+  }
 
-  /* Alternate:  append a specific number of bytes */
-  svn_string_appendbytes (a, "some bytes to frob", 7, pglobal);
-  svn_string_print (a, stdout, TRUE, TRUE);
+  {
+    printf ("   %d. svn_string from substring of cstring %n",
+            test_number, &written);
+    b = svn_string_ncreate (phrase_2, 16, pglobal);
 
-  /* Make sure our appended string is equal to this static one: */
-  if (! svn_string_compare 
-      (a, svn_string_create ("helloa longish phrase xtrasome by", pglobal)))
-    {
-      printf ("error in string-appending comparison.");
-      apr_destroy_pool (pglobal);
-      apr_terminate();
-      exit (1);
-    }
+    /* Test that length, data, and null-termination are correct. */
+    if ((b->len == 16) && ((strncmp (b->data, phrase_2, 16)) == 0))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
 
+    test_number++;
+  }
 
-  /* Duplicate a bytestring, then compare if they're equal */
-  c = svn_string_dup (b, pglobal);
+  {
+    char *tmp;
+    size_t old_len;
 
-  printf ("comparison of c and b is: %d\n", svn_string_compare (c, b));
-  printf ("comparison of a and b is: %d\n", svn_string_compare (a, b));
+    printf ("   %d. appending svn_string to svn_string %n",
+            test_number, &written);
+    tmp = apr_palloc (pglobal, (a->len + b->len + 1));
+    strcpy (tmp, a->data);
+    strcat (tmp, b->data);
+    old_len = a->len;
+    svn_string_appendstr (a, b, pglobal);
 
-  if (! svn_string_compare (c,b)) 
-    {
-      printf ("error in string-dup comparison.");
-      apr_destroy_pool (pglobal);
-      apr_terminate();
-      exit (1);
-    }
+    /* Test that length, data, and null-termination are correct. */
+    if ((a->len == (old_len + b->len)) && ((strcmp (a->data, tmp)) == 0))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
 
-  /* Set a bytestring to NULL, and query this fact. */
-  svn_string_setempty (c);
-  svn_string_print (c, stdout, TRUE, TRUE);
-  
-  printf ("is C empty? : %d\n", svn_string_isempty (c));
-  printf ("is A empty? : %d\n", svn_string_isempty (a));
+    test_number++;
+  }
 
-  if (! svn_string_isempty (c)) 
-    {
-      printf ("error in string-empty test.");
-      apr_destroy_pool (pglobal);
-      apr_terminate();
-      exit (1);
-    }
+  {
+    printf ("   %d. append bytes, then compare two strings %n",
+            test_number, &written);
+    svn_string_appendbytes (a, ", new bytes to append", 11, pglobal);
 
-  
-  /* Fill a bytestring with hash marks */
-  svn_string_fillchar (a, '#');
-  svn_string_print (a, stdout, TRUE, TRUE);
+    /* Test that length, data, and null-termination are correct. */
+    if (svn_string_compare 
+        (a, svn_string_create ("hello, a longish phrase, new bytes", pglobal)))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
+    
+    test_number++;
+  }
 
-  if (! svn_string_compare 
-      (a, svn_string_create ("#################################", pglobal))) 
-    {
-      printf ("error in string-fill comparison.");
-      apr_destroy_pool (pglobal);
-      apr_terminate();
-      exit (1);
-    }
+  {
+    printf ("   %d. dup two strings, then compare %n",
+            test_number, &written);
+    c = svn_string_dup (a, pglobal);
 
+    /* Test that length, data, and null-termination are correct. */
+    if ((svn_string_compare (a, c)) && (! svn_string_compare (b, c)))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
+    
+    test_number++;
+  }
 
-  /* Return a C string from a bytestring */
-  msg = svn_string_dup2cstring (b, pglobal);
-  printf ("The C string returned is: %s\n", msg);
+  {
+    char *tmp;
+    size_t old_len;
+    printf ("   %d. chopping a string %n",
+            test_number, &written);
 
-  /* Compare the C string to the original bytestring */
-  e = svn_string_compare_2cstring (b, msg);
-  f = svn_string_compare_2cstring (b, "a longish phrase");
+    old_len = c->len;
+    tmp = apr_palloc (pglobal, old_len + 1);
+    strcpy (tmp, c->data);
 
-  if (! (e && f))
-    {
-      printf ("error in Cstring comparison.");
-      apr_destroy_pool (pglobal);
-      apr_terminate();
-      exit (1);
-    }
-  
+    svn_string_chop (c, 11);
+
+    if ((c->len == (old_len - 11))
+        && (strncmp (a->data, c->data, c->len) == 0)
+        && (strcmp (a->data, c->data) != 0)
+        && (c->data[c->len] == '\0'))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
+    
+    test_number++;
+  }
+
+  {
+    printf ("   %d. emptifying  a string %n",
+            test_number, &written);
+
+    svn_string_setempty (c);
+
+    /* Just for kicks, check again that c and a are separate objects, too. */
+    if (((c->len == 0) && (c->data[0] == '\0'))
+        && ((a->len != 0) && (a->data[0] != '\0')))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
+    
+    test_number++;
+  }
+
+  {
+    printf ("   %d. filling a string with hashmarks %n",
+            test_number, &written);
+
+    svn_string_fillchar (a, '#');
+
+    if ((strcmp (a->data, "###"))
+        && ((strncmp (a->data, "############", 12)) == 0)
+        && (a->data[(a->len - 1)] == '#')
+        && (a->data[(a->len)] == '\0'))
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" OK\n");
+      }
+    else
+      {
+        for (i = 0; i < (max_pad - written); i++)
+          printf (".");
+        printf (" FAILED\n");
+      }
+    
+    test_number++;
+  }
 
   /* Free our entire memory pool when done. */
   apr_destroy_pool (pglobal);
