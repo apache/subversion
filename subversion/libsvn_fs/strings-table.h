@@ -39,10 +39,14 @@ int svn_fs__open_strings_table (DB **strings_p,
 
 
 /* Set *STREAM to a read stream on string KEY in FS, as part of
- * TRAIL.  The stream is allocated in TRAIL->pool.
- *
- * If KEY does not exist, SVN_ERR_FS_NO_SUCH_STRING is the error
- * returned.
+ * TRAIL.  
+ * 
+ * The stream is allocated in TRAIL->pool.  KEY will be shared by the
+ * stream, not copied, so KEY's storage must be at least as long-lived
+ * as TRAIL->pool.
+ * 
+ * If string KEY does not exist, SVN_ERR_FS_NO_SUCH_STRING is the
+ * error returned.
  */
 svn_error_t *svn_fs__read_string_stream (svn_stream_t **stream,
                                          svn_fs_t *fs,
@@ -50,8 +54,24 @@ svn_error_t *svn_fs__read_string_stream (svn_stream_t **stream,
                                          trail_t *trail);
 
 
+/* Set *SIZE to the size in bytes of string KEY in FS, as part of
+ * TRAIL.
+ *
+ * If string KEY does not exist, SVN_ERR_FS_NO_SUCH_STRING is the
+ * error returned.
+ */
+svn_error_t *svn_fs__string_size (apr_size_t *size,
+                                  svn_fs_t *fs,
+                                  const char *key,
+                                  trail_t *trail);
+
+
 /* Set *STREAM to a write stream for string KEY in FS, as part of
- * TRAIL.  The stream is allocated in TRAIL->pool.
+ * TRAIL.
+ * 
+ * The stream is allocated in TRAIL->pool.  KEY will be shared by the
+ * stream, not copied, so KEY's storage must be at least as long-lived
+ * as TRAIL->pool.
  * 
  * The string is created if it does not exist; otherwise, it is
  * overwritten. 
@@ -63,8 +83,12 @@ svn_error_t *svn_fs__write_string_stream (svn_stream_t **stream,
 
 
 /* Set *STREAM to an appending write stream for string KEY in FS, as
- * part of TRAIL.  The stream is allocated in TRAIL->pool.
- *
+ * part of TRAIL.
+ * 
+ * The stream is allocated in TRAIL->pool.  KEY will be shared by the
+ * stream, not copied, so KEY's storage must be at least as long-lived
+ * as TRAIL->pool.
+ * 
  * The string is created if it does not exist, otherwise, it is
  * appended to. 
  */
