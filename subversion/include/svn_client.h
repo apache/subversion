@@ -908,12 +908,12 @@ svn_client_resolved (const char *path,
  * the @a src_path.  @a dst_path must be a file or directory under version
  * control, or a repository @a url, existent or not.
  *
- * If either @a src_path or @a dst_path are URLs, use the authentication baton 
+ * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
  * succeeds, allocate (in @a pool) and populate @a *commit_info.
  *
- * If neither @a src_path nor @a dst_path is a URL, then this is just a
+ * If @a dst_path is not a URL, then this is just a
  * variant of @c svn_client_add, where the @a dst_path items are scheduled
  * for addition as copies.  No changes will happen to the repository
  * until a commit occurs.  This scheduling can be removed with

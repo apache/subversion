@@ -961,12 +961,14 @@ Committed revision 7.
 
         <refsect1>
           <title>Changes</title>
-          <para>Repository, and working copy if operating on files </para>
+          <para>Repository if destination is a URL.</para>
+          <para>Working copy if destination is a WC path.</para>
         </refsect1>
 
         <refsect1>
           <title>Accesses Repository</title>
-          <para>Yes</para>
+          <para>If source or destination is in the repository, or if needed
+            to look up the source revision number.</para>
         </refsect1>
 
         <refsect1>
