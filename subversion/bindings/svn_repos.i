@@ -1,5 +1,5 @@
 /*
- * svn_wc.i :  SWIG interface file for svn_wc.h
+ * svn_repos.i :  SWIG interface file for svn_repos.h
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -16,12 +16,9 @@
  * ====================================================================
  */
 
-%module _wc
+%module _repos
 
-%import svn_types.i
-%import svn_delta.i
-
-%include svn_wc.h
+%include svn_repos.h
 %{
-#include "svn_wc.h"
+#include "svn_repos.h"
 %}

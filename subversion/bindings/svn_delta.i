@@ -16,13 +16,15 @@
  * ====================================================================
  */
 
-%module delta
+%module _delta
+
+%include "typemaps.i"
 
 %import apr.i
 %import svn_types.i
 %import svn_string.i
-%import svn_error.i
 
 %include svn_delta.h
-
-// ### nothing to do right now
+%{
+#include "svn_delta.h"
+%}

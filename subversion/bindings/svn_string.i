@@ -23,12 +23,18 @@
 %import svn_types.i
 
 typedef struct svn_stringbuf_t svn_stringbuf_t;
+typedef struct svn_string_t svn_string_t;
+
+/* -----------------------------------------------------------------------
+   TYPE: svn_stringbuf_t
+*/
 
 %typemap(python,in) svn_stringbuf_t * {
     if (!PyString_Check($source)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
         return NULL;
     }
+%#error need pool argument from somewhere
     $target = svn_string_ncreate(PyString_AS_STRING($source),
                                  PyString_GET_SIZE($source),
                                  /* ### gah... what pool to use? */
@@ -50,4 +56,22 @@ typedef struct svn_stringbuf_t svn_stringbuf_t;
 							 (*$source)->len));
 }
 
-// ### nothing to do right now
+
+/* -----------------------------------------------------------------------
+   TYPE: svn_string_t
+*/
+
+/* const svn_string_t * is always an input parameter */
+%typemap(python,in) const svn_string_t * (svn_string_t value) {
+    if (!PyString_Check($source)) {
+        PyErr_SetString(PyExc_TypeError, "not a string");
+        return NULL;
+    }
+    value.data = PyString_AS_STRING($source);
+    value.len = PyString_GET_SIZE($source);
+    $target = &value;
+}
+
+//%typemap(python,out) svn_string_t * {
+//    $target = PyString_FromStringAndSize($source->data, $source->len);
+//}
