@@ -102,7 +102,7 @@ Filesystem:
     12. check that our change is still there!
 
   I'm not sure yet what specific functions are required to implement
-  steps 6-12; we'll first establish the concrete list of functions,
+  steps 7-12; we'll first establish the concrete list of functions,
   then implement them.
 
   Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
