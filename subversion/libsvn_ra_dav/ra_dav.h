@@ -68,6 +68,9 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
 /* store the URL where Activities can be created */
 #define SVN_RA_DAV__LP_ACTIVITY_URL     SVN_RA_DAV__LP_NAMESPACE "activity-url"
 
+/* store the URL of the version resource (from the DAV:target property) */
+#define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
+
 
 #endif  /* RA_DAV_H */
 
