@@ -348,7 +348,7 @@ def textual_merges_galore(sbox):
                       )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
-                             { ''     : Item(status='_ '),
+                             { ''     : Item(wc_rev=1, status='_ '),
                                'rho'  : Item(wc_rev=2, status='G '),
                                'pi'   : Item(wc_rev=1, status='G '),
                                'tau'  : Item(wc_rev=1, status='C '),
