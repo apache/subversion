@@ -25,13 +25,12 @@ use strict;
 use Carp;
 
 ######################################################################
-#  CONFIGURATION SECTION
-######################################################################
+# Configuration section.
 
-# sendmail path
+# Sendmail path.
 my $sendmail = "/usr/sbin/sendmail";
 
-# svnlook path
+# Svnlook path.
 my $svnlook = "/usr/local/bin/svnlook";
 
 # Since the path to svnlook depends upon the local installation
@@ -39,22 +38,29 @@ my $svnlook = "/usr/local/bin/svnlook";
 # the administrator has set up the script properly.
 {
   my $ok = 1;
-  foreach my $program ($sendmail, $svnlook) {
-    if (-e $program) {
-      unless (-x $program) {
-        warn "$0: required program `$program' is not executable, edit $0.\n";
-        $ok = 0;
-      }
-    } else {
-      warn "$0: required program `$svnlook' does not exist, edit $0.\n";
-      $ok = 0;
+  foreach my $program ($sendmail, $svnlook)
+    {
+      if (-e $program)
+        {
+          unless (-x $program)
+            {
+              warn "$0: required program `$program' is not executable, ",
+                   "edit $0.\n";
+              $ok = 0;
+            }
+        }
+      else
+        {
+          warn "$0: required program `$svnlook' does not exist, edit $0.\n";
+          $ok = 0;
+        }
     }
-  }
   exit 1 unless $ok;
 }
 
+
 ######################################################################
-# Initial setup/command-line handling
+# Initial setup/command-line handling.
 
 # Each value in this array holds a hash reference which contains the
 # associated email information for one project.  Start with an
@@ -70,39 +76,59 @@ my $rev;
 # Use the reference to the first project to populate.
 my $current_project = $project_settings_list[0];
 
-while (@ARGV) {
-  my $arg = shift @ARGV;
-  if (my ($opt) = $arg =~ /^-([hlmrs])/) {
-    unless (@ARGV) {
-      die "$0: command line option `$arg' is missing a value.\n";
-    }
-    my $value = shift @ARGV;
-    SWITCH: {
-      $current_project->{hostname}       = $value, last SWITCH if $opt eq 'h';
-      $current_project->{log_file}       = $value, last SWITCH if $opt eq 'l';
-      $current_project->{reply_to}       = $value, last SWITCH if $opt eq 'r';
-      $current_project->{subject_prefix} = $value, last SWITCH if $opt eq 's';
+while (@ARGV)
+  {
+    my $arg = shift @ARGV;
+    if (my ($opt) = $arg =~ /^-([hlmrs])/)
+      {
+        unless (@ARGV)
+          {
+            die "$0: command line option `$arg' is missing a value.\n";
+          }
+        my $value = shift @ARGV;
 
-      # Here handle -match.
-      unless ($opt eq 'm') {
-        die "$0: internal error: should only handle -m here.\n";
+        # This hash matches the command line option to the hash key in
+        # the project.
+        my %opt_to_hash_key = (h => 'hostname',
+                               l => 'log_file',
+                               r => 'reply_to',
+                               s => 'subject_prefix');
+        if (my $hash_key = $opt_to_hash_key{$opt})
+          {
+            $current_project->{$hash_key} = $value;
+          }
+        else
+          {
+            # Here handle -match.
+            unless ($opt eq 'm')
+              {
+                die "$0: internal error: should only handle -m here.\n";
+              }
+            $current_project                = &new_project;
+            $current_project->{match_regex} = $value;
+            push(@project_settings_list, $current_project);
+          }
       }
-      $current_project                = &new_project;
-      $current_project->{match_regex} = $value;
-      push(@project_settings_list, $current_project);
-    }
-  } elsif ($arg =~ /^-/) {
-    die "$0: command line option `$arg' is not recognized.\n";
-  } else {
-    if (! defined $repos) {
-      $repos = $arg;
-    } elsif (! defined $rev) {
-      $rev = $arg;
-    } else {
-      push(@{$current_project->{email_addresses}}, $arg);
-    }
+    elsif ($arg =~ /^-/)
+      {
+        die "$0: command line option `$arg' is not recognized.\n";
+      }
+    else
+      {
+        if (! defined $repos)
+          {
+            $repos = $arg;
+          }
+        elsif (! defined $rev)
+          {
+            $rev = $arg;
+          }
+        else
+          {
+            push(@{$current_project->{email_addresses}}, $arg);
+          }
+      }
   }
-}
 
 # If the revision number is undefined, then there were not enough
 # command line arguments.
@@ -112,34 +138,37 @@ while (@ARGV) {
 # compile them.
 {
   my $ok = 1;
-  for (my $i=0; $i<@project_settings_list; ++$i) {
-    my $match_regex = $project_settings_list[$i]->{match_regex};
+  for (my $i=0; $i<@project_settings_list; ++$i)
+    {
+      my $match_regex = $project_settings_list[$i]->{match_regex};
 
-    # To help users that automatically write regular expressions that
-    # match the root directory using ^/, remove the / character
-    # because subversion paths, while they start at the root level, do
-    # not begin with a /.
-    $match_regex =~ s#^\^/#^#;
+      # To help users that automatically write regular expressions
+      # that match the root directory using ^/, remove the / character
+      # because subversion paths, while they start at the root level,
+      # do not begin with a /.
+      $match_regex =~ s#^\^/#^#;
 
-    my $match_re;
-    eval { $match_re = qr/$match_regex/ };
-    if ($@) {
-      warn "$0: -match regex #$i `$match_regex' does not compile:\n$@\n";
-      $ok = 0;
-      next;
+      my $match_re;
+      eval { $match_re = qr/$match_regex/ };
+      if ($@)
+        {
+          warn "$0: -match regex #$i `$match_regex' does not compile:\n$@\n";
+          $ok = 0;
+          next;
+        }
+      $project_settings_list[$i]->{match_re} = $match_re;
     }
-    $project_settings_list[$i]->{match_re} = $match_re;
-  }
   exit 1 unless $ok;
 }
 
 ######################################################################
-# Harvest data using svnlook
+# Harvest data using svnlook.
 
-# change into /tmp so that svnlook diff can create its .svnlook directory
+# Change into /tmp so that svnlook diff can create its .svnlook
+# directory.
 my $tmp_dir = '/tmp';
 chdir($tmp_dir)
-    or die "$0: cannot chdir `$tmp_dir': $!\n";
+  or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # Get the author, date, and log from svnlook.
 my @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'info');
@@ -148,52 +177,64 @@ my $date = shift @svnlooklines;
 shift @svnlooklines;
 my @log = map { "$_\n" } @svnlooklines;
 
-# figure out what directories have changed (using svnlook)
+# Figure out what directories have changed using svnlook.
 my @dirschanged = &read_from_process($svnlook, $repos,
                                      'rev', $rev, 'dirs-changed');
 
 # Lose the trailing slash in the directory names if one exists, except
 # in the case of '/'.
 my $rootchanged = 0;
-for (my $i=0; $i<@dirschanged; ++$i) {
-  if ($dirschanged[$i] eq '/') {
-    $rootchanged = 1;
+for (my $i=0; $i<@dirschanged; ++$i)
+  {
+    if ($dirschanged[$i] eq '/')
+      {
+        $rootchanged = 1;
+      }
+    else
+      {
+        $dirschanged[$i] =~ s#^(.+)[/\\]$#$1#;
+      }
   }
-  else {
-    $dirschanged[$i] =~ s#^(.+)[/\\]$#$1#;
-  }
-}
 
-# figure out what's changed (using svnlook)
+# Figure out what files have changed using svnlook.
 @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'changed');
 
-# parse the changed nodes
+# Parse the changed nodes.
 my @adds;
 my @dels;
 my @mods;
 foreach my $line (@svnlooklines)
-{
+  {
     my $path = '';
     my $code = '';
 
-    # split the line up into the modification code (ignore propmods) and path
+    # Split the line up into the modification code and path, ignoring
+    # property modifications.
     if ($line =~ /^(.).  (.*)$/)
-    {
+      {
         $code = $1;
         $path = $2;
-    }
+      }
 
-    if ($code eq 'A') {
+    if ($code eq 'A')
+      {
         push(@adds, $path);
-    } elsif ($code eq 'D') {
+      }
+    elsif ($code eq 'D')
+      {
         push(@dels, $path);
-    } else {
+      }
+    else
+      {
         push(@mods, $path);
-    }
-}
+      }
+  }
 
-# get the diff from svnlook
+# Get the diff from svnlook.
 my @difflines = &read_from_process($svnlook, $repos, 'rev', $rev, 'diff');
+
+######################################################################
+# Modified directory name collapsing.
 
 # Collapse the list of changed directories only if the root directory
 # was not modified, because otherwise everything is under root and
@@ -201,43 +242,48 @@ my @difflines = &read_from_process($svnlook, $repos, 'rev', $rev, 'diff');
 # than one directory was modified.
 my $commondir = '';
 if (!$rootchanged and @dirschanged > 1)
-{
+  {
     my $firstline    = shift @dirschanged;
     my @commonpieces = split('/', $firstline);
     foreach my $line (@dirschanged)
-    {
+      {
         my @pieces = split('/', $line);
         my $i = 0;
         while ($i < @pieces and $i < @commonpieces)
-        {
+          {
             if ($pieces[$i] ne $commonpieces[$i])
-            {
-                splice (@commonpieces, $i, (scalar @commonpieces - $i));
+              {
+                splice(@commonpieces, $i, @commonpieces - $i);
                 last;
-            }
+              }
             $i++;
-        }
-    }
-    unshift (@dirschanged, $firstline);
+          }
+      }
+    unshift(@dirschanged, $firstline);
 
-    if (scalar @commonpieces)
-    {
-        $commondir = join ('/', @commonpieces);
+    if (@commonpieces)
+      {
+        $commondir = join('/', @commonpieces);
         my @new_dirschanged;
         foreach my $dir (@dirschanged)
-        {
-            if ($dir eq $commondir) {
+          {
+            if ($dir eq $commondir)
+              {
                 $dir = '.';
-            }
-            else {
+              }
+            else
+              {
                 $dir =~ s#^$commondir/##;
-            }
+              }
             push(@new_dirschanged, $dir);
-        }
+          }
         @dirschanged = @new_dirschanged;
-    }
-}
-my $dirlist = join (' ', @dirschanged);
+      }
+  }
+my $dirlist = join(' ', @dirschanged);
+
+######################################################################
+# Assembly of log message.
 
 # Put together the body of the log message.
 my @body;
@@ -245,21 +291,24 @@ push(@body, "Author: $author\n");
 push(@body, "Date: $date\n");
 push(@body, "New Revision: $rev\n");
 push(@body, "\n");
-if (scalar @adds) {
-  @adds = sort @adds;
-  push(@body, "Added:\n");
-  push(@body, map { "   $_\n" } @adds);
-}
-if (scalar @dels) {
-  @dels = sort @dels;
-  push(@body, "Removed:\n");
-  push(@body, map { "   $_\n" } @dels);
-}
-if (scalar @mods) {
-  @mods = sort @mods;
-  push(@body, "Modified:\n");
-  push(@body, map { "   $_\n" } @mods);
-}
+if (@adds)
+  {
+    @adds = sort @adds;
+    push(@body, "Added:\n");
+    push(@body, map { "   $_\n" } @adds);
+  }
+if (@dels)
+  {
+    @dels = sort @dels;
+    push(@body, "Removed:\n");
+    push(@body, map { "   $_\n" } @dels);
+  }
+if (@mods)
+  {
+    @mods = sort @mods;
+    push(@body, "Modified:\n");
+    push(@body, map { "   $_\n" } @mods);
+  }
 push(@body, "Log:\n");
 push(@body, @log);
 push(@body, "\n");
@@ -267,74 +316,91 @@ push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines);
 
 # Go through each project and see if there are any matches for this
 # project.  If so, send the log out.
-foreach my $project (@project_settings_list) {
-  my $match_re = $project->{match_re};
-  my $match    = 0;
-  foreach my $path (@dirschanged, @adds, @dels, @mods) {
-    if ($path =~ $match_re) {
-      $match = 1;
-      last;
-    }
+foreach my $project (@project_settings_list)
+  {
+    my $match_re = $project->{match_re};
+    my $match    = 0;
+    foreach my $path (@dirschanged, @adds, @dels, @mods)
+      {
+        if ($path =~ $match_re)
+          {
+            $match = 1;
+            last;
+          }
+      }
+
+    next unless $match;
+
+    my @email_addresses = @{$project->{email_addresses}};
+    my $userlist        = join(' ', @email_addresses);
+    my $hostname        = $project->{hostname};
+    my $log_file        = $project->{log_file};
+    my $reply_to        = $project->{reply_to};
+    my $subject_prefix  = $project->{subject_prefix};
+    my $subject;
+
+    if ($commondir ne '')
+      {
+        $subject = "rev $rev - in $commondir: $dirlist";
+      }
+    else
+      {
+        $subject = "rev $rev - $dirlist";
+      }
+    if ($subject_prefix =~ /\w/)
+      {
+        $subject = "$subject_prefix $subject";
+      }
+    my $mail_from = $author;
+
+    if ($hostname =~ /\w/)
+      {
+        $mail_from = "$mail_from\@$hostname";
+      }
+
+    my @head;
+    push(@head, "To: $userlist\n");
+    push(@head, "From: $mail_from\n");
+    push(@head, "Subject: $subject\n");
+    push(@head, "Reply-to: $reply_to\n") if $reply_to;
+    push(@head, "\n");
+
+    if ($sendmail =~ /\w/ and @email_addresses)
+      {
+        # Open a pipe to sendmail.
+        my $command = "$sendmail $userlist";
+        if (open(SENDMAIL, "| $command"))
+          {
+            print SENDMAIL @head, @body;
+            close SENDMAIL
+              or warn "$0: error in closing `$command' for writing: $!\n";
+          }
+        else
+          {
+            warn "$0: cannot open `| $command' for writing: $!\n";
+          }
+      }
+
+    # Dump the output to logfile (if its name is not empty).
+    if ($log_file =~ /\w/)
+      {
+        if (open(LOGFILE, ">> $log_file"))
+          {
+            print LOGFILE @head, @body;
+            close LOGFILE
+              or warn "$0: error in closing `$log_file' for appending: $!\n";
+          }
+        else
+          {
+            warn "$0: cannot open `$log_file' for appending: $!\n";
+          }
+      }
   }
-
-  next unless $match;
-
-  my @email_addresses = @{$project->{email_addresses}};
-  my $userlist        = join(' ', @email_addresses);
-  my $hostname        = $project->{hostname};
-  my $log_file        = $project->{log_file};
-  my $reply_to        = $project->{reply_to};
-  my $subject_prefix  = $project->{subject_prefix};
-  my $subject;
-
-  if ($commondir ne '') {
-    $subject = "rev $rev - in $commondir: $dirlist";
-  } else {
-    $subject = "rev $rev - $dirlist";
-  }
-  if ($subject_prefix =~ /\w/) {
-    $subject = "$subject_prefix $subject";
-  }
-  my $mail_from = $author;
-
-  if ($hostname =~ /\w/) {
-    $mail_from = "$mail_from\@$hostname";
-  }
-
-  my @head;
-  push(@head, "To: $userlist\n");
-  push(@head, "From: $mail_from\n");
-  push(@head, "Subject: $subject\n");
-  push(@head, "Reply-to: $reply_to\n") if $reply_to;
-  push(@head, "\n");
-
-  if ($sendmail =~ /\w/ and @email_addresses) {
-    # Open a pipe to sendmail.
-    my $command = "$sendmail $userlist";
-    if (open (SENDMAIL, "| $command")) {
-      print SENDMAIL @head, @body;
-      close SENDMAIL or
-        warn "$0: error in closing `$command' for writing: $!\n";
-    } else {
-      warn "$0: cannot open `| $command' for writing: $!\n";
-    }
-  }
-
-  # Dump the output to logfile (if its name is not empty).
-  if ($log_file =~ /\w/) {
-    if (open(LOGFILE, ">> $log_file")) {
-      print LOGFILE @head, @body;
-      close LOGFILE or
-        warn "$0: error in closing `$log_file' for appending: $!\n";
-    } else {
-        warn "$0: cannot open `$log_file' for appending: $!\n";
-    }
-  }
-}
 
 exit 0;
 
-sub usage {
+sub usage
+{
   warn "@_\n" if @_;
   die "usage: $0 REPOS REVNUM [[-m regex] [options] [email_addr ...]] ...\n",
       "options are\n",
@@ -366,7 +432,8 @@ sub usage {
 
 # Return a new hash data structure for a new empty project that
 # matches any modifications to the repository.
-sub new_project {
+sub new_project
+{
   return {email_addresses => [],
           hostname        => '',
           log_file        => '',
@@ -375,49 +442,63 @@ sub new_project {
           subject_prefix  => ''};
 }
 
-sub safe_read_from_pipe {
-  unless (@_) {
-    croak "$0: safe_read_from_pipe passed no arguments.\n";
-  }
+sub safe_read_from_pipe
+{
+  unless (@_)
+    {
+      croak "$0: safe_read_from_pipe passed no arguments.\n";
+    }
   print "Running @_\n";
   my $pid = open(SAFE_READ, '-|');
-  unless (defined $pid) {
-    die "$0: cannot fork: $!\n";
-  }
-  unless ($pid) {
-    open(STDERR, ">&STDOUT") or
-      die "$0: cannot dup STDOUT: $!\n";
-    exec(@_) or
-      die "$0: cannot exec `@_': $!\n";
-  }
+  unless (defined $pid)
+    {
+      die "$0: cannot fork: $!\n";
+    }
+  unless ($pid)
+    {
+      open(STDERR, ">&STDOUT")
+        or die "$0: cannot dup STDOUT: $!\n";
+      exec(@_)
+        or die "$0: cannot exec `@_': $!\n";
+    }
   my @output;
-  while (<SAFE_READ>) {
-    chomp;
-    push(@output, $_);
-  }
+  while (<SAFE_READ>)
+    {
+      chomp;
+      push(@output, $_);
+    }
   close(SAFE_READ);
   my $result = $?;
   my $exit   = $result >> 8;
   my $signal = $result & 127;
   my $cd     = $result & 128 ? "with core dump" : "";
-  if ($signal or $cd) {
-    warn "$0: pipe from `@_' failed $cd: exit=$exit signal=$signal\n";
-  }
-  if (wantarray) {
-    return ($result, @output);
-  } else {
-    return $result;
-  }
+  if ($signal or $cd)
+    {
+      warn "$0: pipe from `@_' failed $cd: exit=$exit signal=$signal\n";
+    }
+  if (wantarray)
+    {
+      return ($result, @output);
+    }
+  else
+    {
+      return $result;
+    }
 }
 
-sub read_from_process {
-  unless (@_) {
-    croak "$0: read_from_process passed no arguments.\n";
-  }
+sub read_from_process
+{
+  unless (@_)
+    {
+      croak "$0: read_from_process passed no arguments.\n";
+    }
   my ($status, @output) = &safe_read_from_pipe(@_);
-  if ($status) {
-    return ("$0: @_ failed with this output:", @output);
-  } else {
-    return @output;
-  }
+  if ($status)
+    {
+      return ("$0: @_ failed with this output:", @output);
+    }
+  else
+    {
+      return @output;
+    }
 }
