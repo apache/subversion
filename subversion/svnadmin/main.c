@@ -200,7 +200,7 @@ main (int argc, const char * const *argv)
           apr_pool_destroy (this_pool);
         }
     }
-  else if (is_lsrevs || is_lstxn)
+  else if (is_lsrevs)
     {
       svn_revnum_t
         lower = SVN_INVALID_REVNUM,
