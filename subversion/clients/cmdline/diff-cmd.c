@@ -55,9 +55,9 @@ svn_cl__diff (apr_getopt_t *os,
   /* Get an apr_file_t representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
   if ((status = apr_file_open_stdout (&outfile, pool)))
-    return svn_error_create (status, 0, NULL, "can't open stdout");
+    return svn_error_create (status, NULL, "can't open stdout");
   if ((status = apr_file_open_stderr (&errfile, pool)))
-    return svn_error_create (status, 0, NULL, "can't open stderr");
+    return svn_error_create (status, NULL, "can't open stderr");
   
   if ((opt_state->start_revision.kind == svn_opt_revision_unspecified)
       && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
@@ -90,7 +90,7 @@ svn_cl__diff (apr_getopt_t *os,
             opt_state->end_revision.kind = svn_opt_revision_head;
 
           if (targets->nelts < 2)
-            return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+            return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR,
                                      NULL, "Second URL is required.");
           
           target2 = ((const char **) (targets->elts))[1];
@@ -161,7 +161,7 @@ svn_cl__diff (apr_getopt_t *os,
               /* The user specified only '-r N'.  Therefore, each path
                  -must- be a working copy path.  No URLs allowed! */        
               if (svn_path_is_url (target))
-                return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
                                           NULL, "You passed only one "
                                           "revision, but %s is a URL. "
                                           "URLs require two revisions.",

@@ -55,7 +55,7 @@ svn_wc_check_wc (const char *path,
   if (kind == svn_node_none)
     {
       return svn_error_createf
-        (APR_ENOENT, 0, NULL,
+        (APR_ENOENT, NULL,
          "svn_wc_check_wc: %s does not exist", path);
     }
   else if (kind != svn_node_dir)
@@ -144,7 +144,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   /* Can't compare timestamps for an unversioned file. */
   if (entry == NULL)
     return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        "timestamps_equal_p: `%s' not under revision control", entryname);
 
   /* Get the timestamp from the working file and the entry */
@@ -222,14 +222,14 @@ contents_identical_p (svn_boolean_t *identical_p,
       status = apr_file_read_full (file1_h, buf1, sizeof(buf1), &bytes_read1);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
-          (status, 0, NULL,
+          (status, NULL,
            "contents_identical_p: full read failed on %s.", 
            file1);
 
       status = apr_file_read_full (file2_h, buf2, sizeof(buf2), &bytes_read2);
       if (status && !APR_STATUS_IS_EOF(status))
         return svn_error_createf
-          (status, 0, NULL,
+          (status, NULL,
            "contents_identical_p: full read failed on %s.", 
            file2);
       
@@ -244,13 +244,13 @@ contents_identical_p (svn_boolean_t *identical_p,
   status = apr_file_close (file1_h);
   if (status)
     return svn_error_createf 
-      (status, 0, NULL,
+      (status, NULL,
        "contents_identical_p: failed to close %s.", file1);
 
   status = apr_file_close (file2_h);
   if (status)
     return svn_error_createf 
-      (status, 0, NULL,
+      (status, NULL,
        "contents_identical_p: failed to close %s.", file2);
 
   return SVN_NO_ERROR;

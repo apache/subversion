@@ -345,7 +345,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 
 static svn_error_t * convert_python_error(apr_pool_t *pool)
 {
-  return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, 0, NULL,
+  return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
                           "the Python callback raised an exception");
 }
 

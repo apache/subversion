@@ -170,7 +170,7 @@ file_new (VALUE class, VALUE aPath, VALUE flag)
                           NUM2LONG (flag), APR_OS_DEFAULT,
                           pool);
   if (status)
-    svn_ruby_raise (svn_error_createf (status, 0, 0,
+    svn_ruby_raise (svn_error_createf (status, 0,
                                        "Failed to open file %s",
                                        path));
 

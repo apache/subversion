@@ -149,7 +149,7 @@ reporter_link_path (void *reporter_baton,
   url = svn_path_uri_decode(url, rbaton->session->pool);
   repos_url_len = strlen(rbaton->session->repos_url);
   if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
-    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                               "'%s'\n"
                               "is not the same repository as\n"
                               "'%s'", url, rbaton->session->repos_url);
@@ -432,7 +432,7 @@ make_reporter (void *session_baton,
          the original session url! */
       if (strncmp (other_url, sbaton->repos_url, repos_url_len) != 0)
         return svn_error_createf 
-          (SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+          (SVN_ERR_RA_ILLEGAL_URL, NULL,
            "'%s'\n"
            "is not the same repository as\n"
            "'%s'", other_url, sbaton->repos_url);
@@ -692,7 +692,7 @@ svn_ra_local__get_file (void *session_baton,
               /* Uh oh, didn't write as many bytes as we read, and no
                  error was returned.  According to the docstring, this
                  should never happen. */
-              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
+              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                                        "Error writing to svn_stream.");
             }
           

@@ -26,7 +26,7 @@
 static svn_error_t *
 skel_err (const char *skel_type)
 {
-  return svn_error_createf (SVN_ERR_FS_MALFORMED_SKEL, 0, NULL,
+  return svn_error_createf (SVN_ERR_FS_MALFORMED_SKEL, NULL,
                             "Malformed%s%s skeleton", 
                             skel_type ? " " : "",
                             skel_type ? skel_type : "");

@@ -1739,7 +1739,7 @@ static svn_error_t *dav_svn_write_to_filter(void *baton,
   bkt = apr_bucket_transient_create(buffer, *len, dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
-    return svn_error_create(status, 0, NULL,
+    return svn_error_create(status, NULL,
                             "Could not write data to filter.");
   }
 
@@ -1758,7 +1758,7 @@ static svn_error_t *dav_svn_close_filter(void *baton)
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS)
-    return svn_error_create(status, 0, NULL, "Could not write EOS to filter.");
+    return svn_error_create(status, NULL, "Could not write EOS to filter.");
 
   return SVN_NO_ERROR;
 }

@@ -55,7 +55,7 @@ svn_wc_merge (const char *left,
   SVN_ERR (svn_wc_entry (&entry, merge_target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        "svn_wc_merge: `%s' not under revision control", merge_target);
 
   /* Decide if the merge target is a text or binary file. */
@@ -79,7 +79,7 @@ svn_wc_merge (const char *left,
           apr_err = apr_file_close (tmp_f);
           if (apr_err)
             return svn_error_createf
-              (apr_err, 0, NULL,
+              (apr_err, NULL,
                "svn_wc_merge: unable to close tmp file `%s'",
                tmp_target);
       
@@ -104,7 +104,7 @@ svn_wc_merge (const char *left,
       apr_err = apr_file_close (tmp_f);
       if (apr_err)
         return svn_error_createf
-          (apr_err, 0, NULL,
+          (apr_err, NULL,
            "svn_wc_merge: unable to close tmp file `%s'",
            tmp_left);
 
@@ -115,7 +115,7 @@ svn_wc_merge (const char *left,
       apr_err = apr_file_close (tmp_f);
       if (apr_err)
         return svn_error_createf
-          (apr_err, 0, NULL,
+          (apr_err, NULL,
            "svn_wc_merge: unable to close tmp file `%s'", tmp_right);
     
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
@@ -133,7 +133,7 @@ svn_wc_merge (const char *left,
       apr_err = apr_file_close (result_f);
       if (apr_err)
         return svn_error_createf
-          (apr_err, 0, NULL,
+          (apr_err, NULL,
            "svn_wc_merge: unable to close tmp file `%s'", result_target);
 
       if (exit_code == 1 && ! dry_run)  /* got a conflict */
@@ -158,7 +158,7 @@ svn_wc_merge (const char *left,
           apr_err = apr_file_close (lcopy_f);
           if (apr_err)
             return svn_error_createf
-              (apr_err, 0, NULL,
+              (apr_err, NULL,
                "svn_wc_merge: unable to close tmp file `%s'", left_copy);
 
           /* Have I mentioned how much I miss Lisp? */
@@ -173,7 +173,7 @@ svn_wc_merge (const char *left,
           apr_err = apr_file_close (rcopy_f);
           if (apr_err)
             return svn_error_createf
-              (apr_err, 0, NULL,
+              (apr_err, NULL,
                "svn_wc_merge: unable to close tmp file `%s'", right_copy);
 
           /* Why, how much more pleasant to be forced to unroll my loops.
@@ -191,7 +191,7 @@ svn_wc_merge (const char *left,
           apr_err = apr_file_close (tcopy_f);
           if (apr_err)
             return svn_error_createf
-              (apr_err, 0, NULL,
+              (apr_err, NULL,
                "svn_wc_merge: unable to close tmp file `%s'", target_copy);
 
           /* We preserve all the files with keywords expanded and line
@@ -307,7 +307,7 @@ svn_wc_merge (const char *left,
       apr_err = apr_file_close (lcopy_f);
       if (apr_err)
         return svn_error_createf
-          (apr_err, 0, NULL,
+          (apr_err, NULL,
            "svn_wc_merge: unable to close tmp file `%s'", left_copy);
 
       SVN_ERR (svn_io_open_unique_file (&rcopy_f,
@@ -319,7 +319,7 @@ svn_wc_merge (const char *left,
       apr_err = apr_file_close (rcopy_f);
       if (apr_err)
         return svn_error_createf
-          (apr_err, 0, NULL,
+          (apr_err, NULL,
            "svn_wc_merge: unable to close tmp file `%s'", right_copy);
 
       /* create the backup files */

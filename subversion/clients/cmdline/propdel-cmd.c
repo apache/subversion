@@ -78,12 +78,12 @@ svn_cl__propdel (apr_getopt_t *os,
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL,
+        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
                                 "No URL target available.");
       target = ((const char **) (targets->elts))[0];
       SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));  
       if (URL == NULL)
-        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL,
+        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 "Either a URL or versioned item is required.");
 
       /* Let libsvn_client do the real work. */
@@ -103,7 +103,7 @@ svn_cl__propdel (apr_getopt_t *os,
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
       return svn_error_createf
-        (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+        (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
          "Cannot specify revision for deleting versioned property '%s'.",
          pname);
     }

@@ -60,7 +60,7 @@ svn_cl__switch (apr_getopt_t *os,
                                          FALSE, pool));
 
   if ((targets->nelts < 1) || (targets->nelts > 2))
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   /* Get the required SWITCH_URL and the optional TARGET arguments. */
   if (targets->nelts == 1)
@@ -77,7 +77,7 @@ svn_cl__switch (apr_getopt_t *os,
   /* Validate the switch_url */
   if (! svn_path_is_url (switch_url))
     return svn_error_createf 
-      (SVN_ERR_BAD_URL, 0, NULL, 
+      (SVN_ERR_BAD_URL, NULL, 
        "`%s' does not appear to be a URL", switch_url);
 
   /* Canonicalize the URL. */
@@ -89,7 +89,7 @@ svn_cl__switch (apr_getopt_t *os,
   SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, 
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
        "`%s' does not appear to be a working copy path", target);
   
   /* Build an authentication baton to give to libsvn_client. */

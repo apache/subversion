@@ -174,7 +174,7 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
                            (APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY),
                            APR_OS_DEFAULT, pool);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, fname);
+    return svn_error_create (apr_err, NULL, fname);
   
   for (i = 0; i < (sizeof (lines) / sizeof (*lines)); i++)
     {
@@ -188,13 +188,13 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
         {
           apr_err = apr_file_putc (this_eol_str[j], f);
           if (apr_err)
-            return svn_error_create (apr_err, 0, NULL, fname);
+            return svn_error_create (apr_err, NULL, fname);
         }
     }
 
   apr_err = apr_file_close (f);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, fname);
+    return svn_error_create (apr_err, NULL, fname);
   
   return SVN_NO_ERROR;
 }
@@ -214,10 +214,10 @@ remove_file (const char *fname, apr_pool_t *pool)
         {
           apr_err = apr_file_remove (fname, pool);
           if (apr_err)
-            return svn_error_create (apr_err, 0, NULL, fname);
+            return svn_error_create (apr_err, NULL, fname);
         }
       else
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                   "non-file `%s' is in the way", fname);
     }
 
@@ -292,7 +292,7 @@ substitute_and_verify (const char *test_name,
       if (! err)
         {
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
+            (SVN_ERR_TEST_FAILED, NULL,
              "translation of %s should have failed, but didn't", src_fname);
         }
       else if (err->apr_err != SVN_ERR_IO_INCONSISTENT_EOL)
@@ -302,7 +302,7 @@ substitute_and_verify (const char *test_name,
           svn_strerror (err->apr_err, buf, sizeof (buf));
 
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
+            (SVN_ERR_TEST_FAILED, NULL,
              "translation of %s should fail, but not with error \"%s\"",
              src_fname, buf);
         }
@@ -603,12 +603,12 @@ substitute_and_verify (const char *test_name,
     {
       if (contents->len < idx)
         return svn_error_createf
-          (SVN_ERR_MALFORMED_FILE, 0, NULL,
+          (SVN_ERR_MALFORMED_FILE, NULL,
            "%s has short contents at line %" APR_SIZE_T_FMT, dst_fname, i + 1);
 
       if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
-          (SVN_ERR_MALFORMED_FILE, 0, NULL, 
+          (SVN_ERR_MALFORMED_FILE, NULL, 
            "%s has wrong contents at line %" APR_SIZE_T_FMT, dst_fname, i + 1);
 
       /* Else, the data is correct, at least up to the next eol. */
@@ -619,7 +619,7 @@ substitute_and_verify (const char *test_name,
         {
           if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
             return svn_error_createf
-              (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, 
+              (SVN_ERR_IO_CORRUPT_EOL, NULL, 
                "%s has wrong eol style at line %" APR_SIZE_T_FMT, dst_fname,
                i + 1);
           else

@@ -66,7 +66,7 @@ svn_client_cat (svn_stream_t* out,
   SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev));
 
   if (url_kind == svn_node_dir)
-    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, 0, NULL,
+    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              "URL \"%s\" refers to directory", url);
 
   /* Grab some properties we need to know in order to figure out if anything 
@@ -108,7 +108,7 @@ svn_client_cat (svn_stream_t* out,
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);
       if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, "seek failed on '%s'.",
+        return svn_error_createf (apr_err, NULL, "seek failed on '%s'.",
                                   tmp_filename);
 
       /* FIXME: set the kw to the appropriate value as found in the keywords 

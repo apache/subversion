@@ -197,13 +197,13 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int port = strtol(port_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 "illegal character in proxy port number");
       if (port < 0)
-        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 "negative proxy port number");
       if (port > 65535)
-        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 "proxy port number greater than maximum TCP "
                                 "port number 65535");
       *proxy_port = port;
@@ -217,10 +217,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int timeout = strtol(timeout_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                                 "illegal character in timeout value");
       if (timeout < 0)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                                 "negative timeout value");
       *timeout_seconds = timeout;
     }
@@ -233,7 +233,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int debug = strtol(debug_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                                 "illegal character in debug value");
 
       *neon_debug = debug;
@@ -318,7 +318,7 @@ svn_ra_dav__open (void **session_baton,
       || uri.host == NULL || uri.path == NULL)
     {
       ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL,
+      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                               "illegal URL for repository");
     }
 
@@ -326,7 +326,7 @@ svn_ra_dav__open (void **session_baton,
   if (ne_sock_init() != 0)
     {
       ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, 0, NULL,
+      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
                               "network socket initialization failed");
     }
 
@@ -339,7 +339,7 @@ svn_ra_dav__open (void **session_baton,
       if (ne_supports_ssl() == 0)
         {
           ne_uri_free(&uri);
-          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, 0, NULL,
+          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
                                   "SSL is not supported");
         }
     }

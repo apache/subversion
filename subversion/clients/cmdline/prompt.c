@@ -98,7 +98,7 @@ svn_cl__prompt_user (char **result,
   status = apr_file_open_stdin (&fp, pool);
   if (status)
     return
-      svn_error_create (status, 0, NULL,
+      svn_error_create (status, NULL,
                         "svn_cl__prompt_user:  couldn't open stdin.");
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&prompt_native, prompt, pool));
@@ -114,7 +114,7 @@ svn_cl__prompt_user (char **result,
         {
           status = apr_file_getc (&c, fp);
           if (status && ! APR_STATUS_IS_EOF(status))
-            return svn_error_create (status, 0, NULL, "error reading stdin.");
+            return svn_error_create (status, NULL, "error reading stdin.");
           if ((c == '\n') || (c == '\r'))
             break;
           
@@ -129,7 +129,7 @@ svn_cl__prompt_user (char **result,
       /* Hopefully this won't echo to the screen. */
       status = apr_password_get (prompt_native, strbuf->data, &bufsize);
       if (status)
-        return svn_error_create (status, 0, NULL,
+        return svn_error_create (status, NULL,
                                  "error from apr_password_get().");      
 
       /* If echo is turned off, then we must manually add the visible

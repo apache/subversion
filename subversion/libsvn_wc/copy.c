@@ -138,7 +138,7 @@ copy_file_administratively (const char *src_path,
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                               "'%s' already exists and is in the way.",
                               dst_path);
 
@@ -150,12 +150,12 @@ copy_file_administratively (const char *src_path,
   if (dst_entry && dst_entry->kind == svn_node_file)
     {
       if (dst_entry->schedule == svn_wc_schedule_delete)
-        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
+        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   "'%s' is scheduled for deletion, it must"
                                   " be commited before being overwritten",
                                   dst_path);
       else
-        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
+        return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   "There is already a versioned item '%s'",
                                   dst_path);
     }
@@ -167,7 +167,7 @@ copy_file_administratively (const char *src_path,
   if (! src_entry)
     {
       return svn_error_createf 
-        (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL,
+        (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
          "Cannot copy or move '%s' -- it's not under revision control",
          src_path);
     }
@@ -176,7 +176,7 @@ copy_file_administratively (const char *src_path,
            || (src_entry->copied))
     {
       return svn_error_createf 
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          "Cannot copy or move '%s' -- it's not in the repository yet,\n"
          "perhaps because it is a copy or is inside a copied tree.\n"
          "Try committing first.",
@@ -279,7 +279,7 @@ copy_dir_administratively (const char *src_path,
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url))
     return svn_error_createf 
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        "Not allowed to copy or move '%s' -- it's not in the repository yet.\n"
        "Try committing first.",
        src_path);

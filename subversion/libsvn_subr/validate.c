@@ -40,7 +40,7 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
 {
   if (strchr (mime_type, '/') == NULL)
     return svn_error_createf
-      (SVN_ERR_BAD_MIME_TYPE, 0, NULL,
+      (SVN_ERR_BAD_MIME_TYPE, NULL,
        "Mime type \"%s\" missing '/'\n", mime_type);
 
   {
@@ -54,7 +54,7 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
        But I don't trust it. */
     if (! apr_isalnum (c))
       return svn_error_createf
-        (SVN_ERR_BAD_MIME_TYPE, 0, NULL,
+        (SVN_ERR_BAD_MIME_TYPE, NULL,
          "Mime type \"%s\" ends with non-alphanumeric.\n", mime_type);
   }
 

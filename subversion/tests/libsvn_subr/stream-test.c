@@ -77,7 +77,7 @@ test_stream_from_string (const char **msg,
         }
       
       if (! svn_stringbuf_compare (inbuf, outbuf))
-        return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                  "Got unexpected result.");
 
       svn_pool_clear (subpool);
@@ -105,7 +105,7 @@ test_stream_from_string (const char **msg,
         }
       
       if (! svn_stringbuf_compare (inbuf, outbuf))
-        return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                  "Got unexpected result.");
 
       svn_pool_clear (subpool);

@@ -89,7 +89,7 @@ delta_string_keys (apr_array_header_t **keys,
 
   if (rep->kind != svn_fs__rep_kind_delta)
     return svn_error_create 
-      (SVN_ERR_FS_GENERAL, 0, NULL,
+      (SVN_ERR_FS_GENERAL, NULL,
        "delta_string_key: representation is not of type `delta'");
 
   /* Set up a convenience variable. */
@@ -455,7 +455,7 @@ rep_read_range (svn_fs_t *fs,
               /* Verify that this chunk is of the same version as the first. */
               if (first_chunk->version != chunk->version)
                 return svn_error_createf
-                  (SVN_ERR_FS_CORRUPT, 0, NULL,
+                  (SVN_ERR_FS_CORRUPT, NULL,
                    "diff version inconsistencies in representation `%s'",
                    rep_key);
 
@@ -725,7 +725,7 @@ svn_fs__rep_contents (svn_string_t *str,
   /* Paranoia. */
   if (len != str->len)
     return svn_error_createf
-      (SVN_ERR_FS_CORRUPT, 0, NULL,
+      (SVN_ERR_FS_CORRUPT, NULL,
        "svn_fs__rep_read_contents: failure reading rep \"%s\"", rep_key);
 
   return SVN_NO_ERROR;
@@ -774,7 +774,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
     {
       return
         svn_error_create
-        (SVN_ERR_FS_REP_CHANGED, 0, NULL,
+        (SVN_ERR_FS_REP_CHANGED, NULL,
          "txn_body_read_rep: null rep, but offset past zero already");
     }
   else
@@ -880,7 +880,7 @@ rep_write (svn_fs_t *fs,
 
   if (! rep_is_mutable (rep, txn_id))
     svn_error_createf
-      (SVN_ERR_FS_REP_CHANGED, 0, NULL,
+      (SVN_ERR_FS_REP_CHANGED, NULL,
        "rep_write: rep \"%s\" is not mutable", rep_key);
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
@@ -895,7 +895,7 @@ rep_write (svn_fs_t *fs,
          non-fulltext rep.  The only code that creates mutable reps is
          in this file, and it creates them fulltext. */
       return svn_error_createf
-        (SVN_ERR_FS_CORRUPT, 0, NULL,
+        (SVN_ERR_FS_CORRUPT, NULL,
          "rep_write: rep \"%s\" both mutable and non-fulltext", rep_key);
     }
   else /* unknown kind */
@@ -1025,7 +1025,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
   /* Make sure it's mutable. */
   if (! rep_is_mutable (rep, txn_id))
     return svn_error_createf
-      (SVN_ERR_FS_REP_NOT_MUTABLE, 0, NULL,
+      (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
        "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep_key);
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
@@ -1170,7 +1170,7 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
 
   /* Make sure we (still) have a key. */
   if (wb->key == NULL)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
+    return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "write_string_set: Failed to get new string key");
 
   /* Restore *LEN to the value it *would* have been were it not for
@@ -1242,7 +1242,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
      chain, and badness would ensue.  */
   if (strcmp (target, source) == 0)
     return svn_error_createf
-      (SVN_ERR_FS_CORRUPT, 0, NULL,
+      (SVN_ERR_FS_CORRUPT, NULL,
        "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
        target);
 
@@ -1308,7 +1308,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   digest = svn_txdelta_md5_digest (txdelta_stream);
   if (! digest)
     return svn_error_createf
-      (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, 0, NULL,
+      (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, NULL,
        "svn_fs__rep_deltify: failed to calculate MD5 digest for %s",
        source);
 
@@ -1451,7 +1451,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
       SVN_ERR (svn_stream_write (target_stream, buf, &len));
       if (len_read != len)
         return svn_error_createf
-          (SVN_ERR_FS_GENERAL, 0, NULL,
+          (SVN_ERR_FS_GENERAL, NULL,
            "svn_fs__rep_undeltify: Error writing fulltext contents");
     }
   while (len);

@@ -162,7 +162,7 @@ svn_repos_set_path (void *report_baton,
       if (! svn_path_is_empty (pathbuf->data))
         return 
           svn_error_create
-          (SVN_ERR_REPOS_BAD_REVISION_REPORT, 0, NULL,
+          (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
            "svn_repos_set_path: initial revision report was bogus.");
 
       /* Start a transaction based on REVISION. */
@@ -324,7 +324,7 @@ svn_repos_finish_report (void *report_baton)
 
   /* If nothing was described, then we have an error */
   if (rbaton->txn == NULL)
-    return svn_error_create(SVN_ERR_REPOS_NO_DATA_FOR_REPORT, 0, NULL,
+    return svn_error_create(SVN_ERR_REPOS_NO_DATA_FOR_REPORT, NULL,
                             "svn_repos_finish_report: no transaction was "
                             "present, meaning no data was provided.");
 

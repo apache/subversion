@@ -449,6 +449,10 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 29,
               "Berkeley DB error")
 
+  SVN_ERRDEF (SVN_ERR_FS_BERKELEY_DB_DEADLOCK,
+              SVN_ERR_FS_CATEGORY_START + 30,
+              "Berkeley DB deadlock error")
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,

@@ -146,7 +146,7 @@ fold_change (apr_hash_t *changes,
          `reset' case. */
       if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
         return svn_error_create 
-          (SVN_ERR_FS_CORRUPT, 0, NULL,
+          (SVN_ERR_FS_CORRUPT, NULL,
            "Invalid change: missing required node revision ID");
         
       /* Sanity check:  we should be talking about the same node
@@ -156,7 +156,7 @@ fold_change (apr_hash_t *changes,
           && (! svn_fs__id_eq (old_change->node_rev_id, change->noderev_id))
           && (old_change->change_kind != svn_fs_path_change_delete))
         return svn_error_create 
-          (SVN_ERR_FS_CORRUPT, 0, NULL,
+          (SVN_ERR_FS_CORRUPT, NULL,
            "Invalid change ordering: new node revision ID without delete");
 
       /* Sanity check: an add, replacement, or reset must be the first
@@ -166,7 +166,7 @@ fold_change (apr_hash_t *changes,
                  || (change->kind == svn_fs_path_change_reset)
                  || (change->kind == svn_fs_path_change_add))))
         return svn_error_create 
-          (SVN_ERR_FS_CORRUPT, 0, NULL,
+          (SVN_ERR_FS_CORRUPT, NULL,
            "Invalid change ordering: non-add change on deleted path");
 
       /* Now, merge that change in. */
@@ -270,7 +270,7 @@ svn_fs__changes_fetch (apr_hash_t **changes_p,
       result_skel = svn_fs__parse_skel (result.data, result.size, subpool);
       if (! result_skel)
         {
-          err = svn_error_createf (SVN_ERR_FS_CORRUPT, 0, NULL,
+          err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
                                    "error reading changes for key `%s'", key);
           goto cleanup;
         }
@@ -356,7 +356,7 @@ svn_fs__changes_fetch_raw (apr_array_header_t **changes_p,
       result_skel = svn_fs__parse_skel (result.data, result.size, trail->pool);
       if (! result_skel)
         {
-          err = svn_error_createf (SVN_ERR_FS_CORRUPT, 0, NULL,
+          err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
                                    "error reading changes for key `%s'", key);
           goto cleanup;
         }

@@ -47,9 +47,6 @@ typedef struct svn_error
   /** APR error value, possibly SVN_ custom err */
   apr_status_t apr_err;
 
-  /** native error code (e.g. @c errno, @c h_errno...) */
-  int src_err;
-
   /** details from producer of error */
   const char *message;
 

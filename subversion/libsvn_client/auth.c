@@ -106,12 +106,12 @@ get_username (char **username,
           status = apr_current_userid (&uid, &gid, pool);
           if (status)
             return 
-              svn_error_create(status, 0, NULL,
+              svn_error_create(status, NULL,
                                "Error getting UID of process.");
           
           status = apr_get_username (&un, uid, pool);
           if (status)
-            return svn_error_create(status, 0, NULL,
+            return svn_error_create(status, NULL,
                                     "Error in UID->username.");
 
           /* ### Be nice to avoid this cast... */
@@ -368,7 +368,7 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
 
     default:
       {
-        return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, "Unknown authenticator requested.");
+        return svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, NULL, "Unknown authenticator requested.");
       }
     }
   

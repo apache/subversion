@@ -199,7 +199,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
     {
       /* ### shouldn't have happened. we told the server "don't merge" */
       /* ### need something better than APR_EGENERAL */
-      return svn_error_createf(APR_EGENERAL, 0, NULL,
+      return svn_error_createf(APR_EGENERAL, NULL,
                                "Protocol error: we told the server to not "
                                "auto-merge any resources, but it said that "
                                "\"%s\" was merged.", mc->href->data);
@@ -208,7 +208,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
     {
       /* ### unknown parent for this response(!) */
       /* ### need something better than APR_EGENERAL */
-      return svn_error_createf(APR_EGENERAL, 0, NULL,
+      return svn_error_createf(APR_EGENERAL, NULL,
                                "Internal error: there is an unknown parent "
                                "(%d) for the DAV:response element within the "
                                "MERGE response", mc->response_parent);
@@ -223,7 +223,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
     {
       /* one or more properties were missing in the DAV:response for the
          resource. */
-      return svn_error_createf(APR_EGENERAL, 0, NULL,
+      return svn_error_createf(APR_EGENERAL, NULL,
                                "Protocol error: the MERGE response for the "
                                "\"%s\" resource did not return all of the "
                                "properties that we asked for (and need to "
@@ -242,7 +242,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
   if (mc->href->len < mc->base_len)
     {
       /* ### need something better than APR_EGENERAL */
-      return svn_error_createf(APR_EGENERAL, 0, NULL,
+      return svn_error_createf(APR_EGENERAL, NULL,
                                "A MERGE response for \"%s\" is not a child "
                                "of the destination (\"%s\")",
                                mc->href->data, mc->base_href);
@@ -457,7 +457,7 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
         if (mc->response_has_error && mc->err == NULL)
           {
             /* ### fix this error value */
-            mc->err = svn_error_create(APR_EGENERAL, 0, NULL,
+            mc->err = svn_error_create(APR_EGENERAL, NULL,
                                        "The MERGE property response had an "
                                        "error status.");
           }

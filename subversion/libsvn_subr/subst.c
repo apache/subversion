@@ -354,7 +354,7 @@ translate_newline (const char *eol_str,
           ((*src_format_len != newline_len) ||
            (strncmp (src_format, newline_buf, newline_len)))) 
         return svn_error_create
-          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL,
+          (SVN_ERR_IO_INCONSISTENT_EOL, NULL,
            "inconsistent line-endings in source stream, repair flag is off.");
     }
   else
@@ -716,7 +716,7 @@ svn_subst_translate_cstring (const char *src,
       svn_stream_close (src_stream);
       svn_stream_close (dst_stream);      
       return 
-        svn_error_create (err->apr_err, 0, err,
+        svn_error_create (err->apr_err, err,
                           "stringbuf translation failed");
     }
 
@@ -785,7 +785,7 @@ svn_subst_copy_and_translate (const char *src,
       if (err2)
         svn_error_clear (err2);
       return 
-        svn_error_createf (err->apr_err, 0, err,
+        svn_error_createf (err->apr_err, err,
                            "file translation failed when copying '%s' to '%s'",
                            src_native, dst_native);
     }
@@ -796,12 +796,12 @@ svn_subst_copy_and_translate (const char *src,
 
   apr_err = apr_file_close(s);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "error closing %s", src_native);
 
   apr_err = apr_file_close(d);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "error closing %s", dst_native);
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
@@ -833,7 +833,7 @@ svn_subst_translate_string (svn_string_t **new_value,
       apr_status_t apr_err =  
         apr_xlate_open (&xlator, "UTF-8", encoding, pool);
       if (apr_err != APR_SUCCESS)
-        return svn_error_create (apr_err, 0, NULL,
+        return svn_error_create (apr_err, NULL,
                                  "failed to create a converter to UTF-8");
     }
 

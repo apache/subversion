@@ -73,7 +73,7 @@ test_path_is_child (const char **msg,
               || ((! remainder) && (remainders[i][j]))
               || (remainder && strcmp (remainder, remainders[i][j])))
             return svn_error_createf
-              (SVN_ERR_TEST_FAILED, 0, NULL,
+              (SVN_ERR_TEST_FAILED, NULL,
                "svn_path_is_child (%s, %s) returned '%s' instead of '%s'",
                paths[i], paths[j], 
                remainder ? remainder : "(null)",
@@ -123,14 +123,14 @@ test_path_split (const char **msg,
       if (strcmp (dir, paths[i][1]))
         {
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
+            (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_split (%s) returned dirname '%s' instead of '%s'",
              paths[i][0], dir, paths[i][1]);
         }
       if (strcmp (base_name, paths[i][2]))
         {
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
+            (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_split (%s) returned basename '%s' instead of '%s'",
              paths[i][0], base_name, paths[i][2]);
         }
@@ -201,13 +201,13 @@ test_is_url (const char **msg,
         if (expected && (! actual))
           {
             return svn_error_createf
-              (SVN_ERR_TEST_FAILED, 0, NULL,
+              (SVN_ERR_TEST_FAILED, NULL,
                "svn_path_is_uri_safe (%d) returned FALSE instead of TRUE", i);
           }
         if ((! expected) && actual)
           {
             return svn_error_createf
-              (SVN_ERR_TEST_FAILED, 0, NULL,
+              (SVN_ERR_TEST_FAILED, NULL,
                "svn_path_is_uri_safe (%d) returned TRUE instead of FALSE", i);
           }
       }
@@ -221,7 +221,7 @@ test_is_url (const char **msg,
       retval = svn_path_is_url (paths[i]);
       if (retvals[i] != retval)
         return svn_error_createf
-          (SVN_ERR_TEST_FAILED, 0, NULL,
+          (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_url (%s) returned %s instead of %s",
            paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
     }
@@ -263,7 +263,7 @@ test_uri_encode (const char **msg,
       if (strcmp (en_path, paths[i][1]))
         {
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
+            (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_uri_encode ('%s') returned '%s' instead of '%s'",
              paths[i][0], en_path, paths[i][1]);
         }
@@ -273,7 +273,7 @@ test_uri_encode (const char **msg,
       if (strcmp (de_path, paths[i][0]))
         {
           return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
+            (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_uri_decode ('%s') returned '%s' instead of '%s'",
              paths[i][1], de_path, paths[i][0]);
         }
@@ -320,14 +320,14 @@ test_join (const char **msg,
 
       result = svn_path_join(base, comp, pool);
       if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_join(\"%s\", \"%s\") returned "
                                  "\"%s\". expected \"%s\"",
                                  base, comp, result, expect);
 
       result = svn_path_join_many(pool, base, comp, NULL);
       if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_join_many(\"%s\", \"%s\") returned "
                                  "\"%s\". expected \"%s\"",
                                  base, comp, result, expect);
@@ -336,7 +336,7 @@ test_join (const char **msg,
 #define TEST_MANY(args, expect) \
   result = svn_path_join_many args ; \
   if (strcmp(result, expect) != 0) \
-    return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL, \
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, \
                              "svn_path_join_many" #args " returns \"%s\". " \
                              "expected \"%s\"", \
                              result, expect); \
@@ -415,7 +415,7 @@ test_basename (const char **msg,
 
       result = svn_path_basename(path, pool);
       if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_basename(\"%s\") returned "
                                  "\"%s\". expected \"%s\"",
                                  path, result, expect);
@@ -464,18 +464,18 @@ test_decompose (const char **msg,
             {
               const char *component = APR_ARRAY_IDX(components, j, const char*);
               if (! paths[i+j+1])
-                return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL,
+                return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "svn_path_decompose(\"%s\") returned "
                                          "unexpected component \"%s\"",
                                          paths[i], component);
               if (strcmp (component, paths[i+j+1])) 
-                return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL,
+                return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "svn_path_decompose(\"%s\") returned "
                                          "\"%s\" expected \"%s\"",
                                          paths[i], component, paths[i+j+1]);
             }
           if (paths[i+j+1])
-            return svn_error_createf(SVN_ERR_TEST_FAILED, 0, NULL,
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                      "svn_path_decompose(\"%s\") failed "
                                      "to return \"%s\"",
                                      paths[i], paths[i+j+1]);
@@ -534,13 +534,13 @@ test_canonicalize (const char **msg,
       const char *canonical = svn_path_canonicalize (paths[i][0], pool);
 
       if (strcmp (canonical, paths[i][1]))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                   "svn_path_canonicalize(\"%s\") returned "
                                   "\"%s\" expected \"%s\"",
                                   paths[i][0], canonical, paths[i][1]);
 
       if (strcmp (paths[i][0], paths[i][1]) == 0 && canonical != paths[i][0])
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                   "svn_path_canonicalize(\"%s\") alloc'd",
                                   paths[i][0]);
 

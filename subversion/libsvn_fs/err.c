@@ -27,11 +27,22 @@
 #include "fs.h"
 #include "err.h"
 
+/* Return a distinguished error for any db error code we want to detect
+ * programatically; otherwise return a generic error.
+ */
+static int
+db_err_to_apr_err (int db_err)
+{
+  if (db_err == DB_LOCK_DEADLOCK)
+    return SVN_ERR_FS_BERKELEY_DB_DEADLOCK;
+  else
+    return SVN_ERR_FS_BERKELEY_DB;
+}
+
 svn_error_t *
 svn_fs__dberr (int db_err)
 {
-  return svn_error_create (SVN_ERR_FS_BERKELEY_DB,
-                           db_err,
+  return svn_error_create (db_err_to_apr_err(db_err),
                            0,
                            db_strerror (db_err));
 }
@@ -44,7 +55,7 @@ svn_fs__dberrf (int db_err, const char *fmt, ...)
   char *msg;
   svn_error_t *err;
 
-  err = svn_error_create (SVN_ERR_FS_BERKELEY_DB, db_err, 0, "");
+  err = svn_error_create (db_err_to_apr_err(db_err), 0, "");
 
   va_start (ap, fmt);
   msg = apr_pvsprintf (err->pool, fmt, ap);
@@ -73,7 +84,7 @@ svn_fs__check_fs (svn_fs_t *fs)
   if (fs->env)
     return SVN_NO_ERROR;
   else
-    return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0, 0,
+    return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,
                              "filesystem object has not been opened yet");
 }
 
@@ -86,7 +97,7 @@ static svn_error_t *
 corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 {
   svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
-  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0,
+  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
                             fmt, unparsed_id->data, fs->path);
 }
 
@@ -104,7 +115,7 @@ svn_error_t *
 svn_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0,
+    (SVN_ERR_FS_CORRUPT, 0,
      "corrupt filesystem revision `%" SVN_REVNUM_T_FMT "' in filesystem `%s'",
      rev, fs->path);
 }
@@ -117,7 +128,7 @@ svn_fs__err_corrupt_clone (svn_fs_t *fs,
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0,
+    (SVN_ERR_FS_CORRUPT, 0,
      "corrupt clone record for `%s' in transaction `%s' in filesystem `%s'",
      base_path, svn_txn, fs->path);
 }
@@ -137,7 +148,7 @@ svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   svn_string_t *id_str = svn_fs_unparse_id (id, fs->pool);
   return svn_error_createf
-    (SVN_ERR_FS_ID_NOT_FOUND, 0, 0,
+    (SVN_ERR_FS_ID_NOT_FOUND, 0,
      "reference to non-existent node `%s' in filesystem `%s'",
      id_str->data, fs->path);
 }
@@ -147,7 +158,7 @@ svn_error_t *
 svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0,
+    (SVN_ERR_FS_NO_SUCH_REVISION, 0,
      "reference to non-existent revision `%"
      SVN_REVNUM_T_FMT
      "' in filesystem `%s'",
@@ -160,7 +171,7 @@ svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0,
+    (SVN_ERR_FS_CORRUPT, 0,
      "malformed ID as key in `nodes' table of filesystem `%s'", fs->path);
 }
 
@@ -170,7 +181,7 @@ svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0,
+    (SVN_ERR_FS_CORRUPT, 0,
      "corrupt value for `next-id' key in `%s' table of filesystem `%s'", 
      table, fs->path);
 }
@@ -182,7 +193,7 @@ svn_fs__err_corrupt_txn (svn_fs_t *fs,
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0,
+    (SVN_ERR_FS_CORRUPT, 0,
      "corrupt entry in `transactions' table for `%s'"
      " in filesystem `%s'", txn, fs->path);
 }
@@ -193,7 +204,7 @@ svn_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0, 0,
+    (SVN_ERR_FS_CORRUPT, 0,
      "corrupt entry in `copies' table for `%s' in filesystem `%s'", 
      copy_id, fs->path);
 }
@@ -204,7 +215,7 @@ svn_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_NOT_MUTABLE, 0, 0,
+    (SVN_ERR_FS_NOT_MUTABLE, 0,
      "File is not mutable: filesystem `%s', revision %" SVN_REVNUM_T_FMT
      ", path `%s'", fs->path, rev, path);
 }
@@ -215,7 +226,7 @@ svn_fs__err_path_syntax (svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_PATH_SYNTAX, 0, 0,
+    (SVN_ERR_FS_PATH_SYNTAX, 0,
      "search for malformed path `%s' in filesystem `%s'",
      path, fs->path);
 }
@@ -226,7 +237,7 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_TRANSACTION, 0, 0,
+    (SVN_ERR_FS_NO_SUCH_TRANSACTION, 0,
      "no transaction named `%s' in filesystem `%s'",
      txn, fs->path);
 }
@@ -237,7 +248,7 @@ svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0, 0,
+    (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0,
      "cannot modify transaction named `%s' in filesystem `%s'",
      txn, fs->path);
 }
@@ -248,7 +259,7 @@ svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_COPY, 0, 0,
+    (SVN_ERR_FS_NO_SUCH_COPY, 0,
      "no copy with id `%s' in filesystem `%s'", copy_id, fs->path);
 }
 
@@ -258,7 +269,7 @@ svn_fs__err_not_directory (svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_NOT_DIRECTORY, 0, 0,
+    (SVN_ERR_FS_NOT_DIRECTORY, 0,
      "`%s' is not a directory in filesystem `%s'",
      path, fs->path);
 }

@@ -246,13 +246,13 @@ svn_wc__load_prop_file (const char *propfile_path,
 
       status = svn_hash_read (hash, propfile, pool);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "load_prop_file:  can't parse `%s'",
                                   propfile_path);
 
       status = apr_file_close (propfile);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "load_prop_file: can't close `%s'",
                                   propfile_path);
     }
@@ -279,13 +279,13 @@ svn_wc__save_prop_file (const char *propfile_path,
 
   apr_err = svn_hash_write (hash, prop_tmp, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "save_prop_file: can't write prop hash to `%s'",
                               propfile_path);
 
   apr_err = apr_file_close (prop_tmp);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "save_prop_file: can't close `%s'",
                               propfile_path);
 
@@ -317,7 +317,7 @@ append_prop_conflict (apr_file_t *fp,
   status = apr_file_write_full (fp, conflict_description_native->data,
                                 conflict_description_native->len, &written);
   if (status)
-    return svn_error_create (status, 0, NULL,
+    return svn_error_create (status, NULL,
                              "append_prop_conflict: "
                              "apr_file_write_full failed.");
   return SVN_NO_ERROR;
@@ -339,7 +339,7 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
 
   if (! the_entry)
     return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",
        name, svn_wc_adm_access_path (adm_access));
 
@@ -373,7 +373,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "Can't merge props into '%s':"
                               "it's not under revision control.", path);
 
@@ -420,7 +420,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
       if (apr_err)
         {
           apr_file_close (log_fp);
-          return svn_error_createf (apr_err, 0, NULL,
+          return svn_error_createf (apr_err, NULL,
                                     "svn_wc_merge_prop_diffs:"
                                     "error writing log for %s", path);
         }
@@ -753,7 +753,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       apr_status_t status;
       status = apr_file_close (reject_tmp_fp);
       if (status)
-        return svn_error_createf (status, 0, NULL,
+        return svn_error_createf (status, NULL,
                                   "do_property_merge: can't close '%s'",
                                   reject_tmp_path);
                                   
@@ -785,7 +785,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
           status = apr_file_close (reject_fp);
           if (status)
-            return svn_error_createf (status, 0, NULL,
+            return svn_error_createf (status, NULL,
                                       "do_property_merge: can't close '%s'",
                                       full_reject_path);
           
@@ -863,12 +863,12 @@ wcprop_list (apr_hash_t **props,
   
 #if 0
   if (kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL,
+    return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                               "wcprop_list: non-existent path '%s'.",
                               path);
   
   if (kind == svn_node_unknown)
-    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                               "wcprop_list: unknown node kind: '%s'.",
                               path);
 #endif
@@ -942,7 +942,7 @@ svn_wc__wcprop_set (const char *name,
   /* Write. */
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "can't write prop hash for %s", path);
   
   /* Close file, and doing an atomic "move". */
@@ -1010,7 +1010,7 @@ svn_wc_prop_get (const svn_string_t **value,
   if (kind == svn_prop_entry_kind)
     {
       return svn_error_createf   /* we don't do entry properties here */
-        (SVN_ERR_BAD_PROP_KIND, 0, NULL,
+        (SVN_ERR_BAD_PROP_KIND, NULL,
          "property '%s' is an entry property", name);
     }
   else  /* regular prop */
@@ -1060,13 +1060,13 @@ validate_prop_against_node_kind (const char *name,
       node_kind_text = "file";
       break;
     default:
-      return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL,
+      return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                 "%s is not a file or directory", path);
     }
 
   while (*node_kind_prohibit)
     if (strcmp (name, *node_kind_prohibit++) == 0)
-      return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+      return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
                                 "Cannot set %s on a %s (%s)",
                                 name, node_kind_text, path);
 
@@ -1086,7 +1086,7 @@ validate_eol_prop_against_file (const char *path,
   /* See if this file has been determined to be binary. */
   SVN_ERR (svn_wc_prop_get (&mime_type, SVN_PROP_MIME_TYPE, path, pool));
   if (mime_type && svn_mime_type_is_binary (mime_type->data))
-    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, NULL,
+    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
                               "File '%s' has binary mimetype property", path);
 
   /* Open PATH. */
@@ -1107,7 +1107,7 @@ validate_eol_prop_against_file (const char *path,
   err = svn_subst_translate_stream (read_stream, write_stream, 
                                     "", FALSE, NULL, FALSE);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
-    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, 0, err,
+    return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
                               "File '%s' has inconsistent newlines", path);
   return err;
 }
@@ -1134,7 +1134,7 @@ svn_wc_prop_set (const char *name,
     return svn_wc__wcprop_set (name, value, path, pool);
   else if (prop_kind == svn_prop_entry_kind)
     return svn_error_createf   /* we don't do entry properties here */
-      (SVN_ERR_BAD_PROP_KIND, 0, NULL,
+      (SVN_ERR_BAD_PROP_KIND, NULL,
        "property '%s' is an entry property", name);
 
   /* Else, handle a regular property: */
@@ -1196,7 +1196,7 @@ svn_wc_prop_set (const char *name,
   /* Write. */
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL,
+    return svn_error_createf (apr_err, NULL,
                               "can't write prop hash for %s", path);
   
   /* Close file, and doing an atomic "move". */

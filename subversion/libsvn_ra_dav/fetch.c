@@ -471,7 +471,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   req = ne_request_create(sess, "GET", url);
   if (req == NULL)
     {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, 0, NULL,
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                "Could not create a GET request for %s",
                                url);
     }
@@ -631,7 +631,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
       */
 #if 0
       if (written != len && cgc->err == NULL)
-        cgc->err = svn_error_createf(SVN_ERR_INCOMPLETE_DATA, 0, NULL,
+        cgc->err = svn_error_createf(SVN_ERR_INCOMPLETE_DATA, NULL,
                                      "unable to completely write the svndiff "
                                      "data to the parser stream "
                                      "(wrote " APR_SIZE_T_FMT " "
@@ -743,7 +743,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
       /* ### eek. what to do? */
 
       /* ### need an SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL,
+      return svn_error_create(APR_EGENERAL, NULL,
                               "URL does not identify a collection.");
     }
 
@@ -790,7 +790,7 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
     {
       /* Uh oh, didn't write as many bytes as neon gave us. */
       return 
-        svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
+        svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                          "Error writing to svn_stream.");
     }
 #endif
@@ -1401,7 +1401,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
     return err;
 
   if (*revision == SVN_INVALID_REVNUM)
-    return svn_error_create(SVN_ERR_INCOMPLETE_DATA, 0, NULL,
+    return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
                             "Invalid server response to dated-rev request.");
 
   return SVN_NO_ERROR;
@@ -2176,7 +2176,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Could not write an entry to the temporary "
                               "report file.");
     }
@@ -2216,7 +2216,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Could not write an entry to the temporary "
                               "report file.");
     }
@@ -2242,7 +2242,7 @@ static svn_error_t * reporter_delete_path(void *report_baton,
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Could not write a missing entry to the "
                               "temporary report file.");
     }
@@ -2274,7 +2274,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Could not write the trailer for the temporary "
                               "report file.");
     }
@@ -2290,7 +2290,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Couldn't rewind tmpfile.");
     }
   /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
@@ -2298,7 +2298,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   if (status)
     {
       (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, 0, NULL,
+      return svn_error_create(status, NULL,
                               "Couldn't get file-descriptor of tmpfile.");
     }
 
@@ -2322,7 +2322,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   if (rb->edit_baton)
     {
       return svn_error_createf 
-        (SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
+        (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
          "REPORT response handling failed to complete the editor drive");
     }
 
@@ -2478,7 +2478,7 @@ make_reporter (void *session_baton,
 
  error:
   (void) apr_file_close(rb->tmpfile);
-  return svn_error_create(status, 0, NULL, msg);
+  return svn_error_create(status, NULL, msg);
 }                      
 
 

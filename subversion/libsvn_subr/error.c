@@ -63,7 +63,6 @@ svn_error__locate (const char *file, long line)
 
 static svn_error_t *
 make_error_internal (apr_status_t apr_err,
-                     int src_err,
                      svn_error_t *child)
 {
   apr_pool_t *pool;
@@ -80,7 +79,6 @@ make_error_internal (apr_status_t apr_err,
 
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
-  new_error->src_err = src_err;
   new_error->child   = child;
   new_error->pool    = pool;
   new_error->file    = error_file;
@@ -96,13 +94,12 @@ make_error_internal (apr_status_t apr_err,
 
 svn_error_t *
 svn_error_create (apr_status_t apr_err,
-                  int src_err,
                   svn_error_t *child,
                   const char *message)
 {
   svn_error_t *err;
 
-  err = make_error_internal (apr_err, src_err, child);
+  err = make_error_internal (apr_err, child);
 
   err->message = (const char *) apr_pstrdup (err->pool, message);
 
@@ -112,7 +109,6 @@ svn_error_create (apr_status_t apr_err,
 
 svn_error_t *
 svn_error_createf (apr_status_t apr_err,
-                   int src_err,
                    svn_error_t *child,
                    const char *fmt,
                    ...)
@@ -121,7 +117,7 @@ svn_error_createf (apr_status_t apr_err,
 
   va_list ap;
 
-  err = make_error_internal (apr_err, src_err, child);
+  err = make_error_internal (apr_err, child);
 
   va_start (ap, fmt);
   err->message = apr_pvsprintf (err->pool, fmt, ap);
@@ -135,7 +131,6 @@ svn_error_t *
 svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 {
   return svn_error_create (child->apr_err,
-                           child->src_err,
                            child,
                            new_msg);
 }
@@ -192,7 +187,7 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
   else
     fputs (SVN_FILE_LINE_UNDEFINED, stream);
 
-  fprintf (stream, ": (apr_err=%d, src_err=%d)\n", err->apr_err, err->src_err);
+  fprintf (stream, ": (apr_err=%d)\n", err->apr_err);
 #endif /* SVN_DEBUG */
 
   /* When we're recursing, don't repeat the top-level message if its
