@@ -1332,7 +1332,7 @@ test_list = [ None,
               diff_deleted_in_head,
               diff_targets,
               diff_branches,
-              XFail(diff_file_urls),
+              diff_file_urls,
               ]
 
 if __name__ == '__main__':

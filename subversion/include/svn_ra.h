@@ -466,11 +466,6 @@ typedef struct svn_ra_plugin_t
   /** Ask the network layer to 'switch' a working copy to a new
    * @a switch_url;  it's another form of @c do_update().
    *
-   *    [Please note: this function cannot be used to switch a single
-   *    file, only a working copy directory.  The main caller of this
-   *    routine, @c svn_client_switch, uses @c get_file and
-   *    @c svn_wc_install_file to switch a single file.]
-   *
    * The client initially provides an @a switch_editor/@a baton to the RA
    * layer; this editor contains knowledge of where the change will
    * begin in the working copy (when @c open_root() is called). 

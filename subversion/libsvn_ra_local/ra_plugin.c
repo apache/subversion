@@ -505,7 +505,7 @@ svn_ra_local__do_switch (void *session_baton,
                         switch_url,
                         TRUE,
                         recurse,
-                        FALSE,
+                        TRUE,
                         update_editor,
                         update_baton,
                         pool);
