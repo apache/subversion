@@ -181,24 +181,19 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
 
 
 
-svn_error_t *
-svn_wc_set_revision (void *baton,
-                     svn_stringbuf_t *target,
-                     svn_boolean_t recurse,
-                     svn_revnum_t new_revnum)
+/* This function is the "real" meat of svn_wc_set_revision; it assumes
+   that PATH is absolute.  */
+static svn_error_t *
+set_revision (svn_stringbuf_t *path,
+              svn_boolean_t recurse,
+              svn_revnum_t new_revnum,
+              apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
   svn_stringbuf_t *log_parent, *logtag, *basename;
   apr_file_t *log_fp = NULL;
-  struct svn_wc_close_commit_baton *bumper =
-    (struct svn_wc_close_commit_baton *) baton;
-  apr_pool_t *pool = bumper->pool;  /* cute, eh? */
   char *revstr = apr_psprintf (pool, "%ld", new_revnum);
-
-  /* Construct the -full- path */
-  svn_stringbuf_t *path = svn_stringbuf_dup (bumper->prefix_path, pool);
-  svn_path_add_component (path, target, svn_path_local_style);
 
   /* Write a log file in the adm dir of path. */
 
@@ -289,37 +284,70 @@ svn_wc_set_revision (void *baton,
   /* The client's commit routine will take care of removing all
      locks en masse. */
 
-  /* ### Someday perhaps we can make this routine truly recursive,
-     instead of calling svn_wc_get_version_controlled_paths().  :-) */
   if (recurse)
     {
-      /* The caller wants us to bump ALL children of this directory. */
+      apr_hash_t *entries;
       apr_hash_index_t *hi;
-      apr_hash_t *path_list = apr_hash_make (pool);
 
-      /* Fetch a list of all version-controlled paths below us. */
-      SVN_ERR (svn_wc_get_version_controlled_paths (path_list, target, pool));
+      /* Read PATH's entries;  this is the absolute path. */
+      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
 
-      /* Loop over this list, calling self: */
-      for (hi = apr_hash_first (pool, path_list); hi; hi = apr_hash_next (hi))
+      /* Recursively loop over all children. */
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_size_t keylen;
           void *val;
-          const char *child_path;
-          svn_stringbuf_t *child_path_str;
+          const char *name;
+          svn_wc_entry_t *current_entry;
           
-          apr_hash_this (hi, &key, &keylen, &val);
-          child_path = (const char *) key;         
-          child_path_str = svn_stringbuf_create (child_path, pool);
+          apr_hash_this (hi, &key, NULL, &val);
+          name = (const char *) key;
+          current_entry = (svn_wc_entry_t *) val;
+          
+          /* Ignore the "this dir" entry. */
+          if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+            continue;
+          
+          /* Create child path by telescoping the main path. */
+          svn_path_add_component_nts (path, name, svn_path_local_style);
+          
+          /* Recurse, but only allow further recursion if the child is
+             a directory.  */
+          SVN_ERR (set_revision (path, 
+                                 (current_entry->kind == svn_node_dir)
+                                    ? TRUE : FALSE,
+                                 new_revnum,
+                                 pool));
 
-          SVN_ERR (svn_wc_set_revision (baton, child_path_str, FALSE,
-                                        new_revnum));
+          /* De-telescope the path. */
+          svn_path_remove_component (path, svn_path_local_style);
         }
     }
 
   return SVN_NO_ERROR;
 }
+
+
+/* Public API for above */
+svn_error_t *
+svn_wc_set_revision (void *baton,
+                     svn_stringbuf_t *target,
+                     svn_boolean_t recurse,
+                     svn_revnum_t new_revnum)
+{
+  struct svn_wc_close_commit_baton *bumper =
+    (struct svn_wc_close_commit_baton *) baton;
+
+  /* Construct the -full- path by using the baton */
+  svn_stringbuf_t *path = svn_stringbuf_dup (bumper->prefix_path, 
+                                             bumper->pool);
+  svn_path_add_component (path, target, svn_path_local_style);
+
+  /* Call the real function. */
+  return set_revision (path, recurse, new_revnum, bumper->pool);
+}
+
+
 
 svn_error_t *svn_wc_get_wc_prop (void *baton,
                                  svn_stringbuf_t *target,
