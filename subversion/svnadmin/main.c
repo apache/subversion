@@ -27,6 +27,7 @@ typedef enum svnadmin_cmd_t
   svnadmin_cmd_createtxn,
   svnadmin_cmd_deltify,
   svnadmin_cmd_dump,
+  svnadmin_cmd_load,
   svnadmin_cmd_lscr,
   svnadmin_cmd_lsrevs,
   svnadmin_cmd_lstxns,
@@ -132,6 +133,10 @@ usage (const char *progname, int exit_code)
      "      If no revisions are given, all revision trees are dumped.\n"
      "      If just LOWER_REV is given, that one revision tree is dumped.\n"
      "\n"
+     "   load   REPOS_PATH\n"
+     "      Read a 'dumpfile'-formatted stream from stdin, committing\n"
+     "      new revisions into the repository's filesystem.\n"
+     "\n"
      "   lscr      REPOS_PATH PATH\n"
      "      Print, one-per-line and youngest-to-eldest, the revisions in\n"
      "      which PATH was modified.\n"
@@ -213,6 +218,8 @@ parse_command (const char *command)
     return svnadmin_cmd_deltify;
   else if (! strcmp (command, "dump"))
     return svnadmin_cmd_dump;
+  else if (! strcmp (command, "load"))
+    return svnadmin_cmd_load;
   else if (! strcmp (command, "recover"))
     return svnadmin_cmd_recover;
 
@@ -474,6 +481,20 @@ main (int argc, const char * const *argv)
         INT_ERR (svn_repos_dump_fs (repos, stdout_stream, lower, upper, pool));
 
         fflush(stdout);                                   
+      }
+      break;
+
+    case svnadmin_cmd_load:
+      {
+        svn_stream_t *stdin_stream;
+
+        INT_ERR (svn_repos_open (&repos, path, pool));
+        fs = svn_repos_fs (repos);
+
+        /* Read the stream from STDIN.  Users can redirect a file. */
+        stdin_stream = svn_stream_from_stdio (stdin, pool);
+        
+        INT_ERR (svn_repos_load_fs (repos, stdin_stream, pool));
       }
       break;
 
