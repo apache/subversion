@@ -139,6 +139,18 @@ typedef enum svn_errno_t {
      improperly formed data in the database.  */
   SVN_ERR_FS_CORRUPT,
 
+  /* The name given is not a valid directory entry name, or filename.  */
+  SVN_ERR_FS_PATH_SYNTAX,
+
+  /* The filesystem has no version by the given number.  */
+  SVN_ERR_FS_NO_SUCH_VERSION,
+
+  /* There is no file by the given name.  */
+  SVN_ERR_FS_NOT_FOUND,
+
+  /* The name given does not refer to a directory.  */
+  SVN_ERR_FS_NOT_DIRECTORY,
+
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
