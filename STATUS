@@ -97,7 +97,7 @@ Candidate changes:
     Issue 1794: recursive propset can corrupt the entries file
     Justification: very hard for the user to recover
     Votes:
-      +1: philip, gstein
+      +1: philip, gstein, striker
 
   * r9198
     Issue 1802: use APR_EOL_STR endings to create runtime config files.
