@@ -636,7 +636,7 @@ class TargetJavaHeaders(TargetJava):
 
       class_header = build_path_join(self.headers, class_name + '.h')
       class_header_win = build_path_join(self.headers, 
-                                         self.package.replace(".", "_")
+                                         string.replace(self.package,".", "_")
                                          + "_" + class_name + '.h')
       class_pkg_list = string.split(self.package, '.')
       class_pkg = build_path_join(*class_pkg_list)
