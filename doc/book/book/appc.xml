@@ -233,16 +233,11 @@ The specified activity does not exist.
           <title>Under Windows XP, the Subversion server sometimes
             seems to send out corrupted data.</title>
 
-          <para>Yes, this does seem to be the case. We think this may
-            be due to a bug in the XP networking code that the Apache
-            development team has already run into. See <systemitem
-            class="url">http://www.apache.org/dist/httpd/binaries/win32/#xpbug</systemitem>
-            and <systemitem
+          <para>You need to install Window XP Service Pack 1.  You can
+            get all sorts of information about that Service Pack at
+            <systemitem
             class="url">http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</systemitem>
             for details.</para>
-
-          <para>For now, our only advice is <quote>Don't run a
-              Subversion server from Windows XP.</quote></para>
         </sect3>
 
 
