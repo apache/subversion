@@ -29,6 +29,9 @@ To be fixed by someone:
 
   - Use either 'use case' or 'use-case', not a mixture of both.
 
+  - Chapter 8 Section 1.1 "Repository Layer" documents the pre-FSFS state
+    of affairs.
+
 --------------------------------------------------------------
 
 To be fixed by fitz:
