@@ -533,10 +533,12 @@ resolve_to_defaults (apr_hash_t *entries,
 
 
 
-/* Fill ENTRIES according to PATH's entries file. */
+/* Fill the entries cache in ADM_ACCESS. Either the full hash cache will
+   populated, if SHOW_DELETED is TRUE, or the truncated hash cache will be
+   populated if SHOW_DELETED is FALSE.  POOL is used for local memory
+   allocation, the access baton pool is used for the cache. */
 static svn_error_t *
-read_entries (apr_hash_t *entries,
-              const char *path,
+read_entries (svn_wc_adm_access_t *adm_access,
               svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
@@ -546,20 +548,21 @@ read_entries (apr_hash_t *entries,
   apr_status_t apr_err;
   char buf[BUFSIZ];
   apr_size_t bytes_read;
-  struct entries_accumulator *accum;
+  struct entries_accumulator accum;
+  apr_hash_t *entries = apr_hash_make (svn_wc_adm_access_pool (adm_access));
 
   /* Open the entries file. */
-  SVN_ERR (svn_wc__open_adm_file (&infile, path, SVN_WC__ADM_ENTRIES,
-                                  APR_READ, pool));
+  SVN_ERR (svn_wc__open_adm_file (&infile,
+                                  svn_wc_adm_access_path (adm_access),
+                                  SVN_WC__ADM_ENTRIES, APR_READ, pool));
 
   /* Set up userData for the XML parser. */
-  accum = apr_palloc (pool, sizeof (*accum));
-  accum->entries = entries;
-  accum->show_deleted = show_deleted;
-  accum->pool = pool;
+  accum.entries = entries;
+  accum.show_deleted = show_deleted;
+  accum.pool = svn_wc_adm_access_pool (adm_access);
 
   /* Create the XML parser */
-  svn_parser = svn_xml_make_parser (accum,
+  svn_parser = svn_xml_make_parser (&accum,
                                     handle_start_tag,
                                     NULL,
                                     NULL,
@@ -567,7 +570,7 @@ read_entries (apr_hash_t *entries,
 
   /* Store parser in its own userdata, so callbacks can call
      svn_xml_signal_bailout() */
-  accum->parser = svn_parser;
+  accum.parser = svn_parser;
 
   /* Parse. */
   do {
@@ -581,17 +584,20 @@ read_entries (apr_hash_t *entries,
     if (err)
       return svn_error_createf (err->apr_err, 0, err, pool, 
                                 "read_entries: xml parser failed (%s).", 
-                                path);
+                                svn_wc_adm_access_path (adm_access));
   } while (!APR_STATUS_IS_EOF(apr_err));
 
   /* Close the entries file. */
-  SVN_ERR (svn_wc__close_adm_file (infile, path, SVN_WC__ADM_ENTRIES, 0, pool));
+  SVN_ERR (svn_wc__close_adm_file (infile, svn_wc_adm_access_path (adm_access),
+                                   SVN_WC__ADM_ENTRIES, 0, pool));
 
   /* Clean up the xml parser */
   svn_xml_free_parser (svn_parser);
 
   /* Fill in any implied fields. */
-  SVN_ERR (resolve_to_defaults (entries, pool));
+  SVN_ERR (resolve_to_defaults (entries, svn_wc_adm_access_pool (adm_access)));
+
+  svn_wc__adm_access_set_entries (adm_access, show_deleted, entries);
 
   return SVN_NO_ERROR;
 }
@@ -605,7 +611,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
               apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  apr_hash_t *entries = apr_hash_make (pool);
+  apr_hash_t *entries;
   int is_wc;
 
   *entry = NULL;
@@ -793,15 +799,11 @@ svn_wc_entries_read (apr_hash_t **entries,
 {
   apr_hash_t *new_entries;
 
-  new_entries = svn_wc__adm_access_entries (adm_access, show_deleted);
+  new_entries = svn_wc__adm_access_entries (adm_access, show_deleted, pool);
   if (! new_entries)
     {
-      pool = svn_wc_adm_access_pool (adm_access);
-      new_entries = apr_hash_make (pool);
-
-      SVN_ERR (read_entries (new_entries, svn_wc_adm_access_path (adm_access),
-                             show_deleted, pool));
-      svn_wc__adm_access_set_entries (adm_access, show_deleted, new_entries);
+      SVN_ERR (read_entries (adm_access, show_deleted, pool));
+      new_entries = svn_wc__adm_access_entries (adm_access, show_deleted, pool);
     }
 
   *entries = new_entries;
@@ -827,7 +829,6 @@ write_entry (svn_stringbuf_t **output,
   assert (name);
 
   /* Name */
-  entry->name = apr_pstrdup (pool, name);
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING, 
                 entry->name);
 
@@ -1097,7 +1098,10 @@ svn_wc__entries_write (apr_hash_t *entries,
    already exists, the requested changes will be folded (merged) into
    the entry's existing state.  If the entry doesn't exist, the entry
    will be created with exactly those properties described by the set
-   of changes. */
+   of changes.
+
+   POOL may be used to allocate memory referenced by ENTRIES.
+ */
 static void
 fold_entry (apr_hash_t *entries,
             const char *name,
@@ -1208,7 +1212,7 @@ fold_entry (apr_hash_t *entries,
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
      the heck. */
-  apr_hash_set (entries, name, APR_HASH_KEY_STRING, cur_entry);
+  apr_hash_set (entries, cur_entry->name, APR_HASH_KEY_STRING, cur_entry);
 }
 
 
@@ -1225,7 +1229,11 @@ svn_wc__entry_remove (apr_hash_t *entries, const char *name)
    Given an entryname NAME in ENTRIES, examine the caller's requested
    change in *SCHEDULE and the current state of the entry.  Possibly
    modify *SCHEDULE and *MODIFY_FLAGS so that when merged, it will
-   reflect the caller's original intent. */
+   reflect the caller's original intent.
+
+   POOL is used for local allocations only, calling this function does not
+   use POOL to allocate any memory referenced by ENTRIES.
+ */
 static svn_error_t *
 fold_scheduling (apr_hash_t *entries,
                  const char *name,
@@ -1459,8 +1467,6 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* Ensure that NAME is valid. */
   if (name == NULL)
     name = SVN_WC_ENTRY_THIS_DIR;
-  else
-    name = apr_pstrdup (svn_wc_adm_access_pool (adm_access), name);
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
@@ -1472,8 +1478,7 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
       /* If scheduling changes were made, we have a special routine to
          manage those modifications. */
       SVN_ERR (fold_scheduling (entries, name, &modify_flags, 
-                                &entry->schedule,
-                                svn_wc_adm_access_pool (adm_access)));
+                                &entry->schedule, pool));
 
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as

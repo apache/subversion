@@ -591,11 +591,13 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
 }
 
 /* Ensure that the cache for the pruned hash (no deleted entries) in
-   ADM_ACCESS is valid if the full hash is cached.
+   ADM_ACCESS is valid if the full hash is cached.  POOL is used for
+   local, short term, memory allocation.
 
    ### Should this sort of processing be in entries.c? */
 static void
-prune_deleted (svn_wc_adm_access_t *adm_access)
+prune_deleted (svn_wc_adm_access_t *adm_access,
+               apr_pool_t *pool)
 {
   if (! adm_access->entries && adm_access->entries_deleted)
     {
@@ -603,7 +605,7 @@ prune_deleted (svn_wc_adm_access_t *adm_access)
 
       /* I think it will be common for there to be no deleted entries, so
          it is worth checking for that case as we can optimise it. */
-      for (hi = apr_hash_first (adm_access->pool, adm_access->entries_deleted);
+      for (hi = apr_hash_first (pool, adm_access->entries_deleted);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -624,7 +626,7 @@ prune_deleted (svn_wc_adm_access_t *adm_access)
 
       /* Construct pruned hash without deleted entries */
       adm_access->entries = apr_hash_make (adm_access->pool);
-      for (hi = apr_hash_first (adm_access->pool, adm_access->entries_deleted);
+      for (hi = apr_hash_first (pool, adm_access->entries_deleted);
            hi;
            hi = apr_hash_next (hi))
         {
@@ -655,11 +657,12 @@ svn_wc__adm_access_set_entries (svn_wc_adm_access_t *adm_access,
 
 apr_hash_t *
 svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
-                            svn_boolean_t show_deleted)
+                            svn_boolean_t show_deleted,
+                            apr_pool_t *pool)
 {
   if (! show_deleted)
     {
-      prune_deleted (adm_access);
+      prune_deleted (adm_access, pool);
       return adm_access->entries;
     }
   else
