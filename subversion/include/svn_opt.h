@@ -303,17 +303,17 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
 /**
  * @since New in 1.1.
  *
- * Parse a working-copy or url in @a path, looking for an "@" sign, e.g.
+ * Parse a working-copy or url in @a path, looking for an "@" sign.
  *
- *       foo/bar/baz@13
- *       http://blah/bloo@27
- *       blarg/snarf@HEAD
+ * Some examples would be:
+ *
+ *      - foo/bar/baz@@13
+ *      - http://blah/bloo@27
+ *      - blarg/snarf@@HEAD
  *
  * If an "@" is found, return the two halves in @a *truepath and @a
- * *rev, allocating from @a pool.
- *
- * If no "@" is found, set @a *truepath to @a path and @a *rev to kind
- * 'unspecified'.
+ * *rev, allocating from @a pool. If no "@" is found, set @a *truepath
+ * to @a path and @a *rev to kind 'unspecified'.
  */
 svn_error_t *
 svn_opt_parse_path (svn_opt_revision_t *rev,
