@@ -3482,8 +3482,7 @@ txn_body_history_prev (void *baton, apr_pool_t *pool)
 
   /* Open PATH/REVISION, and get its node and a bunch of other
      goodies.  */
-  SVN_ERR (svn_fs__rev_get_txn_id (&txn_id, fs, revision, pool));
-  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, pool));
+  SVN_ERR (open_path (&parent_path, root, path, 0, NULL, pool));
   node = parent_path->node;
   node_id = svn_fs__dag_get_id (node);
   commit_path = svn_fs__dag_get_created_path (node);
