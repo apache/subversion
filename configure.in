@@ -38,6 +38,7 @@ AC_CONFIG_HEADER(svn_private_config.h)
 dnl Todo: we're English-only now, but GNU Gettext eventually?
 dnl Set of available languages.
 dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
+dnl                 I volunteer for this ^^ translation :-)  -xbc
 
 dnl Sub-package configuration ---------------------
 
@@ -125,10 +126,10 @@ SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   FS_RULES="fs-libs fs-programs"
-  AC_SUBST(SVN_DB_INCLUDES)
-  AC_SUBST(SVN_DB_LIBS)
 fi
 AC_SUBST(FS_RULES)
+AC_SUBST(SVN_DB_INCLUDES)
+AC_SUBST(SVN_DB_LIBS)
 
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
                    [The desired major version for the Berkeley DB])
