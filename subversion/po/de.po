@@ -33,7 +33,7 @@
 # stderr       Standardfehlerausgabe
 # stdio        Standardeingabe
 # stdout       Standardausgabe
-# stream			 Datenstrom
+# stream       Datenstrom
 # switch       umstellen
 # system       System, des Systems
 # tag          Tag, des Tags
@@ -49,9 +49,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-08-17 09:36+0200\n"
-"PO-Revision-Date: 2004-08-19 15:01+0100\n"
-"Last-Translator: Lübbe Onken <l.onken@rac.de>\n"
-"Language-Team: Subversion <dev@subversion.tigris.org>\n"
+"PO-Revision-Date: 2004-08-23 10:53+0100\n"
+"Last-Translator: Subversion <dev@subversion.tigris.org>\n"
+"Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -3437,6 +3437,14 @@ msgstr "Unbekannte XML Codierung: '%s'"
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
 
+#: libsvn_ra_dav/file_revs.c:369
+msgid "get-file-revs REPORT not implemented"
+msgstr "'get-file-revs' REPORT nicht implementiert"
+
+#: libsvn_ra_dav/file_revs.c:376
+msgid "The file-revs report didn't contain any revisions"
+msgstr "Der 'get-file-revs' Befehl gab keine Revisionen zurück"
+
 #: libsvn_ra_dav/merge.c:216
 #, c-format
 msgid "Protocol error: we told the server not to auto-merge any resources, but it said that '%s' was merged"
@@ -4595,11 +4603,11 @@ msgstr "keine Fortschrittsanzeige (nur Fehler) auf die Standardausgabe"
 
 #: svnadmin/main.c:223
 msgid "ignore any repos UUID found in the stream"
-msgstr "ignoriere jede Projektarchiv-UUID, die in dem Stream gefunden wird"
+msgstr "ignoriere jede Projektarchiv-UUID, die im Datenstrom gefunden wird"
 
 #: svnadmin/main.c:226
 msgid "set repos UUID to that found in stream, if any"
-msgstr "setze die UUID des Projektarchiv auf die im Stream gefundene, wenn überhaupt"
+msgstr "setze die UUID des Projektarchiv auf die im Datenstrom gefundene"
 
 #: svnadmin/main.c:229
 msgid "type of repository: 'bdb' or 'fsfs'"
@@ -4729,11 +4737,11 @@ msgid ""
 msgstr ""
 "Aufruf: svnadmin load ARCHIV_PFAD\n"
 "\n"
-"Lies einen Stream im 'Dump'-Format von der Standardeingabe in das\n"
+"Lies einen Datenstrom im 'Dump'-Format von der Standardeingabe in das\n"
 "Dateisystem des Projektarchivs ein. Falls das Projektarchiv vorher leer\n"
-"war, wird seine UUID standardmäßig in diejenige geändert, die im Stream\n"
-"spezifiziert ist. Eine Fortschrittsanzeige wird an die Standardausgabe\n"
-"gesendet.\n"
+"war, wird seine UUID standardmäßig in diejenige geändert, die im Daten-\n"
+"strom spezifiziert ist. Eine Fortschrittsanzeige wird an die Standard-\n"
+"ausgabe gesendet.\n"
 
 #: svnadmin/main.c:314
 msgid ""
