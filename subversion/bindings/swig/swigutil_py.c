@@ -80,8 +80,10 @@ void release_py_lock(void)
 void acquire_py_lock(void)
 {
 #ifdef WITH_THREAD
+  void *val;
   PyThreadState *thread_state;
-  apr_threadkey_private_get((void **)&thread_state, _saved_thread_key);
+  apr_threadkey_private_get(&val, _saved_thread_key);
+  thread_state = val;
   PyEval_RestoreThread(thread_state);
 #endif
 }
