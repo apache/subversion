@@ -3586,7 +3586,7 @@ Updated to revision 31.
              For example, the hostname may change, or the URL schema,
              or perhaps just the path which leads to the repository.
              Rather than checkout a new working copy, you can have the
-             <command>svn switch</command> command "rewrite" the the
+             <command>svn switch</command> command "rewrite" the
              beginnings of all the URLs in your working copy.  Use the
              <option>--relocate</option> command to do the
              substitution.  No file contents are changed, nor is the

@@ -1647,7 +1647,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
           directly set or modified by users.  Subversion automatically
           sets this property whenever a <quote>special</quote> object
           is scheduled for addition, such as a symbolic link.  The
-          repository stores a <literal>svn:special</literal> object as
+          repository stores an <literal>svn:special</literal> object as
           an ordinary file.  However, when a client sees this property
           during checkouts or updates, it interprets the contents of
           the file and translates the item back into the special type

@@ -484,7 +484,7 @@ X    Resource is external to this working copy (comes from another
       <option>--no-auth-cache</option> switch.</para>
 
     <para>The exception to this behaviors, however, is in the case of
-      accessing an <command>svnserve</command> server over an ssh
+      accessing an <command>svnserve</command> server over an SSH
       tunnel, using the <literal>svn+ssh://</literal> URL schema.  In
       that case, the <command>ssh</command> program unconditionally
       demands authentication just to start the tunnel.</para>
