@@ -148,7 +148,12 @@ start_resource (void *userdata, const char *href)
 
   /* printf("start_resource: %s\n", href); */
 
+  /* ### mod_dav returns absolute paths in the DAV:href element. that is
+     ### fine for us, since we're based on top of mod_dav. however, this
+     ### will have an impact on future interopability.
+  */
   r->href = apr_pstrdup(fc->pool, href);
+
   return r;
 }
 
