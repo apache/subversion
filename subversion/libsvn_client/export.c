@@ -355,7 +355,7 @@ copy_versioned_files (const char *from,
 static svn_error_t *
 open_root_internal (const char *path,
                     svn_boolean_t force,
-                    svn_wc_notify_func_t notify_func,
+                    svn_wc_notify_func2_t notify_func,
                     void *notify_baton,
                     apr_pool_t *pool)
 {
@@ -374,15 +374,14 @@ open_root_internal (const char *path,
                               svn_path_local_style (path, pool));
 
   if (notify_func)
-    (*notify_func) (notify_baton,
-                    path,
-                    svn_wc_notify_update_add,
-                    svn_node_dir,
-                    NULL,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
-
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_dir;
+      (*notify_func) (notify_baton, notify, pool);
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -401,7 +400,7 @@ struct edit_baton
   apr_hash_t *externals;
   const char *native_eol;
 
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
 
@@ -518,15 +517,13 @@ add_directory (const char *path,
                               svn_path_local_style (full_path, pool));
 
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        full_path,
-                        svn_wc_notify_update_add,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
-
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (full_path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_dir;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
   
   /* Build our dir baton. */
   db->path = full_path;
@@ -730,14 +727,14 @@ close_file (void *file_baton,
     SVN_ERR (svn_io_set_file_affected_time (fb->date, fb->path, pool));
 
   if (fb->edit_baton->notify_func)
-    (*fb->edit_baton->notify_func) (fb->edit_baton->notify_baton,
-                                    fb->path,
-                                    svn_wc_notify_update_add,
-                                    svn_node_file,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (fb->path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_file;
+      (*fb->edit_baton->notify_func) (fb->edit_baton->notify_baton, notify,
+                                      pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -782,8 +779,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
       eb->root_url = url;
       eb->force = force;
       eb->target_revision = &edit_revision;
-      eb->notify_func = ctx->notify_func;
-      eb->notify_baton = ctx->notify_baton;
+      eb->notify_func = ctx->notify_func2;
+      eb->notify_baton = ctx->notify_baton2;
       eb->externals = apr_hash_make (pool);
       eb->native_eol = native_eol; 
 
@@ -884,7 +881,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
           SVN_ERR (svn_io_check_path (to, &kind, pool));
           if (kind == svn_node_none)
             SVN_ERR (open_root_internal
-                     (to, force, ctx->notify_func, ctx->notify_baton, pool));
+                     (to, force, ctx->notify_func2, ctx->notify_baton2, pool));
 
           if (! ignore_externals && recurse)
             SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
@@ -908,15 +905,14 @@ svn_client_export3 (svn_revnum_t *result_rev,
     }
   
 
-  if (ctx->notify_func)
-    (*ctx->notify_func) (ctx->notify_baton,
-                         to,
-                         svn_wc_notify_update_completed,
-                         svn_node_unknown,
-                         NULL,
-                         svn_wc_notify_state_unknown,
-                         svn_wc_notify_state_unknown,
-                         edit_revision);
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (to,
+                                svn_wc_notify_update_completed, pool);
+      notify->revision = edit_revision;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   if (result_rev)
     *result_rev = edit_revision;

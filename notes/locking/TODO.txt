@@ -5,51 +5,22 @@ TODO for locking
 MUST HAVE
 ---------
 
-* svn status -u shows lock info from repos.  (lundblad)
+* notification-system rewrite;  patch is in progress.  (lundblad)
 
-* 'svn up' needs to notify when it deletes a defunct token
-       --> depends on patch-in-progress:
-           rev svn_wc_notify_func_t (on trunk) (lundblad/sussman)
+     - make 'svn up' use new system to tell user that a defunct token
+       has been deleted.
 
-* fix svn_fs_access_t handling in svnserve (lundblad)
+     - make svn_client_(un)lock() use the new notify callback also.
 
-* possibly teach mailer.py to send lock/unlock mails (fitz)
-
-* autoversioning:
-
-    - finish issue 2161:  PROPFIND depth 1 should show locked,
-      nonexistent paths.  (cmpilato)
-
-    - research interoperability with popular dav clients (collabnet folks)
-
-* fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad)
-
-* remove auto-force behaviour for svn unlock URL. (lundblad)
-
-* decide if/how to handle locking of schedule-add paths.
-  also decide if/how 'svn lock/unlock URL' should work on nonexistent paths.
-
-   --> related bugs (?):
-
-      - 'svn lock schedule-add-path' currently fails because it's
-        sending working rev of '0', which the fs tries to check against.
-
-      - 'svn unlock http://nonexistentURL' fails, because ra_dav
-          can't PROPFIND on the imaginary path.  Yet the DAV spec says
-          a locked, nonexistent path ("lock-null") *should* respond to
-          a PROPFIND.  At a minimum, it should have lock properties
-          attached.
-
-      - 'svn unlock svn://nonexistentURL' also fails (but not file:///)
-          ("doesn't exist in HEAD" error)
-
-* scan the whole patch for TODO items introduced on the branch. (all, please)
-
+* scan the whole patch for TODO items introduced on the branch (all, please)
+  
 
 NICE TO HAVE
 ------------
 
 * improve cmdline help messages
+
+* possibly teach mailer.py to send lock/unlock mails (fitz)
 
 * remove ra_svn shim for multiple locks/unlocks (fitz)
 
@@ -59,8 +30,6 @@ NICE TO HAVE
 
 * get neon 0.25 released, so the control-c bug can go away
   (chat with jorton about neon 0.25/svn 1.2 coordination?)
-
-* make --keep-locks into a runtime 'config' option
 
 -----------------------------------------------
 

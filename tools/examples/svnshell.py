@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # svnshell.py : a Python-based shell interface for cruising 'round in
 #               the filesystem.

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # mailer-tweak.py: tweak the svn:date properties on all revisions
 #

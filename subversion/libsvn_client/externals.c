@@ -225,15 +225,11 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          rename the external subdirectory. */
 
       /* First notify that we're about to handle an external. */
-      if (ib->ctx->notify_func)
-        (*ib->ctx->notify_func) (ib->ctx->notify_baton,
-                                 path,
-                                 svn_wc_notify_update_external,
-                                 svn_node_unknown,
-                                 NULL,
-                                 svn_wc_notify_state_unknown,
-                                 svn_wc_notify_state_unknown,
-                                 SVN_INVALID_REVNUM);
+      if (ib->ctx->notify_func2)
+        (*ib->ctx->notify_func2)
+          (ib->ctx->notify_baton2,
+           svn_wc_create_notify (path, svn_wc_notify_update_external,
+                                 ib->pool), ib->pool);
 
       if (ib->is_export)
         /* ### It should be okay to "force" this export.  Externals
@@ -299,15 +295,11 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                   ib->pool));
       
       /* First notify that we're about to handle an external. */
-      if (ib->ctx->notify_func)
-        (*ib->ctx->notify_func) (ib->ctx->notify_baton,
-                                 path,
-                                 svn_wc_notify_update_external,
-                                 svn_node_unknown,
-                                 NULL,
-                                 svn_wc_notify_state_unknown,
-                                 svn_wc_notify_state_unknown,
-                                 SVN_INVALID_REVNUM);
+      if (ib->ctx->notify_func2)
+        (*ib->ctx->notify_func2)
+          (ib->ctx->notify_baton2,
+           svn_wc_create_notify (path, svn_wc_notify_update_external,
+                                 ib->pool), ib->pool);
 
       SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                               &(new_item->revision),
@@ -325,15 +317,12 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       svn_node_kind_t kind;
 
       /* First notify that we're about to handle an external. */
-      if (ib->ctx->notify_func)
-        (*ib->ctx->notify_func) (ib->ctx->notify_baton,
-                                 path,
-                                 svn_wc_notify_update_external,
-                                 svn_node_unknown,
-                                 NULL,
-                                 svn_wc_notify_state_unknown,
-                                 svn_wc_notify_state_unknown,
-                                 SVN_INVALID_REVNUM);
+      if (ib->ctx->notify_func2)
+        (*ib->ctx->notify_func2)
+          (ib->ctx->notify_baton2,
+           svn_wc_create_notify (path, svn_wc_notify_update_external,
+                                 ib->pool), ib->pool
+           );
 
       /* Next, verify that the external working copy matches
          (URL-wise) what is supposed to be on disk. */
@@ -628,15 +617,11 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
             continue;
 
           /* Tell the client we're staring an external status set. */
-          if (ctx->notify_func)
-            (ctx->notify_func) (ctx->notify_baton,
-                                fullpath,
-                                svn_wc_notify_status_external,
-                                svn_node_unknown,
-                                NULL,
-                                svn_wc_notify_state_unknown,
-                                svn_wc_notify_state_unknown,
-                                SVN_INVALID_REVNUM);
+          if (ctx->notify_func2)
+            (ctx->notify_func2)
+              (ctx->notify_baton2,
+               svn_wc_create_notify (fullpath, svn_wc_notify_status_external,
+                                     iterpool), iterpool);
 
           /* And then do the status. */
           SVN_ERR (svn_client_status (NULL, fullpath, 

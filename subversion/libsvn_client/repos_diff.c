@@ -74,7 +74,7 @@ struct edit_baton {
   apr_hash_t *empty_hash;
 
   /* If the func is non-null, send notifications of actions. */
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
   apr_pool_t *pool;
@@ -556,14 +556,15 @@ delete_entry (const char *path,
     }
 
   if (pb->edit_baton->notify_func)
-    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                    svn_path_join (eb->target, path, pool),
-                                    action,
-                                    kind,
-                                    NULL,
-                                    state, state,
-                                    SVN_INVALID_REVNUM);
-
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (svn_path_join (eb->target, path, pool),
+                                action, pool);
+      notify->kind = kind;
+      notify->content_state = notify->prop_state = state;
+      (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton, notify,
+                                      pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -603,14 +604,12 @@ add_directory (const char *path,
     action = svn_wc_notify_update_add;
 
   if (pb->edit_baton->notify_func)
-    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                    b->wcpath,
-                                    action,
-                                    svn_node_dir,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (b->wcpath, action, pool);
+      notify->kind = svn_node_dir;
+      (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton, notify,
+                                      pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -765,10 +764,15 @@ close_file (void *file_baton,
       /* ### maybe try to stat the local b->wcpath? */      
       /* If the file path doesn't exist, then send a 'skipped' notification. */
       if (eb->notify_func)
-        (*eb->notify_func) (eb->notify_baton, b->wcpath,
-                            svn_wc_notify_skip, svn_node_file, NULL,
-                            svn_wc_notify_state_missing, prop_state,
-                            SVN_INVALID_REVNUM);
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify (b->wcpath,
+                                                          svn_wc_notify_skip,
+                                                          pool);
+          notify->kind = svn_node_file;
+          notify->content_state = svn_wc_notify_state_missing;
+          notify->prop_state = prop_state;
+          (*eb->notify_func) (eb->notify_baton, notify, pool);
+        }
       
       svn_error_clear (err);
       return SVN_NO_ERROR;
@@ -820,15 +824,14 @@ close_file (void *file_baton,
     action = svn_wc_notify_update_update;
 
   if (eb->notify_func)
-    (*eb->notify_func)
-      (eb->notify_baton,
-       b->wcpath,
-       action,
-       svn_node_file,
-       NULL,
-       content_state,
-       prop_state,
-       SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (b->wcpath, action,
+                                                      pool);
+      notify->kind = svn_node_file;
+      notify->content_state = content_state;
+      notify->prop_state = prop_state;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -854,12 +857,14 @@ close_directory (void *dir_baton,
           /* ### maybe try to stat the local b->wcpath? */          
           /* If the path doesn't exist, then send a 'skipped' notification. */
           if (eb->notify_func)
-            (*eb->notify_func) (eb->notify_baton, b->wcpath,
-                                svn_wc_notify_skip, svn_node_dir, NULL,
-                                svn_wc_notify_state_missing,
-                                svn_wc_notify_state_missing,
-                                SVN_INVALID_REVNUM);
-
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify (b->wcpath, svn_wc_notify_skip, pool);
+              notify->kind = svn_node_dir;
+              notify->content_state = notify->prop_state
+                = svn_wc_notify_state_missing;
+              (*eb->notify_func) (eb->notify_baton, notify, pool);
+            }
           svn_error_clear (err);      
           return SVN_NO_ERROR;
         }
@@ -878,14 +883,14 @@ close_directory (void *dir_baton,
     }
 
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        b->wcpath,
-                        svn_wc_notify_update_update,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_inapplicable,
-                        prop_state,
-                        SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (b->wcpath, svn_wc_notify_update_update, pool);
+      notify->kind = svn_node_dir;
+      notify->content_state = svn_wc_notify_state_inapplicable;
+      notify->prop_state = prop_state;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -948,7 +953,7 @@ svn_client__get_diff_editor (const char *target,
                              svn_boolean_t dry_run,
                              svn_ra_session_t *ra_session,
                              svn_revnum_t revision,
-                             svn_wc_notify_func_t notify_func,
+                             svn_wc_notify_func2_t notify_func,
                              void *notify_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,

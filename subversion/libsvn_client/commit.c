@@ -213,15 +213,16 @@ import_file (const svn_delta_editor_t *editor,
         }
     }
 
-  if (ctx->notify_func)
-    (*ctx->notify_func) (ctx->notify_baton,
-                         path,
-                         svn_wc_notify_commit_added,
-                         svn_node_file,
-                         mimetype,
-                         svn_wc_notify_state_inapplicable,
-                         svn_wc_notify_state_inapplicable,
-                         SVN_INVALID_REVNUM);
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (path, svn_wc_notify_commit_added, pool);
+      notify->kind = svn_node_file;
+      notify->mime_type = mimetype;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   /* If this is a special file, we need to set the svn:special
      property and create a temporary detranslated version in order to
@@ -310,15 +311,17 @@ import_dir (const svn_delta_editor_t *editor,
              with that name, something is bound to blow up when they
              checkout what they've imported.  So, just skip items with
              that name.  */
-          if (ctx->notify_func)
-            (*ctx->notify_func) (ctx->notify_baton,
-                                 svn_path_join (path, filename, subpool),
-                                 svn_wc_notify_skip,
-                                 svn_node_dir,
-                                 NULL,
-                                 svn_wc_notify_state_inapplicable,
-                                 svn_wc_notify_state_inapplicable,
-                                 SVN_INVALID_REVNUM);
+          if (ctx->notify_func2)
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify (svn_path_join (path, filename,
+                                                       subpool),
+                                        svn_wc_notify_skip, subpool);
+              notify->kind = svn_node_dir;
+              notify->content_state = notify->prop_state
+                = svn_wc_notify_state_inapplicable;
+              (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
+            }
           continue;
         }
 
@@ -352,15 +355,16 @@ import_dir (const svn_delta_editor_t *editor,
              a directory add before displaying adds underneath the
              directory.  To do it the other way around, just move this
              after the recursive call. */
-          if (ctx->notify_func)
-            (*ctx->notify_func) (ctx->notify_baton,
-                                 this_path,
-                                 svn_wc_notify_commit_added,
-                                 svn_node_dir,
-                                 NULL,
-                                 svn_wc_notify_state_inapplicable,
-                                 svn_wc_notify_state_inapplicable,
-                                 SVN_INVALID_REVNUM);
+          if (ctx->notify_func2)
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify (this_path, svn_wc_notify_commit_added,
+                                        subpool);
+              notify->kind = svn_node_dir;
+              notify->content_state = notify->prop_state
+                = svn_wc_notify_state_inapplicable;
+              (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
+            }
 
           /* Recurse. */
           SVN_ERR (import_dir (editor, this_dir_baton, 

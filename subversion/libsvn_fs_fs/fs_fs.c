@@ -328,6 +328,9 @@ svn_fs_fs__hotcopy (const char *src_path,
   svn_revnum_t youngest, rev;
   apr_pool_t *iterpool;
 
+  /* Copy the format file. */
+  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_FORMAT, pool));
+
   /* Copy the current file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_CURRENT, pool));
 
@@ -362,8 +365,8 @@ svn_fs_fs__hotcopy (const char *src_path,
     {
       svn_pool_clear (iterpool);
       SVN_ERR (svn_io_dir_file_copy (src_subdir, dst_subdir,
-                                     apr_psprintf (pool, "%ld", rev),
-                                     pool));
+                                     apr_psprintf (iterpool, "%ld", rev),
+                                     iterpool));
     }
 
   apr_pool_destroy (iterpool);

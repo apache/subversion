@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- Python -*-
 """Transform find-fix.py output into Excellable csv."""
 

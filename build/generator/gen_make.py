@@ -280,15 +280,6 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      # reflect inter-library dependencies in the library install targets
-      inst_area_deps = {}
-      for target in inst_targets:
-        for target_dep in self.graph.get_sources(gen_base.DT_LINK, target.name,
-                                                 gen_base.TargetLib):
-          if target_dep.install and target_dep.install != area:
-            inst_area_deps['install-%s' % target_dep.install] = None
-      inst_area_deps = inst_area_deps.keys()
-
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
         la_tweaked = { }

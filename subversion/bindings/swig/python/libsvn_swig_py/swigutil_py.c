@@ -36,6 +36,9 @@
 #include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
 #if SVN_SWIG_VERSION >= 103024
+#if SVN_SWIG_VERSION >= 103025
+#include <swiglabels.swg>
+#endif
 #include <swigrun.swg>
 #include <python/pyrun.swg>
 #include <runtime.swg>
@@ -1439,7 +1442,6 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 {
   PyObject *receiver = baton;
   PyObject *result;
-  swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
   PyObject *chpaths;
   svn_error_t *err = SVN_NO_ERROR;
  
@@ -1450,6 +1452,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   if (changed_paths)
     {
+      swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
       chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
     }
   else
