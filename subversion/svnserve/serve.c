@@ -391,7 +391,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *log_msg, *date, *author;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_boolean_t aborted = TRUE;
+  svn_boolean_t aborted;
   commit_callback_baton_t ccb;
   svn_revnum_t new_rev;
 

@@ -661,12 +661,12 @@ static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
                                              void *baton)
 {
   ra_svn_driver_state_t *ds = baton;
+  svn_error_t *err;
 
-  SVN_CMD_ERR(ds->editor->close_edit(ds->edit_baton, pool));
-
+  err = ds->editor->close_edit(ds->edit_baton, pool);
   if (ds->aborted)
-    *ds->aborted = FALSE;
-
+    *ds->aborted = (err != SVN_NO_ERROR);
+  SVN_CMD_ERR(err);
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 
