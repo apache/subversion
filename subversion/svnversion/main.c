@@ -70,29 +70,36 @@ analyze_status (void *baton,
     sb->wc_url = apr_pstrdup (sb->pool, status->entry->url);
 }
 
+static void
+usage(void)
+{
+  fprintf(stderr, 
+          "usage: svnversion wc_path [trail_url]\n\n"
+          "  Produce a compact \"version number\" for the working copy\n"
+          "  path WC_PATH.  TRAIL_URL is the trailing portion of the trunk\n"
+          "  URL.  The version number is written to standard output.  For\n"
+          "  example:\n"
+          "\n"
+          "    $ svnversion . /repos/svn/trunk \n"
+          "    4168\n"
+          "\n"
+          "  The version number will be a single number if the working\n"
+          "  copy is single revision, unmodified, not switched and with\n"
+          "  an URL that matches the trunk URL argument.  If the working\n"
+          "  copy is unusual the version number will be more complex:\n"
+          "\n"
+          "   4123:4168     mixed revision working copy\n"
+          "   4168M         modified working copy\n"
+          "   4123S         switched working copy\n"
+          "   4123:4168MS   mixed revision, modified, switched working copy\n"
+          "\n"
+          "  If invoked on a directory that is not a working copy, an\n"
+          "  exported directory say, the program will output \"exported\".\n"
+          "\n");
+}
 
-/* The svnversion program uses svn_client_status to produce a compact
- * "version number" for the Subversion working copy.  The program takes one
- * or two arguments, the first is the path to the working copy, the second
- * is the trailing portion of the trunk URL.  The version number is written
- * to standard output.  Here is an example
- *
- *   $ svnversion . /repos/svn/trunk 
- *   4168
- *
- * The version number will be a single number if the working copy is single
- * revision, unmodified, not switched and with an URL that matches the
- * trunk URL argument.  If the working copy is unusual the version number
- * will be more coplex:
- *
- *   4123:4168       a mixed revision working copy
- *   4168M           a modified working copy
- *   4123S           a switched working copy
- *   4123:4168MS     a mixed revision, modified, switched working copy
- *
- * If invoked on a directory that is not a working copy, an exported
- * directory say, the program will output "exported".
- *
+
+/*
  * Why is this not an svn subcommand?  I have this vague idea that it could
  * be run as part of the build process, with the output embedded in the svn
  * program.  Obviously we don't want to have to run svn when building svn.
@@ -113,7 +120,7 @@ main(int argc, char *argv[])
   
   if (argc != 2 && argc != 3)
     {
-      fprintf(stderr, "usage: svnversion wc_path [trail_url]\n");
+      usage();
       return EXIT_FAILURE;
     }
 
