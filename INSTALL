@@ -659,6 +659,7 @@ III.  BUILDING A SUBVERSION SERVER
 
           $ make depend && make && make install
 
+
   B.  Making and Installing the Subversion Server
       -------------------------------------------
 
@@ -689,6 +690,33 @@ III.  BUILDING A SUBVERSION SERVER
       After the make install, the Subversion shared libraries are in
       /usr/local/lib/.  libmod_dav_svn.so should be installed in
       /usr/local/apache2/modules/.
+
+
+      1.  Building the Server on Windows [EXPERIMENTAL]
+
+      The mod_dav_svn module can now be built on Windows, using the
+      mod_dav_svn project in the workspace `subversion.dsw'. You must
+      have Apache source tree installed in parallel to the Subversion
+      source tree, and will use the apr and apr-util libraries from
+      the Apache sources; like this:
+
+          .../
+            svn/
+              db4-win32/
+              subversion/
+                mod_dav_svn/
+              ...
+            httpd-2.0/
+              srclib/
+                apr/
+                apr-util/
+              ...
+
+      You must have Berkeley DB available, as described in II.E.
+      First, buld (and install) Apache and the Subversion client and
+      local server. Then select mod_dav_svn as the active project,
+      build it, and copy mod_dav_svn.so to the Apache modules
+      directory. Apache configuration is the same as on Unix.
 
 
   C.  Configuring Apache for Subversion
