@@ -24,7 +24,7 @@
 
 /* A structure used by the routines within the `reporter' vtable,
    driven by the client as it describes its working copy revisions. */
-typedef struct svn_repos_report_baton_t
+typedef struct report_baton_t
 {
   svn_repos_t *repos;
 
@@ -87,7 +87,7 @@ typedef struct svn_repos_report_baton_t
   /* Pool from the session baton. */
   apr_pool_t *pool;
 
-} svn_repos_report_baton_t;
+} report_baton_t;
 
 
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
@@ -196,7 +196,7 @@ gut_directory (const char *path,
 
 
 static svn_error_t *
-begin_txn (svn_repos_report_baton_t *rbaton)
+begin_txn (report_baton_t *rbaton)
 {
   /* Start a transaction based on initial_rev. */
   SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
@@ -216,7 +216,7 @@ svn_repos_set_path (void *report_baton,
                     svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
-  svn_repos_report_baton_t *rbaton = report_baton;
+  report_baton_t *rbaton = report_baton;
   svn_boolean_t first_time = FALSE;
 
   /* Sanity check: make that we didn't call this with a bogus revision. */
@@ -317,7 +317,7 @@ svn_repos_link_path (void *report_baton,
 {
   svn_fs_root_t *from_root;
   const char *from_path;
-  svn_repos_report_baton_t *rbaton = report_baton;
+  report_baton_t *rbaton = report_baton;
 
   /* If we haven't already started a main transaction, we need to do
      so now. */
@@ -390,7 +390,7 @@ svn_repos_delete_path (void *report_baton,
 {
   svn_error_t *err;
   const char *delete_path;
-  svn_repos_report_baton_t *rbaton = report_baton;
+  report_baton_t *rbaton = report_baton;
   
   /* If we haven't already started a main transaction, we need to do
      so now. */
@@ -433,7 +433,7 @@ static svn_error_t *
 finish_report (void *report_baton)
 {
   svn_fs_root_t *root1, *root2;
-  svn_repos_report_baton_t *rbaton = report_baton;
+  report_baton_t *rbaton = report_baton;
   const char *tgt_path;
 
   /* If nothing was described, then we have an error */
@@ -507,7 +507,7 @@ svn_repos_finish_report (void *report_baton)
 svn_error_t *
 svn_repos_abort_report (void *report_baton)
 {
-  svn_repos_report_baton_t *rbaton = report_baton;
+  report_baton_t *rbaton = report_baton;
 
   /* ### To avoid uncommitted txns, perhaps we should we try to abort the
      ### second transacation even if aborting the first returns an
@@ -540,7 +540,7 @@ svn_repos_begin_report (void **report_baton,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
-  svn_repos_report_baton_t *rbaton;
+  report_baton_t *rbaton;
 
   /* Build a reporter baton. */
   rbaton = apr_pcalloc (pool, sizeof(*rbaton));
