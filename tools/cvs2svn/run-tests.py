@@ -375,9 +375,19 @@ def space_fname():
 def phoenix_branch():
   "convert a branch file rooted in a 'dead' revision"
   repos, wc, logs = ensure_conversion('phoenix')
-  # We'll figure out the right probes when we get the bug fixed; for
-  # now, the fact that cvs2svn.py raises an exception is enough to
-  # make this test fail as expected.
+  if not ((logs[4].changed_paths.get('/branches/volsung_20010721 '
+                                     '(from /trunk:2)') == 'A')
+          and (logs[4].changed_paths.get('/branches/volsung_20010721/'
+                                         'phoenix') == 'M')
+          and (len(logs[4].changed_paths) == 2)):
+    print "Revision 4 not as expected."
+    raise svntest.Failure
+  if not ((logs[15].changed_paths.get('/tags/vorbis1_0_public_release '
+                                      '(from /trunk:7)') == 'A')
+          and (len(logs[15].changed_paths) == 1)):
+    print "Revision 15 not as expected."
+    raise svntest.Failure
+
 
 
 def two_quick():
@@ -721,7 +731,7 @@ test_list = [ None,
               bogus_tag,
               overlapping_branch,
               tolerate_corruption,
-              XFail(phoenix_branch),
+              phoenix_branch,
               attr_exec,
               space_fname,
               two_quick,
