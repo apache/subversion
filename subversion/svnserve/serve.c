@@ -76,6 +76,11 @@ typedef struct {
   svn_ra_svn_conn_t *conn;
 } log_baton_t;
 
+typedef struct {
+  svn_ra_svn_conn_t *conn;
+  apr_pool_t *pool;  /* Pool provided in the handler call. */
+} file_revs_baton_t;
+
 enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
 enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
@@ -371,6 +376,25 @@ static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cs", name, value));
         }
     }
+  return SVN_NO_ERROR;
+}
+
+/* Write out a list of property diffs.  PROPDIFFS is an array of svn_prop_t
+ * values. */
+static svn_error_t *write_prop_diffs(svn_ra_svn_conn_t *conn,
+                                     apr_pool_t *pool,
+                                     apr_array_header_t *propdiffs)
+{
+  int i;
+
+  for (i = 0; i < propdiffs->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(propdiffs, i, svn_prop_t);
+
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "c(?s)",
+                                     prop->name, prop->value));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -985,6 +1009,93 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *svndiff_handler(void *baton, const char *data,
+                                    apr_size_t *len)
+{
+  file_revs_baton_t *b = baton;
+  svn_string_t str;
+
+  str.data = data;
+  str.len = *len;
+  return svn_ra_svn_write_string(b->conn, b->pool, &str);
+}
+
+static svn_error_t *svndiff_close_handler(void *baton)
+{
+  file_revs_baton_t *b = baton;
+
+  SVN_ERR(svn_ra_svn_write_cstring(b->conn, b->pool, ""));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *file_rev_handler(void *baton, const char *path,
+                                     svn_revnum_t rev, apr_hash_t *rev_props,
+                                     svn_txdelta_window_handler_t *d_handler,
+                                     void **d_baton,
+                                     apr_array_header_t *prop_diffs,
+                                     apr_pool_t *pool)
+{
+  file_revs_baton_t *frb = baton;
+  svn_stream_t *stream;
+
+  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "cr(!",
+                                 path, rev));
+  SVN_ERR(write_proplist(frb->conn, pool, rev_props));
+  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)(!"));
+  SVN_ERR(write_prop_diffs(frb->conn, pool, prop_diffs));
+  SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)"));
+
+  /* Store the pool for the delta stream. */
+  frb->pool = pool;
+
+  /* Prepare for the delta or just write an empty string. */
+  if (d_handler)
+    {
+      stream = svn_stream_create(baton, pool);
+      svn_stream_set_write(stream, svndiff_handler);
+      svn_stream_set_close(stream, svndiff_close_handler);
+
+      svn_txdelta_to_svndiff(stream, pool, d_handler, d_baton);
+    }
+  else
+    SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
+      
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                  apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  svn_error_t *err, *write_err;
+  file_revs_baton_t frb;
+  svn_revnum_t start_rev, end_rev;
+  const char *path;
+  const char *full_path;
+  
+  /* Parse arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)",
+                                 &path, &start_rev, &end_rev));
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  full_path = svn_path_join(b->fs_path, path, pool);
+
+  frb.conn = conn;
+  frb.pool = NULL;
+
+  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev,
+                                file_rev_handler, &frb, pool);
+  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
 
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-latest-rev",  get_latest_rev },
@@ -1002,6 +1113,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "log",             log_cmd },
   { "check-path",      check_path },
   { "get-locations",   get_locations },
+  { "get-file-revs",   get_file_revs },
   { NULL }
 };
 

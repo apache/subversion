@@ -321,9 +321,9 @@ static svn_error_t * brigade_write_fn(void *baton,
 }
 
 
-static svn_stream_t * make_base64_output_stream(apr_bucket_brigade *bb,
-                                                ap_filter_t *output,
-                                                apr_pool_t *pool)
+svn_stream_t * dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
+                                                 ap_filter_t *output,
+                                                 apr_pool_t *pool)
 {
   struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
   svn_stream_t *stream = svn_stream_create(wb, pool);
@@ -932,8 +932,8 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
 
   wb->seen_first_window = FALSE;
   wb->uc = file->uc;
-  base64_stream = make_base64_output_stream(wb->uc->bb, wb->uc->output,
-                                            file->pool);
+  base64_stream = dav_svn_make_base64_output_stream(wb->uc->bb, wb->uc->output,
+                                                    file->pool);
 
   svn_txdelta_to_svndiff(base64_stream, file->pool,
                          &(wb->handler), &(wb->handler_baton));
