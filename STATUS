@@ -30,14 +30,6 @@ Candidate changes:
     Votes:
       +1: ghudson, lundblad, jszakmeister
 
-  * r11215, r11264
-      SVN has needed a good packaging script for Win32 since forever.
-    Justification:
-      This and the related build and test script changes will make
-      creating 1.1.x Win32 binary packages a lot easier.
-    Votes:
-      +1: brane
-
   * r11394
     Fix javahl bindings not using the default config directory if nothing
     else is specified.
@@ -66,3 +58,19 @@ Candidate changes:
       work as well.
     Votes:
       +1: jszakmeister
+
+
+Status of 1.1.2:
+================
+
+Candidate changes:
+
+  * r11215, r11264
+      SVN has needed a good packaging script for Win32 since forever.
+    Justification:
+      This and the related build and test script changes will make
+      creating 1.1.x Win32 binary packages a lot easier.
+    Note: This depends on other changes not mentioned above; I'll
+      develop the patch on branches/1.1.x-build.
+    Votes:
+      +1: brane
