@@ -103,8 +103,8 @@ svn_cl__prompt_user (const char **result,
 
   if (! hide)
     {
-      printf (prompt_native);
-      fflush (stdout);
+      fprintf (stderr, "%s", prompt_native);
+      fflush (stderr);
 
       while (1)
         {
