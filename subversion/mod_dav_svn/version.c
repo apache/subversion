@@ -116,6 +116,12 @@ static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
   if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
     return DAV_AUTO_VERSION_ALWAYS;
 
+  /* ### We also want to allow TYPE_REGULAR VCR's to be
+     auto-versionable.  But we can't start returning ALWAYS here until
+     we implement new routines below.  In particular, mod_dav starts
+     trying to call our version_control() routine, which doesn't yet
+     exist, and then the whole request throws an error.  */
+
   /* Default:  whatever it is, assume it's not auto-versionable */
   return DAV_AUTO_VERSION_NEVER;
 }
@@ -123,6 +129,12 @@ static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
 static dav_error *dav_svn_vsn_control(dav_resource *resource,
                                       const char *target)
 {
+  /*
+    ### We need to implement this from scratch.  For now, we only
+    allow a NULL target, which means, 'create an empty file'.  The
+    resource itself, however, must be tweaked in-place into a true VCR.
+  */
+
   return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
                            SVN_ERR_UNSUPPORTED_FEATURE,
                            "VERSION-CONTROL is not yet implemented.",
@@ -144,6 +156,16 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
   /* Auto-Versioning Stuff */
   if (auto_checkout)
     {
+      /* ### autoversioning todo:
+      
+            - verify we have a VCR, and get the VCR's VR.
+            - create a new activity (txn)
+            - checkout the VR into the activity, creating a WR.
+            - don't return the WR via pointer at the bottom of this
+              routine, but instead tweak the VCR to look like the WR.
+              This might be tricky.
+      */
+
       /* ### Only baselines can be auto-checked-out -- grudgingly --
          so we can allow clients to proppatch unversioned rev props.
          See issue #916. */
@@ -439,6 +461,9 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
 static dav_error *dav_svn_uncheckout(dav_resource *resource)
 {
+  /* ### abort the resource's svn txn, and magically change the
+     resource in-place from a WR back into a VCR */
+
   return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
                            SVN_ERR_UNSUPPORTED_FEATURE,
                            "UNCHECKOUT is not yet implemented.",
@@ -450,6 +475,20 @@ static dav_error *dav_svn_checkin(dav_resource *resource,
                                   int keep_checked_out,
                                   dav_resource **version_resource)
 {
+  /* ### need to write this routine.
+
+     commit the txn hidden within the WR, using an auto-generated log
+     message.  Return the new VR that was created in
+     **version_resource, and convert the WR resource back into a VCR.
+
+     Note that mod_dav may often call this routine first on a child
+     resource, then immediately on its parent, especially if both were
+     auto-checked-out.  Thus it's very likely that we just committed
+     the txn in the previous call to checkin().  The best strategy
+     here, I suppose, is to not throw an error... i.e. if the txn no
+     longer exists, just do nothing.
+ */
+
   return dav_new_error_tag(resource->pool, HTTP_NOT_IMPLEMENTED,
                            SVN_ERR_UNSUPPORTED_FEATURE,
                            "CHECKIN is not yet implemented.",
