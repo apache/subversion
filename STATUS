@@ -134,14 +134,6 @@ Bindings changes that affect the build system:
 
 Bindings changes that don't affect the build system:
 
-     * r8348, r8378, 8380
-     Don't assume an int is the same size as a long in perl bindings.
-     Justification: Prevent potential bizarre breakage on 64-bit platforms.
-     And make blame work right when/if the apr_off_t thing gets handled
-     on 32-bit platforms.
-     Votes:
-      +1: breser (r8348, r8378), clkao (r8348, r8378, r8380), epg
-
      * r8397, r8400
      Fix declaration after statement bug.
      Votes:
