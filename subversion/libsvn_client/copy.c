@@ -47,7 +47,7 @@ svn_client_copy (svn_stringbuf_t *src_path,
                  apr_pool_t *pool)
 {
   enum svn_node_kind src_kind, dst_kind;
-  svn_stringbuf_t *final_parent, *final_basename;
+  svn_stringbuf_t *final_parent = NULL, *final_basename = NULL;
 
   /* Part I:  Parse the types of the arguments */
 

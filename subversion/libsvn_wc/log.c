@@ -642,7 +642,7 @@ log_do_committed (struct log_runner *loggy,
                               "missing revision attr for %s", name);
   else
     {
-      svn_stringbuf_t *working_file;
+      svn_stringbuf_t *working_file = NULL;
       svn_stringbuf_t *tmp_base;
       apr_time_t text_time = 0; /* By default, don't override old stamp. */
       apr_time_t prop_time = 0; /* By default, don't override old stamp. */

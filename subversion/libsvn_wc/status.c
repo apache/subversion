@@ -100,13 +100,13 @@ assemble_status (svn_wc_status_t **status,
       svn_boolean_t text_conflict_p, prop_conflict_p;
       svn_stringbuf_t *parent_dir;
       
-      if (entry->kind == svn_node_file)
+      if (entry->kind == svn_node_dir)
+        parent_dir = path;
+      else  /* non-directory, that's all we need to know */
         {
           parent_dir = svn_stringbuf_dup (path, pool);
           svn_path_remove_component (parent_dir, svn_path_local_style);
         }
-      else if (entry->kind == svn_node_dir)
-        parent_dir = path;
       
       SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
                                     parent_dir, entry, pool));

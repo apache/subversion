@@ -90,14 +90,10 @@ svn_cl__log (apr_getopt_t *os,
   /* ### todo: having built a path hash, we then ignore it, as no one
      is using it yet. */
 
-  /* ### todo: opt parsing has to change to accept the new REV1:REV2
-     syntax before we can do ranges.  Until then, we can use
-     opt_state->revision here, better than nothing. */
-
   SVN_ERR (svn_client_log (auth_baton,
                            paths,
-                           opt_state->revision,
-                           opt_state->revision,
+                           opt_state->start_revision,
+                           opt_state->end_revision,
                            0,   /* discover_changed_paths, ignored for now */
                            log_message_receiver,
                            NULL,  /* no receiver baton right now */

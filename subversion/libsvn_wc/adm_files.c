@@ -1037,7 +1037,7 @@ check_adm_exists (int *exists,
 static svn_error_t *
 make_empty_adm (svn_stringbuf_t *path, apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   apr_status_t apr_err;
   int components_added;
 

@@ -79,8 +79,8 @@ svn_cl__update (apr_getopt_t *os,
                                   auth_baton,
                                   target,
                                   opt_state->xml_file,
-                                  opt_state->revision,
-                                  opt_state->date,
+                                  opt_state->start_revision,
+                                  opt_state->start_date,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   pool));
     }

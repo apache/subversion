@@ -56,18 +56,30 @@ typedef enum {
    commands. */
 typedef struct svn_cl__opt_state_t
 {
-  svn_revnum_t revision;
-  apr_time_t date;
-  svn_stringbuf_t *message;
-  svn_stringbuf_t *xml_file;
-  svn_stringbuf_t *target;
-  svn_stringbuf_t *ancestor_path;
-  svn_boolean_t force;
+  /* These default to SVN_INVALID_REVNUM if not passed. */
+  svn_revnum_t start_revision; /* X in "svn blah -r X" or "svn blah -r X:Y" */
+  svn_revnum_t end_revision;   /* Y in "svn blah -r X:Y" */
+
+  /* These default to 0 if not passed. */
+  apr_time_t start_date;  /* X in "svn blah -D X" or "svn blah -D X:Y" */
+  apr_time_t end_date;    /* Y in "svn blah -r X:Y" */
+
+  svn_stringbuf_t *message;  /* log message */
+
+  svn_stringbuf_t *xml_file;  /* F in "svn blah --xml-file F" */
+
+  svn_stringbuf_t *target;  /* Target dir, T in "svn co -d T" */
+
+  svn_stringbuf_t *ancestor_path;  /* ### todo: who sets this? */
+
+  svn_boolean_t force;  /* Be more forceful, as in "svn rm -f ..." */
+
   /* Note: these next two flags only reflect switches given on the
      commandline.  For example, 'svn up' (with no options) will *not*
      set either of these flags, but will be recursive anyway */
   svn_boolean_t recursive;
   svn_boolean_t nonrecursive;
+
   svn_boolean_t quiet;
   svn_boolean_t version;
   svn_boolean_t verbose;

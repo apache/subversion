@@ -530,8 +530,13 @@ print_diff_tree (svn_fs_root_t *root,
 }
 
 
-/* Recursively print all nodes in the tree.  If SHOW_IDS is non-zero,
-   print the id of each node next to its name. */
+/* Recursively print all nodes in the tree. 
+ * 
+ * ### todo: I'd like to write a more descriptive doc string for this
+ * function, but I wasn't able to figure out in a finite amount of
+ * time why it even takes the arguments it takes, or why it does what
+ * it does with them.  See issue #540.  -kff
+ */
 static void
 print_ids_tree (svn_repos_node_t *node,
                 svn_fs_root_t *root,
@@ -543,7 +548,7 @@ print_ids_tree (svn_repos_node_t *node,
   svn_repos_node_t *tmp_node;
   int i;
   svn_fs_id_t *id;
-  svn_stringbuf_t *unparsed_id;
+  svn_stringbuf_t *unparsed_id = NULL;
   apr_pool_t *subpool;
 
   if (! node)
@@ -565,7 +570,7 @@ print_ids_tree (svn_repos_node_t *node,
   printf ("%s%s <%s>\n", 
           tmp_node->name, 
           tmp_node->kind == svn_node_dir ? "/" : "",
-          id ? unparsed_id->data : "unknown");
+          unparsed_id ? unparsed_id->data : "unknown");
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
