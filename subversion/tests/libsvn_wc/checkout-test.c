@@ -23,6 +23,7 @@
 #include <apr_general.h>
 
 #include "svn_types.h"
+#include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_wc.h"
 #include "svn_string.h"

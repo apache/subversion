@@ -19,6 +19,7 @@
 #include <apr_xml.h>
 #include <mod_dav.h>
 
+#include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_xml.h"
