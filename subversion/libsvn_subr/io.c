@@ -155,7 +155,7 @@ svn_io_open_unique_file (apr_file_t **f,
       apr_err = apr_file_open (f, unique_name_apr, flag,
                                APR_OS_DEFAULT, pool);
 
-      if (APR_STATUS_IS_EEXIST(apr_err))
+      if (APR_STATUS_IS_EEXIST(apr_err) || APR_STATUS_IS_EACCES(apr_err))
         continue;
       else if (apr_err)
         {
