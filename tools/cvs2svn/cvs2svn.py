@@ -100,17 +100,26 @@ class CollectData(rcsparse.Sink):
     self.branchlist = {}
 
   def set_branch_name(self, revision, name):
-    """Record that REVISION is the branch number for BRANCH_NAME.
+    """Record that REVISION is the branch number for branch NAME, and
+    that NAME sprouts from REVISION .
     REVISION is an RCS branch number with an odd number of components,
     for example '1.7.2' (never '1.7.0.2')."""
-    if self.branch_names.has_key(revision):
+    if not self.branch_names.has_key(revision):
+      # The revision->branch mapping always maps to the branch number,
+      # not a revision number.
+      self.branch_names[revision] = name
+      # But the branchlist is keyed on the revision number from which
+      # the branch sprouts, so strip off the odd final component. 
+      sprout_rev = revision[:revision.rfind(".")]
+      if not self.branchlist.has_key(sprout_rev):
+        self.branchlist[sprout_rev] = []
+      self.branchlist[sprout_rev].append(name)
+    else:
       sys.stderr.write("%s: in '%s':\n"
                        "   branch '%s' already has name '%s',\n"
-                       "   cannot also have name '%s'.\n" \
-                       % (error_prefix, self.fname, revision,
+                       "   cannot also have name '%s', ignoring the latter\n" \
+                       % (warning_prefix, self.fname, revision,
                           self.branch_names[revision], name))
-      sys.exit(1)
-    self.branch_names[revision] = name
 
   def get_branch_name(self, revision):
     """Return the name of the branch on which REVISION lies.
@@ -137,7 +146,6 @@ class CollectData(rcsparse.Sink):
     last2_dot = branch_rev.rfind(".")
     branch_rev = branch_rev[:last2_dot] + revision[last_dot:]
     self.set_branch_name(branch_rev, branch_name)
-    self.add_branch_point(branch_rev[:last2_dot], branch_name)
 
   def get_tags(self, revision):
     """Return a list of all tag names attached to REVISION.
@@ -165,7 +173,6 @@ class CollectData(rcsparse.Sink):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
       self.set_branch_name(revision, name)
-      self.add_branch_point(revision[:revision.rfind(".")], name)
     else:
       if not self.taglist.has_key(revision):
         self.taglist[revision] = []
