@@ -120,19 +120,21 @@ make_reporter_baton (svn_ra_local__session_baton_t *session,
 static svn_error_t *
 reporter_set_path (void *reporter_baton,
                    const char *path,
-                   svn_revnum_t revision)
+                   svn_revnum_t revision,
+                   apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_set_path (rbaton->report_baton, path, revision);
+  return svn_repos_set_path (rbaton->report_baton, path, revision, pool);
 }
 
 
 static svn_error_t *
 reporter_delete_path (void *reporter_baton,
-                      const char *path)
+                      const char *path,
+                      apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_delete_path (rbaton->report_baton, path);
+  return svn_repos_delete_path (rbaton->report_baton, path, pool);
 }
 
 
@@ -140,13 +142,14 @@ static svn_error_t *
 reporter_link_path (void *reporter_baton,
                     const char *path,
                     const char *url,
-                    svn_revnum_t revision)
+                    svn_revnum_t revision,
+                    apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
   const char *fs_path = NULL;
   int repos_url_len;
 
-  url = svn_path_uri_decode(url, rbaton->session->pool);
+  url = svn_path_uri_decode(url, pool);
   repos_url_len = strlen(rbaton->session->repos_url);
   if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
     return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -156,7 +159,7 @@ reporter_link_path (void *reporter_baton,
   fs_path = url + repos_url_len;
 
   return svn_repos_link_path (rbaton->report_baton, path,
-                              fs_path, revision);
+                              fs_path, revision, pool);
 }
 
 
@@ -848,10 +851,12 @@ svn_ra_local__get_dir (void *session_baton,
           SVN_ERR (svn_repos_get_committed_info (&(entry->created_rev),
                                                  &datestring,
                                                  &(entry->last_author),
-                                                 root, fullpath, pool));
+                                                 root, fullpath, subpool));
           if (datestring)
             SVN_ERR (svn_time_from_cstring(&(entry->time),
                                            datestring, subpool));
+          if (entry->last_author)
+            entry->last_author = apr_pstrdup(pool, entry->last_author);
           
           /* Store. */
           apr_hash_set (*dirents, entryname, APR_HASH_KEY_STRING, entry);

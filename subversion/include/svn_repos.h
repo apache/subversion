@@ -217,10 +217,13 @@ svn_repos_begin_report (void **report_baton,
  * The first call of this in a given report usually passes an empty
  * @a path; that allows the reporter to set up the correct root revision
  * (useful when creating a txn, for example).
+ *
+ * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_set_path (void *report_baton,
                                  const char *path,
-                                 svn_revnum_t revision);
+                                 svn_revnum_t revision,
+                                 apr_pool_t *pool);
 
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
@@ -232,11 +235,14 @@ svn_error_t *svn_repos_set_path (void *report_baton,
  * transaction at @a path.  Note that while @a path is relative to the 
  * anchor/target used in the creation of the @a report_baton, @a link_path 
  * is an absolute filesystem path!
+ *
+ * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
                                   const char *link_path,
-                                  svn_revnum_t revision);
+                                  svn_revnum_t revision,
+                                  apr_pool_t *pool);
 
 /** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
  * this routine will remove @a path from the current fs transaction. 
@@ -246,9 +252,12 @@ svn_error_t *svn_repos_link_path (void *report_baton,
  *
  * (This allows the reporter's driver to describe missing pieces of a
  * working copy, so that 'svn up' can recreate them.)
+ *
+ * All temporary allocations are done in @a pool.
  */
 svn_error_t *svn_repos_delete_path (void *report_baton,
-                                    const char *path);
+                                    const char *path,
+                                    apr_pool_t *pool);
 
 /** Make the filesystem compare the transaction to a revision and have
  * it drive an update editor (using @c svn_repos_delta_dirs()), then

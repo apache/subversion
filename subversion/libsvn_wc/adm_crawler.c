@@ -131,7 +131,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
 {
   apr_hash_t *entries, *dirents;
   apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool = svn_pool_create (pool), *child_subpool;
   const svn_wc_entry_t *dot_entry;
   const char *this_url, *this_path, *this_full_path;
   svn_wc_adm_access_t *dir_access;
@@ -180,6 +180,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
     }
 
   /* Looping over current directory's SVN entries: */
+  child_subpool = svn_pool_create(subpool);
+
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -204,14 +206,18 @@ report_revisions (svn_wc_adm_access_t *adm_access,
            It needs a more thorough rewrite, but for now we paper it
            over with a terrifyingly ugly kluge. */
 
-        svn_stringbuf_t *this_path_s = svn_stringbuf_create (this_path, pool);
-        svn_stringbuf_t *dir_path_s = svn_stringbuf_create (dir_path, pool);
-        svn_stringbuf_t *full_path_s = svn_stringbuf_create (full_path, pool);
+        svn_stringbuf_t *this_path_s = svn_stringbuf_create (this_path,
+                                                             child_subpool);
+        svn_stringbuf_t *dir_path_s = svn_stringbuf_create (dir_path,
+                                                            child_subpool);
+        svn_stringbuf_t *full_path_s = svn_stringbuf_create (full_path,
+                                                             child_subpool);
         svn_stringbuf_t *this_full_path_s
-          = svn_stringbuf_create (this_full_path, pool);
-        svn_stringbuf_t *this_url_s = svn_stringbuf_create (this_url, pool);
+          = svn_stringbuf_create (this_full_path, child_subpool);
+        svn_stringbuf_t *this_url_s = svn_stringbuf_create (this_url,
+                                                            child_subpool);
         svn_stringbuf_t *dot_entry_url_s
-          = svn_stringbuf_create (dot_entry->url, pool);
+          = svn_stringbuf_create (dot_entry->url, child_subpool);
 
         if (this_path_s->len > dir_path_s->len)
           svn_stringbuf_chop (this_path_s, this_path_s->len - dir_path_s->len);
@@ -224,7 +230,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
         svn_path_add_component (this_path_s, key);
         svn_path_add_component (this_full_path_s, key);
         svn_path_add_component (this_url_s, 
-                                    svn_path_uri_encode (key, pool));
+                                    svn_path_uri_encode (key, child_subpool));
 
         this_path = this_path_s->data;
         this_full_path = this_full_path_s->data;
@@ -236,7 +242,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       /* If the entry is 'deleted', make sure the server knows its missing. */
       if (current_entry->deleted)
         {
-          SVN_ERR (reporter->delete_path (report_baton, this_path));
+          SVN_ERR (reporter->delete_path (report_baton, this_path,
+                                          child_subpool));
           continue;
         }
       
@@ -257,7 +264,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                  move on to the next entry.  Later on, the update
                  editor will return an 'obstructed update' error.  :) */
               SVN_ERR (reporter->delete_path (report_baton,
-                                              this_path));
+                                              this_path,
+                                              child_subpool));
               continue;
             }
 
@@ -267,7 +275,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
               && (current_entry->schedule != svn_wc_schedule_replace))
             {
               /* Recreate file from text-base. */
-              SVN_ERR (restore_file (this_full_path, dir_access, pool));
+              SVN_ERR (restore_file (this_full_path, dir_access,
+                                     child_subpool));
               
               /* Report the restoration to the caller. */
               if (notify_func != NULL)
@@ -289,12 +298,14 @@ report_revisions (svn_wc_adm_access_t *adm_access,
             SVN_ERR (reporter->link_path (report_baton,
                                           this_path,
                                           current_entry->url,
-                                          current_entry->revision));
+                                          current_entry->revision,
+                                          child_subpool));
           /* ... or perhaps just a differing revision. */
           else if (current_entry->revision !=  dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
-                                         current_entry->revision));
+                                         current_entry->revision,
+                                         child_subpool));
         }
       
       else if (current_entry->kind == svn_node_dir && recurse)
@@ -306,7 +317,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
             {
               /* We can't recreate dirs locally, so report as missing,
                  and move on to the next entry.  */
-              SVN_ERR (reporter->delete_path (report_baton, this_path));
+              SVN_ERR (reporter->delete_path (report_baton, this_path,
+                                              child_subpool));
               continue;
             }
           
@@ -325,21 +337,23 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           /* We need to read the full entry of the directory from its
              own "this dir", if available. */
           SVN_ERR (svn_wc_adm_retrieve (&subdir_access, adm_access,
-                                        this_full_path, subpool));
+                                        this_full_path, child_subpool));
           SVN_ERR (svn_wc_entry (&subdir_entry, this_full_path, subdir_access,
-                                 TRUE, subpool));
+                                 TRUE, child_subpool));
 
           /* Possibly report a disjoint URL... */
           if (strcmp (subdir_entry->url, this_url) != 0)
             SVN_ERR (reporter->link_path (report_baton,
                                           this_path,
                                           subdir_entry->url,
-                                          subdir_entry->revision));
+                                          subdir_entry->revision,
+                                          child_subpool));
           /* ... or perhaps just a differing revision. */
           else if (subdir_entry->revision != dir_rev)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
-                                         subdir_entry->revision));
+                                         subdir_entry->revision,
+                                         child_subpool));
 
           /* Recurse. */
           SVN_ERR (report_revisions (adm_access, this_path,
@@ -348,9 +362,10 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                      notify_func, notify_baton,
                                      restore_files, recurse,
                                      traversal_info,
-                                     subpool));
+                                     child_subpool));
         } /* end directory case */
 
+        svn_pool_clear (child_subpool);
     } /* end main entries loop */
 
   /* We're done examining this dir's entries, so free everything. */
@@ -401,7 +416,7 @@ svn_wc_crawl_revisions (const char *path,
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR (reporter->set_path (report_baton, "", base_rev));
+  SVN_ERR (reporter->set_path (report_baton, "", base_rev, pool));
 
   if (entry->schedule != svn_wc_schedule_delete)
     {
@@ -421,7 +436,7 @@ svn_wc_crawl_revisions (const char *path,
         {
           /* Always report directories as missing;  we can't recreate
              them locally. */
-          err = reporter->delete_path (report_baton, "");
+          err = reporter->delete_path (report_baton, "", pool);
           if (err)
             goto abort_report;
         }
@@ -483,7 +498,8 @@ svn_wc_crawl_revisions (const char *path,
           SVN_ERR (reporter->link_path (report_baton,
                                         "",
                                         entry->url,
-                                        entry->revision));
+                                        entry->revision,
+                                        pool));
         }
       else if (entry->revision != base_rev)
         {
@@ -492,7 +508,7 @@ svn_wc_crawl_revisions (const char *path,
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path (report_baton, "", base_rev);
+          err = reporter->set_path (report_baton, "", base_rev, pool);
           if (err)
             goto abort_report;
         }
