@@ -106,7 +106,10 @@ public class DirEntry
 	 */
 	public Revision.Number getLastChangedRevision()
 	{
-		return new Revision.Number(lastChangedRevision);
+        if(lastChangedRevision < 0)
+            return null;
+        else
+		    return new Revision.Number(lastChangedRevision);
 	}
 
     /**
