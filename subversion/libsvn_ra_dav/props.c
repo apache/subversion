@@ -500,7 +500,6 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
        starting_props from parent directories. */
     svn_error_t *err;
     svn_stringbuf_t *path_s = svn_stringbuf_create (parsed_url.path, pool);
-    ne_uri_free(&parsed_url);
 
     while (! svn_path_is_empty (path_s))
       {
@@ -521,11 +520,17 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       }
 
     if (svn_path_is_empty (path_s))
-      /* entire URL was bogus;  not a single part of it exists in
-         the repository!  */
-      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
-                               "No part of path '%s' was found in "
-                               "repository HEAD.", parsed_url.path);
+      {
+        /* entire URL was bogus;  not a single part of it exists in
+           the repository!  */
+        svn_error_t *err
+          = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
+                              "No part of path '%s' was found in "
+                              "repository HEAD.", parsed_url.path);
+        ne_uri_free(&parsed_url);
+        return err;
+      }
+    ne_uri_free(&parsed_url);
   }
 
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
