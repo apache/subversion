@@ -61,11 +61,17 @@ struct dir_baton
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
 
+  /* The revision we should base differences against. */
+  svn_revnum_t base_rev;
+
+  /* If non-null, base differences against this path at the
+     base_revision specified above.  Else if null, the path to this
+     node is implied.  (In the add_* editor calls, this var is called
+     ancestor_path; I'm not clear on which is a better name.)  */
+  svn_string_t *base_path;
+
   /* This directory, guaranteed to be mutable. */
   dag_node_t *node;
-
-  /* Revision number of this directory */
-  svn_revnum_t base_rev;
 };
 
 
@@ -74,11 +80,17 @@ struct file_baton
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
 
+  /* The revision we should base differences against. */
+  svn_revnum_t base_rev;
+
+  /* If non-null, base differences against this path at the
+     base_revision specified above.  Else if null, the path to this
+     node is implied.  (In the add_* editor calls, this var is called
+     ancestor_path; I'm not clear on which is a better name.)  */
+  svn_string_t *base_path;
+
   /* This file, guaranteed to be mutable. */
   dag_node_t *node;
-
-  /* Revision number of this file */
-  svn_revnum_t base_rev;
 };
 
 
@@ -235,6 +247,8 @@ add_directory (svn_string_t *name,
 
   new_dirb->edit_baton = pb->edit_baton;
   new_dirb->parent = pb;
+  new_dirb->base_rev = ancestor_revision;
+  new_dirb->base_path = ancestor_path;
   new_dirb->name = svn_string_dup (name, pb->edit_baton->pool);
   new_dirb->node = add_args.new_node;
 
@@ -288,6 +302,8 @@ replace_directory (svn_string_t *name,
 
   dirb->edit_baton = pb->edit_baton;
   dirb->parent = pb;
+  dirb->base_rev = base_revision;
+  dirb->base_path = NULL;
   dirb->name = svn_string_dup (name, pb->edit_baton->pool);
   dirb->node = repl_args.new_node;
 
@@ -305,7 +321,11 @@ close_directory (void *dir_baton)
 
      However, that would be incorrect --- the node must remain
      mutable, since we may have to merge changes into it before we can
-     commit the transaction.  */
+     commit the transaction.  
+
+     Thank you, Jim, for adding that second paragraph. :-)  Well, I
+     can't think of anything for close_directory to do.  Is it really
+     a no-op?  How delightfully demulcent. */
 
   return SVN_NO_ERROR;
 }
@@ -321,9 +341,58 @@ close_file (void *file_baton)
 }
 
 
-static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *handler_pair)
+/* Helper for txn_body_get_base_contents and txn_body_handle_window. */
+struct handle_txdelta_args
 {
+  struct file_baton *fb;
+  dag_node_t *base_node;
+};
+
+
+/* Helper for apply_txdelta, and indirectly for window_handler. */
+static svn_error_t *
+txn_body_get_base_contents (void *args, trail_t *trail)
+{
+#if 0
+  struct handle_txdelta_args *txdelta_args = args;
+
+  /* Make txdelta_args->base_node be a dag_node_t for the immutable
+     base node ancestral to the file-in-progress. */
+#endif /* 0 */
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for window_handler. */
+static svn_error_t *
+txn_body_handle_window (void *handler_baton, trail_t *trail)
+{
+#if 0
+  struct handlle_txdelta_args *txdelta_args = handler_baton;
+
+  /* Accumulate more and more of the new contents as each window is
+   * received, patching txdelta_args->fb->node based on
+   * txdelta_args->base_node's contents.
+   *
+   * When receive the null window, write out txdelta_args->fb->node to
+   * the database.
+   */
+#endif /* 0 */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+window_handler (svn_txdelta_window_t *window, void *handler_baton)
+{
+#if 0
+  struct handle_txdelta_args *txdelta_args = handler_baton;
+
+  /* fooo */
+#endif /* 0 */
+
   return SVN_NO_ERROR;
 }
 
@@ -333,8 +402,23 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
+  struct file_baton *fb = file_baton;
+  struct handle_txdelta_args txdelta_args;
+
+  txdelta_args.fb = fb;
+
+  /* fooo; */
+
+  /* Get the base against to which the incoming delta should be
+     applied to produce the new file. */
+  SVN_ERR (svn_fs__retry_txn (fb->parent->edit_baton->fs,
+                              txn_body_get_base_contents,
+                              &txdelta_args,
+                              fb->parent->edit_baton->pool));
+
+  
   *handler = window_handler;
-  *handler_baton = file_baton;
+  *handler_baton = &txdelta_args;
   return SVN_NO_ERROR;
 }
 
@@ -376,6 +460,8 @@ add_file (svn_string_t *name,
 
   new_fb->parent = pb;
   new_fb->name = svn_string_dup (name, pb->edit_baton->pool);
+  new_fb->base_rev = ancestor_revision;
+  new_fb->base_path = ancestor_path;
   new_fb->node = add_args.new_node;
 
   *file_baton = new_fb;
@@ -425,6 +511,8 @@ replace_file (svn_string_t *name,
                               &repl_args, pb->edit_baton->pool));
 
   fb->parent = pb;
+  fb->base_rev = base_revision;
+  fb->base_path = NULL;
   fb->name = svn_string_dup (name, pb->edit_baton->pool);
   fb->node = repl_args.new_node;
 
