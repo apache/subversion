@@ -57,6 +57,25 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
       SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
+      AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
+        ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
+      ])
+      SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+
+      AC_CACHE_CHECK([if swig needs -L for its libraries],
+        [ac_cv_swig_ldflags],[
+        # The swig libraries are one directory above the
+        # `swig -swiglib` directory.
+        ac_cv_swig_ldflags=""
+        swig_lib_dir="`dirname $ac_cv_swig_swiglib_dir`"
+        if test "$swig_lib_dir" &&
+           test "$swig_lib_dir" != "/lib" &&
+           test "$swig_lib_dir" != "/usr/lib"; then
+          ac_cv_swig_ldflags="-L$swig_lib_dir"
+        fi
+      ])
+      SWIG_LDFLAGS="$ac_cv_swig_ldflags"
+
       AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
         ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
       ])
@@ -66,4 +85,6 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
+  AC_SUBST(SWIG_LIBSWIG_DIR)
+  AC_SUBST(SWIG_LDFLAGS)
 ])
