@@ -204,7 +204,8 @@ II.  Practice:  Trees
       specific attributes in the 'atts' field are set in tree-nodes:
 
        - svn co/up:        a 'status' attribute is set to a two-character
-                           value from the set (A, D, G, U, C, _, ' ')
+                           value from the set (A, D, G, U, C, _, ' ') or
+                           a 'verb' attribute is set to ('Restored')
 
        - svn status:       a 'status' attribute (as above), plus 'wc_rev'
                            and 'repos_rev' attributes to hold the wc
