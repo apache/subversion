@@ -670,7 +670,7 @@ replace (struct context *c, void *dir_baton,
   apr_hash_t *s_entries;
   apr_hash_index_t *hi;
   int best_distance = -1;
-  svn_fs_dirent_t *s_entry;
+  svn_fs_dirent_t *best_entry = NULL;
 
   /* Get the list of entries in source.  */
   SVN_ERR (svn_fs_dir_entries (&s_entries, c->source_root,
@@ -689,16 +689,17 @@ replace (struct context *c, void *dir_baton,
       void *val;
       apr_size_t klen;
       int distance;
+      svn_fs_dirent_t *this_entry;
     
       /* KEY will be the entry name in source, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
-      s_entry = val;
+      this_entry = val;
 
       /* Find the distance between the target entry and this source
          entry.  This returns -1 if they're completely unrelated.
          Here we're using ID distance as an approximation for delta
          size.  */
-      distance = svn_fs_id_distance (t_entry->id, s_entry->id);
+      distance = svn_fs_id_distance (t_entry->id, this_entry->id);
 
       /* If these nodes are completely unrelated, move along. */
       if (distance == -1)
@@ -707,8 +708,11 @@ replace (struct context *c, void *dir_baton,
       /* If this is the first related node we've found, or just a
          closer node than previously discovered, update our
          best_distance tracker. */
-      if ((best_distance == -1) || (distance < best_distance)) 
-        best_distance = distance;
+      if ((best_distance == -1) || (distance < best_distance))
+        {
+          best_distance = distance;
+          best_entry = this_entry;
+        }
     }
 
   /* If our best_distance is still an invalid distance, we'll replace
@@ -725,7 +729,8 @@ replace (struct context *c, void *dir_baton,
                                   target_path, 
                                   svn_string_create (t_entry->name, c->pool),
                                   source_path, 
-                                  svn_string_create (s_entry->name, c->pool)));
+                                  svn_string_create 
+                                      (best_entry->name, c->pool)));
 
   return SVN_NO_ERROR;
 }
