@@ -302,9 +302,6 @@ svn_error_t *svn_wc__entries_init (svn_string_t *path,
                                    apr_pool_t *pool);
 
 
-#define BRAVE_NEW_INTERFACE 1  /* Temporary toggle for development. */
-#if BRAVE_NEW_INTERFACE
-
 /* A data structure representing an entry from the `entries' file. */
 typedef struct svn_wc__entry_t
 {
@@ -382,117 +379,6 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
 void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
-
-
-#else /* ! BRAVE_NEW_INTERFACE */
-
-/* For a given ENTRYNAME in PATH, set its version to VERSION in the
-   `entries' file.  Set KIND to svn_file_kind or svn_dir_kind; also
-   set other XML attributes via varargs: key, value, key, value,
-   etc. -- where names are char *'s and values are svn_string_t *'s.
-   Terminate list with NULL.
-
-   ENTRYNAME is a string to match the value of the "name" attribute of
-   some entry.  (This attribute is special attribute on entries,
-   because no two entries can have the same name.  No other attribute
-   of an entry is guaranteed to be unique.)
-
-   If no such ENTRYNAME exists, create it.  If ENTRYNAME is NULL, then
-   the entry for this dir will be set.
-
-   The entries file must not be open for writing by anyone else when
-   you call this, or badness will result.  */
-svn_error_t *svn_wc__entry_set (svn_string_t *path,
-                                svn_string_t *entryname,
-                                svn_vernum_t version,
-                                enum svn_node_kind kind,
-                                apr_pool_t *pool,
-                                ...);
-
-/* Exactly like svn_wc__entry_set, except that changes are merged into
-   an existing entry (by first fetching all entry attributes, *then*
-   writing out.) */
-svn_error_t *svn_wc__entry_merge (svn_string_t *path,
-                                  svn_string_t *entryname,
-                                  svn_vernum_t version,
-                                  enum svn_node_kind kind,
-                                  apr_pool_t *pool,
-                                  ...);
-
-
-/* For a given ENTRYNAME in PATH's entries file:
-          get its version into *VERSION,
-          get its file/dir kind into *KIND,
-          and return all other xml attributes as a hash in *HASH.
-
-   If any of the return-by-reference arguments is NULL, that argument
-   will simply not be used.
-
-   If the entry is not found, the error SVN_ERR_WC_ENTRY_NOT_FOUND
-   will be returned.
-*/
-svn_error_t *svn_wc__entry_get (svn_string_t *path,
-                                svn_string_t *entryname, 
-                                svn_vernum_t *version,
-                                enum svn_node_kind *kind,
-                                apr_pool_t *pool,
-                                apr_hash_t **hash);
-
-
-/* Remove ENTRYNAME from PATH's `entries' file. */
-svn_error_t *svn_wc__entry_remove (svn_string_t *path,
-                                   svn_string_t *entryname,
-                                   apr_pool_t *pool);
-
-
-/* Contains info about an entry, used by our xml parser and by the crawler. */
-typedef struct svn_wc__entry_baton_t
-{
-  apr_pool_t *pool;
-  svn_xml_parser_t *parser;
-
-  svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
-
-  svn_boolean_t removing;        /* Set iff the task is to remove an entry. */
-  svn_boolean_t allow_duplicate; /* Set iff should preserve previous entry. */
-
-  apr_file_t *infile;      /* The entries file we're reading from. */
-  apr_file_t *outfile;     /* If this is NULL, then we're GETTING
-                              attributes; if this is non-NULL, then
-                              we're SETTING attributes by writing a
-                              new file.  */
-
-  svn_string_t *entryname; /* The name of the entry we're looking for. */
-  svn_vernum_t version;    /* The version we will get or set. */
-  enum svn_node_kind kind; /* The kind we will get or set. */
-
-  apr_hash_t *attributes;  /* The attribute list from XML, which will
-                              be read from and written to. */
-
-  /* Flag to indicate "looping" over an entries file.  Call this
-     callback on each entry found */
-  svn_boolean_t looping;
-  svn_error_t *(*looper_callback) (void *callback_baton,
-                                   struct svn_wc__entry_baton_t *entrybaton);
-  void *callback_baton;
-
-} svn_wc__entry_baton_t;
-
-
-/* Take an entry baton BATON and parse the relevant `entries' file */
-svn_error_t *do_parse (svn_wc__entry_baton_t *baton);
-
-
-/* Set *ANCESTOR_VER and *ANCESTOR_PATH appropriately for the
-   ENTRY in directory PATH.  If ENTRY is null, then PATH itself is
-   meant. */
-svn_error_t *svn_wc__entry_get_ancestry (svn_string_t *path,
-                                         svn_string_t *entry,
-                                         svn_string_t **ancestor_path,
-                                         svn_vernum_t *ancestor_ver,
-                                         apr_pool_t *pool);
-
-#endif /* BRAVE_NEW_INTERFACE */
 
 
 
