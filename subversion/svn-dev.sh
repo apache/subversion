@@ -16,6 +16,6 @@ else
    exit 1
 fi
 
-LD_LIBRARY_PATH=.:${WC}/subversion/libsvn_string:${WC}/subversion/apr:${LD_LIBRARY_PATH}
+LD_LIBRARY_PATH=.:${WC}/subversion/libsvn_string:${WC}/subversion/libsvn_subr:${WC}/subversion/libsvn_delta:${WC}/subversion/libsvn_wc:${WC}/subversion/apr:${LD_LIBRARY_PATH}
 
 export LD_LIBRARY_PATH

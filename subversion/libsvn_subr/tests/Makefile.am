@@ -1,6 +1,6 @@
 ## Makefile.in is generated from this by automake.
 
-bin_PROGRAMS = hashdump-test
+noinst_PROGRAMS = hashdump-test
 hashdump_test_SOURCES = hashdump-test.c
 
 ## Flags needed when compiling:

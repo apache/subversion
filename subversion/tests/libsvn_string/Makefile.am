@@ -1,6 +1,6 @@
 ## Makefile.in is generated from this by automake.
 
-bin_PROGRAMS = stringtest
+noinst_PROGRAMS = stringtest
 stringtest_SOURCES = stringtest.c
 
 ## Flags needed when compiling:
