@@ -211,7 +211,7 @@ def run_svn(error_expected, *varargs):
   errfile.close()
 
   if (not error_expected) and (stderr_lines):
-    map(sys.stdout.write, lines)
+    map(sys.stdout.write, stderr_lines)
 
   return stdout_lines, stderr_lines
 
