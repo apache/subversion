@@ -183,9 +183,7 @@ svn_cl__propedit (apr_getopt_t *os,
           if (svn_path_is_url (target))
             {
               /* ### If/when svn_client_propset2() supports setting
-                 properties remotely, this guard can go away.  Also,
-                 when we do that, we'll have to pass a real auth baton
-                 instead of NULL to svn_client_propget() below. */
+                 properties remotely, this guard can go away. */
               return svn_error_createf
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                  _("Editing property on non-local target '%s' "
@@ -200,9 +198,7 @@ svn_cl__propedit (apr_getopt_t *os,
           SVN_ERR (svn_client_propget2 (&props, pname_utf8, target,
                                         &peg_revision,
                                         &(opt_state->start_revision),
-                                        FALSE,
-                                        NULL,  /* ### pass ctx here */
-                                        subpool));
+                                        FALSE, ctx, subpool));
           
           /* Get the property value. */
           propval = apr_hash_get (props, target, APR_HASH_KEY_STRING);
