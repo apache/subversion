@@ -51,7 +51,7 @@ static void sigchld_handler(int signo)
 
 int main(int argc, const char *const *argv)
 {
-  svn_boolean_t listen_once = FALSE, daemon = FALSE, tunnel = FALSE;
+  svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
@@ -82,11 +82,11 @@ int main(int argc, const char *const *argv)
       switch (opt)
         {
         case 'd':
-          daemon = TRUE;
+          daemon_mode = TRUE;
           break;
 
         case 't':
-          tunnel = TRUE;
+          tunnel_mode = TRUE;
           break;
 
         case 'X':
@@ -101,12 +101,12 @@ int main(int argc, const char *const *argv)
   if (os->ind != argc)
     usage(argv[0]);
 
-  if (!daemon && !listen_once)
+  if (!daemon_mode && !listen_once)
     {
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, root, tunnel, pool));
+      svn_error_clear(serve(conn, root, tunnel_mode, pool));
       exit(0);
     }
 
