@@ -323,6 +323,10 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
 
+/** Special log attribute values **/
+#define SVN_WC__LOG_ATTR_TIMESTAMP_WC   "working"
+
+
 /* Starting at PATH, write out log entries indicating that a commit
  * succeeded, using REVISION as the new revision number.  run_log will
  * use these log items to complete the commit. 
@@ -394,7 +398,7 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
 
 
 /* For PATH's entries file, create or modify an entry NAME, using
- * explicit fields and, secondarily, varargs.
+ * explicit fields and, secondarily, the attributes in ATTS.
  * 
  * If NAME is null, it means the dir's own entry, as usual.
  * 

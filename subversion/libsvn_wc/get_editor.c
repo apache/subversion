@@ -683,6 +683,9 @@ close_directory (void *dir_baton)
                                    "%d",
                                    db->edit_baton->target_revision);
       
+      /* Because this is a directory, we're not setting the timestamp
+         here.  Directories become "out of date" iff some descendant
+         does. */
       svn_xml_make_open_tag (&entry_accum,
                              db->pool,
                              svn_xml_self_closing,
@@ -1217,6 +1220,9 @@ close_file (void *file_baton)
                          fb->name,
                          SVN_WC_ENTRY_ATTR_REVISION,
                          svn_string_create (revision_str, fb->pool),
+                         SVN_WC_ENTRY_ATTR_TIMESTAMP,
+                         svn_string_create (SVN_WC__LOG_ATTR_TIMESTAMP_WC,
+                                            fb->pool), /* use wfile time */
                          NULL);
 
   /* Write our accumulation of log entries into a log file */
