@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-12-20 20:35+0100\n"
-"PO-Revision-Date: 2004-12-20 23:03+0100\n"
+"POT-Creation-Date: 2004-12-23 14:26+0100\n"
+"PO-Revision-Date: 2004-12-23 14:25+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1843,9 +1843,8 @@ msgid "property '%s' set on '%s'\n"
 msgstr "atrybut '%s' ustawiony dla '%s'\n"
 
 #: clients/cmdline/revert-cmd.c:61
-#, fuzzy
 msgid "Try 'svn revert --recursive' instead?"
-msgstr "Zamiast tego spróbuj wykonać 'svn add' lub 'svn add --non-recursive'."
+msgstr "Zamiast tego spróbuj wykonać 'svn revert --recursive'."
 
 #: clients/cmdline/switch-cmd.c:58
 #, fuzzy, c-format
@@ -2792,9 +2791,8 @@ msgstr ""
 #: libsvn_client/prop_commands.c:568 libsvn_client/prop_commands.c:926
 #: libsvn_client/ra.c:180 libsvn_client/revisions.c:90
 #: libsvn_client/status.c:128 libsvn_client/switch.c:104
-#: libsvn_client/update.c:82 libsvn_wc/adm_ops.c:2104 libsvn_wc/copy.c:386
-#: libsvn_wc/entries.c:1382 libsvn_wc/entries.c:1801 libsvn_wc/props.c:281
-#: libsvn_wc/questions.c:171
+#: libsvn_wc/adm_ops.c:2104 libsvn_wc/copy.c:386 libsvn_wc/entries.c:1382
+#: libsvn_wc/entries.c:1801 libsvn_wc/props.c:281 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' nie podlega zarządzaniu wersjami"
@@ -3072,7 +3070,7 @@ msgid "Missing required revision specification"
 msgstr "Nie podano wymaganej specyfikacji wersji"
 
 #: libsvn_client/log.c:135 libsvn_client/status.c:133
-#: libsvn_client/update.c:86
+#: libsvn_client/update.c:83
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "Element '%s' nie ma URL"
@@ -4221,51 +4219,51 @@ msgstr ""
 msgid "Dumpstream data appears to be malformed"
 msgstr ""
 
-#: libsvn_repos/load.c:227
+#: libsvn_repos/load.c:230
 #, fuzzy
 msgid "Incomplete or unterminated property block"
 msgstr "Nieoczekiwany lub nieznany typ atrybutu"
 
-#: libsvn_repos/load.c:420
+#: libsvn_repos/load.c:423
 #, fuzzy
 msgid "Unexpected EOF writing contents"
 msgstr "Nieoczekiwany koniec strumienia"
 
-#: libsvn_repos/load.c:449
+#: libsvn_repos/load.c:452
 msgid "Malformed dumpfile header"
 msgstr "Błędny nagłówek pliku zrzutu"
 
-#: libsvn_repos/load.c:455 libsvn_repos/load.c:497
+#: libsvn_repos/load.c:458 libsvn_repos/load.c:500
 #, c-format
 msgid "Unsupported dumpfile version: %d"
 msgstr "Wersja repozytorium: %d jest nieobsługiwana"
 
-#: libsvn_repos/load.c:595
+#: libsvn_repos/load.c:598
 #, fuzzy
 msgid "Unrecognized record type in stream"
 msgstr "Nieznany sposób zapisywania końców wiersza"
 
-#: libsvn_repos/load.c:821
+#: libsvn_repos/load.c:855
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Nowa transakcja, na bazie oryginalnej wersji %ld\n"
 
-#: libsvn_repos/load.c:866
+#: libsvn_repos/load.c:900
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr ""
 "Odpowiednia źródłowa wersja %ld nie jest dostępna w bieżącym repozytorium"
 
-#: libsvn_repos/load.c:915
+#: libsvn_repos/load.c:949
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr ""
 
-#: libsvn_repos/load.c:959
+#: libsvn_repos/load.c:993
 #, fuzzy, c-format
 msgid "Unrecognized node-action on node '%s'"
 msgstr "Nieznany rodzaj obiektu: '%s'"
 
-#: libsvn_repos/load.c:1148
+#: libsvn_repos/load.c:1182
 #, c-format
 msgid ""
 "\n"
@@ -4276,7 +4274,7 @@ msgstr ""
 "------- Zatwierdzona wersja %ld >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1154
+#: libsvn_repos/load.c:1188
 #, c-format
 msgid ""
 "\n"
@@ -4298,9 +4296,9 @@ msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "Ścieżka '%s' systemu plików nie jest ani plikiem ani katalogiem"
 
 #: libsvn_repos/reporter.c:624
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy path '%s' does not exist in repository"
-msgstr "Ścieżka '%s' nie istnieje w wersji %ld"
+msgstr "Ścieżka kopii roboczej '%s' nie istnieje w repozytorium"
 
 #: libsvn_repos/reporter.c:827
 msgid "Not authorized to open root of edit operation"
@@ -4391,7 +4389,6 @@ msgid "Creating readme file"
 msgstr "Tworzenie pliku readme"
 
 #: libsvn_repos/repos.c:977
-#, fuzzy
 msgid "Repository creation failed"
 msgstr "Tworzenie repozytorium nie powiodło się"
 
@@ -4458,14 +4455,14 @@ msgid "Error writing hash to '%s'"
 msgstr "Błąd zapisu do '%s'"
 
 #: libsvn_subr/config_file.c:393
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open config file '%s'"
-msgstr "Nie można otworzyć pliku '%s'"
+msgstr "Nie można otworzyć pliku konfiguracyjnego '%s'"
 
 #: libsvn_subr/config_file.c:397
-#, fuzzy, c-format
+#, c-format
 msgid "Can't find config file '%s'"
-msgstr "Nie można otworzyć pliku '%s'"
+msgstr "Nie można znaleźć pliku konfiguracyjnego '%s'"
 
 #: libsvn_subr/date.c:204
 msgid "Can't manipulate current date"
@@ -4509,19 +4506,18 @@ msgid "Can't read contents of link"
 msgstr "Nie można przeczytać zawartości wskazywanej przez odniesienie"
 
 #: libsvn_subr/io.c:517 libsvn_subr/io.c:527
-#, fuzzy
 msgid "Can't find a temporary directory"
-msgstr "Nie można stworzyć katalogu tymczasowego"
+msgstr "Nie można znaleźć katalogu tymczasowego"
 
 #: libsvn_subr/io.c:564
-#, fuzzy, c-format
+#, c-format
 msgid "Can't copy '%s' to '%s'"
-msgstr "Nie można przenieść '%s' do '%s'"
+msgstr "Nie można skopiować '%s' do '%s'"
 
 #: libsvn_subr/io.c:597
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set permissions on '%s'"
-msgstr "Nie można sparsować '%s'"
+msgstr "Nie można przypisać praw dla '%s'"
 
 #: libsvn_subr/io.c:619
 #, fuzzy, c-format
@@ -4539,9 +4535,9 @@ msgid "Destination '%s' is not a directory"
 msgstr "'%s' nie jest katalogiem"
 
 #: libsvn_subr/io.c:665
-#, fuzzy, c-format
+#, c-format
 msgid "Destination '%s' already exists"
-msgstr "Ścieżka '%s' już istnieje"
+msgstr "Ścieżka docelowa '%s' już istnieje"
 
 #: libsvn_subr/io.c:738 libsvn_subr/io.c:1498 libsvn_subr/io.c:1567
 #, c-format
@@ -4555,9 +4551,9 @@ msgid "Error closing directory '%s'"
 msgstr "Błąd zamykania katalogu '%s'"
 
 #: libsvn_subr/io.c:769
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make directory '%s'"
-msgstr "Nie można usunąć katalogu '%s'"
+msgstr "Nie można stworzyć katalogu '%s'"
 
 #: libsvn_subr/io.c:837
 #, fuzzy, c-format
@@ -5356,8 +5352,8 @@ msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "Ścieżka '%s' kończy się '%s', co nie jest dozwolone dla tej operacji"
 
 #: libsvn_wc/lock.c:643
-#, c-format
-msgid "Working copy '%s' not locked"
+#, fuzzy, c-format
+msgid "Working copy '%s' is missing or not locked"
 msgstr "Kopia robocza '%s' nie została zablokowana"
 
 #: libsvn_wc/lock.c:1030
@@ -6693,8 +6689,8 @@ msgstr "wyeksportowano%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "Nie można oczyścić '%s': nie jest katalogiem"
-
 #~ msgid "   %ld => %ld\n"
 #~ msgstr "   %ld => %ld\n"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "Nie można oczyścić '%s': nie jest katalogiem"
