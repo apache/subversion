@@ -77,10 +77,6 @@ typedef struct
   /* kind of transaction. */
   transaction_kind_t kind;
 
-  /* revision which this transaction was committed to create, or an
-     invalid revision number if this transaction was never committed. */
-  svn_revnum_t revision;
-
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */
   apr_hash_t *proplist;
