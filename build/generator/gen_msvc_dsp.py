@@ -29,14 +29,18 @@ class Generator(gen_win.WinGeneratorBase):
       targval = "0x0103"
       target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetLib):
-      if target.msvc_static:
-        targtype = "Win32 (x86) Static Library"
-        targval = "0x0104"
-        target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
-      else:
+      if isinstance(target, gen_base.TargetApacheMod):
+        targtype = "Win32 (x86) Dynamic-Link Library"
+        targval = "0x0102"
+        target.output_name = target.name + '.so'
+      elif isinstance(target, gen_base.TargetSWIG):
         targtype = "Win32 (x86) Dynamic-Link Library"
         targval = "0x0102"
         target.output_name = os.path.basename(target.filename)
+      else:
+        targtype = "Win32 (x86) Static Library"
+        targval = "0x0104"
+        target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
     elif isinstance(target, gen_base.TargetProject):
       if target.cmd:
         targtype = "Win32 (x86) External Target"
@@ -46,9 +50,6 @@ class Generator(gen_win.WinGeneratorBase):
         targval = "0x010a"
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      target.output_name = target.name + '.so'
 
     configs = self.get_configs(target, rootpath)
 
@@ -70,8 +71,8 @@ class Generator(gen_win.WinGeneratorBase):
                                   and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetProject)),
-      'is_dll' : ezt.boolean(isinstance(target, gen_base.TargetLib)
-                             and not target.msvc_static),
+      'is_dll' : ezt.boolean(isinstance(target, gen_base.TargetSWIG)
+                             or isinstance(target, gen_base.TargetApacheMod)),
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
@@ -90,9 +91,9 @@ class Generator(gen_win.WinGeneratorBase):
     # Traverse the targets and generate the project files
     for target in install_targets:
       name = target.name
-      if isinstance(target, gen_base.TargetLinked) and target.external_project:
+      if isinstance(target, gen_base.TargetExternal):
         # Figure out where the external .dsp is located.
-        fname = target.external_project + '.dsp'
+        fname = target.msvc_project + '.dsp'
       else:
         fname = os.path.join(self.projfilesdir,
                              "%s_msvc.dsp" % target.proj_name)

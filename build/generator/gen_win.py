@@ -216,6 +216,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_install_targets(self):
     "Generate the list of targets"
 
+    # First generate fake utility targets
+    self.fake_projects = {}
+    options = {'path': 'build/win32'}
+    utility = gen_base.TargetProject
+    
+    for target in self.graph.get_all_sources(gen_base.DT_FAKE):
+      # since get_all_sources may return duplicates
+      if self.fake_projects.has_key(target):
+        continue
+
+      fake = utility.Section(options, utility)
+      fake.create_targets(self.graph, target.name + "_fake", self.cfg,
+                          self._extension_map)
+      self.graph.add(gen_base.DT_MSVC, fake.target.name, target)
+      self.fake_projects[target] = fake.target
+
     # Get list of targets to generate project files for
     install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL) \
                       + self.graph.get_sources(gen_base.DT_LIST,
@@ -225,23 +241,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
 
-    for target in install_targets:
-      if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
-        install_targets.append(self.create_fake_target(target))
-
     # sort these for output stability, to watch out for regressions.
     install_targets.sort()
     return install_targets
-
-  def create_fake_target(self, dep):
-    "Return a new target which depends on another target but builds nothing"
-    section = gen_base.TargetProject.Section({'path': 'build/win32'},
-                                             gen_base.TargetProject)
-    section.create_targets(self.graph, dep.name + "_fake", self.cfg,
-                           self._extension_map)
-    self.graph.add(gen_base.DT_LINK, section.target.name, dep)
-    dep.msvc_fake = section.target
-    return section.target
 
   def get_configs(self, target, rootpath):
     "Get the list of configurations for the project"
@@ -324,67 +326,97 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def adjust_win_depends(self, target, name):
     "Handle special dependencies if needed"
     
+    # For MSVC we need to hack around Apache modules &
+    # libsvn_ra because dependencies implies linking
+    # and there is no way around that
     if name == '__CONFIG__':
       depends = []
     else:
       depends = self.sections['__CONFIG__'].get_dep_targets(target)
 
-    ### If we link everything with the dynamic apr library instead of the
-    ### static one we could get rid of a lot of this special case apache 
-    ### code...
-    if isinstance(target, gen_base.TargetApacheMod):
-      depends.extend(self.graph.get_sources(gen_base.DT_NONLIB, target.name))
-      return depends
+    deps = self.graph.get_sources(gen_base.DT_MSVC, target.name)
+    fake_deps = self.graph.get_sources(gen_base.DT_FAKE, target.name)
 
-    depends.extend(self.get_win_depends(target))
+    if deps or fake_deps or isinstance(target, gen_base.TargetApacheMod):
+      depends.extend(deps)
+      for dep in fake_deps:
+        depends.append(self.fake_projects[dep])
+    elif isinstance(target, gen_base.TargetExe):
+      depends.extend(self.get_win_depends(target, 1, 1))
+    elif isinstance(target, gen_base.TargetSWIG):
+      for lib in self.graph.get_sources(gen_base.DT_LINK, target.name):
+        if hasattr(lib, 'proj_name'):
+          depends.append(lib)
+          depends.extend(self.get_win_depends(lib, 0))        
+    elif isinstance(target, gen_base.Target):
+      depends.extend(self.get_win_depends(target, 3))
+    else:
+      assert 0
 
     depends = filter(lambda x: hasattr(x, 'proj_name'), depends)
     depends.sort() ### temporary
     return depends
     
   
-  def get_win_depends(self, target):
-    """Return the list of dependencies for target"""
+  def get_win_depends(self, target, recurse=0, no_child_externals=0):
+    """
+    Return the list of dependencies for target
+    If recurse is 0, return just target's dependencies
+    If recurse is 1, return a list of dependencies plus dependencies of dependencies
+    If recurse is 2, only return the dependencies of target's dependencies
+    If recurse is 3, return a list of dependencies minus dependencies of dependencies
 
-    deps = {}
+    """
+    if recurse == 0:
+      deps = { }
+      child_deps = None
+    elif recurse == 1:
+      deps = { }
+      child_deps = deps
+    elif recurse == 2:
+      deps = None
+      child_deps = { }
+    elif recurse == 3:
+      deps = { }
+      child_deps = { }
 
-    top_static = isinstance(target, gen_base.TargetLib) and target.msvc_static
-    self.get_win_depends_impl(target, deps, top_static)
+    self.get_win_depends_impl(target, deps, child_deps, 0, no_child_externals)
+
+    if recurse == 2:
+      deps = child_deps
+    elif recurse == 3:
+      for dep in deps.keys():
+        if child_deps.has_key(dep):
+          del deps[dep]
 
     deps = deps.keys()
     deps.sort()
     return deps
 
-  def get_win_depends_impl(self, target, deps, top_static):  
-    # true if we're iterating over top level dependencies
-    # (inverse of recursion logic below)
-    top_call = top_static or not isinstance(target, gen_base.TargetLib) \
-               or not target.msvc_static 
+  def get_win_depends_impl(self, target, deps, child_deps, 
+    no_externals, no_child_externals):
+    """Find dependencies of target
 
-    for dep in self.graph.get_sources(gen_base.DT_LINK, target.name):
-      if not isinstance(dep, gen_base.Target):
+    target (string) is the target to find dependencies for
+
+    deps (dictionary) if not None will have target's direct dependencies added
+      as keys
+
+    child_deps (dictionary) if not None will have dependencies of target's
+      direct dependencies added as keys    
+    """
+
+    for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, gen_base.Target):
+      if isinstance(obj, gen_base.TargetExternal) and obj.msvc_project and no_externals:
         continue
 
-      dep_lib = isinstance(dep, gen_base.TargetLib)
+      if deps is not None:
+        deps[obj] = None
 
-      # if adding dependencies for a static library, add only non-libraries.
-      # otherwise add all top level dependencies and any libraries that
-      # static library dependencies depend on.
-      if (top_static and not dep_lib) or \
-         (not top_static and (top_call or dep_lib)):
-        deps[dep] = None
-      
-      # a static library can depend on another library through a fake project
-      if top_static and dep_lib and dep.msvc_fake:
-        deps[dep.msvc_fake] = None
-
-      # if dependency is a projectless external library, recurse to treat
-      # its dependencies as if they were target's
-      inherit_deps = dep_lib and not dep.path and not dep.external_project
-      
-      # also recurse into static dependencies of nonstatic targets
-      if (not top_static and dep_lib and dep.msvc_static) or inherit_deps:
-        self.get_win_depends_impl(dep, deps, top_static)
+      if isinstance(obj, gen_base.TargetExternal) and not obj.msvc_project:
+        self.get_win_depends_impl(obj, deps, child_deps, no_externals, no_child_externals)
+      elif child_deps is not None:
+        self.get_win_depends_impl(obj, child_deps, child_deps, no_child_externals, no_child_externals)
 
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
@@ -492,12 +524,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       return []
 
     nondeplibs = ['setargv.obj']
-    depends = [target] + self.get_win_depends(target)
+    depends = [target] + self.get_win_depends(target, 1)
     for dep in depends:
-      if isinstance(dep, gen_base.TargetLinked):
+      if isinstance(dep, gen_base.TargetExternal):
         nondeplibs.extend(map(lambda x: x + '.lib', dep.msvc_libs))
 
-        if dep.external_lib == '$(SVN_DB_LIBS)':
+        if dep.make_lib == '$(SVN_DB_LIBS)':
           nondeplibs.append(dblib)
 
     return nondeplibs
@@ -509,7 +541,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     if isinstance(target, gen_base.TargetApacheMod):
       # get (fname, reldir) pairs for dependent libs
-      for dep_tgt in self.get_win_depends(target):
+      for dep_tgt in self.get_win_depends(target, 1):
         if not isinstance(dep_tgt, gen_base.TargetLib):
           continue
         subdir = string.replace(dep_tgt.name, 'libsvn_', '')
