@@ -54,6 +54,7 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       size_t vallen;
       int bytes_used;
       char *valstring;
+      svn_stringbuf_t *valbuf; /* ### temporary. */
 
       /* Get this key and val. */
       apr_hash_this (this, &key, &keylen, &val);
@@ -70,8 +71,8 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
       /* Output value length, then value. */
-
-      vallen = (size_t) (*unpack_func) (&valstring, val); /* secret decoder! */
+      valbuf = svn_stringbuf_create_from_string (val, pool);
+      vallen = (size_t) (*unpack_func) (&valstring, valbuf);
       svn_stringbuf_appendbytes (*strbuf, "V ", 2);
 
       sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);

@@ -254,8 +254,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
 
           prop = apr_array_push (proparray);
           prop->name = key;
-          prop->value = svn_string_create_from_buf ((svn_stringbuf_t *) val,
-                                                    pool);
+          prop->value = svn_string_dup (val, pool);
         }
 
       /* This the same code as the update-editor's close_file(). */
