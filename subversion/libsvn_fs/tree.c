@@ -3604,412 +3604,7 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 
 
 
-
-/* A qsort-capable method for sorting by our funky base-36 ids. */
-static int 
-sort_keys (const void *a, const void *b)
-{
-  const char *item1 = *((const char * const *) a);
-  const char *item2 = *((const char * const *) b);
-  return svn_fs__key_compare (item1, item2);
-}
-
-
-/* Derive the set of copies which took place in filesystem FS --
-   bounded by the transactions START_TXN_ID and END_TXN_ID, and by the
-   copy ids START_COPY_ID and END_COPY_ID -- which resulted in the
-   migration of START_PATH to END_PATH.  Return the revisions in which
-   these copies occured by adding them as keys to the hash REVS.  Do
-   all of this as part of TRAIL.
-
-   NOTE: END_COPY_ID may be NULL to indicate "the youngest committed
-   copy".  */
-static svn_error_t *
-find_relevant_copies (apr_hash_t *revs,
-                      svn_fs_t *fs,
-                      const char *start_path,
-                      const char *start_txn_id,
-                      const char *start_copy_id,
-                      const char *end_path,
-                      const char *end_txn_id,
-                      const char *end_copy_id, /* may be NULL */
-                      trail_t *trail)
-{
-  const char *cur_path = end_path;
-  const char *cur_copy_id, *cur_txn_id;
-
-  /* Get transaction ids for our bounding revisions. */
-  cur_txn_id = end_txn_id;
-  cur_copy_id = end_copy_id;
-
-  /* Loop while the current transaction ID and copy IDs are greater than our
-     starting bounds.  We'll be going backwards through transaction
-     (youngest to oldest).  */
-  while ((svn_fs__key_compare (cur_txn_id, start_txn_id) == 1)
-         && ((! cur_copy_id)
-             || (svn_fs__key_compare (cur_copy_id, start_copy_id) != -1)))
-    {
-      svn_fs__transaction_t *txn;
-      int i;
-
-      /* Get the current transaction. */
-      SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, cur_txn_id, trail));
-
-      /* Decrement our transaction id.  This might get overwritten
-         later if we find a relevant copy, but whatever. */
-      SVN_ERR (svn_fs__rev_get_txn_id (&cur_txn_id, fs, 
-                                       txn->revision - 1, trail));
-
-      /* If no copies were made in this transaction, it's
-         uninteresting to us. */
-      if (! (txn->copies && txn->copies->nelts))
-        continue;
-
-      /* Otherwise, copies were made in this transaction, and we need
-         to search them, in reverse order of creation, looking for
-         relevance. */
-      qsort (txn->copies->elts, txn->copies->nelts, 
-             txn->copies->elt_size, sort_keys);
-      
-      for (i = txn->copies->nelts - 1; i >= 0; i--)
-        {
-          dag_node_t *node;
-          const char *dst_path;
-          const char *remainder;
-          svn_fs__copy_t *copy;
-
-          /* Note the current copy id. */
-          cur_copy_id = APR_ARRAY_IDX (txn->copies, i, const char *);
-
-          /* If the COPY_ID is younger than our END_COPY_ID, skip it. */
-          if (end_copy_id 
-              && (svn_fs__key_compare (cur_copy_id, end_copy_id) == 1))
-            continue;
-
-          /* If the COPY_ID is older than our START_COPY_ID, we're done. */
-          if (svn_fs__key_compare (cur_copy_id, start_copy_id) == -1)
-            break;
-
-          /* Get the current COPY record. */
-          SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, cur_copy_id, trail));
-
-          /* Figure out the destination path of the copy operation. */
-          SVN_ERR (svn_fs__dag_get_node (&node, fs, copy->dst_noderev_id, 
-                                         trail));
-          dst_path = svn_fs__dag_get_created_path (node);
-
-          /* If our current path was the very destination of the copy,
-             then our new current path will be the copy source.  If
-             our current path was instead the *child* of the
-             destination of the copy, then figure out its previous
-             location by taking its path relative to the copy
-             destination and appending that to the copy source.
-             Finally, if our current path doesn't meet one of these
-             other criteria, just ignore this copy operation
-             altogether. */
-          if (strcmp (cur_path, dst_path) == 0)
-            remainder = "";
-          else
-            remainder = svn_path_is_child (dst_path, cur_path, trail->pool);
-
-          if (remainder)
-            {
-              const char *txn_id = svn_fs__id_txn_id (copy->dst_noderev_id);
-              svn_revnum_t *rev;
-              struct node_id_args nid_args;
-              struct revision_root_args rr_args;
-              const svn_fs_id_t *src_id;
-              svn_fs_root_t *rev_root;
-
-              /* If we get here, then our current path is the
-                 destination of, or the child of the destination of, a
-                 copy.  We will translate its previous path under the
-                 copy source, remember that as our new "current path",
-                 store the revision of this copy as one that we care
-                 about, and carry on. */
-              cur_path = svn_path_join (copy->src_path, remainder, 
-                                        trail->pool);
-              rev = apr_palloc (apr_hash_pool_get (revs), sizeof (*rev));
-              SVN_ERR (svn_fs__txn_get_revision (rev, fs, txn_id, trail));
-              if (! SVN_IS_VALID_REVNUM (*rev))
-                abort();
-
-              /* Jump back to the copy-id of the copy source.  We need
-                 to build a revision root first... */
-              rr_args.root_p = &rev_root;
-              rr_args.fs = fs;
-              SVN_ERR (svn_fs__txn_get_revision (&(rr_args.rev), fs, 
-                                                 copy->src_txn_id, trail));
-              SVN_ERR (txn_body_revision_root (&rr_args, trail));
-
-              /* ... and then use that root to get the NODE-REV-ID
-                 (and hence, the COPY-ID) of the copy source. */
-              nid_args.root = rev_root;
-              nid_args.path = cur_path;
-              nid_args.id_p = &src_id;
-              SVN_ERR (txn_body_node_id (&nid_args, trail));
-
-              /* Store the revision in the revisions hash. */
-              apr_hash_set (revs, (void *)rev, sizeof (rev), (void *)1);
-              
-              /* Squirrel away the source copy id and source rev. */
-              cur_copy_id = svn_fs__id_copy_id (src_id);
-              cur_txn_id = copy->src_txn_id;
-              break;
-            }
-        } /* for() */
-    } /* while() */
-
-  /* Sanity check.  We should have been able to been able to walk back
-     to our exact path.  If we didn't, then either this code is
-     expecting something that the filesystem doesn't provide, or
-     something else is just wrong.  */
-  if (strcmp (cur_path, start_path) != 0)
-    abort();
-
-  return SVN_NO_ERROR;
-}
-
-
-struct revisions_changed_baton
-{
-  apr_hash_t *revs;
-  int cross_copy_history;
-  const char *successor_path;
-  const svn_fs_id_t *successor_id;
-};
-
-
-static svn_error_t *
-revisions_changed_callback (void *baton,
-                            dag_node_t *node,
-                            int *done,
-                            trail_t *trail)
-{
-  struct revisions_changed_baton *b = baton;
-
-  /* If there is no NODE, then this is (or should be) the last call,
-     but we'll set the DONE flag just in case. */
-  if (! node)
-    {
-      *done = 1;
-    }
-  else
-    {
-      const svn_fs_id_t *node_id = svn_fs__dag_get_id (node);
-      const char *succ_cp_id = svn_fs__id_copy_id (b->successor_id);
-      const char *node_cp_id = svn_fs__id_copy_id (node_id);
-      const char *node_cr_path = svn_fs__dag_get_created_path (node);
-      svn_revnum_t *rev = apr_palloc (apr_hash_pool_get (b->revs), 
-                                      sizeof (*rev));
-
-      /* Compare NODE's ID against B->SUCCESSOR_ID, and compare NODE's
-         CMT-PATH against B->SUCCESSOR_PATH, to see if we
-         just crossed a copy boundary.  If so, we either need to quit
-         here (if we're not crossing copy history) or go figure out
-         which copies took place. */
-      /* ### can this be && instead of || ?? */
-      if ((strcmp (node_cp_id, succ_cp_id) != 0)
-          || (strcmp (node_cr_path, b->successor_path) != 0))
-        {
-          /* Check B->CROSS_COPY_HISTORY.  If we are not supposed to cross
-             copy history, quit. */
-          if (! b->cross_copy_history)
-            {
-              *done = 1;
-              return SVN_NO_ERROR;
-            }
-
-          /* Derive the copies that took place between our two nodes.
-             The naive way to do this is the walk backwards through
-             all the copies between SUCC_CP_ID and NODE_CP_ID, finding
-             which ones might have caused the creation of
-             B->SUCCESSOR_PATH, then continuing to see which copy
-             created the source path of the previous interesting copy,
-             and so on.  When this is finished, we should have walked
-             our way back to NODE_CR_PATH. */
-          SVN_ERR (find_relevant_copies (b->revs, 
-                                         svn_fs__dag_get_fs (node),
-                                         node_cr_path, 
-                                         svn_fs__id_txn_id (node_id),
-                                         node_cp_id,
-                                         b->successor_path,
-                                         svn_fs__id_txn_id (b->successor_id),
-                                         succ_cp_id,
-                                         trail));
-        }
-
-      /* See what NODE's created revision is. */
-      SVN_ERR (svn_fs__dag_get_revision (rev, node, trail));
-
-      /* If it's a valid revision, then add this to the baton's hash. */
-      if (SVN_IS_VALID_REVNUM (*rev))
-        apr_hash_set (b->revs, (void *)rev, sizeof (rev), (void *)1);
-
-      /* Cache the NODE's ID and CMT-PATH in our baton so we can
-         compare against them on our next iteration through this
-         callback. */
-      b->successor_id = svn_fs__id_copy (svn_fs__dag_get_id (node), 
-                                         trail->pool);
-      b->successor_path = apr_pstrdup (trail->pool, node_cr_path);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-struct revisions_changed_args
-{
-  apr_hash_t *revs;
-  svn_fs_t *fs;
-  svn_fs_root_t *root;
-  const char *path;
-  const svn_fs_id_t *id;
-  int cross_copy_history;
-};
-
-
-static svn_error_t *
-txn_body_revisions_changed (void *baton, trail_t *trail)
-{
-  struct revisions_changed_args *args = baton;
-  struct revisions_changed_baton b;
-  const char *node_cr_path, *node_cp_id;
-  const svn_fs_id_t *node_id;
-  dag_node_t *node;
-  svn_revnum_t *rev 
-    = apr_palloc (apr_hash_pool_get (args->revs), sizeof (*rev));
-
-  /* Our callback baton will use the REVS array in our caller's
-     baton. */
-  b.revs = args->revs;
-
-  /* Also, note in our baton whether we wish to cross copy history. */
-  b.cross_copy_history = args->cross_copy_history;
-
-  /* Get the NODE for ARGS->id.  */
-  SVN_ERR (svn_fs__dag_get_node (&node, args->fs, args->id, trail));
-
-  /* Get the NODE's created path and copy ID. */
-  node_cr_path = svn_fs__dag_get_created_path (node);
-  node_id = svn_fs__dag_get_id (node);
-  node_cp_id = svn_fs__id_copy_id (node_id);
-
-  /* Reset the SUCCESSOR_PATH and SUCCESSOR_ID members of the callback
-     baton to point to our new node. */
-  b.successor_path = node_cr_path;
-  b.successor_id = args->id;
-
-  /* If we are coming at this thing from a different path than it was
-     last committed at, there has been at least one copy of a parent
-     directory made since that last commit.  If we aren't crossing
-     copy boundaries, we should stop our search here, else we need to
-     go find those missing copies.  */
-  if (strcmp (args->path, b.successor_path) != 0)
-    {
-      const char *last_txn_id;
-
-      if (! b.cross_copy_history) 
-        return SVN_NO_ERROR;
-
-      /* Get our ending bounds for transaction ids. */
-      if (svn_fs_is_revision_root (args->root))
-        SVN_ERR (svn_fs__rev_get_txn_id (&last_txn_id, args->fs,
-                                         args->root->rev, trail));
-      else
-        last_txn_id = args->root->txn;
-
-      /* Derive the copies that took place between our two
-         nodes.  The naive way to do this is the walk backwards
-         through all the copies between SUCC_CP_ID and LAST_CP_ID (or,
-         if NULL, the last copy id in the `copies' table), finding
-         which ones might have caused the creation of
-         B.SUCCESSOR_PATH, then continuing to see which copy created
-         the source path of the previous interesting copy, and so on.
-         When this is finished, we should have walked our way back to
-         NODE_CR_PATH. */
-      SVN_ERR (find_relevant_copies (b.revs, 
-                                     args->fs,
-                                     node_cr_path, 
-                                     svn_fs__id_txn_id (node_id),
-                                     node_cp_id,
-                                     args->path, 
-                                     last_txn_id,
-                                     NULL,
-                                     trail));
-    }
-
-  /* Add NODE's created rev to the array in the baton. */
-  SVN_ERR (svn_fs__dag_get_revision (rev, node, trail));
-  if (SVN_IS_VALID_REVNUM (*rev))
-    apr_hash_set (b.revs, (void *)rev, sizeof (rev), (void *)1);
-
-  /* Walk NODE's predecessors, harvesting revisions changed. */
-  return svn_fs__dag_walk_predecessors (node, revisions_changed_callback,
-                                        &b, trail);
-}
-
-
-
-/* Note:  it is acceptable for this function to call back into
-   public FS API interfaces because it does not itself use trails.  */
-svn_error_t *
-svn_fs_revisions_changed (apr_array_header_t **revs,
-                          svn_fs_root_t *root,
-                          const char *path,
-                          int cross_copy_history,
-                          apr_pool_t *pool)
-{
-  struct revisions_changed_args args;
-  svn_fs_t *fs = svn_fs_root_fs (root);
-  apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *all_revs = apr_hash_make (subpool);
-  apr_hash_index_t *hi;
-
-  /* Error on non-revision ROOT. */
-  if (! svn_fs_is_revision_root (root))
-    return svn_error_create 
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL, 
-       "svn_fs_revisions_changed: no support for non-revision roots");
-
-  /* Populate the common baton members. */
-  args.revs = all_revs;
-  args.fs = fs;
-  args.cross_copy_history = cross_copy_history;
-  args.root = root;
-  args.path = svn_fs__canonicalize_abspath (path, subpool);
-
-  /* Do the real work. */
-  SVN_ERR (svn_fs_node_id (&(args.id), args.root, args.path, subpool));
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revisions_changed,
-                              &args, subpool));
-
-  /* Now build the return array from the keys in the hash table.  The
-     items in the array share storage with the hash keys, but that's
-     alright because the hash keys are alloced in POOL.  */
-  *revs = apr_array_make (pool, apr_hash_count (all_revs), 
-                          sizeof (svn_revnum_t));
-  for (hi = apr_hash_first (pool, all_revs); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      svn_revnum_t revision;
-
-      apr_hash_this (hi, &key, NULL, NULL);
-      revision = *((const svn_revnum_t *)key);
-      (*((svn_revnum_t *) apr_array_push (*revs))) = revision;
-    }
-
-  /* Destroy all memory used, except array and the revisions in it. */
-  svn_pool_destroy (subpool);
-
-  /* Now sort the array */
-  qsort ((*revs)->elts, (*revs)->nelts, (*revs)->elt_size, 
-         svn_sort_compare_revisions);
-
-  /* Return the array. */
-  return SVN_NO_ERROR;
-}
-
+/* Finding Changes */
 
 struct paths_changed_args
 {
@@ -4048,5 +3643,356 @@ svn_fs_paths_changed (apr_hash_t **changed_paths_p,
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root), txn_body_paths_changed,
                               &args, pool));
   *changed_paths_p = args.changes;
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Our coolio opaque history object. */
+struct svn_fs_history_t
+{
+  svn_fs_t *fs;
+  const char *path;
+  svn_revnum_t revision;
+  const char *path_hint;
+  svn_revnum_t rev_hint;
+  int is_interesting;
+};
+
+
+/* Return a new history object (marked as "interesting") for PATH and
+   REVISION, allocated in POOL.  Note that paths are not duped into
+   POOL -- it is the responsibility of the caller to ensure that this
+   happens. */
+static svn_fs_history_t *
+assemble_history (svn_fs_t *fs,
+                  const char *path,
+                  svn_revnum_t revision,
+                  int is_interesting,
+                  const char *path_hint,
+                  svn_revnum_t rev_hint,
+                  apr_pool_t *pool)
+{
+  svn_fs_history_t *history = apr_pcalloc (pool, sizeof (*history));
+  history->path = path;
+  history->revision = revision;
+  history->is_interesting = is_interesting;
+  history->path_hint = path_hint;
+  history->rev_hint = rev_hint;
+  history->fs = fs;
+  return history;
+}
+
+
+/* A qsort-capable method for sorting by our funky base-36 ids. */
+static int 
+sort_keys (const void *a, const void *b)
+{
+  const char *item1 = *((const char * const *) a);
+  const char *item2 = *((const char * const *) b);
+  return svn_fs__key_compare (item1, item2);
+}
+
+
+/* Derive the oldest of a set of copies which took place in filesystem
+   FS -- bounded by the transactions START_TXN_ID and END_TXN_ID, and
+   by the copy ids START_COPY_ID and END_COPY_ID -- which resulted in
+   the creation of END_PATH.  Return the previous location of the
+   END_PATH as *SRC_REV/SRC_PATH, and the revision in which the copy
+   occured as *DST_REV.  Do all of this as part of TRAIL.
+
+   NOTE: END_COPY_ID may be NULL to indicate "the youngest committed
+   copy".  */
+static svn_error_t *
+find_youngest_copy (svn_revnum_t *src_rev, /* return */
+                    const char **src_path, /* return */
+                    svn_revnum_t *dst_rev, /* return */
+                    const char *dst_path,
+                    svn_fs_t *fs,
+                    svn_revnum_t start_rev,
+                    const char *start_copy_id,
+                    svn_revnum_t end_rev,
+                    const char *end_copy_id, /* may be NULL */
+                    trail_t *trail)
+{
+  svn_revnum_t cur_rev = end_rev;
+  const char *cur_path = dst_path;
+  const char *cur_copy_id = end_copy_id;
+
+  *src_path = NULL;
+  *src_rev = SVN_INVALID_REVNUM;
+  *dst_rev = SVN_INVALID_REVNUM;
+
+  /* Loop while the current revision and copy IDs are greater than our
+     starting bounds.  We'll be going backwards through transaction
+     (youngest to oldest).  */
+  while ((cur_rev >= start_rev)
+         && ((! cur_copy_id)
+             || (svn_fs__key_compare (cur_copy_id, start_copy_id) != -1)))
+    {
+      svn_fs__transaction_t *txn;
+      const char *cur_txn_id;
+      int i;
+
+      /* Fetch our current transaction. */
+      SVN_ERR (svn_fs__rev_get_txn_id (&cur_txn_id, fs, cur_rev, trail));
+      SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, cur_txn_id, trail));
+
+      /* If no copies were made in this transaction, it's
+         uninteresting to us. */
+      if (! (txn->copies && txn->copies->nelts))
+        goto loop_inc;
+
+      /* Otherwise, copies were made in this transaction, and we need
+         to search them, in reverse order of creation, looking for
+         relevance. */
+      qsort (txn->copies->elts, txn->copies->nelts, 
+             txn->copies->elt_size, sort_keys);
+      
+      for (i = txn->copies->nelts - 1; i >= 0; i--)
+        {
+          dag_node_t *node;
+          const char *copy_dst;
+          const char *remainder;
+          svn_fs__copy_t *copy;
+
+          /* Note the current copy id. */
+          cur_copy_id = APR_ARRAY_IDX (txn->copies, i, const char *);
+
+          /* If the COPY_ID is younger than our END_COPY_ID, skip it. */
+          if (end_copy_id 
+              && (svn_fs__key_compare (cur_copy_id, end_copy_id) == 1))
+            continue;
+
+          /* If the COPY_ID is older than our START_COPY_ID, we've
+             nothing left to look for. */
+          if (svn_fs__key_compare (cur_copy_id, start_copy_id) == -1)
+            break;
+
+          /* Get the current COPY record. */
+          SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, cur_copy_id, trail));
+
+          /* Figure out the destination path of the copy operation. */
+          SVN_ERR (svn_fs__dag_get_node (&node, fs, copy->dst_noderev_id, 
+                                         trail));
+          copy_dst = svn_fs__dag_get_created_path (node);
+
+          /* If our current path was the very destination of the copy,
+             then our new current path will be the copy source.  If
+             our current path was instead the *child* of the
+             destination of the copy, then figure out its previous
+             location by taking its path relative to the copy
+             destination and appending that to the copy source.
+             Finally, if our current path doesn't meet one of these
+             other criteria, just ignore this copy operation
+             altogether. */
+          if (strcmp (cur_path, copy_dst) == 0)
+            remainder = "";
+          else
+            remainder = svn_path_is_child (copy_dst, cur_path, trail->pool);
+
+          if (remainder)
+            {
+              /* If we get here, then our current path is the destination 
+                 of, or the child of the destination of, a copy.  Fill
+                 in the return values and get outta here.  */
+              SVN_ERR (svn_fs__txn_get_revision (src_rev, fs, 
+                                                 copy->src_txn_id, trail));
+              *src_path = svn_path_join (copy->src_path, remainder, 
+                                         trail->pool);
+              *dst_rev = cur_rev;
+              return SVN_NO_ERROR;
+            }
+        } /* for() */
+      
+    loop_inc:
+      cur_rev--;
+      
+    } /* while() */
+
+  return SVN_NO_ERROR;
+}
+
+  
+svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
+                                  svn_fs_root_t *root,
+                                  const char *path,
+                                  apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+
+  /* We require a revision root. */
+  if (root->kind != revision_root)
+    return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, NULL, "");
+
+  /* And we require that the path exist in the root. */
+  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  if (kind == svn_node_none)
+    return not_found (root, path);
+
+  /* Okay, all seems well.  Build our history object and return it. */
+  *history_p = assemble_history (svn_fs_root_fs (root),
+                                 svn_fs__canonicalize_abspath (path, pool),
+                                 root->rev, 0, NULL, SVN_INVALID_REVNUM, pool);
+  return SVN_NO_ERROR;
+}
+
+
+struct history_prev_args
+{
+  svn_fs_history_t **prev_history_p;
+  svn_fs_history_t *history;
+  int cross_copies;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+txn_body_history_prev (void *baton, trail_t *trail)
+{
+  struct history_prev_args *args = baton;
+  svn_fs_history_t **prev_history = args->prev_history_p;
+  svn_fs_history_t *history = args->history;
+  const char *end_cp_id = NULL;
+  const char *commit_path, *src_path, *path = history->path;
+  svn_revnum_t commit_rev, src_rev, dst_rev, revision = history->revision;
+  apr_pool_t *retpool = args->pool;
+  svn_fs_t *fs = history->fs;
+  dag_node_t *node;
+  svn_fs_root_t *root;
+  const svn_fs_id_t *node_id;
+  struct revision_root_args rr_args;
+  int paths_differ;
+
+  /* Initialize our return value. */
+  *prev_history = NULL;
+
+  /* If our last history report left us hints about where to pickup
+     the chase, start from those locations. */
+  if (history->path_hint && SVN_IS_VALID_REVNUM (history->rev_hint))
+    {
+      path = history->path_hint;
+      revision = history->rev_hint;
+    }
+  
+  /* Construct a ROOT for the current revision. */
+  rr_args.root_p = &root;
+  rr_args.fs = fs;
+  rr_args.rev = revision;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &rr_args, 
+                              trail->pool));
+
+  /* Open PATH/REVISION, and get its node and a bunch of other goodies.  */
+  SVN_ERR (get_dag (&node, root, path, trail));
+  node_id = svn_fs__dag_get_id (node);
+  commit_path = svn_fs__dag_get_created_path (node);
+  SVN_ERR (svn_fs__dag_get_revision (&commit_rev, node, trail));
+
+  /* If our history path/revision matches its node's commit
+     path/revision ... */
+  paths_differ = strcmp (path, commit_path);
+  if ((! paths_differ) && (revision == commit_rev))
+    {
+      if (! history->is_interesting)
+        {
+          /* ... and we've not already reported this history point,
+             then go for it. */
+          *prev_history = assemble_history (fs, 
+                                            apr_pstrdup (retpool, commit_path),
+                                            commit_rev, 1, NULL, 
+                                            SVN_INVALID_REVNUM, retpool);
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* Otherwise, we set our target path and revision to those
+             of our predecessor (unless there is no predecessor, in
+             which case we're all done!). */
+          const svn_fs_id_t *pred_id;
+
+          SVN_ERR (svn_fs__dag_get_predecessor_id (&pred_id, node, trail));
+          if (! pred_id)
+            return SVN_NO_ERROR;
+
+          /* Replace NODE and friends with the information from its
+             predecessor. */
+          SVN_ERR (svn_fs__dag_get_node (&node, fs, pred_id, trail));
+          node_id = svn_fs__dag_get_id (node);
+          end_cp_id = svn_fs__id_copy_id (node_id);
+          commit_path = svn_fs__dag_get_created_path (node);
+          SVN_ERR (svn_fs__dag_get_revision (&commit_rev, node, trail));
+        }
+    }
+
+  /* Easy out to avoid a copy hunt when our caller wouldn't want one. */
+  if (paths_differ && (! args->cross_copies))
+    return SVN_NO_ERROR;
+    
+  /* See if any copies took place between our path/revision and
+     the location of the node's last commit.  */
+  SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
+                               fs, commit_rev, svn_fs__id_copy_id (node_id),
+                               revision, end_cp_id, trail));
+  if (src_path && SVN_IS_VALID_REVNUM (src_rev))
+    {
+      *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
+                                        dst_rev, 1, src_path, src_rev, 
+                                        retpool);
+    }
+  else
+    {
+      *prev_history = assemble_history (fs, apr_pstrdup (retpool, commit_path),
+                                        commit_rev, 1, NULL, 
+                                        SVN_INVALID_REVNUM, retpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs_history_prev (svn_fs_history_t **prev_history_p,
+                                  svn_fs_history_t *history,
+                                  int cross_copies,
+                                  apr_pool_t *pool)
+{
+  svn_fs_history_t *prev_history = NULL;
+  svn_fs_t *fs = history->fs;
+
+  /* Special case: the root directory changes in every single
+     revision, no exceptions.  And, the root can't be the target (or
+     child of a target -- duh) of a copy.  So, if that's our path,
+     then we need only decrement our revision by 1, and there you go. */
+  if (strcmp (history->path, "/") == 0)
+    {
+      if (! history->is_interesting)
+        prev_history = assemble_history (fs, "/", history->revision,
+                                         1, NULL, SVN_INVALID_REVNUM, pool);
+      else if (history->revision > 0)
+        prev_history = assemble_history (fs, "/", history->revision - 1,
+                                         1, NULL, SVN_INVALID_REVNUM, pool);
+    }
+  else
+    {
+      /* Get a trail, and get to work. */
+      struct history_prev_args args;
+      args.prev_history_p = &prev_history;
+      args.history = history;
+      args.cross_copies = cross_copies;
+      args.pool = pool;
+      SVN_ERR (svn_fs__retry_txn (fs, txn_body_history_prev, &args, pool));
+    }
+
+  *prev_history_p = prev_history;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs_history_location (const char **path,
+                                      svn_revnum_t *revision,
+                                      svn_fs_history_t *history,
+                                      apr_pool_t *pool)
+{
+  *path = apr_pstrdup (pool, history->path);
+  *revision = history->revision;
   return SVN_NO_ERROR;
 }

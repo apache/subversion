@@ -168,3 +168,84 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
   
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_repos_revisions_changed (apr_array_header_t **revs,
+                             svn_fs_t *fs,
+                             const char *path,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             svn_boolean_t cross_copies,
+                             apr_pool_t *pool)
+{
+  svn_fs_history_t *history;
+  apr_pool_t *subpool1 = svn_pool_create (pool);
+  apr_pool_t *subpool2 = svn_pool_create (pool);
+  apr_pool_t *oldpool, *newpool;
+  const char *history_path;
+  svn_revnum_t history_rev;
+  svn_fs_root_t *root;
+
+  /* Validate the revisions. */
+  if ((! SVN_IS_VALID_REVNUM (start)) || (! SVN_IS_VALID_REVNUM (end)))
+    return svn_error_create (SVN_ERR_FS_NO_SUCH_REVISION, 0, "");
+
+  /* Ensure that the input is ordered. */
+  if (start > end)
+    {
+      svn_revnum_t tmprev = start;
+      start = end;
+      end = tmprev;
+    }
+
+  /* Allocate our return array. */
+  *revs = apr_array_make (pool, 4, sizeof (history_rev));
+
+  /* Get a revision root for END, and an initial HISTORY baton.  */
+  SVN_ERR (svn_fs_revision_root (&root, fs, end, pool));
+  SVN_ERR (svn_fs_node_history (&history, root, path, subpool1));
+  oldpool = subpool1;
+  newpool = subpool2;
+
+  /* Now, we loop over the history items, calling svn_fs_history_prev(). */
+  do
+    {
+      apr_pool_t *tmppool;
+
+      /* Note that we have to do some crazy pool work here.  We can't
+         get rid of the old history until we use it to get the new, so
+         we alternate back and forth between our subpools.  */
+      SVN_ERR (svn_fs_history_prev (&history, history, cross_copies, newpool));
+
+      /* Only continue if there is further history to deal with. */
+      if (! history)
+        break;
+
+      /* Fetch the location information for this history step.
+         ### We would probably just use POOL if we actually cared
+         ### about the HISTORY_PATH. */
+      SVN_ERR (svn_fs_history_location (&history_path, &history_rev,
+                                        history, newpool));
+      
+      /* If this history item predates our START revision, quit
+         here. */
+      if (history_rev < start)
+        break;
+      APR_ARRAY_PUSH (*revs, svn_revnum_t) = history_rev;
+
+      /* We're done with the old history item, so we can clear its
+         pool, and then toggle our notion of "the old pool". */
+      svn_pool_clear (oldpool);
+      tmppool = oldpool;
+      oldpool = newpool;
+      newpool = tmppool;
+    }
+  while (history); /* shouldn't hit this */
+
+  svn_pool_destroy (subpool1);
+  svn_pool_destroy (subpool2);
+  return SVN_NO_ERROR;
+}
+
+                             

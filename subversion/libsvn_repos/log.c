@@ -155,13 +155,6 @@ svn_repos_get_logs (svn_repos_t *repos,
      all the revisions in which any of the paths was changed.  */
   if (paths && paths->nelts)
     {
-      svn_fs_root_t *rev_root;
-
-      /* Set the revision root to the newer of the revisions we are
-         searching for.  */
-      SVN_ERR (svn_fs_revision_root
-               (&rev_root, fs, (start > end) ? start : end, pool));
-
       /* If there is only one path, we'll just get its sorted changed
          revisions.  Else, we'll be combining all our findings into a
          hash (to remove duplicates) and then generating a sorted
@@ -169,11 +162,9 @@ svn_repos_get_logs (svn_repos_t *repos,
       if (paths->nelts == 1)
         {
           /* Get the changed revisions for this path. */
-          SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, 
-                                             APR_ARRAY_IDX (paths, 0, 
-                                                            const char *),
-                                             strict_node_history ? 0 : 1, 
-                                             pool));
+          SVN_ERR (svn_repos_revisions_changed 
+                   (&revs, fs, APR_ARRAY_IDX (paths, 0, const char *),
+                    start, end, strict_node_history ? 0 : 1, pool));
         }
       else
         {
@@ -190,11 +181,9 @@ svn_repos_get_logs (svn_repos_t *repos,
 
               /* Get the changed revisions for this path, and add them to
                  the hash (this will eliminate duplicates). */
-              SVN_ERR (svn_fs_revisions_changed (&changed_revs,
-                                                 rev_root, 
-                                                 this_path, 
-                                                 strict_node_history ? 0 : 1, 
-                                                 pool));
+              SVN_ERR (svn_repos_revisions_changed 
+                       (&changed_revs, fs, this_path,
+                        start, end, strict_node_history ? 0 : 1, pool));
               for (j = 0; j < changed_revs->nelts; j++)
                 {
                   /* We're re-using the memory allocated for the array
