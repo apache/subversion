@@ -576,7 +576,9 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
   my_bc_relative = "";
   {
     const char *relative_path;
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
     const char *relative_path_old;
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
     
     relative_path = apr_hash_get(rsrc->propset,
                                  SVN_RA_DAV__PROP_BASELINE_RELPATH,
