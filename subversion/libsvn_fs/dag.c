@@ -463,41 +463,55 @@ get_dir_entries (skel_t **entries,
 }
 
 
-/* Given a directory entries list skel ENTRIES, search for a directory
-   entry named NAME (which is assumed to be a single path component).
-   If no such entry exists, *ENTRY is set to NULL.  Else *ENTRY is
-   pointed to that `entry' list skel, a reference into the memory
-   allocated for ENTRIES.  */ 
+/* Search for an entry NAME in directory entries list ENTRIES.
+   NAME must be a single path component.
+
+   If there is such an entry, then
+        - set *ENTRY_P to point to that list skel (a reference into
+          the memory allocated for ENTRIES);
+        - and if PREV_ENTRY_P is non-null, then
+               - if the entry found is not the first entry, set
+                 *PREV_ENTRY_P to point to the entry before it,
+               - else set *PREV_ENTRY_P to null.
+
+   Else if there is no such entry, set *ENTRY_P to NULL and, if
+   PREV_ENTRY_P is non-null, set *PREV_ENTRY_P to the last entry in
+   the list.  */
 static svn_error_t *
-find_dir_entry (skel_t **entry, 
+find_dir_entry (skel_t **entry_p,
+                skel_t **prev_entry_p,
                 skel_t *entries,
                 const char *name, 
                 trail_t *trail)
 {
-  skel_t *cur_entry;
-  
+  skel_t *cur_entry, *prev_entry;
+
   /* search the entry list for one whose name matches NAME.  */
-  for (cur_entry = entries->children; 
-       cur_entry; cur_entry = cur_entry->next)
+  for (prev_entry = NULL, cur_entry = entries->children;
+       cur_entry != NULL;
+       prev_entry = cur_entry, cur_entry = cur_entry->next)
     {
       if (svn_fs__matches_atom (cur_entry->children, name))
         {
           if (svn_fs__list_length (cur_entry) != 2)
-            {
-              return svn_error_createf
-                (SVN_ERR_FS_CORRUPT, 0, 0, trail->pool,
-                 "directory entry \"%s\" ill-formed", name);
-            }
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, 0, 0, trail->pool,
+               "directory entry \"%s\" ill-formed", name);
           else
             {
-              *entry = cur_entry;
+              *entry_p = cur_entry;
+              if (prev_entry_p)
+                *prev_entry_p = prev_entry;
               return SVN_NO_ERROR;
             }
         }
     }
 
   /* We never found the entry, but this is non-fatal. */
-  *entry = (skel_t *) NULL;
+  *entry_p = (skel_t *) NULL;
+  if (prev_entry_p)
+    *prev_entry_p = prev_entry;
+
   return SVN_NO_ERROR;
 }
 
@@ -515,7 +529,7 @@ dir_entry_from_node (skel_t **entry,
   skel_t *entries;
 
   SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, parent, trail));
-  return find_dir_entry (entry, entries, name, trail);
+  return find_dir_entry (entry, NULL, entries, name, trail);
 }
 
 
@@ -591,7 +605,7 @@ set_entry (dag_node_t *parent,
     SVN_ERR (svn_fs__read_rep (&rep, fs, mutable_rep_key, trail));
     SVN_ERR (svn_fs__string_from_rep (&str, fs, rep, trail));
     entries = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
-    SVN_ERR (find_dir_entry (&entry, entries, name, trail));
+    SVN_ERR (find_dir_entry (&entry, NULL, entries, name, trail));
 
     if (entry)
       {
@@ -1194,7 +1208,7 @@ delete_entry (dag_node_t *parent,
   entries = svn_fs__parse_skel ((char *) str.data, str.len, trail->pool);
 
   /* Find NAME in the ENTRIES skel.  */
-  SVN_ERR (find_dir_entry (&entry, entries, name, trail));
+  SVN_ERR (find_dir_entry (&entry, &prev_entry, entries, name, trail));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
@@ -1232,10 +1246,11 @@ delete_entry (dag_node_t *parent,
   /* Write out the updated entries list. */
   unparsed_entries = svn_fs__unparse_skel (entries, trail->pool);
   string_key = svn_fs__string_key_from_rep (rep, trail->pool);
-  svn_fs__string_append (fs, &string_key,
-                         unparsed_entries->len,
-                         unparsed_entries->data,
-                         trail);
+  SVN_ERR (svn_fs__string_clear (fs, string_key, trail));
+  SVN_ERR (svn_fs__string_append (fs, &string_key,
+                                  unparsed_entries->len,
+                                  unparsed_entries->data,
+                                  trail));
 
   return SVN_NO_ERROR;
 }
