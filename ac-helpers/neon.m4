@@ -91,9 +91,9 @@ dnl Configure neon --------------------------
           echo "but Subversion needs neon $NEON_WANTED."
           SVN_DOWNLOAD_NEON()
         else
-          SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D.*//g'`
+          SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
           NEON_LIBS=`$neon_config --libs | sed -e 's/-lneon//g'`
-          CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I.* //g'`"
+          CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
           NEON_LIBS="$NEON_LIBS "`$neon_config --prefix `"/lib/libneon.la"
         fi
       else
