@@ -1,3 +1,0 @@
-echo +\"`uname -mpiors`\\n\" \\
-echo +\"`uname -n`\\n\" \\
-echo +\"`uname -v`\\n\" 
