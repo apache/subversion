@@ -16,6 +16,7 @@
 .Op Fl -dumpfile Ar name
 .Op Fl -encoding Ar encoding
 .Op Fl -svnadmin Ar path
+.Op Fl -username Ar name
 .Ar cvs-repos-path
 .Sh DESCRIPTION
 .Nm
@@ -73,6 +74,12 @@ of the CVS archive.
 Path to the the
 .Ar svnadmin
 program.
+.It Fl -username Ar name
+Set the default username to
+.Ar name
+when cvs2svn.py doesn't have a username from the CVS repository to
+work with.  This happens when a branch or tag is created.  The default
+name is "unknown".
 .It Fl p Ar n
 Start the program at pass
 .Ar n ,
