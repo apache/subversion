@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Project Tasks</title></head>
 <body bgcolor="#F0F0F0" text="#000033">
 
 <p>
@@ -42,13 +43,12 @@ Here are the tasks:
 
 <ul>
 
-   <li> <b>Rename some fields and functions throughout code</b> <p>
-   This is 
-   <a
+   <!-- ***************************************************************** -->
+   <li><b>Rename some fields and functions throughout code</b>
+   <p> This is <a
    href="http://subversion.tigris.org/issues/show_bug.cgi?id=560">issue
    #560</a>.  It involves tweaks across quite a bit of code.  A
-   one-day task, at most.  Description:
-   <p>
+   one-day task, at most.  Description:</p>
    <pre>
    There are many, many instances of "editors" in our codebase. (See
    'svn_delta_edit_fns_t' in svn_delta.h).
@@ -77,18 +77,16 @@ Here are the tasks:
    parameters as appropriate.
    </pre>
    </li>
-   <p>
 
-   <li> <b>Convert to more appropriate string types throughout code</b> <p>
-   This is 
-   <a
+   <!-- ***************************************************************** -->
+   <li><b>Convert to more appropriate string types throughout code</b>
+   <p>This is <a
    href="http://subversion.tigris.org/issues/show_bug.cgi?id=406">issue
    #406</a>.  It involves tweaks across quite a bit of code, but
    they're fairly minor tweaks.  Also, it can be done incrementally,
    there's no particular reason why the whole change needs to happen
    at once.  Estimate: one solid evening, or two at the most.  Here's
-   the description:
-   <p>
+   the description:</p>
    <pre>
    There are many places where, for historical reasons, we are using
    svn_stringbuf_t to pass or return constant char * data.  We could
@@ -128,16 +126,12 @@ Here are the tasks:
    of svn_string_t functions.
    </pre>
    </li>
-   <p>
 
-   <!-- ---------------------------------------------------------- -->
-
-   <li> <b>Add better usage descriptions to subcommand help.</b><p>
-   This is
-   <a
+   <!-- ***************************************************************** -->
+   <li><b>Add better usage descriptions to subcommand help.</b>
+   <p>This is <a
    href="http://subversion.tigris.org/issues/show_bug.cgi?id=407">issue
-   #407</a>, filed by Ben, the description is:
-   <p>
+   #407</a>, filed by Ben, the description is:</p>
    <pre>
    $ svn help co
    checkout (co): Check out a working directory from a repository.
@@ -153,13 +147,10 @@ Here are the tasks:
    This is a "bite sized task" for a volunteer.
    </pre>
    </li>
-   <p>
 
-   <!-- ---------------------------------------------------------- -->
-
-   <li> <b>Fix up date parsing library issues</b> <p>
-   </li>
-   This task is probably small, but will require some investigation
+   <!-- ***************************************************************** -->
+   <li><b>Fix up date parsing library issues</b>
+   <p>This task is probably small, but will require some investigation
    and list discussion first probably.  The basic issue is this: Ben
    took the getdate.y date grammar file from CVS (that file has always
    been in the public domain) and imported it into Subversion.  So now
@@ -169,39 +160,35 @@ Here are the tasks:
    getdate.y, and it would be better to have a .c file that we edit
    directly, than a .y file which causes Subversion developers to be
    dependent on having the correct version of Yacc/Bison/Whatever
-   installed.
-   <p>
-   This message from Branko summarizes the issues pretty well; read
+   installed.</p>
+
+   <p>This message from Branko summarizes the issues pretty well; read
    it, then move back and forth in the thread to get some context and
-   a sense of what people see as the solution domain right now:
-   <p>
-   <a
-  href="http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&listName=dev"
-   >http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&listName=dev</a>
-   <p>
+   a sense of what people see as the solution domain right now:</p>
+   <p><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&amp;listName=dev"
+   >http://subversion.tigris.org/servlets/ReadMsg?msgId=31147&amp;listName=dev</a>
+   </p>
 
-   <!-- ---------------------------------------------------------- -->
-
-   <li> <b>Constify svn_parse_date()'s first parameter</b> <p>
-   </li>
-   This is
-   <a
+   <!-- ***************************************************************** -->
+   <li><b>Constify svn_parse_date()'s first parameter</b>
+   <p>This is <a
    href="http://subversion.tigris.org/issues/show_bug.cgi?id=408">issue
-   #408</a>, the description is:
-   <p>
+   #408</a>, the description is:</p>
+   <pre>
    The first argument of svn_parse_date() should be const.  However,
    because the function originates in getdate.y and that parameter is
    related to the global yyInput variable, there may be more to this
    change than just adding the qualifier...
-   <p>
+   </pre>
 
 <!-- template for further items: -->
 <!--
 
-   <li> <b></b> <p>
-   </li>
+   <li><b></b>
    <p>
-
+   </p>
+   </li>
 -->
 
 </ul>
