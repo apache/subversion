@@ -751,11 +751,12 @@ svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
 /**
  * @since New in 1.1.
  *
- * Same as svn_io_dir_make, but sets the sgid on the directory on
- * systems that support it.  On Unix filesystems, setting the sgid
- * bit on a directory ensures that files and subdirectories created
- * within inherit group ownership from the parent instead of from the
- * primary gid. */
+ * Same as svn_io_dir_make, but attempts to set the sgid on the
+ * directory on systems that support it.  Does not return an error if
+ * the attempt to set the sgid bit fails.  On Unix filesystems,
+ * setting the sgid bit on a directory ensures that files and
+ * subdirectories created within inherit group ownership from the
+ * parent instead of from the primary gid. */
 svn_error_t *
 svn_io_dir_make_sgid (const char *path, apr_fileperms_t perm,
                       apr_pool_t *pool);
