@@ -649,7 +649,7 @@ do_entry (svn_string_t *path,
   if (err)
     return err;
   
-  if (setting)
+  if (setting || removing)
     {
       /* Close the outfile and *sync* it, so it replaces the original
          infile. */
@@ -717,6 +717,7 @@ svn_wc__entry_merge (svn_string_t *path,
   va_list ap;
   const char *key;
   svn_boolean_t allow_duplicate = 0;
+  svn_boolean_t deleting_an_added_file = 0;
 
   svn_vernum_t existing_version;
   enum svn_node_kind existing_kind;
@@ -741,12 +742,7 @@ svn_wc__entry_merge (svn_string_t *path,
     {
       svn_string_t *val;
 
-      /* Treat add and delete specially.  One of them in the argument list
-         overrides the other in the hash.  (They had better not *both*
-         be in the argument list!)  Then we also have to tell
-         do_entry() to ignore matches and write out a new entry with
-         the same name.
-      */
+      /* Treat add and delete specially. */
       if ((strcmp (key, SVN_WC__ENTRIES_ATTR_ADD) == 0)
           && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_DELETE,
                             strlen (SVN_WC__ENTRIES_ATTR_DELETE))))
@@ -759,9 +755,7 @@ svn_wc__entry_merge (svn_string_t *path,
                && (apr_hash_get (existing_hash, SVN_WC__ENTRIES_ATTR_ADD,
                                  strlen (SVN_WC__ENTRIES_ATTR_ADD))))
         {
-          apr_hash_set (existing_hash, SVN_WC__ENTRIES_ATTR_ADD,
-                        strlen (SVN_WC__ENTRIES_ATTR_ADD), NULL);
-          allow_duplicate = 1;
+          deleting_an_added_file = 1;
         }
 
       val = va_arg (ap, svn_string_t *);
@@ -769,13 +763,22 @@ svn_wc__entry_merge (svn_string_t *path,
     }
   va_end (ap);
 
-  err = do_entry (path, pool, entryname,
-                  allow_duplicate,
-                  version, NULL,
-                  kind, NULL,
-                  0, /* not removing */
-                  1, /* setting */
-                  existing_hash);
+  if (deleting_an_added_file)
+    err = do_entry (path, pool, entryname,
+                    0,
+                    version, NULL,
+                    kind, NULL,
+                    1, /* removing */
+                    0, /* not setting */
+                    existing_hash);
+  else
+    err = do_entry (path, pool, entryname,
+                    allow_duplicate,
+                    version, NULL,
+                    kind, NULL,
+                    0, /* not removing */
+                    1, /* setting */
+                    existing_hash);
 
   return err;
 }
