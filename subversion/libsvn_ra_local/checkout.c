@@ -91,11 +91,13 @@ set_any_props (svn_fs_root_t *root,
     
   apr_hash_set (props, SVN_PROP_ENTRY_COMMITTED_DATE, 
                 strlen(SVN_PROP_ENTRY_COMMITTED_DATE),
-                svn_string_create (committed_date, pool));
+                committed_date ?
+                svn_string_create (committed_date, pool) : NULL);
     
   apr_hash_set (props, SVN_PROP_ENTRY_LAST_AUTHOR, 
                 strlen(SVN_PROP_ENTRY_LAST_AUTHOR),
-                svn_string_create (last_author, pool));
+                last_author ?
+                svn_string_create (last_author, pool) : NULL);
   
   
   /* Loop over properties, send them through the editor. */
