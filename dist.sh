@@ -6,13 +6,13 @@
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The REVISION will be used in the version string. The tarball will be
 #   constructed from the root located at REPOS-PATH. If REPOS-PATH is
-#   not specified then the default is "branches/release-VERSION". For
+#   not specified then the default is "branches/VERSION". For
 #   example, the command line:
 #
 #      ./dist.sh 0.24.2 6284
 #
-#   from the top-level of a branches/release-0.24.2 working copy will
-#   create the 0.24.2 release tarball. Make sure you have apr, apr-util,
+#   from the top-level of a branches/0.24.2 working copy will create
+#   the 0.24.2 release tarball. Make sure you have apr, apr-util,
 #   and neon subdirectories and that the working copy is configured
 #   before running this script in the top-level directory.
 #
@@ -40,11 +40,10 @@ fi
 VERSION="$1"
 
 REVISION="$2"
-WC_REVISION="`svnversion doc`"
 
 REPOS_PATH="$3"
 if [ -z "$REPOS_PATH" ]; then
-  REPOS_PATH="branches/release-$VERSION"
+  REPOS_PATH="branches/$VERSION"
 else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
@@ -56,29 +55,7 @@ DISTPATH="$DIST_SANDBOX/$DISTNAME"
 echo "Distribution will be named: $DISTNAME"
 echo "     constructed from path: /$REPOS_PATH"
 
-if [ "$WC_REVISION" != "$REVISION" ]; then
-  echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-  echo "*                                                             *"
-  echo "* WARNING:  The docs/ directory in your working copy does not *"
-  echo "*           appear  to  have the same revision number  as the *"
-  echo "*           distribution revision you requested.  Since these *"
-  echo "*           documents will be the ones included in your final *"
-  echo "*           tarball, please  be  sure they reflect the proper *"
-  echo "*           state.                                            *"
-  echo "*                                                             *"
-  echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-fi
-
-echo "Cleaning old docs in docs/ ..."
-
-rm -f doc/translations/french/svn-handbook-french.info
-rm -f doc/translations/french/svn-handbook-french.info-*
-rm -f doc/translations/french/svn-handbook-french.html
-rm -f doc/translations/french/svn-handbook-french.txt
-
-echo "Building new docs in docs/ ..."
-FOP_OPTS="-Xms100m -Xmx200m"
-export FOP_OPTS
+echo "Building new design docs in docs/ ..."
 
 make doc-design
 
