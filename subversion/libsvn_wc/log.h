@@ -145,9 +145,7 @@ extern "C" {
  * 
  * Targets is a hash of files/dirs that actually got committed --
  * these are the only ones who we can write log items for, and whose
- * revision numbers will get set.  todo: eventually this hash will be
- * of the sort used by svn_wc__compose_paths(), as with all entries
- * recursers.
+ * revision numbers will get set.
  */
 svn_error_t *svn_wc__log_commit (const char *path,
                                  apr_hash_t *targets,

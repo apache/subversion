@@ -166,12 +166,12 @@ generate_delta_tree (svn_repos_node_t **tree,
    mods, or b) contains files that have changed. */
 static svn_error_t *
 print_dirs_changed_tree (svn_repos_node_t *node,
-                         svn_stringbuf_t *path /* UTF-8! */,
+                         const char *path /* UTF-8! */,
                          apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
   int print_me = 0;
-  svn_stringbuf_t *full_path;
+  const char *full_path;
 
   if (! node)
     return SVN_NO_ERROR;
@@ -215,8 +215,8 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   if (print_me)
     {
       const char *path_native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path->data, pool));
-      printf ("%s/\n", path->data);
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+      printf ("%s/\n", path_native);
     }
 
   /* Recursively handle the node's children. */
@@ -224,14 +224,12 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   if (! tmp_node)
     return SVN_NO_ERROR;
 
-  full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name);
+  full_path = svn_path_join (path, tmp_node->name, pool);
   SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, pool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
-      svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts (full_path, tmp_node->name);
+      full_path = svn_path_join (path, tmp_node->name, pool);
       SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, pool));
     }
 
@@ -243,10 +241,10 @@ print_dirs_changed_tree (svn_repos_node_t *node,
    (do not include directories affected only by "bubble-up"). */
 static svn_error_t *
 print_changed_tree (svn_repos_node_t *node,
-                    svn_stringbuf_t *path /* UTF-8! */,
+                    const char *path /* UTF-8! */,
                     apr_pool_t *pool)
 {
-  svn_stringbuf_t *full_path;
+  const char *full_path;
   char status[3] = "_ ";
   int print_me = 1;
 
@@ -274,7 +272,7 @@ print_changed_tree (svn_repos_node_t *node,
   if (print_me)
     {
       const char *path_native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path->data, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
       printf ("%s  %s%s\n",
               status,
               path_native,
@@ -287,14 +285,12 @@ print_changed_tree (svn_repos_node_t *node,
     return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
-  full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, node->name);
+  full_path = svn_path_join (path, node->name, pool);
   SVN_ERR (print_changed_tree (node, full_path, pool));
   while (node->sibling)
     {
       node = node->sibling;
-      svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts (full_path, node->name);
+      full_path = svn_path_join (path, node->name, pool);
       SVN_ERR (print_changed_tree (node, full_path, pool));
     }
 
@@ -606,11 +602,11 @@ print_diff_tree (svn_fs_root_t *root,
 static svn_error_t *
 print_ids_tree (svn_repos_node_t *node,
                 svn_fs_root_t *root,
-                svn_stringbuf_t *path /* UTF-8! */,
+                const char *path /* UTF-8! */,
                 int indentation,
                 apr_pool_t *pool)
 {
-  svn_stringbuf_t *full_path;
+  const char *full_path;
   int i;
   const svn_fs_id_t *id;
   svn_string_t *unparsed_id = NULL;
@@ -627,7 +623,7 @@ print_ids_tree (svn_repos_node_t *node,
     }
 
   /* Get the node's ID */
-  svn_fs_node_id (&id, root, path->data, pool);
+  svn_fs_node_id (&id, root, path, pool);
   if (id)
     unparsed_id = svn_fs_unparse_id (id, pool);
   
@@ -645,15 +641,13 @@ print_ids_tree (svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create (pool);
-  full_path = svn_stringbuf_dup (path, subpool);
-  svn_path_add_component_nts (full_path, node->name);
-  SVN_ERR (print_ids_tree (node, root, full_path, indentation + 1,
-                           subpool));
+  full_path = svn_path_join (path, node->name, subpool);
+  SVN_ERR (print_ids_tree (node, root, full_path, indentation + 1, subpool));
   while (node->sibling)
     {
+      svn_pool_clear (subpool);
       node = node->sibling;
-      svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts (full_path, node->name);
+      full_path = svn_path_join (path, node->name, pool);
       SVN_ERR (print_ids_tree (node, root, full_path, indentation + 1,
                                subpool));
     }
@@ -811,8 +805,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
                                 TRUE, pool)); 
   if (tree)
-    SVN_ERR (print_dirs_changed_tree (tree, svn_stringbuf_create ("", pool),
-                                      pool));
+    SVN_ERR (print_dirs_changed_tree (tree, "", pool));
 
   return SVN_NO_ERROR;
 }
@@ -842,7 +835,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
                                 TRUE, pool)); 
   if (tree)
-    SVN_ERR (print_changed_tree (tree, svn_stringbuf_create ("", pool), pool));
+    SVN_ERR (print_changed_tree (tree, "", pool));
 
   return SVN_NO_ERROR;
 }
@@ -896,8 +889,7 @@ do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
     {
       if (show_ids)
         {
-          SVN_ERR (print_ids_tree (tree, root, 
-                                   svn_stringbuf_create ("", pool), 0, pool));
+          SVN_ERR (print_ids_tree (tree, root, "", 0, pool));
         }
       else
         {

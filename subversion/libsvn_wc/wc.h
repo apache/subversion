@@ -95,16 +95,6 @@ struct svn_wc_traversal_info_t
 
 /*** Names and file/dir operations in the administrative area. ***/
 
-/* Create DIR as a working copy directory. */
-/* ### This function hasn't been defined nor completely documented
-   yet, so I'm not sure whether the "ancestor" arguments are really
-   meant to be urls and should be changed to "url_*".  -kff */ 
-svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
-                                     svn_stringbuf_t *ancestor_path,
-                                     svn_revnum_t ancestor_revnum,
-                                     apr_pool_t *pool);
-
-
 /* kff todo: namespace-protecting these #defines so we never have to
    worry about them conflicting with future all-caps symbols that may
    be defined in svn_wc.h. */
