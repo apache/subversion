@@ -21,6 +21,7 @@
 #include "db.h"
 #include "svn_io.h"
 #include "svn_fs.h"
+#include "skel.h"
 #include "trail.h"
 
 
