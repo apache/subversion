@@ -647,28 +647,17 @@ def modify_and_update_receive_new_external(sbox):
 
 #----------------------------------------------------------------------
 
-def disallow_parent_directory_reference(sbox):
-  "error if external target dir refers to '..'"
+def disallow_dot_or_dotdot_directory_reference(sbox):
+  "error if external target dir involves '.' or '..'"
   sbox.build()
   wc_dir         = sbox.wc_dir
-
-  wc_other       = sbox.wc_dir + '.other'
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
 
-  # Checkout the 'other' working copy, at revision 1.
-  svntest.main.safe_rmtree(wc_other)
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     'checkout',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     repo_url, wc_other)
-
-  # Set up some illegal externals in the original WC.
-  def set_externals_for_path(path, val, dir):
+  # Try to set illegal externals in the original WC.
+  def set_externals_for_path_expect_error(path, val, dir):
     tmp_f = os.tempnam(dir, 'tmp')
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn("", None, [],
+    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.remove(tmp_f)
@@ -676,36 +665,19 @@ def disallow_parent_directory_reference(sbox):
   B_path = os.path.join(wc_dir, 'A', 'B')
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  externals_1 = "../foo  "         + repo_url + "/A/B/E" + "\n"
-  externals_2 = "foo/bar/../baz  " + repo_url + "/A/B/E" + "\n"
-  externals_3 = "foo/..  "         + repo_url + "/A/B/E" + "\n"
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  F_path = os.path.join(wc_dir, 'A', 'C', 'F')
+  externals_value_1 = "../foo  "         + repo_url + "/A/B/E" + "\n"
+  externals_value_2 = "foo/bar/../baz  " + repo_url + "/A/B/E" + "\n"
+  externals_value_3 = "foo/..  "         + repo_url + "/A/B/E" + "\n"
+  externals_value_4 = ". "               + repo_url + "/A/B/E" + "\n"
+  externals_value_5 = "./ "              + repo_url + "/A/B/E" + "\n"
 
-  set_externals_for_path(B_path, externals_1, wc_dir)
-  set_externals_for_path(G_path, externals_2, wc_dir)
-  set_externals_for_path(H_path, externals_3, wc_dir)
-
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     'ci', '-m', 'log msg', '--quiet', wc_dir)
-
-  # Update the corresponding parts of the  other working copy,
-  # expecting errors.
-  other_B_path = os.path.join(wc_other, 'A', 'B')
-  other_G_path = os.path.join(wc_other, 'A', 'D', 'G')
-  other_H_path = os.path.join(wc_other, 'A', 'D', 'H')
-
-  def test_update(path, expected_err):
-    out_lines, err_lines = svntest.main.run_svn (1, 'up', path)
-    if (err_lines):
-      m = re.compile(expected_err)
-      for line in err_lines:
-        if m.match(line):
-          break
-      else:
-        raise svntest.Failure
-
-  test_update(other_B_path, "Target dir '../foo' references '..'")
-  test_update(other_G_path, "Target dir 'foo/bar/../baz' references '..'")
-  test_update(other_H_path, "Target dir 'foo/..' references '..'")
+  set_externals_for_path_expect_error(B_path, externals_value_1, wc_dir)
+  set_externals_for_path_expect_error(G_path, externals_value_2, wc_dir)
+  set_externals_for_path_expect_error(H_path, externals_value_3, wc_dir)
+  set_externals_for_path_expect_error(C_path, externals_value_4, wc_dir)
+  set_externals_for_path_expect_error(F_path, externals_value_5, wc_dir)
 
 
 ########################################################################
@@ -721,7 +693,7 @@ test_list = [ None,
               update_change_modified_external,
               update_receive_change_under_external,
               modify_and_update_receive_new_external,
-              disallow_parent_directory_reference,
+              disallow_dot_or_dotdot_directory_reference,
              ]
 
 if __name__ == '__main__':

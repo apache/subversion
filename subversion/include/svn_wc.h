@@ -261,17 +261,19 @@ typedef struct svn_wc_external_item_t
 } svn_wc_external_item_t;
 
 
-/** Set @a *externals_p to a hash table whose keys are subdirectory
- * names and values are @a svn_wc_external_item_t * objects,
- * based on @a desc.
+/** If @a externals_p is non-null, set @a *externals_p to a hash table
+ * whose keys are subdirectory names and values are @a
+ * svn_wc_external_item_t * objects, based on @a desc.
+ *
+ * If the format of @a desc is invalid, don't touch @a *externals_p and
+ * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
+ * you just want to check the validity of an externals description,
+ * and don't care about the parsed result, pass null for @a externals_p.
  *
  * The format of @a desc is the same as for values of the directory
  * property @c SVN_PROP_EXTERNALS, which see.
  *
  * Allocate the table, keys, and values in @a pool.
- *
- * If the format of @a desc is invalid, don't touch @a *externals_p and
- * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.
  *
  * Use @a parent_directory only in constructing error strings.
  */
