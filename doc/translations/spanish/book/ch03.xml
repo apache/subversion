@@ -712,7 +712,7 @@ Updated to revision 2.
         <varlistentry>
           <term><command>svn add foo</command></term>
           <listitem>
-            <para>Programe añadir <filename>foo</filename> al repositorio.
+            <para>Programa añadir <filename>foo</filename> al repositorio.
               <!--TODO:schedule foo to be added-->Cuando haga su proximo
               envio, <filename>foo</filename> se convertirá en hijo de
               su directorio padre. Fijese que si <filename>foo</filename>
@@ -728,7 +728,7 @@ Updated to revision 2.
         <varlistentry>
           <term><command>svn delete foo</command></term>
           <listitem>
-            <para>Programe <!--TODO:schedule--> borrar
+            <para>Programa <!--TODO:schedule--> borrar
               <filename>foo</filename> del repositorio. Si
               <filename>foo</filename> es un fichero, se borrará
               inmediatamente de su copia de trabajo local. Si
@@ -748,37 +748,37 @@ Updated to revision 2.
         <varlistentry>
           <term><command>svn copy foo bar</command></term>
           <listitem>
-            <para>Cree un nuevo objeto <filename>bar</filename>
-
-
-            Create a new item <filename>bar</filename> as a
-              duplicate of <filename>foo</filename>.
-              <filename>bar</filename> is automatically scheduled for
-              addition.  When <filename>bar</filename> is added to the
-              repository on the next commit, its copy history is
-              recorded (as having originally come from
-              <filename>foo</filename>).  <command>svn copy</command>
-              does not create intermediate directories.</para>
+            <para>Crea un nuevo objeto <filename>bar</filename> como
+              duplicado de <filename>foo</filename>.
+              <filename>bar</filename> es automáticamente programado
+              para la adición<!--TODO:is automatically scheduled for
+              addition-->. Cuando <filename>bar</filename> es añadido al
+              repositorio en el siguiente envio de cambios, su historia
+              de copia es registrada (como que originalmente  viene de
+              <filename>foo</filename><!--TODO:as having originally come
+              from-->).<command>svn copy</command> no crea directorios
+              intermedios.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn move foo bar</command></term>
           <listitem>
-            <para>This command is exactly the same as running
+            <para>Este comando funciona exactamente igual que
               <command>svn copy foo bar; svn delete foo</command>.
-              That is, <filename>bar</filename> is scheduled for
-              addition as a copy of <filename>foo</filename>, and
-              <filename>foo</filename> is scheduled for removal.
-              <command>svn move</command> does not create intermediate
-              directories.</para>
+              Esto es, se programa <!--TODO:scheduled-->
+              <filename>bar</filename> para la adición como una copia de
+              <filename>foo</filename>, y se programa
+              <filename>foo</filename> para la eliminación<!--TODO:
+              for removal-->. <command>svn move</command> no crea
+              directorios intermedios.</para>
           </listitem>
         </varlistentry>
 
       </variablelist>
 
       <sidebar>
-        <title>Changing the Repository Without a Working Copy</title>
+        <title>Cambiando el Repositorio Sin una Copia de Trabajo</title>
 
         <!-- ### pll - Fri 07 Feb 2003 12:55:07                            -->
         <!-- I find this sidebar rather confusing here, since you really   -->
@@ -789,16 +789,20 @@ Updated to revision 2.
         <!-- probably be in chapter 2 (around the "Subversion in action"   -->
         <!-- though, so that this sidebar makes more sense.                -->
         
-        <para>Earlier in this chapter, we said that you have to commit
-          any changes that you make in order for the repository to
-          reflect these changes. That's not entirely true&mdash;there
-          <emphasis>are</emphasis> some use-cases that immediately
-          commit tree changes to the repository.  This only happens
-          when a subcommand is operating directly on a URL, rather
-          than on a working-copy path. In particular, specific uses
-          of <command>svn mkdir</command>, <command>svn
-          copy</command>, <command>svn move</command>, and
-          <command>svn delete</command> can work with URLs.</para>
+        <para>Anteriormente en este capítulo, dijimos que tiene que enviar
+          cualquier cambio que usted haga en orden para que <!--TODO:in
+          order for the repository to reflect these changes-->el
+          repositorio refleje estos cambios. Esto no enteramente cierto
+          <!--TODO: entirely true... podria quedar mejor "no es del todo
+          cierto-->&mdash;<emphasis>hay</emphasis> algunos usos-casos que
+          inmediatamente envian los cambios del árbol al repositorio. Esto
+          sucede solamente cuando un subcomando está operando directamente
+          sobre una URL, al contrario que sobre una ruta de la copia-local
+          <!--TODO:on a URL, rather than on a working-copy path-->.
+          En particular, usos especificos de <command>svn mkdir</command>,
+          <command>svn copy</command>, <command>svn move</command>, y
+          <command>svn delete</command> pueden trabajar con URLs.</para>
+
 
         <para>URL operations behave in this manner because commands
           that operate on a working copy can use the working copy as a
