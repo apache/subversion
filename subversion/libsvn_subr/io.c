@@ -213,8 +213,8 @@ apr_transfer_file_contents (const char *src,
   if (apr_err)
     return apr_err;
   
-  /* Get its size. */
-  apr_err = apr_file_info_get (&finfo, APR_FINFO_MIN, s);
+  /* Get its perms. */
+  apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
   if (apr_err)
     {
       apr_file_close (s);  /* toss any error */
