@@ -84,13 +84,12 @@ $LastChangedDate$
 @summarycontents
 @contents
 
+@ifnottex
 @node Top
 @top
-
-@ifinfo
 This manual is a general guide to the Subversion revision control system.
 
-@end ifinfo
+@end ifnottex
 
 @c Here is our logical table of contents.
 
