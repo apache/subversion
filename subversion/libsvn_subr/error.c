@@ -275,7 +275,7 @@ svn_error_clear (svn_error_t *err)
 }
 
 static void
-print_error (svn_error_t *err, FILE *stream)
+print_error (svn_error_t *err, FILE *stream, const char *prefix)
 {
   char errbuf[256];
   const char *err_string;
@@ -308,8 +308,8 @@ print_error (svn_error_t *err, FILE *stream)
   /* Only print the same APR error string once. */
   if (err->message)
     {
-      svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: %s\n",
-                                            err->message));
+      svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "%s%s\n",
+                                            prefix, err->message));
     }
   else
     {
@@ -327,12 +327,21 @@ print_error (svn_error_t *err, FILE *stream)
         }
       
       svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
-                                            "svn: %s\n", err_string));
+                                            "%s%s\n", prefix, err_string));
     }
 }
 
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+{
+  svn_handle_error2 (err, stream, fatal, "svn: ");
+}
+
+void
+svn_handle_error2 (svn_error_t *err,
+                   FILE *stream,
+                   svn_boolean_t fatal,
+                   const char *prefix)
 {
   /* In a long error chain, there may be multiple errors with the same
      error code and no custom message.  We only want to print the
@@ -372,7 +381,7 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
       
       if (! printed_already)
         {
-          print_error (err, stream);
+          print_error (err, stream, prefix);
           if (! err->message)
             {
               (*((apr_status_t *) apr_array_push (empties))) = err->apr_err;
@@ -395,8 +404,14 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 void
 svn_handle_warning (FILE *stream, svn_error_t *err)
 {
-  svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: warning: %s\n",
-                                       err->message));
+  svn_handle_warning2(stream, err, "svn: ");
+}
+
+void
+svn_handle_warning2 (FILE *stream, svn_error_t *err, const char *prefix)
+{
+  svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "%swarning: %s\n",
+                                        prefix, err->message));
   fflush (stream);
 }
 

@@ -268,7 +268,7 @@ int main(int argc, const char *const *argv)
   err = check_lib_versions();
   if (err)
     {
-      svn_handle_error(err, stderr, FALSE);
+      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
       svn_error_clear(err);
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
@@ -501,7 +501,7 @@ int main(int argc, const char *const *argv)
           err = serve(conn, &params, connection_pool);
 
           if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
-            svn_handle_error(err, stdout, FALSE);
+            svn_handle_error2(err, stdout, FALSE, "svnserve: ");
           svn_error_clear(err);
 
           apr_socket_close(usock);

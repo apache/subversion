@@ -1579,7 +1579,7 @@ warning_func (void *baton,
 {
   if (! err)
     return;
-  svn_handle_error (err, stderr, FALSE);
+  svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
 }
 
 
@@ -1935,7 +1935,7 @@ main (int argc, const char * const *argv)
   err = check_lib_versions ();
   if (err)
     {
-      svn_handle_error (err, stderr, FALSE);
+      svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
@@ -2069,7 +2069,7 @@ main (int argc, const char * const *argv)
                                              pool);
               if (err)
                 {
-                  svn_handle_error (err, stderr, FALSE);
+                  svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
                   svn_pool_destroy (pool);
                   svn_error_clear (err);
                   return EXIT_FAILURE;
@@ -2198,12 +2198,12 @@ main (int argc, const char * const *argv)
     {
       if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          svn_handle_error (err, stderr, 0);
+          svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
           svn_opt_subcommand_help (subcommand->name, cmd_table,
                                    options_table, pool);
         }
       else
-        svn_handle_error (err, stderr, 0);
+        svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }
