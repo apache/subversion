@@ -73,7 +73,7 @@ extern int (*test_funcs[])(const char **msg);
 
 /* Determine the array size of test_funcs[], the inelegant way.  :)  */
 static int
-get_array_size ()
+get_array_size (void)
 {
   int i;
 
