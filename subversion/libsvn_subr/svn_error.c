@@ -190,6 +190,30 @@ report_unversioned_item (const char *path)
 }
 
 static apr_status_t 
+report_added_item (const char *path, apr_pool_t *pool)
+{
+  return APR_SUCCESS;
+}
+
+static apr_status_t 
+report_unadded_item (const char *path, apr_pool_t *pool)
+{
+  return APR_SUCCESS;
+}
+
+static apr_status_t 
+report_deleted_item (const char *path, apr_pool_t *pool)
+{
+  return APR_SUCCESS;
+}
+
+static apr_status_t 
+report_undeleted_item (const char *path, apr_pool_t *pool)
+{
+  return APR_SUCCESS;
+}
+
+static apr_status_t 
 report_warning (apr_status_t status, const char *warning)
 {
   return APR_SUCCESS;
@@ -240,6 +264,10 @@ svn_error_init_pool (apr_pool_t *top_pool)
 
       /* Stuff it with default useless functions. */
       feedback_vtable->report_unversioned_item = report_unversioned_item;
+      feedback_vtable->report_added_item = report_added_item;
+      feedback_vtable->report_unadded_item = report_unadded_item;
+      feedback_vtable->report_deleted_item = report_deleted_item;
+      feedback_vtable->report_undeleted_item = report_undeleted_item;
       feedback_vtable->report_warning = report_warning;
       feedback_vtable->report_progress = report_progress;
 

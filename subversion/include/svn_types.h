@@ -92,6 +92,11 @@ typedef int svn_boolean_t;
 /* The fs revision property that stores a commit's date. */
 #define SVN_PROP_REVISION_DATE  SVN_PROP_PREFIX "date"
 
+/* The mime-type of a given file. */
+#define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
+
+/* The character set of a given file. */
+#define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
 
 /* The propname *prefix* that makes a propname a "WC property". 
    For example, ra_dav might store a versioned-resource url as a WC

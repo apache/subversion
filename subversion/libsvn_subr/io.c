@@ -872,6 +872,83 @@ svn_io_run_cmd (const char *path,
 }
 
 
+svn_error_t *
+svn_io_detect_mimetype (const char **mimetype,
+                        const char *file,
+                        apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+  apr_file_t *fh;
+  const char *generic_binary = "application/octet-stream";
+  apr_status_t apr_err;
+  unsigned char block[1024];
+  apr_size_t amt_read = sizeof (block);
+
+
+  /* Default return value is NULL. */
+  *mimetype = NULL;
+
+  /* See if this file even exists, and make sure it really is a file. */
+  SVN_ERR (svn_io_check_path (svn_stringbuf_create (file, pool), &kind, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                              "Can't detect mimetype of non-file '%s'",
+                              file);
+
+  apr_err = apr_file_open (&fh, file, APR_READ, 0, pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "svn_io_detect_mimetype: error opening '%s'",
+                              file);
+
+  /* Read a block of data from FILE. */
+  apr_err = apr_file_read (fh, block, &amt_read);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "svn_io_detect_mimetype: error reading '%s'",
+                              file);
+
+  /* Now close the file.  No use keeping it open any more.  */
+  apr_file_close (fh);
+
+
+  /* Right now, this function is going to be really stupid.  It's
+     going to examine the first block of data, and make sure that 85%
+     of the bytes are such that their value is in the ranges 0x07-0x0D
+     or 0x20-0x7F, and that 100% of those bytes is not 0x00.
+
+     If those criteria are not met, we're calling it binary. */
+  {
+    int i;
+    int binary_count = 0;
+
+    /* Run through the data we've read, counting the 'binary-ish'
+       bytes.  HINT: If we see a 0x00 byte, we'll set our count to its
+       max and stop reading the file. */
+    for (i = 0; i < amt_read; i++)
+      {
+        if (block[i] == 0)
+          {
+            binary_count = amt_read;
+            break;
+          }
+        if ((block[i] < 0x07)
+            || ((block[i] > 0x0D) && (block[i] < 0x20))
+            || (block[i] > 0x7F))
+          {
+            binary_count++;
+          }
+      }
+
+    if (((binary_count * 1000) / amt_read) > 850)
+      {
+        *mimetype = generic_binary;
+        return SVN_NO_ERROR;
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
 
 
 

@@ -238,13 +238,11 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
 
 
 /* Invoke PROGRAM with ARGS, using PATH as working directory.
- * Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
- * ERRFILE, except where they are null.
- *
- * ARGS is a list of (const char *)'s, terminated by NULL.
- * ARGS[0] is the name of the program, though it need not be the same
- * as CMD.
- */
+   Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
+   ERRFILE, except where they are null.
+  
+   ARGS is a list of (const char *)'s, terminated by NULL.  ARGS[0] is
+   the name of the program, though it need not be the same as CMD.  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
                              const char *const *args,
@@ -252,6 +250,17 @@ svn_error_t *svn_io_run_cmd (const char *path,
                              apr_file_t *outfile,
                              apr_file_t *errfile,
                              apr_pool_t *pool);
+
+
+/* Examine FILE to determine if it can be described by a known (as in,
+   known by this function) Multipurpose Internet Mail Extension (MIME)
+   type.  If so, set MIMETYPE to a character string describing the
+   MIME type, else set it to NULL.  Use POOL for any necessary
+   allocations.  */
+svn_error_t *svn_io_detect_mimetype (const char **mimetype,
+                                     const char *file,
+                                     apr_pool_t *pool);
+                                      
 
 
 #ifdef __cplusplus
