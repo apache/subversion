@@ -230,11 +230,6 @@ typedef struct svn_client_ctx_t
   /** main auth baton. */
   svn_auth_baton_t *auth_baton;
 
-  /** if the application has a 'default' username or password, it's in
-   * this structure, if @c NULL, then no defaults exist.
-   */
-  svn_auth_cred_simple_t *default_simple_creds;
-
   /** prompt callback function */
   svn_client_prompt_t prompt_func;
 

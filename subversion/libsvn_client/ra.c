@@ -253,21 +253,21 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
 
   /* Only register a WC provider if we have a base directory.  But
-     register a prompt provider regardless (if there is no base
-     directory, it simply won't be able to cache successfully
-     authenticated credentials). */
-
+     register a prompt provider regardless. */
   if (base_dir)
     {
       /* Get and register the WC provider. */
-      svn_wc_get_simple_wc_provider
-        (&provider, &provider_baton, base_dir, base_access,
-         ctx->default_simple_creds ? ctx->default_simple_creds->username : NULL,
-         ctx->default_simple_creds ? ctx->default_simple_creds->password : NULL,
-         pool);
+      svn_wc_get_simple_wc_provider (&provider, &provider_baton, pool);
 
       svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
                                   provider, provider_baton, pool);
+
+      /* And don't forget to set its runtime parameters! */
+      svn_auth_set_parameter(ctx->auth_baton,
+                             SVN_AUTH_PARAM_SIMPLE_WC_WCDIR, base_dir);
+      if (base_access)
+        svn_auth_set_parameter(ctx->auth_baton,
+                               SVN_AUTH_PARAM_SIMPLE_WC_ACCESS, base_access);
     }
 
   /* Get and register the prompt provider. */
@@ -275,10 +275,8 @@ svn_client__open_ra_session (void **session_baton,
     {
       svn_client__get_simple_prompt_provider 
         (&provider, &provider_baton, ctx->prompt_func, ctx->prompt_baton,
-         2, /* retry limit */
-         ctx->default_simple_creds ? ctx->default_simple_creds->username : NULL,
-         ctx->default_simple_creds ? ctx->default_simple_creds->password : NULL,
-         pool);
+         2, /* retry limit */ pool);
+
       svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
                                   provider, provider_baton, pool);
     }
@@ -288,7 +286,22 @@ svn_client__open_ra_session (void **session_baton,
   cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
-  cb->got_new_auth_info = ctx->default_simple_creds ? TRUE : FALSE;
+
+  /* Decide if the user passed new auth info into the system by
+     examining the auth_baton's runtime params. */
+  {
+    const char *uname, *passwd;
+    uname = svn_auth_get_parameter (ctx->auth_baton,
+                                    SVN_AUTH_PARAM_DEFAULT_USERNAME);
+    passwd = svn_auth_get_parameter (ctx->auth_baton,
+                                     SVN_AUTH_PARAM_DEFAULT_PASSWORD);
+    cb->got_new_auth_info = (uname || passwd) ? TRUE : FALSE;
+
+    /* ### if --no-auth-cache were represented in auth_baton as a
+       runtime parameter as well, then its existence could just
+       prevent cb->got_new_auth_info from being set, no?  would that
+       be enough?  */
+  }
 
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, pool));
 

@@ -91,25 +91,23 @@ svn_client__revision_is_local (const svn_opt_revision_t *revision);
 
 /*** Auth providers. ***/
 
-/* Set *PROVIDER and *PROVIDER_BATON to an authentication
- * provider of type svn_auth_cred_simple_t that gets information by
- * prompting the user with PROMPT_FUNC and PROMPT_BATON.  If
- * either DEFAULT_USERNAME or DEFAULT_PASSWORD is non-NULL,
- * return the default argument(s) when svn_auth_first_credentials
- * is called.  If first_credentials() fails, then re-prompt 
- * RETRY_LIMIT number of times (via next_credentials()).  
- * BASE_DIR is the top-most working copy directory into which
- * successfully authenticated credentials will be cached.  It may be
- * NULL where no working copy is available.  BASE_ACCESS is the
- * access baton associated with BASE_DIR. */
+/* Set *PROVIDER and *PROVIDER_BATON to an authentication provider of
+ * type svn_auth_cred_simple_t that gets information by prompting the
+ * user with PROMPT_FUNC and PROMPT_BATON.  If either
+ * SVN_AUTH_PARAM_DEFAULT_USERNAME or SVN_AUTH_PARAME_DEFAULT_PASSWORD
+ * is defined as a runtime parameter in the auth_baton, then return
+ * the default argument(s) when svn_auth_first_credentials is called.
+ * If first_credentials() fails, then re-prompt RETRY_LIMIT number of
+ * times (via next_credentials()).  BASE_DIR is the top-most working
+ * copy directory into which successfully authenticated credentials
+ * will be cached.  It may be NULL where no working copy is available.
+ * BASE_ACCESS is the access baton associated with BASE_DIR. */
 void 
 svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                         void **provider_baton,
                                         svn_client_prompt_t prompt_func,
                                         void *prompt_baton,
                                         int retry_limit,
-                                        const char *default_username,
-                                        const char *default_password,
                                         apr_pool_t *pool);
 
 
