@@ -1593,15 +1593,15 @@ svn_boolean_t svn_wc_keywords_differ (const svn_wc_keywords_t *a,
                                       svn_boolean_t compare_values);
 
 
-/* Copy the contents of SRC to DST atomically, overwriting DST if it
-   exists, possibly performing line ending and keyword translations.
+/* Copy and translate the data in stream SRC into stream DST.  It is
+   assumed that SRC is a readable stream and DST is a writable stream.
 
    If EOL_STR is non-NULL, replace whatever bytestring SRC uses to
    denote line endings with EOL_STR in the output.  If SRC has an
    inconsistent line ending style, then: if REPAIR is FALSE, return
-   SVN_ERR_IO_INCONSISTENT_EOL and remove DST, else if REPAIR is TRUE,
-   convert any line ending in SRC to EOL_STR in DST.  Recognized line
-   endings are: "\n", "\r", and "\r\n".
+   SVN_ERR_IO_INCONSISTENT_EOL, else if REPAIR is TRUE, convert any
+   line ending in SRC to EOL_STR in DST.  Recognized line endings are:
+   "\n", "\r", and "\r\n".
 
    Expand and contract keywords using the contents of KEYWORDS as the
    new values.  If EXPAND is TRUE, expand contracted keywords and
@@ -1609,13 +1609,13 @@ svn_boolean_t svn_wc_keywords_differ (const svn_wc_keywords_t *a,
    keywords and ignore contracted ones.  NULL for any of the keyword
    values (KEYWORDS->revision, e.g.) indicates that keyword should be
    ignored (not contracted or expanded).  If the KEYWORDS structure
-   itself is NULL, keyword substition will be altogether ignored.
+   itself is NULL, keyword substitution will be altogether ignored.
 
    Detect only keywords that are no longer than SVN_IO_MAX_KEYWORD_LEN
    bytes, including the delimiters and the keyword itself.
 
-   If anything goes wrong during the copy, attempt to delete DST (if
-   it exists).
+   Note that a translation request is *required*:  one of EOL_STR or
+   KEYWORDS must be non-NULL.
 
    Recommendation: if EXPAND is false, then you don't care about the
    keyword values, so pass empty strings as non-null signifiers.
@@ -1624,9 +1624,28 @@ svn_boolean_t svn_wc_keywords_differ (const svn_wc_keywords_t *a,
 
    See svn_wc__get_keywords() and svn_wc__get_eol_style() for a
    convenient way to get EOL_STR and KEYWORDS if in libsvn_wc.
+  */
+svn_error_t *svn_wc_translate_stream (svn_stream_t *src,
+                                      svn_stream_t *dst,
+                                      const char *eol_str,
+                                      svn_boolean_t repair,
+                                      const svn_wc_keywords_t *keywords,
+                                      svn_boolean_t expand);
+
+
+/* Convenience routine: a variant of svn_wc_translate_stream which
+   operates on files.  (See previous docstring for details.)
+
+   Copy the contents of file-path SRC to file-path DST atomically,
+   either creating DST (or overwriting DST if it exists), possibly
+   performing line ending and keyword translations.
+
+   If anything goes wrong during the copy, attempt to delete DST (if
+   it exists).
 
    If EOL_STR and KEYWORDS are NULL, behavior is just a byte-for-byte
-   copy.  */
+   copy.
+ */
 svn_error_t *svn_wc_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
