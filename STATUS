@@ -67,6 +67,34 @@ make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
 
+    * r8463  (fix for issue #1709)
+      Make mod_dav_svn stop spewing huge responses at dead sockets.
+      Justification:  serious DoS attack potential!
+      Notes: looks like a big change, but it's mainly adding
+             error-checking code to mod_dav_svn.
+      Votes:
+       +1: cmpilato, kfogel
+       +0: dionisos
+
+    * r8139
+      Fix authentication bugs. 
+      Justification: Bugs that happen when prompt providers aren't
+        turned on.  Which includes the command line client when
+        --non-interactive is used.
+      Votes:
+       +1: ghudson, bliss
+
+    * Issue #1653 (patch 294)
+      Remove svn_io_file_print
+      Justification: No need to export and support function which is
+        only used locally.
+      Votes:
+       +1: dionisos
+
+Core changes that already have three +1 votes and no vetos.  (If you
+veto something below, or remove a threshold vote, please move it to
+the section for unapproved changes.)
+
     * Issue #1705 (patch 291)
       Change blame receiver's line_no argument from apr_off_t to apr_int64_t.
       Justification:  Fixes the most user visible problem from the
@@ -84,29 +112,7 @@ section for approved changes.)
       Justification:  Inconsistent with what we support and breaks
         SVN_INVALID_FILESIZE.
       Votes:
-       +1: ghudson, kfogel, bliss
-
-    * r8463  (fix for issue #1709)
-      Make mod_dav_svn stop spewing huge responses at dead sockets.
-      Justification:  serious DoS attack potential!
-      Notes: looks like a big change, but it's mainly adding
-             error-checking code to mod_dav_svn.
-      Votes:
-       +1: cmpilato, kfogel
-
-    * r8139
-      Fix authentication bugs. 
-      Justification: Bugs that happen when prompt providers aren't
-        turned on.  Which includes the command line client when
-        --non-interactive is used.
-      Votes:
-       +1: ghudson, bliss
-
-Core changes that already have three +1 votes and no vetos.  (If you
-veto something below, or remove a threshold vote, please move it to
-the section for unapproved changes.)
-
-   [none pending]
+       +1: ghudson, kfogel, bliss, dionisos
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
