@@ -2077,7 +2077,7 @@ txn_body_file_length (void *baton,
   SVN_ERR (get_dag (&file, args->root, args->path, trail));
 
   /* Now fetch its length */
-  return svn_fs__dag_file_length(&args->length, file, trail);
+  return svn_fs__dag_file_length (&args->length, file, trail);
 }
 
 svn_error_t *

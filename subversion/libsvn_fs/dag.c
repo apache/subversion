@@ -1577,7 +1577,7 @@ svn_fs__dag_file_length (apr_size_t *length,
   SVN_ERR (get_node_revision (&node_rev, file, trail));
 
   /* Seg-fault protection. */
-  assert (node_rev->len >= 3);
+  assert (svn_fs__list_length (node_rev) >= 3);
 
   /* Get the string key from the rep. */
   {
@@ -1945,7 +1945,7 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
     prop_rep_key = apr_pstrndup (trail->pool,
                                  node_rev->children->next->data,
                                  node_rev->children->next->len);
-    if (prop_rep_key[0] != '\0')
+    if (prop_rep_key && prop_rep_key[0] != '\0')
       SVN_ERR (svn_fs__make_rep_immutable (node->fs, prop_rep_key, trail));
   }
 
@@ -1956,7 +1956,7 @@ make_node_immutable (dag_node_t *node, trail_t *trail)
     data_rep_key = apr_pstrndup (trail->pool,
                                  node_rev->children->next->next->data,
                                  node_rev->children->next->next->len);
-    if (data_rep_key[0] != '\0')
+    if (data_rep_key && data_rep_key[0] != '\0')
       SVN_ERR (svn_fs__make_rep_immutable (node->fs, data_rep_key, trail));
   }
 
