@@ -1053,20 +1053,20 @@ Committed revision 406.
         tronco. Recuerde siempre hacer esto, porque es información
         crítica que necesitará más adelante.</para>
 
-      <para>For example, suppose you decide to keep working on your
-        branch for another week, in order to complete an enhancement
-        to your original feature or bugfix.  The repository's
-        <literal>HEAD</literal> revision is now 480, and you're ready
-        to do another merge from your private branch to the trunk.
-        But as discussed in <xref linkend="svn-ch-4-sect-3.2"/>, you
-        don't want to merge the changes you've already merged before;
-        you only want to merge everything <quote>new</quote> on your
-        branch since the last time you merged.  The trick is to figure
-        out what's new.</para>
+      <para>Por ejemplo, suponga que decide continuar trabajando en
+        su rama otra semana, para completar una mejora a una de
+        las características originales o corregir un fallo. La
+        revisión <literal>HEAD</literal> del repositorio es ahora
+        480, y está listo para realizar otra fusión desde su
+        rama privada al tronco.  Pero como se discutió en <xref
+        linkend="svn-ch-4-sect-3.2"/>, no quiere fusionar los
+        cambios que ya fueron fusionados; sólo quiere fusionar todo
+        lo <quote>nuevo</quote> en su rama desde la última vez que
+        fue fusionada. El truco es descubrir qué es lo nuevo.</para>
 
-      <para>The first step is to run <command>svn log</command> on the
-        trunk, and look for a log message about the last time you
-        merged from the branch:</para>
+      <para>El primer paso es ejecutar <command>svn log</command>
+        en el tronco, y buscar un mensaje de cambios sobre la última
+        vez que realizó una fusión desde su rama:</para>
 
       <screen>
 $ cd calc/trunk
