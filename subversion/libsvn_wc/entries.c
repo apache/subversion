@@ -1529,6 +1529,10 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->name = apr_pstrdup (pool, entry->name);
   if (entry->url)
     dupentry->url = apr_pstrdup (pool, entry->url);
+  if (entry->repos)
+    dupentry->repos = apr_pstrdup (pool, entry->repos);
+  if (entry->uuid)
+    dupentry->uuid = apr_pstrdup (pool, entry->uuid);
   if (entry->copyfrom_url)
     dupentry->copyfrom_url = apr_pstrdup (pool, entry->copyfrom_url);
   if (entry->conflict_old)
@@ -1539,6 +1543,8 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->conflict_wrk = apr_pstrdup (pool, entry->conflict_wrk);
   if (entry->prejfile)
     dupentry->prejfile = apr_pstrdup (pool, entry->prejfile);
+  if (entry->checksum)
+    dupentry->checksum = apr_pstrdup (pool, entry->checksum);
   if (entry->cmt_author)
     dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
 

@@ -533,6 +533,9 @@ typedef enum svn_wc_schedule_t
  */
 typedef struct svn_wc_entry_t
 {
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
+     if you need to extend that as well. */
+
   /* General Attributes */
 
   /** entry's name */
@@ -604,7 +607,9 @@ typedef struct svn_wc_entry_t
 
   /** last commit author of this item */
   const char *cmt_author;
-  
+
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
+     if you need to extend that as well. */
 } svn_wc_entry_t;
 
 
