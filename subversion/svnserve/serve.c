@@ -1385,6 +1385,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
       if (params->ssl_layer 
           && svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SSL))
+        {
           /* Flush write buffer before SSL handshake. */
           svn_ra_svn_flush(conn, pool);
 
