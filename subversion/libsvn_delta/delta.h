@@ -107,7 +107,7 @@ typedef enum svn_delta__XML_t
 
 
 
-typedef struct svn_delta__stackframe_t
+typedef struct svn_xml__stackframe_t
 {
   svn_delta__XML_t tag;  /* this stackframe represents an open <tag> */
 
@@ -122,14 +122,14 @@ typedef struct svn_delta__stackframe_t
                             this hash to detect collisions in the
                             dirent-namespace */
 
-  struct svn_delta__stackframe_t *next;
-  struct svn_delta__stackframe_t *previous;
+  struct svn_xml__stackframe_t *next;
+  struct svn_xml__stackframe_t *previous;
   
-} svn_delta__stackframe_t;
+} svn_xml__stackframe_t;
 
 
 
-/* An svn_delta__digger_t is passed as *userData to Expat (and from
+/* An svn_xml__digger_t is passed as *userData to Expat (and from
  * there to registered callback functions).
  *
  * As the callbacks see various XML elements, they construct
@@ -157,7 +157,7 @@ typedef struct svn_delta__stackframe_t
  *
  */
 
-typedef struct svn_delta__digger_t
+typedef struct svn_xml__digger_t
 {
   /* Pool to do allocations from. */
   apr_pool_t *pool;
@@ -166,7 +166,7 @@ typedef struct svn_delta__digger_t
      for storing XML attributes and for XML validation. 
      
      NOTE that this is the *YOUNGEST* frame on the stack, not the oldest! */
-  svn_delta__stackframe_t *stack;
+  svn_xml__stackframe_t *stack;
 
   /* Callbacks to use when we discover interesting XML events */
   const svn_delta_walk_t *walker;
@@ -199,7 +199,7 @@ typedef struct svn_delta__digger_t
      buffered up */
   struct svn_propdelta_t *current_propdelta;
 
-} svn_delta__digger_t;
+} svn_xml__digger_t;
 
 
 
