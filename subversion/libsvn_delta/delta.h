@@ -38,11 +38,21 @@ extern "C" {
 
 typedef struct svn_txdelta__ops_baton_t {
   int num_ops;                  /* current number of ops */
+  int src_ops;                  /* current number of source copy ope */
   int ops_size;                 /* number of ops allocated */
   svn_txdelta_op_t *ops;        /* the operations */
 
   svn_stringbuf_t *new_data;    /* any new data used by the operations */
 } svn_txdelta__ops_baton_t;
+
+
+/* Context for composing windows. */
+typedef struct svn_txdelta__compose_ctx_t
+{
+  apr_off_t sview_offset;       /* Source view offset in the combined window */
+  apr_size_t sview_len;         /* Source view length in the combined window */
+  svn_boolean_t use_second;     /* TRUE if window_B is the composite. */
+} svn_txdelta__compose_ctx_t;
 
 
 /* Insert a delta op into the delta window being built via BUILD_BATON. If
@@ -59,7 +69,12 @@ void svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
 
 /* Allocate a delta window from POOL. */
 svn_txdelta_window_t *
-svn_txdelta__make_window (svn_txdelta__ops_baton_t *build_baton,
+svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
+                          apr_pool_t *pool);
+
+/* Return a copy of WINDOW, allocated from POOL. */
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
                           apr_pool_t *pool);
 
 
@@ -77,8 +92,20 @@ void svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
-                              /*FIXME:*/apr_off_t *sview_offset,
+                              svn_txdelta__compose_ctx_t *context,
                               apr_pool_t *pool);
+
+
+/* Apply the instructions from WINDOW to a source view SBUF to produce
+   a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
+   bytes of data and TBUF is assumed to have room for TLEN bytes of
+   output.  TLEN may be more than WINDOW->tview_len, so return the
+   actual number of bytes written.  This is purely a memory operation;
+   nothing can go wrong as long as we have a valid window.  */
+void
+svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
+                                 const char *sbuf, char *tbuf,
+                                 apr_size_t *tlen);
 
 
 

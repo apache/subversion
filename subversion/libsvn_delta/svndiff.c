@@ -474,9 +474,10 @@ write_handler (void *baton,
 				 "svndiff contains corrupt window header");
 
       /* Check for source windows which slide backwards.  */
-      if (sview_offset < db->last_sview_offset
-	  || (sview_offset + sview_len
-	      < db->last_sview_offset + db->last_sview_len))
+      if (sview_len > 0
+          && (sview_offset < db->last_sview_offset
+              || (sview_offset + sview_len
+                  < db->last_sview_offset + db->last_sview_len)))
 	return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, 0, NULL, 
 				 db->pool,
 				 "svndiff has backwards-sliding source views");
@@ -500,11 +501,15 @@ write_handler (void *baton,
       npos = 0;
       for (op = ops; op < ops + ninst; op++)
 	{
+          /* ### Why don't we use a build baton and svn_txdelta__make_window
+                 like everyone else?  --xbc */
           /* FIXME: The way things stand now, every svndiff insn is decoded
              twice. We should integrate what count_and_verify_instructions
              does here, instead.  --xbc */
 	  p = decode_instruction (op, p, end);
-	  if (op->action_code == svn_txdelta_new)
+	  if (op->action_code == svn_txdelta_source)
+            ++window.src_ops;
+	  else if (op->action_code == svn_txdelta_new)
 	    {
 	      op->offset = npos;
 	      npos += op->length;

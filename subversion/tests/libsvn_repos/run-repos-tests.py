@@ -9,4 +9,12 @@ sys.path.insert(0, python_libs)
 
 # Run the tests
 import exectest
-exectest.run_tests(['repos-test'])
+errors = exectest.run_tests(['repos-test'])
+sys.exit(errors)
+
+
+### End of file.
+# local variables:
+# eval: (load-file "../../../tools/dev/svn-dev.el")
+# end:
+
