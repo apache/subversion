@@ -1320,19 +1320,21 @@ Transmitting file data .
 Committed revision 1390.
 </screen>
 
-      <para>The plus sign in the status output indicates that the item
-        isn't merely scheduled for addition, but scheduled for
-        addition <quote>with history.</quote> Subversion remembers
-        where it was copied from.  In the future, running <command>svn
-        log</command> on this file will traverse back through the
-        file's resurrection and through all the history it had prior
-        to revision 807.  In other words, this new
-        <filename>real.c</filename> isn't really new; it's a direct
-        descendant of the original, deleted file.</para>
+      <para>El símbolo de suma en la salida del comando indica que
+        el elemento no sólo se ha programado para ser añadido, sino
+        para ser añadido <quote>con historia.</quote> Subversion
+        recuerda de dónde fue copiado. En el futuro, ejecutar
+        <command>svn log</command> sobre este fichero recorrerá
+        su historia hasta la resurrección y continuará también con
+        la que tenía antes de la revisión 807. En otras palabras,
+        este nuevo <filename>real.c</filename> no es realmente
+        nuevo; es un descendiente directo del fichero original que
+        fue borrado.</para>
 
-      <para>Although our example shows us resurrecting a file, note
-        that these same techniques work just as well for resurrecting
-        deleted directories.</para>
+      <para>A pesar de que nuestro ejemplo muestra cómo resucitar
+        un fichero, tenga en cuenta que esta misma técnica
+        proporciona los mismos resultados al resucitar directorios
+        borrados.</para>
 
     </sect2>
 
