@@ -702,7 +702,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
     {
       svn_string_t bc_relative;
       apr_size_t len;
-      char *tmp;
+
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
                                             NULL, ras->sess, ras->url,
                                             SVN_INVALID_REVNUM, pool));
@@ -712,10 +712,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
         return svn_error_create(APR_EGENERAL, NULL,
                                 "Impossibly long relative url.");
       len = len - bc_relative.len - 1;
-      tmp = apr_palloc(ras->pool, len + 1);
-      memcpy(tmp, ras->url, len);
-      tmp[len] = '\0';
-      ras->repos_root = tmp;
+      ras->repos_root = apr_pstrmemdup(ras->pool, ras->url, len);
     }
 
   *url = ras->repos_root;
