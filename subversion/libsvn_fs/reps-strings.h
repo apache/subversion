@@ -28,13 +28,13 @@
 const char *svn_fs__string_key_from_rep (skel_t *rep, apr_pool_t *pool);
 
 
-/* Set STR->data to the fulltext string for REP in FS, and STR->len to
-   the string's length, as part of TRAIL.  The data is allocated in
+/* Set STR->data to the contents of rep REP_KEY in FS, and STR->len to
+   the contents' length, as part of TRAIL.  The data is allocated in
    TRAIL->pool.  */
-svn_error_t *svn_fs__string_from_rep (svn_string_t *str,
-                                      svn_fs_t *fs,
-                                      skel_t *rep,
-                                      trail_t *trail);
+svn_error_t *svn_fs__rep_contents (svn_string_t *str,
+                                   svn_fs_t *fs,
+                                   const char *rep_key,
+                                   trail_t *trail);
 
 
 /* Return non-zero if representation skel REP is mutable.  */
@@ -83,7 +83,16 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 
 
-/*** Stream-based reading and writing of rep/string contents. ***/
+/*** Reading and writing rep contents. ***/
+
+/* Set *SIZE to the size of rep REP_KEY's contents in FS, as part of
+   TRAIL.  Note: this is the fulltext size, no matter how the contents
+   are represented in storage.  */
+svn_error_t *svn_fs__rep_size (apr_size_t *size,
+                               svn_fs_t *fs,
+                               const char *rep_key,
+                               trail_t *trail);
+
 
 /* Return a stream to read the contents of the representation
    identified by REP_KEY.  Allocate the stream in POOL, and start

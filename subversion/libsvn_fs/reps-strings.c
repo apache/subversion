@@ -56,14 +56,16 @@ svn_fs__string_key_from_rep (skel_t *rep, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_fs__string_from_rep (svn_string_t *str,
-                         svn_fs_t *fs,
-                         skel_t *rep,
-                         trail_t *trail)
+svn_fs__rep_contents (svn_string_t *str,
+                      svn_fs_t *fs,
+                      const char *rep_key,
+                      trail_t *trail)
 {
   const char *strkey;
   char *data;
+  skel_t *rep;
 
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
   strkey = svn_fs__string_key_from_rep (rep, trail->pool);
   SVN_ERR (svn_fs__string_size (&(str->len), fs, strkey, trail));
   data = apr_palloc (trail->pool, str->len);
@@ -318,6 +320,23 @@ rep_read_range (svn_fs_t *fs,
 
 
 /*** Retrieving data. ***/
+
+svn_error_t *
+svn_fs__rep_size (apr_size_t *size,
+                  svn_fs_t *fs,
+                  const char *rep_key,
+                  trail_t *trail)
+{
+  skel_t *rep;
+  const char *str_key;
+
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
+  str_key = svn_fs__string_key_from_rep (rep, trail->pool);
+  SVN_ERR (svn_fs__string_size (size, fs, str_key, trail));
+
+  return SVN_NO_ERROR;
+}
+
 
 struct read_rep_args
 {
