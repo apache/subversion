@@ -696,46 +696,37 @@ revision_props (const char **msg)
      the expected values. */
   SVN_ERR (svn_fs_revision_proplist (&proplist, fs, 0, pool));
   {
-    apr_hash_index_t *hi;
-    int num_props = 0;
-    svn_string_t *prop_name, *prop_value;
+    svn_string_t *prop_value;
 
-    for (hi = apr_hash_first (proplist); hi; hi = apr_hash_next (hi))
+    if (apr_hash_count (proplist) != 4 )
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+         "unexpected number of revision properties were found");
+
+    /* Loop through our list of expected revision property name/value
+       pairs. */
+    for (i = 0; i < 4; i++)
       {
-        const void *key;
-        apr_size_t klen;
-        void *val;
+        /* For each expected property: */
 
-        /* If there are more properties than expected, this is a Bad
-           Thing */
-        if (++num_props > 4)
-          return svn_error_createf
-            (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-             "more revision properties were found than were expected");
-
-        /* Get next property */
-        apr_hash_this (hi, &key, &klen, &val);
-        prop_name = svn_string_ncreate (key, klen, pool);
-        prop_value = (svn_string_t *) val;
-
-        /* Loop through our expected final properties list, hoping to
-           find the right name with the right value.  If the name is
-           missing, or the value is wrong, the whole test fails. */
-        for (i = 0; i < 4; i++)
-          {
-            if (! strcmp (prop_name->data, final_props[i][0]))
-              break;
-          }
-        if (i >= 4)
+        /* Step 1.  Find it by name in the hash of all rev. props
+           returned to us by svn_fs_revision_proplist.  If it can't be
+           found, return an error. */
+        prop_value = apr_hash_get (proplist, 
+                                   final_props[i][0],
+                                   strlen (final_props[i][0]));
+        if (! prop_value)
           return svn_error_createf
             (SVN_ERR_FS_GENERAL, 0, NULL, pool,
              "unable to find expected revision property");
-          
+
+        /* Step 2.  Make sure the value associated with it is the same
+           as what was expected, else return an error. */
         if (strcmp (prop_value->data, final_props[i][1]))
           return svn_error_createf
             (SVN_ERR_FS_GENERAL, 0, NULL, pool,
              "revision property had an unexpected value");
-      } 
+      }
   }
   
   /* Close the transaction and fs. */
