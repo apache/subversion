@@ -9,7 +9,7 @@ if ($^O ne 'VMS') {
 }
 
 my $swig_version;
-open TOPMAKE, "<../../../../Makefile";
+open TOPMAKE, "<../../../../../Makefile";
 while (<TOPMAKE>) {
   /^SWIG_VERSION\s*=\s*(\d+)\s*$/;
   if (defined($1)) {
@@ -19,11 +19,11 @@ while (<TOPMAKE>) {
 close TOPMAKE;
 
 my @modules = qw/client delta fs ra repos wc/;
-my @ldpaths = ('../.libs',
-               map {"../../../libsvn_$_/.libs"} (@modules, qw/diff subr
-                                                              ra_local
-                                                              ra_svn
-                                                              ra_dav/));
+my @ldpaths = ('../libsvn_swig_perl/.libs',
+               map {"../../../../libsvn_$_/.libs"} (@modules, qw/diff subr
+                                                                 ra_local
+                                                                 ra_svn
+                                                                 ra_dav/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_config = $ENV{APR_CONFIG} || '/usr/local/lib/apache2/apr-config';
@@ -46,7 +46,7 @@ my %config = (
     ABSTRACT => 'Perl bindings for Subversion',
     CCFLAGS  => join(' ', $apr_cflags, $apu_cflags, 
                      `$perl_path -MExtUtils::Embed -e ccopts`,
-                     ' -I.. -I../../../include -g'),
+                     ' -I../libsvn_swig_perl -I../../../../include -I../.. -g'),
     OBJECT => q/$(O_FILES)/,
     LIBS => [join(' ', $apr_ldflags,
                   (map {$_ = abs_path($_); "-L$_"} @ldpaths),
@@ -92,15 +92,16 @@ sub MY::postamble {
    }
    
    my $swig_command = "swig $flags -nopm -perl " .
-                      "-I.. -I../../../include $apr_cflags";
+                      "-I../.. -I../libsvn_swig_perl -I../../../../include" .
+                      $apr_cflags;
 
    my $swig_modules_command = join ('',
-                                    map {"\nsvn_$_.c : ../svn_$_.i ".
+                                    map {"\nsvn_$_.c : ../../svn_$_.i ".
                                          "ra_plugin.hi ra_reporter.hi ".
                                          "delta_editor.hi\n" .
                                          "\t$swig_command -module SVN::_".
                                          main::perlish($_) .
-                                         " -o svn_$_.c ../svn_$_.i\n"}
+                                         " -o svn_$_.c ../../svn_$_.i\n"}
                                          @modules
                                    );
 
@@ -114,20 +115,20 @@ install :: modules
 par :: all
 \t$perl_path -MPAR::Dist -e"blip_to_par(name=>'SVN",version=>'`$perl_path -Mblib -MSVN::Core -e 'print $SVN::Core::VERSION'`')"
 
-ra_plugin.hi: ../../../include/svn_ra.h
-\t$perl_path h2i.pl ../../../include/svn_ra.h svn_ra_plugin_t > \$@
+ra_plugin.hi: ../../../../include/svn_ra.h
+\t$perl_path h2i.pl ../../../../include/svn_ra.h svn_ra_plugin_t > \$@
 
-ra_reporter.hi: ../../../include/svn_ra.h
-\t$perl_path h2i.pl ../../../include/svn_ra.h svn_ra_reporter_t > \$@
+ra_reporter.hi: ../../../../include/svn_ra.h
+\t$perl_path h2i.pl ../../../../include/svn_ra.h svn_ra_reporter_t > \$@
 
-delta_editor.hi: ../../../include/svn_delta.h
-\t$perl_path h2i.pl ../../../include/svn_delta.h svn_delta_editor_t > \$@
+delta_editor.hi: ../../../../include/svn_delta.h
+\t$perl_path h2i.pl ../../../../include/svn_delta.h svn_delta_editor_t > \$@
 
 modules :: $module_c_files
 $module_make_commands\t\$(NOECHO) \$(TOUCH) \$\@
 
-core.c :: ../core.i
-\t$swig_command -module SVN::_Core -o core.c ../core.i
+core.c :: ../../core.i
+\t$swig_command -module SVN::_Core -o core.c ../../core.i
 
 $swig_modules_command
 
