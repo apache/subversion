@@ -16,7 +16,6 @@ import string
 import getopt
 import stat
 import md5
-import shutil
 import anydbm
 import marshal
 
@@ -685,7 +684,6 @@ class RepositoryMirror:
     self.nodes_db[parent_key] = marshal.dumps(parent)
     self.symroots_db[path] = marshal.dumps((tags, branches))
     new_val[self.mutable_flag] = 1
-    s = marshal.dumps(new_val)
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
 
     if expected_entries:
@@ -834,7 +832,7 @@ class RepositoryMirror:
     if pruned_count > len(components):
       sys.stderr.write("Error: deleting '%s' tried to prune %d components.\n"
                        % (path, pruned_count))
-      exit(1)
+      sys.exit(1)
 
     if pruned_count:
       if pruned_count == len(components):
