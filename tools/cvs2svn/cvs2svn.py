@@ -853,12 +853,29 @@ else:
     return "'" + string.replace(str, "'", "'\\''") + "'"
 
 class Dumper:
-  def __init__(self, dumpfile_path):
+  def __init__(self, ctx):
     'Open DUMPFILE_PATH, and initialize revision to REVISION.'
-    self.dumpfile_path = dumpfile_path
+    self.dumpfile_path = ctx.dumpfile
     self.revision = 0
-    self.dumpfile = open(dumpfile_path, 'wb')
     self.repos_mirror = RepositoryMirror()
+    self.svnadmin = ctx.svnadmin
+    self.target = ctx.target
+    self.dump_only = ctx.dump_only
+    self.dumpfile = None
+    
+    # If all we're doing here is dumping, we can go ahead and
+    # initialize our single dumpfile.  Else, if we're suppose to
+    # create the repository, do so.
+    if self.dump_only:
+      self.init_dumpfile()
+    elif ctx.create_repos:
+      print 'creating repos %s' % (self.target)
+      os.system('%s create %s' % (self.svnadmin, self.target))
+
+    
+  def init_dumpfile(self):
+    # Open the dumpfile for binary-mode write.
+    self.dumpfile = open(self.dumpfile_path, 'wb')
 
     # Initialize the dumpfile with the standard headers:
     #
@@ -868,10 +885,26 @@ class Dumper:
     self.dumpfile.write('SVN-fs-dump-format-version: 2\n'
                         '\n')
 
+  def flush_and_remove_dumpfile(self):
+    self.dumpfile.close()
+    print 'loading revision %d into %s' % (self.revision, self.target)
+    os.system('%s load -q %s < %s'
+              % (self.svnadmin, self.target, self.dumpfile_path))
+    os.remove(self.dumpfile_path)
+  
   def start_revision(self, props):
     """Write the next revision, with properties, to the dumpfile.
     Return the newly started revision."""
 
+    # If this is not a --dump-only, we need to flush (load into the
+    # repository) any dumpfile data we have already written and the
+    # init a new dumpfile before starting this revision.
+    
+    if not self.dump_only:
+      if self.revision > 0:
+        self.flush_and_remove_dumpfile()
+      self.init_dumpfile()
+      
     self.revision = self.revision + 1
 
     # A revision typically looks like this:
@@ -1120,7 +1153,15 @@ class Dumper:
 
   def close(self):
     self.repos_mirror.close()
-    self.dumpfile.close()
+
+    # If we're only making a dumpfile, we should be done now.  Just
+    # close the dumpfile.  Otherwise, we're in "incremental" mode, and
+    # we need to close our incremental dumpfile, flush it to the
+    # repository, and then remove it.
+    if self.dump_only:
+      self.dumpfile.close()
+    else:
+      self.flush_and_remove_dumpfile()
 
 
 def format_date(date):
@@ -2030,7 +2071,7 @@ def pass4(ctx):
   count = 0
 
   # Start the dumpfile object.
-  dumper = Dumper(ctx.dumpfile)
+  dumper = Dumper(ctx)
 
   # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
@@ -2091,27 +2132,11 @@ def pass4(ctx):
     print count, 'commits processed.'
 
 
-def pass5(ctx):
-  # on a dry or dump-only run, there is nothing really to do in pass 5
-  if ctx.dry_run or ctx.dump_only:
-    return
-
-  # create the target repository is so requested
-  if ctx.create_repos:
-    os.system('%s create %s' % (ctx.svnadmin, ctx.target))
-
-  # now, load the dumpfile into the repository
-  print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
-  os.system('%s load %s < %s'
-            % (ctx.svnadmin, ctx.target, ctx.dumpfile))
-
-
 _passes = [
   pass1,
   pass2,
   pass3,
   pass4,
-  pass5,
   ]
 
 
