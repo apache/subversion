@@ -267,23 +267,23 @@ representation.  Here are the two forms currently recognized:
        Each OFFSET indicates the point in the fulltext that this
        element reconstructs, and WINDOW says how to reconstruct it:
 
-       WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY [REP-OFFSET]]) ;
-       DIFF   ::= ("svndiff" STRING-KEY)
+       WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
+       DIFF   ::= ("svndiff" VERSION STRING-KEY)
 
        Notice that a WINDOW holds only metadata.  REP-KEY says what
        the window should be applied against, or none if this is a
        self-compressed delta; SIZE says how much data this window
        reconstructs; CHECKSUM is a checksum on just the portion of
-       fulltext reconstructed by this window; and STRING-KEY says
-       which string contains the actual svndiff data (there is no diff
-       data held directly in the representations table, of course).
+       fulltext reconstructed by this window; VERSION says what
+       version of the svndiff format is being used (currently only
+       version 0 is supported); and STRING-KEY says which string
+       contains the actual svndiff data (there is no diff data held
+       directly in the representations table, of course).
 
        Note also that REP-KEY might refer to a representation that
-       itself requires undeltification.  For now, we just reconstruct
-       fulltexts recursively until we get what we need; in the future,
-       an efficient delta-combiner is planned that will retrieve the
-       required data directly without expanding anything; that's where
-       REP-OFFSET may prove useful.  We think. :-)
+       itself requires undeltification.  We use a delta combiner to
+       combine all the deltas needed to reproduce the fulltext from
+       some stored plaintext.
 
        Branko says this is what REP-OFFSET is for:
        > The offsets embedded in the svndiff are stored in a string;
@@ -426,7 +426,7 @@ The Berkeley DB `transactions' table records both unfinished and
 committed transactions.  Every key in this table is a transaction ID.
 Unfinished transactions have values that are skels of the form:
 
-   ("transaction" ROOT-ID BASE-ID PROP-KEY COPIES)
+   ("transaction" ROOT-ID BASE-ID PROPLIST COPIES)
 
 where:
 
@@ -436,30 +436,33 @@ where:
    * BASE-ID is the node revision ID of the root of the transaction's
      base revision.
 
-   * PROP-KEY is a key into the `representations' table (which see),
-     whose value is a representation pointing to a string (see `strings'
-     table) that is a PROPLIST skel.
+   * PROPLIST is a skel giving the revision properties for the
+     transaction.
 
    * COPIES contains a list of keys into the `copies' table,
-     referencing all the filesystem copies created
-     inside of this transaction.  If the transaction is aborted, these
-     copies get removed from the `copies' table.
+     referencing all the filesystem copies created inside of this
+     transaction.  If the transaction is aborted, these copies get
+     removed from the `copies' table.
 
 Committed transaction, however, have values that are skels of the form:
 
-   ("committed" REVISION ROOT-ID PROP-KEY)
+   ("committed" ROOT-ID REV PROPLIST COPIES)
 
 where:
-
-   * REVISION represents the revision that was created when the
-     transaction was committed.
 
    * ROOT-ID is the node revision ID of the committed transaction's (or
      revision's) root node.
 
-   * PROP-KEY is a key into the `representations' table (which see),
-     whose value is a representation pointing to a string (see `strings'
-     table) that is a PROPLIST skel.
+   * REVISION represents the revision that was created when the
+     transaction was committed.
+
+   * PROPLIST is a skel giving the revision properties for the
+     committed transaction.
+
+   * COPIES contains a list of keys into the `copies' table,
+     referencing all the filesystem copies created by this committed
+     transaction.  Nothing currently uses this information for
+     committed transactions, but it could be useful in the future.
 
 As the sole exception to the rule above, the `transactions' table
 always has one entry whose key is `next-id', and whose value is the
