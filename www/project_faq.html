@@ -4,6 +4,9 @@
 
 <![CDATA[ Table of Contents ]]>
 <ol>
+<p>
+<strong>General questions:</strong>
+</p>
 <li><a href="#why">Why does this project exist?</a></li>
 <li><a href="#collab">Is Subversion proprietary?  I heard that it
     belongs to CollabNet.</a></li> 
@@ -19,11 +22,20 @@
     use Subversion?</a></li> 
 <li><a href="#feature-x">Why don't you do X, just like SCM system Y?</a></li>
 <li><a href="#release">When's the next release?</a></li>
+<li><a href="#more-information">I have other questions.  Where can I
+    get more information?</a></li>  
+<p>
+<strong>How-to:</strong>
+</p>
+<li><a href="#repository">How do I create a repository?  How do I
+    import data into it?</a></li> 
+<li><a href="#proxy">What if I'm behind a proxy?</a></li>
+<p>
+<strong>Troubleshooting:</strong>
+</p>
 <li><a href="#unrecognized-url-error">I just built the distribution
     binary, and when I try to check out Subversion, I get an error
     about an "Unrecognized URL scheme."  What's up with that?</a></li>
-<li><a href="#repository">How do I create a repository?  How do I
-    import data into it?</a></li> 
 <li><a href="#db-recover">I'm getting errors finding or opening a repository,
     but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
@@ -33,13 +45,13 @@
 <li><a href="#windows-repository">I'm running Subversion under windows
     and I can create a repository fine, but I get errors trying to
     import or check out from it.  What's wrong?</a></li>
-<li><a href="#proxy">What if I'm behind a proxy?</a></li>
 <li><a href="#globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.  </a></li>
+<p>
+<strong>References:</strong>
+</p>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
-<li><a href="#more-information">I have other problems or questions
-    about Subversion.  Where can I get more information?</a></li>
 </ol>
 
 <![CDATA[=========================================================]]>
@@ -47,10 +59,12 @@
 <p>
 <hr>
 <p>
+<h2>General questions:</h2>
+<p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="why">Why does this project exist?</a></h2>
+<h3><a name="why">Why does this project exist?</a></h3>
 
 <p>To take over the CVS user base.  Specifically, we're writing a new
 revision control system that is very similar to CVS, but fixes many
@@ -58,8 +72,8 @@ things that are broken.  See our front page.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="collab">Is Subversion proprietary?  I heard that it
-belongs to CollabNet.</a></h2>
+<h3><a name="collab">Is Subversion proprietary?  I heard that it
+belongs to CollabNet.</a></h3>
 
 <p>No, Subversion is open source / free software.  CollabNet pays the
 salaries of several full-time developers, and holds the copyright on
@@ -74,8 +88,8 @@ CollabNet or anyone else is required.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="stable">Is Subversion stable enough for me to use for my
-own projects?</a></h2>
+<h3><a name="stable">Is Subversion stable enough for me to use for my
+own projects?</a></h3>
 
 <p>Yes and No.</p>
 
@@ -99,8 +113,8 @@ and use Subversion.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="portability">What operating systems does Subversion run
-    on?</a></h2>
+<h3><a name="portability">What operating systems does Subversion run
+    on?</a></h3>
 
 <p>All modern flavors of Unix, Win32, BeOS, OS/2, MacOS X.</p>
 
@@ -121,8 +135,8 @@ non-Unix platforms; if you succeed, we'd like to hear about it.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="filesystem">What's all this about a new filesystem?  Is
-it like ext2?</a></h2>
+<h3><a name="filesystem">What's all this about a new filesystem?  Is
+it like ext2?</a></h3>
 
 <p>No.  The "Subversion Filesystem" is not a kernel-level filesystem that
 one would install in an operating system.  Instead, it refers to the
@@ -136,8 +150,8 @@ versions of files and directories are saved.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="apache-extension">I heard that Subversion is an Apache
-extension?</a></h2>
+<h3><a name="apache-extension">I heard that Subversion is an Apache
+extension?</a></h3>
 
 <p>No.  Subversion is a set of libraries.  It comes with a command-line
 client that uses them.  The Subversion <i>server</i> is Apache + <a
@@ -149,8 +163,8 @@ href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="need-apache">Does this mean I have to set up Apache to
-use Subversion?</a></h2>
+<h3><a name="need-apache">Does this mean I have to set up Apache to
+use Subversion?</a></h3>
 
 <p>If you want to <b>host</b> a networked repository: yes.</p>
 <p>If you just want to <b>access</b> a repository with your client: no.</p>
@@ -161,7 +175,7 @@ href="http://subversion.tigris.org/server_setup.html">Server Setup</a>.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="feature-x">Why don't you do X, just like SCM system Y?</a></h2>
+<h3><a name="feature-x">Why don't you do X, just like SCM system Y?</a></h3>
 
 <p>We aren't attempting to break new ground in SCM systems, nor are we
 attempting to imitate all the best features of every SCM system out
@@ -169,7 +183,7 @@ there.  We're trying to replace CVS.  See the first question.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="release">When's the next release?</a></h2>
+<h3><a name="release">When's the next release?</a></h3>
 
 <p>See our status page, <a
 href="http://subversion.tigris.org/project_status.html">
@@ -177,9 +191,88 @@ http://subversion.tigris.org/project_status.html</a>.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2>I just built the distribution binary, and when I try to check out
+<h3>I have other questions.  Where can I get more<a
+name="more-information"> information?</a></h3>
+
+<p>Please send your questions or concerns to the Subversion Development <a
+href="mailto:dev@subversion.tigris.org">mailing list</a>.  Alternatively,
+several Subversion users and developers can usually be contacted via IRC on
+channel #svn on <a
+href="http://www.openprojects.net">irc.openprojects.net</a>.</p>
+
+<![CDATA[=========================================================]]>
+
+<p>
+<hr>
+<p>
+<h2>How-to:</h2>
+<p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="repository">How do I create a repository?  How do I
+import data into it?</a></h3>
+
+<p>See <a
+href="http://svn.collab.net/repos/svn/trunk/README">
+http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
+at section IV, the "Quickstart Guide".</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="proxy">What if I'm behind a proxy?</a></h3>
+
+<p>The Subversion client can go through a proxy, if you configure it
+to do so.  First, edit your ~/.subversion/proxies configuration file
+to indicate which proxy to use.  There are comments in the file
+explaining how to do this.  If you don't have that file, get the
+latest Subversion client and run any command; this will cause the
+configuration directory and template files to be created.</p>
+
+<p>Next, you need to make sure the proxy server itself supports all
+the HTTP methods Subversion uses.  Some proxy servers do not support
+these methods by default: PROPFIND, REPORT, MERGE, MKACTIVITY,
+CHECKOUT.  In general, solving this depends on the particular proxy
+software.  For Squid, the config option is</p>
+
+<pre>
+   #  TAG: extension_methods
+   #       Squid only knows about standardized HTTP request methods.
+   #       You can add up to 20 additional "extension" methods here.
+   #
+   #Default:
+   # none
+   extension_methods REPORT MERGE MKACTIVITY CHECKOUT
+</pre>
+
+<p>(Squid 2.4 and later already knows about PROPFIND.)</p>
+
+<p>If it's difficult or impossible to get the proxy to allow
+Subversion traffic, but you want to check out the Subversion sources,
+you may be able to go around the proxy.  Some proxies that filter port
+80 nevertheless allow anything on port 81.  For this reason, the
+<tt>svn.collab.net</tt> repository server listens on port 81 as well
+as on port 80.  Try:</p>
+
+<pre>
+   svn checkout http://svn.collab.net:81/repos/svn/trunk -d subversion
+</pre>
+
+<p>and maybe the proxy will let you through.</p>
+
+<![CDATA[=========================================================]]>
+
+<p>
+<hr>
+<p>
+<h2>Troubleshooting:</h2>
+<p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3>I just built the distribution binary, and when I try to check out
 Subversion, I get an error about an "Unrecognized URL scheme."  What's up
-with<a name="unrecognized-url-error"> that?</a></h2>
+with<a name="unrecognized-url-error"> that?</a></h3>
 
 <p>Subversion uses a plugin system to allow access to repositories.  Currently
 there are two of these plugins: ra_local allows access to a local
@@ -202,19 +295,8 @@ variable.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="repository">How do I create a repository?  How do I
-import data into it?</a></h2>
-
-<p>See <a
-href="http://svn.collab.net/repos/svn/trunk/README">
-http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
-at section IV, the "Quickstart Guide".</p>
-
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h2><a name="db-recover">I'm getting errors finding or opening a repository,
-    but I know my repository URL is correct.  What's wrong?</a></h2> 
+<h3><a name="db-recover">I'm getting errors finding or opening a repository,
+    but I know my repository URL is correct.  What's wrong?</a></h3> 
 
 <p>Sometimes you'll see errors that look like this:</p>
 
@@ -260,8 +342,8 @@ at all.  We're working on it, and volunteers are welcome :-).
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2>I'm getting strange errors in my httpd error log, and Subversion
-operations aren't working.</h2>
+<h3>I'm getting strange errors in my httpd error log, and Subversion
+operations aren't working.</h3>
 
 <p>Sometimes you need to run Berkeley DB's recovery procedure.  Shut
 down apache, cd into the relevant repository's `<tt>db</tt>'
@@ -279,9 +361,9 @@ will sometimes be necessary.
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2>When I run `<tt>configure</tt>', I get errors about
+<h3>When I run `<tt>configure</tt>', I get errors about
 <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
-What<a name="configure-sed-error">'s wrong?</a></h2>
+What<a name="configure-sed-error">'s wrong?</a></h3>
 
 <p>
 You probably have old copies of
@@ -293,8 +375,8 @@ building with are completely up-to-date, and try again.
 
 <![CDATA[-----------------------------------------------------------]]>
  
-<h2>I'm having trouble building Subversion under Windows with MSVC++ 6.0.
-<a name="windows-msvc-build"> What should I do?</a></h2>
+<h3>I'm having trouble building Subversion under Windows with MSVC++ 6.0.
+<a name="windows-msvc-build"> What should I do?</a></h3>
 
 <p>
 Probably you just need to get the latest platform SDK.  The one that
@@ -303,9 +385,9 @@ ships with VC++ 6.0 is not recent enough.
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2>I'm running Subversion under windows and I can create a repository
+<h3>I'm running Subversion under windows and I can create a repository
 fine, but <a name="windows-repository">I get errors trying to import
-or check out from it.  What's wrong?</a></h2>
+or check out from it.  What's wrong?</a></h3>
 
 <p>If the error looks something like:
 <pre>
@@ -322,51 +404,9 @@ svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="proxy">What if I'm behind a proxy?</a></h2>
-
-<p>The Subversion client can go through a proxy, if you configure it
-to do so.  First, edit your ~/.subversion/proxies configuration file
-to indicate which proxy to use.  There are comments in the file
-explaining how to do this.  If you don't have that file, get the
-latest Subversion client and run any command; this will cause the
-configuration directory and template files to be created.</p>
-
-<p>Next, you need to make sure the proxy server itself supports all
-the HTTP methods Subversion uses.  Some proxy servers do not support
-these methods by default: PROPFIND, REPORT, MERGE, MKACTIVITY,
-CHECKOUT.  In general, solving this depends on the particular proxy
-software.  For Squid, the config option is</p>
-
-<pre>
-   #  TAG: extension_methods
-   #       Squid only knows about standardized HTTP request methods.
-   #       You can add up to 20 additional "extension" methods here.
-   #
-   #Default:
-   # none
-   extension_methods REPORT MERGE MKACTIVITY CHECKOUT
-</pre>
-
-<p>(Squid 2.4 and later already knows about PROPFIND.)</p>
-
-<p>If it's difficult or impossible to get the proxy to allow
-Subversion traffic, but you want to check out the Subversion sources,
-you may be able to go around the proxy.  Some proxies that filter port
-80 nevertheless allow anything on port 81.  For this reason, the
-<tt>svn.collab.net</tt> repository server listens on port 81 as well
-as on port 80.  Try:</p>
-
-<pre>
-   svn checkout http://svn.collab.net:81/repos/svn/trunk -d subversion
-</pre>
-
-<p>and maybe the proxy will let you through.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h2><a name="globalrev">Why does the entire repository share the 
+<h3><a name="globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
-    own revision numbers.</a></h2>
+    own revision numbers.</a></h3>
 <p>
 The global revision number attached to the repository as a whole is
 meaningless from a user's perspective. It's an internal mechanism that
@@ -385,20 +425,17 @@ change of a given code base.  There are other more complicated ways to
 get a much better picture of a code-base's rate of change.
 </p>
 
+<![CDATA[=========================================================]]>
+
+<p>
+<hr>
+<p>
+<h2>References:</h2>
+<p>
+
 <![CDATA[-----------------------------------------------------------]]>
 
-<h2><a name="bikeshed">What's a 'bikeshed'?</a></h2>
+<h3><a name="bikeshed">What's a 'bikeshed'?</a></h3>
 
 <p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
 </p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h2>I have other problems or questions about Subversion.  Where can I get
-more<a name="more-information"> information?</a></h2>
-
-<p>Please send your questions or concerns to the Subversion Development <a
-href="mailto:dev@subversion.tigris.org">mailing list</a>.  Alternatively,
-several Subversion users and developers can usually be contacted via IRC on
-channel #svn on <a
-href="http://www.openprojects.net">irc.openprojects.net</a>.</p>
