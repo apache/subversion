@@ -456,6 +456,13 @@ svn_delta_wrap_editor (const svn_delta_editor_t **new_editor,
 {
   assert (middle_editor != NULL);
 
+  if ((! before_editor) && (! after_editor))
+    {
+      *new_editor = middle_editor;
+      *new_edit_baton = middle_edit_baton;
+      return;
+    }
+
   if (before_editor)
     {
       svn_delta_compose_editors (new_editor, new_edit_baton,
