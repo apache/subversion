@@ -195,10 +195,15 @@ AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
 AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
 	[Define to be the full path to your diff program])
 
-dnl Find a default patch program
-AC_PATH_PROG(SVN_CLIENT_PATCH, patch, patch)
+dnl Find a version of GNU patch
+AC_MSG_CHECKING([for GNU patch])
+SVN_CLIENT_PATCH="`ac-helpers/gnu-patch.sh`"
+if test "$SVN_CLIENT_PATCH" = "";  then
+  AC_MSG_ERROR([cannot find a GNU patch program in your PATH.])
+fi
+AC_MSG_RESULT([$SVN_CLIENT_PATCH])
 AC_DEFINE_UNQUOTED(SVN_CLIENT_PATCH, "$SVN_CLIENT_PATCH", 
-	[Define to be the full path to your patch program])
+	[Define to be the full path to your GNU patch program])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
