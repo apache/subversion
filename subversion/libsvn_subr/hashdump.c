@@ -237,11 +237,19 @@ svn_hash_read (apr_hash_t *hash,
 
       first_time = 0;
 
-      if ((len == 3)
-          && (buf[0] == 'E')       /* We've reached the end of the  */
-          && (buf[1] == 'N')       /* dumped hash table, so leave.  */
-          && (buf[2] == 'D'))
+      if (((len == 3) && (buf[0] == 'E') && (buf[1] == 'N') && (buf[2] == 'D'))
+          || ((len == 9)
+              && (buf[0] == 'P')
+              && (buf[1] == 'R')       /* We formerly used just "END" to */
+              && (buf[2] == 'O')       /* end a property hash, but later */
+              && (buf[3] == 'P')       /* we added "PROPS-END", so that  */
+              && (buf[4] == 'S')       /* the fs dump format would be    */
+              && (buf[5] == '-')       /* more human-readable.  That's   */
+              && (buf[6] == 'E')       /* why we accept either way here. */
+              && (buf[7] == 'N')
+              && (buf[8] == 'D')))
         {
+          /* We've reached the end of the dumped hash table, so leave. */
           return APR_SUCCESS;
         }
       else if ((buf[0] == 'K') && (buf[1] == ' '))
