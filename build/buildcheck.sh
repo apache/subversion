@@ -53,15 +53,20 @@ echo "buildcheck: libtool version $lt_pversion (ok)"
 #--------------------------------------------------------------------------
 # check for the correct version of Neon
 #
-NEON_WANTED=0.19.2
+NEON_WANTED_REGEX=0.19.[2-3]
+NEON_LATEST_WORKING_VER=0.19.3
+NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
 if test -d ./neon; then
   NEON_VERSION="`./ac-helpers/get-neon-ver.sh neon`"
-  if test "$NEON_WANTED" != "$NEON_VERSION"; then
-    echo "buildcheck: neon version $NEON_VERSION found in ./neon/."
-    echo "            You need neon $NEON_WANTED."
-    exit 1
-  fi
-
+  case "$NEON_VERSION" in
+    $NEON_WANTED_REGEX)
+      ;;
+    *)
+      echo "buildcheck: neon version $NEON_VERSION found in ./neon/."
+      echo "            You need neon $NEON_LATEST_WORKING_VER."
+      exit 1
+      ;;
+  esac
   echo "buildcheck: neon version $NEON_VERSION (ok)"
 fi
 

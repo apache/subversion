@@ -15,7 +15,7 @@ This build requires certain other packages to be installed.
 
        db >= 4.0.14
        expat (comes with RedHat)
-       neon = 0.19.2
+       neon = 0.19.[2-3]
        apache >= 2.0.32 (for subversion-server)
 
     B. To compile:
@@ -25,7 +25,7 @@ This build requires certain other packages to be installed.
        apache-devel >= 2.0.32
        expat-devel
        libtool >= 1.4.2
-       neon = 0.19.2
+       neon = 0.19.[2-3]
        python >= 1.5.2 (2.0 or greater to run check programs)
 
     The non-standard packages apache-2.0.32, db, and neon, can be found at:
