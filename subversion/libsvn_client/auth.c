@@ -131,6 +131,7 @@ get_username (char **username,
 
 static svn_error_t *
 get_password (char **password,
+              char *username,
               void *auth_baton,
               apr_pool_t *pool)
 {
@@ -161,9 +162,12 @@ get_password (char **password,
       
       else
         {
+          char promptbuf[100];
+          
+          snprintf(promptbuf, 100, "%s's password: ", username);
+
           /* No file cache?  Then prompt the user. */
-          SVN_ERR (ab->prompt_callback (password, 
-                                        "password: ",
+          SVN_ERR (ab->prompt_callback (password, promptbuf,
                                         TRUE, /* don't echo to the screen */
                                         ab->prompt_baton, pool));
 
@@ -185,7 +189,7 @@ get_user_and_pass (char **username,
                    apr_pool_t *pool)
 {
   SVN_ERR (get_username (username, auth_baton, pool));
-  SVN_ERR (get_password (password, auth_baton, pool));
+  SVN_ERR (get_password (password, *username, auth_baton, pool));
 
   return SVN_NO_ERROR;
 }
