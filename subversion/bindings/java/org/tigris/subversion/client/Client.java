@@ -60,6 +60,6 @@ public interface Client
     void diff(List diffOptions, String path1, OptRevision revision1,
               String path2, OptRevision revision2, boolean recurse,
               boolean ignoreAncestry, boolean noDiffDeleted,
-              OutputStream outfile, OutputStream errfile)
+              OutputStream output, OutputStream error)
         throws SubversionException;
 }
