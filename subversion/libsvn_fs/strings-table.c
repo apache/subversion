@@ -200,15 +200,25 @@ svn_fs__append_string_stream (svn_stream_t **stream,
   struct string_baton *baton = apr_pcalloc (trail->pool, sizeof (*baton));
   svn_stream_t *s = svn_stream_create (baton, trail->pool);
 
-  /* kff todo: is there some other way to append to a record?  Without
-     using DB_DBT_PARTIAL?  DB_APPEND isn't it; that's for appending
-     to the end of the database, not the end of an individual record. */
-  apr_size_t size;
-  svn_fs__string_size (&size, fs, key, trail);
+  {
+    /* Is there some other way to append to a record?  Without using
+       DB_DBT_PARTIAL?  DB_APPEND isn't it; that's for appending to
+       the end of a query or recno database, not appending to the end
+       of an individual record value. */
+    svn_error_t *err;
+    apr_size_t size;
+    err = svn_fs__string_size (&size, fs, key, trail);
+
+    if (! err)
+      baton->offset = size;
+    else if (err->apr_err == SVN_ERR_FS_NO_SUCH_STRING)
+      baton->offset = 0;
+    else
+      return err;
+  }
   
   baton->fs     = fs;
   baton->key    = key;
-  baton->offset = size;
   baton->trail  = trail;
   
   svn_stream_set_write (s, string_write);
