@@ -60,28 +60,34 @@ svn_cl__diff (apr_getopt_t *os,
   if ((status = apr_file_open_stderr (&errfile, pool)))
     return svn_error_create (status, NULL, "can't open stderr");
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, /* no @revs */ pool));
-
   if (! opt_state->old_target && ! opt_state->new_target
       && opt_state->start_revision.kind != svn_opt_revision_unspecified
       && opt_state->end_revision.kind != svn_opt_revision_unspecified
-      && targets->nelts == 1
-      && svn_path_is_url (APR_ARRAY_IDX(targets, 0, const char *)))
+      && (os->argc - os->ind == 1)
+      && svn_path_is_url (os->argv[os->ind]))
     {
       /* The 'svn diff -rN:M URL' case (matches 'svn merge'). */
+      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
+                                             opt_state->targets,
+                                             &(opt_state->start_revision),
+                                             &(opt_state->end_revision),
+                                             FALSE, /* no @revs */ pool));
+
       old_target = new_target = APR_ARRAY_IDX(targets, 0, const char *);
       targets->nelts = 0;
     }
   else if (! opt_state->old_target && ! opt_state->new_target
-           && targets->nelts == 2
-           && svn_path_is_url ( APR_ARRAY_IDX(targets, 0, const char *))
-           && svn_path_is_url ( APR_ARRAY_IDX(targets, 1, const char *)))
+           && (os->argc - os->ind == 2)
+           && svn_path_is_url (os->argv[os->ind])
+           && svn_path_is_url (os->argv[os->ind + 1]))
     {
       /* The 'svn diff URL1[@N] URL2[@M]' case (matches 'svn merge'). */
+      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
+                                             opt_state->targets,
+                                             &(opt_state->start_revision),
+                                             &(opt_state->end_revision),
+                                             TRUE, /* extract @revs */ pool));
+
       old_target = APR_ARRAY_IDX(targets, 0, const char *);
       new_target = APR_ARRAY_IDX(targets, 1, const char *);
       targets->nelts = 0;
@@ -93,9 +99,15 @@ svn_cl__diff (apr_getopt_t *os,
     }
   else
     {
-      /* The 'svn diff [-rN[:M]] [--old OLD [--new NEW]] [PATH ...]' case */
+      /* The 'svn diff [-rN[:M]] [--old OLD] [--new NEW] [PATH ...]' case */
       apr_array_header_t *tmp = apr_array_make (pool, 2, sizeof (const char *));
       apr_array_header_t *tmp2;
+
+      SVN_ERR (svn_opt_args_to_target_array (&targets, os,
+                                             opt_state->targets,
+                                             &(opt_state->start_revision),
+                                             &(opt_state->end_revision),
+                                             FALSE, /* no @revs */ pool));
 
       APR_ARRAY_PUSH (tmp, const char *) = (opt_state->old_target
                                             ? opt_state->old_target : ".");
