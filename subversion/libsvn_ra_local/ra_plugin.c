@@ -519,7 +519,8 @@ get_file (void *session_baton,
           const char *path,
           svn_revnum_t revision,
           svn_stream_t *stream,
-          svn_revnum_t *fetched_rev)
+          svn_revnum_t *fetched_rev,
+          apr_hash_t **props)
 {
   svn_fs_root_t *root;
   svn_stream_t *contents;
@@ -589,6 +590,9 @@ get_file (void *session_baton,
           break;
         }
     }
+
+  if (props)
+    SVN_ERR (svn_fs_node_proplist (props, root, abs_path->data, sbaton->pool));
 
   return SVN_NO_ERROR;
 }

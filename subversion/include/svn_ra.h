@@ -351,12 +351,15 @@ typedef struct svn_ra_plugin_t
      If REVISION is SVN_INVALID_REVNUM (meaning 'head') and
      *FETCHED_REV is not NULL, then this function will set
      *FETCHED_REV to the actual revision that was retrieved.  (Some
-     callers want to know, and some don't.) */
+     callers want to know, and some don't.) 
+
+     If PROPS is non NULL, it will contain the properties of the file. */
   svn_error_t *(*get_file) (void *session_baton,
                             const char *path,
                             svn_revnum_t revision,
                             svn_stream_t *stream,
-                            svn_revnum_t *fetched_rev);
+                            svn_revnum_t *fetched_rev,
+                            apr_hash_t **props);
 
 
   /* Check out revision REVISION of the url specified in

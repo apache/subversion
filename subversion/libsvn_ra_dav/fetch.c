@@ -785,8 +785,11 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   const char *path,
                                   svn_revnum_t revision,
                                   svn_stream_t *stream,
-                                  svn_revnum_t *fetched_rev)
+                                  svn_revnum_t *fetched_rev,
+                                  apr_hash_t **props)
 {
+  svn_ra_dav_resource_t *rsrc;
+  apr_hash_index_t *hi;
   svn_stringbuf_t *url_str;
   const char *final_url;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
@@ -828,6 +831,32 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                               get_file_reader, stream,
                               ras->callbacks->get_wc_prop,
                               ras->callback_baton, ras->pool) );
+
+  if (props)
+    {
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
+                                              NULL, NULL /* all props */, 
+                                              ras->pool) ); 
+
+      *props = apr_hash_make(ras->pool);
+
+      for (hi = apr_hash_first(ras->pool, rsrc->propset); 
+           hi; 
+           hi = apr_hash_next(hi)) 
+        {
+          const void *key;
+          void *val;
+
+          apr_hash_this(hi, &key, NULL, &val);
+
+#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
+          if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
+            apr_hash_set(*props, &((const char *)key)[NSLEN], 
+                         APR_HASH_KEY_STRING, 
+                         svn_string_create(val, ras->pool));    
+#undef NSLEN
+        }
+    }
 
   return SVN_NO_ERROR;
 }

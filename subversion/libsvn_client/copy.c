@@ -534,6 +534,8 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       svn_stream_t *fstream;
       apr_file_t *fp;
       svn_revnum_t fetched_rev = 0;
+      apr_hash_t *props;
+      apr_hash_index_t *hi;
       
       /* Open DST_PATH for writing. */
       status = apr_file_open (&fp, dst_path->data, (APR_CREATE | APR_WRITE),
@@ -549,7 +551,18 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       /* Have the RA layer 'push' data at this stream.  We pass a
          relative path of "", because we opened SRC_URL, which is
          already the full URL to the file. */         
-      SVN_ERR (ra_lib->get_file (sess, "", src_rev, fstream, &fetched_rev));
+      SVN_ERR (ra_lib->get_file (sess, "", src_rev, fstream, 
+                                 &fetched_rev, &props));
+
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi)) 
+        {
+          const void *key;
+          void *val;
+
+          apr_hash_this (hi, &key, NULL, &val);
+
+          SVN_ERR (svn_wc_prop_set (key, val, dst_path->data, pool));
+        }
 
       /* Close the file. */
       status = apr_file_close (fp);
