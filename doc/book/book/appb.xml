@@ -1,18 +1,104 @@
 <appendix id="svn-ap-b">
   <title>CVS Repository Migration</title>
 
-  <simplesect>
-    
-    <para>
-      ### TODO Write this
-    </para>
+  <para>Since Subversion aims to be the successor to CVS, it only
+    makes sense to provide tools to help that migration.  Subversion
+    has a script that migrates data from a CVS repository to a
+    Subversion repository.  Yes, you <emphasis>can</emphasis> take
+    your CVS history with you into the brave new world.</para>
 
-  </simplesect>
+  <sect1 id="svn-ap-b-sect-1">
+    <title>Requirements</title>
+
+    <para>The tool is called <filename>cvs2svn.py</filename>, and it's a
+      python script that lives within Subversion's source tree in the
+      <filename>tools</filename> subdirectory.  In order to run this
+      program, you need a number of external things:</para>
+    
+    <variablelist>
+      
+      <varlistentry>
+        <term>python 2.0</term>
+        
+        <listitem><para>Make sure you have python 2.0 or later
+            installed.  You can get the latest from <systemitem
+            class="url">http://www.python.org/</systemitem>.</para></listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term><filename>rcsparse.py</filename></term> 
+        
+        <listitem><para>This is a python module for parsing RCS files,
+            and is part of the ViewCVS project.  It's needed to read
+            your CVS repository.  For convenience, a copy is provided
+            in the same directory as <filename>cvs2svn.py</filename>,
+            although a more recent version may be available from the
+            ViewCVS project&mdash; <systemitem
+            class="url">http://viewcvs.sf.net/.</systemitem>.  Simply
+            drop this module into a place where python can find it,
+            somewhere like
+            <filename>/usr/local/lib/python2.2/</filename>.</para></listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>svn python bindings</term> 
+        
+        <listitem><para>The SWIG-generated python bindings to the
+            Subversion libraries must be installed.  In particular,
+            <filename>cvs2svn.py</filename> needs to make calls into
+            <filename>libsvn_fs</filename> so it can commit data into
+            a Subversion repository.  (See <xref
+              linkend="svn-ch-7-sect-2.3"/>.)  </para></listitem>
+      </varlistentry>
+      
+    </variablelist>
+  
+  </sect1>
+  
+  <sect1 id="svn-ap-b-sect-2">
+    <title>Running cvs2svn.py</title>
+    
+    <para>Because CVS doesn't have atomic commits,
+      <filename>cvs2svn.py</filename> has the difficult job of
+      deducing them.  It does this by examing RCS files and looking
+      for per-file revisions with identical log messages.  If two RCS
+      revisions have the same log message, and were committed at
+      nearly the same time (say, within a couple minutes of each
+      other), then <filename>cvs2svn.py</filename> places them into a
+      common change <quote>group</quote>, and commits the change-group
+      to a new Subversion repository as a single revision.</para>
+    
+    <para>The previous explanation is a bit of a simplification;
+      there's much more bookkeeping to do than that.  In fact,
+      <filename>cvs2svn.py</filename> does its work in multiple
+      <quote>passes</quote>, creating large amounts of temporary data
+      on disk.  If you interrupt the script, you can pass the
+      <option>-p</option> option to script later on, indicating which
+      pass to resume with.</para>
+
+    <para>Invoking the script is simple:</para>
+    
+    <screen>
+$ cvs2svn.py -s /path/to/new/svn/repos /path/to/cvs/repos
+[...]
+
+### INSERT SAMPLE OUTPUT HERE
+
+[...]
+    </screen>
+
+    <para>The conversion take anywhere from several minutes to dozens
+      of hours, depending on the size of your CVS repository.  When
+      run on Subversion's own CVS repository (the first year of
+      Subversion's history, before it became self-hosting), it takes
+      about 30 minutes, and commits about 3000 revisions to the
+      Subversion repository.</para>
+        
+    <para>### Does the subversion repository get auto-created?</para>
+
+  </sect1>
 
 </appendix>
 
-<!--
-local variables: 
-sgml-parent-document: ("book.xml" "appendix")
-end:
--->
+<!-- local variables: sgml-parent-document: ("book.xml" "appendix")
+end: -->
