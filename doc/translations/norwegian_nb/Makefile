@@ -2,6 +2,11 @@ XSLTPROC = xsltproc
 INSTALL_DIR = $(DESTDIR)/usr/share/doc/subversion
 INSTALL = install
 
+BOOKFILES=appa.xml appb.xml appc.xml appd.xml book.xml ch00.xml \
+          ch01.xml ch02.xml ch03.xml ch04.xml ch05.xml ch06.xml \
+          ch07.xml ch08.xml ch09.xml colo.xml copyright.xml \
+          foreword.xml glossary.xml
+
 ## You shouldn't normally need to edit anything below here.
 SHELL = /bin/sh
 SVNVERSION = svnversion
@@ -175,4 +180,32 @@ install-misc-pdf: $(MDOCS_PDF_TARGET) $(MDOCS_INSTALL_DIR)
 install-misc-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 	$(INSTALL) $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 
+editmode:
+	for _prc in $(BOOKFILES); do \
+		echo -n "$$_prc: convert..."; \
+		dest=book/$$_prc; \
+		swp=book/.$$_prc.swp; \
+		if [ -e $$swp ]; then \
+			echo "$$swp: Swap file found. Is the file being edited?" >&2; \
+			exit 1; \
+		fi; \
+		bin/clean_files -e $$dest >$$dest.tmp || exit 1; \
+		echo -n "move..."; \
+		mv $$dest.tmp $$dest; \
+		echo "OK."; \
+	done
 
+commitmode:
+	for _prc in $(BOOKFILES); do \
+		echo -n "$$_prc: clean..."; \
+		dest=book/$$_prc; \
+		swp=book/.$$_prc.swp; \
+		if [ -e $$swp ]; then \
+			echo "$$swp: Swap file found. Is the file being edited?" >&2; \
+			exit 1; \
+		fi; \
+		bin/clean_files $$dest >$$dest.tmp || exit 1; \
+		echo -n "move..."; \
+		mv $$dest.tmp $$dest; \
+		echo "OK."; \
+	done
