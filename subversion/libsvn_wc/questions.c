@@ -67,14 +67,16 @@ svn_wc_check_wc (const char *path,
 
       err = svn_io_read_version_file (wc_format, format_file_path, pool);
 
-      if (err)
+      if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+                  || APR_STATUS_IS_ENOTDIR(err->apr_err)))
         {
-          /* If the format file could not be opened for any reason,
-             then for our purposes this is not a working copy, so
-             return 0. */
+          /* If the format file does not exist, then for our purposes
+             this is not a working copy, so return 0. */
           svn_error_clear (err);
           *wc_format = 0;
         }
+      else if (err)
+        return err;
       else
         {
           /* If we managed to read the format file we assume that we

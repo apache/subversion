@@ -973,7 +973,11 @@ validate_eol_prop_against_file (const char *path,
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
                               "File '%s' has inconsistent newlines", path);
-  return err;
+  else if (err)
+    return err;
+
+  SVN_ERR (svn_io_file_close (fp, pool));
+  return SVN_NO_ERROR;
 }
 
 
