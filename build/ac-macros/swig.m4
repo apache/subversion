@@ -255,10 +255,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
       AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
-        # XXX: This apparent temporary kludge needs to be resolved
-        # I assume we *should* be using CFLAGS from Ruby
-        svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC))'` -g \$(SWIG_RB_INCLUDES)"
-        # svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
+        svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
       ])
       SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 
