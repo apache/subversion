@@ -724,19 +724,123 @@ svn_wc_entry (svn_wc_entry_t **entry,
 }
 
 
+#if 0
+/* This is #if 0'd out until I decide where to use it. --cmpilato */
+
+/* Run a simple validity check on the ENTRIES (the list of entries
+   associated with the directory PATH). */
+static svn_error_t *
+check_entries (apr_hash_t *entries,
+               svn_string_t *path,
+               apr_pool_t *pool)
+{
+  svn_wc_entry_t *default_entry;
+  apr_hash_index_t *hi;
+
+  default_entry = apr_hash_get (entries, 
+                                SVN_WC_ENTRY_THIS_DIR, 
+                                APR_HASH_KEY_STRING);
+  if (! default_entry)
+    return svn_error_createf
+      (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
+       "'%s' has no default entry",
+       path->data);
+
+  switch (default_entry->schedule)
+    {
+    case svn_wc_schedule_normal:
+    case svn_wc_schedule_add:
+    case svn_wc_schedule_delete:
+    case svn_wc_schedule_replace:
+      /* These are all valid states */
+      break;
+
+    case svn_wc_schedule_unadd:
+    case svn_wc_schedule_undelete:
+    default:
+      /* These are all INvalid states */
+      return svn_error_createf
+        (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
+         "Directory '%s' has an invalid schedule",
+         path->data);
+    }
+  
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *name;
+      apr_size_t keylen;
+      void *val;
+      svn_wc_entry_t *this_entry;
+
+      /* Get the entry */
+      apr_hash_this (hi, &key, &keylen, &val);
+      this_entry = val;
+      name = (const char *)key;
+
+      /* We've already checked the "this dir" entry */
+      if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR ))
+        continue;
+
+      switch (this_entry->schedule)
+        {
+        case svn_wc_schedule_normal:
+        case svn_wc_schedule_add:
+        case svn_wc_schedule_delete:
+        case svn_wc_schedule_replace:
+          /* These are all valid states */
+          break;
+
+        case svn_wc_schedule_unadd:
+        case svn_wc_schedule_undelete:
+        default:
+          /* These are all INvalid states */
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
+             "'%s' in directory '%s' has an invalid schedule",
+             name, path->data);
+        }
+
+      if ((default_entry->schedule == svn_wc_schedule_add)
+          && (this_entry->schedule != svn_wc_schedule_add))
+        return svn_error_createf
+          (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
+           "'%s' in directory '%s' (which is scheduled for addition) "
+           "is not itself scheduled for addition",
+           name, path->data);
+  
+      if ((default_entry->schedule == svn_wc_schedule_delete)
+          && (this_entry->schedule != svn_wc_schedule_delete))
+        return svn_error_createf
+          (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
+           "'%s' in directory '%s' (which is scheduled for deletion) "
+           "is not itself scheduled for deletion",
+           name, path->data);
+
+      if ((default_entry->schedule == svn_wc_schedule_replace)
+          && (this_entry->schedule == svn_wc_schedule_normal))
+        return svn_error_createf
+          (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
+           "'%s' in directory '%s' (which is scheduled for replacement) "
+           "has in invalid schedule",
+           name, path->data);
+    }
+  
+  return SVN_NO_ERROR;
+}
+#endif
+
+
 svn_error_t *
 svn_wc_entries_read (apr_hash_t **entries,
                      svn_stringbuf_t *path,
                      apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *new_entries;
 
   new_entries = apr_hash_make (pool);
 
-  err = read_entries (new_entries, path, TRUE, pool);
-  if (err)
-    return err;
+  SVN_ERR (read_entries (new_entries, path, TRUE, pool));
 
   *entries = new_entries;
   return SVN_NO_ERROR;
