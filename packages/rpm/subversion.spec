@@ -1,4 +1,4 @@
-%define apache_version 2.0.31-0.5
+%define apache_version 2.0.32-0.1
 %define neon_version 0.18.5
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
@@ -207,7 +207,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL NEWS PORTING
+%doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL PORTING
 %doc README TASKS
 %doc tools subversion/LICENSE
 /usr/bin/svn
