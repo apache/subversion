@@ -63,6 +63,7 @@ class Generator(gen_win.WinGeneratorBase):
         if '-' in rsrc:
           rsrc = '"%s"' % rsrc
         sources.append(rsrc)
+    sources.sort()
 
     data = {
       'target' : target,
@@ -109,7 +110,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     for name, target in self.targets.items():
       # This isn't working yet
-      if name.find('-test') >= 0:
+      if string.find(name, '-test') >= 0:
         continue
 
       # These aren't working yet
@@ -123,14 +124,17 @@ class Generator(gen_win.WinGeneratorBase):
       if isinstance(target, gen_base.TargetProject):
         fname = self.find_win_project(os.path.join(target.path, name), ['.dsp'])
       else:
-        fname = os.path.join(self.projfilesdir,"%s_msvc.dsp" % (name.replace('-', '_')))
-        depth = self.projfilesdir.count(os.sep)+1
-        self.write_project(target, fname, '\\'.join(['..']*depth))
+        fname = os.path.join(self.projfilesdir,
+                             "%s_msvc.dsp" % (string.replace(name, '-', '_')))
+        depth = string.count(self.projfilesdir, os.sep) + 1
+        self.write_project(target, fname, string.join(['..']*depth, '\\'))
 
       if '-' in fname:
         fname = '"%s"' % fname
 
-      fout.write("Project: \"%s\"=%s - Package Owner=<4>\n\n" % (name.replace('-', ''), fname.replace(os.sep, '\\')))
+      fout.write("Project: \"%s\"=%s - Package Owner=<4>\n\n"
+                 % (string.replace(name, '-', ''),
+                    string.replace(fname, os.sep, '\\')))
       fout.write("Package=<5>\n")
       fout.write("{{{\n")
       fout.write("}}}\n\n")
@@ -160,7 +164,8 @@ class Generator(gen_win.WinGeneratorBase):
 
       for dep in depends:
         fout.write("    Begin Project Dependency\n")
-        fout.write("    Project_Dep_Name %s\n" % dep.name.replace('-',''))
+        fout.write("    Project_Dep_Name %s\n"
+                   % string.replace(dep.name, '-', ''))
         fout.write("    End Project Dependency\n")
 
       fout.write("}}}\n\n")

@@ -4,6 +4,7 @@
 
 import os
 import md5
+import string
 
 import gen_base
 import gen_win
@@ -159,7 +160,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     configs = self.newElement(root, "Configurations")
     for cfg in self.configs:
-      defines=';'.join(self.get_win_defines(target_ob, cfg))
+      defines=string.join(self.get_win_defines(target_ob, cfg), ';')
 
       for plat in self.platforms:
         config_params={
@@ -174,7 +175,7 @@ class Generator(gen_win.WinGeneratorBase):
           })
         config = self.newElement(configs, "Configuration", config_params)
 
-        includes=';'.join(self.get_win_includes(target_ob, rootpath))
+        includes=string.join(self.get_win_includes(target_ob, rootpath), ';')
         compiler_params={
           "Name":"VCCLCompilerTool",
           "AdditionalIncludeDirectories":includes,
@@ -214,7 +215,7 @@ class Generator(gen_win.WinGeneratorBase):
 
         self.newElement(config, 'Tool', {"Name":"VCCustomBuildTool"})
 
-        libs=' '.join(self.get_win_libs(target_ob))
+        libs=string.join(self.get_win_libs(target_ob), ' ')
         link_params={
           "Name":"VCLinkerTool",
           "AdditionalDependencies":libs,
@@ -233,7 +234,7 @@ class Generator(gen_win.WinGeneratorBase):
           })
         if cfg=='Debug':
           link_params.update({
-            "AdditionalDependencies":libs.replace("libdb40", "libdb40d"), #Little hacky-hacky
+            "AdditionalDependencies":string.replace(libs, "libdb40", "libdb40d"), #Little hacky-hacky
             "LinkIncremental":"2",
             "GenerateDebugInformation":"TRUE",
             "OptimizeReferences":"0",
@@ -262,7 +263,8 @@ class Generator(gen_win.WinGeneratorBase):
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target_ob):
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-        rsrc=src.replace(target_ob.path+os.sep,'').replace(os.sep,'\\')
+        rsrc=string.replace(string.replace(src, target_ob.path+os.sep, ''),
+                            os.sep, '\\')
         file = self.newElement(files, "File", {"RelativePath":rsrc})
 
     globals = self.newElement(root, "Globals")
@@ -274,8 +276,21 @@ class Generator(gen_win.WinGeneratorBase):
 
   def makeguid(self, data):
     "Generate a windows style GUID"
-    myhash=md5.md5(data).hexdigest()
-    guid=("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12], myhash[12:16], myhash[16:20], myhash[20:32])).upper()
+    ### blah. this function can generate invalid GUIDs. leave it for now,
+    ### but we need to fix it. we can wrap the apr UUID functions, or
+    ### implement this from scratch using the algorithms described in
+    ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
+
+    hash = md5.md5(data)
+    try:
+      myhash = hash.hexdigest()
+    except AttributeError:
+      # Python 1.5.2
+      myhash = string.join(map(lambda x: '%02x' % ord(x), hash.digest()), '')
+
+    guid = string.upper("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
+                                              myhash[12:16], myhash[16:20],
+                                              myhash[20:32]))
     return guid
 
   def write(self, oname):
@@ -302,14 +317,20 @@ class Generator(gen_win.WinGeneratorBase):
       self.guids[target]=guid
 
       #We might be building on a non windows os, so use native path here
-      fname=os.path.join(self.projfilesdir,"%s_vcnet.vcproj" % (target.replace('-','_')))
-      depth=target_ob.path.count(os.sep)+1
-      self.writeProject(target_ob, fname, '\\'.join(['..']*depth))
+      fname=os.path.join(self.projfilesdir,
+                         "%s_vcnet.vcproj" % (string.replace(target,'-','_')))
+      depth=string.count(target_ob.path, os.sep)+1
+      self.writeProject(target_ob, fname,
+                        string.join(['..']*depth, '\\'))
       
       if isinstance(target_ob, gen_base.TargetExternal):
         fname = target_ob._sources[0]
 
-      self.ofile.write('Project("%s") = "%s", "%s", "%s"\n' % (self.global_guid, target, fname.replace(os.sep,'\\'), guid))
+      self.ofile.write('Project("%s") = "%s", "%s", "%s"\n'
+                       % (self.global_guid,
+                          target,
+                          string.replace(fname, os.sep, '\\'),
+                          guid))
       self.ofile.write("EndProject\n")
 
     self.ofile.write("Global\n")
