@@ -1229,7 +1229,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                       svn_revnum_t revision,
                                       svn_boolean_t recurse,
                                       const svn_delta_editor_t *editor,
-                                      void *edit_baton)
+                                      void *edit_baton,
+                                      apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   svn_error_t *err;
@@ -1241,37 +1242,37 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   apr_array_header_t *subdirs;  /* subdirs to scan (subdir_t *) */
   apr_array_header_t *files;    /* files to grab (svn_ra_dav_resource_t *) */
   svn_stringbuf_t *edit_path 
-    = svn_stringbuf_create ("", ras->pool); /* telescopic path */
+    = svn_stringbuf_create ("", pool); /* telescopic path */
   apr_pool_t *subpool;
 
   /* ### use quick_wrap rather than SVN_ERR on some of these? */
 
   /* this subpool will be used during various iteration loops, and cleared
      each time. long-lived stuff should go into ras->pool. */
-  subpool = svn_pool_create(ras->pool);
+  subpool = svn_pool_create(pool);
 
   /* begin the checkout process by fetching some basic information */
   SVN_ERR( begin_checkout(ras, revision, &activity_coll, &target_rev,
                           &bc_root) );
 
   /* all the files we checkout will have TARGET_REV for the revision */
-  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev, ras->pool) );
+  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev, pool) );
 
   /* In the checkout case, we don't really have a base revision, so
      pass SVN_IGNORED_REVNUM. */
   SVN_ERR( (*editor->open_root)(edit_baton, SVN_IGNORED_REVNUM,
-                                ras->pool, &root_baton) );
+                                pool, &root_baton) );
 
   /* store the subdirs into an array for processing, rather than recursing */
-  subdirs = apr_array_make(ras->pool, 5, sizeof(subdir_t *));
-  files = apr_array_make(ras->pool, 10, sizeof(svn_ra_dav_resource_t *));
+  subdirs = apr_array_make(pool, 5, sizeof(subdir_t *));
+  files = apr_array_make(pool, 10, sizeof(svn_ra_dav_resource_t *));
 
   /* Build a directory resource for the root. We'll pop this off and fetch
      the information for it. */
-  subdir = apr_palloc(ras->pool, sizeof(*subdir));
+  subdir = apr_palloc(pool, sizeof(*subdir));
   subdir->parent_baton = root_baton;
 
-  subdir->rsrc = apr_pcalloc(ras->pool, sizeof(*subdir->rsrc));
+  subdir->rsrc = apr_pcalloc(pool, sizeof(*subdir->rsrc));
   subdir->rsrc->url = bc_root;
 
   PUSH_SUBDIR(subdirs, subdir);
@@ -1321,7 +1322,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                      
           SVN_ERR_W( (*editor->add_directory) (edit_path->data, parent_baton,
                                                NULL, SVN_INVALID_REVNUM,
-                                               ras->pool, &this_baton),
+                                               pool, &this_baton),
                      "could not add directory");
         }
       else 
@@ -1343,12 +1344,12 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       /* add a sentinel. this will be used to signal a close_directory
          for this directory's baton. */
-      subdir = apr_pcalloc(ras->pool, sizeof(*subdir));
+      subdir = apr_pcalloc(pool, sizeof(*subdir));
       subdir->parent_baton = this_baton;
       PUSH_SUBDIR(subdirs, subdir);
 
       err = fetch_dirents(ras, url, this_baton, recurse, subdirs, files,
-                          editor->change_dir_prop, ras->pool);
+                          editor->change_dir_prop, pool);
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
 
@@ -1358,7 +1359,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       /* ### should we close the dir batons before returning?? */
       SVN_ERR_W( (*editor->change_dir_prop)(this_baton, 
                                             SVN_RA_DAV__LP_ACTIVITY_COLL,
-                                            activity_coll, ras->pool),
+                                            activity_coll, pool),
                  "could not save the URL to indicate "
                  "where to create activities");
 
@@ -1391,7 +1392,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   /* ### should never reach??? */
 
   /* Finish the edit */
-  SVN_ERR( ((*editor->close_edit) (edit_baton, ras->pool)) );
+  SVN_ERR( ((*editor->close_edit) (edit_baton, pool)) );
 
   /* Store auth info if necessary */
   SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );

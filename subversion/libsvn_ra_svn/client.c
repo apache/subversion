@@ -626,10 +626,9 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
 static svn_error_t *ra_svn_checkout(void *sess, svn_revnum_t rev,
                                     svn_boolean_t recurse,
                                     const svn_delta_editor_t *editor,
-                                    void *edit_baton)
+                                    void *edit_baton, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
 
   /* Tell the server to start a checkout. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "checkout", "(?r)b", rev, recurse));

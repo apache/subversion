@@ -390,15 +390,15 @@ svn_ra_local__do_checkout (void *session_baton,
                            svn_revnum_t revision,
                            svn_boolean_t recurse,
                            const svn_delta_editor_t *editor,
-                           void *edit_baton)
+                           void *edit_baton,
+                           apr_pool_t *pool)
 {
   svn_revnum_t revnum_to_fetch;
   svn_ra_local__session_baton_t *sbaton = 
     (svn_ra_local__session_baton_t *) session_baton;
   
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch,
-                                              sbaton->pool));
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch, pool));
   else
     revnum_to_fetch = revision;
 
@@ -406,7 +406,7 @@ svn_ra_local__do_checkout (void *session_baton,
                                revnum_to_fetch,
                                recurse,
                                sbaton->fs_path,
-                               editor, edit_baton, sbaton->pool));
+                               editor, edit_baton, pool));
 
   return SVN_NO_ERROR;
 }

@@ -133,7 +133,8 @@ svn_error_t * svn_ra_dav__do_checkout (
   svn_revnum_t revision,
   svn_boolean_t recurse,
   const svn_delta_editor_t *editor,
-  void *edit_baton);
+  void *edit_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_update(
   void *session_baton,

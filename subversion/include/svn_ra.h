@@ -449,12 +449,15 @@ typedef struct svn_ra_plugin_t
    * else just its topmost directory. 
    *
    * Do a complete drive of @a editor, ending with a call to @c close_edit().
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*do_checkout) (void *session_baton,
                                svn_revnum_t revision,
                                svn_boolean_t recurse,
                                const svn_delta_editor_t *editor,
-                               void *edit_baton);
+                               void *edit_baton,
+                               apr_pool_t *pool);
 
 
   /** Ask the network layer to update a working copy.
