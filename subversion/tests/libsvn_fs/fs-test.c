@@ -15,315 +15,245 @@
 #include <apr_pools.h>
 #include "svn_error.h"
 #include "svn_fs.h"
+
 #include "../../libsvn_fs/fs.h"
 #include "../../libsvn_fs/rev-table.h"
 #include "../../libsvn_fs/trail.c"
-
-/* Some utility functions.  */
-
 
 /* A global pool, initialized by `main' for tests to use.  */
 apr_pool_t *pool;
 
 
-/* A place to set a breakpoint.  */
-static int
-fail (void)
-{
-  return 1;
-}
-
-
-/* The name of the test repository. */
-const char repository[] = "test-repo";
-
-
+/*-------------------------------------------------------------------*/
 
-/* Create a filesystem.  */
+/** Helper routines. **/
 
-/* Safe to call this multiple times -- only creates a filesystem once. */
-static int
-create_berkeley_filesystem (const char **msg)
-{
-  svn_fs_t *fs;
-  static int fs_already_created = 0;
-
-  *msg = "create Berkeley DB filesystem";
-
-  if (! fs_already_created)
-    {
-      fs = svn_fs_new (pool);
-      if (fs == NULL)
-        return fail();
-      
-      if (SVN_NO_ERROR != svn_fs_create_berkeley (fs, repository))
-        return fail();
-      
-      if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-        return fail();
-      
-      fs_already_created = 1;
-    }
-
-  return 0;
-}
-
-
-
-/* Open a filesystem.  */
-
-
-/* Get and check the initial root id; must be 0.0. */
+/* Create a berkeley db repository in a subdir NAME, and return a new
+   FS object which points to it.  */
 static svn_error_t *
-check_filesystem_root_id (void *fs_baton, trail_t *trail)
+create_fs_and_repos (svn_fs_t **fs, const char *name)
 {
-  svn_fs_t *fs = fs_baton;
-  svn_fs_id_t *root_id;
-
-  SVN_ERR (svn_fs__rev_get_root (&root_id, fs, 0, trail));
-  if (root_id[0] != 0
-      && root_id[1] != 0
-      && root_id[2] != -1)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-                            "node id of revision `0' is not `0.0'");
+  *fs = svn_fs_new (pool);
+  if (! fs)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "Couldn't alloc a new fs object.");
+  
+  SVN_ERR (svn_fs_create_berkeley (*fs, name));
+  
   return SVN_NO_ERROR;
 }
 
 
 
-/* The Prologue: stuff to do at the beginning of most txn-based tests.
-   See in-line comments at each step to find out what this does. */
-static int
-common_test_prologue (svn_fs_t **fs)
-{
-  const char *ignored;
+/*-----------------------------------------------------------------*/
+
+/** The actual fs-tests called by `make check` **/
 
-  /* Make sure the filesystem exists. */
-  if (create_berkeley_filesystem (&ignored) != 0)
-    return fail();
-
-  /* Init a new FS structure */
-  *fs = svn_fs_new (pool);
-  if (*fs == NULL)
-    return fail();
-
-  /* Open our db tables, and hook them up to our FS structure */
-  if (SVN_NO_ERROR != svn_fs_open_berkeley (*fs, repository))
-    return fail();
-
-  return 0;
-}
-
-
-
-static int
-open_berkeley_filesystem (const char **msg)
+/* Create a filesystem.  */
+static svn_error_t *
+create_berkeley_filesystem (const char **msg)
 {
   svn_fs_t *fs;
 
-  *msg = "open Berkeley DB filesystem";
+  *msg = "svn_fs_create_berkeley";
 
-  /* Do our common `startup stuff' */
-  if (common_test_prologue (&fs))
-    return fail();
+  /* Create and close a repository. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-1")); /* helper */
+  SVN_ERR (svn_fs_close_fs (fs));
+  
+  return SVN_NO_ERROR;
+}
 
-  if (SVN_NO_ERROR != svn_fs__retry_txn (fs, check_filesystem_root_id,
-                                         fs, fs->pool))
-    return fail();
 
-  {
-    svn_revnum_t rev;
+/* Open an existing filesystem.  */
+static svn_error_t *
+open_berkeley_filesystem (const char **msg)
+{
+  svn_fs_t *fs, *fs2;
 
-    if (SVN_NO_ERROR != svn_fs_youngest_rev (&rev, fs, pool))
-      return fail();
+  *msg = "open an existing Berkeley DB filesystem";
 
-    if (rev != 0)
-      return fail();
-  }
+  /* Create and close a repository (using fs). */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-2")); /* helper */
+  SVN_ERR (svn_fs_close_fs (fs));
 
-  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-    return fail();
+  /* Create a different fs object, and use it to re-open the
+     repository again.  */
+  fs2 = svn_fs_new (pool);
+  if (! fs2)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "Couldn't alloc a new fs object.");
 
-  return 0;
+  SVN_ERR (svn_fs_open_berkeley (fs2, "test-repo-2"));
+  SVN_ERR (svn_fs_close_fs (fs2));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Fetch the youngest revision from a repos. */
+static svn_error_t *
+fetch_youngest_rev (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+
+  *msg = "fetch the youngest revision from a filesystem";
+
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-3")); /* helper */
+
+  SVN_ERR (svn_fs_youngest_rev (&rev, fs, pool));
+  
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
 }
 
 
 
-
-/* Safe to call this multiple times -- only creates first txn once. */
-static int
+/* Begin a txn, check its name, then close it */
+static svn_error_t *
 trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_error_t *err;
-  static int made_first_txn_already = 0;
+  char *txn_name;
 
-  *msg = "begin a txn, check its name, then immediately close it";
+  *msg = "begin a txn, check its name, then close it";
 
-  if (! made_first_txn_already)
-    {
-      /* Do our common `startup stuff' */
-      if (common_test_prologue (&fs))
-        return fail();
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-4")); /* helper */
 
-      /* Begin a transaction. */
-      if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
-        return fail();
+  /* Begin a new transaction that is based on revision 0.  */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
       
-      /* Test that it got id "0", since it's the first txn. */
-      {
-        char *txn_name;
-        
-        err = svn_fs_txn_name (&txn_name, txn, pool);
-        if (err)
-          return fail();
-        
-        if (strcmp (txn_name, "0") != 0)
-          return fail();
-      }
-      
-      /* Close it. */
-      if (SVN_NO_ERROR != svn_fs_close_txn (txn))
-        return fail();
-      
-      /* Close the FS. */
-      if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-        return fail();
+  /* Test that the txn name is non-null. */
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
+  
+  if (! txn_name)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "Got a NULL txn name.");
 
-      made_first_txn_already = 1;
-    }
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
-static int
+
+/* Open an existing transaction by name. */
+static svn_error_t *
 reopen_trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  const char *ignored;
+  char *txn_name;
 
-  *msg = "reopen and check the transaction name";
+  *msg = "open an existing transaction by name";
 
-  /* Do our common `startup stuff' */
-  if (common_test_prologue (&fs))
-    return fail();
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-5")); /* helper */
 
-  /* Make sure the transaction exists. */
-  if (trivial_transaction (&ignored) != 0)
-    return fail();
+  /* Begin a new transaction that is based on revision 0.  */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
 
-  /* Open the transaction, just to make sure it's in the database. */
-  if (SVN_NO_ERROR != svn_fs_open_txn (&txn, fs, "0", pool))
-    return fail();
+  /* Close the transaction. */
+  SVN_ERR (svn_fs_close_txn (txn));
 
-  /* Close it. */
-  if (SVN_NO_ERROR != svn_fs_close_txn (txn))
-    return fail();
+  /* Reopen the transaction by name */
+  SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
 
-  /* Close the FS. */
-  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-    return fail();
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
-static int
+
+/* Create a file! */
+static svn_error_t *
 create_file_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_error_t *err;
-  static int made_txn_already = 0;
+  svn_fs_root_t *txn_root;
 
   *msg = "begin a txn, get the txn root, and add a file!";
 
-  if (! made_txn_already)
-    {
-      /* Do our common `startup stuff' */
-      if (common_test_prologue (&fs))
-        return fail();
-      
-      /* Begin a transaction. */
-      if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
-        return fail();
-      
-      /* Test that it got id "0", since it's the second txn. */
-      {
-        char *txn_name;
-        
-        err = svn_fs_txn_name (&txn_name, txn, pool);
-        if (err)
-          return fail();
-        
-        if (strcmp (txn_name, "0") != 0)
-          return fail();
-      }
-      
-      {
-        svn_fs_root_t *txn_root;
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-6")); /* helper */
 
-        /* Get the txn root */
-        if (SVN_NO_ERROR != svn_fs_txn_root (&txn_root, txn, pool))
-          return fail();
+  /* Begin a new transaction that is based on revision 0.  */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
 
-        /* Create a file named "my_file.txt" in the root directory. */
-        if (SVN_NO_ERROR != svn_fs_make_file (txn_root,
-                                              "beer.txt",
-                                              pool))
-          return fail();
-      }
+  /* Get the txn root */
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  
+  /* Create a new file in the root directory. */
+  SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
 
-      /* Close it. */
-      if (SVN_NO_ERROR != svn_fs_close_txn (txn))
-        return fail();
-      
-     /* Close the FS. */
-      if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-        return fail();
+  /* Close the transaction and fs. */
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
 
-      made_txn_already = 1;
-    }
-
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
-static int
-list_live_transactions (const char **msg)
+/* Make sure we get txn lists correctly. */
+static svn_error_t *
+verify_txn_list (const char **msg)
 {
   svn_fs_t *fs;
+  svn_fs_txn_t *txn1, *txn2;
+  char *name1, *name2;
   char **txn_list;
-  const char *ignored;
 
-  *msg = "list active transactions";
+  *msg = "create 2 txns, list them, and verify the list.";
 
-  /* Do our common `startup stuff' */
-  if (common_test_prologue (&fs))
-    return fail();
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-7")); /* helper */
 
-  /* Make sure the transaction exists. */
-  if (trivial_transaction (&ignored) != 0)
-    return fail();
+  /* Begin a new transaction, get its name, close it.  */
+  SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_name (&name1, txn1, pool));
+  SVN_ERR (svn_fs_close_txn (txn1));
 
-  /* Get the list of transactions. */
-  if (SVN_NO_ERROR != svn_fs_list_transactions (&txn_list, fs, pool))
-    return fail();
+  /* Begin *another* transaction, get its name, close it.  */
+  SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_name (&name2, txn2, pool));
+  SVN_ERR (svn_fs_close_txn (txn2));
 
-  /* Check the list. It should have exactly one entry, "0". */
-  if (txn_list[0] == NULL
-      || txn_list[1] != NULL
-      || strcmp (txn_list[0], "0") != 0)
-    return fail();
+  /* Get the list of active transactions from the fs. */
+  SVN_ERR (svn_fs_list_transactions (&txn_list, fs, pool));
 
-  /* Close the FS. */
-  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-    return fail();
+  /* Check the list. It should have *exactly* two entries. */
+  if ((txn_list[0] == NULL)
+      || (txn_list[1] == NULL)
+      || (txn_list[2] != NULL))
+    goto all_bad;
+  
+  /* We should be able to find our 2 txn names in the list, in some
+     order. */
+  if ((! strcmp (txn_list[0], name1))
+      && (! strcmp (txn_list[1], name2)))
+    goto all_good;
+  
+  else if ((! strcmp (txn_list[1], name1))
+           && (! strcmp (txn_list[0], name2)))
+    goto all_good;
+  
+ all_bad:
 
-  return 0;
+  return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                           "Got a bogus txn list.");
+ all_good:
+  
+  /* Close the fs. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -334,10 +264,11 @@ int (*test_funcs[]) (const char **msg) = {
   0,
   create_berkeley_filesystem,
   open_berkeley_filesystem,
+  fetch_youngest_rev,
   trivial_transaction,
   reopen_trivial_transaction,
   create_file_transaction,
-  list_live_transactions,
+  verify_txn_list,
   0
 };
 
