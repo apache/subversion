@@ -1735,6 +1735,75 @@ def merge_into_missing(sbox):
   expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+# A test for issue 1738
+
+def dry_run_adds_file_with_prop(sbox):
+  "merge --dry-run adding a new file with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Commit a new file which has a property.
+  zig_path = os.path.join(wc_dir, 'A', 'B', 'E', 'zig')
+  svntest.main.file_append(zig_path, "zig contents")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', zig_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     zig_path)
+  
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/zig'     : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.add({
+    'A/B/E/zig'   : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Do a regular merge of that change into a different dir.
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  E_url = svntest.main.current_repo_url + '/A/B/E'
+
+  expected_output = wc.State(F_path, {
+    'zig'  : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    'zig'      : Item("zig contents", {'foo':'foo_val'}),
+    })
+  expected_skip = wc.State('', { })
+  expected_status = None  # status is optional
+  
+  svntest.actions.run_and_verify_merge(F_path, '1', '2', E_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, # please check props too
+                                       0)
+
+  # Revert the local mods.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', F_path)
+  os.unlink(os.path.join(F_path, 'zig'))
+
+  # Now do the same merge with --dry-run.
+  svntest.actions.run_and_verify_merge(F_path, '1', '2', E_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, # please check props too
+                                       0, '--dry-run')
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1755,6 +1824,7 @@ test_list = [ None,
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
               merge_into_missing,
+              XFail(dry_run_adds_file_with_prop),
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
