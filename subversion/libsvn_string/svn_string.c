@@ -162,7 +162,9 @@ svn_string_isempty (const svn_string_t *str)
 
 
 static void
-lengthen_block (svn_string_t *str, size_t minimum_new_size, apr_pool_t *pool)
+ensure_block_capacity (svn_string_t *str, 
+                       size_t minimum_new_size,
+                       apr_pool_t *pool)
 {
   while (str->blocksize < minimum_new_size)
     str->blocksize *= 2;
@@ -188,7 +190,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
      then make it twice the total size we need. */
 
   /* +1 for null terminator. */
-  lengthen_block (str, (total_len + 1), pool);
+  ensure_block_capacity (str, (total_len + 1), pool);
 
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
