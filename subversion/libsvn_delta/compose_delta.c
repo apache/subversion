@@ -120,19 +120,10 @@ free_block (void *ptr, alloc_block_t **free_list)
 /* ==================================================================== */
 /* Mapping offsets in the target streem to txdelta ops. */
 
-typedef struct offset_index_node_t
-{
-  /* Offset into the target stream defined by this op. */
-  apr_off_t offset;
-
-  /* Position in the new-data stream, for svn_txdelta_new ops. */
-  apr_off_t new_data_pos;
-} offset_index_node_t;
-
 typedef struct offset_index_t
 {
   int length;
-  offset_index_node_t *offs;
+  apr_off_t *offs;
 } offset_index_t;
 
 /* Create an index mapping target stream offsets to delta ops in
@@ -144,7 +135,6 @@ create_offset_index (const svn_txdelta_window_t *window,
 {
   offset_index_t *ndx = apr_palloc(pool, sizeof(*ndx));
   apr_off_t offset = 0;
-  apr_off_t new_data_pos = 0;
   int i;
 
   ndx->length = window->num_ops;
@@ -152,21 +142,10 @@ create_offset_index (const svn_txdelta_window_t *window,
 
   for (i = 0; i < ndx->length; ++i)
     {
-      const svn_txdelta_op_t *const op = &window->ops[i];
-      offset_index_node_t *const node = &ndx->offs[i];
-
-      node->offset = offset;
-      offset += op->length;
-      if (op->action_code == svn_txdelta_new)
-        {
-          node->new_data_pos = new_data_pos;
-          new_data_pos += op->length;
-        }
-      else
-        node->new_data_pos = -1;
+      ndx->offs[i] = offset;
+      offset += window->ops[i].length;
     }
-  ndx->offs[ndx->length].offset = offset;
-  ndx->offs[ndx->length].new_data_pos = -1;
+  ndx->offs[ndx->length] = offset;
 
   return ndx;
 }
@@ -175,19 +154,19 @@ create_offset_index (const svn_txdelta_window_t *window,
    NDX. */
 
 static int
-search_offset_index (offset_index_t *ndx, apr_off_t offset)
+search_offset_index (const offset_index_t *ndx, apr_off_t offset)
 {
   int lo, hi, op;
 
   assert(offset >= 0);
-  assert(offset < ndx->offs[ndx->length].offset);
+  assert(offset < ndx->offs[ndx->length]);
 
   for (lo = 0, hi = ndx->length, op = (lo + hi)/2;
        lo < hi;
        op = (lo + hi)/2)
     {
-      const apr_off_t this_offset = ndx->offs[op].offset;
-      const apr_off_t next_offset = ndx->offs[op + 1].offset;
+      const apr_off_t this_offset = ndx->offs[op];
+      const apr_off_t next_offset = ndx->offs[op + 1];
       if (offset < this_offset)
         hi = op;
       else if (offset > next_offset)
@@ -201,7 +180,7 @@ search_offset_index (offset_index_t *ndx, apr_off_t offset)
         }
     }
 
-  assert(ndx->offs[op].offset <= offset && offset < ndx->offs[op + 1].offset);
+  assert(ndx->offs[op] <= offset && offset < ndx->offs[op + 1]);
   return op;
 }
 
@@ -409,7 +388,7 @@ clean_tree (range_index_t *ndx, apr_off_t limit)
          : top_offset);
 
       if (node->limit <= limit
-          || (node->offset < limit && offset <= limit))
+          || (node->offset < limit && offset < limit))
         {
           *nodep = node->right;
           node->right = NULL;
@@ -463,7 +442,7 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
             {
               /* Again, we have to check if the new node and the one
                  to the left of the root override root's range. */
-              if (ndx->tree->prev && ndx->tree->prev->limit >= offset)
+              if (ndx->tree->prev && ndx->tree->prev->limit > offset)
                 {
                   /* Replace the data in the splayed node. */
                   ndx->tree->offset = offset;
@@ -567,30 +546,30 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
   range_list_node_t *last_range = NULL;
   range_index_node_t *node = ndx->tree;
 
-  while (offset <= limit)
+  while (offset < limit)
     {
       if (node == NULL)
         return alloc_range_list(&range_list, &last_range, ndx,
                                 range_from_source,
-                                offset, limit, -1);
+                                offset, limit, 0);
 
       if (offset < node->offset)
         {
-          if (limit < node->offset)
+          if (limit <= node->offset)
             return alloc_range_list(&range_list, &last_range, ndx,
                                     range_from_source,
-                                    offset, limit, -1);
+                                    offset, limit, 0);
           else
             {
               alloc_range_list(&range_list, &last_range, ndx,
                                range_from_source,
-                               offset, node->offset - 1, -1);
+                               offset, node->offset, 0);
               offset = node->offset;
             }
         }
       else
         {
-          if (offset > node->limit)
+          if (offset >= node->limit)
             node = node->next;
           else
             {
@@ -603,7 +582,7 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
                   alloc_range_list(&range_list, &last_range, ndx,
                                    range_from_target,
                                    offset, node->limit, node->target_offset);
-                  offset = node->limit + 1;
+                  offset = node->limit;
                   node = node->next;
                 }
             }
@@ -616,22 +595,61 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
 
 
 static void
-copy_source_ops (svn_txdelta__ops_baton_t *build_baton,
-                 const range_list_node_t *range,
+copy_source_ops (apr_off_t offset, apr_off_t limit,
+                 svn_txdelta__ops_baton_t *build_baton,
                  const svn_txdelta_window_t *window,
-                 const offset_index_t *offset_index,
-                 apr_pool_t *op_pool, apr_pool_t *pool)
+                 const offset_index_t *ndx,
+                 apr_pool_t *pool)
 {
+  const int first_op = search_offset_index (ndx, offset);
+  const int last_op = search_offset_index (ndx, limit - 1);
+  int op_ndx;
 
-  /* FIXME: "Use" unused variables and functions. */
-  (void) build_baton;
-  (void) range;
-  (void) window;
-  (void) offset_index;
-  (void) op_pool;
-  (void) pool;
+  for (op_ndx = first_op; op_ndx <= last_op; ++op_ndx)
+    {
+      const svn_txdelta_op_t *const op = &window->ops[op_ndx];
+      const apr_off_t *const off = &ndx->offs[op_ndx];
 
-  (void) search_offset_index;
+      const apr_off_t fix_offset = (offset > *off ? offset - *off : 0);
+      const apr_off_t fix_limit = (off[1] > limit ? off[1] - limit : 0);
+
+      /* It would be extremely weird if the fixed-up op had zero length. */
+      assert(fix_offset + fix_limit < op->length);
+
+      if (op->action_code != svn_txdelta_target)
+        {
+          /* Delta ops that don't depend on the virtual target can be
+             copied to the composite unchanged. */
+          const char *const new_data = (op->action_code == svn_txdelta_new
+                                        ? (window->new_data->data
+                                           + op->offset + fix_offset)
+                                        : NULL);
+
+          svn_txdelta__insert_op(build_baton, op->action_code,
+                                 op->offset + fix_offset,
+                                 op->length - fix_offset - fix_limit,
+                                 new_data, pool);
+        }
+      else
+        {
+          /* The source of a target copy must start before the current
+             offset in the (virtual) target stream. */
+          assert(op->offset < *off);
+
+          if (op->offset + op->length > *off)
+            {
+              /* Overlapping target copies are a pain in the ass. */
+            }
+          else
+            {
+              /* The recursion _must_ end, otherwise the delta has
+                 circular references, and that is not possible. */
+              copy_source_ops(op->offset + fix_offset,
+                              op->offset + op->length - fix_limit,
+                              build_baton, window, ndx, pool);
+            }
+        }
+    }
 }
 
 
@@ -675,9 +693,10 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
       /* Read the description of the delta composition algorithm in
          notes/fs-improvements.txt before going any further.
          You have been warned. */
+      build_baton.new_data = svn_stringbuf_create ("", pool);
       for (i = 0; i < window_B->num_ops; ++i)
         {
-          const svn_txdelta_op_t *op = &window_B->ops[i];
+          const svn_txdelta_op_t *const op = &window_B->ops[i];
           if (op->action_code != svn_txdelta_source)
             {
               /* Delta ops that don't depend on the source can be copied
@@ -694,7 +713,7 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                  positions in window_B's _source_ stream, which is the
                  same as window_A's _target_ stream! */
               const apr_off_t offset = op->offset;
-              const apr_off_t limit = op->offset + op->length - 1;
+              const apr_off_t limit = op->offset + op->length;
               range_list_node_t *range_list, *range;
 
               splay_range_index(offset, range_index);
@@ -705,11 +724,12 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                   if (range->kind == range_from_target)
                     svn_txdelta__insert_op(&build_baton, svn_txdelta_target,
                                            range->target_offset,
-                                           range->limit - range->offset + 1,
+                                           range->limit - range->offset,
                                            NULL, pool);
                   else
-                    copy_source_ops(&build_baton, range,
-                                    window_A, offset_index, pool, subpool);
+                    copy_source_ops(range->offset, range->limit,
+                                    &build_baton, window_A, offset_index,
+                                    pool);
                 }
 
               free_range_list(range_list, range_index);
