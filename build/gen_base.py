@@ -71,7 +71,12 @@ class _GeneratorBase:
       else:
         self.install[itype] = [ target_ob ]
 
+      # collect all the paths where stuff might get built
       self.target_dirs[target_ob.path] = None
+      for pattern in string.split(self.parser.get(target, 'sources')):
+        if string.find(pattern, os.sep) != -1:
+          self.target_dirs[os.path.join(target_ob.path,
+                                        os.path.dirname(pattern))] = None
 
     if errors:
       raise GenError('Target generation failed.')
