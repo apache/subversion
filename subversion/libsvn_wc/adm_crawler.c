@@ -172,7 +172,12 @@ static svn_error_t *
 do_lock (svn_stringbuf_t *path, apr_hash_t *locks, apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
-      
+  svn_boolean_t locked;
+
+  /* See if this directory is locked already */
+  if (apr_hash_get (locks, path->data, APR_HASH_KEY_STRING) != NULL)
+    return SVN_NO_ERROR;
+
   err = svn_wc__lock (path, 0, pool);
   if (err)
     {
