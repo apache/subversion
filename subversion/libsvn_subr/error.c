@@ -143,7 +143,6 @@ void
 svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
 {
   apr_pool_t *pool = chain->pool;
-  apr_pool_t *oldpool = new_err->pool;
 
   while (chain->child)
     chain = chain->child;
