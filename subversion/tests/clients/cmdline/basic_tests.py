@@ -96,8 +96,8 @@ def basic_checkout(sbox):
   url = svntest.main.current_repo_url
   stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', url,
                                                      '-d', wc_dir)
-  if len (stderr_lines) != 0:
-    print "repeat checkout failed"
+  if len (stderr_lines) == 0:
+    print "repeat checkout succeeded when should have failed"
     return 1
 
   # lambda is restored

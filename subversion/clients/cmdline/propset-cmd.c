@@ -38,7 +38,7 @@ svn_cl__propset (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *propname;
+  const char *propname;
   const svn_string_t *propval = NULL;
   apr_array_header_t *targets;
   int i;
@@ -53,11 +53,11 @@ svn_cl__propset (apr_getopt_t *os,
   SVN_ERR (svn_cl__parse_num_args (os, opt_state,
                                    "propset", num_args_wanted, pool));
 
-  propname  = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
+  propname  = ((const char **) (opt_state->args->elts))[0];
   if (num_args_wanted == 2)
     {
-      svn_stringbuf_t *buf = ((svn_stringbuf_t **) (opt_state->args->elts))[1];
-      propval = svn_string_create_from_buf (buf, pool);
+      const char *buf = ((const char **) (opt_state->args->elts))[1];
+      propval = svn_string_create (buf, pool);
     }
 
   /* suck up all the remaining arguments into a targets array */
@@ -68,15 +68,15 @@ svn_cl__propset (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset(propname->data, propval, target->data,
+      const char *target = ((const char **) (targets->elts))[i];
+      SVN_ERR (svn_client_propset(propname, propval, target,
                                   opt_state->recursive, pool));
 
       if (! opt_state->quiet)
         printf ("property `%s' set%s on '%s'\n",
-                propname->data,
+                propname,
                 opt_state->recursive ? " (recursively)" : "",
-                target->data);
+                target);
     }
 
   return SVN_NO_ERROR;

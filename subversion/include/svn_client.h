@@ -119,8 +119,8 @@ typedef svn_error_t *(*svn_client_prompt_t)
 typedef struct svn_client_auth_baton_t
 {
   /* auth info that the app -may- already have, e.g. from argv[] */
-  char *username;    
-  char *password; 
+  const char *username;    
+  const char *password; 
   
   /* a callback provided by the app layer, for prompting the user */
   svn_client_prompt_t prompt_callback;
@@ -169,11 +169,11 @@ typedef struct svn_client_commit_info_t
 /* The commit candidate structure. */
 typedef struct svn_client_commit_item_t
 {
-  svn_stringbuf_t *path;         /* absolute working-copy path of item */
+  const char *path;              /* absolute working-copy path of item */
   svn_node_kind_t kind;          /* node kind (dir, file) */
-  svn_stringbuf_t *url;          /* commit url for this item */
+  const char *url;               /* commit url for this item */
   svn_revnum_t revision;         /* revision (copyfrom-rev if _IS_COPY) */
-  svn_stringbuf_t *copyfrom_url; /* copyfrom-url */
+  const char *copyfrom_url;      /* copyfrom-url */
   apr_byte_t state_flags;        /* state flags */
 
 } svn_client_commit_item_t;
@@ -182,17 +182,17 @@ typedef struct svn_client_commit_item_t
 /* Callback type used by commit-y operations to get a commit log message
    from the caller.
    
-   COMMIT_ITEMS is an array of svn_client_commit_item_t structures,
-   which may be fully or only partially filled-in, depending on the
-   type of commit operation.  The callback handler should populate
-   *LOG_MSG with the log message of the commit, or NULL if it wishes
-   to abort the commit process.
+   Set *LOG_MSG to the log message for the commit, allocated in POOL,
+   or NULL if wish to abort the commit process.  COMMIT_ITEMS is an
+   array of svn_client_commit_item_t structures, which may be fully or
+   only partially filled-in, depending on the type of commit
+   operation.
 
    BATON is provided along with the callback for use by the handler.
 
    All allocations should be performed in POOL.  */
 typedef svn_error_t *
-(*svn_client_get_commit_log_t) (svn_stringbuf_t **log_msg,
+(*svn_client_get_commit_log_t) (const char **log_msg,
                                 apr_array_header_t *commit_items,
                                 void *baton,
                                 apr_pool_t *pool);
@@ -240,11 +240,11 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
                      const svn_delta_editor_t *after_editor,
                      void *after_edit_baton,
                      svn_client_auth_baton_t *auth_baton,
-                     svn_stringbuf_t *URL,
-                     svn_stringbuf_t *path,
+                     const char *URL,
+                     const char *path,
                      const svn_client_revision_t *revision,
                      svn_boolean_t recurse,
-                     svn_stringbuf_t *xml_src,
+                     const char *xml_src,
                      apr_pool_t *pool);
 
 
@@ -279,8 +279,8 @@ svn_client_update (const svn_delta_editor_t *before_editor,
                    const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
-                   svn_stringbuf_t *path,
-                   svn_stringbuf_t *xml_src,
+                   const char *path,
+                   const char *xml_src,
                    const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
@@ -317,8 +317,8 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
                    const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
-                   svn_stringbuf_t *path,
-                   svn_stringbuf_t *url,
+                   const char *path,
+                   const char *url,
                    const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
@@ -339,7 +339,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
    happen to the repository until a commit occurs.  This scheduling
    can be removed with svn_client_revert. */
 svn_error_t *
-svn_client_add (svn_stringbuf_t *path,
+svn_client_add (const char *path,
                 svn_boolean_t recursive,
                 svn_wc_notify_func_t notify_func,
                 void *notify_baton,
@@ -366,7 +366,7 @@ svn_client_add (svn_stringbuf_t *path,
 */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
-                  svn_stringbuf_t *path,
+                  const char *path,
                   svn_client_auth_baton_t *auth_baton,
                   svn_client_get_commit_log_t log_msg_func,
                   void *log_msg_baton,
@@ -399,7 +399,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
    information is not required.  */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
-                   svn_stringbuf_t *path,
+                   const char *path,
                    svn_boolean_t force,
                    svn_client_auth_baton_t *auth_baton,
                    svn_client_get_commit_log_t log_msg_func,
@@ -464,12 +464,12 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const svn_delta_editor_t *after_editor,
                                 void *after_edit_baton, 
                                 svn_client_auth_baton_t *auth_baton,   
-                                svn_stringbuf_t *path,
-                                svn_stringbuf_t *url,
-                                svn_stringbuf_t *new_entry,
+                                const char *path,
+                                const char *url,
+                                const char *new_entry,
                                 svn_client_get_commit_log_t log_msg_func,
                                 void *log_msg_baton,
-                                svn_stringbuf_t *xml_dst,
+                                const char *xml_dst,
                                 svn_revnum_t revision,
                                 svn_boolean_t nonrecursive,
                                 apr_pool_t *pool);
@@ -528,7 +528,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
-                   svn_stringbuf_t *xml_dst,
+                   const char *xml_dst,
                    svn_revnum_t revision,
                    svn_boolean_t nonrecursive,
                    apr_pool_t *pool);
@@ -562,7 +562,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_revnum_t *youngest,  /* only touched if `update' set */
-                   svn_stringbuf_t *path,
+                   const char *path,
                    svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
@@ -574,7 +574,7 @@ svn_client_status (apr_hash_t **statushash,
    to END in turn, inclusive (but never invoke RECEIVER on a given log
    message more than once).
   
-   TARGETS contains all the working copy paths (as svn_stringbuf_t *'s)
+   TARGETS contains all the working copy paths (as const char *'s)
    for which log messages are desired; the common prefix of TARGETS
    determines the repository and auth info.  RECEIVER is invoked only
    on messages whose revisions involved a change to some path in
@@ -631,16 +631,16 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
    If RECURSE is true (and the PATHs are directories) this will be a
    recursive operation.
   
-   DIFF_OPTIONS (an array of svn_stringbuf_t * items) is used to pass
-   additional command line options to the diff processes invoked to
-   compare files.
+   DIFF_OPTIONS (an array of const char *) is used to pass additional
+   command line options to the diff processes invoked to compare
+   files.
   
    AUTH_BATON is used to communicate with the repository.  */
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_client_auth_baton_t *auth_baton,
-                              svn_stringbuf_t *path1,
+                              const char *path1,
                               const svn_client_revision_t *revision1,
-                              svn_stringbuf_t *path2,
+                              const char *path2,
                               const svn_client_revision_t *revision2,
                               svn_boolean_t recurse,
                               apr_file_t *outfile,
@@ -678,11 +678,11 @@ svn_error_t *
 svn_client_merge (const svn_delta_editor_t *after_editor,
                   void *after_edit_baton,
                   svn_client_auth_baton_t *auth_baton,
-                  svn_stringbuf_t *path1,
+                  const char *path1,
                   const svn_client_revision_t *revision1,
-                  svn_stringbuf_t *path2,
+                  const char *path2,
                   const svn_client_revision_t *revision2,
-                  svn_stringbuf_t *target_wcpath,
+                  const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
                   apr_pool_t *pool);
@@ -691,7 +691,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
 /* Recursively cleanup a working copy directory DIR, finishing any
    incomplete operations, removing lockfiles, etc. */
 svn_error_t *
-svn_client_cleanup (svn_stringbuf_t *dir,
+svn_client_cleanup (const char *dir,
                     apr_pool_t *pool);
 
 
@@ -703,7 +703,7 @@ svn_client_cleanup (svn_stringbuf_t *dir,
    and the path of the reverted item. If this information is not required,
    then NOTIFY_FUNC may be NULL.  */
 svn_error_t *
-svn_client_revert (svn_stringbuf_t *path,
+svn_client_revert (const char *path,
                    svn_boolean_t recursive,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
@@ -718,7 +718,7 @@ svn_client_revert (svn_stringbuf_t *path,
    If PATH's conflict state is removed, call NOTIFY_FUNC (with
    NOTIFY_BATON) if the func is non-NULL. */
 svn_error_t *
-svn_client_resolve (svn_stringbuf_t *path,
+svn_client_resolve (const char *path,
                     svn_wc_notify_func_t notify_func,
                     void *notify_baton,
                     apr_pool_t *pool);
@@ -759,9 +759,9 @@ svn_client_resolve (svn_stringbuf_t *path,
    may be NULL.  */
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
-                 svn_stringbuf_t *src_path,
+                 const char *src_path,
                  const svn_client_revision_t *src_revision,
-                 svn_stringbuf_t *dst_path,
+                 const char *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
@@ -818,9 +818,9 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
    thing.  NOTIFY_FUNC can be NULL if this feedback is not required.  */
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
-                 svn_stringbuf_t *src_path,
+                 const char *src_path,
                  const svn_client_revision_t *src_revision,
-                 svn_stringbuf_t *dst_path,
+                 const char *dst_path,
                  svn_boolean_t force,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,

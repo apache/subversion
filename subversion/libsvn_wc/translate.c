@@ -703,17 +703,16 @@ svn_wc_copy_and_translate (const char *src,
 
 
 svn_error_t *
-svn_wc_translated_file (svn_stringbuf_t **xlated_p,
-                        svn_stringbuf_t *vfile,
+svn_wc_translated_file (const char **xlated_p,
+                        const char *vfile,
                         apr_pool_t *pool)
 {
   enum svn_wc__eol_style style;
   const char *eol;
   svn_wc_keywords_t *keywords;
   
-  SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile->data, pool));
-  SVN_ERR (svn_wc__get_keywords (&keywords,
-                                 vfile->data, NULL, pool));
+  SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords, vfile, NULL, pool));
 
   if ((style == svn_wc__eol_style_none) && (! keywords))
     {
@@ -722,20 +721,20 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
     }
   else  /* some translation is necessary */
     {
-      svn_stringbuf_t *tmp_dir, *tmp_vfile;
+      const char *tmp_dir, *tmp_vfile;
       apr_status_t apr_err;
       apr_file_t *ignored;
 
       /* First, reserve a tmp file name. */
 
-      svn_path_split (vfile, &tmp_dir, &tmp_vfile, pool);
+      svn_path_split_nts (vfile, &tmp_dir, &tmp_vfile, pool);
       
       tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
-                                    tmp_vfile->data, NULL);
+                                    tmp_vfile, NULL);
       
       SVN_ERR (svn_io_open_unique_file (&ignored,
                                         &tmp_vfile,
-                                        tmp_vfile->data,
+                                        tmp_vfile,
                                         SVN_WC__TMP_EXT,
                                         FALSE,
                                         pool));
@@ -746,12 +745,12 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
       if (apr_err)
         return svn_error_createf
           (0, 0, NULL, pool,
-           "svn_wc_translated_file: unable to close %s", tmp_vfile->data);
+           "svn_wc_translated_file: unable to close %s", tmp_vfile);
       
       if (style == svn_wc__eol_style_fixed)
         {
-          SVN_ERR (svn_wc_copy_and_translate (vfile->data,
-                                              tmp_vfile->data,
+          SVN_ERR (svn_wc_copy_and_translate (vfile,
+                                              tmp_vfile,
                                               eol,
                                               TRUE,
                                               keywords,
@@ -760,8 +759,8 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
         }
       else if (style == svn_wc__eol_style_native)
         {
-          SVN_ERR (svn_wc_copy_and_translate (vfile->data,
-                                              tmp_vfile->data,
+          SVN_ERR (svn_wc_copy_and_translate (vfile,
+                                              tmp_vfile,
                                               SVN_WC__DEFAULT_EOL_MARKER,
                                               FALSE,
                                               keywords,
@@ -770,8 +769,8 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
         }
       else if (style == svn_wc__eol_style_none)
         {
-          SVN_ERR (svn_wc_copy_and_translate (vfile->data,
-                                              tmp_vfile->data,
+          SVN_ERR (svn_wc_copy_and_translate (vfile,
+                                              tmp_vfile,
                                               NULL,
                                               FALSE,
                                               keywords,
@@ -783,7 +782,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
           return svn_error_createf
             (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
              "svn_wc_translated_file: %s has unknown eol style property",
-             vfile->data);
+             vfile);
         }
 
       *xlated_p = tmp_vfile;
@@ -932,7 +931,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
            || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
       if (entry && (entry->cmt_author))
-        keywords->author = svn_string_create_from_buf (entry->cmt_author, pool);
+        keywords->author = svn_string_create (entry->cmt_author, pool);
       else
         keywords->author = svn_string_create ("", pool);
     }
@@ -940,7 +939,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
            || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
       if (entry && (entry->url))
-        keywords->url = svn_string_create_from_buf (entry->url, pool);
+        keywords->url = svn_string_create (entry->url, pool);
       else
         keywords->url = svn_string_create ("", pool);
     }
@@ -1019,9 +1018,7 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
           
           /* If we haven't already read the entry in, do so now. */
           if (! entry)
-            SVN_ERR (svn_wc_entry (&entry, 
-                                   svn_stringbuf_create (path, pool),
-                                   FALSE, pool));
+            SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
 
           /* Now, try to expand the keyword. */
           SVN_ERR (expand_keyword (&tmp_keywords, &is_valid,

@@ -46,9 +46,11 @@
 static void
 detect_changed (apr_hash_t *changed,
                 svn_repos_node_t *node,
-                svn_stringbuf_t *path,
+                const char *path,
                 apr_pool_t *pool)
 {
+  const char *down_path = path;
+
   /* Recurse sideways first. */
   if (node->sibling)
     detect_changed (changed, node->sibling, path, pool);
@@ -59,13 +61,11 @@ detect_changed (apr_hash_t *changed,
      when the new path is "/", so we'd end up with "", which would
      screw everything up anyway). */ 
   if (node->name && *(node->name))
-    {
-      svn_path_add_component_nts (path, node->name);
-    }
+    down_path = svn_path_join (path, node->name, pool);
 
   /* Recurse downward before processing this node. */
   if (node->child)
-    detect_changed (changed, node->child, path, pool);
+    detect_changed (changed, node->child, down_path, pool);
     
   /* Process this node.
      We register all differences except for directory opens that don't
@@ -76,17 +76,9 @@ detect_changed (apr_hash_t *changed,
          && (! node->prop_mod)))
     {
       apr_hash_set (changed,
-                    apr_pstrdup (pool, path->data), path->len,
+                    apr_pstrdup (pool, path), APR_HASH_KEY_STRING,
                     (void *) ((int) node->action));
     }
-
-  /* "Leave" this node. */
-  svn_path_remove_component (path);
-
-  /* ### todo: See issue #559.  This workaround is slated for
-     demolition in the next ten microseconds. */
-  if (path->len == 0)
-    svn_stringbuf_appendcstr (path, "/");
 }
 
 
@@ -129,23 +121,15 @@ svn_repos_get_logs (svn_repos_t *repos,
      all the revisions in which any of the paths was changed.  */
   if (paths && paths->nelts)
     {
-      int i;
       svn_fs_root_t *rev_root;
-      apr_array_header_t *cpaths =
-          apr_array_make (pool, paths->nelts, sizeof (const char *));
-
-      /* Build an array of const char's from our stringbuf stuff.  */
-      for (i = 0; i < paths->nelts; i++)
-        (*(const char **)apr_array_push (cpaths)) =
-                (APR_ARRAY_IDX (paths, i, svn_stringbuf_t *))->data;
 
       /* Set the revision root to the newer of the revisions we are
          searching for.  */
-      SVN_ERR (svn_fs_revision_root (&rev_root, fs, 
-                                     (start > end) ? start : end, pool));
+      SVN_ERR (svn_fs_revision_root
+               (&rev_root, fs, (start > end) ? start : end, pool));
 
       /* And the search is on... */
-      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, cpaths, pool));
+      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, pool));
 
       /* If no revisions were found for these entries, we have nothing
          to show. Just return now before we break a sweat.  */
@@ -214,8 +198,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                                         FALSE, TRUE, FALSE, FALSE, subpool));
           detect_changed (changed_paths,
                           svn_repos_node_from_baton (edit_baton),
-                          svn_stringbuf_create ("/", subpool),
-                          subpool);
+                          "/", subpool);
 
           /* ### Feels slightly bogus to assume "/" as the right start
              for repository style. */

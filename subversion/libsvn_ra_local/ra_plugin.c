@@ -142,16 +142,14 @@ reporter_link_path (void *reporter_baton,
                     svn_revnum_t revision)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  const svn_string_t *repos_path = NULL, *fs_path = NULL;
+  const char *repos_path = NULL, *fs_path = NULL;
 
   /* Derive a FS path from URL. */
   SVN_ERR (svn_ra_local__split_URL 
-           (&repos_path, &fs_path,
-            svn_stringbuf_create (url, rbaton->session->pool),
-            rbaton->session->pool));
+           (&repos_path, &fs_path, url, rbaton->session->pool));
   
   return svn_repos_link_path (rbaton->report_baton, path, 
-                              fs_path->data, revision);
+                              fs_path, revision);
 }
 
 
@@ -189,7 +187,7 @@ static const svn_ra_reporter_t ra_local_reporter =
 
 static svn_error_t *
 svn_ra_local__open (void **session_baton,
-                    svn_stringbuf_t *repos_URL,
+                    const char *repos_URL,
                     const svn_ra_callbacks_t *callbacks,
                     void *callback_baton,
                     apr_pool_t *pool)
@@ -225,7 +223,7 @@ svn_ra_local__open (void **session_baton,
 
   /* Open the filesystem at located at environment `repos_path' */
   SVN_ERR (svn_repos_open (&(session->repos),
-                           session->repos_path->data,
+                           session->repos_path,
                            session->pool));
 
   /* Cache the filesystem object from the repos here for
@@ -306,7 +304,7 @@ svn_ra_local__get_commit_editor (void *session_baton,
                                  svn_revnum_t *new_rev,
                                  const char **committed_date,
                                  const char **committed_author,
-                                 svn_stringbuf_t *log_msg)
+                                 const char *log_msg)
 {
   svn_ra_local__session_baton_t *sess_baton = session_baton;
   struct commit_cleanup_baton *cb
@@ -361,7 +359,7 @@ svn_ra_local__do_update (void *session_baton,
                          const svn_ra_reporter_t **reporter,
                          void **report_baton,
                          svn_revnum_t update_revision,
-                         svn_stringbuf_t *update_target,
+                         const char *update_target,
                          svn_boolean_t recurse,
                          const svn_delta_edit_fns_t *update_editor,
                          void *update_baton)
@@ -369,10 +367,6 @@ svn_ra_local__do_update (void *session_baton,
   svn_revnum_t revnum_to_update_to;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
-
-  /* ### fix the update_target param at some point */
-  const char *target;
-  target = update_target ? update_target->data : NULL;
 
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
@@ -387,8 +381,8 @@ svn_ra_local__do_update (void *session_baton,
                                    revnum_to_update_to,
                                    sbaton->username,
                                    sbaton->repos, 
-                                   sbaton->fs_path->data,
-                                   target, 
+                                   sbaton->fs_path,
+                                   update_target, 
                                    NULL,
                                    TRUE, /* send text-deltas */
                                    recurse,
@@ -407,21 +401,17 @@ svn_ra_local__do_switch (void *session_baton,
                          const svn_ra_reporter_t **reporter,
                          void **report_baton,
                          svn_revnum_t update_revision,
-                         svn_stringbuf_t *update_target,
+                         const char *update_target,
                          svn_boolean_t recurse,
-                         svn_stringbuf_t *switch_url,
+                         const char *switch_url,
                          const svn_delta_edit_fns_t *update_editor,
                          void *update_baton)
 {
   svn_revnum_t revnum_to_update_to;
-  const svn_string_t *switch_repos_path, *switch_fs_path;
+  const char *switch_repos_path, *switch_fs_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
 
-  /* ### fix the update_target param at some point */
-  const char *target;
-  target = update_target ? update_target->data : NULL;
-  
   /* Pull the relevant fs-path portion out of switch_url. */
   SVN_ERR_W (svn_ra_local__split_URL (&switch_repos_path, &switch_fs_path,
                                       switch_url, sbaton->pool),
@@ -429,12 +419,12 @@ svn_ra_local__do_switch (void *session_baton,
 
   /* Sanity check:  the switch_url better be in the same repository as
      the original session url! */
-  if (! svn_string_compare (sbaton->repos_path, switch_repos_path))
+  if (strcmp (sbaton->repos_path, switch_repos_path) != 0)
     return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, sbaton->pool,
                               "'%s'\n"
                               "is not the same repository as\n"
-                              "'%s'", switch_repos_path->data,
-                              sbaton->repos_path->data);
+                              "'%s'", switch_repos_path,
+                              sbaton->repos_path);
 
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
@@ -449,9 +439,9 @@ svn_ra_local__do_switch (void *session_baton,
                                    revnum_to_update_to,
                                    sbaton->username,
                                    sbaton->repos, 
-                                   sbaton->fs_path->data,
-                                   target,
-                                   switch_fs_path->data,
+                                   sbaton->fs_path,
+                                   update_target,
+                                   switch_fs_path,
                                    TRUE, /* we want text-deltas */
                                    recurse,
                                    update_editor, update_baton,
@@ -469,7 +459,7 @@ static svn_error_t *
 svn_ra_local__do_status (void *session_baton,
                          const svn_ra_reporter_t **reporter,
                          void **report_baton,
-                         svn_stringbuf_t *status_target,
+                         const char *status_target,
                          svn_boolean_t recurse,
                          const svn_delta_edit_fns_t *status_editor,
                          void *status_baton)
@@ -477,10 +467,6 @@ svn_ra_local__do_status (void *session_baton,
   svn_revnum_t revnum_to_update_to;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
-
-  /* ### fix the status_target param at some point */
-  const char *target;
-  target = status_target ? status_target->data : NULL;
 
   SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
 
@@ -492,8 +478,8 @@ svn_ra_local__do_status (void *session_baton,
                                    revnum_to_update_to,
                                    sbaton->username,
                                    sbaton->repos, 
-                                   sbaton->fs_path->data,
-                                   target,
+                                   sbaton->fs_path,
+                                   status_target,
                                    NULL,
                                    FALSE, /* don't send text-deltas */
                                    recurse,
@@ -518,16 +504,14 @@ svn_ra_local__get_log (void *session_baton,
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   apr_array_header_t *abs_paths
-    = apr_array_make (sbaton->pool, paths->nelts, sizeof (svn_stringbuf_t *));
+    = apr_array_make (sbaton->pool, paths->nelts, sizeof (const char *));
   int i;
 
   for (i = 0; i < paths->nelts; i++)
     {
-      svn_stringbuf_t *relative_path
-        = (((svn_stringbuf_t **)(paths)->elts)[i]);
-
-      svn_stringbuf_t *abs_path
-        = svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
+      const char *abs_path;
+      const char *relative_path
+        = (((const char **)(paths)->elts)[i]);
 
       /* ### Not sure if this counts as a workaround or not.  The
          session baton uses the empty string to mean root, and not
@@ -535,11 +519,13 @@ svn_ra_local__get_log (void *session_baton,
          a path library function to add this separator -- hardcoding
          it is totally bogus.  See issue #559, though it may be only
          tangentially related. */
-      if (abs_path->len == 0)
-        svn_stringbuf_appendcstr (abs_path, "/");
+      if (relative_path[0] == '\0')
+        abs_path = "/";
+      else
+        abs_path = apr_pstrdup (sbaton->pool, sbaton->fs_path);
 
-      svn_path_add_component (abs_path, relative_path);
-      (*((svn_stringbuf_t **)(apr_array_push (abs_paths)))) = abs_path;
+      abs_path = svn_path_join (abs_path, relative_path, sbaton->pool);
+      (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
   return svn_repos_get_logs (sbaton->repos,
@@ -561,8 +547,7 @@ svn_ra_local__do_check_path (svn_node_kind_t *kind,
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   svn_fs_root_t *root;
-  svn_stringbuf_t *abs_path 
-    = svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
+  const char *abs_path = sbaton->fs_path;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -570,17 +555,17 @@ svn_ra_local__do_check_path (svn_node_kind_t *kind,
      a path library function to add this separator -- hardcoding
      it is totally bogus.  See issue #559, though it may be only
      tangentially related. */
-  if (abs_path->len == 0)
-    svn_stringbuf_appendcstr (abs_path, "/");
+  if (abs_path[0] == '\0')
+    abs_path = "/";
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    svn_path_add_component_nts (abs_path, path);
+    abs_path = svn_path_join (abs_path, path, sbaton->pool);
 
   if (! SVN_IS_VALID_REVNUM (revision))
     SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, sbaton->pool));
   SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
-  *kind = svn_fs_check_path (root, abs_path->data, sbaton->pool);
+  *kind = svn_fs_check_path (root, abs_path, sbaton->pool);
   return SVN_NO_ERROR;
 }
 
@@ -601,9 +586,7 @@ svn_ra_local__get_file (void *session_baton,
   char buf[SVN_STREAM_CHUNK_SIZE];
   apr_size_t rlen, wlen;
   svn_ra_local__session_baton_t *sbaton = session_baton;
-
-  svn_stringbuf_t *abs_path 
-    = svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
+  const char *abs_path = sbaton->fs_path;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -611,12 +594,12 @@ svn_ra_local__get_file (void *session_baton,
      a path library function to add this separator -- hardcoding
      it is totally bogus.  See issue #559, though it may be only
      tangentially related. */
-  if (abs_path->len == 0)
-    svn_stringbuf_appendcstr (abs_path, "/");
+  if (abs_path[0] == '\0')
+    abs_path = "/";
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    svn_path_add_component_nts (abs_path, path);
+    abs_path = svn_path_join (abs_path, path, sbaton->pool);
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM (revision))
@@ -633,7 +616,7 @@ svn_ra_local__get_file (void *session_baton,
 
   /* Get a stream representing the file's contents. */
   SVN_ERR (svn_fs_file_contents (&contents, root,
-                                 abs_path->data, sbaton->pool));
+                                 abs_path, sbaton->pool));
 
   /* Now push data from the fs stream back at the caller's stream. */
   while (1)
@@ -667,42 +650,38 @@ svn_ra_local__get_file (void *session_baton,
   if (props)
     {
       svn_revnum_t committed_rev;
-      svn_string_t *committed_date, *last_author;
-      svn_stringbuf_t *value;
-      svn_string_t *abs_path_s;
+      const char *committed_date, *last_author;
+      svn_string_t *value;
       char *revision_str = NULL;
 
       /* Create a hash with props attached to the fs node. */
-      SVN_ERR (svn_fs_node_proplist (props, root, abs_path->data,
-                                     sbaton->pool));
+      SVN_ERR (svn_fs_node_proplist (props, root, abs_path, sbaton->pool));
       
       /* Now add some non-tweakable metadata to the hash as well... */
     
       /* The so-called 'entryprops' with info about CR & friends. */
-      abs_path_s = svn_string_create_from_buf (abs_path, sbaton->pool);
       SVN_ERR (svn_repos_get_committed_info (&committed_rev,
                                              &committed_date,
                                              &last_author,
-                                             root, abs_path_s,
+                                             root, abs_path,
                                              sbaton->pool));
 
 
       revision_str = apr_psprintf (sbaton->pool, "%" SVN_REVNUM_T_FMT,
                                    committed_rev);
-      value = svn_stringbuf_create (revision_str, sbaton->pool);
+      value = svn_string_create (revision_str, sbaton->pool);
       apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
                     APR_HASH_KEY_STRING, value);
                     
       if (committed_date)
-        value = svn_stringbuf_create_from_string (committed_date,
-                                                  sbaton->pool);
+        value = svn_string_create (committed_date, sbaton->pool);
       else
         value = NULL;
       apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_DATE, 
                     APR_HASH_KEY_STRING, value);
       
       if (last_author)
-        value = svn_stringbuf_create_from_string (last_author, sbaton->pool);
+        value = svn_string_create (last_author, sbaton->pool);
       else
         value = NULL;
       apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 

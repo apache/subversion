@@ -41,7 +41,7 @@ struct edit_baton
 {
   /* For status, the "destination" of the edit  and whether to honor
      any paths that are 'below'.  */
-  svn_stringbuf_t *path;
+  const char *path;
   svn_boolean_t descend;
 
   /* The youngest revision in the repository.  This is a reference
@@ -115,13 +115,11 @@ tweak_statushash (void *edit_baton,
   /* If not, make it so. */
   if (! statstruct)
     {
-      svn_stringbuf_t *pathkey = svn_stringbuf_create (path, pool);
-        
       /* Use the public API to get a statstruct: */
-      SVN_ERR (svn_wc_status (&statstruct, pathkey, pool));
+      SVN_ERR (svn_wc_status (&statstruct, path, pool));
 
       /* Put the path/struct into the hash. */
-      apr_hash_set (statushash, pathkey->data, pathkey->len, statstruct);
+      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
     }
 
   /* Tweak the structure's repos fields. */
@@ -141,10 +139,10 @@ tweak_statushash (void *edit_baton,
 struct dir_baton
 {
   /* The path to this directory. */
-  svn_stringbuf_t *path;
+  const char *path;
 
   /* Basename of this directory. */
-  svn_stringbuf_t *name;
+  const char *name;
 
   /* The global edit baton. */
   struct edit_baton *edit_baton;
@@ -183,7 +181,7 @@ make_dir_baton (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+  const char *full_path; 
 
   /* Don't do this.  Just do NOT do this to me. */
   if (pb && (! path))
@@ -191,13 +189,13 @@ make_dir_baton (const char *path,
 
   /* Construct the full path of this directory. */
   if (pb)
-    svn_path_add_component_nts (full_path, path);
+    full_path = svn_path_join (eb->path, path, pool);
+  else
+    full_path = apr_pstrdup (pool, eb->path);
 
   /* Finish populating the baton members. */
   d->path         = full_path;
-  d->name         = path ? svn_stringbuf_create (svn_path_basename (path,
-                                                                    pool),
-                                                 pool) : NULL;
+  d->name         = path ? (svn_path_basename (path, pool)) : NULL;
   d->edit_baton   = edit_baton;
   d->parent_baton = parent_baton;
   d->pool         = pool;
@@ -218,10 +216,10 @@ struct file_baton
   apr_pool_t *pool;
 
   /* Name of this file (its entry in the directory). */
-  const svn_stringbuf_t *name;
+  const char *name;
 
   /* Path to this file, either abs or relative to the change-root. */
-  svn_stringbuf_t *path;
+  const char *path;
 
   /* 'svn status' shouldn't print status lines for things that are
      added;  we're only interest in asking if objects that the user
@@ -250,16 +248,17 @@ make_file_baton (struct dir_baton *parent_dir_baton,
   struct dir_baton *pb = parent_dir_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+  const char *full_path;
  
   /* Construct the full path of this directory. */
   if (pb)
-    svn_path_add_component_nts (full_path, path);
+    full_path = svn_path_join (eb->path, path, pool);
+  else
+    full_path = apr_pstrdup (pool, eb->path);
 
   /* Finish populating the baton members. */
   f->path       = full_path;
-  f->name       = svn_stringbuf_create (svn_path_basename (path, pool),
-                                        pool);
+  f->name       = svn_path_basename (path, pool);
   f->pool       = pool;
   f->dir_baton  = pb;
   f->edit_baton = eb;
@@ -303,10 +302,8 @@ delete_entry (const char *path,
   struct dir_baton *db = parent_baton;
   struct edit_baton *eb = db->edit_baton;
   apr_hash_t *entries;
-  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
   const char *name = svn_path_basename (path, pool);
-
-  svn_path_add_component_nts (full_path, path);
+  const char *full_path = svn_path_join (eb->path, path, pool);
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -320,12 +317,12 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc_entries_read (&entries, db->path, FALSE, pool));
   if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               full_path->data,
+                               full_path,
                                svn_wc_status_deleted, 0));
 
   /* Mark the parent dir regardless -- it lost an entry. */
   SVN_ERR (tweak_statushash (db->edit_baton,
-                             db->path->data,
+                             db->path,
                              svn_wc_status_modified, 0));
 
   return SVN_NO_ERROR;
@@ -395,14 +392,14 @@ close_directory (void *dir_baton)
   /* If this directory was added, add the directory to the status hash. */
   if (db->added)
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               db->path->data,
+                               db->path,
                                svn_wc_status_added,
                                db->prop_changed ? svn_wc_status_added : 0));
 
   /* Else, mark the existing directory in the statushash. */
   else
     SVN_ERR (tweak_statushash (db->edit_baton,
-                               db->path->data,
+                               db->path,
                                db->text_changed ? svn_wc_status_modified : 0,
                                db->prop_changed ? svn_wc_status_modified : 0));
   
@@ -491,13 +488,13 @@ close_file (void *file_baton)
   /* If this is a new file, add it to the statushash. */
   if (fb->added)
     SVN_ERR (tweak_statushash (fb->edit_baton,
-                               fb->path->data,
+                               fb->path,
                                svn_wc_status_added, 
                                fb->prop_changed ? svn_wc_status_added : 0));
   /* Else, mark the existing file in the statushash. */
   else
     SVN_ERR (tweak_statushash (fb->edit_baton,
-                               fb->path->data,
+                               fb->path,
                                fb->text_changed ? svn_wc_status_modified : 0,
                                fb->prop_changed ? svn_wc_status_modified : 0));
 
@@ -523,14 +520,14 @@ close_edit (void *edit_baton)
 svn_error_t *
 svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_stringbuf_t *path,
+                          const char *path,
                           svn_boolean_t descend,
                           apr_hash_t *statushash,
                           svn_revnum_t *youngest,
                           apr_pool_t *pool)
 {
   struct edit_baton *eb;
-  svn_stringbuf_t *anchor, *target, *tempbuf;
+  const char *anchor, *target, *tempbuf;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
 
@@ -546,12 +543,14 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
      hash-keys already in the hash.  (svn_wc_statuses is ignorant of
      anchor/target issues.) */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  tempbuf = svn_stringbuf_dup (anchor, pool);
   if (target)
-    svn_path_add_component (tempbuf, target);
+    tempbuf = svn_path_join (anchor, target, pool);
+  else
+    tempbuf = apr_pstrdup (pool, anchor);
 
-  if (! svn_stringbuf_compare (path, tempbuf))
-    eb->path = svn_stringbuf_create ("", pool);
+
+  if (strcmp (path, tempbuf) != 0)
+    eb->path = "";
   else
     eb->path = anchor;
 

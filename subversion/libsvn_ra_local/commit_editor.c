@@ -47,7 +47,7 @@ struct edit_baton
   const char *user;
 
   /* Commit message for this commit. */
-  svn_string_t log_msg;
+  const char *log_msg;
 
   /* Hook to run when when the commit is done. */
   svn_ra_local__commit_hook_t *hook;
@@ -61,7 +61,7 @@ struct edit_baton
   svn_fs_t *fs;
 
   /* Location in fs where where the edit will begin. */
-  svn_stringbuf_t *base_path;
+  const char *base_path;
 
   /** Created during the edit: **/
 
@@ -136,7 +136,7 @@ open_root (void *edit_baton,
                                               eb->repos, 
                                               base_revision, 
                                               eb->user, 
-                                              &(eb->log_msg),
+                                              eb->log_msg,
                                               eb->pool));
   SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
   SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
@@ -148,7 +148,7 @@ open_root (void *edit_baton,
   dirb->edit_baton = edit_baton;
   dirb->parent = NULL;
   dirb->pool = pool;
-  dirb->path = apr_pstrdup (pool, eb->base_path->data);
+  dirb->path = apr_pstrdup (pool, eb->base_path);
 
   *root_baton = dirb;
   return SVN_NO_ERROR;
@@ -166,7 +166,7 @@ delete_entry (const char *path,
   struct edit_baton *eb = parent->edit_baton;
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
-  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  */
   kind = svn_fs_check_path (eb->txn_root, full_path, pool);
@@ -202,7 +202,7 @@ add_directory (const char *path,
   struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  const char *full_path = svn_path_join (eb->base_path, path, pool);
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Sanity check. */  
@@ -213,8 +213,8 @@ add_directory (const char *path,
 
   if (copy_path)
     {
-      const svn_string_t *repos_path;
-      const svn_string_t *fs_path;
+      const char *repos_path;
+      const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
 
@@ -226,12 +226,11 @@ add_directory (const char *path,
 
       /* This add has history.  Let's split the copy_url. */
       SVN_ERR (svn_ra_local__split_URL 
-               (&repos_path, &fs_path, 
-                svn_stringbuf_create (copy_path, subpool), subpool));
+               (&repos_path, &fs_path, copy_path, subpool));
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      if (strcmp (eb->session->repos_path->data, repos_path->data) != 0)
+      if (strcmp (eb->session->repos_path, repos_path) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
            "add_dir `%s': copy_url is from different repo", full_path);
@@ -240,7 +239,7 @@ add_directory (const char *path,
          repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
                                      copy_revision, subpool));
-      SVN_ERR (svn_fs_copy (copy_root, fs_path->data,
+      SVN_ERR (svn_fs_copy (copy_root, fs_path,
                             eb->txn_root, full_path, subpool));
     }
   else
@@ -278,7 +277,7 @@ open_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  Make sure it does not exist,
      else return an out-of-dateness error. */
@@ -323,7 +322,7 @@ add_file (const char *path,
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  const char *full_path = svn_path_join (eb->base_path, path, pool);
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Sanity check. */  
@@ -334,8 +333,8 @@ add_file (const char *path,
 
   if (copy_path)
     {      
-      const svn_string_t *repos_path; 
-      const svn_string_t *fs_path;
+      const char *repos_path; 
+      const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
 
@@ -347,12 +346,11 @@ add_file (const char *path,
 
       /* This add has history.  Let's split the copyfrom_url. */
       SVN_ERR (svn_ra_local__split_URL 
-               (&repos_path, &fs_path, 
-                svn_stringbuf_create (copy_path, subpool), subpool));
+               (&repos_path, &fs_path, copy_path, subpool));
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      if (strcmp (eb->session->repos_path->data, repos_path->data) != 0)
+      if (strcmp (eb->session->repos_path, repos_path) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
                "add_file `%s': copy_url is from different repo", full_path);
@@ -361,7 +359,7 @@ add_file (const char *path,
          repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
                                      copy_revision, subpool));
-      SVN_ERR (svn_fs_copy (copy_root, fs_path->data, 
+      SVN_ERR (svn_fs_copy (copy_root, fs_path, 
                             eb->txn_root, full_path, subpool));
     }
   else
@@ -400,7 +398,7 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
-  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
+  const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Get this node's creation revision (doubles as an existence check). */
   SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, pool));
@@ -520,7 +518,7 @@ svn_error_t *
 svn_ra_local__get_editor (const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_ra_local__session_baton_t *session,
-                          svn_stringbuf_t *log_msg,
+                          const char *log_msg,
                           svn_ra_local__commit_hook_t *hook,
                           void *hook_baton,
                           apr_pool_t *pool)
@@ -545,11 +543,10 @@ svn_ra_local__get_editor (const svn_delta_editor_t **editor,
   /* Set up the edit baton. */
   eb->pool = subpool;
   eb->user = apr_pstrdup (subpool, session->username);
-  eb->log_msg.data = apr_pmemdup (subpool, log_msg->data, log_msg->len + 1);
-  eb->log_msg.len = log_msg->len;
+  eb->log_msg = apr_pstrdup (subpool, log_msg);
   eb->hook = hook;
   eb->hook_baton = hook_baton;
-  eb->base_path = svn_stringbuf_create_from_string (session->fs_path, subpool);
+  eb->base_path = apr_pstrdup (subpool, session->fs_path);
   eb->session = session;
   eb->repos = session->repos;
   eb->fs = svn_repos_fs (session->repos);

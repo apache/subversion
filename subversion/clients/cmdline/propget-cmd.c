@@ -38,7 +38,7 @@ svn_cl__propget (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *propname;
+  const char *propname;
   apr_array_header_t *targets;
   int i;
 
@@ -46,7 +46,7 @@ svn_cl__propget (apr_getopt_t *os,
   SVN_ERR (svn_cl__parse_num_args (os, opt_state,
                                    "propget", 1, pool));
 
-  propname = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
+  propname = ((const char **) (opt_state->args->elts))[0];
 
   /* suck up all the remaining arguments into a targets array */
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
@@ -56,18 +56,12 @@ svn_cl__propget (apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      /* ### Main code should propably be changed to make arguments
-         svn_string_t's instead of svn_stringbuf_t's */
-      svn_string_t pname;
+      const char *target = ((const char **) (targets->elts))[i];
       apr_hash_t *props;
       apr_hash_index_t *hi;
       svn_boolean_t print_filenames = FALSE;
 
-      pname.data = propname->data;
-      pname.len = propname->len;
-
-      SVN_ERR (svn_client_propget (&props, propname->data, target->data,
+      SVN_ERR (svn_client_propget (&props, propname, target,
                                    opt_state->recursive, pool));
 
       print_filenames = (targets->nelts > 1 || apr_hash_count(props) > 1);

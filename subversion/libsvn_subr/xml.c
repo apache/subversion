@@ -377,7 +377,7 @@ amalgamate (const char **atts,
           continue;
         else
           apr_hash_set (ht, apr_pstrndup(pool, key, keylen), keylen, 
-                        val ? svn_stringbuf_create (val, pool) : NULL);
+                        val ? apr_pstrdup (pool, val) : NULL);
       }
 }
 
@@ -390,7 +390,7 @@ svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool)
   
   while ((key = va_arg (ap, char *)) != NULL)
     {
-      svn_stringbuf_t *val = va_arg (ap, svn_stringbuf_t *);
+      const char *val = va_arg (ap, const char *);
       apr_hash_set (ht, key, APR_HASH_KEY_STRING, val);
     }
 
@@ -448,15 +448,14 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
     {
       const void *key;
       void *val;
-      apr_ssize_t keylen;
 
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       assert (val != NULL);
 
       svn_stringbuf_appendcstr (*str, "\n   ");
-      svn_stringbuf_appendcstr (*str, (char *) key);
+      svn_stringbuf_appendcstr (*str, key);
       svn_stringbuf_appendcstr (*str, "=\"");
-      svn_xml_escape_stringbuf (str, (svn_stringbuf_t *) val, pool);
+      svn_xml_escape_nts (str, val, pool);
       svn_stringbuf_appendcstr (*str, "\"");
     }
 

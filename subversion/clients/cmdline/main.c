@@ -871,7 +871,7 @@ main (int argc, const char * const *argv)
               log_is_pathname = TRUE;
             }
         }
-        opt_state.message = svn_stringbuf_create (opt_arg, pool);
+        opt_state.message = apr_pstrdup (pool, opt_arg);
         break;
       case 'r':
         ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
@@ -917,10 +917,10 @@ main (int argc, const char * const *argv)
         opt_state.quiet = TRUE;
         break;
       case svn_cl__xml_file_opt:
-        opt_state.xml_file = svn_stringbuf_create (opt_arg, pool);
+        opt_state.xml_file = apr_pstrdup (pool, opt_arg);
         break;
       case 'd':
-        opt_state.target = svn_stringbuf_create (opt_arg, pool);
+        opt_state.target = apr_pstrdup (pool, opt_arg);
         break;
       case 'F':
         err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);
@@ -934,8 +934,7 @@ main (int argc, const char * const *argv)
         {
           svn_wc_entry_t *e;
 
-          err = svn_wc_entry (&e, svn_stringbuf_create (opt_arg, pool),
-                              FALSE, pool);
+          err = svn_wc_entry (&e, opt_arg, FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)
             log_under_version_control = TRUE;
         }
@@ -950,7 +949,8 @@ main (int argc, const char * const *argv)
 	      svn_pool_destroy (pool);
 	      return EXIT_FAILURE;
 	    }
-	  opt_state.targets = svn_cl__newlinelist_to_array(buffer, pool);
+	  opt_state.targets = svn_cstring_split (buffer->data, "\n\r",
+                                                 TRUE, pool);
 	}
         break;
       case svn_cl__force_opt:
@@ -967,10 +967,10 @@ main (int argc, const char * const *argv)
         opt_state.help = TRUE;
         break;
       case svn_cl__auth_username_opt:
-        opt_state.auth_username = svn_stringbuf_create (opt_arg, pool);
+        opt_state.auth_username = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__auth_password_opt:
-        opt_state.auth_password = svn_stringbuf_create (opt_arg, pool);
+        opt_state.auth_password = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__locale_opt:
         /* The only locale name that ISO C defines is the "C" locale;
@@ -997,7 +997,7 @@ main (int argc, const char * const *argv)
         opt_state.xml = TRUE;
         break;
       case 'x':
-        opt_state.extensions = svn_stringbuf_create(opt_arg, pool);
+        opt_state.extensions = apr_pstrdup (pool, opt_arg);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

@@ -45,14 +45,14 @@ typedef struct svn_ra_local__session_baton_t
   apr_pool_t *pool;
   
   /* A `file://' URL containing a local repository and path. */
-  svn_stringbuf_t *repository_URL;
+  const char *repository_URL;
 
   /* The user accessing the repository. */
   char *username;
 
   /* The URL above, split into two components. */
-  const svn_string_t *repos_path;
-  const svn_string_t *fs_path;
+  const char *repos_path;
+  const char *fs_path;
 
   /* A repository object. */
   svn_repos_t *repos;
@@ -104,9 +104,9 @@ typedef svn_error_t *svn_ra_local__commit_hook_t (svn_revnum_t new_revision,
    this case, is expected to be the empty string.  Also, the path
    which follows the */
 svn_error_t *
-svn_ra_local__split_URL (const svn_string_t **repos_path,
-                         const svn_string_t **fs_path,
-                         svn_stringbuf_t *URL,
+svn_ra_local__split_URL (const char **repos_path,
+                         const char **fs_path,
+                         const char *URL,
                          apr_pool_t *pool);
 
 
@@ -119,8 +119,8 @@ svn_error_t *
 svn_ra_local__checkout (svn_fs_t *fs, 
                         svn_revnum_t revnum, 
                         svn_boolean_t recurse,
-                        svn_stringbuf_t *URL,
-                        const svn_string_t *fs_path,
+                        const char *URL,
+                        const char *fs_path,
                         const svn_delta_editor_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool);
@@ -149,7 +149,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
 svn_error_t *svn_ra_local__get_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_ra_local__session_baton_t *session,
-                                       svn_stringbuf_t *log_msg,
+                                       const char *log_msg,
                                        svn_ra_local__commit_hook_t *hook,
                                        void *hook_baton,
                                        apr_pool_t *pool);

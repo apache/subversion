@@ -28,8 +28,8 @@ int main(int argc, char **argv)
   svn_error_t *err;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
-  svn_stringbuf_t *common_path = 0;
-  svn_stringbuf_t *common_path2 = 0;
+  const char *common_path = 0;
+  const char *common_path2 = 0;
   int i;
 
   if (argc < 2) {
@@ -41,12 +41,10 @@ int main(int argc, char **argv)
   pool = svn_pool_create(NULL);
 
   /* Create the target array */
-  targets = apr_array_make(pool, argc - 1, sizeof(svn_stringbuf_t*));
+  targets = apr_array_make(pool, argc - 1, sizeof(const char *));
   for (i = 1; i < argc; i++)
-    {
-      svn_stringbuf_t * target = svn_stringbuf_create(argv[i], pool);
-      (*((svn_stringbuf_t **)apr_array_push(targets))) = target;
-    }
+    *((const char **)apr_array_push(targets)) = argv[i];
+
 
   /* Call the function */
   err = svn_path_condense_targets(&common_path, &condensed_targets,
@@ -55,13 +53,12 @@ int main(int argc, char **argv)
     svn_handle_error(err, stderr, 1);
 
   /* Display the results */
-  printf("%s: ", common_path->data);
+  printf("%s: ", common_path);
   for (i = 0; i < condensed_targets->nelts; i++)
     {
-      svn_stringbuf_t * target = ((svn_stringbuf_t**)condensed_targets->elts)[i];
+      const char * target = ((const char**)condensed_targets->elts)[i];
       if (target)
-        printf("%s, ",
-               ((svn_stringbuf_t **)condensed_targets->elts)[i]->data);
+        printf("%s, ", target);
       else
         printf("NULL, "); 
     }
@@ -72,7 +69,7 @@ int main(int argc, char **argv)
   if (err != SVN_NO_ERROR)
     svn_handle_error(err, stderr, 1);
 
-  if (!svn_stringbuf_compare(common_path, common_path2))
+  if (strcmp (common_path, common_path2) != 0)
     {
       printf("Common path without getting targets does not match common path "
              "with targets\n");

@@ -91,7 +91,7 @@ typedef struct
   const char *user;
 
   /* Log message for the commit. */
-  svn_stringbuf_t *log_msg;
+  const char *log_msg;
 
   /* The new revision created by this commit. */
   svn_revnum_t *new_rev;
@@ -142,30 +142,21 @@ static const ne_propname fetch_props[] =
 static const ne_propname log_message_prop = { SVN_PROP_PREFIX, "log" };
 
 
-static svn_stringbuf_t *escape_url(const char *url, apr_pool_t *pool)
-{
-  svn_string_t url_str;
-  url_str.data = url;
-  url_str.len = strlen(url);
-  return svn_path_uri_encode(&url_str, pool);
-}
-  
-
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code,
                                     int okay_1, int okay_2)
 {
   ne_request *req;
-  svn_stringbuf_t *url_str = escape_url(url, ras->pool);
+  const char *url_str = svn_path_uri_encode(url, ras->pool);
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url_str->data);
+  req = ne_request_create(ras->sess, method, url_str);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                ras->pool,
                                "Could not create a request (%s %s)",
-                               method, url_str->data);
+                               method, url_str);
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
@@ -400,22 +391,22 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 {
   ne_request *req;
   const char *body;
-  svn_stringbuf_t *url_str;
+  const char *url_str;
 
   /* assert: vsn_url != NULL */
-  url_str = escape_url(vsn_url, cc->ras->pool);
+  url_str = svn_path_uri_encode(vsn_url, cc->ras->pool);
 
   /* ### send a CHECKOUT resource on vsn_url; include cc->activity_url;
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "CHECKOUT", url_str->data);
+  req = ne_request_create(cc->ras->sess, "CHECKOUT", url_str);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                cc->ras->pool,
                                "Could not create a CHECKOUT request (%s)",
-                               url_str->data);
+                               url_str);
     }
 
   /* ### store this into cc to avoid pool growth */
@@ -436,7 +427,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
   /* run the request and get the resulting status code (and svn_error_t) */
   return svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
-                                      "CHECKOUT", url_str->data,
+                                      "CHECKOUT", url_str,
                                       201 /* Created */,
                                       allow_404 ? 404 /* Not Found */ : 0,
                                       cc->ras->pool);
@@ -556,7 +547,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_request *req;
   int code;
   ne_buffer *body; /* ### using an ne_buffer because it can realloc */
-  svn_stringbuf_t *url_str;
+  const char *url_str;
   svn_error_t *err;
 
   /* just punt if there are no changes to make. */
@@ -603,15 +594,15 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 
   ne_buffer_zappend(body, "</D:propertyupdate>");
 
-  url_str = escape_url(rsrc->wr_url, ras->pool);
-  req = ne_request_create(ras->sess, "PROPPATCH", url_str->data);
+  url_str = svn_path_uri_encode(rsrc->wr_url, ras->pool);
+  req = ne_request_create(ras->sess, "PROPPATCH", url_str);
 
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
   /* run the request and get the resulting status code (and svn_error_t) */
   err = svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                     url_str->data,
+                                     url_str,
                                      207 /* Multistatus */,
                                      0 /* nothing else allowed */,
                                      ras->pool);
@@ -1021,16 +1012,16 @@ static svn_error_t * commit_stream_close(void *baton)
   apr_status_t status;
   svn_error_t *err;
   apr_off_t offset = 0;
-  svn_stringbuf_t *url_str = escape_url(rsrc->wr_url, pb->pool);
+  const char *url_str = svn_path_uri_encode(rsrc->wr_url, pb->pool);
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "PUT", url_str->data);
+  req = ne_request_create(cc->ras->sess, "PUT", url_str);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                pb->pool,
                                "Could not create a PUT request (%s)",
-                               url_str->data);
+                               url_str);
     }
 
   /* ### use a symbolic name somewhere for this MIME type? */
@@ -1058,7 +1049,7 @@ static svn_error_t * commit_stream_close(void *baton)
 
   /* run the request and get the resulting status code (and svn_error_t) */
   err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                     "PUT", url_str->data,
+                                     "PUT", url_str,
                                      201 /* Created */,
                                      204 /* No Content */,
                                      cc->ras->pool);
@@ -1169,7 +1160,7 @@ static svn_error_t * commit_close_edit(void *edit_baton)
 }
 
 static svn_error_t * apply_log_message(commit_ctx_t *cc,
-                                       svn_stringbuf_t *log_msg)
+                                       const char *log_msg)
 {
   apr_pool_t *pool = cc->ras->pool;
   const svn_string_t *vcc;
@@ -1197,8 +1188,8 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   SVN_ERR( checkout_resource(cc, &baseline_rsrc, FALSE) );
 
   /* XML-Escape the log message. */
-  xml_data = NULL;              /* Required by svn_xml_escape_stringbuf. */
-  svn_xml_escape_nts(&xml_data, log_msg->data, cc->ras->pool);
+  xml_data = NULL;           /* Required by svn_xml_escape_*. */
+  svn_xml_escape_nts(&xml_data, log_msg, cc->ras->pool);
 
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;
@@ -1223,7 +1214,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  svn_stringbuf_t *log_msg)
+  const char *log_msg)
 {
   svn_ra_session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;

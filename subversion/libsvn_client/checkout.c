@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_ra.h"
@@ -84,38 +85,38 @@ handle_externals_description (const char *externals,
    so that fetching external items (and any errors therefrom) doesn't
    delay the primary checkout.  */
 static svn_error_t *
-process_externals (svn_stringbuf_t *path, apr_pool_t *pool)
+process_externals (const char *path, apr_pool_t *pool)
 {
   const svn_string_t *externals;
 
-  SVN_ERR (svn_wc_prop_get (&externals, SVN_PROP_EXTERNALS, path->data, pool));
+  SVN_ERR (svn_wc_prop_get (&externals, SVN_PROP_EXTERNALS, path, pool));
 
   if (externals)
-    SVN_ERR (handle_externals_description (externals->data, path->data, pool));
+    SVN_ERR (handle_externals_description (externals->data, path, pool));
 
   /* Recurse. */
   {
     apr_hash_t *entries;
     apr_hash_index_t *hi;
+    apr_pool_t *subpool = svn_pool_create (pool);
     
     SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
     for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
       {
-        const void *key;
-        apr_ssize_t klen;
         void *val;
         svn_wc_entry_t *ent;
         
-        apr_hash_this (hi, &key, &klen, &val);
-        ent = (svn_wc_entry_t *) val;
+        apr_hash_this (hi, NULL, NULL, &val);
+        ent = val;
 
         if ((ent->kind == svn_node_dir)
-            && (strcmp (ent->name->data, SVN_WC_ENTRY_THIS_DIR) != 0))
+            && (strcmp (ent->name, SVN_WC_ENTRY_THIS_DIR) != 0))
           {
-            svn_path_add_component (path, ent->name);
-            SVN_ERR (process_externals (path, pool));
-            svn_path_remove_component (path);
+            const char *path2 = svn_path_join (path, ent->name, subpool);
+            SVN_ERR (process_externals (path2, subpool));
           }
+
+        svn_pool_clear (subpool);
       }
   }
 
@@ -133,11 +134,11 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
                      const svn_delta_editor_t *after_editor,
                      void *after_edit_baton,
                      svn_client_auth_baton_t *auth_baton,
-                     svn_stringbuf_t *URL,
-                     svn_stringbuf_t *path,
+                     const char *URL,
+                     const char *path,
                      const svn_client_revision_t *revision,
                      svn_boolean_t recurse,
-                     svn_stringbuf_t *xml_src,
+                     const char *xml_src,
                      apr_pool_t *pool)
 {
   const svn_delta_editor_t *checkout_editor;
@@ -157,7 +158,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Canonicalize the URL. */
-  svn_path_canonicalize (URL);
+  URL = svn_path_canonicalize_nts (URL, pool);
 
   /* Fetch the checkout editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
@@ -184,7 +185,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
       /* Open an RA session to URL. Note that we do not have an admin area
          for storing temp files.  We do, however, want to store auth data
@@ -194,7 +195,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
                                             auth_baton, pool));
 
       SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, path->data, pool));
+               (&revnum, ra_lib, session, revision, path, pool));
 
       /* Tell RA to do a checkout of REVISION; if we pass an invalid
          revnum, that means RA will fetch the latest revision.  */
@@ -222,11 +223,11 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
       const svn_delta_edit_fns_t *wrap_editor;
 
       /* Open xml file. */
-      apr_err = apr_file_open (&in, xml_src->data, (APR_READ | APR_CREATE),
+      apr_err = apr_file_open (&in, xml_src, (APR_READ | APR_CREATE),
                                APR_OS_DEFAULT, pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "unable to open %s", xml_src->data);
+                                  "unable to open %s", xml_src);
 
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */
@@ -240,7 +241,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
                                       wrap_editor,
                                       wrap_edit_baton,
-                                      URL->data,
+                                      URL,
                                       revnum,
                                       pool);
 
@@ -254,6 +255,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
       apr_file_close (in);
     }
 
+  /* fooo */
   SVN_ERR (process_externals (path, pool));
 
   return SVN_NO_ERROR;

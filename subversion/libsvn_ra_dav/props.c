@@ -136,12 +136,7 @@ static void *create_private(void *userdata, const char *url)
   char *url_path;
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
-  svn_string_t my_url;
-  svn_stringbuf_t *url_str;
-  
-  my_url.data = url;
-  my_url.len = strlen(url);
-  url_str = svn_path_uri_decode(&my_url, pc->pool);
+  const char *decoded_url = svn_path_uri_decode(url, pc->pool);
 
   r->pool = pc->pool;
 
@@ -150,7 +145,7 @@ static void *create_private(void *userdata, const char *url)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) uri_parse(url_str->data, &parsed_url, NULL);
+  (void) uri_parse(decoded_url, &parsed_url, NULL);
   url_path = apr_pstrdup(pc->pool, parsed_url.path);
   uri_free(&parsed_url);
 
@@ -309,19 +304,14 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   ne_xml_parser *hip;
   int rv;
   prop_ctx_t pc = { 0 };
-  svn_string_t my_url;
-  svn_stringbuf_t *url_str;
   ne_request *req;
   int status_code;
-
-  my_url.data = url;
-  my_url.len = strlen(url);
-  url_str = svn_path_uri_encode(&my_url, pool);
+  const char *encoded_url = svn_path_uri_encode(url, pool);
 
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
 
-  pc.dph = ne_propfind_create(sess, url_str->data, depth);
+  pc.dph = ne_propfind_create(sess, encoded_url, depth);
   ne_propfind_set_private(pc.dph, create_private, &pc);
   hip = ne_propfind_get_parser(pc.dph);
   ne_xml_push_handler(hip, neon_descriptions,
@@ -349,13 +339,13 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
   if (rv != NE_OK)
     {
-      const char *msg = apr_psprintf(pool, "PROPFIND of %s", url_str->data);
+      const char *msg = apr_psprintf(pool, "PROPFIND of %s", encoded_url);
       return svn_ra_dav__convert_error(sess, msg, rv, pool);
     }
 
   if (404 == status_code)
     return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
-                             "Failed to fetch props for '%s'", url_str->data);
+                             "Failed to fetch props for '%s'", encoded_url);
 
   *results = pc.props;
 

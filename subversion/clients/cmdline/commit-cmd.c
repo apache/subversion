@@ -46,7 +46,7 @@ svn_cl__commit (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
-  svn_stringbuf_t *base_dir;
+  const char *base_dir;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
   svn_revnum_t revnum;
@@ -67,12 +67,12 @@ svn_cl__commit (apr_getopt_t *os,
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
     {
-      svn_stringbuf_t *parent_dir, *base_name;
+      const char *parent_dir, *base_name;
 
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, 
                                          &base_name, pool));
       if (base_name)
-        svn_stringbuf_set (base_dir, parent_dir->data);
+        base_dir = apr_pstrdup (pool, parent_dir);
     }
 
   /* Get revnum set to something meaningful, to cover the xml case. */
@@ -90,7 +90,7 @@ svn_cl__commit (apr_getopt_t *os,
             svn_cl__make_notify_baton (pool),
             auth_baton,
             targets,
-            &svn_cl__get_log_message,
+            svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, base_dir, pool),
             opt_state->xml_file,
             revnum,

@@ -36,7 +36,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client__can_delete (svn_stringbuf_t *path,
+svn_client__can_delete (const char *path,
                         apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -79,7 +79,7 @@ svn_client__can_delete (svn_stringbuf_t *path,
 
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
-                   svn_stringbuf_t *path,
+                   const char *path,
                    svn_boolean_t force, 
                    svn_client_auth_baton_t *auth_baton,
                    svn_client_get_commit_log_t log_msg_func,
@@ -88,23 +88,19 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
-  svn_string_t str;
-
-  str.data = path->data;
-  str.len = path->len;
-  if (svn_path_is_url (&str))
+  if (svn_path_is_url (path))
     {
       /* This is a remote removal.  */
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
-      svn_stringbuf_t *anchor, *target;
+      const char *anchor, *target;
       const svn_delta_editor_t *editor;
       void *edit_baton;
       void *root_baton;
       svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
       const char *committed_date = NULL;
       const char *committed_author = NULL;
-      svn_stringbuf_t *log_msg;
+      const char *log_msg;
       
       /* Create a new commit item and add it to the array. */
       if (log_msg_func)
@@ -114,7 +110,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
             = apr_array_make (pool, 1, sizeof (item));
           
           item = apr_pcalloc (pool, sizeof (*item));
-          item->url = svn_stringbuf_dup (path, pool);
+          item->url = apr_pstrdup (pool, path);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
             = item;
@@ -125,13 +121,13 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
             return SVN_NO_ERROR;
         }
       else
-        log_msg = svn_stringbuf_create ("", pool);
+        log_msg = "";
 
-      svn_path_split (path, &anchor, &target, pool);
+      svn_path_split_nts (path, &anchor, &target, pool);
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
 
       /* Open an RA session for the URL. Note that we don't have a local
          directory, nor a place to put temp files or store the auth data. */
@@ -149,7 +145,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       /* Drive the editor to delete the TARGET. */
       SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool,
                                   &root_baton));
-      SVN_ERR (editor->delete_entry (target->data, SVN_INVALID_REVNUM, 
+      SVN_ERR (editor->delete_entry (target, SVN_INVALID_REVNUM, 
                                      root_baton, pool));
       SVN_ERR (editor->close_directory (root_baton));
       SVN_ERR (editor->close_edit (edit_baton));

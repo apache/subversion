@@ -78,7 +78,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_revnum_t *new_rev,
   const char **committed_date,
   const char **committed_author,
-  svn_stringbuf_t *log_msg);
+  const char *log_msg);
 
 svn_error_t * svn_ra_dav__get_file(
   void *session_baton,
@@ -104,7 +104,7 @@ svn_error_t * svn_ra_dav__do_update(
   const svn_ra_reporter_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
-  svn_stringbuf_t *update_target,
+  const char *update_target,
   svn_boolean_t recurse,
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
@@ -113,7 +113,7 @@ svn_error_t * svn_ra_dav__do_status(
   void *session_baton,
   const svn_ra_reporter_t **reporter,
   void **report_baton,
-  svn_stringbuf_t *status_target,
+  const char *status_target,
   svn_boolean_t recurse,
   const svn_delta_edit_fns_t *wc_status,
   void *wc_status_baton);
@@ -123,9 +123,9 @@ svn_error_t * svn_ra_dav__do_switch(
   const svn_ra_reporter_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
-  svn_stringbuf_t *update_target,
+  const char *update_target,
   svn_boolean_t recurse,
-  svn_stringbuf_t *switch_url,
+  const char *switch_url,
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
 

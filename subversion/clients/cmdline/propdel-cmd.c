@@ -38,14 +38,14 @@ svn_cl__propdel (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *pname;
+  const char *pname;
   apr_array_header_t *targets;
   int i;
 
   SVN_ERR (svn_cl__parse_num_args (os, opt_state, "propdel", 1, pool));
 
   /* Get the property's name. */
-  pname = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
+  pname = ((const char **) (opt_state->args->elts))[0];
 
   /* Suck up all the remaining arguments into a targets array */
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
@@ -56,14 +56,14 @@ svn_cl__propdel (apr_getopt_t *os,
   /* For each target, remove the property PNAME. */
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset (pname->data, NULL, target->data,
+      const char *target = ((const char **) (targets->elts))[i];
+      SVN_ERR (svn_client_propset (pname, NULL, target,
                                    opt_state->recursive, pool));
 
       if (! opt_state->quiet)
-        printf ("property `%s' deleted %s from '%s'.\n", pname->data,
+        printf ("property `%s' deleted %s from '%s'.\n", pname,
                 opt_state->recursive ? "(recursively)" : "",
-                target->data);
+                target);
     }
 
   return SVN_NO_ERROR;

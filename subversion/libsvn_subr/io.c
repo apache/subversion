@@ -86,7 +86,7 @@ svn_io_check_path (const char *path,
 
 svn_error_t *
 svn_io_open_unique_file (apr_file_t **f,
-                         svn_stringbuf_t **unique_name,
+                         const char **unique_name,
                          const char *path,
                          const char *suffix,
                          svn_boolean_t delete_on_close,
@@ -95,6 +95,7 @@ svn_io_open_unique_file (apr_file_t **f,
   char number_buf[6];
   int i;
   apr_size_t iterating_portion_idx;
+  svn_stringbuf_t *unique_name_buf;
 
   /* The random portion doesn't have to be very random; it's just to
      avoid a series of collisions where someone has filename NAME and
@@ -110,22 +111,22 @@ svn_io_open_unique_file (apr_file_t **f,
      (unsigned int)unique_name,
      &random_portion_width);
 
-  *unique_name = svn_stringbuf_create (path, pool);
+  unique_name_buf = svn_stringbuf_create (path, pool);
 
   /* Not sure of a portable PATH_MAX constant to use here, so just
      guessing at 255. */
-  if ((*unique_name)->len >= 255)
+  if (unique_name_buf->len >= 255)
     {
-      int chop_amt = ((*unique_name)->len - 255)
+      int chop_amt = (unique_name_buf->len - 255)
                       + random_portion_width
                       + 3  /* 2 dots */
                       + 5  /* 5 digits of iteration portion */
                       + strlen (suffix);
-      svn_stringbuf_chop (*unique_name, chop_amt);
+      svn_stringbuf_chop (unique_name_buf, chop_amt);
     }
 
-  iterating_portion_idx = (*unique_name)->len + random_portion_width + 2;
-  svn_stringbuf_appendcstr (*unique_name,
+  iterating_portion_idx = unique_name_buf->len + random_portion_width + 2;
+  svn_stringbuf_appendcstr (unique_name_buf,
                             apr_psprintf (pool, ".%s.00000%s",
                                           random_portion, suffix));
 
@@ -139,20 +140,20 @@ svn_io_open_unique_file (apr_file_t **f,
 
       /* Tweak last attempted name to get the next one. */
       sprintf (number_buf, "%05d", i);
-      (*unique_name)->data[iterating_portion_idx + 0] = number_buf[0];
-      (*unique_name)->data[iterating_portion_idx + 1] = number_buf[1];
-      (*unique_name)->data[iterating_portion_idx + 2] = number_buf[2];
-      (*unique_name)->data[iterating_portion_idx + 3] = number_buf[3];
-      (*unique_name)->data[iterating_portion_idx + 4] = number_buf[4];
+      unique_name_buf->data[iterating_portion_idx + 0] = number_buf[0];
+      unique_name_buf->data[iterating_portion_idx + 1] = number_buf[1];
+      unique_name_buf->data[iterating_portion_idx + 2] = number_buf[2];
+      unique_name_buf->data[iterating_portion_idx + 3] = number_buf[3];
+      unique_name_buf->data[iterating_portion_idx + 4] = number_buf[4];
 
-      apr_err = apr_file_open (f, (*unique_name)->data, flag,
+      apr_err = apr_file_open (f, unique_name_buf->data, flag,
                                APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
         continue;
       else if (apr_err)
         {
-          char *filename = (*unique_name)->data;
+          char *filename = unique_name_buf->data;
           *f = NULL;
           *unique_name = NULL;
           return svn_error_createf (apr_err,
@@ -164,7 +165,10 @@ svn_io_open_unique_file (apr_file_t **f,
                                     filename);
         }
       else
-        return SVN_NO_ERROR;
+        {
+          *unique_name = unique_name_buf->data;
+          return SVN_NO_ERROR;
+        }
     }
 
   *f = NULL;
@@ -206,16 +210,16 @@ svn_io_copy_file (const char *src,
 
 
 svn_error_t *
-svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
+svn_io_append_file (const char *src, const char *dst, apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
-  apr_err = apr_file_append (src->data, dst->data, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_append (src, dst, APR_OS_DEFAULT, pool);
   if (apr_err)
     {
       const char *msg
         = apr_psprintf (pool, "svn_io_append_file: appending %s to %s",
-                        src->data, dst->data);
+                        src, dst);
       return svn_error_create (apr_err, 0, NULL, pool, msg);
     }
   
@@ -223,9 +227,9 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 }
 
 
-svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
-                                          svn_stringbuf_t *dst_parent,
-                                          svn_stringbuf_t *dst_basename,
+svn_error_t *svn_io_copy_dir_recursively (const char *src,
+                                          const char *dst_parent,
+                                          const char *dst_basename,
                                           svn_boolean_t copy_perms,
                                           apr_pool_t *pool)
 {
@@ -233,47 +237,43 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
   apr_status_t status;
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
-  svn_stringbuf_t *dst_path, *src_target, *dst_target;
+  const char *dst_path;
 
   /* Make a subpool for recursion */
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
-  dst_path = svn_stringbuf_dup (dst_parent, pool);
-  svn_path_add_component (dst_path, dst_basename);
+  dst_path = svn_path_join (dst_parent, dst_basename, pool);
 
   /* Sanity checks:  SRC and DST_PARENT are directories, and
      DST_BASENAME doesn't already exist in DST_PARENT. */
-  SVN_ERR (svn_io_check_path (src->data, &kind, subpool));
+  SVN_ERR (svn_io_check_path (src, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
-                              src->data);
+                              src);
 
-  SVN_ERR (svn_io_check_path (dst_parent->data, &kind, subpool));
+  SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
-                              dst_parent->data);
+                              dst_parent);
 
-  SVN_ERR (svn_io_check_path (dst_path->data, &kind, subpool));
+  SVN_ERR (svn_io_check_path (dst_path, &kind, subpool));
   if (kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, subpool,
-                              "'%s' already exists.", dst_path->data);
+                              "'%s' already exists.", dst_path);
   
   /* Create the new directory. */
   /* ### TODO: copy permissions? */
-  status = apr_dir_make (dst_path->data, APR_OS_DEFAULT, pool);
+  status = apr_dir_make (dst_path, APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
                               "Unable to create directory '%s'",
-                              dst_path->data);
+                              dst_path);
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
   SVN_ERR (svn_io_get_dirents (&dirents, src, subpool));
-
-  src_target = svn_stringbuf_dup (src, subpool);
-  dst_target = svn_stringbuf_dup (dst_path, subpool);
 
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
     {
@@ -282,6 +282,7 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
       void *val;
       const char *entryname;
       enum svn_node_kind *entrykind;
+      const char *src_target;
 
       /* Get next entry and its kind */
       apr_hash_this (hi, &key, &klen, &val);
@@ -289,31 +290,25 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
       entrykind = (enum svn_node_kind *) val;
 
       /* Telescope the entryname onto the source dir. */
-      svn_path_add_component_nts (src_target, entryname);
+      src_target = svn_path_join (src, entryname, subpool);
 
       /* If it's a file, just copy it over. */
       if (*entrykind == svn_node_file)
         {
           /* Telescope and de-telescope the dst_target in here */
-          svn_path_add_component_nts (dst_target, entryname);
-          SVN_ERR (svn_io_copy_file (src_target->data, dst_target->data,
+          const char *dst_target
+            = svn_path_join (dst_path, entryname, subpool);
+          SVN_ERR (svn_io_copy_file (src_target, dst_target,
                                      copy_perms, subpool));
-          svn_path_remove_component (dst_target);
-        }          
-
-      /* If it's a directory, recurse. */
-      else if (*entrykind == svn_node_dir)
+        }
+      else if (*entrykind == svn_node_dir)  /* recurse */
         SVN_ERR (svn_io_copy_dir_recursively (src_target,
-                                              dst_target,
-                                              svn_stringbuf_create (entryname,
-                                                                    subpool),
+                                              dst_path,
+                                              entryname,
                                               copy_perms,
                                               subpool));
 
       /* ### someday deal with other node kinds? */
-
-      /* De-telescope the source dir for the next iteration. */
-      svn_path_remove_component (src_target);
     }
     
 
@@ -330,17 +325,17 @@ svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
 
 svn_error_t *
 svn_io_file_affected_time (apr_time_t *apr_time,
-                           svn_stringbuf_t *path,
+                           const char *path,
                            apr_pool_t *pool)
 {
   apr_finfo_t finfo;
   apr_status_t apr_err;
 
-  apr_err = apr_stat (&finfo, path->data, APR_FINFO_MIN, pool);
+  apr_err = apr_stat (&finfo, path, APR_FINFO_MIN, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "svn_io_file_affected_time: cannot stat %s", path->data);
+       "svn_io_file_affected_time: cannot stat %s", path);
 
   if (finfo.mtime > finfo.ctime)
     *apr_time = finfo.mtime;
@@ -967,7 +962,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
 
 svn_error_t *
 svn_io_get_dirents (apr_hash_t **dirents,
-                    svn_stringbuf_t *path,
+                    const char *path,
                     apr_pool_t *pool)
 {
   apr_status_t status; 
@@ -982,12 +977,12 @@ svn_io_get_dirents (apr_hash_t **dirents,
 
   *dirents = apr_hash_make (pool);
   
-  status = apr_dir_open (&this_dir, path->data, pool);
+  status = apr_dir_open (&this_dir, path, pool);
   if (status) 
     return
       svn_error_createf (status, 0, NULL, pool,
                          "svn_io_get_dirents:  failed to open dir '%s'",
-                         path->data);
+                         path);
 
   for (status = apr_dir_read (&this_entry, flags, this_dir);
        status == APR_SUCCESS;
@@ -1018,14 +1013,14 @@ svn_io_get_dirents (apr_hash_t **dirents,
     return 
       svn_error_createf (status, 0, NULL, pool,
                          "svn_io_get_dirents:  error while reading dir '%s'",
-                         path->data);
+                         path);
 
   status = apr_dir_close (this_dir);
   if (status) 
     return
       svn_error_createf (status, 0, NULL, pool,
                          "svn_io_get_dirents:  failed to close dir '%s'",
-                         path->data);
+                         path);
   
   return SVN_NO_ERROR;
 }

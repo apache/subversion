@@ -90,13 +90,12 @@ svn_cl__checkout (apr_getopt_t *os,
    */
   for (i = 0; i < opt_state->args->nelts; i++)
     {
-      svn_stringbuf_t *local_dir;
-      svn_stringbuf_t *repos_url
-        = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
+      const char *local_dir;
+      const char *repos_url = ((const char **) (opt_state->args->elts))[0];
 
       /* Canonicalize the URL. */
       /* ### um. this function isn't really designed for URLs... */
-      svn_path_canonicalize (repos_url);
+      repos_url = svn_path_canonicalize_nts (repos_url, pool);
 
       /* Ensure that we have a default dir to checkout into. */
       if (! opt_state->target)
@@ -108,9 +107,7 @@ svn_cl__checkout (apr_getopt_t *os,
              ### abs_path and get the last component of *that*. if the
              ### abs_path is "/", then we have to make something up :-)
           */
-          local_dir =
-            svn_stringbuf_create (svn_path_basename (repos_url->data, pool),
-                                  pool);
+          local_dir = svn_path_basename (repos_url, pool);
         }
       else
         local_dir = opt_state->target;

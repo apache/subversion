@@ -33,71 +33,77 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_path_get_absolute(svn_stringbuf_t **pabsolute,
-                      const svn_stringbuf_t *relative,
+svn_path_get_absolute(char **pabsolute,
+                      const char *relative,
                       apr_pool_t *pool)
 {
+  /* ### This belongs in path.c! */
+
+  /* We call svn_path_canonicalize_nts() on the input data, rather
+     than the output, so that `buffer' can be returned directly
+     without const vs non-const issues. */
+
   char * buffer;
-  int apr_err = apr_filepath_merge(&buffer, NULL, relative->data,
+  int apr_err = apr_filepath_merge(&buffer, NULL,
+                                   svn_path_canonicalize_nts (relative, pool),
                                    APR_FILEPATH_NOTRELATIVE
                                    | APR_FILEPATH_TRUENAME,
                                    pool);
-  if (apr_err == APR_SUCCESS)
-    {
-      *pabsolute = svn_stringbuf_create(buffer, pool);
-      svn_path_canonicalize(*pabsolute);
-      return SVN_NO_ERROR;
-    }
-  else
-    {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
-                               "Couldn't determine absolute path of %s.", 
-                               relative->data);
-    }
+  if (apr_err)
+    return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
+                             "Couldn't determine absolute path of %s.", 
+                             relative);
+
+  *pabsolute = buffer;
+
+  return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
-svn_path_split_if_file(svn_stringbuf_t *path,
-                       svn_stringbuf_t **pdirectory,
-                       svn_stringbuf_t **pfile,
-                       apr_pool_t * pool)
+svn_path_split_if_file(const char *path,
+                       const char **pdirectory,
+                       const char **pfile,
+                       apr_pool_t *pool)
 {
+  /* ### This belongs in path.c! */
+
   apr_finfo_t finfo;
-  apr_status_t apr_err = apr_stat(&finfo, path->data, APR_FINFO_TYPE, pool);
+  apr_status_t apr_err = apr_stat(&finfo, path, APR_FINFO_TYPE, pool);
   if (apr_err != APR_SUCCESS)
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL,
                               pool, "Couldn't determine if %s was a file or "
-                              "directory.", path->data);
+                              "directory.", path);
     }
   else
     {
       if (finfo.filetype == APR_DIR)
         {
           *pdirectory = path;
-          *pfile = svn_stringbuf_create("", pool);
+          *pfile = "";
         }
       else if (finfo.filetype == APR_REG)
         {
-          svn_path_split(path, pdirectory, pfile, pool);
+          svn_path_split_nts(path, pdirectory, pfile, pool);
         }
       else 
         {
           return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
                                   "%s is neither a file nor a directory name.",
-                                  path->data);
+                                  path);
         }
     }
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_path_condense_targets (svn_stringbuf_t **pbasedir,
+svn_path_condense_targets (const char **pbasedir,
                            apr_array_header_t **pcondensed_targets,
                            const apr_array_header_t *targets,
                            apr_pool_t *pool)
 {
-  if (targets->nelts <=0)
+  if (targets->nelts <= 0)
     {
       *pbasedir = NULL;
       if (pcondensed_targets)
@@ -106,7 +112,7 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
   else
     {
       int i, j, num_condensed = targets->nelts;
-      svn_stringbuf_t *file;
+      const char *file;
       svn_boolean_t *removed
         = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));
       
@@ -120,20 +126,21 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
          even do the loop if we don't need to condense the targets. */
       
       apr_array_header_t *abs_targets
-        = apr_array_make (pool, targets->nelts, sizeof (svn_stringbuf_t*));
+        = apr_array_make (pool, targets->nelts, sizeof (const char *));
       
-      SVN_ERR (svn_path_get_absolute (pbasedir,
-                                      ((svn_stringbuf_t **) targets->elts)[0],
+      /* ### this cast is a kluge */
+      SVN_ERR (svn_path_get_absolute ((char **) pbasedir,
+                                      ((const char **) targets->elts)[0],
                                       pool));
       
-      (*((svn_stringbuf_t**)apr_array_push (abs_targets))) = *pbasedir;
+      (*((const char **)apr_array_push (abs_targets))) = *pbasedir;
       
       for (i = 1; i < targets->nelts; ++i)
         {
-          svn_stringbuf_t *rel = ((svn_stringbuf_t **)targets->elts)[i];
-          svn_stringbuf_t *absolute;
+          const char *rel = ((const char **)targets->elts)[i];
+          char *absolute;
           SVN_ERR (svn_path_get_absolute (&absolute, rel, pool));
-          (*((svn_stringbuf_t **)apr_array_push (abs_targets))) = absolute;
+          (*((const char **)apr_array_push (abs_targets))) = absolute;
           *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
                                                      absolute, 
                                                      pool);
@@ -154,18 +161,18 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
 
               for (j = i + 1; j < abs_targets->nelts; ++j)
                 {
-                  svn_stringbuf_t *abs_targets_i;
-                  svn_stringbuf_t *abs_targets_j;
-                  svn_stringbuf_t *ancestor;
+                  const char *abs_targets_i;
+                  const char *abs_targets_j;
+                  const char *ancestor;
 
                   if (removed[j])
                     continue;
 
                   abs_targets_i = 
-                    ((svn_stringbuf_t **)abs_targets->elts)[i];
+                    ((const char **)abs_targets->elts)[i];
 
                   abs_targets_j = 
-                    ((svn_stringbuf_t **)abs_targets->elts)[j];
+                    ((const char **)abs_targets->elts)[j];
 
                   ancestor = svn_path_get_longest_ancestor 
                     (abs_targets_i, abs_targets_j, pool);
@@ -173,12 +180,12 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
                   if (! ancestor)
                     continue;
 
-                  if (svn_stringbuf_compare (ancestor, abs_targets_i))
+                  if (strcmp (ancestor, abs_targets_i) == 0)
                     {
                       removed[j] = TRUE;
                       num_condensed--;
                     }
-                  else if (svn_stringbuf_compare (ancestor, abs_targets_j))
+                  else if (strcmp (ancestor, abs_targets_j) == 0)
                     {
                       removed[i] = TRUE;
                       num_condensed--;
@@ -190,10 +197,9 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
              remove the target. */
           for (i = 0; i < abs_targets->nelts; ++i)
             {
-              svn_stringbuf_t *abs_targets_i = ((svn_stringbuf_t **)
-                                             abs_targets->elts)[i];
-              if ((svn_stringbuf_compare (abs_targets_i, *pbasedir))
-                  && !removed[i])
+              const char *abs_targets_i
+                = ((const char **) abs_targets->elts)[i];
+              if ((strcmp (abs_targets_i, *pbasedir) == 0) && (! removed[i]))
                 {
                   removed[i] = TRUE;
                   num_condensed--;
@@ -201,34 +207,36 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
             }
           
           /* Now create the return array, and copy the non-removed items */
-          *pcondensed_targets = apr_array_make (pool, num_condensed,
-                                                sizeof (svn_stringbuf_t*));
+          {
+            int basedir_len = strlen (*pbasedir);
+
+            *pcondensed_targets = apr_array_make (pool, num_condensed,
+                                                  sizeof (const char *));
           
-          for (i = 0; i < abs_targets->nelts; ++i)
-            {
-              char *rel_item;
-
-              if (removed[i])
-                continue;
-
-              rel_item = ((svn_stringbuf_t**)abs_targets->elts)[i]->data;
-
-              rel_item += (*pbasedir)->len + 1;
-
-              (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets)))
-                = svn_stringbuf_create (rel_item, pool);
-            }
+            for (i = 0; i < abs_targets->nelts; ++i)
+              {
+                const char *rel_item;
+                
+                if (removed[i])
+                  continue;
+                
+                rel_item = ((const char **)abs_targets->elts)[i];
+                rel_item += basedir_len + 1;
+                
+                (*((const char **)apr_array_push (*pcondensed_targets)))
+                  = apr_pstrdup (pool, rel_item);
+              }
+          }
         }
       
       /* Finally check if pbasedir is a dir or a file. */
       if (! svn_path_split_if_file (*pbasedir, pbasedir, &file, pool))
         {
-          if ((pcondensed_targets != NULL)
-              && (! svn_path_is_empty (file)))
+          if ((pcondensed_targets != NULL) && (! svn_path_is_empty_nts (file)))
             {
               /* If there was just one target, and it was a file, then
                  return it as the sole condensed target. */
-              (*((svn_stringbuf_t**)apr_array_push (*pcondensed_targets))) = file;
+              (*((const char **)apr_array_push (*pcondensed_targets))) = file;
             }
         }
     }
@@ -261,11 +269,11 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
 
   /* Create our list of absolute paths for our "keepers" */
   abs_targets = apr_array_make (temp_pool, targets->nelts, 
-                                sizeof (svn_stringbuf_t *));
+                                sizeof (const char *));
 
   /* Create our list of untainted paths for our "keepers" */
   rel_targets = apr_array_make (pool, targets->nelts,
-                                sizeof (svn_stringbuf_t *));
+                                sizeof (const char *));
 
   /* For each target in our list we do the following:
 
@@ -277,8 +285,8 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
   */
   for (i = 0; i < targets->nelts; i++)
     {
-      svn_stringbuf_t *rel_path = ((svn_stringbuf_t **)targets->elts)[i];
-      svn_stringbuf_t *abs_path;
+      const char *rel_path = ((const char **)targets->elts)[i];
+      char *abs_path;
       int j;
       svn_boolean_t keep_me;
 
@@ -290,10 +298,10 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
       keep_me = TRUE;
       for (j = 0; j < abs_targets->nelts; j++)
         {
-          svn_stringbuf_t *keeper = ((svn_stringbuf_t **)abs_targets->elts)[j];
+          const char *keeper = ((const char **)abs_targets->elts)[j];
           
           /* Quit here if we find this path already in the keepers. */
-          if (svn_stringbuf_compare (keeper, abs_path))
+          if (strcmp (keeper, abs_path) == 0)
             {
               keep_me = FALSE;
               break;
@@ -311,8 +319,8 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
          and its original path to REL_TARGETS. */
       if (keep_me)
         {
-          (* ((svn_stringbuf_t **) apr_array_push (abs_targets))) = abs_path;
-          (* ((svn_stringbuf_t **) apr_array_push (rel_targets))) = rel_path;
+          (* ((const char **) apr_array_push (abs_targets))) = abs_path;
+          (* ((const char **) apr_array_push (rel_targets))) = rel_path;
         }
     }
   

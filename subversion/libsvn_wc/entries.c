@@ -57,8 +57,8 @@
 /*** Initialization of the entries file. ***/
 
 svn_error_t *
-svn_wc__entries_init (svn_stringbuf_t *path,
-                      svn_stringbuf_t *url,
+svn_wc__entries_init (const char *path,
+                      const char *url,
                       apr_pool_t *pool)
 {
   apr_status_t apr_err;
@@ -79,7 +79,7 @@ svn_wc__entries_init (svn_stringbuf_t *path,
                          svn_xml_normal,
                          SVN_WC__ENTRIES_TOPLEVEL,
                          "xmlns",
-                         svn_stringbuf_create (SVN_XML_NAMESPACE, pool),
+                         SVN_XML_NAMESPACE,
                          NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
@@ -90,9 +90,9 @@ svn_wc__entries_init (svn_stringbuf_t *path,
      svn_xml_self_closing,
      SVN_WC__ENTRIES_ENTRY,
      SVN_WC__ENTRY_ATTR_KIND,
-     svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool), 
+     SVN_WC__ENTRIES_ATTR_DIR_STR,
      SVN_WC__ENTRY_ATTR_REVISION,
-     svn_stringbuf_create (initial_revstr, pool),
+     initial_revstr,
      SVN_WC__ENTRY_ATTR_URL,
      url,
      NULL);
@@ -109,7 +109,7 @@ svn_wc__entries_init (svn_stringbuf_t *path,
       return svn_error_createf (apr_err, 0, NULL, pool,
                                 "svn_wc__entries_init: "
                                 "error writing %s's entries file",
-                                path->data);
+                                path);
     }
 
   /* Now we have a `entries' file with exactly one entry, an entry
@@ -159,23 +159,22 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                        apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = alloc_entry (pool);
-  svn_stringbuf_t *name;
+  const char *name;
   
   *modify_flags = 0;
 
   /* Find the name and set up the entry under that name. */
   name = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
-  entry->name = name ? name 
-                     : svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+  entry->name = name ? name : SVN_WC_ENTRY_THIS_DIR;
 
   /* Attempt to set revision (resolve_to_defaults may do it later, too) */
   {
-    svn_stringbuf_t *revision_str
+    const char *revision_str
       = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING);
 
     if (revision_str)
       {
-        entry->revision = SVN_STR_TO_REV (revision_str->data);
+        entry->revision = SVN_STR_TO_REV (revision_str);
         *modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
       }
     else
@@ -193,46 +192,46 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Set up kind. */
   {
-    svn_stringbuf_t *kindstr
+    const char *kindstr
       = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_KIND, APR_HASH_KEY_STRING);
 
     entry->kind = svn_node_none;
     if (kindstr)
       {
-        if (! strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_FILE_STR))
+        if (! strcmp (kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR))
           entry->kind = svn_node_file;
-        else if (! strcmp (kindstr->data, SVN_WC__ENTRIES_ATTR_DIR_STR))
+        else if (! strcmp (kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR))
           entry->kind = svn_node_dir;
         else
           return svn_error_createf 
             (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
              "Entry '%s' has invalid node kind",
-             (name ? name->data : SVN_WC_ENTRY_THIS_DIR));
+             (name ? name : SVN_WC_ENTRY_THIS_DIR));
         *modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
       }
   }
 
   /* Look for a schedule attribute on this entry. */
   {
-    svn_stringbuf_t *schedulestr
+    const char *schedulestr
       = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_SCHEDULE, APR_HASH_KEY_STRING);
     
     entry->schedule = svn_wc_schedule_normal;
     if (schedulestr)
       {
-        if (! strcmp (schedulestr->data, SVN_WC__ENTRY_VALUE_ADD))
+        if (! strcmp (schedulestr, SVN_WC__ENTRY_VALUE_ADD))
           entry->schedule = svn_wc_schedule_add;
-        else if (! strcmp (schedulestr->data, SVN_WC__ENTRY_VALUE_DELETE))
+        else if (! strcmp (schedulestr, SVN_WC__ENTRY_VALUE_DELETE))
               entry->schedule = svn_wc_schedule_delete;
-        else if (! strcmp (schedulestr->data, SVN_WC__ENTRY_VALUE_REPLACE))
+        else if (! strcmp (schedulestr, SVN_WC__ENTRY_VALUE_REPLACE))
           entry->schedule = svn_wc_schedule_replace;
-        else if (! strcmp (schedulestr->data, ""))
+        else if (! strcmp (schedulestr, ""))
           entry->schedule = svn_wc_schedule_normal;
         else
           return svn_error_createf 
             (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
              "Entry '%s' has invalid '%s' value",
-             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
              SVN_WC__ENTRY_ATTR_SCHEDULE);
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
@@ -264,7 +263,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Is this entry copied? */
   {
-    svn_stringbuf_t *copiedstr, *revstr;
+    const char *copiedstr, *revstr;
       
     copiedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPIED, 
                               APR_HASH_KEY_STRING);
@@ -272,17 +271,17 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->copied = FALSE;
     if (copiedstr)
       {
-        if (! strcmp (copiedstr->data, "true"))
+        if (! strcmp (copiedstr, "true"))
           entry->copied = TRUE;
-        else if (! strcmp (copiedstr->data, "false"))
+        else if (! strcmp (copiedstr, "false"))
           entry->copied = FALSE;
-        else if (! strcmp (copiedstr->data, ""))
+        else if (! strcmp (copiedstr, ""))
           entry->copied = FALSE;
         else
           return svn_error_createf 
             (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
              "Entry '%s' has invalid '%s' value",
-             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
              SVN_WC__ENTRY_ATTR_COPIED);
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
@@ -294,13 +293,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     revstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, 
                            APR_HASH_KEY_STRING);
     if (revstr)
-      entry->copyfrom_rev = SVN_STR_TO_REV (revstr->data);
+      entry->copyfrom_rev = SVN_STR_TO_REV (revstr);
     
   }
 
   /* Is this entry deleted? */
   {
-    svn_stringbuf_t *deletedstr;
+    const char *deletedstr;
       
     deletedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_DELETED, 
                                APR_HASH_KEY_STRING);
@@ -308,17 +307,17 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->deleted = FALSE;
     if (deletedstr)
       {
-        if (! strcmp (deletedstr->data, "true"))
+        if (! strcmp (deletedstr, "true"))
           entry->deleted = TRUE;
-        else if (! strcmp (deletedstr->data, "false"))
+        else if (! strcmp (deletedstr, "false"))
           entry->deleted = FALSE;
-        else if (! strcmp (deletedstr->data, ""))
+        else if (! strcmp (deletedstr, ""))
           entry->deleted = FALSE;
         else
           return svn_error_createf 
             (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
              "Entry '%s' has invalid '%s' value",
-             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
              SVN_WC__ENTRY_ATTR_DELETED);
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
@@ -327,13 +326,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Attempt to set up timestamps. */
   {
-    svn_stringbuf_t *text_timestr, *prop_timestr;
+    const char *text_timestr, *prop_timestr;
     
     text_timestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                                  APR_HASH_KEY_STRING);
     if (text_timestr)
       {
-        if (! strcmp (text_timestr->data, SVN_WC_TIMESTAMP_WC))
+        if (! strcmp (text_timestr, SVN_WC_TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -341,7 +340,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->text_time = svn_time_from_nts (text_timestr->data);
+          entry->text_time = svn_time_from_nts (text_timestr);
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
       }
@@ -350,7 +349,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                  APR_HASH_KEY_STRING);
     if (prop_timestr)
       {
-        if (! strcmp (prop_timestr->data, SVN_WC_TIMESTAMP_WC))
+        if (! strcmp (prop_timestr, SVN_WC_TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -358,7 +357,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                it.  */
           }
         else
-          entry->prop_time = svn_time_from_nts (prop_timestr->data);
+          entry->prop_time = svn_time_from_nts (prop_timestr);
         
         *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
       }
@@ -374,13 +373,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
   /* Setup last-committed values. */
   {
-    svn_stringbuf_t *cmt_datestr, *cmt_revstr;
+    const char *cmt_datestr, *cmt_revstr;
     
     cmt_datestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CMT_DATE,
                                 APR_HASH_KEY_STRING);
     if (cmt_datestr)
       {
-        entry->cmt_date = svn_time_from_nts (cmt_datestr->data);
+        entry->cmt_date = svn_time_from_nts (cmt_datestr);
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_DATE;
       }
     else
@@ -390,7 +389,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                APR_HASH_KEY_STRING);
     if (cmt_revstr)
       {
-        entry->cmt_rev = SVN_STR_TO_REV (cmt_revstr->data);
+        entry->cmt_rev = SVN_STR_TO_REV (cmt_revstr);
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
       }
     else
@@ -438,7 +437,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
       && (! accum->show_deleted))
     ;
   else
-    apr_hash_set (accum->entries, entry->name->data, entry->name->len, entry);
+    apr_hash_set (accum->entries, entry->name, APR_HASH_KEY_STRING, entry);
 }
 
 
@@ -461,8 +460,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      dst->url = svn_stringbuf_dup (src->url, pool);
-      svn_path_add_component (dst->url, dst->name);
+      dst->url = svn_path_join (src->url, dst->name, pool);
     }
 }
 
@@ -503,15 +501,11 @@ resolve_to_defaults (apr_hash_t *entries,
   /* Then use it to fill in missing information in other entries. */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
-      const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
-      svn_stringbuf_t *entryname;
 
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, NULL, NULL, &val);
       this_entry = val;
-      entryname = svn_stringbuf_ncreate (key, keylen, pool);
 
       if (this_entry == default_entry) 
         /* THIS_DIR already has all the information it can possibly
@@ -542,7 +536,7 @@ resolve_to_defaults (apr_hash_t *entries,
 /* Fill ENTRIES according to PATH's entries file. */
 static svn_error_t *
 read_entries (apr_hash_t *entries,
-              svn_stringbuf_t *path,
+              const char *path,
               svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
@@ -587,7 +581,7 @@ read_entries (apr_hash_t *entries,
     if (err)
       return svn_error_createf (err->apr_err, 0, err, pool, 
                                 "read_entries: xml parser failed (%s).", 
-                                path->data);
+                                path);
   } while (!APR_STATUS_IS_EOF(apr_err));
 
   /* Close the entries file. */
@@ -605,7 +599,7 @@ read_entries (apr_hash_t *entries,
 
 svn_error_t *
 svn_wc_entry (svn_wc_entry_t **entry,
-              svn_stringbuf_t *path,
+              const char *path,
               svn_boolean_t show_deleted,
               apr_pool_t *pool)
 {
@@ -615,7 +609,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
 
   *entry = NULL;
 
-  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   /* ### todo:
      Make an innocent way to discover that a dir/path is or is not
@@ -630,7 +624,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-           "svn_wc_entry: %s is not a working copy directory", path->data);
+           "svn_wc_entry: %s is not a working copy directory", path);
 
 
       SVN_ERR (svn_wc_entries_read (&entries, path, show_deleted, pool));
@@ -652,24 +646,24 @@ svn_wc_entry (svn_wc_entry_t **entry,
          Either way, if PATH is a versioned entity, it is versioned as
          a file.  So look split and look in parent for entry info. */
 
-      svn_stringbuf_t *dir, *base_name;
-      svn_path_split (path, &dir, &base_name, pool);
+      const char *dir, *base_name;
+      svn_path_split_nts (path, &dir, &base_name, pool);
 
-      if (svn_path_is_empty (dir))
-        svn_stringbuf_set (dir, ".");
+      if (svn_path_is_empty_nts (dir))
+        dir = ".";
 
       SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
       if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-           "svn_wc_entry: %s is not a working copy directory", dir->data);
+           "svn_wc_entry: %s is not a working copy directory", dir);
 
       /* ### it would be nice to avoid reading all of these. or maybe read
          ### them into a subpool and copy the one that we need up to the
          ### specified pool. */
       SVN_ERR (svn_wc_entries_read (&entries, dir, show_deleted, pool));
       
-      *entry = apr_hash_get (entries, base_name->data, base_name->len);
+      *entry = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
     }
 
   return SVN_NO_ERROR;
@@ -683,7 +677,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
    associated with the directory PATH). */
 static svn_error_t *
 check_entries (apr_hash_t *entries,
-               svn_stringbuf_t *path,
+               const char *path,
                apr_pool_t *pool)
 {
   svn_wc_entry_t *default_entry;
@@ -696,7 +690,7 @@ check_entries (apr_hash_t *entries,
     return svn_error_createf
       (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
        "'%s' has no default entry",
-       path->data);
+       path);
 
   /* Validate DEFAULT_ENTRY's current schedule. */
   switch (default_entry->schedule)
@@ -713,7 +707,7 @@ check_entries (apr_hash_t *entries,
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
          "Directory '%s' has an invalid schedule",
-         path->data);
+         path);
     }
   
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -748,7 +742,7 @@ check_entries (apr_hash_t *entries,
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
              "'%s' in directory '%s' has an invalid schedule",
-             name, path->data);
+             name, path);
         }
 
       if ((default_entry->schedule == svn_wc_schedule_add)
@@ -757,7 +751,7 @@ check_entries (apr_hash_t *entries,
           (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
            "'%s' in directory '%s' (which is scheduled for addition) "
            "is not itself scheduled for addition",
-           name, path->data);
+           name, path);
   
       if ((default_entry->schedule == svn_wc_schedule_delete)
           && (this_entry->schedule != svn_wc_schedule_delete))
@@ -765,7 +759,7 @@ check_entries (apr_hash_t *entries,
           (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
            "'%s' in directory '%s' (which is scheduled for deletion) "
            "is not itself scheduled for deletion",
-           name, path->data);
+           name, path);
 
       if ((default_entry->schedule == svn_wc_schedule_replace)
           && (this_entry->schedule == svn_wc_schedule_normal))
@@ -773,17 +767,17 @@ check_entries (apr_hash_t *entries,
           (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
            "'%s' in directory '%s' (which is scheduled for replacement) "
            "has in invalid schedule",
-           name, path->data);
+           name, path);
     }
   
   return SVN_NO_ERROR;
 }
-#endif
+#endif /* 0 */
 
 
 svn_error_t *
 svn_wc_entries_read (apr_hash_t **entries,
-                     svn_stringbuf_t *path,
+                     const char *path,
                      svn_boolean_t show_deleted,
                      apr_pool_t *pool)
 {
@@ -809,33 +803,32 @@ write_entry (svn_stringbuf_t **output,
              apr_pool_t *pool)
 {
   apr_hash_t *atts = apr_hash_make (pool);
-  svn_stringbuf_t *valuestr;
+  const char *valuestr;
 
   /*** Create a hash that represents an entry. ***/
 
   assert (name);
 
   /* Name */
-  entry->name = svn_stringbuf_create (name, pool);
+  entry->name = apr_pstrdup (pool, name);
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING, 
                 entry->name);
 
   /* Revision */
   if (SVN_IS_VALID_REVNUM (entry->revision))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                  svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
-                                         entry->revision));
+                  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, entry->revision));
   
   /* URL */
   if (entry->url)
-    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING, 
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
                   entry->url);
   
   /* Kind */
   switch (entry->kind)
     {
     case svn_node_dir:
-      valuestr = svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_DIR_STR, pool);
+      valuestr = SVN_WC__ENTRIES_ATTR_DIR_STR;
       break;
 
     case svn_node_none:
@@ -845,7 +838,7 @@ write_entry (svn_stringbuf_t **output,
     case svn_node_file:
     case svn_node_unknown:
     default:
-      valuestr = svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, pool);
+      valuestr = SVN_WC__ENTRIES_ATTR_FILE_STR;
       break;
     }
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_KIND, APR_HASH_KEY_STRING, valuestr);
@@ -854,15 +847,15 @@ write_entry (svn_stringbuf_t **output,
   switch (entry->schedule)
     {
     case svn_wc_schedule_add:
-      valuestr = svn_stringbuf_create (SVN_WC__ENTRY_VALUE_ADD, pool);
+      valuestr = SVN_WC__ENTRY_VALUE_ADD;
       break;
 
     case svn_wc_schedule_delete:
-      valuestr = svn_stringbuf_create (SVN_WC__ENTRY_VALUE_DELETE, pool);
+      valuestr = SVN_WC__ENTRY_VALUE_DELETE;
       break;
 
     case svn_wc_schedule_replace:
-      valuestr = svn_stringbuf_create (SVN_WC__ENTRY_VALUE_REPLACE, pool);
+      valuestr = SVN_WC__ENTRY_VALUE_REPLACE;
       break;
 
     case svn_wc_schedule_normal:
@@ -891,36 +884,32 @@ write_entry (svn_stringbuf_t **output,
                   entry->prejfile);
 
   /* Copy-related Stuff */
-  valuestr = entry->copied ? svn_stringbuf_create ("true", pool) : NULL;
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING,
-                valuestr);
+                (entry->copied ? "true" : NULL));
 
   if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
-                  svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
-                                         entry->copyfrom_rev));
+                  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                entry->copyfrom_rev));
 
   if (entry->copyfrom_url)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
                   entry->copyfrom_url);
 
   /* Deleted state */
-  valuestr = entry->deleted ? svn_stringbuf_create ("true", pool) : NULL;
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
-                valuestr);
+                (entry->deleted ? "true" : NULL));
 
   /* Timestamps */
   if (entry->text_time)
     {
-      const char *timestr = svn_time_to_nts (entry->text_time, pool);
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_TEXT_TIME, APR_HASH_KEY_STRING,
-                    svn_stringbuf_create (timestr, pool));
+                    svn_time_to_nts (entry->text_time, pool));
     }
   if (entry->prop_time)
     {
-      const char *timestr = svn_time_to_nts (entry->prop_time, pool);
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PROP_TIME, APR_HASH_KEY_STRING,
-                    svn_stringbuf_create (timestr, pool));
+                    svn_time_to_nts (entry->prop_time, pool));
     }
 
   /* Checksum */
@@ -931,8 +920,7 @@ write_entry (svn_stringbuf_t **output,
   /* Last-commit Stuff */
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
-                  svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
-                                         entry->cmt_rev));
+                  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, entry->cmt_rev));
 
   if (entry->cmt_author)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,
@@ -940,9 +928,8 @@ write_entry (svn_stringbuf_t **output,
 
   if (entry->cmt_date)
     {
-      const char *timestr = svn_time_to_nts (entry->cmt_date, pool);
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_DATE, APR_HASH_KEY_STRING,
-                    svn_stringbuf_create (timestr, pool));
+                    svn_time_to_nts (entry->cmt_date, pool));
     }
     
 
@@ -979,11 +966,11 @@ write_entry (svn_stringbuf_t **output,
         }
       else
         {
-          svn_stringbuf_t *this_path;
+          const char *this_path;
 
           /* If this is not the "this dir" entry, and the revision is
-             the same as that of the "this dir" entry, don't out the
-             revision. */
+             the same as that of the "this dir" entry, don't write out
+             the revision. */
           if (entry->revision == this_dir->revision)
             apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, 
                           APR_HASH_KEY_STRING, NULL);
@@ -993,9 +980,9 @@ write_entry (svn_stringbuf_t **output,
              don't write out the url */
           if (entry->url)
             {
-              this_path = svn_stringbuf_dup (this_dir->url, pool);
-              svn_path_add_component_nts (this_path, name);
-              if (svn_stringbuf_compare (this_path, entry->url))
+              this_path = svn_path_join (this_dir->url, name, pool);
+
+              if (strcmp (this_path, entry->url) == 0)
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING, NULL);
             }
@@ -1014,7 +1001,7 @@ write_entry (svn_stringbuf_t **output,
 
 svn_error_t *
 svn_wc__entries_write (apr_hash_t *entries,
-                       svn_stringbuf_t *path,
+                       const char *path,
                        apr_pool_t *pool)
 {
   svn_error_t *err = NULL, *err2 = NULL;
@@ -1032,7 +1019,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   if (! this_dir)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "No default entry in directory `%s'", 
-                              path->data);
+                              path);
 
   /* Open entries file for writing. */
   SVN_ERR (svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
@@ -1043,7 +1030,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   svn_xml_make_open_tag (&bigstr, pool, svn_xml_normal,
                          SVN_WC__ENTRIES_TOPLEVEL,
                          "xmlns",
-                         svn_stringbuf_create (SVN_XML_NAMESPACE, pool),
+                         SVN_XML_NAMESPACE,
                          NULL);
 
   /* Write out "this dir" */
@@ -1075,7 +1062,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   if (apr_err)
     err = svn_error_createf (apr_err, 0, NULL, pool,
                              "svn_wc__entries_write: %s",
-                             path->data);
+                             path);
       
   /* Close & sync. */
   err2 = svn_wc__close_adm_file (outfile, path, SVN_WC__ADM_ENTRIES, 1, pool);
@@ -1096,12 +1083,13 @@ svn_wc__entries_write (apr_hash_t *entries,
    of changes. */
 static void
 fold_entry (apr_hash_t *entries,
-            const svn_stringbuf_t *name,
+            const char *name,
             apr_uint32_t modify_flags,
             svn_wc_entry_t *entry,
             apr_pool_t *pool)
 {
-  svn_wc_entry_t *cur_entry = apr_hash_get (entries, name->data, name->len);
+  svn_wc_entry_t *cur_entry
+    = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
   
   assert (name != NULL);
 
@@ -1110,7 +1098,7 @@ fold_entry (apr_hash_t *entries,
 
   /* Name (just a safeguard here, really) */
   if (! cur_entry->name)
-    cur_entry->name = svn_stringbuf_dup (name, pool);
+    cur_entry->name = apr_pstrdup (pool, name);
 
   /* Revision */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_REVISION)
@@ -1118,9 +1106,7 @@ fold_entry (apr_hash_t *entries,
 
   /* Ancestral URL in repository */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
-    cur_entry->url = entry->url 
-                     ? svn_stringbuf_dup (entry->url, pool) 
-                     : NULL;
+    cur_entry->url = entry->url ? apr_pstrdup (pool, entry->url) : NULL;
 
   /* Kind */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
@@ -1133,7 +1119,7 @@ fold_entry (apr_hash_t *entries,
   /* Checksum */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CHECKSUM)
     cur_entry->checksum = entry->checksum
-                          ? svn_stringbuf_dup (entry->checksum, pool) 
+                          ? apr_pstrdup (pool, entry->checksum)
                           : NULL;
   
   /* Copy-related stuff */
@@ -1142,7 +1128,7 @@ fold_entry (apr_hash_t *entries,
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_COPYFROM_URL)
     cur_entry->copyfrom_url = entry->copyfrom_url 
-                              ? svn_stringbuf_dup (entry->copyfrom_url, pool)
+                              ? apr_pstrdup (pool, entry->copyfrom_url)
                               : NULL;
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_COPYFROM_REV)
@@ -1162,22 +1148,22 @@ fold_entry (apr_hash_t *entries,
   /* Conflict stuff */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_OLD)
     cur_entry->conflict_old = entry->conflict_old 
-                              ? svn_stringbuf_dup (entry->conflict_old, pool) 
+                              ? apr_pstrdup (pool, entry->conflict_old) 
                               : NULL;
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_NEW)
     cur_entry->conflict_new = entry->conflict_new
-                              ? svn_stringbuf_dup (entry->conflict_new, pool) 
+                              ? apr_pstrdup (pool, entry->conflict_new) 
                               : NULL;
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICT_WRK)
     cur_entry->conflict_wrk = entry->conflict_wrk
-                              ? svn_stringbuf_dup (entry->conflict_wrk, pool) 
+                              ? apr_pstrdup (pool, entry->conflict_wrk)
                               : NULL;
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_PREJFILE)
     cur_entry->prejfile = entry->prejfile 
-                          ? svn_stringbuf_dup (entry->prejfile, pool) 
+                          ? apr_pstrdup (pool, entry->prejfile)
                           : NULL;
 
   /* Last-commit stuff */
@@ -1189,7 +1175,7 @@ fold_entry (apr_hash_t *entries,
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CMT_AUTHOR)
     cur_entry->cmt_author = entry->cmt_author
-                            ? svn_stringbuf_dup (entry->cmt_author, pool) 
+                            ? apr_pstrdup (pool, entry->cmt_author) 
                             : NULL;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
@@ -1205,15 +1191,14 @@ fold_entry (apr_hash_t *entries,
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
      the heck. */
-  apr_hash_set (entries, name->data, name->len, cur_entry);
+  apr_hash_set (entries, name, APR_HASH_KEY_STRING, cur_entry);
 }
 
 
 void
-svn_wc__entry_remove (apr_hash_t *entries,
-                      svn_stringbuf_t *name)
+svn_wc__entry_remove (apr_hash_t *entries, const char *name)
 {
-  apr_hash_set (entries, name->data, name->len, NULL);
+  apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
 }
 
 
@@ -1226,7 +1211,7 @@ svn_wc__entry_remove (apr_hash_t *entries,
    reflect the caller's original intent. */
 static svn_error_t *
 fold_scheduling (apr_hash_t *entries,
-                 svn_stringbuf_t *name,
+                 const char *name,
                  apr_uint32_t *modify_flags,
                  svn_wc_schedule_t *schedule,
                  apr_pool_t *pool)
@@ -1238,7 +1223,7 @@ fold_scheduling (apr_hash_t *entries,
     return SVN_NO_ERROR;
 
   /* Get the current entry */
-  entry = apr_hash_get (entries, name->data, name->len);
+  entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
 
   /* If we're not merging in changes, only the _add, _delete, _replace
      and _normal schedules are allowed. */
@@ -1273,7 +1258,7 @@ fold_scheduling (apr_hash_t *entries,
           svn_error_createf 
           (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
            "fold_state_changes: '%s' is not a versioned resource",
-           name->data);
+           name);
     }
 
   /* Get the default entry */
@@ -1302,14 +1287,14 @@ fold_scheduling (apr_hash_t *entries,
           (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
            "fold_state_changes: Can't add '%s' to deleted directory"
            "--try undeleting its parent directory first",
-           name->data);
+           name);
       if (*schedule == svn_wc_schedule_replace)
         return 
           svn_error_createf 
           (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
            "fold_state_changes: Can't replace '%s' in deleted directory"
            "--try undeleting its parent directory first",
-           name->data);
+           name);
     }
 
   switch (entry->schedule)
@@ -1338,7 +1323,7 @@ fold_scheduling (apr_hash_t *entries,
               svn_error_createf 
               (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
                "fold_state_changes: Entry '%s' already under revision control",
-               name->data);
+               name);
         }
       break;
 
@@ -1363,7 +1348,7 @@ fold_scheduling (apr_hash_t *entries,
              the SVN_WC_ENTRY_THIS_DIR entry as that would
              leave the entries file in an invalid state. */
           assert (entry != this_dir_entry);
-          apr_hash_set (entries, name->data, name->len, NULL);
+          apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
           return SVN_NO_ERROR;
         }
       break;
@@ -1426,7 +1411,7 @@ fold_scheduling (apr_hash_t *entries,
         svn_error_createf 
         (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
          "fold_state_changes: Entry '%s' has illegal schedule",
-         name->data);
+         name);
     }
   return SVN_NO_ERROR;
 }
@@ -1434,8 +1419,8 @@ fold_scheduling (apr_hash_t *entries,
 
 
 svn_error_t *
-svn_wc__entry_modify (svn_stringbuf_t *path,
-                      svn_stringbuf_t *name,
+svn_wc__entry_modify (const char *path,
+                      const char *name,
                       svn_wc_entry_t *entry,
                       apr_uint32_t modify_flags,
                       apr_pool_t *pool)
@@ -1452,14 +1437,14 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
 
   /* Ensure that NAME is valid. */
   if (name == NULL)
-    name = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+    name = SVN_WC_ENTRY_THIS_DIR;
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
       svn_wc_entry_t *entry_before, *entry_after;
 
       /* Keep a copy of the unmodified entry on hand. */
-      entry_before = apr_hash_get (entries, name->data, name->len);
+      entry_before = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
       
       /* If scheduling changes were made, we have a special routine to
          manage those modifications. */
@@ -1469,7 +1454,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
       /* Special case:  fold_state_changes() may have actually REMOVED
          the entry in question!  If so, don't try to fold_entry, as
          this will just recreate the entry again. */
-      entry_after = apr_hash_get (entries, name->data, name->len);
+      entry_after = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
 
       /* Note if this entry was deleted above so we don't accidentally
          re-add it in the following steps. */
@@ -1497,21 +1482,21 @@ svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
   /* ...and then re-copy stuff that needs to be duped into our pool. */
   if (entry->name)
-    dupentry->name = svn_stringbuf_dup (entry->name, pool);
+    dupentry->name = apr_pstrdup (pool, entry->name);
   if (entry->url)
-    dupentry->url = svn_stringbuf_dup (entry->url, pool);
+    dupentry->url = apr_pstrdup (pool, entry->url);
   if (entry->copyfrom_url)
-    dupentry->copyfrom_url = svn_stringbuf_dup (entry->copyfrom_url, pool);
+    dupentry->copyfrom_url = apr_pstrdup (pool, entry->copyfrom_url);
   if (entry->conflict_old)
-    dupentry->conflict_old = svn_stringbuf_dup (entry->conflict_old, pool);
+    dupentry->conflict_old = apr_pstrdup (pool, entry->conflict_old);
   if (entry->conflict_new)
-    dupentry->conflict_new = svn_stringbuf_dup (entry->conflict_new, pool);
+    dupentry->conflict_new = apr_pstrdup (pool, entry->conflict_new);
   if (entry->conflict_wrk)
-    dupentry->conflict_wrk = svn_stringbuf_dup (entry->conflict_wrk, pool);
+    dupentry->conflict_wrk = apr_pstrdup (pool, entry->conflict_wrk);
   if (entry->prejfile)
-    dupentry->prejfile = svn_stringbuf_dup (entry->prejfile, pool);
+    dupentry->prejfile = apr_pstrdup (pool, entry->prejfile);
   if (entry->cmt_author)
-    dupentry->cmt_author = svn_stringbuf_dup (entry->cmt_author, pool);
+    dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
 
   return dupentry;
 }
@@ -1519,20 +1504,20 @@ svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
 svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
-                     const svn_stringbuf_t *name,
-                     const svn_stringbuf_t *new_url,
+                     const char *name,
+                     const char *new_url,
                      const svn_revnum_t new_rev,
                      apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
 
-  entry = apr_hash_get (entries, name->data, APR_HASH_KEY_STRING);
+  entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-                              "No such entry: '%s'", name->data);
+                              "No such entry: '%s'", name);
 
   if (new_url != NULL)
-    entry->url = svn_stringbuf_dup (new_url, pool);
+    entry->url = apr_pstrdup (pool, new_url);
 
   if ((SVN_IS_VALID_REVNUM (new_rev))
       && (entry->schedule != svn_wc_schedule_add)
@@ -1546,7 +1531,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
      update, then it *must* have meant for the the entry to be
      permanently gone in the parent dir's revision. */
   if (entry->deleted)
-    apr_hash_set (entries, name->data, APR_HASH_KEY_STRING, NULL);
+    apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1642,6 +1627,15 @@ static void
 svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
+
+  /* ############################################################### 
+     ###                                                         ###
+     ### Yo!  If you're thinking of making this function active, ###
+     ### first convert it so that the values in `paths' are      ###
+     ### plain C strings, instead of svn_stringbuf_t *.          ###
+     ###                                                         ### 
+     ############################################################### */
+
 
   /* First, iterate over the hash canonicalizing paths. */
   for (hi = apr_hash_first (pool, paths); hi; hi = apr_hash_next (hi))

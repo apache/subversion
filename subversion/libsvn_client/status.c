@@ -59,7 +59,7 @@
 static svn_error_t *
 add_update_info_to_status_hash (apr_hash_t *statushash,
                                 svn_revnum_t *youngest,
-                                svn_stringbuf_t *path,
+                                const char *path,
                                 svn_client_auth_baton_t *auth_baton,
                                 svn_boolean_t descend,
                                 apr_pool_t *pool)
@@ -71,7 +71,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   const svn_delta_edit_fns_t *wrap_editor;
   void *wrap_edit_baton;
   const svn_ra_reporter_t *reporter;
-  svn_stringbuf_t *anchor, *target, *URL;
+  const char *anchor, *target, *URL;
   svn_wc_entry_t *entry;
 
   /* Use PATH to get the update's anchor and targets. */
@@ -82,16 +82,16 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", anchor->data);
+       "svn_client_update: %s is not under revision control", anchor);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", anchor->data);
-  URL = svn_stringbuf_dup (entry->url, pool);
+       "svn_client_update: entry '%s' has no URL", anchor);
+  URL = apr_pstrdup (pool, entry->url);
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
@@ -139,7 +139,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_revnum_t *youngest,
-                   svn_stringbuf_t *path,
+                   const char *path,
                    svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,

@@ -59,8 +59,8 @@ svn_client_update (const svn_delta_editor_t *before_editor,
                    const svn_delta_editor_t *after_editor,
                    void *after_edit_baton,
                    svn_client_auth_baton_t *auth_baton,
-                   svn_stringbuf_t *path,
-                   svn_stringbuf_t *xml_src,
+                   const char *path,
+                   const char *xml_src,
                    const svn_client_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
@@ -76,14 +76,12 @@ svn_client_update (const svn_delta_editor_t *before_editor,
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   svn_wc_entry_t *entry;
-  svn_stringbuf_t *URL;
-  svn_stringbuf_t *anchor, *target;
+  const char *URL, *anchor, *target;
   svn_error_t *err;
   svn_revnum_t revnum;
 
   /* Sanity check.  Without this, the update is meaningless. */
-  assert (path != NULL);
-  assert (path->len > 0);
+  assert (path && (path[0] != '\0'));
 
   /* Use PATH to get the update's anchor and targets. */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
@@ -93,12 +91,12 @@ svn_client_update (const svn_delta_editor_t *before_editor,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", anchor->data);
+       "svn_client_update: %s is not under revision control", anchor);
   if (! entry->url)
     return svn_error_createf
       (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-       "svn_client_update: entry '%s' has no URL", anchor->data);
-  URL = svn_stringbuf_dup (entry->url, pool);
+       "svn_client_update: entry '%s' has no URL", anchor);
+  URL = apr_pstrdup (pool, entry->url);
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
@@ -138,7 +136,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
@@ -148,7 +146,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
       /* ### todo: shouldn't svn_client__get_revision_number be able
          to take a url as easily as a local path?  */
       SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, anchor->data, pool));
+               (&revnum, ra_lib, session, revision, anchor, pool));
 
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision.  */
@@ -183,11 +181,11 @@ svn_client_update (const svn_delta_editor_t *before_editor,
       apr_file_t *in = NULL;
 
       /* Open xml file. */
-      apr_err = apr_file_open (&in, xml_src->data, (APR_READ | APR_CREATE),
+      apr_err = apr_file_open (&in, xml_src, (APR_READ | APR_CREATE),
                                APR_OS_DEFAULT, pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "unable to open %s", xml_src->data);
+                                  "unable to open %s", xml_src);
 
       /* Do an update by xml-parsing the stream.  An invalid revnum
          means that there will be a revision number in the <delta-pkg>
@@ -196,7 +194,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
                                       wrapped_old_editor,
                                       wrapped_old_edit_baton,
-                                      URL->data,
+                                      URL,
                                       revnum,
                                       pool);
 

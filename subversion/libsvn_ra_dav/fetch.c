@@ -607,12 +607,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       apr_pool_t *pool)
 {
   file_read_ctx_t frc = { 0 };
-  svn_string_t my_url;
-  svn_stringbuf_t *url_str;
-
-  my_url.data	= url;
-  my_url.len	= strlen(url);
-  url_str	= svn_path_uri_encode (&my_url, pool);
+  const char *encoded_url = svn_path_uri_encode (url, pool);
 
   SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
                                         &frc.handler,
@@ -628,7 +623,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   frc.pool = pool;
 
-  SVN_ERR( custom_get_request(sess, url_str->data, relpath,
+  SVN_ERR( custom_get_request(sess, encoded_url, relpath,
                               fetch_file_reader, &frc,
                               get_wc_prop, cb_baton, pool) );
 
@@ -1793,7 +1788,7 @@ make_reporter (void *session_baton,
                const svn_ra_reporter_t **reporter,
                void **report_baton,
                svn_revnum_t revision,
-               svn_stringbuf_t *target,
+               const char *target,
                const char *dst_path,
                svn_boolean_t recurse,
                const svn_delta_edit_fns_t *editor,
@@ -1857,11 +1852,11 @@ make_reporter (void *session_baton,
     }
 
   /* A NULL target is no problem.  */
-  if (target && target->data)
+  if (target)
     {
       s = apr_psprintf(ras->pool, 
                        "<S:update-target>%s</S:update-target>",
-                       target->data);
+                       target);
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
       if (status)
         {
@@ -1917,7 +1912,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
-                                    svn_stringbuf_t *update_target,
+                                    const char *update_target,
                                     svn_boolean_t recurse,
                                     const svn_delta_edit_fns_t *wc_update,
                                     void *wc_update_baton)
@@ -1938,7 +1933,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
 svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
-                                    svn_stringbuf_t *status_target,
+                                    const char *status_target,
                                     svn_boolean_t recurse,
                                     const svn_delta_edit_fns_t *wc_status,
                                     void *wc_status_baton)
@@ -1960,9 +1955,9 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
-                                    svn_stringbuf_t *update_target,
+                                    const char *update_target,
                                     svn_boolean_t recurse,
-                                    svn_stringbuf_t *switch_url,
+                                    const char *switch_url,
                                     const svn_delta_edit_fns_t *wc_update,
                                     void *wc_update_baton)
 {
@@ -1971,7 +1966,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         report_baton,
                         revision_to_update_to,
                         update_target,
-                        switch_url->data,
+                        switch_url,
                         recurse,
                         wc_update,
                         wc_update_baton,

@@ -58,8 +58,8 @@
    afterwards if IS_MOVE is TRUE.  Use POOL for all necessary
    allocations. */
 static svn_error_t *
-wc_to_wc_copy (svn_stringbuf_t *src_path,
-               svn_stringbuf_t *dst_path,
+wc_to_wc_copy (const char *src_path,
+               const char *dst_path,
                svn_boolean_t is_move,
                svn_boolean_t force,
                svn_wc_notify_func_t notify_func,
@@ -67,27 +67,27 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
                apr_pool_t *pool)
 {
   svn_node_kind_t src_kind, dst_kind;
-  svn_stringbuf_t *unused, *parent = dst_path, *base_name;
+  const char *parent = dst_path, *base_name;
 
   /* Verify that SRC_PATH exists. */
-  SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
+  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
-                              "path `%s' does not exist.", src_path->data);
+                              "path `%s' does not exist.", src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
      file or dir added to its parent (possibly an implicit '.').  If
      DST_PATH is a dir, then SRC_PATH's basename will become a new
      file or dir within DST_PATH itself.  Else if it's a file, just
      error out. */
-  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_none)
-    svn_path_split (dst_path, &parent, &base_name, pool);
+    svn_path_split_nts (dst_path, &parent, &base_name, pool);
   else if (dst_kind == svn_node_dir)
-    svn_path_split (src_path, &unused, &base_name, pool);
+    svn_path_split_nts (src_path, NULL, &base_name, pool);
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_path->data);
+                              "file `%s' already exists.", dst_path);
 
   if (is_move && !force)
     {
@@ -111,15 +111,15 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
 
 static svn_error_t *
 repos_to_repos_copy (svn_client_commit_info_t **commit_info,
-                     svn_stringbuf_t *src_url, 
+                     const char *src_url, 
                      const svn_client_revision_t *src_revision, 
-                     svn_stringbuf_t *dst_url, 
+                     const char *dst_url, 
                      svn_client_auth_baton_t *auth_baton,
-                     svn_stringbuf_t *message,
+                     const char *message,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *top_url, *src_rel, *dst_rel, *base_name, *unused;
+  const char *top_url, *src_rel, *dst_rel, *base_name, *unused;
   apr_array_header_t *src_pieces = NULL, *dst_pieces = NULL;
   svn_revnum_t youngest;
   void *ra_baton, *sess;
@@ -134,7 +134,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   svn_revnum_t src_revnum;
-  svn_stringbuf_t *piece, *telepath;
+  const char *piece, *telepath;
 
   /* ### TODO:  Currently, this function will violate the depth-first
      rule of editors when doing a move of something up into one of its
@@ -161,7 +161,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       if ((! src_pieces) || (! src_pieces->nelts))
         return svn_error_createf 
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-           "error decomposing relative path `%s'", src_rel->data);
+           "error decomposing relative path `%s'", src_rel);
     }
 
   dst_rel = svn_path_is_child (top_url, dst_url, pool);
@@ -171,7 +171,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       if ((! dst_pieces) || (! dst_pieces->nelts))
         return svn_error_createf 
           (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-           "error decomposing relative path `%s'", dst_rel->data);
+           "error decomposing relative path `%s'", dst_rel);
     }
 
   /* Allocate room for the root baton, the pieces of the
@@ -187,7 +187,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url->data, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
@@ -207,27 +207,25 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     src_revnum = youngest;
   
   /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (&src_kind, sess,
-                               src_rel ? src_rel->data : NULL, src_revnum));
+  SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel, src_revnum));
   if (src_kind == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
        "path `%s' does not exist in revision `%" SVN_REVNUM_T_FMT "'",
-       src_url->data, src_revnum);
+       src_url, src_revnum);
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (&dst_kind, sess, 
-                               dst_rel ? dst_rel->data : NULL, youngest));
+  SVN_ERR (ra_lib->check_path (&dst_kind, sess, dst_rel, youngest));
   if (dst_kind == svn_node_none)
     {
-      svn_path_split (dst_url, &unused, &base_name, pool);
+      svn_path_split_nts (dst_url, &unused, &base_name, pool);
       dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
     }
   else if (dst_kind == svn_node_dir)
-    svn_path_split (src_url, &unused, &base_name, pool);
+    svn_path_split_nts (src_url, &unused, &base_name, pool);
   else
     return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_url->data);
+                              "file `%s' already exists.", dst_url);
 
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton,
@@ -236,14 +234,11 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                       &committed_author,
                                       message));
 
-  /* Initialize telepath to an empty string that's as big as our
-     biggest relative target (we don't want to have to realloc this
-     thing. */
-  if (src_rel->len > dst_rel->len)
-    telepath = svn_stringbuf_dup (src_rel, pool);
-  else
-    telepath = svn_stringbuf_dup (dst_rel, pool);
-  svn_stringbuf_setempty (telepath);
+  /* ### Avoiding iteration pools in the loops below until know
+     they're necessary.  If performance problems with this function,
+     that's the first place to look. */
+
+  telepath = "";
 
   /* Drive that editor, baby! */
   SVN_ERR (editor->open_root (edit_baton, youngest, pool, &root_baton));
@@ -258,24 +253,24 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       /* open_directory() all the way down to DST's parent. */
       while (i < dst_pieces->nelts)
         {
-          piece = (((svn_stringbuf_t **)(dst_pieces)->elts)[i]);
-          svn_path_add_component (telepath, piece);
-          SVN_ERR (editor->open_directory (telepath->data, batons[i], 
+          piece = (((const char **)(dst_pieces)->elts)[i]);
+          telepath = svn_path_join (telepath, piece, pool);
+          SVN_ERR (editor->open_directory (telepath, batons[i], 
                                            youngest, pool, &(batons[i + 1])));
           i++;
         }
     }
   /* Add our file/dir with copyfrom history. */
-  svn_path_add_component (telepath, base_name);
+  telepath = svn_path_join (telepath, base_name, pool);
   if (src_kind == svn_node_dir)
     {
-      SVN_ERR (editor->add_directory (telepath->data, batons[i], src_url->data,
+      SVN_ERR (editor->add_directory (telepath, batons[i], src_url,
                                       src_revnum, pool, &baton));
       SVN_ERR (editor->close_directory (baton));
     }
   else
     {
-      SVN_ERR (editor->add_file (telepath->data, batons[i], src_url->data,
+      SVN_ERR (editor->add_file (telepath, batons[i], src_url,
                                  src_revnum, pool, &baton));
       SVN_ERR (editor->close_file (baton));
     }
@@ -289,7 +284,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     }
 
   /* If this was a move, we need to remove the SRC_URL. */
-  svn_stringbuf_setempty (telepath);
+  telepath = "";
   if (is_move)
     {
       /* If SRC_PIECES is NULL, we're trying to move a directory into
@@ -300,17 +295,17 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       /* open_directory() all the way down to SRC's parent. */
       while (i < (src_pieces->nelts - 1))
         {
-          piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
-          svn_path_add_component (telepath, piece);
-          SVN_ERR (editor->open_directory (telepath->data, batons[i], 
+          piece = (((const char **)(src_pieces)->elts)[i]);
+          telepath = svn_path_join (telepath, piece, pool);
+          SVN_ERR (editor->open_directory (telepath, batons[i], 
                                            youngest, pool, &(batons[i + 1])));
           i++;
         }
           
       /* Delete SRC. */
-      piece = (((svn_stringbuf_t **)(src_pieces)->elts)[i]);
-      svn_path_add_component (telepath, piece);
-      SVN_ERR (editor->delete_entry (telepath->data, SVN_INVALID_REVNUM, 
+      piece = (((const char **)(src_pieces)->elts)[i]);
+      telepath = svn_path_join (telepath, piece, pool);
+      SVN_ERR (editor->delete_entry (telepath, SVN_INVALID_REVNUM, 
                                      batons[i], pool));
 
       /* Now, close up all those batons (except the root
@@ -352,13 +347,9 @@ unlock_dirs (apr_hash_t *locked_dirs,
   for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
-      void *val;
-      svn_stringbuf_t *strkey;
 
-      apr_hash_this (hi, &key, &keylen, &val);
-      strkey = svn_stringbuf_ncreate ((const char *)key, keylen, pool);
-      SVN_ERR (svn_wc_unlock (strkey, pool));
+      apr_hash_this (hi, &key, NULL, NULL);
+      SVN_ERR (svn_wc_unlock (key, pool));
     }
 
   return SVN_NO_ERROR;
@@ -450,17 +441,17 @@ reconcile_errors (svn_error_t *commit_err,
 
 static svn_error_t *
 wc_to_repos_copy (svn_client_commit_info_t **commit_info,
-                  svn_stringbuf_t *src_path, 
-                  svn_stringbuf_t *dst_url, 
+                  const char *src_path, 
+                  const char *dst_url, 
                   svn_client_auth_baton_t *auth_baton,
-                  svn_stringbuf_t *message,
+                  const char *message,
                   const svn_delta_editor_t *before_editor,
                   void *before_edit_baton,
                   const svn_delta_editor_t *after_editor,
                   void *after_edit_baton,
                   apr_pool_t *pool)
 {
-  svn_stringbuf_t *anchor, *target, *parent, *base_name;
+  const char *anchor, *target, *parent, *base_name;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_delta_editor_t *editor;
@@ -473,22 +464,22 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL, *cleanup_err = NULL;
   svn_boolean_t commit_in_progress = FALSE;
-  svn_stringbuf_t *base_path, *base_url;
+  char *base_path, *base_url;
 
   /* Check the SRC_PATH. */
-  SVN_ERR (svn_io_check_path (src_path->data, &src_kind, pool));
+  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
 
   /* Split the SRC_PATH into a parent and basename. */
-  svn_path_split (src_path, &parent, &base_name, pool);
-  if (svn_path_is_empty (parent))
-    parent = svn_stringbuf_create (".", pool);
+  svn_path_split_nts (src_path, &parent, &base_name, pool);
+  if (svn_path_is_empty_nts (parent))
+    parent = ".";
 
   /* Split the DST_URL into an anchor and target. */
-  svn_path_split (dst_url, &anchor, &target, pool);
+  svn_path_split_nts (dst_url, &anchor, &target, pool);
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
 
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
@@ -496,7 +487,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                         auth_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
-  SVN_ERR (ra_lib->check_path (&dst_kind, session, target->data,
+  SVN_ERR (ra_lib->check_path (&dst_kind, session, target,
                                SVN_INVALID_REVNUM));
   
   /* Close the RA session.  We'll re-open it after we've figured out
@@ -505,7 +496,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   session = NULL;
 
   /* BASE_URL defaults to DST_URL. */
-  base_url = svn_stringbuf_dup (dst_url, pool);
+  base_url = apr_pstrdup (pool, dst_url);
   if (dst_kind == svn_node_none)
     {
       /* DST_URL doesn't exist under it's parent URL, so the URL we
@@ -515,14 +506,14 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* DST_URL is an existing directory URL.  The URL we will be
          creating, then, is DST_URL+BASENAME. */
-      svn_path_add_component (base_url, base_name);
+      base_url = svn_path_join (base_url, base_name, pool);
     }
   else
     {
       /* DST_URL is an existing file, which can't be overwritten or
          used as a container, so error out. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
-                                "file `%s' already exists.", dst_url->data);
+                                "file `%s' already exists.", dst_url);
     }
 
   /* Get the absolute path of the WC path. */
@@ -610,9 +601,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
 
 static svn_error_t *
-repos_to_wc_copy (svn_stringbuf_t *src_url,
+repos_to_wc_copy (const char *src_url,
                   const svn_client_revision_t *src_revision,
-                  svn_stringbuf_t *dst_path, 
+                  const char *dst_path, 
                   svn_client_auth_baton_t *auth_baton,
                   const svn_delta_editor_t *before_editor,
                   void *before_edit_baton,
@@ -629,7 +620,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, src_url->data, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, src_url, pool));
 
   /* Open a repository session to the given URL. We do not (yet) have a
      working copy, so we don't have a corresponding path and tempfiles
@@ -652,11 +643,11 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
            "path `%s' not found in revision `%" SVN_REVNUM_T_FMT "'",
-           src_url->data, src_revnum);
+           src_url, src_revnum);
       else
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-           "path `%s' not found in head revision", src_url->data);
+           "path `%s' not found in head revision", src_url);
     }
 
   /* There are two interfering sets of cases to watch out for here:
@@ -681,27 +672,24 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
    */
 
   /* First, figure out about dst. */
-  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_dir)
     {
-      svn_stringbuf_t *unused, *base_name;
-      svn_path_split (src_url, &unused, &base_name, pool);
+      const char *base_name;
+      svn_path_split_nts (src_url, NULL, &base_name, pool);
 
-      /* We shouldn't affect the caller's dst_path, so dup first and
-         then extend. */
-      dst_path = svn_stringbuf_dup (dst_path, pool);
-      svn_path_add_component (dst_path, base_name);
+      dst_path = svn_path_join (dst_path, base_name, pool);
     }
   else if (dst_kind != svn_node_none)  /* must be a file */
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_path->data);
+                              "file `%s' already exists.", dst_path);
 
   /* Now that dst_path has possibly been reset, check that there's
      nothing in the way of the upcoming checkout. */
-  SVN_ERR (svn_io_check_path (dst_path->data, &dst_kind, pool));
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-                              "`%s' is in the way", dst_path->data);
+                              "`%s' is in the way", dst_path);
 
   if (src_kind == svn_node_dir)
     {    
@@ -757,12 +745,12 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       apr_hash_index_t *hi;
       
       /* Open DST_PATH for writing. */
-      status = apr_file_open (&fp, dst_path->data, (APR_CREATE | APR_WRITE),
+      status = apr_file_open (&fp, dst_path, (APR_CREATE | APR_WRITE),
                               APR_OS_DEFAULT, pool);
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
                                   "failed to open file '%s' for writing.",
-                                  dst_path->data);
+                                  dst_path);
 
       /* Create a generic stream that operates on this file.  */
       fstream = svn_stream_from_aprfile (fp, pool);
@@ -789,7 +777,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
              processing).  */
           kind = svn_property_kind (&len, key);
           if (kind == svn_prop_regular_kind)
-            SVN_ERR (svn_wc_prop_set (key, val, dst_path->data, pool));
+            SVN_ERR (svn_wc_prop_set (key, val, dst_path, pool));
         }
 
       /* Close the file. */
@@ -797,7 +785,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
       if (status)
         return svn_error_createf (status, 0, NULL, pool,
                                   "failed to close file '%s'.",
-                                  dst_path->data);   
+                                  dst_path);   
      
       /* Also, if SRC_REVNUM is invalid ('head'), then FETCHED_REV is now
          equal to the revision that was actually retrieved.  This is
@@ -826,9 +814,9 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
 
 static svn_error_t *
 setup_copy (svn_client_commit_info_t **commit_info,
-            svn_stringbuf_t *src_path,
+            const char *src_path,
             const svn_client_revision_t *src_revision,
-            svn_stringbuf_t *dst_path,
+            const char *dst_path,
             svn_client_auth_baton_t *auth_baton,
             svn_client_get_commit_log_t log_msg_func,
             void *log_msg_baton,
@@ -843,16 +831,11 @@ setup_copy (svn_client_commit_info_t **commit_info,
             apr_pool_t *pool)
 {
   svn_boolean_t src_is_url, dst_is_url;
-  svn_string_t path_str;
-  svn_stringbuf_t *message;
+  const char *message;
 
   /* Are either of our paths URLs? */
-  path_str.data = src_path->data;
-  path_str.len = src_path->len;
-  src_is_url = svn_path_is_url (&path_str);
-  path_str.data = dst_path->data;
-  path_str.len = dst_path->len;
-  dst_is_url = svn_path_is_url (&path_str);
+  src_is_url = svn_path_is_url (src_path);
+  dst_is_url = svn_path_is_url (dst_path);
 
   if (is_move)
     {
@@ -862,12 +845,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
                "cannot move path '%s' into its own child '%s'",
-               src_path->data, dst_path->data);
-          if (svn_stringbuf_compare (src_path, dst_path))
+               src_path, dst_path);
+          if (strcmp (src_path, dst_path) == 0)
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
                "cannot move path '%s' into itself",
-               src_path->data);
+               src_path);
         }
       else
         {
@@ -901,7 +884,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         = apr_array_make (pool, 1, sizeof (item));
       
       item = apr_pcalloc (pool, sizeof (*item));
-      item->url = svn_stringbuf_dup (dst_path, pool);
+      item->url = apr_pstrdup (pool, dst_path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
@@ -912,7 +895,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         return SVN_NO_ERROR;
     }
   else
-    message = svn_stringbuf_create ("", pool);
+    message = "";
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
@@ -949,9 +932,9 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
-                 svn_stringbuf_t *src_path,
+                 const char *src_path,
                  const svn_client_revision_t *src_revision,
-                 svn_stringbuf_t *dst_path,
+                 const char *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
@@ -977,9 +960,9 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
 svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
-                 svn_stringbuf_t *src_path,
+                 const char *src_path,
                  const svn_client_revision_t *src_revision,
-                 svn_stringbuf_t *dst_path,
+                 const char *dst_path,
                  svn_boolean_t force,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,

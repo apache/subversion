@@ -91,7 +91,7 @@ generate_file_diffs (apr_array_header_t **tmp_files_p,
     {
       FILE *source_file;
       FILE *target_file;
-      svn_stringbuf_t *tmpfile_name;
+      const char *tmpfile_name;
       apr_file_t *tmp_file;
 
       /* Open the two source files. */
@@ -128,7 +128,7 @@ generate_file_diffs (apr_array_header_t **tmp_files_p,
       apr_file_close (tmp_file);
 
       /* ...but remember the tmpfile's name. */
-      (*((svn_stringbuf_t **) apr_array_push (tmp_files))) = tmpfile_name;
+      (*((const char **) apr_array_push (tmp_files))) = tmpfile_name;
     }
 
   *tmp_files_p = tmp_files;
@@ -145,7 +145,7 @@ do_delta_combination (const char **out_filename,
                       apr_array_header_t *svndiff_files,
                       apr_pool_t *pool)
 {
-  svn_stringbuf_t *target = ((svn_stringbuf_t **) (svndiff_files->elts))[0];
+  const char *target = ((const char **) (svndiff_files->elts))[0];
 
 
   /* ### TODO:  RIGHT HERE!  HERE YA GO!  THIS IS THE SPOT!!
@@ -153,7 +153,7 @@ do_delta_combination (const char **out_filename,
      Right about ... HERE ... would be a good place to put some delta
      combination code.  See the docstring above for what should
      happen.  */
-  *out_filename = apr_pstrdup (pool, target->data);
+  *out_filename = apr_pstrdup (pool, target);
   return SVN_NO_ERROR;
 }
 
@@ -172,7 +172,6 @@ apply_svndiff_data (const char **out_filename,
 {
   FILE *source_file, *svndiff_file;
   apr_file_t *out_file;
-  svn_stringbuf_t *unique_file;
   svn_txdelta_window_handler_t svndiff_handler;
   svn_stream_t *out_stream, *in_stream;
   void *svndiff_baton;
@@ -182,11 +181,8 @@ apply_svndiff_data (const char **out_filename,
      diff-applied output. */
   source_file = fopen (source_filename, "rb");
   svndiff_file = fopen (svndiff_filename, "rb");
-  SVN_ERR (svn_io_open_unique_file (&out_file, &unique_file,
+  SVN_ERR (svn_io_open_unique_file (&out_file, out_filename,
                                     "svndiff", ".data", FALSE, pool));
-
-  /* Store our returned filename. */
-  *out_filename = unique_file->data;
 
   /* Get a handler/baton that will apply txdelta's to SOURCE_FILE, and
      place the results in OUT_FILE.  */

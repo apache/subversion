@@ -40,8 +40,7 @@ svn_cl__copy (apr_getopt_t *os,
               apr_pool_t *pool)
 {
   apr_array_header_t *targets;
-  svn_stringbuf_t *src_path, *dst_path;
-  svn_string_t path_str;
+  const char *src_path, *dst_path;
   svn_client_auth_baton_t *auth_baton = NULL;
   const svn_delta_editor_t *trace_editor = NULL;
   void *trace_edit_baton = NULL;
@@ -58,16 +57,12 @@ svn_cl__copy (apr_getopt_t *os,
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
-  src_path = ((svn_stringbuf_t **) (targets->elts))[0];
-  dst_path = ((svn_stringbuf_t **) (targets->elts))[1];
+  src_path = ((const char **) (targets->elts))[0];
+  dst_path = ((const char **) (targets->elts))[1];
 
   /* Figure out which type of trace editor to use. */
-  path_str.data = src_path->data;
-  path_str.len = src_path->len;
-  src_is_url = svn_path_is_url (&path_str);
-  path_str.data = dst_path->data;
-  path_str.len = dst_path->len;
-  dst_is_url = svn_path_is_url (&path_str);
+  src_is_url = svn_path_is_url (src_path);
+  dst_is_url = svn_path_is_url (dst_path);
 
   if ((! src_is_url) && (! dst_is_url))
     /* WC->WC : No trace editor needed. */

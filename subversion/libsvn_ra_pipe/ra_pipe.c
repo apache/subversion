@@ -84,9 +84,7 @@ svn_ra_pipe__close (void *session_baton)
 
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__CLOSE_SESSION_TAG, NULL);
 
@@ -115,9 +113,7 @@ svn_ra_pipe__get_latest_revnum (void *session_baton,
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
 
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__LATEST_REVNUM_TAG, NULL);
@@ -148,16 +144,13 @@ svn_ra_pipe__get_dated_revision (void *session_baton,
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
 
   /* ### Should we use a different date format here? */
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__LATEST_REVNUM_TAG,
                          SVN_RA_PIPE__ATT_DATE,
-                         svn_stringbuf_create (svn_time_to_nts (tm, sess->pool),
-                                               sess->pool),
+                         svn_time_to_nts (tm, sess->pool),
                          NULL);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
 
@@ -180,25 +173,23 @@ svn_ra_pipe__get_commit_editor (void *session_baton,
                                 svn_revnum_t *new_rev,
                                 const char **committed_date,
                                 const char **committed_author,
-                                svn_stringbuf_t *log_msg)
+                                const char *log_msg)
 {
   svn_ra_pipe__session_baton_t *sess = session_baton;
   svn_stringbuf_t *buf = NULL;
   svn_stringbuf_t *logbuf = NULL;
   apr_status_t apr_err;
 
-  svn_xml_escape_stringbuf (&logbuf, log_msg, sess->pool);
+  svn_xml_escape_nts (&logbuf, log_msg, sess->pool);
 
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__COMMIT_TAG, 
                          SVN_RA_PIPE__ATT_LOG_MSG,
-                         logbuf,
+                         logbuf->data,
                          NULL);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__COMMIT_TAG);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
@@ -236,17 +227,15 @@ svn_ra_pipe__do_checkout (void *session_baton,
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
 
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__CHECKOUT_TAG,
                          SVN_RA_PIPE__ATT_REV,
-                         svn_stringbuf_createf (sess->pool, "%ld", revision),
+                         apr_psprintf (sess->pool,
+                                       "%" SVN_REVNUM_T_FMT, revision),
                          SVN_RA_PIPE__ATT_RECURSE,
-                         svn_stringbuf_create (recurse ? "true" : "false",
-                                               sess->pool),
+                         recurse ? "true" : "false",
                          NULL);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
 
@@ -367,29 +356,27 @@ svn_ra_pipe__get_log (void *session_baton,
 
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, xNULL);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__GET_LOG_TAG,
                          SVN_RA_PIPE__ATT_STARTREV,
-                         svn_stringbuf_createf (sess->pool, "%ld", start),
+                         apr_psprintf (sess->pool,
+                                       "%" SVN_REVNUM_T_FMT, start),
                          SVN_RA_PIPE__ATT_ENDREV,
-                         svn_stringbuf_createf (sess->pool, "%ld", end),
+                         apr_psprintf (sess->pool,
+                                       "%" SVN_REVNUM_T_FMT, end),
                          SVN_RA_PIPE__ATT_CHANGED_PATHS,
-                         svn_stringbuf_create
-                            ( discover_changed_paths ?  "true" : "false",
-                              sess->pool),
+                         discover_changed_paths ?  "true" : "false",
                          NULL);
   for (i = 0; i < paths->nelts; ++i)
     {
       svn_stringbuf_t *pathbuf = NULL;
-      svn_xml_escape_stringbuf (&pathbuf, ((svn_stringbuf_t **)paths->elts)[i],
-                                sess->pool);
+      svn_xml_escape_nts (&pathbuf, ((const char **)paths->elts)[i],
+                          sess->pool);
       svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                              SVN_RA_PIPE__PATH_TAG,
                              SVN_RA_PIPE__ATT_VALUE,
-                             pathbuf,
+                             pathbuf->data,
                              NULL);
     }
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__GET_LOG_TAG);
@@ -422,16 +409,15 @@ svn_ra_pipe__do_check_path (svn_node_kind_t *kind,
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
 
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__CHECK_PATH_TAG, 
                          SVN_RA_PIPE__ATT_PATH,
-                         pathbuf,
+                         pathbuf->data,
                          SVN_RA_PIPE__ATT_REV,
-                         svn_stringbuf_createf (sess->pool, "%ld", revision),
+                         apr_psprintf (sess->pool,
+                                       "%" SVN_REVNUM_T_FMT, revision),
                          NULL);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
 
@@ -463,15 +449,14 @@ svn_ra_pipe__get_file (void *session_baton,
   svn_xml_make_header (&buf, sess->pool);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_normal,
                          SVN_RA_PIPE__REQUEST_TAG, "xmlns:S",
-                         svn_stringbuf_create (SVN_RA_PIPE__NAMESPACE,
-                                               sess->pool),
-                         NULL);
+                         SVN_RA_PIPE__NAMESPACE, NULL);
   svn_xml_make_open_tag (&buf, sess->pool, svn_xml_self_closing,
                          SVN_RA_PIPE__GET_FILE_TAG,
                          SVN_RA_PIPE__ATT_PATH,
-                         pathbuf,
+                         pathbuf->data,
                          SVN_RA_PIPE__ATT_REV,
-                         svn_stringbuf_createf (sess->pool, "%ld", revision),
+                         apr_psprintf (sess->pool,
+                                       "%" SVN_REVNUM_T_FMT, revision),
                          NULL);
   svn_xml_make_close_tag (&buf, sess->pool, SVN_RA_PIPE__REQUEST_TAG);
 

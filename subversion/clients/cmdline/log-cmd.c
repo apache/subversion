@@ -272,8 +272,7 @@ log_message_receiver_xml (void *baton,
   revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
   /* <logentry revision="xxx"> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
-                         "revision", svn_stringbuf_create (revstr, pool),
-                         NULL);
+                         "revision", revstr, NULL);
 
   /* <author>xxx</author> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
@@ -311,10 +310,8 @@ log_message_receiver_xml (void *baton,
           actionstr = apr_psprintf (pool, "%c",
                                     (action == 'R' ? 'U' : action));
           /* <path action="X">xxx</path> */
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "path", "action",
-                                 svn_stringbuf_create(actionstr, pool),
-                                 NULL);
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
+                                 "action", actionstr, NULL);
           svn_xml_escape_nts (&sb, path, pool);
           svn_xml_make_close_tag (&sb, pool, "path");
         }
@@ -324,8 +321,7 @@ log_message_receiver_xml (void *baton,
     }
 
   /* <msg>xxx</msg> */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg",
-                         NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
   svn_xml_escape_nts (&sb, msg, pool);
   svn_xml_make_close_tag (&sb, pool, "msg");
   

@@ -57,9 +57,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 {
   svn_ra_plugin_t *ra_lib;  
   void *ra_baton, *session;
-  svn_stringbuf_t *URL;
-  svn_stringbuf_t *base_name = NULL;
-  svn_string_t path_str;
+  const char *path;
+  const char *URL;
+  const char *base_name = NULL;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err;
@@ -74,17 +74,16 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   start_revnum = end_revnum = SVN_INVALID_REVNUM;
 
-  path_str.data = (APR_ARRAY_IDX(targets, 0, svn_stringbuf_t *))->data;
-  path_str.len = strlen(path_str.data);
+  path = (APR_ARRAY_IDX(targets, 0, const char *));
 
   /* Use the passed URL, if there is one.  */
-  if (svn_path_is_url (&path_str))
+  if (svn_path_is_url (path))
     {
       /* Set the URL from our first target */
-      URL = svn_path_uri_encode(&path_str, pool);
+      URL = svn_path_uri_encode(path, pool);
 
       /* Initialize this array, since we'll be building it below */
-      condensed_targets = apr_array_make (pool, 1, sizeof(svn_stringbuf_t *));
+      condensed_targets = apr_array_make (pool, 1, sizeof(const char *));
 
       /* The logic here is this: If we get passed one argument, we assume
          it is the full URL to a file/dir we want log info for. If we get
@@ -96,16 +95,15 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
           /* We have some paths, let's use them. Start after the URL.  */
           for (i = 1; i < targets->nelts; i++)
-            (*((svn_stringbuf_t **)apr_array_push (condensed_targets))) =
-                APR_ARRAY_IDX(targets, i, svn_stringbuf_t *);
+            (*((const char **)apr_array_push (condensed_targets))) =
+                APR_ARRAY_IDX(targets, i, const char *);
         }
       else
         {
           /* If we have a single URL, then the session will be rooted at
              it, so just send an empty stringbuf for the paths we are
              interested in. */
-          (*((svn_stringbuf_t **)apr_array_push (condensed_targets))) = 
-              svn_stringbuf_create ("", pool);
+          (*((const char **)apr_array_push (condensed_targets))) = "";
         }
     }
   else
@@ -118,24 +116,23 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                                           targets, pool));
 
       if (condensed_targets->nelts == 0)
-        (*((svn_stringbuf_t**)apr_array_push (condensed_targets))) =
-            svn_stringbuf_create("", pool);
+        (*((const char **)apr_array_push (condensed_targets))) = "";
 
       SVN_ERR (svn_wc_entry (&entry, base_name, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
-          "svn_client_log: %s is not under revision control", base_name->data);
+          "svn_client_log: %s is not under revision control", base_name);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, 0, NULL, pool,
-          "svn_client_log: entry '%s' has no URL", base_name->data);
-      URL = svn_stringbuf_dup (entry->url, pool);
+          "svn_client_log: entry '%s' has no URL", base_name);
+      URL = apr_pstrdup (pool, entry->url);
     }
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
   /* Open a repository session to the URL. If we got here from a full URL
      passed to the command line, then we don't pass base_name or
@@ -151,11 +148,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   /* Get the revisions based on the users "hints".  */
   SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, start, 
-            base_name ? base_name->data : NULL, pool));
+           (&start_revnum, ra_lib, session, start, base_name, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, end, 
-            base_name ? base_name->data : NULL, pool));
+           (&end_revnum, ra_lib, session, end, base_name, pool));
 
   err = ra_lib->get_log (session,
                          condensed_targets,

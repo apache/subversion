@@ -66,22 +66,23 @@ extern "C" {
 
 /* Initialize an entries file based on URL, in th adm area for
    PATH.  The adm area must not already have an entries file. */
-svn_error_t *svn_wc__entries_init (svn_stringbuf_t *path,
-                                   svn_stringbuf_t *url,
+svn_error_t *svn_wc__entries_init (const char *path,
+                                   const char *url,
                                    apr_pool_t *pool);
 
 
 /* Create or overwrite an `entries' file for PATH using the contents
    of ENTRIES.  See also svn_wc_entries_read() in the public api. */
 svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
-                                    svn_stringbuf_t *path,
+                                    const char *path,
                                     apr_pool_t *pool);
 
 
-/* Set *NEW_ENTRY to a new entry, taking attributes from ATTS.
-   Allocate the entry itself in POOL, but don't copy attributes into
-   POOL.  Instead, (*NEW_ENTRY)->attributes and any allocated members
-   in *NEW_ENTRY will refer directly to ATTS and its values.
+/* Set *NEW_ENTRY to a new entry, taking attributes from ATTS, whose
+   keys and values are both char *.  Allocate the entry itself in
+   POOL, but don't copy attributes into POOL.  Instead,
+   (*NEW_ENTRY)->attributes and any allocated members in *NEW_ENTRY
+   will refer directly to ATTS and its values.
 
    Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
 svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
@@ -138,14 +139,14 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
    NOTE: when you call this function, the entries file will be read,
    tweaked, and written back out.  */
-svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
-                                   svn_stringbuf_t *name,
+svn_error_t *svn_wc__entry_modify (const char *path,
+                                   const char *name,
                                    svn_wc_entry_t *entry,
                                    apr_uint32_t modify_flags,
                                    apr_pool_t *pool);
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
-void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
+void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
 
 
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
@@ -156,8 +157,8 @@ void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
  */
 svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
-                     const svn_stringbuf_t *name,
-                     const svn_stringbuf_t *new_url,
+                     const char *name,
+                     const char *new_url,
                      const svn_revnum_t new_rev,
                      apr_pool_t *pool);
 

@@ -85,7 +85,7 @@ typedef struct
   /* Holds the directory that corresponds to the REPOS_URL at RA->open()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
-  svn_stringbuf_t *base_dir;
+  const char *base_dir;
 
   /* Record whether we should store the user/pass into the WC */
   svn_boolean_t do_store;
@@ -127,8 +127,8 @@ typedef struct
    and allocations related to this session are performed in POOL.  */
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
-                                           svn_stringbuf_t *base_url,
-                                           svn_stringbuf_t *base_dir,
+                                           const char *base_url,
+                                           const char *base_dir,
                                            apr_array_header_t *commit_items,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
@@ -164,7 +164,7 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 /* Verify that the path can be deleted without losing stuff, i.e. ensure
    that there are no modified or unversioned resources under PATH.  This is
    similar to checking the output of the status command. */
-svn_error_t * svn_client__can_delete (svn_stringbuf_t *path, apr_pool_t *pool);
+svn_error_t * svn_client__can_delete (const char *path, apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -175,9 +175,9 @@ svn_client__checkout_internal (const svn_delta_editor_t *before_editor,
                                void *before_edit_baton,
                                const svn_delta_editor_t *after_editor,
                                void *after_edit_baton,
-                               svn_stringbuf_t *path,
-                               svn_stringbuf_t *xml_src,
-                               svn_stringbuf_t *ancestor_path,
+                               const char *path,
+                               const char *xml_src,
+                               const char *ancestor_path,
                                svn_revnum_t ancestor_revision,
                                svn_boolean_t recurse,
                                apr_pool_t *pool);
@@ -188,8 +188,8 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
                              void *before_edit_baton,
                              const svn_delta_editor_t *after_editor,
                              void *after_edit_baton,
-                             svn_stringbuf_t *path,
-                             svn_stringbuf_t *xml_src,
+                             const char *path,
+                             const char *xml_src,
                              svn_revnum_t ancestor_revision,
                              svn_boolean_t recurse,
                              apr_pool_t *pool);
@@ -218,7 +218,7 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
  * EDITOR/EDIT_BATON return the newly created editor and baton/
  */
 svn_error_t *
-svn_client__get_diff_editor (svn_stringbuf_t *target,
+svn_client__get_diff_editor (const char *target,
                              const svn_diff_callbacks_t *diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
@@ -317,7 +317,7 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
                                   apr_hash_t **locked_dirs,
-                                  svn_stringbuf_t *parent_dir,
+                                  const char *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
                                   apr_pool_t *pool);
@@ -332,8 +332,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
 svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
                                    apr_hash_t **locked_dirs,
-                                   svn_stringbuf_t *new_url,
-                                   svn_stringbuf_t *target,
+                                   const char *new_url,
+                                   const char *target,
                                    apr_pool_t *pool);
                
 
@@ -344,9 +344,12 @@ int svn_client__sort_commit_item_urls (const void *a, const void *b);
 
 /* Rewrite the COMMIT_ITEMS array to be sorted by URL.  Also, discover
    a common *BASE_URL for the items in the array, and rewrite those
-   items' URLs to be relative to that *BASE_URL.  */
+   items' URLs to be relative to that *BASE_URL.  
+
+   Afterwards, some of the items in COMMIT_ITEMS may contain data
+   allocated in POOL. */
 svn_error_t *
-svn_client__condense_commit_items (svn_stringbuf_t **base_url,
+svn_client__condense_commit_items (char **base_url,
                                    apr_array_header_t *commit_items,
                                    apr_pool_t *pool);
 
@@ -372,7 +375,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
    files left after the transmission of text and property mods,
    *TEMPFILES is the place to look.  */
 svn_error_t *
-svn_client__do_commit (svn_stringbuf_t *base_url,
+svn_client__do_commit (const char *base_url,
                        apr_array_header_t *commit_items,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,

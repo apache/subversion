@@ -53,9 +53,8 @@ svn_ra_pipe__set_path (void *report_baton,
 
   svn_xml_make_open_tag (&buf, baton->pool, svn_xml_normal,
                          SVN_RA_PIPE__ENTRY_TAG, SVN_RA_PIPE__ATT_REV,
-                         svn_stringbuf_createf (baton->pool,
-                                                "%" SVN_REVNUM_T_FMT,
-                                                revision),
+                         apr_psprintf (baton->pool, "%" SVN_REVNUM_T_FMT,
+                                       revision),
                          NULL);
   svn_stringbuf_appendstr (buf, qpath);
   svn_xml_make_close_tag (&buf, baton->pool, SVN_RA_PIPE__ENTRY_TAG);
@@ -108,11 +107,10 @@ svn_ra_pipe__link_path (void *report_baton,
 
   svn_xml_make_open_tag (&buf, baton->pool, svn_xml_normal,
                          SVN_RA_PIPE__ENTRY_TAG, SVN_RA_PIPE__ATT_REV,
-                         svn_stringbuf_createf (baton->pool,
-                                                "%" SVN_REVNUM_T_FMT,
-                                                revision),
+                         apr_psprintf (baton->pool, "%" SVN_REVNUM_T_FMT,
+                                       revision),
                          SVN_RA_PIPE__ATT_URL,
-                         linkpath,
+                         linkpath->data,
                          NULL);
   svn_stringbuf_appendstr (buf, qpath);
   svn_xml_make_close_tag (&buf, baton->pool, SVN_RA_PIPE__ENTRY_TAG);

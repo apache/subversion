@@ -48,7 +48,7 @@ svn_cl__diff (apr_getopt_t *os,
   int i;
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
-  options = svn_cl__stringlist_to_array (opt_state->extensions, pool);
+  options = svn_cstring_split (opt_state->extensions, " \t\n\r", TRUE, pool);
 
   /* Get an apr_file_t representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
@@ -63,19 +63,16 @@ svn_cl__diff (apr_getopt_t *os,
       /* No '-r' was supplied, so this is either the form 
          'svn diff URL1@N URL2@M', or 'svn diff wcpath ...' */
 
-      svn_string_t ts;
-      svn_stringbuf_t *target1, *target2;
+      const char *target1, *target2;
 
       targets = svn_cl__args_to_target_array (os, opt_state,
                                               TRUE, /* extract @revs */
                                               pool);      
       svn_cl__push_implicit_dot_target (targets, pool);
 
-      target1 = ((svn_stringbuf_t **) (targets->elts))[0];
+      target1 = ((const char **) (targets->elts))[0];
 
-      ts.data = target1->data;
-      ts.len = target1->len;
-      if (svn_path_is_url (&ts))
+      if (svn_path_is_url (target1))
         {
           /* The form 'svn diff URL1@N URL2@M'. */
 
@@ -92,7 +89,7 @@ svn_cl__diff (apr_getopt_t *os,
                                      NULL, pool, 
                                      "Second URL is required.");
           
-          target2 = ((svn_stringbuf_t **) (targets->elts))[1];
+          target2 = ((const char **) (targets->elts))[1];
           
           /* Notice that we're passing DIFFERENT paths to
              svn_client_diff.  This is the only use-case which does so! */
@@ -116,8 +113,7 @@ svn_cl__diff (apr_getopt_t *os,
 
           for (i = 0; i < targets->nelts; ++i)
             {
-              svn_stringbuf_t *target
-                = ((svn_stringbuf_t **) (targets->elts))[i];
+              const char *target = ((const char **) (targets->elts))[i];
               
               /* We're running diff on each TARGET independently;  also
                  notice that we pass TARGET twice, since we're always
@@ -150,22 +146,18 @@ svn_cl__diff (apr_getopt_t *os,
       
       for (i = 0; i < targets->nelts; ++i)
         {
-          svn_string_t ts;
-          svn_stringbuf_t *target
-            = ((svn_stringbuf_t **) (targets->elts))[i];
+          const char *target = ((const char **) (targets->elts))[i];
   
           if (opt_state->end_revision.kind == svn_client_revision_unspecified)
             {
               /* The user specified only '-r N'.  Therefore, each path
                  -must- be a working copy path.  No URLs allowed! */        
-              ts.data = target->data;
-              ts.len = target->len;
-              if (svn_path_is_url (&ts))
+              if (svn_path_is_url (target))
                 return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                                           NULL, pool, "You passed only one "
                                           "revision, but %s is a URL. "
                                           "URLs require two revisions.",
-                                          ts.data);
+                                          target);
 
               /* URL or not, if the 2nd revision wasn't given by the
                  user, they must want to compare the 1st repsository

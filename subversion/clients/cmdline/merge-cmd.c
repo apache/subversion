@@ -44,8 +44,8 @@ svn_cl__merge (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
-  svn_stringbuf_t *parent_dir, *entry;
-  svn_stringbuf_t *sourcepath1, *sourcepath2, *targetpath;
+  const char *parent_dir, *entry;
+  const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
 
@@ -78,11 +78,11 @@ svn_cl__merge (apr_getopt_t *os,
                                    "Need at least one path.");
         }
 
-      sourcepath1 = sourcepath2 = ((svn_stringbuf_t **) (targets->elts))[0];
+      sourcepath1 = sourcepath2 = ((const char **) (targets->elts))[0];
       if (targets->nelts >= 2)
-        targetpath = ((svn_stringbuf_t **) (targets->elts))[1];
+        targetpath = ((const char **) (targets->elts))[1];
       else
-        targetpath = svn_stringbuf_create (".", pool);
+        targetpath = ".";
     }
   else /* using @rev syntax, revs already extracted. */
     {
@@ -93,12 +93,12 @@ svn_cl__merge (apr_getopt_t *os,
                                    "Need at least two paths.");
         }
 
-      sourcepath1 = ((svn_stringbuf_t **) (targets->elts))[0];
-      sourcepath2 = ((svn_stringbuf_t **) (targets->elts))[1];
+      sourcepath1 = ((const char **) (targets->elts))[0];
+      sourcepath2 = ((const char **) (targets->elts))[1];
       if (targets->nelts >= 3)
-        targetpath = ((svn_stringbuf_t **) (targets->elts))[2];
+        targetpath = ((const char **) (targets->elts))[2];
       else
-        targetpath = svn_stringbuf_create (".", pool);
+        targetpath = ".";
     }
 
   if (opt_state->start_revision.kind == svn_client_revision_unspecified)

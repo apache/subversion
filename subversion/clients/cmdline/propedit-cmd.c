@@ -38,7 +38,7 @@ svn_cl__propedit (apr_getopt_t *os,
                   svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
-  svn_stringbuf_t *propname;
+  const char *propname;
   apr_array_header_t *targets;
   int i;
 
@@ -46,7 +46,7 @@ svn_cl__propedit (apr_getopt_t *os,
   SVN_ERR (svn_cl__parse_num_args (os, opt_state, "propedit", 1, pool));
 
   /* Get the property's name. */
-  propname = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
+  propname = ((const char **) (opt_state->args->elts))[0];
 
   /* Suck up all the remaining arguments into a targets array */
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
@@ -58,18 +58,18 @@ svn_cl__propedit (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       apr_hash_t *props;
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      const char *target = ((const char **) (targets->elts))[i];
       svn_string_t *propval;
-      svn_stringbuf_t *new_propval;
-      svn_stringbuf_t *base_dir = target;
+      const char *new_propval;
+      const char *base_dir = target;
       svn_wc_entry_t *entry;
 
       /* Fetch the current property. */
-      SVN_ERR (svn_client_propget (&props, propname->data, target->data,
+      SVN_ERR (svn_client_propget (&props, propname, target,
                                    FALSE, pool));
 
       /* Get the property value. */
-      propval = apr_hash_get (props, target->data, target->len);
+      propval = apr_hash_get (props, target, APR_HASH_KEY_STRING);
       if (! propval)
         propval = svn_string_create ("", pool);
 
@@ -77,38 +77,36 @@ svn_cl__propedit (apr_getopt_t *os,
       SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
       if (! entry)
         return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
-                                 pool, target->data);
+                                 pool, target);
       if (entry->kind == svn_node_file)
         {
-          svn_path_split (target, &base_dir, NULL, pool);
+          svn_path_split_nts (target, &base_dir, NULL, pool);
         }
       
       /* Run the editor on a temporary file which contains the
          original property value... */
       SVN_ERR (svn_cl__edit_externally (&new_propval,
                                         base_dir,
-                                        propval,
+                                        propval->data,
                                         pool));
 
       /* ...and re-set the property's value accordingly. */
       if (new_propval)
         {
-          propval->data = new_propval->data;
-          propval->len = new_propval->len;
-          SVN_ERR (svn_client_propset (propname->data,
+          propval->data = new_propval;
+          propval->len = strlen (new_propval);
+          SVN_ERR (svn_client_propset (propname,
                                        propval,
-                                       target->data,
+                                       target,
                                        FALSE,
                                        pool));
           printf ("Set new value for property `%s' on `%s'\n",
-                  propname->data,
-                  target->data);
+                  propname, target);
         }
       else
         {
           printf ("No changes to property `%s' on `%s'\n",
-                  propname->data,
-                  target->data);
+                  propname, target);
         }
     }
 
