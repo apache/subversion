@@ -100,7 +100,8 @@ _svn()
 		cmdOpts="--targets -R --recursive"
 		;;
 	list|ls)
-		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts"
+		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
+                         --incremental --xml"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \

@@ -28,8 +28,10 @@
 #include "svn_sorts.h"
 #include "svn_pools.h"
 #include "svn_time.h"
+#include "svn_xml.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 /*** Code. ***/
 
@@ -114,6 +116,109 @@ print_dirents (apr_hash_t *dirents,
 }
 
 
+static const char *
+kind_str (svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_dir:
+      return "dir";
+    case svn_node_file:
+      return "file";
+    default:
+      return "";
+    }
+}
+
+
+static svn_error_t *
+print_dirents_xml (apr_hash_t *dirents,
+                   const char *path,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  /* Collate whole list into sb before printing. */
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  apr_array_header_t *array;
+  int i;
+
+  array = svn_sort__hash (dirents, svn_sort_compare_items_as_paths, pool);
+  
+  /* "<list path=...>" */
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "list",
+                         "path", path[0] == '\0' ? "." : path,
+                         NULL);
+
+  for (i = 0; i < array->nelts; ++i)
+    {
+      const char *utf8_entryname;
+      svn_dirent_t *dirent;
+      svn_sort__item_t *item;
+
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+     
+      item = &APR_ARRAY_IDX (array, i, svn_sort__item_t);
+
+      utf8_entryname = item->key;
+
+      dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
+
+      /* "<entry ...>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "entry",
+                             "kind", kind_str (dirent->kind),
+                             NULL);
+
+      /* "<name>xxx</name> */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "name", NULL);
+      svn_xml_escape_cdata_cstring (&sb, utf8_entryname, pool);
+      svn_xml_make_close_tag (&sb, pool, "name");
+
+      /* "<size>xxx</size>" */
+      if (dirent->kind == svn_node_file)
+        {
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "size",
+                                 NULL);
+          svn_xml_escape_cdata_cstring
+            (&sb, apr_psprintf (pool, "%" SVN_FILESIZE_T_FMT, dirent->size),
+             pool);
+          svn_xml_make_close_tag (&sb, pool, "size");
+        }
+
+      /* "<commit revision=...>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "commit",
+                             "revision",
+                             apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                           dirent->created_rev),
+                             NULL);
+      if (dirent->last_author)
+        {
+          /* "<author>xxx</author>" */
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
+                                 NULL);
+          svn_xml_escape_cdata_cstring (&sb, dirent->last_author, pool);
+          svn_xml_make_close_tag (&sb, pool, "author");
+        }
+      /* "<date>xxx</date>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date", NULL);
+      svn_xml_escape_cdata_cstring
+        (&sb, svn_time_to_cstring (dirent->time, pool), pool);
+      svn_xml_make_close_tag (&sb, pool, "date");
+      /* "</commit>" */
+      svn_xml_make_close_tag (&sb, pool, "commit");
+
+      /* "</entry>" */
+      svn_xml_make_close_tag (&sb, pool, "entry");
+    }
+
+  /* "</list>" */
+  svn_xml_make_close_tag (&sb, pool, "list");
+
+  return svn_cmdline_printf (pool, "%s", sb->data);
+}
+
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__ls (apr_getopt_t *os,
@@ -132,6 +237,38 @@ svn_cl__ls (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
+  if (opt_state->xml)
+    {
+      /* The XML output contains all the information, so "--verbose"
+        does not apply. */
+      if (opt_state->verbose)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'verbose' option invalid in XML mode"));
+
+      /* If output is not incremental, output the XML header and wrap
+         everything in a top-level element. This makes the output in
+         its entirety a well-formed XML document. */
+      if (! opt_state->incremental)
+        {
+          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+          /* <?xml version="1.0" encoding="utf-8"?> */
+          svn_xml_make_header (&sb, pool);
+          
+          /* "<lists>" */
+          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lists", NULL);
+          
+          SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
+        }
+    }
+  else
+    {
+      if (opt_state->incremental)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'incremental' option only valid in XML "
+                                   "mode"));
+    }
+
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
     {
@@ -149,8 +286,23 @@ svn_cl__ls (apr_getopt_t *os,
                                &(opt_state->start_revision),
                                opt_state->recursive, ctx, subpool));
 
-      SVN_ERR (print_dirents (dirents, opt_state->verbose, ctx, subpool));
+      if (opt_state->xml)
+        SVN_ERR (print_dirents_xml (dirents, truepath, ctx, subpool));
+      else
+        SVN_ERR (print_dirents (dirents, opt_state->verbose, ctx, subpool));
+
       svn_pool_clear (subpool);
+    }
+
+  if (opt_state->xml)
+    {
+      if (! opt_state->incremental)
+        {
+          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+          /* "</lists>" */
+          svn_xml_make_close_tag (&sb, pool, "lists");
+          SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
+        }
     }
 
   return SVN_NO_ERROR;
