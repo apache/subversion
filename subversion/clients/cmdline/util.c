@@ -42,6 +42,7 @@
 #include "svn_io.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
+#include "svn_config.h"
 #include "cl.h"
 
 
@@ -364,6 +365,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   svn_error_t *err = SVN_NO_ERROR, *err2;
   char *old_cwd;
   int sys_err;
+  struct svn_config_t *cfg;
 
   /* Try to find an editor in the environment. */
   editor = getenv ("SVN_EDITOR");
@@ -371,6 +373,12 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     editor = getenv ("VISUAL");
   if (! editor)
     editor = getenv ("EDITOR");
+  
+  /* Now, override this editor choice with a selection from our config
+     file (using what we have found thus far as the default in case no
+     config option exists). */
+  SVN_ERR (svn_config_read_config (&cfg, pool));
+  svn_config_get (cfg, &editor, "helpers", "editor_cmd", editor);
 
   /* Abort if there is no editor specified */
   if (! editor)

@@ -93,7 +93,12 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                SVN_REGISTRY_HKCU       \
                                SVN_REGISTRY_PATH       \
                                SVN_REGISTRY_CONFIG_PROXY_KEY
-
+#  define SVN_REGISTRY_CONFIG_PROXY_KEY "Config"
+#  define SVN_REGISTRY_USR_CONFIG_CONFIG_PATH \
+                               SVN_REGISTRY_PREFIX     \
+                               SVN_REGISTRY_HKCU       \
+                               SVN_REGISTRY_PATH       \
+                               SVN_REGISTRY_CONFIG_CONFIG_KEY
 #endif /* SVN_WIN32 */
 
 /* System-wide and configuration subdirectory names.
@@ -109,8 +114,11 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 /* The description/instructions file in the config directory. */
 #define SVN_CONFIG__USR_README_FILE    "README"
 
+/* The main configuration file in SVN_CONFIG__DIRECTORY. */
+#define SVN_CONFIG__USR_CONFIG_FILE    "config"
+
 /* The proxy config file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__USR_PROXY_FILE    "proxies"
+#define SVN_CONFIG__USR_PROXY_FILE     "proxies"
 
 
 /* Set *PATH_P to the path to config file FNAME in the system

@@ -95,7 +95,10 @@ typedef struct
      this base directory. */
   const char *base_dir;
 
-  /* Record whether we should store the user/pass into the WC */
+  /* Record whether we should attempt store the user/pass into the WC.
+     If true, then store the username, and consult the run-time config
+     option `store_password' to decide whether or not to store the
+     password. */
   svn_boolean_t do_store;
 
   /* An array of svn_client_commit_item_t * structures, present only
@@ -119,7 +122,10 @@ typedef struct
         structures, present only for working copy commits, NULL otherwise.
 
       - DO_STORE indicates whether the RA layer should attempt to
-        store authentication info.
+        store authentication info.  If DO_STORE is set, then store the
+        username, and consult the run-time config option
+        `store_password' to determine whether or not to store the
+        password.
 
       - USE_ADMIN indicates that the RA layer should create tempfiles
         in the administrative area instead of in the working copy itself.

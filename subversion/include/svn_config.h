@@ -44,6 +44,22 @@ extern "C" {
 typedef struct svn_config_t svn_config_t;
 
 
+/* Merge configuration information from all available sources and
+   store it in *CFGP, which is allocated in POOL.  That is, first 
+   read any system-wide configurations (from a file or from the
+   registry), then merge in personal configurations (again from
+   file or registry).
+
+   ###
+   ### Currently only reads from ~/.subversion/config.
+   ### See http://subversion.tigris.org/issues/show_bug.cgi?id=579.  
+   ###
+
+   If no config information is available, return an empty *CFGP.
+*/
+svn_error_t *svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool);
+
+
 /* Merge proxy configuration information from all available sources
    and store it in *CFGP, which is allocated in POOL.  That is, first
    read any system-wide proxy configurations (from a file or from the

@@ -484,7 +484,7 @@ svn_config_ensure (apr_pool_t *pool)
      success.  There's no _need_ to init a config directory if
      something's preventing it. */
 
-  /* Ensure that the `README' file exists. */
+  /** Ensure that the `README' file exists. **/
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_README_FILE, pool));
 
@@ -625,7 +625,7 @@ svn_config_ensure (apr_pool_t *pool)
         }
     }
 
-  /* Ensure that the `proxies' file exists. */
+  /** Ensure that the `proxies' file exists. **/
   SVN_ERR (svn_config__user_config_path
            (&path, SVN_CONFIG__USR_PROXY_FILE, pool));
 
@@ -687,6 +687,79 @@ svn_config_ensure (apr_pool_t *pool)
         "# username = defaultusername\n"
         "# password = defaultpassword\n";
 
+      apr_err = apr_file_open (&f, path,
+                               (APR_WRITE | APR_CREATE | APR_EXCL),
+                               APR_OS_DEFAULT,
+                               pool);
+
+      if (! apr_err)
+        {
+          apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "writing config file `%s'", path);
+          
+          apr_err = apr_file_close (f);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool, 
+                                      "closing config file `%s'", path);
+        }
+    }
+
+  /** Ensure that the `config' file exists. **/
+  SVN_ERR (svn_config__user_config_path
+           (&path, SVN_CONFIG__USR_CONFIG_FILE, pool));
+
+  if (! path)  /* highly unlikely, since a previous call succeeded */
+    return SVN_NO_ERROR;
+
+  err = svn_io_check_path (path, &kind, pool);
+  if (err)
+    return SVN_NO_ERROR;
+  
+  if (kind == svn_node_none)
+    {
+      apr_file_t *f;
+      const char *contents =
+        "### This file configures various client-side behaviors.\n"
+        "###\n"
+        "### The commented-out examples below are intended to demonstrate\n"
+        "### how to use this file.\n"
+        "\n"
+        "### Section for authentication and authorization customizations.\n"
+        "### Set store_password to 'no' to avoid storing your subversion\n"
+        "###   password in your working copies.  It defaults to 'yes'.\n"   
+        "# [auth]\n"
+        "# store_password = no\n"
+        "\n"
+        "### Section for configuring external helper applications.\n"
+        "### Set editor to the command used to invoke your text editor.\n"
+        "###   This will override the environment variables that Subversion\n"
+        "###   examines by default to find this information ($EDITOR, \n"
+        "###   et al).\n"
+        "### Set diff_cmd to the absolute path of your `diff' program.\n"
+        "###   This will override the compile-time default path to `diff'\n"
+        "###   that Subversion default to.\n"
+        "### Set diff3_cmd to the absolute path of your `diff3' program.\n"
+        "###   This will override the compile-time default path to `diff3'\n"
+        "###   that Subversion default to.\n"
+        "# [helpers]\n"
+        "# editor_cmd = editor (vi, emacs, notepad, etc.)\n"
+        "# diff_cmd = /path/to/diff\n"
+        "# diff3_cmd = /path/to/diff3\n"
+        "\n"
+        "### Section for configuring miscelleneous Subversion options.\n"
+        "### Set global_ignores to a set of whitespace-delimited globs\n"
+        "###   which Subversion will ignore in its `status' output.  By\n"
+        "###   default, this value is '*.o *.lo *.la #*# *.rej *~ .#*'. \n"
+        "###   To turn off global ignores, simply set the value to be\n"
+        "###   empty (as in \"global_ignores = \").\n"
+        "# [miscellany]\n"
+        "# global_ignores = *.o *.lo *.la #*# *.rej *~ .#*"
+        "\n"
+        "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
+        "### for what else will soon be customized in this file.\n";
+        
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
                                APR_OS_DEFAULT,

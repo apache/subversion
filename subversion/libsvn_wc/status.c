@@ -30,27 +30,26 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_wc.h"
+#include "svn_config.h"
 
 #include "wc.h"
 #include "props.h"
 
 
-static void add_default_ignores (apr_array_header_t *patterns)
+static svn_error_t *
+get_default_ignores (apr_array_header_t **patterns,
+                     apr_pool_t *pool)
 {
-  static const char * const ignores[] = 
-  {
-    "*.o", "*.lo", "*.la", "#*#", "*.rej", "*~", ".#*",
-    /* what else? */
-    NULL
-  };
-  int i;
-  
-  for (i = 0; ignores[i] != NULL; i++)
-    {
-      const char **ent = apr_array_push(patterns);
-      *ent = ignores[i];
-    }
+  struct svn_config_t *cfg;
+  const char *val;
 
+  SVN_ERR (svn_config_read_config (&cfg, pool));
+  svn_config_get (cfg, &val, "miscellany", "global_ignores", 
+                  "*.o *.lo *.la #*# *.rej *~ .#*");
+  *patterns = apr_array_make (pool, 4, sizeof (const char *));
+  svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -300,12 +299,14 @@ add_status_structure (apr_hash_t *statushash,
 
 /* Add all items that are NOT in ENTRIES (which is a list of PATH's
    versioned things) to the STATUSHASH as unversioned items,
-   allocating everything in POOL. */
+   allocating everything in POOL.  If IGNORES is non-NULL, it contains
+   the default ignores, else this is an indication that no ignores
+   should be honored. */
 static svn_error_t *
 add_unversioned_items (const char *path, 
                        apr_hash_t *entries,
                        apr_hash_t *statushash,
-                       svn_boolean_t no_ignore,
+                       apr_array_header_t *ignores,
                        apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -318,10 +319,19 @@ add_unversioned_items (const char *path,
 
   /* Unless specified, add default ignore regular expressions and try
      to add any svn:ignore properties from the parent directory. */
-  patterns = apr_array_make (subpool, 1, sizeof(const char *));
-  if (! no_ignore)
+  if (ignores)
     {
-      add_default_ignores (patterns);
+      int i;
+
+      /* Copy default ignores into the local PATTERNS array. */
+      patterns = apr_array_make (subpool, 1, sizeof(const char *));
+      for (i = 0; i < ignores->nelts; i++)
+        {
+          const char *ignore = APR_ARRAY_IDX (ignores, i, const char *);
+          (*((const char **) apr_array_push (patterns))) = ignore;
+        }
+
+      /* Then add any svn:ignore globs to the PATTERNS array. */
       SVN_ERR (add_ignore_patterns (path, patterns, subpool));
     }
 
@@ -353,7 +363,7 @@ add_unversioned_items (const char *path,
 
       /* See if any of the ignore patterns we have matches our
          keystring. */
-      for (i = 0; i < patterns->nelts; i++)
+      for (i = 0; patterns && (i < patterns->nelts); i++)
         {
           const char *pat = (((const char **) (patterns)->elts))[i];
                 
@@ -450,6 +460,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       apr_hash_t *entries;
       apr_hash_index_t *hi;
       int is_wc;
+      apr_array_header_t *ignores = NULL;
 
       /* Sanity check to make sure that we're being called on a working copy.
          This isn't strictly necessary, since svn_wc_entries_read will fail 
@@ -463,9 +474,13 @@ svn_wc_statuses (apr_hash_t *statushash,
       /* Load entries file for the directory into the requested pool. */
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
+      /* Read the default ignores from the config files. */
+      if (! no_ignore)
+        SVN_ERR (get_default_ignores (&ignores, pool));
+
       /* Add the unversioned items to the status output. */
       SVN_ERR (add_unversioned_items (path, entries, statushash,
-                                      no_ignore, pool));
+                                      ignores, pool));
 
       /* Loop over entries hash */
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
