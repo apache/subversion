@@ -13,10 +13,9 @@ DISTFILES=	apr_20020309172416.tar.gz apr-util_20020309172426.tar.gz
 
 MAINTAINER=	rooneg@electricjellyfish.net
 
-LIB_DEPENDS=	expat:${PORTSDIR}/textproc/expat
-
 BUILD_DEPENDS=	autoconf:${PORTSDIR}/devel/autoconf \
 		libtool:${PORTSDIR}/devel/libtool
+LIB_DEPENDS=	expat:${PORTSDIR}/textproc/expat
 
 GNU_CONFIGURE=	yes
 
