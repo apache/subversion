@@ -27,7 +27,7 @@
 #include "dav_svn.h"
 
 
-dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
+dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool)
 {
     dav_error *derr;
