@@ -14,10 +14,12 @@ http://svn.collab.net/repos/svn/tags/0.31.0
  * faster updates (fewer entries-file writes gives ~20% speedup) (r7170, #1490)
  * more work on psvn.el and svn_load_dirs.pl
  * more cvs2svn bugfixes
+ * obsolete manpages truncated to point to 'help' and book URLs. (r7340, #1508)
  * other bugfixes:  no more revision keywords "FIRST" or "CHANGED" (r7250),
    fix 'svn cp URL URL' $EDITOR msg generation (r7264), fix regression
    bug in 'svnadmin load' (r7273), 'svnadmin setlog' now triggers
-   repository hooks (r7322), 'svn cp -rHEAD wc' now works correctly (r7331).
+   repository hooks (r7322), 'svn cp -rHEAD wc' now works correctly (r7331),
+   post-commit-hook failures correctly ignored by client (r7342, #906)
 
  Developer-visible changes:
  * tons of filesystem improvements (#1499):
