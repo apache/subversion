@@ -177,8 +177,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', 't', 'v'} },
 
     {"tree", subcommand_tree, {0},
-     "usage: svnlook tree REPOS_PATH\n\n"
-     "Print the tree, optionally showing node revision ids.\n",
+     "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
+     "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
+     "of the tree otherwise), optionally showing node revision ids.\n",
      {'r', 't', svnlook__show_ids} },
 
     {"uuid", subcommand_uuid, {0},
@@ -1341,14 +1342,17 @@ do_plist (svnlook_ctxt_t *c,
 
 /* Print the diff between revision 0 and our root. */
 static svn_error_t *
-do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
+do_tree (svnlook_ctxt_t *c, 
+         const char *path,
+         svn_boolean_t show_ids, 
+         apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   const svn_fs_id_t *id;
 
   SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (svn_fs_node_id (&id, root, "", pool));
-  SVN_ERR (print_tree (root, "", id, 0, show_ids, pool));
+  SVN_ERR (svn_fs_node_id (&id, root, path, pool));
+  SVN_ERR (print_tree (root, path, id, 0, show_ids, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1554,7 +1558,8 @@ subcommand_tree (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svnlook_ctxt_t *c;
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
-  SVN_ERR (do_tree (c, opt_state->show_ids, pool));
+  SVN_ERR (do_tree (c, opt_state->arg1 ? opt_state->arg1 : "", 
+                    opt_state->show_ids, pool));
   return SVN_NO_ERROR;
 }
 
