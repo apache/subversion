@@ -224,36 +224,55 @@ server_ssl_callback(void *userdata,
   return !server_creds;
 }
 
-static int
-client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
+static svn_boolean_t
+client_ssl_decrypt_cert(svn_ra_session_t *ras,
+                        const char *cert_file,
+                        ne_ssl_client_cert *clicert)
 {
-  svn_ra_session_t *ras = userdata;
-  void *creds;
-  svn_auth_cred_ssl_client_cert_pw_t *pw_creds = NULL;
   svn_auth_iterstate_t *state;
-  apr_pool_t *pool;
   svn_error_t *error;
+  apr_pool_t *pool;
+  svn_boolean_t ok = FALSE;
+  void *creds;
+  int try;
 
   apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-                                     "none", /* ### fix? */
-                                     ras->callbacks->auth_baton,
-                                     pool);
-  if (error || !creds)
+  for (try = 0; TRUE; ++try)
     {
-      svn_error_clear(error);
-    }
-  else
-    {
-      pw_creds = creds;
-      if (pw_creds)
+      if (try == 0)
         {
-          apr_cpystrn(pwbuf, pw_creds->password, len);
+          error = svn_auth_first_credentials(&creds, &state,
+                                             SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                             cert_file,
+                                             ras->callbacks->auth_baton,
+                                             pool);
+        }
+      else
+        {
+          error = svn_auth_next_credentials(&creds, state, pool);
+        }
+
+      if (error || !creds)
+        {
+          /* Failure or too many attempts */
+          svn_error_clear(error);
+          break;
+        }
+      else
+        {
+          svn_auth_cred_ssl_client_cert_pw_t *pw_creds = creds;
+
+          if (ne_ssl_clicert_decrypt(clicert, pw_creds->password) == 0)
+            {
+              /* Success */
+              ok = TRUE;
+              break;
+            }
         }
     }
   apr_pool_destroy(pool);
-  return (pw_creds == NULL);
+
+  return ok;
 }
 
 
@@ -263,44 +282,58 @@ client_ssl_callback(void *userdata, ne_session *sess,
                     int dncount)
 {
   svn_ra_session_t *ras = userdata;
+  ne_ssl_client_cert *clicert = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
+  const char *realmstring;
   apr_pool_t *pool;
   svn_error_t *error;
-  apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_SSL_CLIENT_CERT,
-                                     "none", /* ### fix? */
-                                     ras->callbacks->auth_baton,
-                                     pool);
-  if (error || !creds)
-    {
-      svn_error_clear(error);
-    }
-  else
-    {
-      svn_auth_cred_ssl_client_cert_t *client_creds = creds;
-      ne_ssl_client_cert *clicert
-        = ne_ssl_clicert_read(client_creds->cert_file);
-      if (clicert != NULL)
-        {
-          if (ne_ssl_clicert_encrypted(clicert))
-            {
-              char pw[128];
-              if ((client_ssl_keypw_callback(userdata, pw, sizeof(pw)) == 0)
-                  && (ne_ssl_clicert_decrypt(clicert, pw) == 0))
-                /* Successfully decrypted */
-                ne_ssl_set_clicert(sess, clicert);
+  int try;
 
-              /* ### Notify user if decrypt fails? */
-            }
-          else
+  apr_pool_create(&pool, ras->pool);
+
+  realmstring = apr_psprintf (pool, "%s://%s:%d", ras->root.scheme,
+                              ras->root.host, ras->root.port);
+
+  for (try = 0; TRUE; ++try)
+    {
+      if (try == 0)
+        {
+          error = svn_auth_first_credentials(&creds, &state,
+                                             SVN_AUTH_CRED_SSL_CLIENT_CERT,
+                                             realmstring,
+                                             ras->callbacks->auth_baton,
+                                             pool);
+        }
+      else
+        {
+          error = svn_auth_next_credentials(&creds, state, pool);
+        }
+
+      if (error || !creds)
+        {
+          /* Failure or too many attempts */
+          svn_error_clear(error);
+          break;
+        }
+      else
+        {
+          svn_auth_cred_ssl_client_cert_t *client_creds = creds;
+
+          clicert = ne_ssl_clicert_read(client_creds->cert_file);
+          if (clicert)
             {
-              /* Cert isn't encrypted, so just attach it. */
-              ne_ssl_set_clicert(sess, clicert);
+              if (!ne_ssl_clicert_encrypted(clicert) ||
+                  client_ssl_decrypt_cert(ras, client_creds->cert_file,
+                                          clicert))
+                {
+                  ne_ssl_set_clicert(sess, clicert);
+                }
+              break;
             }
         }
     }
+
   apr_pool_destroy(pool);
 }
 

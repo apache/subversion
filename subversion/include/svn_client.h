@@ -226,7 +226,7 @@ void svn_client_get_ssl_server_trust_prompt_provider (
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
- * a server.
+ * a server.  The prompt will be retried @a retry_limit times.
  *  
  * @a *provider requires no run-time parameters.
  */
@@ -234,6 +234,7 @@ void svn_client_get_ssl_client_cert_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_ssl_client_cert_prompt_func_t prompt_func,
   void *prompt_baton,
+  int retry_limit,
   apr_pool_t *pool);
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -241,7 +242,8 @@ void svn_client_get_ssl_client_cert_prompt_provider (
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
- * client certificate is protected by a passphrase.
+ * client certificate is protected by a passphrase.  The prompt will
+ * be retried @a retry_limit times.
  *
  * @a *provider requires no run-time parameters. 
  */
@@ -249,6 +251,7 @@ void svn_client_get_ssl_client_cert_pw_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
   void *prompt_baton,
+  int retry_limit,
   apr_pool_t *pool);
 
 

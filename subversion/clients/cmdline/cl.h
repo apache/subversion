@@ -296,6 +296,7 @@ svn_error_t *
 svn_cl__auth_ssl_client_cert_prompt (
   svn_auth_cred_ssl_client_cert_t **cred_p,
   void *baton,
+  const char *realm,
   apr_pool_t *pool);
 
 
@@ -304,6 +305,7 @@ svn_error_t *
 svn_cl__auth_ssl_client_cert_pw_prompt (
   svn_auth_cred_ssl_client_cert_pw_t **cred_p,
   void *baton,
+  const char *realm,
   apr_pool_t *pool);
 
 

@@ -277,12 +277,14 @@ svn_cl__auth_ssl_server_trust_prompt (
 svn_error_t *
 svn_cl__auth_ssl_client_cert_prompt (svn_auth_cred_ssl_client_cert_t **cred_p,
                                      void *baton,
+                                     const char *realm,
                                      apr_pool_t *pool)
 {
+  svn_auth_cred_ssl_client_cert_t *cred = NULL;
   const char *cert_file = NULL;
-  svn_auth_cred_ssl_client_cert_t *cred;
 
-  SVN_ERR (prompt (&cert_file, "client certificate filename: ", FALSE, pool));
+  SVN_ERR (maybe_print_realm (realm, pool));
+  SVN_ERR (prompt (&cert_file, "Client certificate filename: ", FALSE, pool));
 
   cred = apr_palloc (pool, sizeof(*cred));
   cred->cert_file = cert_file;
@@ -297,24 +299,18 @@ svn_error_t *
 svn_cl__auth_ssl_client_cert_pw_prompt (
   svn_auth_cred_ssl_client_cert_pw_t **cred_p,
   void *baton,
+  const char *realm,
   apr_pool_t *pool)
 {
-  
+  svn_auth_cred_ssl_client_cert_pw_t *cred = NULL;
   const char *result;
+  const char *text = apr_psprintf (pool, "Passphrase for '%s': ", realm);
 
-  SVN_ERR (prompt (&result, "client certificate passphrase: ", TRUE, pool));
+  SVN_ERR (prompt (&result, text, TRUE, pool));
 
-  if (result && result[0])
-    {
-      svn_auth_cred_ssl_client_cert_pw_t *ret =
-        apr_pcalloc (pool, sizeof (*ret));
-      ret->password = result;
-      *cred_p = ret;
-    }
-  else
-    {
-      *cred_p = NULL;
-    }
+  cred = apr_pcalloc (pool, sizeof (*cred));
+  cred->password = result;
+  *cred_p = cred;
 
   return SVN_NO_ERROR;
 }

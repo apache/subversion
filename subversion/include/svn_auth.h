@@ -179,7 +179,9 @@ typedef struct
 /** SSL client passphrase.
  *
  * @a password gets set with the appropriate password for the
- * certificate.
+ * certificate.  The realmstring use with this credential type
+ * must be a name that makes it possible for the user to identify
+ * the certificate.
  */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
 typedef struct
@@ -267,7 +269,8 @@ typedef svn_error_t *
  * @a cert_info is a structure describing the server cert that was
  * presented to the client, and @a failures is a bitmask that
  * describes exactly why the cert could not be automatically validated.
- * (See the #define error flag values below.)
+ * (See the #define error flag values below.)  @a realm is a string
+ * that can be used in the prompt string.
  *
  * Note that these values are stored in the on disk auth cache by the
  * SSL server certificate auth provider, so the meaning of these bits
@@ -289,20 +292,24 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
 
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
- * @a baton is an implementation-specific closure.
+ * @a baton is an implementation-specific closure.  @a realm is a string
+ * that can be used in the prompt string.
  */
 typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t) (
   svn_auth_cred_ssl_client_cert_t **cred,
   void *baton,
+  const char *realm,
   apr_pool_t *pool);
 
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
- * @a baton is an implementation-specific closure.
+ * @a baton is an implementation-specific closure.  @a realm is a string
+ * identifying the certificate, and can be used in the prompt string.
  */
 typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t) (
   svn_auth_cred_ssl_client_cert_pw_t **cred,
   void *baton,
+  const char *realm,
   apr_pool_t *pool);
 
 
