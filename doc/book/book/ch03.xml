@@ -115,8 +115,11 @@ Committed revision 3.
         expansion, no end-of-line translation, no nothing) copy of the
         file as it existed in the last revision (called the
         <quote>BASE</quote> revision) that you updated it to in your
-        working copy.  We refer to this file as a
-        <quote>pristine</quote> copy.</para>
+        working copy.  We refer to this file as the
+        <firstterm>pristine copy</firstterm> or
+        <firstterm>text-base</firstterm> version of your file, and
+        it's always an exact byte-for-byte copy of the file as it
+        exists in the repository.</para>
       </note>
       
       <variablelist>
@@ -155,10 +158,9 @@ Committed revision 3.
         
       </variablelist>
       
-      <para>Here are some examples of revision keywords in action
-        (don't worry if the commands don't make sense yet; we'll be
-        explaining these commands as we go through the
-        chapter):</para>
+      <para>Here are some examples of revision keywords in action.
+        Don't worry if the commands don't make sense yet; we'll be
+        explaining these commands as we go through the chapter:</para>
       
       <screen>
 $ svn diff --revision PREV:COMMITTED foo.c
@@ -246,9 +248,9 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
           return anything on the day of the 27th.</para>
 
         <para>If you want to include the 27th in your search, you can
-          either specify the 27th with the time (<literal>2002-11-27
-          23:59</literal>), or just specify the next day
-          (<literal>2002-11-28</literal>).</para>
+          either specify the 27th with the time (<literal>{"2002-11-27
+          23:59"}</literal>), or just specify the next day
+          (<literal>{2002-11-28}</literal>).</para>
         
       </sidebar>
       
@@ -351,7 +353,7 @@ Checked out revision 3678.
           them later in this chapter.</para>
       </note>
 
-    <para>Unless you're ready to xcommit a new file or directory, or
+    <para>Unless you're ready to commit a new file or directory, or
       changes to existing ones, there's no need to further notify the
       Subversion server that you've done anything.</para>
 
@@ -480,8 +482,8 @@ Checked out revision 2499.
       
       <screen>
 $ svn update
-U  ./foo.c
-U  ./bar.c
+U  foo.c
+U  bar.c
 Updated to revision 2.
 </screen>
       
@@ -786,18 +788,18 @@ Updated to revision 2.
       
         <screen>
 $ svn status
-  L    ./abc.c               # svn has a lock in its .svn directory for abc.c
-M      ./bar.c               # the content in bar.c has local modifications
- M     ./baz.c               # baz.c has property but no content modifications
-?      ./foo.o               # svn doesn't manage foo.o
-!      ./some_dir            # svn manages this, but it's either missing or incomplete
-~      ./qux                 # versioned as dir, but is file, or vice versa
-A  +   ./moved_dir           # added with history of where it came from
-M  +   ./moved_dir/README    # added with history and has local modifications
-D      ./stuff/fish.c        # this file is scheduled for deletion
-A      ./stuff/loot/bloo.h   # this file is scheduled for addition
-C      ./stuff/loot/lump.c   # this file has conflicts from an update
-    S  ./stuff/squawk        # this file or dir has been switched to a branch
+  L    abc.c               # svn has a lock in its .svn directory for abc.c
+M      bar.c               # the content in bar.c has local modifications
+ M     baz.c               # baz.c has property but no content modifications
+?      foo.o               # svn doesn't manage foo.o
+!      some_dir            # svn manages this, but it's either missing or incomplete
+~      qux                 # versioned as dir, but is file, or vice versa
+A  +   moved_dir           # added with history of where it came from
+M  +   moved_dir/README    # added with history and has local modifications
+D      stuff/fish.c        # this file is scheduled for deletion
+A      stuff/loot/bloo.h   # this file is scheduled for addition
+C      stuff/loot/lump.c   # this file has conflicts from an update
+    S  stuff/squawk        # this file or dir has been switched to a branch
 &hellip;
 </screen>
       
@@ -970,15 +972,15 @@ D      stuff/fish.c
            
         <screen>
 $ svn status --verbose
-M               44        23    sally     ./README
-                44        30    sally     ./INSTALL
-M               44        20    harry     ./bar.c
-                44        18    ira       ./stuff
-                44        35    harry     ./stuff/trout.c
-D               44        19    ira       ./stuff/fish.c
-                44        21    sally     ./stuff/things
-A                0         ?     ?        ./stuff/things/bloo.h
-                44        36    harry     ./stuff/things/gloo.c
+M               44        23    sally     README
+                44        30    sally     INSTALL
+M               44        20    harry     bar.c
+                44        18    ira       stuff
+                44        35    harry     stuff/trout.c
+D               44        19    ira       stuff/fish.c
+                44        21    sally     stuff/things
+A                0         ?     ?        stuff/things/bloo.h
+                44        36    harry     stuff/things/gloo.c
 </screen>
            
         <para>This is the <quote>long form</quote> output of
@@ -998,11 +1000,11 @@ A                0         ?     ?        ./stuff/things/bloo.h
       
         <screen>
 $ svn status --show-updates --verbose
-M      *        44        23    sally     ./README
-M               44        20    harry     ./bar.c
-       *        44        35    harry     ./stuff/trout.c
-D               44        19    ira       ./stuff/fish.c
-A                0         ?     ?        ./stuff/things/bloo.h
+M      *        44        23    sally     README
+M               44        20    harry     bar.c
+       *        44        35    harry     stuff/trout.c
+D               44        19    ira       stuff/fish.c
+A                0         ?     ?        stuff/things/bloo.h
 Status against revision:   46
 </screen>
            
@@ -1213,9 +1215,9 @@ $ svn status README
       
       <screen>
 $ svn update
-U  ./INSTALL
-G  ./README
-C  ./bar.c
+U  INSTALL
+G  README
+C  bar.c
 Updated to revision 46.
 </screen>
            
@@ -1456,7 +1458,7 @@ Creole Mustard
 Bottom piece of bread
 </screen>
 
-        <para>Now run <command>svn resolved</command> and you're now
+        <para>Now run <command>svn resolved</command>, and you're
           ready to commit your changes:</para>
 
         <screen>
@@ -1467,8 +1469,9 @@ $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
         <para>Remember, if you ever get confused while editing the
           conflicted file, you can always consult the three files that
           Subversion creates for you in your working
-          copy&mdash;including your file as it was before you
-          updated.</para>
+          copy&mdash;including your file as it was before you updated.
+          You can even use a third-party interactive merging tool to
+          examine those three files.</para>
 
       </sect3>
 
