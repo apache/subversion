@@ -43,6 +43,7 @@ add_dir_recursive (const char *dirname,
   apr_finfo_t this_entry;
   apr_status_t apr_err;
   apr_pool_t *subpool;
+  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (svn_stringbuf_create (dirname, pool),
@@ -54,9 +55,9 @@ add_dir_recursive (const char *dirname,
   /* Read the directory entries one by one and add those things to
      revision control. */
   apr_err = apr_dir_open (&dir, dirname, pool);
-  for (apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir);
+  for (apr_err = apr_dir_read (&this_entry, flags, dir);
        APR_STATUS_IS_SUCCESS (apr_err);
-       apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir))
+       apr_err = apr_dir_read (&this_entry, flags, dir))
     {
       svn_stringbuf_t *fullpath;
 

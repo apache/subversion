@@ -155,11 +155,12 @@ import_dir (const svn_delta_edit_fns_t *editor,
   apr_dir_t *dir;
   apr_finfo_t this_entry;
   apr_status_t apr_err;
+  apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
   apr_err = apr_dir_open (&dir, path->data, subpool);
-  for (apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir);
+  for (apr_err = apr_dir_read (&this_entry, flags, dir);
        APR_STATUS_IS_SUCCESS (apr_err);
-       apr_err = apr_dir_read (&this_entry, APR_FINFO_NORM, dir))
+       apr_err = apr_dir_read (&this_entry, flags, dir))
     {
       svn_stringbuf_t *new_path = svn_stringbuf_dup (path, subpool);
       svn_path_add_component (new_path,
