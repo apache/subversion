@@ -2008,13 +2008,13 @@ read_change (change_t **change_p,
 }
 
 /* Fetch all the changed path entries from FILE and store then in
- *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
- *data.  Store a hash of paths to copyfrom revisions/paths in
- COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
- the changed-path entries have already been folded (by
- write_final_changed_paths) and may be out of order, so we shouldn't
- remove children of replaced or deleted directories.  Do all
- allocations in POOL. */
+   *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
+   *data.  Store a hash of paths to copyfrom revisions/paths in
+   COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
+   the changed-path entries have already been folded (by
+   write_final_changed_path_info) and may be out of order, so we shouldn't
+   remove children of replaced or deleted directories.  Do all
+   allocations in POOL. */
 static svn_error_t *
 fetch_all_changes (apr_hash_t *changed_paths,
                    apr_hash_t *copyfrom_hash,
