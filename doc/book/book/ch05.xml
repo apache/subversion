@@ -1556,9 +1556,9 @@ $ svnadmin dump myrepos --revision 100:200 > revs-100-200.dumpfile
         one large one, like so:</para>
 
       <screen>
-$ svnadmin dump myrepos 0 1000 > dumpfile1
-$ svnadmin dump myrepos 1001 2000 --incremental > dumpfile2
-$ svnadmin dump myrepos 2001 3000 --incremental > dumpfile3
+$ svnadmin dump myrepos --revision 0:1000 &gt; dumpfile1
+$ svnadmin dump myrepos --revision 1001:2000 --incremental &gt; dumpfile2
+$ svnadmin dump myrepos --revision 2001:3000 --incremental &gt; dumpfile3
 </screen>
 
       <para>These dump files could be loaded into a new repository with
@@ -1609,7 +1609,7 @@ $youngest = `svnlook youngest $repos_path`;
 chomp $youngest;
 
 # Do the backup.
-`svnadmin dump $repos_path $new_start $youngest --incremental >> $dumpfile`;
+`svnadmin dump $repos_path --revision $new_start:$youngest --incremental &gt;&gt; $dumpfile`;
 
 # Store a new last-dumped revision
 open LASTDUMPED, "&gt; $last_dumped" or die;
