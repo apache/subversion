@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-14 08:26+0200\n"
-"PO-Revision-Date: 2004-09-22 22:36+0200\n"
+"POT-Creation-Date: 2004-09-23 23:01+0200\n"
+"PO-Revision-Date: 2004-09-25 23:34+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1100,13 +1100,18 @@ msgstr ""
 "      URL, HeadURL             - URL dla najnowszej wersji pliku.\n"
 "      Author, LastChangedBy    - Autor ostatniej zmiany.\n"
 "      Date, LastChangedDate    - Data i czas ostatniej zmiany.\n"
-"      Rev, Revision,           - Wersja, w której nastąpiła ostatnia zmiana.\n"
+"      Rev, Revision,           - Wersja, w której nastąpiła ostatnia "
+"zmiana.\n"
 "      LastChangedRevision\n"
-"      Id                       - Zwarty zapis łączący powyższe 4 informacje.\n"
+"      Id                       - Zwarty zapis łączący powyższe 4 "
+"informacje.\n"
 "    svn:executable - Obecność atrybutu sygnalizuje, że plik powinien być\n"
-"      wykonywalny. Atrybutu tego nie można ustawić dla katalogu, gdy parametrem\n"
-"      jest katalog uruchomienie z opcją --non-recursive spowoduje zgłoszenie\n"
-"      błędu a uruchomienie z opcją --recursive spowoduje ustawienie atrybutu\n"
+"      wykonywalny. Atrybutu tego nie można ustawić dla katalogu, gdy "
+"parametrem\n"
+"      jest katalog uruchomienie z opcją --non-recursive spowoduje "
+"zgłoszenie\n"
+"      błędu a uruchomienie z opcją --recursive spowoduje ustawienie "
+"atrybutu\n"
 "      dla wszystkich plików w tym katalogu.\n"
 "    svn:eol-style - Sposób zapisywania końca wierszy, jedno z 'native'\n"
 "      (odpowiedni dla platformy), 'LF', 'CR', 'CRLF'.\n"
@@ -1117,7 +1122,8 @@ msgstr ""
 "      zdefiniowany są traktowane jako tekstowe. Wszystkie inne pliki\n"
 "      są traktowane jako binarne.\n"
 "    svn:externals  - Lista (oddzielanych znakiem nowego wiersza) odsyłaczy\n"
-"      do modułów, z których każdy składa się z ścieżki w ramach repozytorium,\n"
+"      do modułów, z których każdy składa się z ścieżki w ramach "
+"repozytorium,\n"
 "      opcjonalnie wersji oraz URL. Przykład:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
@@ -2204,7 +2210,8 @@ msgstr "Nieznany typ systemu plików"
 
 #: include/svn_error_codes.h:507
 msgid "The repository is locked, perhaps for db recovery"
-msgstr "Repozytorium jest zablokowane, być może ze względu na odtwarzanie bazy danych"
+msgstr ""
+"Repozytorium jest zablokowane, być może ze względu na odtwarzanie bazy danych"
 
 #: include/svn_error_codes.h:511
 msgid "A repository hook failed"
@@ -2346,213 +2353,221 @@ msgstr "Wyczerpano możliwości uwierzytelniania"
 msgid "Read access denied for root of edit"
 msgstr "Brak prawa do odczytu"
 
-#: include/svn_error_codes.h:675
+#: include/svn_error_codes.h:674
+msgid "Item is not readable."
+msgstr "Nie można odczytać elementu."
+
+#: include/svn_error_codes.h:679
+msgid "Item is partially readable."
+msgstr "Element można tylko częściowo odczytać."
+
+#: include/svn_error_codes.h:686
 msgid "Svndiff data has invalid header"
 msgstr "Błędny nagłówek danych svndiff"
 
-#: include/svn_error_codes.h:679
+#: include/svn_error_codes.h:690
 msgid "Svndiff data contains corrupt window"
 msgstr "Błędne okno danych svndiff"
 
-#: include/svn_error_codes.h:683
+#: include/svn_error_codes.h:694
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "Dane svndiff zawierają wsteczny podgląd"
 
-#: include/svn_error_codes.h:687
+#: include/svn_error_codes.h:698
 msgid "Svndiff data contains invalid instruction"
 msgstr "Dane svndiff zawierają nieznaną instrukcję"
 
-#: include/svn_error_codes.h:691
+#: include/svn_error_codes.h:702
 msgid "Svndiff data ends unexpectedly"
 msgstr "Nieoczekiwany koniec danych svndiff"
 
-#: include/svn_error_codes.h:697
+#: include/svn_error_codes.h:708
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache nie zna ścieżki do systemu plików Subversion"
 
-#: include/svn_error_codes.h:701
+#: include/svn_error_codes.h:712
 msgid "Apache got a malformed URI"
 msgstr "Apache otrzymał błędny URI"
 
-#: include/svn_error_codes.h:705
+#: include/svn_error_codes.h:716
 msgid "Activity not found"
 msgstr "Nie znaleziono aktywności"
 
-#: include/svn_error_codes.h:709
+#: include/svn_error_codes.h:720
 msgid "Baseline incorrect"
 msgstr "Błędna linia bazowa"
 
-#: include/svn_error_codes.h:713
+#: include/svn_error_codes.h:724
 msgid "Input/output error"
 msgstr "Błąd wejścia/wyjścia"
 
-#: include/svn_error_codes.h:719
+#: include/svn_error_codes.h:730
 msgid "A path under version control is needed for this operation"
 msgstr "To polecenie wymaga ścieżki podlegającej zarządzaniu wersjami "
 
-#: include/svn_error_codes.h:723
+#: include/svn_error_codes.h:734
 msgid "Repository access is needed for this operation"
 msgstr "To polecenie wymaga dostępu do repozytorium"
 
-#: include/svn_error_codes.h:727
+#: include/svn_error_codes.h:738
 msgid "Bogus revision information given"
 msgstr "Błędne informacje o wersji"
 
-#: include/svn_error_codes.h:731
+#: include/svn_error_codes.h:742
 msgid "Attempting to commit to a URL more than once"
 msgstr "Próba zatwierdzenia URL więcej niż raz"
 
-#: include/svn_error_codes.h:735
+#: include/svn_error_codes.h:746
 msgid "Operation does not apply to binary file"
 msgstr "Polecenie niedostępne dla plików binarnych"
 
-#: include/svn_error_codes.h:741
+#: include/svn_error_codes.h:752
 msgid "Format of an svn:externals property was invalid"
 msgstr "Błędny format atrybutu svn:externals"
 
-#: include/svn_error_codes.h:745
+#: include/svn_error_codes.h:756
 msgid "Attempting restricted operation for modified resource"
 msgstr "Próba wykonania zastrzeżonej operacji dla zmodyfikowanego zasobu"
 
-#: include/svn_error_codes.h:749
+#: include/svn_error_codes.h:760
 msgid "Operation does not apply to directory"
 msgstr "Polecenie niedostępne dla katalogów"
 
-#: include/svn_error_codes.h:753
+#: include/svn_error_codes.h:764
 msgid "Revision range is not allowed"
 msgstr "Zakres wersji jest niedozwolony w tym przypadku"
 
-#: include/svn_error_codes.h:757
+#: include/svn_error_codes.h:768
 msgid "Inter-repository relocation not allowed"
 msgstr "Przeniesienie między repozytoriami nie jest dozwolone"
 
-#: include/svn_error_codes.h:761
+#: include/svn_error_codes.h:772
 msgid "Author name cannot contain a newline"
 msgstr "Nazwa autora nie może zawierać znaku nowego wiersza"
 
-#: include/svn_error_codes.h:765
+#: include/svn_error_codes.h:776
 msgid "Bad property name"
 msgstr "Błędna nazwa atrybutu"
 
-#: include/svn_error_codes.h:770
+#: include/svn_error_codes.h:781
 msgid "Two versioned resources are unrelated"
 msgstr "Podane zasoby nie są ze sobą związane"
 
-#: include/svn_error_codes.h:777
+#: include/svn_error_codes.h:788
 msgid "A problem occurred; see later errors for details"
 msgstr "Wystąpił błąd, szczegóły dalej."
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:792
 msgid "Failure loading plugin"
 msgstr "Błąd ładowania plugina."
 
-#: include/svn_error_codes.h:785
+#: include/svn_error_codes.h:796
 msgid "Malformed file"
 msgstr "Błędny plik."
 
-#: include/svn_error_codes.h:789
+#: include/svn_error_codes.h:800
 msgid "Incomplete data"
 msgstr "Niepełne dane"
 
-#: include/svn_error_codes.h:793
+#: include/svn_error_codes.h:804
 msgid "Incorrect parameters given"
 msgstr "Błędne parametry"
 
-#: include/svn_error_codes.h:797
+#: include/svn_error_codes.h:808
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr ""
 "Polecenie wymaga pliku podlegającego zarządzaniu wersjami, podany parametr "
 "tego warunku nie spełnia."
 
-#: include/svn_error_codes.h:801
+#: include/svn_error_codes.h:812
 msgid "Test failed"
 msgstr "Błąd testu."
 
-#: include/svn_error_codes.h:805
+#: include/svn_error_codes.h:816
 msgid "Trying to use an unsupported feature"
 msgstr "Próba użycia nieobsługiwanej funkcji"
 
-#: include/svn_error_codes.h:809
+#: include/svn_error_codes.h:820
 msgid "Unexpected or unknown property kind"
 msgstr "Nieoczekiwany lub nieznany typ atrybutu"
 
-#: include/svn_error_codes.h:813
+#: include/svn_error_codes.h:824
 msgid "Illegal target for the requested operation"
 msgstr "Nielegalny obiekt dla podanej operacji"
 
-#: include/svn_error_codes.h:817
+#: include/svn_error_codes.h:828
 msgid "MD5 checksum is missing"
 msgstr "Niezgodność sumy kontrolnej MD5"
 
-#: include/svn_error_codes.h:821
+#: include/svn_error_codes.h:832
 msgid "Directory needs to be empty but is not"
 msgstr "Katalog powinien być pusty - a nie jest"
 
-#: include/svn_error_codes.h:825
+#: include/svn_error_codes.h:836
 msgid "Error calling external program"
 msgstr "Błąd uruchamiania zewnętrznego programu"
 
-#: include/svn_error_codes.h:829
+#: include/svn_error_codes.h:840
 msgid "Python exception has been set with the error"
 msgstr "Wyjątek języka Python"
 
-#: include/svn_error_codes.h:833
+#: include/svn_error_codes.h:844
 msgid "A checksum mismatch occurred"
 msgstr "Niezgodność sumy kontrolnej"
 
-#: include/svn_error_codes.h:837
+#: include/svn_error_codes.h:848
 msgid "The operation was interrupted"
 msgstr "Wykonanie polecenia przerwano"
 
-#: include/svn_error_codes.h:841
+#: include/svn_error_codes.h:852
 msgid "The specified diff option is not supported"
 msgstr "Podana opcja diff nie jest obsługiwana"
 
-#: include/svn_error_codes.h:845
+#: include/svn_error_codes.h:856
 msgid "Property not found"
 msgstr "Nie ma takiego atrybutu"
 
-#: include/svn_error_codes.h:849
+#: include/svn_error_codes.h:860
 msgid "No auth file path available"
 msgstr "Brak ścieżki do pliku uwierzytelniającego"
 
-#: include/svn_error_codes.h:854
+#: include/svn_error_codes.h:865
 msgid "Incompatible library version"
 msgstr "Niekompatybilna wersja biblioteki"
 
-#: include/svn_error_codes.h:860
+#: include/svn_error_codes.h:871
 msgid "Client error in parsing arguments"
 msgstr "Błąd klienta w trakcie parsowania parametrów"
 
-#: include/svn_error_codes.h:864
+#: include/svn_error_codes.h:875
 msgid "Not enough args provided"
 msgstr "Zbyt mało parametrów"
 
-#: include/svn_error_codes.h:868
+#: include/svn_error_codes.h:879
 msgid "Mutually exclusive arguments specified"
 msgstr "Podano sprzeczne parametry"
 
-#: include/svn_error_codes.h:872
+#: include/svn_error_codes.h:883
 msgid "Attempted command in administrative dir"
 msgstr "Próba wykonania polecenia w katalogu administracyjnym"
 
-#: include/svn_error_codes.h:876
+#: include/svn_error_codes.h:887
 msgid "The log message file is under version control"
 msgstr "Plik z opisem zmian podlega zarządzaniu wersjami"
 
-#: include/svn_error_codes.h:880
+#: include/svn_error_codes.h:891
 msgid "The log message is a pathname"
 msgstr "Opis zmian jest ścieżką"
 
-#: include/svn_error_codes.h:884
+#: include/svn_error_codes.h:895
 msgid "Committing in directory scheduled for addition"
 msgstr "Próba zatwierdzania w katalogu oczekującym na dodanie"
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:899
 msgid "No external editor available"
 msgstr "Brak zewnętrznego edytora"
 
-#: include/svn_error_codes.h:892
+#: include/svn_error_codes.h:903
 msgid "Something is wrong with the log message's contents"
 msgstr "Opis zmian zawiera jakiś błąd"
 
@@ -3289,7 +3304,7 @@ msgstr "Ostatnia linia w pliku wersji dłuższa niż 64 znaki"
 msgid "Final line in revision file missing space"
 msgstr "Brak spacji w ostatniej linii pliku wersji"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:163 libsvn_repos/log.c:167
+#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:231 libsvn_repos/log.c:235
 #, c-format
 msgid "No such revision %ld"
 msgstr "Nie ma takiej wersji %ld"
@@ -3692,7 +3707,7 @@ msgstr "Dla żądania '%s' otrzymano niepoprawny wynikowy XML: %s (%s)"
 msgid "%s request failed on '%s'"
 msgstr "żądanie %s nie powiodło się dla '%s'"
 
-#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:465
+#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:467
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3707,11 +3722,11 @@ msgstr ""
 msgid "Unable to open an ra_local session to URL"
 msgstr "Nie można utworzyć połączenia w sesji ra_local do URL"
 
-#: libsvn_ra_local/ra_plugin.c:927
+#: libsvn_ra_local/ra_plugin.c:930
 msgid "Module for accessing a repository on local disk."
 msgstr "Moduł umożliwiający dostęp do repozytorium na lokalnym dysku."
 
-#: libsvn_ra_local/ra_plugin.c:972
+#: libsvn_ra_local/ra_plugin.c:975
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
 msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_local"
@@ -3824,15 +3839,19 @@ msgstr ""
 msgid "Failed to find time on revision %ld"
 msgstr "Nie znaleziono atrybutu czas dla wersji %ld"
 
-#: libsvn_repos/rev_hunt.c:199
+#: libsvn_repos/rev_hunt.c:219
 #, c-format
 msgid "Invalid start revision %ld"
 msgstr "Nieprawidłowa początkowa wersja %ld"
 
-#: libsvn_repos/rev_hunt.c:203
+#: libsvn_repos/rev_hunt.c:223
 #, c-format
 msgid "Invalid end revision %ld"
 msgstr "Nieprawidłowa końcowa wersja %ld"
+
+#: libsvn_repos/rev_hunt.c:315
+msgid "Unreadable path encountered; access denied."
+msgstr "Brak dostępu do ścieżki."
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
@@ -5420,7 +5439,8 @@ msgstr ""
 "  postać:\n"
 "\n"
 "   4123:4168     kopia robocza zawiera więcej niż jedną wersję\n"
-"   4168M         kopia robocza jest zmodyfikowana w stosunku do repozytorium\n"
+"   4168M         kopia robocza jest zmodyfikowana w stosunku do "
+"repozytorium\n"
 "   4123S         kopia robocza jest repozycjonowana\n"
 "   4123:4168MS   wszystkie te efekty równocześnie\n"
 "\n"
