@@ -3,7 +3,7 @@
 <center>
 <img src="subversion.jpg">
 <h2>Weekly Status</h2>
-Last updated:  28 February 2001
+Last updated:  2 March 2001
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -36,9 +36,9 @@ Last updated:  28 February 2001
     <td align="left">Versioning Filesystem</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=205 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>51%</font></td>
-          <td width=195 bgcolor="FF0000">&nbsp;</td>
+          <td width=240 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>60%</font></td>
+          <td width=160 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -95,20 +95,12 @@ Last updated:  28 February 2001
 
 <h3>Last Week's Activities</h3>
 
-<ul>
-<li>Implemented upper level of repository public interface
-    (<tt>svn_fs.h</tt>, <tt>tree.c</tt>).</li>
-<li>Implementing DAG filesystem
-    (<tt>dag.h</tt>, <tt>dag.c</tt>).</li>
-<li>Implementing filesystem low-level table friendlies
-    (<tt>*-table.h</tt>, <tt>*-table.c</tt>).</li>
-<li>Started local-access commit editor
-    (<tt>editor.c</tt>).</li>
-<li>Add to repository test suite
-    (<tt>fs-test.c</tt>).</li>
-<li>Make adding a file to a repository work!
-    (<tt>all of the above, heh</tt>).</li>
-</ul>
+This has been a breakthrough week for the project.  The versioned
+filesystem has gone from vapor to reality!  A few weeks' worth of code
+finally came together, and we're now able to read and write files and
+directories in the repository.  All the data is being stored in
+Berkeley DB, and we have real transactions when we write.
+
 
 <!----------------------------------------------------------------->
 
@@ -117,8 +109,8 @@ Last updated:  28 February 2001
 <ul>
 <li><b>Filesystem</b>:  kfogel, cmpilato, sussman, jimb </li>
 <li><b>DAV layer</b>:  gstein </li>
-<li><b>Client libs</b>:  kfogel, sussman, cmpilato,
-    but in holding pattern </li>
+<li><b>Client libs</b>:  fitz, (kfogel, sussman, cmpilato,
+    but in holding pattern) </li>
 <li><b>Migration tools</b>:  -- </li>
 <li><b>Docs</b>: everyone, but on hold during fs work </li>
 </ul>
