@@ -196,10 +196,10 @@ typedef struct svn_ra_plugin_t
    However, all "ra_FOO" implementations *must* export a function named
    `svn_ra_FOO_init()' of type `svn_ra_init_func_t'.
 
-   When called by libsvn_client, this routine simply returns an
-   internal, static plugin structure. In addition, it returns the URI
-   scheme handled by this RA module. POOL is a pool for allocating
-   configuration / one-time data.
+   When called by libsvn_client, this routine adds an entry (or
+   entries) to the hash table for any URL schemes it handles. The hash
+   value must be of type (svn_ra_plugin_t *). POOL is a pool for
+   allocating configuration / one-time data.
 
    This type is defined to use the "C Calling Conventions" to ensure that
    abi_version is the first parameter. The RA plugin must check that value
@@ -209,8 +209,7 @@ typedef struct svn_ra_plugin_t
 */
 typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
                                             apr_pool_t *pool,
-                                            const char **url_scheme,
-                                            const svn_ra_plugin_t **plugin);
+                                            apr_hash_t *hash);
 
 /* The current ABI (Application Binary Interface) version for the
    RA plugin model. This version number will change when the ABI
@@ -236,12 +235,10 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
 
 svn_error_t * svn_ra_dav_init (int abi_version,
                                apr_pool_t *pool,
-                               const char **url_scheme,
-                               const svn_ra_plugin_t **plugin);
+                               apr_hash_t *hash);
 svn_error_t * svn_ra_local_init (int abi_version,
                                  apr_pool_t *pool,
-                                 const char **url_scheme,
-                                 const svn_ra_plugin_t **plugin);
+                                 apr_hash_t *hash);
 
 
 

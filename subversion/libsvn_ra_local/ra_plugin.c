@@ -288,11 +288,9 @@ static const svn_ra_plugin_t ra_local_plugin =
 svn_error_t *
 svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
-                   const char **url_type,
-                   const svn_ra_plugin_t **plugin)
+                   apr_hash_t *hash)
 {
-  *url_type = "file";
-  *plugin = &ra_local_plugin;
+  apr_hash_set (hash, "file", APR_HASH_KEY_STRING, &ra_local_plugin);
 
   /* ben sez:  todo:  check that abi_version >=1. */
 

@@ -147,14 +147,8 @@ svn_ra_init_ra_libs (void **ra_baton,
         {
           /* linked in or successfully dynloaded */
 
-          const char *url_scheme;
-          const svn_ra_plugin_t *ra_plugin;
+          SVN_ERR( (*initfunc)(SVN_RA_ABI_VERSION, pool, ra_library_hash) );
 
-          SVN_ERR( (*initfunc)(SVN_RA_ABI_VERSION,
-                               pool, &url_scheme, &ra_plugin) );
-
-          apr_hash_set (ra_library_hash,
-                        url_scheme, APR_HASH_KEY_STRING, ra_plugin);
         }
     }
 
