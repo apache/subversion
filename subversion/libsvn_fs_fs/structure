@@ -94,11 +94,13 @@ The predecessor of a node-rev crosses copy history; together with the
 count field, it allows efficient determination of the base for
 skip-deltas.  The first node-rev of a node contains no "pred" field.
 In a node-revision resulting from a copy, the "copyfrom" field gives
-the copyfrom data; in other node-revs, the "copyroot" field identifies
-the root node-revision of the copy.  (Note that since copy IDs are
-initially inherited from parent directory to child, the root of a
-node-rev's copy may belong to a different node, perhaps of a different
-type, than the node-rev itself does.)
+the copyfrom data.  The "copyroot" field identifies the root
+node-revision of the copy; it may be omitted if the node-rev is its
+own copy root (as is the case for node-revs with copy history, and for
+the root node of revision 0).  Note that since copy IDs are inherited
+from parent directory to child, the root of a node-rev's copy may
+belong to a different node, perhaps of a different type, than the
+node-rev itself does.
 
 A node-revision with no properties may omit the "props" field.
 

@@ -158,10 +158,12 @@ find_entry(struct entry *entry, const char *path, apr_pool_t *pool)
   return entry;
 }
 
+/* Initialize new_entry from the fields of old_entry, tweaking them as
+   appropriate for a modification.  (Further changes will be needed
+   for soft and hard copies.) */
 static void
 copy_entry(struct parse_baton *pb, struct entry *new_entry,
-           struct entry *old_entry, svn_boolean_t is_copy,
-           svn_boolean_t soft_copy)
+           struct entry *old_entry)
 {
   *new_entry = *old_entry;
   if (new_entry->children)
@@ -170,21 +172,8 @@ copy_entry(struct parse_baton *pb, struct entry *new_entry,
   new_entry->node_off = -1;
   new_entry->pred_count = old_entry->pred_count + 1;
   new_entry->pred = old_entry;
-  if (is_copy)
-    {
-      new_entry->copy_id = pb->next_copy_id++;
-      new_entry->copyfrom_rev = old_entry->node_rev;
-      new_entry->copyfrom_path = old_entry->created_path;
-      new_entry->soft_copy = soft_copy;
-    }
-  else
-    {
-      /* Make the new node-rev a change of the old one. */
-      new_entry->copyfrom_rev = SVN_INVALID_REVNUM;
-      new_entry->copyfrom_path = NULL;
-      if (SVN_IS_VALID_REVNUM(old_entry->copyfrom_rev) || !old_entry->pred)
-        new_entry->copyroot = old_entry;
-    }
+  new_entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  new_entry->copyfrom_path = NULL;
 }
 
 /* Get the child entry for NAME under ENTRY, copying it for the current
@@ -201,13 +190,36 @@ get_child(struct parse_baton *pb, struct entry *entry, const char *name,
   assert(child);
   if (child->node_rev != pb->current_rev)
     {
-      path = svn_path_join(entry->created_path, name, pb->pool);
-      /* Copy the child entry.  Create a "soft copy" if our created
-         path does not match the old child entry's created path. */
+      /* We need to make a copy of child for this revision. */
       new_child = new_entry(pb->pool);
-      copy_entry(pb, new_child, child,
-                 (strcmp(path, child->created_path) != 0), TRUE);
+      copy_entry(pb, new_child, child);
+      path = svn_path_join(entry->created_path, name, pb->pool);
       new_child->created_path = path;
+
+      /* We need to assign a copy-id to the new child.  The rules:
+         - If child is not derived from a copy, we inherit from the
+           parent.  (Often this means keeping the same copy-id as
+           child has; if parent has a different copy-id, then this is
+           the "lazy" copy of the child onto the parent's branch.)
+         - If child is derived from a copy and we are accessing it
+           through its created path, then we don't change the copy ID.
+         - If child is derived from a copy and we are not accessing
+           it through its created path, then we create a "soft copy"
+           with a fresh copy ID. */
+      if (child->node_id != child->copyroot->node_id)
+        {
+          new_child->copy_id = entry->copy_id;
+          new_child->copyroot = entry->copyroot;
+        }
+      else if (strcmp(child->created_path, new_child->created_path) != 0)
+        {
+          new_child->copy_id = pb->next_copy_id++;
+          new_child->copyfrom_rev = child->node_rev;
+          new_child->copyfrom_path = child->created_path;
+          new_child->soft_copy = TRUE;
+          new_child->copyroot = new_child;
+        }
+
       name = apr_pstrdup(pb->pool, name);
       apr_hash_set(entry->children, name, APR_HASH_KEY_STRING, new_child);
       child = new_child;
@@ -401,7 +413,7 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
                         "%s %" SVN_REVNUM_T_FMT " %s",
                         (entry->soft_copy) ? "soft" : "hard",
                         entry->copyfrom_rev, entry->copyfrom_path));
-  else
+  if (entry->copyroot != entry)
     SVN_ERR(write_field(pb, pool, "copyroot", "%s",
                         node_rev_id(entry->copyroot, pool)));
   SVN_ERR(svn_stream_printf(out, pool, "\n"));
@@ -538,7 +550,7 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
   /* Set up a new root for this rev. */
   root = new_entry(pb->pool);
   if (rev != 0)
-    copy_entry(pb, root, get_root(pb, rev - 1), FALSE, FALSE);
+    copy_entry(pb, root, get_root(pb, rev - 1));
   else
     {
       root->node_id = pb->next_node_id++;
@@ -596,17 +608,22 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
         {
           copy_src = find_entry(get_root(pb, copyfrom_rev), copyfrom_path,
                                 pool);
-          copy_entry(pb, entry, copy_src, TRUE, FALSE);
+          copy_entry(pb, entry, copy_src);
+          entry->copy_id = pb->next_copy_id++;
+          entry->copyfrom_rev = copy_src->node_rev;
+          entry->copyfrom_path = apr_pstrdup(pb->pool, copyfrom_path);
+          entry->soft_copy = FALSE;
+          entry->copyroot = entry;
         }
       else
         {
           entry->node_id = pb->next_node_id++;
           entry->copy_id = parent->copy_id;
+          entry->copyroot = parent->copyroot;
           if (kind == svn_node_dir)
             entry->children = apr_hash_make(pb->pool);
           entry->node_rev = pb->current_rev;
           entry->node_off = -1;
-          entry->copyroot = parent->copyroot;
         }
       entry->created_path = apr_pstrdup(pb->pool, path);
       name = apr_pstrdup(pb->pool, name);
