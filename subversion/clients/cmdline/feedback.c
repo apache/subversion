@@ -105,6 +105,10 @@ void svn_cl__notify_func (void *baton,
       printf ("Reverted %s\n", path);
       return;
 
+    case svn_wc_notify_resolve:
+      printf ("Resolved conflicted state of %s\n", path);
+      return;
+
     case svn_wc_notify_update:
       printf ("U   %s\n", path);
       return;

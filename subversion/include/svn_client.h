@@ -605,6 +605,20 @@ svn_client_revert (svn_stringbuf_t *path,
                    apr_pool_t *pool);
 
 
+/* Remove the 'conflicted' state on a working copy PATH.  This will
+   not semantically resolve conflicts;  it just allows PATH to be
+   committed in the future.  The implementation details are opaque.
+
+   If PATH is not in a state of conflict to begin with, do nothing.
+   If PATH's conflict state is removed, call NOTIFY_FUNC (with
+   NOTIFY_BATON) if the func is non-NULL. */
+svn_error_t *
+svn_client_resolve (svn_stringbuf_t *path,
+                    svn_wc_notify_func_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *pool);
+
+
 /* Copy SRC_PATH to DST_PATH.
 
    SRC_PATH must be a file or directory under version control, or the
