@@ -132,10 +132,10 @@ Mac OS X 10.1.5:
                  Max Horn <max@quendi.de>,
                  Hamilton Link <helink@sandia.gov>
      Notes:      
-     -- As of lately, autoconf 2.53, libtool 1.42, automake 1.5 (for aclocal),
+     -- As of lately, autoconf 2.53, libtool 1.4.2, automake 1.5 (for aclocal),
         and texinfo 4.0 are needed to complete the entire server build process.
         Suitable versions are not provided with OS X yet. Use fink and see
-        http://www.apache.org/~piers/macosx/ to gather them all. Additional
+        http://www.apache.org/~pier/macosx/ to gather them all. Additional
         system-neutral dependancies are listed in the INSTALL file.
      -- As of 0.21.3, neon appears to build with or without --enable-shared,
         but currently the svn build process later gives a warning without it.
