@@ -821,21 +821,21 @@ Updated to revision 2.
     <sect2 id="svn-ch-3-sect-4.3">
       <title>Examine Sus Cambios</title>
       
-      <para>Once you've finished making changes, you need to commit
-        them to the repository, but before you do so, it's usually a
-        good idea to take a look at exactly what you've changed.  By
-        examining your changes before you commit, you can make a
-        more accurate log message. You may also discover that
-        you've inadvertently changed a file, and this gives you a
-        chance to revert those changes before committing.
-        Additionally, this is a good opportunity to review and
-        scrutinize changes before publishing them.  You can see
-        exactly what changes you've made by using <command>svn
-        status</command>, <command>svn diff</command>, and
-        <command>svn revert</command>.  You will usually use the first
-        two commands to find out what files have changed in your
-        working copy, and then perhaps the third to revert some (or
-        all) of those changes.</para>
+      <para>Una vez que haya terminado de hacer cambios, necesita enviarlos
+        al repositorio, pero antes de hacerlo, generalmente es buena
+        idea hechar un vistazo a lo que ha cambiado exactamente. Examinando
+        sus cambios antes de que los envie, puede hacer un mensaje de
+        informe de cambios más exacto. También puede descubrir que ha
+        cambiado inadvertidamente un fichero, y esto le dá la posibilidad
+        de invertir<!--TODO:revert...¿retroceder?--> esos cambios antes
+        de enviarlos. Además, esta es una buena oportunidad para revisar
+        y escudriñar cambios antes de publicarlos. Usted puede ver
+        exactamente qué cambios ha hecho usando <command>svn
+        status</command>, <command>svn diff</command>, y
+        <command>svn revert</command>. Generalmente usará los primeros
+        dos comandos para descubrir qué ficheros han cambiado en su copia
+        de trabajo local, y después quizá el tercero para invertir
+        algunos (o todos) de esos cambios.</para>
       
       <!-- pll - Fri 07 Feb 2003 12:55:07                                   -->
       <!-- I find this following paragraph a little unclear.  Mostly for    -->
