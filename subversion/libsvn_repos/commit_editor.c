@@ -506,7 +506,7 @@ close_edit (void *edit_baton)
                                    &eb->log_msg, eb->pool));
 
   /* Commit. */
-  err = svn_fs_commit_txn (&conflict, &new_revision, eb->txn);
+  err = svn_repos_fs_commit_txn (&conflict, &new_revision, eb->txn);
 
   if (err)
     {
