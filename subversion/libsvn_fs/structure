@@ -520,11 +520,11 @@ where:
      - "delete"    : If PATH exists then PATH was removed from the
                      filesystem, otherwise ID.COMMIT-PATH was
                      removed. 
+     - "modify"    : ID.COMMIT-PATH was otherwise modified.
+     - "rename"    : ID was renamed (moved) from PATH to ID.COMMIT-PATH.
      - "replace"   : Something at ID.COMMIT-PATH was removed, then ID
                      was added to the filesystem.
-     - "modify"    : ID.COMMIT-PATH was otherwise modified.
      - "reset"     : Ignore any previous changes for ID in this txn.
-     - "moved"     : ID was moved from PATH to ID.COMMIT-PATH.
 
    * TEXT-MOD is a bit specifying whether or not the properties of
      this node where modified.
@@ -773,8 +773,8 @@ Transactions:
 Changes:
 
                  CHANGE ::= ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD [PATH]) ;
-            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" 
-			    | "reset" | "moved" 
+            CHANGE-KIND ::= "add" | "delete" | "modify" | "rename" |
+                              "replace" | "reset" 
                TEXT-MOD ::= atom ;
                PROP-MOD ::= atom ;
 
