@@ -20,12 +20,12 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
-#include <http_basic.h>
-#include <http_utils.h>
-#include <dav_basic.h>
-#include <dav_207.h>
-#include <dav_props.h>
-#include <hip_xml.h>
+#include <ne_basic.h>
+#include <ne_utils.h>
+#include <ne_basic.h>
+#include <ne_207.h>
+#include <ne_props.h>
+#include <ne_xml.h>
 
 #include "svn_error.h"
 #include "svn_delta.h"
@@ -41,7 +41,7 @@
 /* when we begin a checkout, we fetch these from the "public" resources to
    steer us towards a Baseline Collection. we fetch the resourcetype to
    verify that we're accessing a collection. */
-static const dav_propname starting_props[] =
+static const ne_propname starting_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
   { "SVN:", "baseline-relative-path" },
@@ -51,7 +51,7 @@ static const dav_propname starting_props[] =
 
 /* if we need to directly ask the VCC for the "latest" baseline, these are
    the properties to fetch. */
-static const dav_propname vcc_props[] =
+static const ne_propname vcc_props[] =
 {
   { "DAV:", "checked-in" },
   { NULL }
@@ -59,7 +59,7 @@ static const dav_propname vcc_props[] =
 
 /* when speaking to a Baseline to reach the Baseline Collection, fetch these
    properties. */
-static const dav_propname baseline_props[] =
+static const ne_propname baseline_props[] =
 {
   { "DAV:", "baseline-collection" },
   { "DAV:", "version-name" },
@@ -68,7 +68,7 @@ static const dav_propname baseline_props[] =
 
 /* fetch these properties from all resources in the Baseline Collection
    during a checkout. */
-static const dav_propname fetch_props[] =
+static const ne_propname fetch_props[] =
 {
   { "DAV:", "resourcetype" },
   { "DAV:", "checked-in" },
@@ -147,7 +147,7 @@ static const char report_head[] = ("<S:update-report xmlns:S=\""
                                    "\">" DEBUG_CR);
 static const char report_tail[] = ("</S:update-report>" DEBUG_CR);
 
-static const struct hip_xml_elm report_elements[] =
+static const struct ne_xml_elm report_elements[] =
 {
   { SVN_XML_NAMESPACE, "update-report", ELEM_update_report, 0 },
   { SVN_XML_NAMESPACE, "target-revision", ELEM_target_revision, 0 },
@@ -160,7 +160,7 @@ static const struct hip_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
 
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
-  { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
+  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
 
   { NULL }
 };
@@ -228,7 +228,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
   struct uri parsed_url;
   apr_hash_index_t *hi;
 
-  SVN_ERR( svn_ra_dav__get_props(&dirents, ras, url, DAV_DEPTH_ONE, NULL,
+  SVN_ERR( svn_ra_dav__get_props(&dirents, ras, url, NE_DEPTH_ONE, NULL,
                                  fetch_props, pool) );
 
   uri_parse(url, &parsed_url, NULL);
@@ -325,14 +325,14 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
 
   frc.pool = pool;
 
-  rv = http_read_file(ras->sess, url, fetch_file_reader, &frc);
-  if (rv != HTTP_OK)
+  rv = ne_read_file(ras->sess, url, fetch_file_reader, &frc);
+  if (rv != NE_OK)
     {
       /* ### other GET responses? */
 
       /* ### need an SVN_ERR here */
       err = svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                             http_get_error(ras->sess));
+                             ne_get_error(ras->sess));
     }
   /* else: err == NULL */
 
@@ -712,7 +712,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
-static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
+static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
 {
   /* We're being very strict with the validity of XML elements here. If
      something exists that we don't know about, then we might not update
@@ -722,18 +722,18 @@ static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
 
   switch (parent)
     {
-    case HIP_ELM_root:
+    case NE_ELM_root:
       if (child == ELEM_update_report)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_update_report:
       if (child == ELEM_target_revision
           || child == ELEM_replace_directory)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_replace_directory:
       if (child == ELEM_replace_directory
@@ -743,40 +743,40 @@ static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
           || child == ELEM_fetch_props
           || child == ELEM_delete_entry
           || child == ELEM_checked_in)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_add_directory:
       if (child == ELEM_add_directory
           || child == ELEM_add_file
           || child == ELEM_checked_in)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_replace_file:
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
           || child == ELEM_fetch_props)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_add_file:
       if (child == ELEM_checked_in)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_checked_in:
-      if (child == DAV_ELM_href)
-        return HIP_XML_VALID;
+      if (child == NE_ELM_href)
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     default:
-      return HIP_XML_DECLINE;
+      return NE_XML_DECLINE;
     }
 
   /* NOTREACHED */
@@ -798,7 +798,7 @@ static void push_dir(report_baton_t *rb, void *baton)
   di->vsn_url = NULL;
 }
 
-static int start_element(void *userdata, const struct hip_xml_elm *elm,
+static int start_element(void *userdata, const struct ne_xml_elm *elm,
                          const char **atts)
 {
   report_baton_t *rb = userdata;
@@ -942,7 +942,7 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   return 1;
 }
 
-static int end_element(void *userdata, const struct hip_xml_elm *elm,
+static int end_element(void *userdata, const struct ne_xml_elm *elm,
                        const char *cdata)
 {
   report_baton_t *rb = userdata;
@@ -975,7 +975,7 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
       rb->file_baton = NULL;
       break;
 
-    case DAV_ELM_href:
+    case NE_ELM_href:
       /* record the href that we just found */
       svn_ra_dav__copy_href(rb->href, cdata);
 
@@ -1084,7 +1084,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   fp = fopen(rb->fname->data, "rb");
 
   err = svn_ra_dav__parsed_request(rb->ras, "REPORT", rb->ras->root.path,
-                                   NULL, fp,
+                                   NULL, fileno(fp),
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    rb->ras->pool);

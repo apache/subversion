@@ -17,10 +17,12 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 
-#include <dav_basic.h>
-#include <dav_props.h>
-#include <hip_xml.h>
+#include <ne_basic.h>
+#include <ne_props.h>
+#include <ne_xml.h>
 
 #include "svn_error.h"
 #include "svn_delta.h"
@@ -30,7 +32,7 @@
 
 
 typedef struct {
-  hip_xml_elmid id;
+  ne_xml_elmid id;
   const char *name;
   int is_property;      /* is it a property, or part of some structure? */
 } elem_defn;
@@ -49,19 +51,19 @@ static const elem_defn elem_definitions[] =
   { 0 }
 };
 
-static const struct hip_xml_elm neon_descriptions[] =
+static const struct ne_xml_elm neon_descriptions[] =
 {
   /* DAV elements */
-  { "DAV:", "baseline-collection", ELEM_baseline_coll, HIP_XML_CDATA },
+  { "DAV:", "baseline-collection", ELEM_baseline_coll, NE_XML_CDATA },
   { "DAV:", "checked-in", ELEM_checked_in, 0 },
-  { "DAV:", "collection", ELEM_collection, HIP_XML_CDATA },
-  { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
+  { "DAV:", "collection", ELEM_collection, NE_XML_CDATA },
+  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "version-controlled-configuration", ELEM_vcc, 0 },
-  { "DAV:", "version-name", ELEM_version_name, HIP_XML_CDATA },
+  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
 
   /* SVN elements */
-  { "SVN:", "baseline-relative-path", ELEM_baseline_relpath, HIP_XML_CDATA },
+  { "SVN:", "baseline-relative-path", ELEM_baseline_relpath, NE_XML_CDATA },
 
   { NULL }
 };
@@ -72,103 +74,15 @@ typedef struct {
 
   apr_pool_t *pool;
 
-  dav_propfind_handler *dph;
+  ne_propfind_handler *dph;
 
 } prop_ctx_t;
 
 
-#ifndef USING_NEON_REPLACEMENT_HACK
-
-#include <ne_alloc.h>
-/* this is defined (differently) in 0.12. theoretically, a compile error
-   will result if somebody tries to use 0.12. better than crashing due to
-   a mismatch in the dav_propfind_handler_s structure... */
-int ne_realloc(int foo);
-
-/* ### UGH!! we're peeking into Neon's private structure! */
-struct dav_propfind_handler_s {
-    http_session *sess;
-    const char *uri;
-    int depth;
-
-    int has_props; /* whether we've already written some
-		    * props to the body. */
-    sbuffer body;
-    
-    dav_207_parser *parser207;
-    hip_xml_parser *parser;
-    struct hip_xml_elm *elms;
-
-    /* Callback to create the private structure. */
-    dav_props_create_complex private_creator;
-    void *private_userdata;
-    
-    /* Current propset. */
-    dav_prop_result_set *current;
-
-    dav_props_result callback;
-    void *userdata;
-};
-
-/* ### extended replacement for Neon's dav_props.c::propfind(). allows us
-   ### to send headers with the PROPFIND request. punt if/when Neon allows
-   ### similar functionality. */
-static int propfind(dav_propfind_handler *handler,
-		    dav_props_result results, void *userdata,
-                    const char *label)
-{
-    int ret;
-    http_req *req;
-
-    /* Register the catch-all handler to ignore any cruft the
-     * server returns. */
-    dav_207_ignore_unknown(handler->parser207);
-    
-    req = http_request_create(handler->sess, "PROPFIND", handler->uri);
-
-    handler->callback = results;
-    handler->userdata = userdata;
-
-    http_set_request_body_buffer(req, sbuffer_data(handler->body));
-
-    http_add_request_header(req, "Content-Type", "text/xml"); /* TODO: UTF-8? */
-    dav_add_depth_header(req, handler->depth);
-
-    /* ### SVN BEGIN ### */
-    if (label != NULL)
-      http_add_request_header(req, "Label", label);
-    /* ### SVN END ### */
-    
-    http_add_response_body_reader(req, dav_accept_207, hip_xml_parse_v, 
-				  handler->parser);
-
-    ret = http_request_dispatch(req);
-
-    if (ret == HTTP_OK && http_get_status(req)->klass != 2) {
-	ret = HTTP_ERROR;
-    } else if (!hip_xml_valid(handler->parser)) {
-	http_set_error(handler->sess, hip_xml_get_error(handler->parser));
-	ret = HTTP_ERROR;
-    }
-
-    http_request_destroy(req);
-
-    return ret;
-}
-static int my_dav_propfind_named(dav_propfind_handler *handler,
-                                 dav_props_result results, void *userdata,
-                                 const char *label)
-{
-    sbuffer_zappend(handler->body, "</prop></propfind>" EOL);
-    return propfind(handler, results, userdata, label);
-}
-
-#endif /* USING_NEON_REPLACEMENT_HACK */
-
 
 /* look up an element definition. may return NULL if the elem is not
    recognized. */
-static const elem_defn *defn_from_id(hip_xml_elmid id)
+static const elem_defn *defn_from_id(ne_xml_elmid id)
 {
   const elem_defn *defn;
 
@@ -214,26 +128,26 @@ static void *create_private(void *userdata, const char *url)
 }
 
 static void process_results(void *userdata, const char *uri,
-                            const dav_prop_result_set *rset)
+                            const ne_prop_result_set *rset)
 {
 #if 0
   prop_ctx_t *pc = userdata;
-  svn_ra_dav_resource_t *r = dav_propset_private(rset);
+  svn_ra_dav_resource_t *r = ne_propset_private(rset);
 #endif
 
-  /* ### should use dav_propset_status(rset) to determine whether the
+  /* ### should use ne_propset_status(rset) to determine whether the
    * ### PROPFIND failed for the properties we're interested in. */
 
-  /* ### use dav_propset_iterate(rset) to copy unhandled properties into
+  /* ### use ne_propset_iterate(rset) to copy unhandled properties into
      ### the resource's hash table of props.
      ### maybe we need a special namespace for user props? */
 }
 
-static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
+static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
 {
   switch (parent)
     {
-    case DAV_ELM_prop:
+    case NE_ELM_prop:
         switch (child)
           {
           case ELEM_baseline_coll:
@@ -242,39 +156,39 @@ static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
           case ELEM_resourcetype:
           case ELEM_vcc:
           case ELEM_version_name:
-            return HIP_XML_VALID;
+            return NE_XML_VALID;
 
           default:
             /* some other, unrecognized property */
-            return HIP_XML_DECLINE;
+            return NE_XML_DECLINE;
           }
         
     case ELEM_baseline_coll:
     case ELEM_checked_in:
     case ELEM_vcc:
-      if (child == DAV_ELM_href)
-        return HIP_XML_VALID;
+      if (child == NE_ELM_href)
+        return NE_XML_VALID;
       else
-        return HIP_XML_DECLINE; /* not concerned with other types */
+        return NE_XML_DECLINE; /* not concerned with other types */
       
     case ELEM_resourcetype:
       if (child == ELEM_collection)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_DECLINE; /* not concerned with other types (### now) */
+        return NE_XML_DECLINE; /* not concerned with other types (### now) */
 
     default:
-      return HIP_XML_DECLINE;
+      return NE_XML_DECLINE;
     }
 
   /* NOTREACHED */
 }
 
-static int start_element(void *userdata, const struct hip_xml_elm *elm,
+static int start_element(void *userdata, const struct ne_xml_elm *elm,
                          const char **atts)
 {
   prop_ctx_t *pc = userdata;
-  svn_ra_dav_resource_t *r = dav_propfind_current_private(pc->dph);
+  svn_ra_dav_resource_t *r = ne_propfind_current_private(pc->dph);
 
   switch (elm->id)
     {
@@ -297,14 +211,14 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   return 0;
 }
 
-static int end_element(void *userdata, const struct hip_xml_elm *elm,
+static int end_element(void *userdata, const struct ne_xml_elm *elm,
                        const char *cdata)
 {
   prop_ctx_t *pc = userdata;
-  svn_ra_dav_resource_t *r = dav_propfind_current_private(pc->dph);
+  svn_ra_dav_resource_t *r = ne_propfind_current_private(pc->dph);
   const char *name;
 
-  if (elm->id == DAV_ELM_href)
+  if (elm->id == NE_ELM_href)
     {
       /* use the parent element's name, not the href */
       const elem_defn *parent_defn = defn_from_id(r->href_parent);
@@ -337,42 +251,50 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     const char *url,
                                     int depth,
                                     const char *label,
-                                    const dav_propname *which_props,
+                                    const ne_propname *which_props,
                                     apr_pool_t *pool)
 {
-  hip_xml_parser *hip;
+  ne_xml_parser *hip;
   int rv;
   prop_ctx_t pc = { 0 };
 
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
 
-  pc.dph = dav_propfind_create(ras->sess, url, depth);
-  dav_propfind_set_complex(pc.dph, which_props, create_private, &pc);
-  hip = dav_propfind_get_parser(pc.dph);
-  hip_xml_push_handler(hip, neon_descriptions,
-                       validate_element, start_element, end_element, &pc);
-  rv = my_dav_propfind_named(pc.dph, process_results, &pc, label);
-  dav_propfind_destroy(pc.dph);
+  pc.dph = ne_propfind_create(ras->sess, url, depth);
+  ne_propfind_set_private(pc.dph, create_private, &pc);
+  hip = ne_propfind_get_parser(pc.dph);
+  ne_xml_push_handler(hip, neon_descriptions,
+                      validate_element, start_element, end_element, &pc);
 
-  if (rv != HTTP_OK)
+  if (label != NULL)
+    {
+      /* get the request pointer and add a Label header */
+      ne_request *req = ne_propfind_get_request(pc.dph);
+      ne_add_request_header(req, "Label", label);
+    }
+  
+  rv = ne_propfind_named(pc.dph, which_props, process_results, &pc);
+  ne_propfind_destroy(pc.dph);
+
+  if (rv != NE_OK)
     {
       switch (rv)
         {
-        case HTTP_CONNECT:
+        case NE_CONNECT:
           /* ### need an SVN_ERR here */
           return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
                                    "Could not connect to server "
                                    "(%s, port %d).",
                                    ras->root.host, ras->root.port);
-        case HTTP_AUTH:
+        case NE_AUTH:
           return svn_error_create(SVN_ERR_NOT_AUTHORIZED, 0, NULL, 
                                   pool,
                                   "Authentication failed on server.");
         default:
           /* ### need an SVN_ERR here */
           return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                  http_get_error(ras->sess));
+                                  ne_get_error(ras->sess));
         }
     }
 
@@ -385,12 +307,12 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              svn_ra_session_t *ras,
                                              const char *url,
                                              const char *label,
-                                             const dav_propname *which_props,
+                                             const ne_propname *which_props,
                                              apr_pool_t *pool)
 {
   apr_hash_t *props;
 
-  SVN_ERR( svn_ra_dav__get_props(&props, ras, url, DAV_DEPTH_ZERO,
+  SVN_ERR( svn_ra_dav__get_props(&props, ras, url, NE_DEPTH_ZERO,
                                  label, which_props, pool) );
   *rsrc = apr_hash_get(props, url, APR_HASH_KEY_STRING);
   if (*rsrc == NULL)

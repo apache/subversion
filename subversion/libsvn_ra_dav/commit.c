@@ -14,18 +14,19 @@
 
 
 
-#include <http_request.h>
-
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_uuid.h>
 
 #define APR_WANT_STDIO
+#define APR_WANT_STRFUNC
 #include <apr_want.h>
 
 #if APR_HAVE_STDLIB
 #include <stdlib.h>     /* for free() */
 #endif
+
+#include <ne_request.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -110,7 +111,7 @@ static const int singleton_delete_prop;
 
 /* this property will be fetched from the server when we don't find it
    cached in the WC property store. */
-static const dav_propname fetch_props[] =
+static const ne_propname fetch_props[] =
 {
   { "DAV:", "checked-in" },
   { NULL }
@@ -120,11 +121,11 @@ static const dav_propname fetch_props[] =
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code)
 {
-  http_req *req;
+  ne_request *req;
   int rv;
 
   /* create/prep the request */
-  req = http_request_create(ras->sess, method, url);
+  req = ne_request_create(ras->sess, method, url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
@@ -134,11 +135,11 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
     }
 
   /* run the request and get the resulting status code. */
-  rv = http_request_dispatch(req);
-  *code = http_get_status(req)->code;
-  http_request_destroy(req);
+  rv = ne_request_dispatch(req);
+  *code = ne_get_status(req)->code;
+  ne_request_destroy(req);
 
-  if (rv != HTTP_OK)
+  if (rv != NE_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
@@ -310,7 +311,7 @@ static svn_error_t * add_child(resource_t **child,
 /* check out the specified resource (if it hasn't been checked out yet) */
 static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 {
-  http_req *req;
+  ne_request *req;
   int rv;
   int code;
   const char *body;
@@ -329,7 +330,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  req = http_request_create(cc->ras->sess, "CHECKOUT", res->vsn_url);
+  req = ne_request_create(cc->ras->sess, "CHECKOUT", res->vsn_url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
@@ -345,17 +346,17 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
                       "<D:activity-set>"
                       "<D:href>%s</D:href>"
                       "</D:activity-set></D:checkout>", cc->activity_url);
-  http_set_request_body_buffer(req, body);
+  ne_set_request_body_buffer(req, body, strlen(body));
 
-  http_add_response_header_handler(req, "location",
-                                   http_duplicate_header, &locn);
+  ne_add_response_header_handler(req, "location",
+                                 ne_duplicate_header, &locn);
 
   /* run the request and get the resulting status code. */
-  rv = http_request_dispatch(req);
-  code = http_get_status(req)->code;
-  http_request_destroy(req);
+  rv = ne_request_dispatch(req);
+  code = ne_get_status(req)->code;
+  ne_request_destroy(req);
 
-  if (rv != HTTP_OK)
+  if (rv != NE_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
@@ -668,7 +669,7 @@ static svn_error_t * commit_stream_close(void *baton)
   put_baton_t *pb = baton;
   commit_ctx_t *cc = pb->file->cc;
   resource_t *rsrc = pb->file->rsrc;
-  http_req *req;
+  ne_request *req;
   FILE *fp;
   int rv;
   int code;
@@ -677,7 +678,7 @@ static svn_error_t * commit_stream_close(void *baton)
   (void) apr_file_close(pb->tmpfile);
 
   /* create/prep the request */
-  req = http_request_create(cc->ras->sess, "PUT", rsrc->wr_url);
+  req = ne_request_create(cc->ras->sess, "PUT", rsrc->wr_url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
@@ -687,26 +688,26 @@ static svn_error_t * commit_stream_close(void *baton)
     }
 
   /* ### use a symbolic name somewhere for this MIME type? */
-  http_add_request_header(req, "Content-Type", "application/vnd.svn-svndiff");
+  ne_add_request_header(req, "Content-Type", "application/vnd.svn-svndiff");
 
   fp = fopen(pb->fname->data, "rb");
-  http_set_request_body_stream(req, fp);
+  ne_set_request_body_fd(req, fileno(fp));
 
   /* run the request and get the resulting status code. */
-  rv = http_request_dispatch(req);
+  rv = ne_request_dispatch(req);
 
   /* we're done with the file */
   (void) fclose(fp);
   (void) apr_file_remove(pb->fname->data, pb->pool);
 
   /* fetch the status, then clean up the request */
-  code = http_get_status(req)->code;
-  http_request_destroy(req);
+  code = ne_get_status(req)->code;
+  ne_request_destroy(req);
 
   /* toss the pool. all things pb are now history */
   svn_pool_destroy(pb->pool);
 
-  if (rv != HTTP_OK)
+  if (rv != NE_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
