@@ -50,9 +50,6 @@ typedef struct fs_library_vtable_t
 
 typedef struct fs_vtable_t
 {
-  void (*set_warning_func) (svn_fs_t *fs,svn_fs_warning_callback_t warning,
-                            void *warning_baton);
-  const char *(*get_path) (svn_fs_t *fs, apr_pool_t *pool);
   svn_error_t *(*youngest_rev) (svn_revnum_t *youngest_p, svn_fs_t *fs,
                                 apr_pool_t *pool);
   svn_error_t *(*revision_prop) (svn_string_t **value_p, svn_fs_t *fs,
@@ -122,6 +119,9 @@ typedef struct root_vtable_t
                                      apr_pool_t *pool);
   svn_error_t *(*delete_node) (svn_fs_root_t *root, const char *path,
                                apr_pool_t *pool);
+  svn_error_t *(*copied_from) (svn_revnum_t *rev_p, const char **path_p,
+                               svn_fs_root_t *root, const char *path,
+                               apr_pool_t *pool);
 
   /* Property operations */
   svn_error_t *(*node_prop) (svn_string_t **value_p, svn_fs_root_t *root,
@@ -136,17 +136,12 @@ typedef struct root_vtable_t
   svn_error_t *(*props_changed) (int *changed_p, svn_fs_root_t *root1,
                                  const char *path1, svn_fs_root_t *root2,
                                  const char *path2, apr_pool_t *pool);
-  svn_error_t *(*copied_from) (svn_revnum_t *rev_p, const char **path_p,
-                               svn_fs_root_t *root, const char *path,
-                               apr_pool_t *pool);
 
   /* Directories */
   svn_error_t *(*dir_entries) (apr_hash_t **entries_p, svn_fs_root_t *root,
                                const char *path, apr_pool_t *pool);
   svn_error_t *(*make_dir) (svn_fs_root_t *root, const char *path,
                             apr_pool_t *pool);
-  svn_error_t *(*rename) (svn_fs_root_t *root, const char *from,
-                          const char *to, apr_pool_t *pool);
   svn_error_t *(*copy) (svn_fs_root_t *from_root, const char *from_path,
                         svn_fs_root_t *to_root, const char *to_path,
                         apr_pool_t *pool);
