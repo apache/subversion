@@ -132,17 +132,17 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r10462,r10491,r10493
+  * r10462,r10491,r10493,r10517
     Add 2 new features to the javahl binding. svn info and svn log -v for
-    the java client.
+    the java client. r10517 is needed to unbreak javahl when r10505 is ported.
     Justification:
       The subclipse (subclipse.tigris.org) people need these patches.
     Notes:
       The feature are implemented, so existing clients do not break.
       r10493 fixes line endings in the Java bindings to be set to native.
     Votes:
-      +1: pmayweg (with r10493)
-      +0: breser (with r10493)
+      +1: pmayweg
+      +0: breser (without r10517)
 
   * r10502
     Fix issue 1986:  'svn cp dir1 dir2' when dir1 contains versioned symlink.
