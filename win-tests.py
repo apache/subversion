@@ -14,6 +14,7 @@ Usage: python win-tests.py [option] [test-path]
 
 
 tests = ['subversion/tests/libsvn_subr/config-test.exe',
+         'subversion/tests/libsvn_subr/compat-test.exe',
          'subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/string-test.exe',
          'subversion/tests/libsvn_subr/path-test.exe',
