@@ -21,11 +21,16 @@
 
 3.  At the top of the httpd-2.0 tree, run "buildconf".
 
-4.  ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
+4.  ./configure --enable-dav --enable-so --prefix=/usr/local/apache2 \
+		--with-mpm=prefork
 
      The first arg says to build mod_dav.
      The second arg says to enable (and build everything) as shared libs.
      The third arg is where you will ultimately install apache.
+     The fourth arg says to use the "prefork" style of operation.
+       NOTE: The fourth arg is needed for FreeBSD systems (broken
+       threads), but should be left out for other platforms (which
+       will cause Apache to default to a threaded model of operation)
 
 5.  make && make install
 
@@ -38,8 +43,12 @@
     This argument tells subversion to build mod_dav_svn, and where to
     find the required information to do so.
 
-    Note:  do *not* configure subversion with "--disable-shared"!
+    Note: do *not* configure subversion with "--disable-shared"!
     mod_dav_svn *must* be built as a shared library.
+
+    Note: it *is* possible to build mod_dav_svn as a static library
+    and link it directly into Apache. Possible, but painful. Stick
+    with the shared library for now; if you can't, then ask.
 
 7.  After compiling all of subversion as shared libs, enter these
     directories one at a time and run `make install`:
@@ -51,18 +60,18 @@
 
     This will copy the shared libraries into /usr/local/lib.
 
-8.  cd into /usr/local/apache2, or wherever your "httpd.conf" file was
+8.  cd into /usr/local/apache2/conf, or wherever your "httpd.conf" file was
     installed, and add these lines to the *bottom* of httpd.conf:
 
           <Location /svn/repos>
-             dav svn
-             svn /absolute/path/to/repository
+             DAV svn
+             SVNPath /absolute/path/to/repository
           </Location>
 
 9.  Now go ahead and fire up apache 2.0, using the 'apachectl' script,
     whereever it was installed:
 
-           ./apachectl start
+           ./bin/apachectl start
 
 10. Finally, try doing a network checkout from the repository:
 
