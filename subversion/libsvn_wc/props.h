@@ -30,17 +30,6 @@ svn_error_t *svn_wc__has_props (svn_boolean_t *has_props,
                                 apr_pool_t *pool);
 
 
-/* Given two property hashes (working copy and `base'), deduce what
-   propchanges the user has made since the last update.  Return these
-   changes as a series of svn_prop_t structures stored in
-   LOCAL_PROPCHANGES, allocated from POOL.  */
-svn_error_t *
-svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
-                               apr_hash_t *localprops,
-                               apr_hash_t *baseprops,
-                               apr_pool_t *pool);
-
-
 
 /* Given two propchange objects, return TRUE iff they conflict.  If
    there's a conflict, DESCRIPTION will contain an english description

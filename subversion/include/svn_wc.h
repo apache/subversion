@@ -910,7 +910,7 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
 
 /* Given a PATH to a file or directory under version control, discover
    any local changes made to properties.  Return these changes as an
-   array of (svn_prop_t *) structures stored in *PROPCHANGES.  The
+   array of svn_prop_t structures stored in *PROPCHANGES.  The
    structures and array will be allocated in POOL.
 
    If there are no local property modifications on PATH, then set
@@ -926,6 +926,29 @@ svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
                                     apr_hash_t **original_props,
                                     const char *path,
                                     apr_pool_t *pool);
+
+
+
+/* Given two property hashes, deduce the differences between them
+   (from BASEPROPS -> LOCALPROPS).  Return these changes as a series
+   of svn_prop_t structures stored in LOCAL_PROPCHANGES, allocated
+   from POOL.
+   
+   For note, here's a quick little table describing the logic of this
+   routine:
+
+   basehash        localhash         event
+   --------        ---------         -----
+   value = foo     value = NULL      Deletion occurred.
+   value = foo     value = bar       Set occurred (modification)
+   value = NULL    value = baz       Set occurred (creation)
+*/
+svn_error_t *
+svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
+                              apr_hash_t *localprops,
+                              apr_hash_t *baseprops,
+                              apr_pool_t *pool);
+
 
 
 /* Given paths to three fulltexts, merge the differences between LEFT
