@@ -22,9 +22,6 @@ class Generator(gen_win.WinGeneratorBase):
   def __init__(self, fname, verfname):
     gen_win.WinGeneratorBase.__init__(self, fname, verfname, 'vcnet-vcproj')
 
-    self.guids={}
-    self.global_guid="{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}"
-
   def default_output(self, oname):
     return 'subversion_vcnet.sln'
 
@@ -129,13 +126,33 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self, oname):
     "Write a Solution (.sln)"
 
-    self.ofile = open(oname, 'wt')
+    install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
-    #Python seems to write a \r\n when \n is given so don't worry about that
-    self.ofile.write("Microsoft Visual Studio Solution File, Format Version 7.00\n")
+    targets = [ ]
 
-    for target_ob in self.graph.get_all_sources(gen_base.DT_INSTALL):
+    guids = { }
 
+    # VC.NET uses GUIDs to refer to projects. generate them up front
+    # because we need them already assigned on the dependencies for
+    # each target we work with.
+    for target_ob in install_targets:
+      ### don't create guids for these (yet)
+      if isinstance(target_ob, gen_base.TargetScript):
+        continue
+      if isinstance(target_ob, gen_base.TargetSWIG):
+        continue
+      if isinstance(target_ob, gen_base.SWIGLibrary):
+        continue
+      guids[target_ob.name] = self.makeguid(target_ob.name)
+
+    ### GJS: these aren't in the DT_INSTALL graph, so they didn't get GUIDs
+    guids['apr'] = self.makeguid('apr')
+    guids['aprutil'] = self.makeguid('aprutil')
+    guids['neon'] = self.makeguid('neon')
+
+    for target_ob in install_targets:
+
+      ### nothing to do for these yet
       if isinstance(target_ob, gen_base.TargetScript):
         continue
       if isinstance(target_ob, gen_base.TargetSWIG):
@@ -143,70 +160,53 @@ class Generator(gen_win.WinGeneratorBase):
       if isinstance(target_ob, gen_base.SWIGLibrary):
         continue
 
-      target = target_ob.name
-
-      # VC.NET uses GUIDs to refer to projects, so store them here
-      guid=self.makeguid(target)
-      self.guids[target]=guid
-
-      #We might be building on a non windows os, so use native path here
-      fname=os.path.join(self.projfilesdir,
-                         "%s_vcnet.vcproj" % (string.replace(target,'-','_')))
-      depth=string.count(target_ob.path, os.sep)+1
+      fname = os.path.join(self.projfilesdir,
+                           "%s_vcnet.vcproj" % (string.replace(target_ob.name,
+                                                               '-',
+                                                               '_')))
+      depth = string.count(target_ob.path, os.sep) + 1
       self.writeProject(target_ob, fname,
-                        string.join(['..']*depth, '\\'))
+                        string.join(['..'] * depth, '\\'))
       
       if isinstance(target_ob, gen_base.TargetExternal):
         fname = target_ob._sources[0]
 
-      self.ofile.write('Project("%s") = "%s", "%s", "%s"\n'
-                       % (self.global_guid,
-                          target,
-                          string.replace(fname, os.sep, '\\'),
-                          guid))
-      self.ofile.write("EndProject\n")
-
-    self.ofile.write("Global\n")
-
-    self.ofile.write("\tGlobalSection(SolutionConfiguration) = preSolution\n")
-    self.ofile.write("\t\tConfigName.0 = Debug\n")
-    self.ofile.write("\t\tConfigName.1 = Release\n")
-    self.ofile.write("\tEndGlobalSection\n")
-
-    self.ofile.write("\tGlobalSection(ProjectDependencies) = postSolution\n")
-
-    ### GJS: these aren't in the DT_INSTALL graph, so they didn't get GUIDs
-    self.guids['apr'] = self.makeguid('apr')
-    self.guids['aprutil'] = self.makeguid('aprutil')
-    self.guids['neon'] = self.makeguid('neon')
-
-    for target_ob in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      target = target_ob.name
       ### GJS: or should this be get_unique_win_depends?
-      depends=self.get_win_depends(target_ob)
+      deplist = self.get_win_depends(target_ob)
 
-      for i in range(0, len(depends)):
-        depend=depends[i]
-        self.ofile.write("\t\t%s.%d = %s\n" % (self.guids[target], i, self.guids[depend.name]))
+      depends = [ ]
+      for i in range(len(deplist)):
+        depends.append(_item(guid=guids[deplist[i].name],
+                             index=i,
+                             ))
 
-    self.ofile.write("\tEndGlobalSection\n")
+      targets.append(_item(name=target_ob.name,
+                           path=string.replace(fname, os.sep, '\\'),
+                           guid=guids[target_ob.name],
+                           depends=depends,
+                           ))
 
-    self.ofile.write("\tGlobalSection(ProjectConfiguration) = postSolution\n")
-    for name,guid in self.guids.items():
-      for plat in self.platforms:
-        for cmd in ('ActiveCfg','Build.0'):
-          for cfg in self.configs:
-            self.ofile.write("\t\t%s.%s.%s = %s|%s\n" % (guid, cfg, cmd, cfg, plat))
-    self.ofile.write("\tEndGlobalSection\n")
+    configs = [ ]
+    for i in range(len(self.configs)):
 
-    self.ofile.write("\tGlobalSection(ExtensibilityGlobals) = postSolution\n")
-    self.ofile.write("\tEndGlobalSection\n")
+      ### this is different from writeProject
+      configs.append(_item(name=self.configs[i], index=i))
 
-    self.ofile.write("\tGlobalSection(ExtensibilityAddIns) = postSolution\n")
-    self.ofile.write("\tEndGlobalSection\n")
+    data = {
+      'targets' : targets,
+      'configs' : configs,
+      'platforms' : self.platforms,
+      'guids' : guids.values(),
+      }
 
-    self.ofile.write("EndGlobal\n")
+    fout = StringIO()
 
+    template = ezt.Template(compress_whitespace = 0)
+    template.parse_file(os.path.join('build', 'generator', 'vcnet_sln.ezt'))
+    template.generate(fout, data)
+
+    if self.write_file_if_changed(oname, fout.getvalue()):
+      print "Wrote %s" % oname
 
 
 class _item:
