@@ -264,13 +264,9 @@ svn_config__sys_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
   {
-    char folder[MAX_PATH];
-    HRESULT res = svn_config__win_config_path (folder, TRUE);
-    if (res != S_OK)
-      return SVN_NO_ERROR;
-
-    *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (folder, pool),
+    const char *folder;
+    SVN_ERR (svn_config__win_config_path (&folder, TRUE, pool));
+    *path_p = svn_path_join_many (pool, folder,
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 
@@ -298,13 +294,9 @@ svn_config__user_config_path (const char **path_p,
 
 #ifdef SVN_WIN32
   {
-    char folder[MAX_PATH];
-    HRESULT res = svn_config__win_config_path (folder, FALSE);
-    if (res != S_OK)
-      return SVN_NO_ERROR;
-
-    *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (folder, pool),
+    const char *folder;
+    SVN_ERR (svn_config__win_config_path (&folder, FALSE, pool));
+    *path_p = svn_path_join_many (pool, folder,
                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
   }
 

@@ -26,19 +26,86 @@
 #include <windows.h>
 #include <shlobj.h>
 
-HRESULT
-svn_config__win_config_path (char *folder, int system_path)
+#include <apr_file_info.h>
+/* FIXME: We're using an internal APR header here, which means we
+   have to build Subversion with APR sources. This being Win32-only,
+   that should be fine for now, but a better solution must be found in
+   combination with issue #850. */
+#include "../../apr/include/arch/win32/utf8.h"
+
+#include "svn_error.h"
+#include "svn_path.h"
+#include "svn_utf.h"
+
+svn_error_t *
+svn_config__win_config_path (const char **folder, int system_path,
+                             apr_pool_t *pool)
 {
   /* ### Adding CSIDL_FLAG_CREATE here, because those folders really
      must exist.  I'm not too sure about the SHGFP_TYPE_CURRENT
      semancics, though; maybe we should use ..._DEFAULT instead? */
+  const int csidl = ((system_path ? CSIDL_COMMON_APPDATA : CSIDL_APPDATA)
+                     | CSIDL_FLAG_CREATE);
 
-  /* FIXME: The path returned here is *not* in UTF-8, and does *not*
-     use / as the path separator.  Have to keep that in mind. */
+  int style;
+  apr_status_t apr_err = apr_filepath_encoding(&style, pool);
 
-   const int csidl = (system_path ? CSIDL_COMMON_APPDATA : CSIDL_APPDATA);
-   return SHGetFolderPathA (NULL, csidl | CSIDL_FLAG_CREATE, NULL,
-                            SHGFP_TYPE_CURRENT, folder);
+  if (apr_err)
+    return svn_error_create (apr_err, NULL,
+                             "Can't determine the native path encoding");
+
+  if (style == APR_FILEPATH_ENCODING_UTF8)
+    {
+      WCHAR folder_ucs2[MAX_PATH];
+      int inwords, outbytes, outlength;
+      char *folder_utf8;
+
+      if (S_OK != SHGetFolderPathW (NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
+                                    folder_ucs2))
+        goto no_folder_path;
+
+      /* ### When mapping from UCS-2 to UTF-8, we need at most 3 bytes
+             per wide char, plus extra space for the nul terminator. */
+      inwords = lstrlenW (folder_ucs2);
+      outbytes = outlength = 3 * (inwords + 1);
+      folder_utf8 = apr_palloc (pool, outlength);
+
+      apr_err = apr_conv_ucs2_to_utf8 (folder_ucs2, &inwords,
+                                       folder_utf8, &outbytes);
+      if (!apr_err && (inwords > 0 || outbytes == 0))
+        apr_err = APR_INCOMPLETE;
+      if (apr_err)
+        return svn_error_create (apr_err, NULL,
+                                 "Can't convert config path to UTF-8");
+
+      /* Note that apr_conv_ucs2_to_utf8 does _not_ terminate the
+         outgoing buffer. */
+      folder_utf8[outlength - outbytes] = '\0';
+      *folder = folder_utf8;
+    }
+  else if (style == APR_FILEPATH_ENCODING_LOCALE)
+    {
+      char folder_ansi[MAX_PATH];
+      if (S_OK != SHGetFolderPathA (NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
+                                    folder_ansi))
+        goto no_folder_path;
+      SVN_ERR (svn_utf_cstring_to_utf8 (folder, folder_ansi, NULL, pool));
+    }
+  else
+    {
+      /* There is no third option on Windows; we should never get here. */
+      return svn_error_createf (APR_EINVAL, NULL,
+                                "Unknown native path encoding (%d)", style);
+    }
+
+  *folder = svn_path_internal_style (*folder, pool);
+  return SVN_NO_ERROR;
+
+ no_folder_path:
+  return svn_error_create (SVN_ERR_BAD_FILENAME, NULL,
+                           (system_path
+                            ? "Can't determine the system config path"
+                            : "Can't determine the user's config path"));
 }
 
 
