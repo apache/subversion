@@ -37,38 +37,33 @@ int svn_fs_bdb__open_lock_tokens_table (DB **locks_tokens_p,
 
 
 /* Add a lock-token to the `lock-tokens' table in FS, as part of TRAIL. 
-   Use PATH as the key and LOCK_TOKEN as the value.  KIND indicates
-   whether PATH is a file or directory.
+   Use PATH as the key and LOCK_TOKEN as the value.
 
    Warning: if PATH already exists as a key, then its value will be
    overwritten. */
 svn_error_t *
 svn_fs_bdb__lock_token_add (svn_fs_t *fs,
                             const char *path,
-                            svn_node_kind_t kind,
                             const char *lock_token,
                             trail_t *trail,
                             apr_pool_t *pool);
 
 
 /* Remove the lock-token whose key is PATH from the `lock-tokens'
-   table of FS, as part of TRAIL.  KIND indicates whether PATH is a
-   file or directory.
+   table of FS, as part of TRAIL.
 
    If PATH doesn't exist as a key, return SVN_ERR_FS_NO_SUCH_LOCK.
 */
 svn_error_t *
 svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
                                const char *path,
-                               svn_node_kind_t kind,
                                trail_t *trail,
                                apr_pool_t *pool);
 
 
 /* Retrieve the lock-token *LOCK_TOKEN_P pointed to by PATH from the
    `lock-tokens' table of FS, as part of TRAIL.  Perform all
-   allocations in POOL.  KIND indicates whether PATH is a file or
-   directory.
+   allocations in POOL.
 
    If PATH doesn't exist as a key, return SVN_ERR_FS_NO_SUCH_LOCK.
 
@@ -84,7 +79,6 @@ svn_error_t *
 svn_fs_bdb__lock_token_get (const char **lock_token_p,
                             svn_fs_t *fs,
                             const char *path,
-                            svn_node_kind_t kind,
                             trail_t *trail,
                             apr_pool_t *pool);
 

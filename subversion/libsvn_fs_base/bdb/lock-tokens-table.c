@@ -66,7 +66,6 @@ svn_fs_bdb__open_lock_tokens_table (DB **lock_tokens_p,
 svn_error_t *
 svn_fs_bdb__lock_token_add (svn_fs_t *fs,
                             const char *path,
-                            svn_node_kind_t kind,
                             const char *lock_token,
                             trail_t *trail,
                             apr_pool_t *pool)
@@ -74,9 +73,6 @@ svn_fs_bdb__lock_token_add (svn_fs_t *fs,
 
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
-
-  if ((kind == svn_node_dir) && (strcmp (path, "/") != 0))
-    path = apr_pstrcat (pool, path, "/", NULL);
 
   svn_fs_base__str_to_dbt (&key, path);
   svn_fs_base__str_to_dbt (&value, lock_token);
@@ -92,22 +88,16 @@ svn_fs_bdb__lock_token_add (svn_fs_t *fs,
 svn_error_t *
 svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
                                const char *path,
-                               svn_node_kind_t kind,
                                trail_t *trail,
                                apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  const char *lookup_path = path;
   DBT key;
   int db_err;
 
-  if ((kind == svn_node_dir) && (strcmp (path, "/") != 0))
-    lookup_path = apr_pstrcat (pool, path, "/", NULL);
-
-  svn_fs_base__str_to_dbt (&key, lookup_path);
+  svn_fs_base__str_to_dbt (&key, path);
   svn_fs_base__trail_debug (trail, "lock-tokens", "del");
   db_err = bfd->lock_tokens->del (bfd->lock_tokens, trail->db_txn, &key, 0);
-  
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_lock (fs, path); 
   SVN_ERR (BDB_WRAP (fs, "deleting entry from 'lock-tokens' table", db_err));
@@ -120,24 +110,19 @@ svn_error_t *
 svn_fs_bdb__lock_token_get (const char **lock_token_p,
                             svn_fs_t *fs,
                             const char *path,
-                            svn_node_kind_t kind,
                             trail_t *trail,
                             apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  const char *lookup_path = path;
   DBT key, value;
   svn_error_t *err;
   svn_lock_t *lock;
   const char *lock_token;
   int db_err;
 
-  if ((kind == svn_node_dir) && (strcmp (path, "/") != 0))
-    lookup_path = apr_pstrcat (pool, path, "/", NULL);
-
   svn_fs_base__trail_debug (trail, "lock-tokens", "get");
   db_err = bfd->lock_tokens->get (bfd->lock_tokens, trail->db_txn,
-                                  svn_fs_base__str_to_dbt (&key, lookup_path),
+                                  svn_fs_base__str_to_dbt (&key, path),
                                   svn_fs_base__result_dbt (&value),
                                   0);
   svn_fs_base__track_dbt (&value, pool);
@@ -156,7 +141,7 @@ svn_fs_bdb__lock_token_get (const char **lock_token_p,
     {
       /* If `locks' doesn't have the lock, then we should lose it too. */
       svn_error_t *delete_err;
-      delete_err = svn_fs_bdb__lock_token_delete (fs, path, kind, trail, pool);
+      delete_err = svn_fs_bdb__lock_token_delete (fs, path, trail, pool);
       if (delete_err)
         svn_error_compose (err, delete_err);
       return err;
@@ -167,5 +152,3 @@ svn_fs_bdb__lock_token_get (const char **lock_token_p,
   *lock_token_p = lock_token;
   return SVN_NO_ERROR;
 }
-
-

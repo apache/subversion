@@ -1306,13 +1306,11 @@ txn_body_change_node_prop (void *baton,
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, txn_id, 
                       trail, trail->pool));
 
-  /* Check to see if path is locked;  if so, check that we can use it. 
-     Notice that we're calling with recurse==0, regardless of node kind. */  
+  /* Check to see if path is locked; if so, check that we can use it.
+     Notice that we're doing this non-recursively, regardless of node kind. */
   if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_base__allow_locked_operation 
-             (args->path,
-              svn_fs_base__dag_node_kind (parent_path->node),
-              0, trail, trail->pool));
+             (args->path, FALSE, trail, trail->pool));
 
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, 
                               trail, trail->pool));
@@ -2627,16 +2625,13 @@ txn_body_commit (void *baton, trail_t *trail)
                   && (change->change_kind == svn_fs_path_change_modify)))
             recurse = FALSE;
 
-          SVN_ERR (svn_fs_base__allow_locked_operation (key, kind, recurse,
+          SVN_ERR (svn_fs_base__allow_locked_operation (key, recurse,
                                                         trail, subpool));
         }
       else
         {
-          /* Non-recursive check first. */
-          SVN_ERR (svn_fs_base__allow_locked_operation 
-                   (key, svn_node_file, FALSE, trail, subpool));
-          SVN_ERR (svn_fs_base__allow_locked_operation 
-                   (key, svn_node_dir, TRUE, trail, subpool));
+          SVN_ERR (svn_fs_base__allow_locked_operation (key, TRUE, 
+                                                        trail, subpool));
         }
     }
   svn_pool_destroy (subpool);
@@ -2932,10 +2927,8 @@ txn_body_make_dir (void *baton,
      can use it. */
   if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
-      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
-                                                    1, trail, trail->pool));
-      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                    0, trail, trail->pool));
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, TRUE,
+                                                    trail, trail->pool));
     }
 
   /* Create the subdirectory.  */
@@ -3009,9 +3002,7 @@ txn_body_delete (void *baton,
      check that we can use the existing lock(s). */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
-      svn_node_kind_t kind = svn_fs_base__dag_node_kind (parent_path->node);
-      svn_boolean_t recurse = (kind == svn_node_dir) ? TRUE : FALSE;
-      SVN_ERR (svn_fs_base__allow_locked_operation (path, kind, recurse,
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, TRUE,
                                                     trail, trail->pool));
     }
   
@@ -3081,9 +3072,7 @@ txn_body_copy (void *baton,
      can use the existing lock(s). */
   if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
-      svn_node_kind_t kind = svn_fs_base__dag_node_kind (from_node);
-      svn_boolean_t recurse = (kind == svn_node_dir) ? TRUE : FALSE;
-      SVN_ERR (svn_fs_base__allow_locked_operation (to_path, kind, recurse,
+      SVN_ERR (svn_fs_base__allow_locked_operation (to_path, TRUE,
                                                     trail, trail->pool));
     }
 
@@ -3315,10 +3304,8 @@ txn_body_make_file (void *baton,
      can use it. */
   if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
-      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
-                                                    1, trail, trail->pool));
-      SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                    0, trail, trail->pool));
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, TRUE,
+                                                    trail, trail->pool));
     }
 
   /* Create the file.  */
@@ -3641,9 +3628,8 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
 
   /* Check to see if path is locked;  if so, check that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_base__allow_locked_operation 
-             (tb->path, svn_fs_base__dag_node_kind (parent_path->node),
-              FALSE, trail, trail->pool));
+    SVN_ERR (svn_fs_base__allow_locked_operation (tb->path, FALSE, 
+                                                  trail, trail->pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, 
@@ -3831,9 +3817,8 @@ txn_body_apply_text (void *baton, trail_t *trail)
 
   /* Check to see if path is locked;  if so, check that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_base__allow_locked_operation 
-             (tb->path, svn_fs_base__dag_node_kind (parent_path->node),
-              FALSE, trail, trail->pool));
+    SVN_ERR (svn_fs_base__allow_locked_operation (tb->path, FALSE, 
+                                                  trail, trail->pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, 

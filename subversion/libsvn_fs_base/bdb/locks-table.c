@@ -158,25 +158,72 @@ svn_fs_bdb__lock_get (svn_lock_t **lock_p,
 }
 
 
+static svn_error_t *
+get_lock (svn_lock_t **lock_p,
+          svn_fs_t *fs,
+          const char *path,
+          const char *lock_token,
+          trail_t *trail,
+          apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* Make sure the token points to an existing, non-expired lock, by
+     doing a lookup in the `locks' table.  Use 'pool'. */
+  err = svn_fs_bdb__lock_get (lock_p, fs, lock_token, trail, pool);
+  if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+              || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
+    {
+      svn_error_clear (err);
+
+      /* If `locks' doesn't have the lock, then we should lose it
+         from `lock-tokens' table as well, then skip to the next
+         matching path-key. */
+      err = svn_fs_bdb__lock_token_delete (fs, path, trail, pool);
+    }
+  return err;
+}
 
 
 svn_error_t *
 svn_fs_bdb__locks_get (apr_hash_t **locks_p,
                        svn_fs_t *fs,
                        const char *path,
-                       const svn_node_kind_t kind,
                        trail_t *trail,
                        apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
-  const char *lookup_path = path;
   DBC *cursor;
   DBT key, value;
   int db_err;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *locks = apr_hash_make (pool);
+  const char *lock_token;
+  svn_lock_t *lock;
+  svn_error_t *err;
+  const char *lookup_path = path;
 
-  if ((kind == svn_node_dir) && (strcmp (path, "/") != 0))
+  /* First, try to lookup PATH itself. */
+  err = svn_fs_bdb__lock_token_get (&lock_token, fs, path, trail, pool);
+  if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+              || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
+              || (err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)))
+    {
+      svn_error_clear (err);
+    }
+  else if (err)
+    {
+      return err;
+    }
+  else
+    {
+      SVN_ERR (get_lock (&lock, fs, path, lock_token, trail, pool));
+      apr_hash_set (locks, apr_pstrdup (pool, path), 
+                    APR_HASH_KEY_STRING, lock);
+    }
+
+  /* Now go hunt for possible children of PATH. */
+  if (strcmp (path, "/") != 0)
     lookup_path = apr_pstrcat (pool, path, "/", NULL);
 
   svn_fs_base__trail_debug (trail, "lock-tokens", "cursor");
@@ -184,29 +231,22 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
                                      &cursor, 0);  
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading lock tokens", db_err));
 
-  /* Since the key is going to be returned as well as the value
-   * make sure BDB malloc's the returned key.
-   */
+  /* Since the key is going to be returned as well as the value make
+     sure BDB malloc's the returned key.  */
   svn_fs_base__str_to_dbt (&key, lookup_path);
   key.flags |= DB_DBT_MALLOC;
 
-  /* Get the first matching key that is either equal or greater
-   * than the one passed in, by passing in the DB_RANGE_SET flag.
-   */
+  /* Get the first matching key that is either equal or greater than
+     the one passed in, by passing in the DB_RANGE_SET flag.  */
   db_err = cursor->c_get (cursor, &key, svn_fs_base__result_dbt (&value),
                           DB_SET_RANGE);
 
-  /* As long as the prefix of the returned KEY matches LOOKUP_PATH 
-   * we know it is either LOOKUP_PATH or a decendant thereof.
-   */
-  while ((! db_err) && 
-         strncmp (lookup_path, key.data, strlen (lookup_path)) == 0)
+  /* As long as the prefix of the returned KEY matches LOOKUP_PATH we
+     know it is either LOOKUP_PATH or a decendant thereof.  */
+  while ((! db_err) 
+         && strncmp (lookup_path, key.data, strlen (lookup_path)) == 0)
     {
-      const char *lock_token;
-      char *child_path;
-      svn_node_kind_t child_kind;
-      svn_lock_t *lock;
-      svn_error_t *err;
+      const char *child_path;
 
       svn_pool_clear (subpool);
 
@@ -217,32 +257,13 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
       child_path = apr_pstrmemdup (subpool, key.data, key.size);
       lock_token = apr_pstrmemdup (subpool, value.data, value.size);
 
-      /* Figure out the node_kind of this child path. */
-      child_kind =
-        (child_path[key.size - 1] == '/') ? svn_node_dir : svn_node_file;
-
-      /* If the child_path has a trailing '/', we need to remove it,
-         to stay compatible with the rest of the fs library. */
-      if (child_path[key.size - 1] == '/')
-          child_path[key.size - 1] = '\0';
-
-      /* Make sure the token points to an existing, non-expired lock,
-         by doing a lookup in the `locks' table.  Use 'pool'. */
-      err = svn_fs_bdb__lock_get (&lock, fs, lock_token, trail, pool);
-      if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
-                  || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
+      /* Get the lock for CHILD_PATH.  */
+      err = get_lock (&lock, fs, child_path, lock_token, trail, pool);
+      if (err)
         {
-          svn_error_clear (err);
-
-          /* If `locks' doesn't have the lock, then we should lose it
-             from `lock-tokens' table as well, then skip to the next
-             matching path-key. */
-          SVN_ERR (svn_fs_bdb__lock_token_delete (fs, child_path,
-                                                  child_kind, trail, subpool));
-          continue;
+          cursor->c_close (cursor);
+          return err;
         }
-      else if (err)
-        return err;
 
       /* Lock is verified, return it in the hash. */
       apr_hash_set (locks, apr_pstrdup (pool, child_path), 

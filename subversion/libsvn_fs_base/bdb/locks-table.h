@@ -78,8 +78,7 @@ svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
 
 
 /* Retrieve a hash of locks in *LOCKS_P, representing all locks
-   that exist at or below PATH in FS.  KIND indicates whether PATH is
-   a file or directory.
+   that exist at or below PATH in FS.
 
    The hash maps (const char *)path -> (svn_lock_t *)lock.  All
    allocations are made in POOL.
@@ -93,7 +92,6 @@ svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
 svn_error_t *svn_fs_bdb__locks_get (apr_hash_t **locks_p,
                                     svn_fs_t *fs,
                                     const char *path,
-                                    const svn_node_kind_t kind,
                                     trail_t *trail,
                                     apr_pool_t *pool);
 
