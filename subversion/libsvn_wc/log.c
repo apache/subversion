@@ -342,7 +342,7 @@ remove_from_revision_control (struct log_runner *loggy, svn_string_t *name)
 
 /*** Dispatch on the xml opening tag. ***/
 
-static void
+static svn_error_t *
 log_do_run_cmd (struct log_runner *loggy,
                 const char *name,
                 const XML_Char **atts)
@@ -387,9 +387,8 @@ log_do_run_cmd (struct log_runner *loggy,
       apr_err = apr_open (&infile, infile_path->data, APR_READ,
                           APR_OS_DEFAULT, loggy->pool);
       if (apr_err)
-        signal_error (loggy, svn_error_createf
-                      (apr_err, 0, NULL, loggy->pool,
-                       "error opening %s", infile_path->data));
+        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
+                                  "error opening %s", infile_path->data);
     }
   
   if (outfile_name)
@@ -405,9 +404,8 @@ log_do_run_cmd (struct log_runner *loggy,
                           (APR_WRITE | APR_CREATE),
                           APR_OS_DEFAULT, loggy->pool);
       if (apr_err)
-        signal_error (loggy, svn_error_createf
-                      (apr_err, 0, NULL, loggy->pool,
-                       "error opening %s", outfile_path->data));
+        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
+                                  "error opening %s", outfile_path->data);
     }
   
   if (errfile_name)
@@ -423,9 +421,8 @@ log_do_run_cmd (struct log_runner *loggy,
                           (APR_WRITE | APR_CREATE),
                           APR_OS_DEFAULT, loggy->pool);
       if (apr_err)
-        signal_error (loggy, svn_error_createf
-                      (apr_err, 0, NULL, loggy->pool,
-                       "error opening %s", errfile_path->data));
+        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
+                                  "error opening %s", errfile_path->data);
     }
   
   err = run_cmd_in_directory (loggy->path,
@@ -436,20 +433,15 @@ log_do_run_cmd (struct log_runner *loggy,
                               errfile,
                               loggy->pool);
   if (err)
-    {
-      signal_error
-        (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                   0,
-                                   NULL,
-                                   loggy->pool,
-                                   "error running %s in %s",
-                                   name, loggy->path->data));
-      return;
-    }
+     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                               "error running %s in %s",
+                               name, loggy->path->data);
+
+  return SVN_NO_ERROR;
 }
 
 
-static void
+static svn_error_t *
 log_do_file_xfer (struct log_runner *loggy,
                   const char *name,
                   enum svn_wc__xfer_action action,
@@ -459,29 +451,22 @@ log_do_file_xfer (struct log_runner *loggy,
   const char *dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
 
   if (! dest)
-    {
-      signal_error
-        (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                   0,
-                                   NULL,
-                                   loggy->pool,
-                                   "missing dest attr in %s",
-                                   loggy->path->data));
-      return;
-    }
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                              "missing dest attr in %s", loggy->path->data);
 
   /* Else. */
 
   err = file_xfer_under_path (loggy->path, name, dest, action, loggy->pool);
   if (err)
     signal_error (loggy, err);
+
+  return SVN_NO_ERROR;
 }
 
 
-static void
+static svn_error_t *
 log_do_rm (struct log_runner *loggy, const char *name)
 {
-  svn_error_t *err;
   apr_status_t apr_err;
   svn_string_t *full_path;
 
@@ -490,18 +475,14 @@ log_do_rm (struct log_runner *loggy, const char *name)
 
   apr_err = apr_remove_file (full_path->data, loggy->pool);
   if (apr_err)
-    {
-      err = svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                               "apr_remove_file couldn't remove %s",
-                               name);
-      signal_error (loggy, err);
-      return;
-    }
+    return svn_error_createf (apr_err, 0, NULL, loggy->pool,
+                              "apr_remove_file couldn't remove %s", name);
+
+  return SVN_NO_ERROR;
 }
 
 
-
-static void
+static svn_error_t *
 log_do_modify_entry (struct log_runner *loggy,
                      const char *name,
                      const XML_Char **atts)
@@ -586,30 +567,17 @@ log_do_modify_entry (struct log_runner *loggy,
         enum svn_node_kind tfile_kind;
         err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
         if (err)
-          {
-            signal_error (loggy, svn_error_createf
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error checking path %s",
-                           tfile->data));
-            return;
-          }
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "error checking path %s", tfile->data);
+
         err = svn_io_file_affected_time (&text_time,
                                          tfile,
                                          loggy->pool);
         if (err)
-          {
-            signal_error (loggy, svn_error_createf
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error getting file affected time on %s",
-                           tfile->data));
-            return;
-          }
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "error getting file affected time on %s", tfile->data);
       }
             
     /* Scenario 3:  use the integer provided, as-is. */
@@ -637,30 +605,17 @@ log_do_modify_entry (struct log_runner *loggy,
         enum svn_node_kind pfile_kind;
         err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
         if (err)
-          {
-            signal_error (loggy, svn_error_createf
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error checking path %s",
-                           pfile->data));
-            return;
-          }
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "error checking path %s", pfile->data);
+
         err = svn_io_file_affected_time (&prop_time,
                                          pfile,
                                          loggy->pool);
         if (err)
-          {
-            signal_error (loggy, svn_error_createf
-                          (SVN_ERR_WC_BAD_ADM_LOG,
-                           0,
-                           NULL,
-                           loggy->pool,
-                           "error getting file affected time on %s",
-                           pfile->data));
-            return;
-          }
+          return svn_error_createf
+            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+             "error getting file affected time on %s", pfile->data);
       }
             
             
@@ -685,20 +640,14 @@ log_do_modify_entry (struct log_runner *loggy,
                                   loggy->pool,
                                   ah);
   if (err)
-    {
-      signal_error (loggy, svn_error_createf 
-                    (SVN_ERR_WC_BAD_ADM_LOG,
-                     0,
-                     NULL,
-                     loggy->pool,
-                     "error merge_syncing entry %s",
-                     name));
-      return;
-    }
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                              "error merge_syncing entry %s", name);
+
+  return SVN_NO_ERROR;
 }
 
 
-static void
+static svn_error_t *
 log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
   svn_error_t *err;
@@ -706,14 +655,64 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
   
   err = remove_from_revision_control (loggy, sname);
   if (err)
-    {
-      signal_error (loggy, err);
-      return;
-    }
+    return err;
+
+  return SVN_NO_ERROR;
 }
 
 
-static void
+/* In PARENT_DIR, if REJFILE exists and is not 0 bytes, then mark
+ * ENTRY as being in a state of CONFLICT_TYPE (using REJFILE as the
+ * reject file).  Else if REJFILE is 0 bytes, then just remove it (the
+ * ENTRY is not in a state of conflict, and REJFILE was never used).
+ *
+ * If REJFILE does not exist, do nothing.
+ *
+ * CONFLICT_TYPE is one of kff todo: see wc.h, Ben.
+ */
+static svn_error_t *
+conflict_if_file (svn_string_t *parent_dir,
+                  const char *rejfile,
+                  const char *entry,
+                  const char *conflict_type,
+                  apr_pool_t *pool)
+{
+  /* kff todo: fooo in progress */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+log_do_updated (struct log_runner *loggy,
+                const char *name,
+                const XML_Char **atts)
+{
+  svn_error_t *err;
+  const char *t = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_TEXT_REJFILE, atts);
+  const char *p = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_PROP_REJFILE, atts);
+
+  if (t)
+    {
+      err = conflict_if_file (loggy->path, t, name, "kff todo: text!",
+                              loggy->pool);
+      if (err)
+        return err;
+    }
+
+  if (p)
+    {
+      err = conflict_if_file (loggy->path, p, name, "kff todo: prop!",
+                              loggy->pool);
+      if (err)
+        return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 log_do_committed (struct log_runner *loggy,
                   const char *name,
                   const XML_Char **atts)
@@ -723,16 +722,8 @@ log_do_committed (struct log_runner *loggy,
     = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
 
   if (! revstr)
-    {
-      signal_error
-        (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                   0,
-                                   NULL,
-                                   loggy->pool,
-                                   "missing revision attr for %s",
-                                   name));
-      return;
-    }
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                              "missing revision attr for %s", name);
   else
     {
       svn_string_t *working_file;
@@ -745,20 +736,14 @@ log_do_committed (struct log_runner *loggy,
 
       err = svn_wc__entries_read (&entries, loggy->path, loggy->pool);
       if (err)
-        {
-          signal_error (loggy, err);
-          return;
-        }
+        return err;
           
       entry = apr_hash_get (entries, sname->data, sname->len);
       if (entry && (entry->flags & SVN_WC_ENTRY_DELETE))
         {
           err = remove_from_revision_control (loggy, sname);
           if (err)
-            {
-              signal_error (loggy, err);
-              return;
-            }
+            return err;
         }
       else   /* entry not being deleted, so mark commited-to-date */
         {
@@ -770,16 +755,9 @@ log_do_committed (struct log_runner *loggy,
               
           err = svn_io_check_path (tmp_base, &kind, loggy->pool);
           if (err)
-            {
-              signal_error (loggy, svn_error_createf
-                            (SVN_ERR_WC_BAD_ADM_LOG,
-                             0,
-                             NULL,
-                             loggy->pool,
-                             "error checking existence of %s",
-                             name));
-              return;
-            }
+            return svn_error_createf
+              (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+               "error checking existence of %s", name);
               
           if (kind == svn_node_file)
             {
@@ -789,44 +767,24 @@ log_do_committed (struct log_runner *loggy,
                                                    tmp_base,
                                                    loggy->pool);
               if (err)
-                {
-                  signal_error (loggy, svn_error_createf 
-                                (SVN_ERR_WC_BAD_ADM_LOG,
-                                 0,
-                                 NULL,
-                                 loggy->pool,
-                                 "error comparing %s and %s",
-                                 working_file->data, tmp_base->data));
-                  return;
-                }
+                return svn_error_createf 
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                   "error comparing %s and %s",
+                   working_file->data, tmp_base->data);
                   
               err = svn_io_file_affected_time 
                 (&timestamp, same ? working_file : tmp_base, loggy->pool);
               if (err)
-                {
-                  signal_error
-                    (loggy, svn_error_createf 
-                     (SVN_ERR_WC_BAD_ADM_LOG,
-                      0,
-                      NULL,
-                      loggy->pool,
-                      "error getting file_affected_time on %s",
-                      same ? working_file->data : tmp_base->data));
-                  return;
-                }
+                return svn_error_createf 
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                   "error getting file_affected_time on %s",
+                   same ? working_file->data : tmp_base->data);
                   
               err = replace_text_base (loggy->path, name, loggy->pool);
               if (err)
-                {
-                  signal_error (loggy, svn_error_createf 
-                                (SVN_ERR_WC_BAD_ADM_LOG,
-                                 0,
-                                 NULL,
-                                 loggy->pool,
-                                 "error replacing text base for %s",
-                                 name));
-                  return;
-                }
+                return svn_error_createf 
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                   "error replacing text base for %s", name);
             }
               
           /* Else the SVN/tmp/text-base/ file didn't exist.  Whatever; we
@@ -844,24 +802,20 @@ log_do_committed (struct log_runner *loggy,
                                           loggy->pool,
                                           NULL);
           if (err)
-            {
-              signal_error
-                (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                           0,
-                                           NULL,
-                                           loggy->pool,
-                                           "error merge_syncing %s",
-                                           name));
-              return;
-            }
+            return svn_error_createf
+              (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+               "error merge_syncing %s", name);
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
 
 static void
 start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
+  svn_error_t *err = NULL;
   struct log_runner *loggy = userData;
 
   /* All elements use the `name' attribute, so grab it now. */
@@ -881,28 +835,31 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   
   /* Dispatch. */
   if (strcmp (eltname, SVN_WC__LOG_RUN_CMD) == 0) {
-    log_do_run_cmd (loggy, name, atts);
+    err = log_do_run_cmd (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0) {
-    log_do_modify_entry (loggy, name, atts);
+    err = log_do_modify_entry (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
-    log_do_delete_entry (loggy, name);
+    err = log_do_delete_entry (loggy, name);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_UPDATED) == 0) {
+    err = log_do_updated (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_COMMITTED) == 0) {
-    log_do_committed (loggy, name, atts);
+    err = log_do_committed (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_RM) == 0) {
-    log_do_rm (loggy, name);
+    err = log_do_rm (loggy, name);
   }
   else if (strcmp (eltname, SVN_WC__LOG_MV) == 0) {
-    log_do_file_xfer (loggy, name, svn_wc__xfer_mv, atts);
+    err = log_do_file_xfer (loggy, name, svn_wc__xfer_mv, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_CP) == 0) {
-    log_do_file_xfer (loggy, name, svn_wc__xfer_cp, atts);
+    err = log_do_file_xfer (loggy, name, svn_wc__xfer_cp, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_APPEND) == 0) {
-    log_do_file_xfer (loggy, name, svn_wc__xfer_append, atts);
+    err = log_do_file_xfer (loggy, name, svn_wc__xfer_append, atts);
   }
   else
     {
@@ -915,6 +872,15 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                    loggy->path->data, eltname));
       return;
     }
+
+  if (err)
+    signal_error
+      (loggy, svn_error_createf
+       (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
+        "start_handler: error processing element %s in %s",
+        eltname, loggy->path->data));
+  
+  return;
 }
 
 

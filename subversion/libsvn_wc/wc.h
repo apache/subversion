@@ -337,8 +337,19 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_APPEND              "append"
 
 
-/* A commit completed successfully, so:  
- *   if SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
+/* Handle closure after an update completes successfully:  
+ *
+ *   If SVN_WC__LOG_ATTR_TEXT_REJFILE exists and has >0 size, then
+ *   mark the entry as textually conflicted; else remove a 0 byte
+ *   reject file.
+ *
+ *   Similarly for SVN_WC__LOG_ATTR_PROP_REJFILE.
+ */
+#define SVN_WC__LOG_UPDATED            "updated"
+
+/* Handle closure after a commit completes successfully:  
+ *
+ *   If SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
  *      compare SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME with working file
  *         if they're the same, use working file's timestamp
  *         else use SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME's timestamp
@@ -350,10 +361,9 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
-#define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
-/* The rest are for SVN_WC__LOG_RUN_CMD.  I'd love not to need a
-   separate attribute for every argument to the CMD, but in xml each
-   attribute has to have a unique name within that element, right? */
+#define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
+#define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
+/* The rest are for SVN_WC__LOG_RUN_CMD.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_INFILE         "infile"
 #define SVN_WC__LOG_ATTR_OUTFILE        "outfile"
 #define SVN_WC__LOG_ATTR_ERRFILE        "errfile"
