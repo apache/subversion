@@ -844,6 +844,16 @@ Updated to revision 3.
             command to remove stale locks and get your working copy
             into a usable state again.  See <xref
             linkend="svn-ap-b"/>.</para>
+
+          <para>If, for some reason, an <command>svn update</command>
+            fails due to a problem running an external diff program
+            (e.g. user input or network failure), pass the
+            <option>--diff3-cmd</option> to allow cleanup to complete
+            any merging with your external diff program.  You can also
+            specify any configuration directory with the
+            <option>--config-dir</option> switch, but you should need
+            these switches extremely infrequently.</para>
+
         </refsect1>
 
         <refsect1>
@@ -864,7 +874,11 @@ Updated to revision 3.
         <refsect1>
           <title>Switches:</title>
 
-          <para>None</para>
+          <screen>
+--diff3-cmd CMD
+--config-dir DIR
+          </screen>
+
         </refsect1>
 
         <refsect1>
