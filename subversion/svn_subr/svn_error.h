@@ -49,13 +49,44 @@
 
 
 #include <svn_types.h>
+#include <apr_errno.h>     /* APR's error system */
 
 
+/* 
+   Theoretically, this is the header file where we can define our own
+   *custom* Subversion errno's, specifically between the ranges of
+   APR_OS_START_USEERR and APR_OS_START_SYSERR (see apr_errno.h)
+*/
 
 
+typedef struct svn_error_t
+{
+  ap_status_t errno;           /* native OS errno */
+  svn_boolean_t fatal;         /* is this a fatal error? */
+  svn_string_t description;    /* textual description from ap_strerror() */
+  int canonical_errno;         /* "canonicalized" errno from APR */ 
+
+} svn_error_t;
 
 
+/* svn_error_t constructor */
 
+svn_error_t *svn_create_error (ap_status_t errno, 
+                               svn_boolean_t fatal,
+                               ap_pool_t *pool);
+
+
+/* all routines call this */
+
+void svn_handle_error (svn_error_t *error);
+
+
+/* example usage:
+
+   if (bad_thing)
+     svn_handle_error (svn_create_error (errno, FALSE, pool));
+
+ */
 
 
 

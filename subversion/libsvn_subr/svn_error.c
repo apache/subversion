@@ -51,7 +51,19 @@
 #include <svn_error.h>
 
 
+svn_error_t *
+svn_create_error (ap_status_t errno, svn_boolean_t fatal, ap_pool_t *pool)
+{
+  svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
+                                                      sizeof(svn_error_t));
 
+  new_error->errno = errno;
+  new_error->fatal = fatal;
+  new_error->description = svn_string_create (ap_strerror (errno), pool);
+  new_error->canonical_errno = ap_canonical_error (errno);
+
+  return new_error;
+}
 
 
 
