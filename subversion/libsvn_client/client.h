@@ -413,6 +413,50 @@ typedef struct svn_client__external_item_t
 } svn_client__external_item_t;
 
 
+/* Set *EXTERNALS_P to a hash table whose keys are target subdir
+ * names, and values are `svn_client__external_item_t *' objects,
+ * based on DESC.
+ *
+ * The format of EXTERNALS is the same as for values of the directory
+ * property SVN_PROP_EXTERNALS, which see.
+ *
+ * Allocate the table, keys, and values in POOL.
+ *
+ * If the format of DESC is invalid, don't touch *EXTERNALS_P and
+ * return SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.
+ */
+svn_error_t *svn_client__parse_externals_description
+   (apr_hash_t **externals_p,
+    const char *desc,
+    apr_pool_t *pool);
+
+
+/* Walk newly checked-out tree PATH looking for directories that have
+   the "svn:externals" property set.  For each one, read the external
+   items from in the property value, and check them out as subdirs
+   of the directory that had the property.
+
+   BEFORE_EDITOR/BEFORE_EDIT_BATON and AFTER_EDITOR/AFTER_EDIT_BATON,
+   along with AUTH_BATON, are passed along to svn_client_checkout() to
+   check out the external items.   ### This is a lousy notification
+   system, soon it will be notification callbacks instead, that will
+   be nice! ###
+
+   ### todo: AUTH_BATON may not be so useful.  It's almost like we
+       need access to the original auth-obtaining callbacks that
+       produced auth baton in the first place.  Hmmm. ###
+
+   Use POOL for temporary allocation.  */
+svn_error_t *svn_client__checkout_externals
+   (const char *path, 
+    const svn_delta_editor_t *before_editor,
+    void *before_edit_baton,
+    const svn_delta_editor_t *after_editor,
+    void *after_edit_baton,
+    svn_client_auth_baton_t *auth_baton,
+    apr_pool_t *pool);
+
+
 
 #ifdef __cplusplus
 }
