@@ -270,7 +270,11 @@ copy_file_administratively (const char *src_path,
    the items in question get deleted and the result is a directory in the
    repository that matches the original source directory for copy.  If this
    were not done the deleted=true items would simply vanish from the
-   entries file as the copy is added to the working copy.  Issue 2101. */
+   entries file as the copy is added to the working copy.  The new
+   schedule=delete files do not have a text-base and so their scheduled
+   deletion cannot be reverted.  For directories a placeholder with an
+   svn_node_kind_t of svn_node_file and schedule=delete is used to avoid
+   the problems associated with creating a directory.  Issue 2101. */
 static svn_error_t *
 convert_deleted_to_schedule_delete (svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool)
