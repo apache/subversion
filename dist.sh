@@ -2,8 +2,8 @@
 
 #
 # USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
-#                  [-apr PATH-TO-APR ] [-apu PATH-TO-APR-UTIL] 
-#                  [-api PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
+#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
+#                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-zip] [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
@@ -17,12 +17,12 @@
 #   from the top-level of a branches/0.24.2 working copy will create
 #   the 0.24.2 release tarball. Make sure you have apr, apr-util,
 #   and neon subdirectories in your current working directory or
-#   specify the path to them with the -apr, -apu or -neon options.
+#   specify the path to them with the -apr, -apru or -neon options.
 #   For example:
 #      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x \
 #        -apr -neon ~/in-tree-libraries/neon-0.24.7 \
 #        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
-#        -apu ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
+#        -apru ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
 #
 #   When building a alpha, beta or rc tarballs pass the apppropriate flag
 #   followeb by the number for that releasse.  For example you'd do
@@ -33,14 +33,14 @@
 #   specified, it will build a release tarball.
 #  
 #   To build a Windows zip file package pass -zip and the path
-#   to apr-iconv with -api.
+#   to apr-iconv with -apri.
 
 
 # A quick and dirty usage message
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
 [-rs REVISION-SVN ] [-pr REPOS-PATH] \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
-[-apr APR_PATH ] [-apu APR_UTIL_PATH] [-api APR_ICONV_PATH]
+[-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH]
 [-neon NEON_PATH ] [-zip]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
@@ -62,8 +62,8 @@ do
         -pr)  REPOS_PATH="$ARG" ;;
 	-rc)  RC="$ARG" ;;
        -apr)  APR_PATH="$ARG" ;;
-       -apu)  APU_PATH="$ARG" ;;
-       -api)  API_PATH="$ARG" ;;
+       -apru) APRU_PATH="$ARG" ;;
+       -apri) APRI_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
       -beta)  BETA="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
@@ -75,7 +75,7 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apu|-api|-neon)
+      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apru|-apri|-neon)
         ARG_PREV=$ARG
         ;;
       -zip)
@@ -126,16 +126,16 @@ if [ -z "$APR_PATH" ]; then
   APR_PATH='apr'
 fi
 
-if [ -z "$APU_PATH" ]; then
-  APU_PATH='apr-util'
+if [ -z "$APRU_PATH" ]; then
+  APRU_PATH='apr-util'
 fi
 
 if [ -z "$NEON_PATH" ]; then
   NEON_PATH='neon'
 fi
 
-if [ -z "$API_PATH" ]; then
-  API_PATH='apr-iconv'
+if [ -z "$APRI_PATH" ]; then
+  APRI_PATH='apr-iconv'
 fi
 
 if [ ! -d "$APR_PATH" ]; then
@@ -143,8 +143,8 @@ if [ ! -d "$APR_PATH" ]; then
   exit 1
 fi
 
-if [ ! -d "$APU_PATH" ]; then
-  echo "ERROR: '$APU_PATH' does not exist."
+if [ ! -d "$APRU_PATH" ]; then
+  echo "ERROR: '$APRU_PATH' does not exist."
   exit 1
 fi
 
@@ -154,8 +154,8 @@ if [ ! -d "$NEON_PATH" ]; then
 fi
 
 # apr-iconv is only included in zip files
-if [ -n "$ZIP" ] && [ ! -d "$API_PATH" ]; then
-  echo "ERROR: '$API_PATH' does not exist."
+if [ -n "$ZIP" ] && [ ! -d "$APRI_PATH" ]; then
+  echo "ERROR: '$APRI_PATH' does not exist."
   exit 1
 fi
 
@@ -191,16 +191,16 @@ echo "Removing all CVS/ and .cvsignore files from apr..."
 find "$DISTPATH/apr" -name CVS -type d -print | xargs rm -fr
 find "$DISTPATH/apr" -name .cvsignore -print | xargs rm -f
 
-echo "Copying $APU_PATH into sandbox, making extraclean..."
-cp -r "$APU_PATH" "$DISTPATH/apr-util"
+echo "Copying $APRU_PATH into sandbox, making extraclean..."
+cp -r "$APRU_PATH" "$DISTPATH/apr-util"
 (cd "$DISTPATH/apr-util" && [ -f Makefile ] && make extraclean)
 echo "Removing all CVS/ and .cvsignore files from apr-util..."
 find "$DISTPATH/apr-util" -name CVS -type d -print | xargs rm -fr
 find "$DISTPATH/apr-util" -name .cvsignore -print | xargs rm -f
 
 if [ -n "$ZIP" ]; then
-  echo "Copying $API_PATH into sandbox, making extraclean..."
-  cp -r "$API_PATH" "$DISTPATH/apr-iconv"
+  echo "Copying $APRI_PATH into sandbox, making extraclean..."
+  cp -r "$APRI_PATH" "$DISTPATH/apr-iconv"
   (cd "$DISTPATH/apr-iconv" && [ -f Makefile ] && make extraclean)
   echo "Removing all CVS/ and .cvsignore files from apr-iconv..."
   find "$DISTPATH/apr-iconv" -name CVS -type d -print | xargs rm -fr
