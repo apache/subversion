@@ -530,14 +530,16 @@ enum svn_node_action
 
 
 /* Dump the contents of the filesystem within already-open REPOS into
-   writable STREAM.  Begin at revision START_REV, and dump every
-   revision up through END_REV.  Use POOL for all allocation.
+   writable DEMPSTREAM.  Begin at revision START_REV, and dump every
+   revision up through END_REV.  Use POOL for all allocation.  If
+   non-NULL, send feedback to FEEDBACK_STREAM.
 
    If START_REV is SVN_INVALID_REVNUM, then start dumping at revision 0.
    If END_REV is SVN_INVALID_REVNUM, then dump through the HEAD revision.
 */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
-                                svn_stream_t *stream,
+                                svn_stream_t *dumpstream,
+                                svn_stream_t *feedback_stream,
                                 svn_revnum_t start_rev,
                                 svn_revnum_t end_rev,
                                 apr_pool_t *pool);
@@ -545,12 +547,10 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
 
 /* Read and parse dumpfile-formatted DUMPSTREAM, reconstructing
    filesystem revisions in already-open REPOS.  Use POOL for all
-   allocation.  If non-NULL, the parser will send feedback to
-   FEEDBACK_STREAM.
+   allocation.  If non-NULL, send feedback to FEEDBACK_STREAM.
 
-   ### Describe a policy/interface for adding revisions to a non-empty
-       repository.  Also, someday create an interface for adding
-       revisions to a -subdir- of existing repository?
+   If the dumpstream contains copy history that is unavailable in the
+   repository, an error will be thrown.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,

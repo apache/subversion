@@ -129,13 +129,15 @@ usage (const char *progname, int exit_code)
      "\n"
      "   dump   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      Dump the contents of filesystem to stdout in a 'dumpfile'\n"
-     "      portable format.  Dump revisions LOWER_REV through UPPER_REV.\n"
-     "      If no revisions are given, all revision trees are dumped.\n"
-     "      If just LOWER_REV is given, that one revision tree is dumped.\n"
+     "      portable format, sending feedback to stderr.  Dump revisions\n"
+     "      LOWER_REV through UPPER_REV. If no revisions are given, all\n"
+     "      revision trees are dumped.  If just LOWER_REV is given, that one\n"
+     "      revision tree is dumped.\n"
      "\n"
      "   load   REPOS_PATH\n"
      "      Read a 'dumpfile'-formatted stream from stdin, committing\n"
      "      new revisions into the repository's filesystem.\n"
+     "      Send progress feedback to stdout.\n"
      "\n"
      "   lscr      REPOS_PATH PATH\n"
      "      Print, one-per-line and youngest-to-eldest, the revisions in\n"
@@ -449,7 +451,7 @@ main (int argc, const char * const *argv)
 
     case svnadmin_cmd_dump:
       {
-        svn_stream_t *stdout_stream;
+        svn_stream_t *stdout_stream, *stderr_stream;
         svn_revnum_t
           lower = SVN_INVALID_REVNUM,
           upper = SVN_INVALID_REVNUM;
@@ -475,10 +477,12 @@ main (int argc, const char * const *argv)
           upper = lower;
         
         /* Run the dump to STDOUT.  Let the user redirect output into
-           a file if they want.  :-)  */
+           a file if they want.  :-)  Progress feedback goes to stderr. */
         stdout_stream = svn_stream_from_stdio (stdout, pool);
+        stderr_stream = svn_stream_from_stdio (stderr, pool);
 
-        INT_ERR (svn_repos_dump_fs (repos, stdout_stream, lower, upper, pool));
+        INT_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
+                                    lower, upper, pool));
 
         fflush(stdout);                                   
       }

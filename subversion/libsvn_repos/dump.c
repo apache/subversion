@@ -99,8 +99,14 @@ struct edit_baton
   /* The stream to dump to. */
   svn_stream_t *stream; 
 
+  /* Send feedback here, if non-NULL */
+  svn_stream_t *feedback_stream;
+
   /* The fs revision root, so we can read the contents of paths. */
   svn_fs_root_t *fs_root;
+
+  /* The first revision dumped in this dumpstream. */
+  svn_revnum_t oldest_dumped_rev;
 
   /* reusable buffer for writing file contents */
   char buffer[SVN_STREAM_CHUNK_SIZE];
@@ -163,18 +169,19 @@ make_dir_baton (const char *path,
 /* This helper is the main "meat" of the editor -- it does all the
    work of writing a node record.
    
-   Write out a node record for PATH of type KIND under FS_ROOT.
+   Write out a node record for PATH of type KIND under EB->FS_ROOT.
    ACTION describes what is happening to the node (see enum svn_node_action).
-   Write record to writable STREAM, using BUFFER to write in chunks.
+   Write record to writable EB->STREAM, using EB->BUFFER to write in chunks.
+
+   If copy-history is available, it is in COPYFROM_PATH/REV.
   */
 static svn_error_t *
-dump_node (svn_fs_root_t *fs_root,
+dump_node (struct edit_baton *eb,
            const char *path,    /* an absolute path. */
            enum svn_node_kind kind,
            enum svn_node_action action,
-           svn_stream_t *stream,
-           void *buffer,
-           apr_size_t bufsize,
+           const char *copyfrom_path,
+           svn_revnum_t copyfrom_rev,
            apr_pool_t *pool)
 {
   svn_stringbuf_t *propstring;
@@ -183,31 +190,31 @@ dump_node (svn_fs_root_t *fs_root,
   apr_size_t content_length = 0, len;
 
   /* Write out metadata headers for this file node. */
-  SVN_ERR (svn_stream_printf (stream, pool,
+  SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", path));
   
   if (kind == svn_node_file)
-    SVN_ERR (svn_stream_printf (stream, pool,
+    SVN_ERR (svn_stream_printf (eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
   else if (kind == svn_node_dir)
-    SVN_ERR (svn_stream_printf (stream, pool,
+    SVN_ERR (svn_stream_printf (eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
   
   if (action == svn_node_action_change)
     {
-      SVN_ERR (svn_stream_printf (stream, pool,
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
                                   ": change\n"));  
     }
   else if (action == svn_node_action_replace)
     {
-      SVN_ERR (svn_stream_printf (stream, pool,
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
                                   ": replace\n"));  
     }
   else if (action == svn_node_action_delete)
     {
-      SVN_ERR (svn_stream_printf (stream, pool,
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
                                   ": delete\n\n"));  
       /* Notice the extra \n above;  that's because this is the -last-
@@ -219,23 +226,21 @@ dump_node (svn_fs_root_t *fs_root,
     }
   else if (action == svn_node_action_add)
     {
-      const char *copyfrom_path;
-      svn_revnum_t copyfrom_rev;
-
-      SVN_ERR (svn_stream_printf (stream, pool,
+      SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
-
-      /* ### Does this node have a copyfrom history?  Really,
-         dir_delta should be sending it to add_file or add_dir -- but
-         it doesn't yet.  So we manually make a check. */
-      SVN_ERR (svn_fs_copied_from (&copyfrom_rev, &copyfrom_path,
-                                   fs_root, path, pool));
-
-      /* ### someday put a copyfrom-sources-checksum in fb. */
 
       if (copyfrom_path != NULL)
         {
-          SVN_ERR (svn_stream_printf (stream, pool,
+          if ((copyfrom_rev < eb->oldest_dumped_rev)
+              && eb->feedback_stream)
+            svn_stream_printf 
+              (eb->feedback_stream, pool,
+               "WARNING: copyfrom_rev %" SVN_REVNUM_T_FMT
+               " is older than oldest dumped rev %" SVN_REVNUM_T_FMT 
+               "\n... loading this dump into an empty repository will fail.\n",
+               copyfrom_rev, eb->oldest_dumped_rev);
+
+          SVN_ERR (svn_stream_printf (eb->stream, pool,
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
                                       ": %" SVN_REVNUM_T_FMT "\n"
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
@@ -251,7 +256,7 @@ dump_node (svn_fs_root_t *fs_root,
 
   /* If the file has no props, then the prophash will be empty, and
      the propstring will be nothing but "END".  */    
-  SVN_ERR (svn_fs_node_proplist (&prophash, fs_root, path, pool));
+  SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
   write_hash_to_stringbuf (prophash, svn_unpack_bytestring, 
                            &propstring, pool);
   content_length += propstring->len;
@@ -259,20 +264,20 @@ dump_node (svn_fs_root_t *fs_root,
   /* Add the length of file's text, too. */
   if (kind == svn_node_file)
     {
-      SVN_ERR (svn_fs_file_length (&textlen, fs_root, path, pool));
+      SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
       content_length += textlen;
     }
 
   /* ### someday write a node-content-checksum here.  */
 
   /* This is the last header before we dump the content. */
-  SVN_ERR (svn_stream_printf (stream, pool,
+  SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
                               ": %" APR_SIZE_T_FMT "\n\n", content_length));
 
   /* Dump property content. */
   len = propstring->len;
-  SVN_ERR (svn_stream_write (stream, propstring->data, &len));
+  SVN_ERR (svn_stream_write (eb->stream, propstring->data, &len));
   
   /* Dump text content */
   /*    (this stream "pull and push" code was stolen from
@@ -282,17 +287,17 @@ dump_node (svn_fs_root_t *fs_root,
       apr_size_t rlen, wlen;
       svn_stream_t *contents;
           
-      SVN_ERR (svn_fs_file_contents (&contents, fs_root, path, pool));
+      SVN_ERR (svn_fs_file_contents (&contents, eb->fs_root, path, pool));
       
       while (1)
         {
           /* read a maximum number of bytes from the file, please. */
-          rlen = bufsize; 
-          SVN_ERR (svn_stream_read (contents, buffer, &rlen));
+          rlen = eb->bufsize; 
+          SVN_ERR (svn_stream_read (contents, eb->buffer, &rlen));
           
           /* write however many bytes you read, please. */
           wlen = rlen;
-          SVN_ERR (svn_stream_write (stream, buffer, &wlen));
+          SVN_ERR (svn_stream_write (eb->stream, eb->buffer, &wlen));
           if (wlen != rlen)
             {
               /* Uh oh, didn't write as many bytes as we read, and no
@@ -304,7 +309,7 @@ dump_node (svn_fs_root_t *fs_root,
                                    path);
             }
         
-        if (rlen != bufsize)
+        if (rlen != eb->bufsize)
           {
             /* svn_stream_read didn't throw an error, yet it didn't read
                all the bytes requested.  According to the docstring,
@@ -315,7 +320,7 @@ dump_node (svn_fs_root_t *fs_root,
     }
   
   len = 2;
-  SVN_ERR (svn_stream_write (stream, "\n\n", &len)); /* ### needed? */
+  SVN_ERR (svn_stream_write (eb->stream, "\n\n", &len)); /* ### needed? */
   
   return SVN_NO_ERROR;
 }
@@ -364,10 +369,10 @@ add_directory (const char *path,
   /* This might be a replacement -- is the path already deleted? */
   val = apr_hash_get (pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
-  SVN_ERR (dump_node (eb->fs_root, path, 
+  SVN_ERR (dump_node (eb, path, 
                       svn_node_dir,
                       val ? svn_node_action_replace : svn_node_action_add,
-                      eb->stream, eb->buffer, eb->bufsize, pool));
+                      copyfrom_path, copyfrom_revision, pool));
 
   if (val)
     /* delete the path, it's now been dumped. */
@@ -417,9 +422,9 @@ close_directory (void *dir_baton)
       /* By sending 'svn_node_unknown', the Node-kind: header simply won't
          be written out.  No big deal at all, really.  The loader
          shouldn't care.  */
-      SVN_ERR (dump_node (eb->fs_root, path,
+      SVN_ERR (dump_node (eb, path,
                           svn_node_unknown, svn_node_action_delete,
-                          eb->stream, eb->buffer, eb->bufsize, subpool));     
+                          NULL, SVN_INVALID_REVNUM, subpool));
 
       svn_pool_clear (subpool);
     }
@@ -444,10 +449,10 @@ add_file (const char *path,
   /* This might be a replacement -- is the path already deleted? */
   val = apr_hash_get (pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
-  SVN_ERR (dump_node (eb->fs_root, path, 
+  SVN_ERR (dump_node (eb, path, 
                       svn_node_file,
                       val ? svn_node_action_replace : svn_node_action_add,
-                      eb->stream, eb->buffer, eb->bufsize, pool));
+                      copyfrom_path, copyfrom_revision, pool));
 
   if (val)
     /* delete the path, it's now been dumped. */
@@ -468,9 +473,9 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  SVN_ERR (dump_node (eb->fs_root, path, 
+  SVN_ERR (dump_node (eb, path, 
                       svn_node_file, svn_node_action_change, 
-                      eb->stream, eb->buffer, eb->bufsize, pool));
+                      NULL, SVN_INVALID_REVNUM, pool));
 
   *file_baton = NULL;  /* muhahahaha again */
   return SVN_NO_ERROR;
@@ -491,9 +496,9 @@ change_dir_prop (void *parent_baton,
      *actually* changed by itself.  */
   if (! db->written_out)
     {
-      SVN_ERR (dump_node (eb->fs_root, db->path, 
+      SVN_ERR (dump_node (eb, db->path, 
                           svn_node_dir, svn_node_action_change, 
-                          eb->stream, eb->buffer, eb->bufsize, pool));
+                          NULL, SVN_INVALID_REVNUM, pool));
       db->written_out = TRUE;
     }
   return SVN_NO_ERROR;
@@ -508,6 +513,8 @@ get_dump_editor (const svn_delta_editor_t **editor,
                  svn_revnum_t to_rev,
                  const char *root_path,
                  svn_stream_t *stream,
+                 svn_stream_t *feedback_stream,
+                 svn_revnum_t oldest_dumped_rev,
                  apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -518,6 +525,8 @@ get_dump_editor (const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->stream = stream;
+  eb->feedback_stream = feedback_stream;
+  eb->oldest_dumped_rev = oldest_dumped_rev;
   eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup (pool, root_path);
   SVN_ERR (svn_fs_revision_root (&(eb->fs_root), fs, to_rev, pool));
@@ -586,6 +595,7 @@ write_revision_record (svn_stream_t *stream,
 svn_error_t *
 svn_repos_dump_fs (svn_repos_t *repos,
                    svn_stream_t *stream,
+                   svn_stream_t *feedback_stream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
                    apr_pool_t *pool)
@@ -633,6 +643,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
               /* Just write out the one revision 0 record and move on.
                  The parser might want to use its properties. */
               SVN_ERR (write_revision_record (stream, fs, 0, subpool));
+              to_rev = 0;
               goto loop_end;
             }
 
@@ -653,7 +664,8 @@ svn_repos_dump_fs (svn_repos_t *repos,
 
       /* The editor which dumps nodes to a file. */
       SVN_ERR (get_dump_editor (&dump_editor, &dump_edit_baton, 
-                                fs, to_rev, "/", stream, subpool));
+                                fs, to_rev, "/", stream, feedback_stream,
+                                start_rev, subpool));
       /* ### remove this wrapper someday: */
       svn_delta_compat_wrap (&editor, &edit_baton,
                              dump_editor, dump_edit_baton, subpool);
@@ -667,12 +679,16 @@ svn_repos_dump_fs (svn_repos_t *repos,
                                     FALSE, /* don't send text-deltas */
                                     TRUE, /* recurse */
                                     FALSE, /* don't send entry props */
-                                    FALSE, /* ### don't send copyfrom args */
+                                    TRUE, /* send copyfrom args */
                                     subpool));
 
     loop_end:
       /* Reuse all memory consumed by the dump of of this one revision. */
       svn_pool_clear (subpool);
+      if (feedback_stream)
+        svn_stream_printf (feedback_stream, pool,
+                           "* Dumped revision %" SVN_REVNUM_T_FMT ".\n",
+                           to_rev);
     }
 
   svn_pool_destroy (subpool);
