@@ -1,0 +1,31 @@
+
+Subversion Tarball Release Procedure
+====================================
+
+1. Update CHANGES to contain all the latest changes.  Commit.
+
+2. Update working copy to head, make check.
+
+3. Bump product version number in svn_version.h and CHANGES.  Commit.
+
+4. ./dist.sh
+
+5. Test the tarball:
+
+   a.  tar xfz subversion-rXXXX.tar.gz;  cd subversion-rXXXX
+     
+   b.  ./configure --disable-shared --enable-maintainer-mode
+
+   c.  make
+
+   d.  make check
+
+   e.  subversion/clients/cmdline/svn co http://svn.collab.net/repos/svn/trunk
+
+6. [OPTIONAL] Upgrade server to head, then repeat step 5e.
+
+7. Post tarball to the Downloads web page.
+
+8. Update status webpage.
+
+9. Post news item, send announcement to dev and announce lists.
