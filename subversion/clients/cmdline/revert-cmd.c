@@ -53,7 +53,8 @@ svn_cl__revert (apr_getopt_t *os,
         
         SVN_ERR (svn_client_revert
                  (target, recursive,
-                  (opt_state->quiet ? NULL : svn_cl__notify_reverted), NULL,
+                  SVN_CL_NOTIFY(opt_state), 
+                  svn_cl__make_notify_baton (pool),
                   pool));
       }
   else

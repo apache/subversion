@@ -51,8 +51,8 @@ svn_cl__add (apr_getopt_t *os,
       {
         svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         err = svn_client_add (target, recursive,
-                              (opt_state->quiet ? NULL : svn_cl__notify_added),
-                              pool,  /* notify_baton */
+                              SVN_CL_NOTIFY(opt_state),
+                              svn_cl__make_notify_baton (pool),
                               pool);
         if (err)
           {

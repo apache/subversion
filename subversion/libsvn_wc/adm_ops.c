@@ -400,7 +400,7 @@ mark_tree (svn_stringbuf_t *dir,
            apr_uint16_t modify_flags,
            enum svn_wc_schedule_t schedule,
            svn_boolean_t copied,
-           svn_wc_notify_func_t notify_delete,
+           svn_wc_notify_func_t notify_func,
            void *notify_baton,
            apr_pool_t *pool)
 {
@@ -436,7 +436,7 @@ mark_tree (svn_stringbuf_t *dir,
       if (entry->kind == svn_node_dir)
         SVN_ERR (mark_tree (fullpath, modify_flags,
                             schedule, copied,
-                            notify_delete, notify_baton,
+                            notify_func, notify_baton,
                             subpool));
 
       /* Mark this entry. */
@@ -447,8 +447,8 @@ mark_tree (svn_stringbuf_t *dir,
                 schedule,
                 FALSE, TRUE, 0, 0, NULL, NULL, subpool, NULL));
 
-      if (schedule == svn_wc_schedule_delete && notify_delete != NULL)
-        (*notify_delete) (notify_baton, fullpath->data);
+      if (schedule == svn_wc_schedule_delete && notify_func != NULL)
+        (*notify_func) (notify_baton, svn_wc_notify_delete, fullpath->data);
 
       /* Reset FULLPATH to just hold this dir's name. */
       svn_stringbuf_set (fullpath, dir->data);
@@ -475,7 +475,7 @@ mark_tree (svn_stringbuf_t *dir,
 
 svn_error_t *
 svn_wc_delete (svn_stringbuf_t *path,
-               svn_wc_notify_func_t notify_delete,
+               svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool)
 {
@@ -499,7 +499,7 @@ svn_wc_delete (svn_stringbuf_t *path,
         /* Recursively mark a whole tree for deletion. */
         SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
                             svn_wc_schedule_delete, FALSE,
-                            notify_delete, notify_baton,
+                            notify_func, notify_baton,
                             pool));
     }
 
@@ -531,8 +531,8 @@ svn_wc_delete (svn_stringbuf_t *path,
     }
 
   /* Report the deletion to the caller. */
-  if (notify_delete != NULL)
-    (*notify_delete) (notify_baton, path->data);
+  if (notify_func != NULL)
+    (*notify_func) (notify_baton, svn_wc_notify_delete, path->data);
 
   return SVN_NO_ERROR;
 }
@@ -558,7 +558,7 @@ svn_error_t *
 svn_wc_add (svn_stringbuf_t *path,
             svn_stringbuf_t *copyfrom_url,
             svn_revnum_t copyfrom_rev,
-            svn_wc_notify_func_t notify_added,
+            svn_wc_notify_func_t notify_func,
             void *notify_baton,
             apr_pool_t *pool)
 {
@@ -740,8 +740,8 @@ svn_wc_add (svn_stringbuf_t *path,
     }
 
   /* Report the addition to the caller. */
-  if (notify_added != NULL)
-    (*notify_added) (notify_baton, path->data);
+  if (notify_func != NULL)
+    (*notify_func) (notify_baton, svn_wc_notify_add, path->data);
 
   return SVN_NO_ERROR;
 }
@@ -940,7 +940,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
 svn_error_t *
 svn_wc_revert (svn_stringbuf_t *path,
                svn_boolean_t recursive,
-               svn_wc_notify_func_t notify_revert,
+               svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool)
 {
@@ -1104,8 +1104,8 @@ svn_wc_revert (svn_stringbuf_t *path,
     }
 
   /* If PATH was reverted, tell our client that. */
-  if ((notify_revert != NULL) && reverted)
-    (*notify_revert) (notify_baton, path->data);
+  if ((notify_func != NULL) && reverted)
+    (*notify_func) (notify_baton, svn_wc_notify_revert, path->data);
 
   /* Finally, recurse if requested. */
   if (recursive && (entry->kind == svn_node_dir))
@@ -1135,7 +1135,7 @@ svn_wc_revert (svn_stringbuf_t *path,
 
           /* Revert the entry. */
           SVN_ERR (svn_wc_revert (full_entry_path, TRUE,
-                                  notify_revert, notify_baton, pool));
+                                  notify_func, notify_baton, pool));
 
           /* Return FULL_ENTRY_PATH to its pre-appended state. */
           svn_stringbuf_set (full_entry_path, path->data);
