@@ -484,12 +484,51 @@ svn_repos_fs_unlock (svn_repos_t *repos,
 
 svn_error_t *
 svn_repos_fs_get_locks (apr_hash_t **locks,
-                        svn_fs_t *fs,
+                        svn_repos_t *repos,
                         const char *path,
                         svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
+  apr_hash_t *all_locks;
+  apr_hash_index_t *hi;
+  svn_revnum_t head_rev;
+  svn_fs_root_t *head_root;
+
+  /* We'll use a subpool to authorize each path. */
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* Get all the locks. */
+  SVN_ERR (svn_fs_get_locks (&all_locks, repos->fs, path, pool));
+  
+  /* Locks are always said to apply to HEAD revision, so we'll check
+     to see if locked-paths are readable in HEAD as well. */
+  SVN_ERR (svn_fs_youngest_rev (&head_rev, repos->fs, pool));
+  SVN_ERR (svn_fs_revision_root (&head_root, repos->fs, head_rev, pool));
+
+  /* But then remove the ones attached to unreadable paths. */
+  for (hi = apr_hash_first (pool, all_locks); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t keylen;
+      const char *locked_path;
+      svn_boolean_t readable;
+
+      svn_pool_clear (subpool);
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      locked_path = (const char *) key;
+
+      SVN_ERR (authz_read_func (&readable, head_root, locked_path,
+                                authz_read_baton, subpool));
+      if (! readable)
+        apr_hash_set (all_locks, key, keylen, NULL);
+    }
+
+  svn_pool_destroy (subpool);
+
+  *locks = all_locks;
   return SVN_NO_ERROR;
 }
 

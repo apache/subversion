@@ -936,7 +936,7 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
  * return any locks on unreadable paths, just silently omit them.
  */
 svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
-                                     svn_fs_t *fs,
+                                     svn_repos_t *repos,
                                      const char *path,
                                      svn_repos_authz_func_t authz_read_func,
                                      void *authz_read_baton,
