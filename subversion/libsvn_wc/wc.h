@@ -523,10 +523,10 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
    PROPCHANGES, merge the changes into the working copy.  Necessary
    log entries will be appended to ENTRY_ACCUM.
 
-   Note that `merging' here means dealing with conflicts too. 
-   kff sez: can you expand on this?  How does it deal with conflicts?
-   How does caller discover the name of the reject file?
-*/
+   If conflicts are found when merging, they are placed into a
+   temporary .prej file.  Log entries are then written to move this
+   file next to the working copy, or to append the conflicts to the
+   file's already-existing .prej file.  */
 svn_error_t *
 svn_wc__do_property_merge (svn_string_t *path,
                            const svn_string_t *name,
