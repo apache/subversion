@@ -296,7 +296,8 @@ assemble_status (svn_wc_status_t **status,
         }
       else if (path_kind != entry->kind)
         final_text_status = svn_wc_status_obstructed;
-      else if (entry->kind == svn_node_dir)
+
+      if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
         SVN_ERR (svn_wc_locked (&locked_p, path, pool));
     }
 
