@@ -206,22 +206,49 @@ static void add_props(const svn_ra_dav_resource_t *r,
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  
+  svn_stringbuf_t *skey;
+  svn_stringbuf_t *sval;
+
+  skey = svn_stringbuf_create("", pool);
+  sval = svn_stringbuf_create("", pool);
+
   for (hi = apr_hash_first(pool, r->propset); hi; hi = apr_hash_next(hi))
     {
       const char *key;
       char *val;
-      
+
       apr_hash_this(hi, (const void **)&key, NULL, (void *)&val);
       
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
-      
       if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
         {
-          svn_stringbuf_t *skey, *sval;
-          skey = svn_stringbuf_create(key + NSLEN, pool);
-          sval = svn_stringbuf_create(val, pool);
-          
+          /* for custom props, we strip the namespace, and just use whatever
+             name the user gave the property. */
+
+          svn_stringbuf_set(skey, key + NSLEN);
+
+          /* ### urk. this value isn't binary-safe... */
+          svn_stringbuf_set(sval, val);
+
+          (*setter)(baton, skey, sval);
+        }
+#undef NSLEN
+#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
+      else if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
+        {
+          /* this is one of our properties. pass it straight through. */
+
+          /* ### oops. watch out for props that the server sets, which we
+             ### don't want reflected in the WC. we should put these into
+             ### a server-prop namespace. */
+          if (strcmp(key + NSLEN, "baseline-relative-path") == 0)
+            continue;
+
+          svn_stringbuf_set(skey, key);
+
+          /* ### urk. this value isn't binary-safe... */
+          svn_stringbuf_set(sval, val);
+
           (*setter)(baton, skey, sval);
         }
 #undef NSLEN
