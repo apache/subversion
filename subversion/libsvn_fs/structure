@@ -204,7 +204,8 @@ does not allow this.
      */
 
 PROP-KEY is a key into the `representations' table (which see), whose
-value is a PROPLIST skel.
+value is a representation pointing to a string (see `strings' table)
+that is a PROPLIST skel.
 
 
 
@@ -223,7 +224,7 @@ FILE: how files are represented.
 If a NODE-REVISION's header's KIND is "file", then the node-revision
 skel represents a file, and has the form:
 
-    (HEADER REP-KEY)
+    (HEADER PROP-KEY REP-KEY)
 
 where REP-KEY identifies the representation for the file's contents.
 See discussion of representations later.
@@ -235,7 +236,7 @@ DIR: how directories are represented.
 If the header's KIND is "dir", then the node-revision skel
 represents a directory, and has the form:
 
-    (HEADER REP-KEY)
+    (HEADER PROP-KEY REP-KEY)
 
 where REP-KEY identifies the representation for the directory's
 entries list (see discussion of representations later).  An entries
@@ -322,13 +323,23 @@ table; instead, they always refer into the `representations' table,
 which knows whether a given string is a fulltext or a delta, and if it
 is a delta, what it is a delta against.  That, combined with the
 knowledge in (a) and (b) above, allows Subversion to retrieve the data
-and parse it appropriately.  Each entry in the `representations' table
-has one of two forms:
+and parse it appropriately.  A representation has the form:
 
-   ("fulltext" KEY)
+   (HEADER KIND-SPECIFIC)
+
+where HEADER is
+
+   (KIND FLAG ...)
+
+The KIND is "fulltext" or "delta", and currently the only FLAG is
+mutability, just as with node revisions.  KIND-SPECIFIC varies
+considerably depending on the kind of representation.  Here are the
+two forms currently recognized:
+
+   (("fulltext" ...) KEY)
        The data is at KEY in the `strings' table.
 
-   ("delta" REP-KEY STRING-KEY CHECKSUM)
+   (("delta" ...) REP-KEY STRING-KEY CHECKSUM)
        Apply the delta at STRING-KEY in the `strings' table against the
        fulltext derived from REP-KEY in the `representations' table.
        "Derived" because REP-KEY might not refer to a fulltext, in
@@ -342,15 +353,15 @@ perhaps in an ordinary Unix file.
 
 Let's work through an example node revision:
 
-   (("file" FLAGS ...) PROP-KEY "2345")
+   ((("file") FLAGS ...) PROP-KEY "2345")
 
 The entry for key "2345" in `representations' is:
 
-   ("delta" "2343" ("svndiff" "1729") CHECKSUM)
+   (("delta") "2343" ("svndiff" "1729") CHECKSUM)
 
 and the entry for key "2343" in `representations' is:
 
-   ("fulltext" "1001")
+   (("fulltext") "1001")
 
 while the entry for key "1729" in `strings' is:
 
@@ -740,8 +751,9 @@ Node revisions:
 Representations:
 
          REPRESENTATION ::= FULLTEXT | DELTA ;
-               FULLTEXT ::= ("fulltext" STRING-KEY) ;
-                  DELTA ::= ("delta" REP-KEY DIFF CHECKSUM) ;
+               FULLTEXT ::= (("fulltext" FLAG ...) STRING-KEY) ;
+                  DELTA ::= (("delta" FLAG ...) REP-KEY DIFF CHECKSUM) ;
+                   FLAG ::= "mutable" | ;
                    DIFF ::= ("svndiff" STRING-KEY) ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
