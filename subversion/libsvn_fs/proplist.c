@@ -48,6 +48,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include "apr_pools.h"
 #include "apr_hash.h"
 #include "svn_string.h"
