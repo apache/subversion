@@ -262,6 +262,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            ne_xml_endelm_cb endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
+                           int *status_code,
                            apr_pool_t *pool)
 {
   ne_request *req;
@@ -368,6 +369,8 @@ svn_ra_dav__parsed_request(ne_session *sess,
     }
   
   code = ne_get_status(req)->code;
+  if (status_code)
+    *status_code = code;
   ne_request_destroy(req);
 
   if (err) /* If the error parser had a problem */
