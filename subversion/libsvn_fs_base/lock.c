@@ -124,15 +124,24 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
                                  apr_pool_t *pool)
 {
   struct lock_token_get_args args;
+  svn_error_t *err;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.path = path;
   args.lock_p = lock;  
-  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
-                                   &args, pool));
+  err = svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
+                                &args, pool);
+  if (err
+      && (err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK
+          || err->apr_err == SVN_ERR_FS_LOCK_EXPIRED))
+    {
+      svn_error_clear (err);
+      *lock = NULL;
+      return SVN_NO_ERROR;
+    }
   
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
