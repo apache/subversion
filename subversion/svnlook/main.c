@@ -72,7 +72,8 @@ enum
   { 
     svnlook__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnlook__show_ids,
-    svnlook__no_diff_deleted
+    svnlook__no_diff_deleted,
+    svnlook__no_diff_added
   };
 
 /*
@@ -107,6 +108,9 @@ static const apr_getopt_option_t options_table[] =
     {"no-diff-deleted", svnlook__no_diff_deleted, 0,
      N_("do not print differences for deleted files")},
 
+    {"no-diff-added", svnlook__no_diff_added, 0,
+     N_("do not print differences for added files")},
+
     {0,               0, 0, 0}
   };
 
@@ -140,7 +144,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"diff", subcommand_diff, {0},
      N_("usage: svnlook diff REPOS_PATH\n\n"
         "Print GNU-style diffs of changed files and properties.\n"),
-     {'r', 't', svnlook__no_diff_deleted} },
+     {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added} },
 
     {"dirs-changed", subcommand_dirschanged, {0},
      N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -212,6 +216,7 @@ struct svnlook_opt_state
   svn_boolean_t show_ids;         /* --show-ids */
   svn_boolean_t help;             /* --help */
   svn_boolean_t no_diff_deleted;  /* --no-diff-deleted */
+  svn_boolean_t no_diff_added;    /* --no-diff-added */
   svn_boolean_t verbose;          /* --verbose */
 };
 
@@ -223,6 +228,7 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t is_revision;
   svn_boolean_t show_ids;
   svn_boolean_t no_diff_deleted;
+  svn_boolean_t no_diff_added;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
@@ -786,6 +792,7 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
+                 svn_boolean_t no_diff_added,
                  const char *tmpdir,
                  apr_pool_t *pool)
 {
@@ -886,7 +893,8 @@ print_diff_tree (svn_fs_root_t *root,
                                         : _("Index")))),
                                      path));
 
-      if ((! no_diff_deleted) || (node->action != 'D'))
+      if (!(node->action == 'D' && no_diff_deleted)
+          && !(node->action == 'A' && no_diff_added))
         {
           svn_diff_t *diff;
 
@@ -965,6 +973,7 @@ print_diff_tree (svn_fs_root_t *root,
                             svn_path_join (path, node->name, subpool),
                             svn_path_join (base_path, node->name, subpool),
                             no_diff_deleted,
+                            no_diff_added,
                             tmpdir,
                             subpool));
   while (node->sibling)
@@ -975,6 +984,7 @@ print_diff_tree (svn_fs_root_t *root,
                                 svn_path_join (path, node->name, subpool),
                                 svn_path_join (base_path, node->name, subpool),
                                 no_diff_deleted,
+                                no_diff_added,
                                 tmpdir,
                                 subpool));
     }
@@ -1326,7 +1336,8 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (create_unique_tmpdir (&tmpdir, pool));
       err = print_diff_tree (root, base_root, tree, "", "",
-                             c->no_diff_deleted, tmpdir, pool);
+                             c->no_diff_deleted, c->no_diff_added,
+                             tmpdir, pool);
       if (err)
         {
           svn_error_clear (svn_io_remove_dir (tmpdir, pool));
@@ -1552,6 +1563,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   svn_fs_set_warning_func (baton->fs, warning_func, NULL);
   baton->show_ids = opt_state->show_ids;
   baton->no_diff_deleted = opt_state->no_diff_deleted;
+  baton->no_diff_added = opt_state->no_diff_added;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
@@ -1908,6 +1920,10 @@ main (int argc, const char * const *argv)
 
         case svnlook__no_diff_deleted:
           opt_state.no_diff_deleted = TRUE;
+          break;
+
+        case svnlook__no_diff_added:
+          opt_state.no_diff_added = TRUE;
           break;
 
         default:
