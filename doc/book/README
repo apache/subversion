@@ -129,6 +129,8 @@ II. COMPILING THE DOCS
      the environment variable FOP_OPTS (which is also configurable in
      your ~/.foprc).
 
+        $ export FOP_OPTS="-Xms100m -Xmx200m"
+
    * If you want images to be included in the PDF, you'll need to use
      the JIMI image processing library.  Grab the latest release from
      http://java.sun.com/products/jimi/, then cp the jar file into the
