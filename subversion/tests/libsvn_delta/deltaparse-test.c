@@ -28,7 +28,8 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
   
   /* TODO:  delve into the vcdiff window and print the data. */
 
-  /* This deallocates the whole subpool created to hold the window. */
+  /* This deallocates the whole subpool created to hold the window.
+     We're donewith the window, so we should clean up! */
   svn_free_delta_window (window);
 
   return SVN_NO_ERROR;
