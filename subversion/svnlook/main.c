@@ -670,7 +670,7 @@ print_tree (svn_repos_node_t *node,
 
   /* Print the node. */
   tmp_node = node;
-  printf ("%s%s \n", 
+  printf ("%s%s\n", 
           tmp_node->name, 
           tmp_node->kind == svn_node_dir ? "/" : "");
 
