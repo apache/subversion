@@ -273,12 +273,12 @@ main (int argc, char **argv)
   apr_pool_t *pool;
   int opt_id;
   const char *optarg;
-  apr_getopt_t *opt;
+  apr_getopt_t *os;
   svn_cl__opt_state_t opt_state;
   const svn_cl__cmd_desc_t *subcommand;
   apr_array_header_t *targets;  /* file/dir args from the command line */
 
-  apr_longopt_t options[] =
+  apr_getopt_option_t options[] =
   {
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {"target-dir",    svn_cl__target_dir_opt, 1}, /* README: --destination */
@@ -297,15 +297,15 @@ main (int argc, char **argv)
 
   targets = apr_make_array (pool, 0, sizeof (svn_string_t *));
 
-  apr_initopt (&opt, pool, argc - 1, argv + 1);
-  opt->interleave = 1;
+  apr_initopt (&os, pool, argc - 1, argv + 1);
+  os->interleave = 1;
 
   /* Get the subcommand. */
-  subcommand = get_command (opt);
+  subcommand = get_command (os);
 
   if (! subcommand)
     {
-      fprintf (stderr, "unknown command: %s\n", opt->argv[0]);
+      fprintf (stderr, "unknown command: %s\n", os->argv[0]);
       subcommand = get_canonical_command ("help");
     }
 
@@ -313,7 +313,7 @@ main (int argc, char **argv)
   while (1)
     {
       /* Parse the next option. */
-      apr_err = apr_getopt_long (opt, options,&opt_id, &optarg);
+      apr_err = apr_getopt_long (os, options, &opt_id, &optarg);
       if (APR_STATUS_IS_EOF (apr_err))
         break;
       else if (! APR_STATUS_IS_SUCCESS (apr_err))
@@ -348,9 +348,9 @@ main (int argc, char **argv)
       }
     }
 
-  for (; opt->ind < opt->argc; opt->ind++)
+  for (; os->ind < os->argc; os->ind++)
     {
-      char *this_arg = opt->argv[opt->ind];
+      const char *this_arg = os->argv[os->ind];
 
       if ((subcommand->cmd_code == svn_cl__propset_command)
           && (opt_state.name == NULL))
