@@ -103,18 +103,21 @@ greek_tree = ( ('iota', "This is the file 'iota'.", {}, {}),
 
 # For running subversion and returning the output
 def run_svn(*varargs):
-  "Run svn with VARARGS, and return stdout as a list of lines."
+  "Run svn with VARARGS; return stdout, stderr as lists of lines."
 
   command = svn_binary
   for arg in varargs:
     command = command + " " + `arg`    # build the command string
 
-  infile, outfile = os.popen2(command) # run command, get 2 file descriptors
-  output_lines = outfile.readlines()
+  infile, outfile, errfile = os.popen3(command)
+  stdout_lines = outfile.readlines()
+  stderr_lines = errfile.readlines()
+
   outfile.close()
   infile.close()
+  errfile.close()
 
-  return output_lines
+  return stdout_lines, stderr_lines
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):

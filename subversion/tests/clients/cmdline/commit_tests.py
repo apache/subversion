@@ -186,6 +186,7 @@ def commit_one_file():
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output_tree,
                                                 expected_status_tree,
+                                                None,
                                                 None, None,
                                                 None, None,
                                                 omega_path)
@@ -211,6 +212,43 @@ def commit_multi_targets():
 
   pass
   
+#----------------------------------------------------------------------
+
+# Regression test for bug reported by Jon Trowbridge:
+# 
+#    From: Jon Trowbridge <trow@ximian.com>
+#    Subject:  svn segfaults if you commit a file that hasn't been added
+#    To: dev@subversion.tigris.org
+#    Date: 17 Jul 2001 03:20:55 -0500
+#    Message-Id: <995358055.16975.5.camel@morimoto>
+#   
+#    The problem is that report_single_mod in libsvn_wc/adm_crawler.c is
+#    called with its entry parameter as NULL, but the code doesn't
+#    check that entry is non-NULL before trying to dereference it.
+#
+# This bug never had an issue number.
+#
+def commit_unversioned_thing():
+  "committing unversioned object produces error"
+
+  sbox = sandbox(commit_unversioned_thing)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Create an unversioned file in the wc.
+  svntest.main.file_append(os.path.join(wc_dir, 'blorg'), "nothing to see")
+
+  # Commit a non-existent file.
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                None,
+                                                None,
+                                                "unversioned",
+                                                None, None,
+                                                None, None,
+                                                os.path.join(wc_dir,'blorg'))
+
 #----------------------------------------------------------------------
 
 # regression test for bug #391
@@ -298,6 +336,7 @@ def nested_dir_replacements():
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output_tree,
                                                 expected_status_tree,
+                                                None,
                                                 None, None,
                                                 None, None,
                                                 wc_dir)
@@ -311,6 +350,7 @@ def nested_dir_replacements():
 # list all tests here, starting with None:
 test_list = [ None,
               commit_one_file,
+              commit_unversioned_thing,
               nested_dir_replacements
              ]
 

@@ -87,6 +87,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_MALFORMED_XML,
               "XML data was not well-formed")
 
+  SVN_ERRDEF (SVN_ERR_UNVERSIONED_RESOURCE,
+              "Tried a versioning operation on an unversioned resource")
+
   SVN_ERRDEF (SVN_ERR_UNFRUITFUL_DESCENT,
               "WC descent came up empty")
 

@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os.path, shutil, string
+import os.path, shutil, string, re
 
 import main, tree  # general svntest routines in this module.
 
@@ -49,7 +49,7 @@ def guarantee_greek_repository(path):
     # figger out the "file:" url needed to run import
     url = "file://" + os.path.abspath(main.pristine_dir)
     # import the greek tree.
-    output = main.run_svn("import", url, main.greek_dump_dir)
+    output, errput = main.run_svn("import", url, main.greek_dump_dir)
 
     # verify the printed output of 'svn import'.
     lastline = string.strip(output.pop())
@@ -109,7 +109,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   main.remove_wc(wc_dir_name)
 
   # Checkout and make a tree of the output.
-  output = main.run_svn ('co', URL, '-d', wc_dir_name)
+  output, errput = main.run_svn ('co', URL, '-d', wc_dir_name)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
@@ -147,7 +147,7 @@ def run_and_verify_update(wc_dir_name,
   Return 0 if successful."""
 
   # Update and make a tree of the output.
-  output = main.run_svn ('up', wc_dir_name, *args)
+  output, errput = main.run_svn ('up', wc_dir_name, *args)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
@@ -172,6 +172,7 @@ def run_and_verify_update(wc_dir_name,
 
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
+                          error_re_string = None,
                           singleton_handler_a = None,
                           a_baton = None,
                           singleton_handler_b = None,
@@ -179,41 +180,57 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
-  
+
   The subcommand output will be verified against OUTPUT_TREE.  If
   optional STATUS_OUTPUT_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
-  were bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more details.
-  Return 0 if successful."""
+  were bumped.)
+
+  If ERROR_RE_STRING is None, the commit must not exit with error.  If
+  ERROR_RE_STRING is a string, the commit must exit with error, and
+  the error message must match regular expression ERROR_RE_STRING.
+
+  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  tree.compare_trees - see that function's doc string for more
+  details.  Return 0 if successful."""
 
   # Commit.
-  output = main.run_svn ('ci', *args)
+  output, errput = main.run_svn ('ci', *args)
+
+  if (error_re_string):
+    rm = re.compile (error_re_string)
+    for line in errput:
+      match = rm.search(line)
+      if match:
+        return 0
+    return 1
+
+  # Else not expecting error:
 
   # Remove the final output line, and verify that 'Commit succeeded'.
   lastline = ""
   if len(output):
     lastline = string.strip(output.pop())
-
-  if lastline != 'Commit succeeded.':
-    print "ERROR:  commit did not 'succeed'."
-    print "The final line from 'svn ci' was:"
-    print lastline
-    return 1
-
-  # Convert the output into a tree.
-  mytree = tree.build_tree_from_commit (output)
-
-  # Verify actual output against expected output.
-  if tree.compare_trees (mytree, output_tree):
-    return 1
-
-  # Verify via 'status' command too, if possible.
-  if status_output_tree:
-    if run_and_verify_status(wc_dir_name, status_output_tree):
+    
+    if lastline != 'Commit succeeded.':
+      print "ERROR:  commit did not 'succeed'."
+      print "The final line from 'svn ci' was:"
+      print lastline
       return 1
-
-  return 0
+    
+    # Convert the output into a tree.
+    expected_tree = tree.build_tree_from_commit (output)
+    
+    # Verify actual output against expected output.
+    if tree.compare_trees (expected_tree, output_tree):
+      return 1
+    
+    # Verify via 'status' command too, if possible.
+    if status_output_tree:
+      if run_and_verify_status(wc_dir_name, status_output_tree):
+        return 1
+      
+      return 0
 
 
 def run_and_verify_status(wc_dir_name, output_tree,
@@ -227,7 +244,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
   more details.
   Return 0 on success."""
 
-  output = main.run_svn ('status', wc_dir_name)
+  output, errput = main.run_svn ('status', wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 

@@ -1449,39 +1449,49 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
 
           /* Get the entry for TARGET. */
           SVN_ERR (svn_wc_entry (&tgt_entry, target, pool));
-          {
-            apr_pool_t *subpool = svn_pool_create (pool);
-            svn_stringbuf_t *basename;
-            
-            basename = svn_path_last_component (target,
-                                                svn_path_local_style, 
-                                                pool);
 
-            /* If TARGET is a file, we check that file for mods.  No
-               stackframes will be pushed or popped, since (the file's
-               parent is already on the stack).  No batons will be
-               closed at all (in case we need to commit more files in
-               this parent). */
-            err = report_single_mod (basename->data,
-                                     tgt_entry,
-                                     &stack,
-                                     affected_targets,
-                                     locked_dirs,
-                                     editor,
-                                     edit_baton,
-                                     &dir_baton,
-                                     FALSE,
-                                     pool);
-
-            svn_pool_destroy (subpool);
-
-            if (err)
-              {
-                remove_all_locks (locked_dirs, pool);
-                return svn_error_quick_wrap 
-                  (err, "commit failed: while sending tree-delta.");
-              }
-          }
+          if (tgt_entry)
+            {
+              apr_pool_t *subpool = svn_pool_create (pool);
+              svn_stringbuf_t *basename;
+              
+              basename = svn_path_last_component (target,
+                                                  svn_path_local_style, 
+                                                  pool);
+              
+              /* If TARGET is a file, we check that file for mods.  No
+                 stackframes will be pushed or popped, since (the file's
+                 parent is already on the stack).  No batons will be
+                 closed at all (in case we need to commit more files in
+                 this parent). */
+              err = report_single_mod (basename->data,
+                                       tgt_entry,
+                                       &stack,
+                                       affected_targets,
+                                       locked_dirs,
+                                       editor,
+                                       edit_baton,
+                                       &dir_baton,
+                                       FALSE,
+                                       pool);
+              
+              svn_pool_destroy (subpool);
+              
+              if (err)
+                {
+                  remove_all_locks (locked_dirs, pool);
+                  return svn_error_quick_wrap 
+                    (err, "commit failed: while sending tree-delta.");
+                }
+            }
+          else
+            {
+              return svn_error_createf
+                (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
+                 "svn_wc_crawl_local_mods: '%s' is not a versioned resource",
+                 target->data);
+            }
+          
         } /*  -- End of main target loop -- */
       
       /* To finish, pop the stack all the way back to the grandaddy
