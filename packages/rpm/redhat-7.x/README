@@ -21,19 +21,21 @@ This build requires certain other packages to be installed.
 
     The non-standard packages apache, db, and neon, can be found at:
 
-    http://summersoft.fay.ar.us/pub/subversion/i386
-    http://summersoft.fay.ar.us/pub/subversion/src
+    http://summersoft.fay.ar.us/pub/subversion/latest
 
 2.  Building a source and binary RPM
 
     To build the latest release directly from the subversion repository:
 
-    cd ../..; svn update; cd packages/rpm; make
+    $ cd ../..; svn update; cd packages/rpm/redhat-7.x; make
+      or
+    $ cd ../..; svn update; cd packages/rpm/redhat-8+; make
 
     To make a particular release:
 
-    cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm; make
-
+    $ cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm/redhat-7.x; make
+      or   
+    $ cd ../..; svn update -r <ReleaseNumber>; cd packages/rpm/redhat-u+; make
 
 If you have any questions or problems, please direct them to the
 dev@subversion.tigris.org mailing list.  I'm on that list and will help out
@@ -42,6 +44,3 @@ if I can.
 You can find the current required packages in a Subversion source repository
 at the http://summersoft.fay.ar.us/repos URL.
 
-If you can try compiling RPMS on other platforms, please send email to
-david@summersoft.fay.ar.us and I'll help out if I can.  It would be nice to
-see RPMS for other platforms that I don't currently have access to.
