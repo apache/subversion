@@ -259,9 +259,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   fs->env_path = apr_pstrdup (fs->pool, path);
 
-  /* Create the directory for the new environment.  */
+  /* Create the directory for the new environment (if needed).  */
   apr_err = apr_make_dir (path, APR_OS_DEFAULT, fs->pool);
-  if (apr_err != 0)
+  if (apr_err != 0 && !APR_STATUS_IS_EEXIST(apr_err))
     return svn_error_createf (apr_err, 0, 0, fs->pool,
 			      "creating Berkeley DB environment dir `%s'",
 			      path);
