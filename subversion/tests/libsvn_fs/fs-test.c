@@ -896,7 +896,10 @@ check_id_absent (svn_fs_t *fs, svn_fs_id_t *id)
 
 /* Test deleting of mutable nodes.  We build a tree in a transaction,
    then try to delete various items in the tree.  We never commit the
-   tree, so every entry being deleted points to a mutable node. */
+   tree, so every entry being deleted points to a mutable node. 
+
+   NOTE: This function tests internal filesystem interfaces, not just
+   the public filesystem interface.  */
 static svn_error_t *
 delete_mutables (const char **msg)
 {
@@ -1128,6 +1131,10 @@ delete_mutables (const char **msg)
 }
 
 
+/* Test that aborting a Subversion transaction works.
+
+   NOTE: This function tests internal filesystem interfaces, not just
+   the public filesystem interface.  */
 static svn_error_t *
 abort_txn (const char **msg)
 {
@@ -1242,7 +1249,7 @@ abort_txn (const char **msg)
      * are gone, but all of the ones in txn1 are still there. 
      */
 
-    /* Check the standard files in t2. */
+    /* Check that every node rev in t2 has vanished from the fs. */
     SVN_ERR (check_id_absent (fs, t2_root_id));
     SVN_ERR (check_id_absent (fs, t2_iota_id));
     SVN_ERR (check_id_absent (fs, t2_A_id));
@@ -1265,7 +1272,7 @@ abort_txn (const char **msg)
     SVN_ERR (check_id_absent (fs, t2_rho_id));
     SVN_ERR (check_id_absent (fs, t2_tau_id));
     
-    /* Check the standard files in t1. */
+    /* Check that every node rev in t1 is still in the fs. */
     SVN_ERR (check_id_present (fs, t1_root_id));
     SVN_ERR (check_id_present (fs, t1_iota_id));
     SVN_ERR (check_id_present (fs, t1_A_id));
@@ -1289,7 +1296,7 @@ abort_txn (const char **msg)
     SVN_ERR (check_id_present (fs, t1_tau_id));
   }
 
-  /* Test that txn2 is gone, by trying to open it. */
+  /* Test that txn2 itself is gone, by trying to open it. */
   {
     svn_fs_txn_t *txn2_again;
     svn_error_t *err;
@@ -1309,7 +1316,7 @@ abort_txn (const char **msg)
       }
   }
 
-  /* Test that txn names are not recycled, by opening a third txn.  */
+  /* Test that txn names are not recycled, by opening a new txn.  */
   {
     svn_fs_txn_t *txn3;
     const char *txn3_name;
@@ -1324,6 +1331,8 @@ abort_txn (const char **msg)
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
            "txn name \"%s\" was recycled", txn3_name);
       }
+
+    SVN_ERR (svn_fs_close_txn (txn3));
   }
 
   /* Close the transaction and fs. */
