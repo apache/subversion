@@ -25,6 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_wc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,7 +98,8 @@ typedef struct
    * Set @a *credentials to another set of valid credentials, (using
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
-   * @a **credenitals to NULL.
+   * @a **credenitals to NULL.  If the provider only has one set of
+   * credentials, this function pointer should simply be NULL.
    */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
@@ -107,8 +109,10 @@ typedef struct
    *
    * Store @a credentials for future use.  @a provider_baton is
    * general context for the vtable.  Set @a *saved to true if the
-   * save happened, or false if not.  (The provider is not required to
-   * save; if it refuses or is unable to save, return false.)
+   * save happened, or false if not.  The provider is not required to
+   * save; if it refuses or is unable to save for non-fatal reasons,
+   * return false.  If the provider never saves data, then this
+   * function pointer should simply be NULL.
    */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
@@ -214,6 +218,21 @@ svn_error_t * svn_auth_save_credentials(const char *cred_kind,
                                         apr_pool_t *pool);
 
 /** @} */
+
+
+/** General authentication providers */
+
+/** Set @a *provider and @ *provider_baton to an authentication
+    provider of type @c svn_auth_cred_simple_t that gets/sets
+    information from a working copy directory @a wc_dir.  If an access
+    baton for @a wc_dir is already open and available, pass it in @a
+    wc_dir_access, else pass NULL. */
+void svn_auth_get_simple_wc_provider (const svn_auth_provider_t **provider,
+                                      void **provider_baton,
+                                      const char *wc_dir,
+                                      svn_wc_adm_access_t *wc_dir_access,
+                                      apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
