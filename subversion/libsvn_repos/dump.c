@@ -459,45 +459,12 @@ dump_node (struct edit_baton *eb,
     }
 
   /* Dump text content */
-  /*    (this stream "pull and push" code was stolen from
-        libsvn_ra_local/ra_plugin.c:get_file().  */
-  if (must_dump_text && (kind == svn_node_file))
+  if (must_dump_text && (kind == svn_node_file) && eb->stream)
     {
-      apr_size_t rlen, wlen;
       svn_stream_t *contents;
-          
+
       SVN_ERR (svn_fs_file_contents (&contents, eb->fs_root, path, pool));
-      
-      while (1)
-        {
-          /* read a maximum number of bytes from the file, please. */
-          rlen = eb->bufsize; 
-          SVN_ERR (svn_stream_read (contents, eb->buffer, &rlen));
-          
-          /* write however many bytes you read, please. */
-          if (eb->stream)
-            {
-              wlen = rlen;
-              SVN_ERR (svn_stream_write (eb->stream, eb->buffer, &wlen));
-              if (wlen != rlen)
-                {
-                  /* Uh oh, didn't write as many bytes as we read, and no
-                     error was returned.  According to the docstring, this
-                     should never happen. */
-                  return svn_error_createf 
-                    (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                     "Error dumping textual contents of '%s'", path);
-                }
-            }
-        
-        if (rlen != eb->bufsize)
-          {
-            /* svn_stream_read didn't throw an error, yet it didn't read
-               all the bytes requested.  According to the docstring,
-               this means a plain old EOF happened, so we're done. */
-            break;
-          }
-        }
+      SVN_ERR (svn_stream_copy (contents, eb->stream, pool));
     }
   
   if (eb->stream)

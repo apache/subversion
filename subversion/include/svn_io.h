@@ -465,6 +465,12 @@ svn_stream_readline (svn_stream_t *stream,
                      svn_boolean_t *eof,
                      apr_pool_t *pool);
 
+/** Read the contents of the readable stream @a from and write them to the
+ * writable stream @a to.
+ */
+svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
+                              apr_pool_t *pool);
+
 /** @} */
 
 /** Sets @a *result to a string containing the contents of @a filename, a

@@ -545,32 +545,12 @@ dump_contents (apr_file_t *fh,
                const char *path /* UTF-8! */,
                apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  apr_size_t len, len2;
-  svn_stream_t *stream;
-  char buffer[1024];
+  svn_stream_t *contents, *file_stream;
 
-  /* Get a stream to the current file's contents. */
-  SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));
-  
-  /* Now, route that data into our temporary file. */
-  while (1)
-    {
-      SVN_ERR (check_cancel (NULL));
-      len = sizeof (buffer);
-      SVN_ERR (svn_stream_read (stream, buffer, &len));
-      len2 = len;
-      apr_err = apr_file_write (fh, buffer, &len2);
-      if ((apr_err) || (len2 != len))
-        return svn_error_wrap_apr 
-          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA,
-           "Can't write contents of '%s'", path);
-      if (len != sizeof (buffer))
-        break;
-    }
-
-  /* And close the file. */
-  apr_file_close (fh);
+  /* Grab the contents and copy them into fh. */
+  SVN_ERR (svn_fs_file_contents (&contents, root, path, pool));
+  file_stream = svn_stream_from_aprfile (fh, pool);
+  SVN_ERR (svn_stream_copy (contents, file_stream, pool));
   return SVN_NO_ERROR;
 }
 
