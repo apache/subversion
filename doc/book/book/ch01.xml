@@ -500,7 +500,7 @@ $
       actual work will happen:</para>
 
     <screen>
-$ svn checkout file://path/to/repos/trunk project
+$ svn checkout file:///path/to/repos/trunk project
 A  project/foo.c
 A  project/bar.c
 A  project/Makefile
