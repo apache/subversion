@@ -137,16 +137,6 @@ commit_change_dir_prop (void *dir_baton,
 }
 
 static svn_error_t *
-commit_change_dirent_prop (void *dir_baton,
-                           svn_string_t *entry,
-                           svn_string_t *name,
-                           svn_string_t *value)
-{
-  /* ### need to design where dirent props are stored */
-  return NULL;
-}
-
-static svn_error_t *
 commit_close_dir (void *dir_baton)
 {
   /* ### nothing? */
@@ -216,7 +206,6 @@ static const svn_delta_edit_fns_t commit_editor = {
   commit_add_dir,
   commit_rep_dir,
   commit_change_dir_prop,
-  commit_change_dirent_prop,
   commit_close_dir,
   commit_add_file,
   commit_rep_file,

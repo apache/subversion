@@ -930,16 +930,6 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
              value_string);
         break;
       }
-    case svn_propdelta_dirent:
-      {
-        if (digger->editor->change_dirent_prop)
-          err = (*(digger->editor->change_dirent_prop)) 
-            (digger->dir_baton,
-             digger->current_propdelta->entity_name,
-             digger->current_propdelta->name,
-             value_string);
-        break;
-      }
     default:
       {
         return svn_error_create 

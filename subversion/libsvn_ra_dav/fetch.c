@@ -551,15 +551,6 @@ update_change_dir_prop (void *dir_baton,
 }
 
 static svn_error_t *
-update_change_dirent_prop (void *dir_baton,
-                           svn_string_t *entry,
-                           svn_string_t *name,
-                           svn_string_t *value)
-{
-  return NULL;
-}
-
-static svn_error_t *
 update_close_dir (void *dir_baton)
 {
   return NULL;
@@ -619,7 +610,6 @@ static const svn_delta_edit_fns_t update_editor = {
   update_add_dir,
   update_rep_dir,
   update_change_dir_prop,
-  update_change_dirent_prop,
   update_close_dir,
   update_add_file,
   update_rep_file,

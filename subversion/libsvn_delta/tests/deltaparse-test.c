@@ -360,34 +360,6 @@ test_change_dir_prop (void *parent_baton,
 }
 
 
-static svn_error_t *
-test_change_dirent_prop (void *parent_baton,
-                         svn_string_t *entry,
-                         svn_string_t *name, svn_string_t *value)
-{
-  struct dir_baton *d = (struct dir_baton *) parent_baton;
-  print_spaces (d->edit_baton->indentation);
-
-  printf ("PROPCHANGE on dir-entry '%s': ", (char *) entry->data);
-
-  if (value == NULL)
-    printf (" delete  `%s'\n", (char *) name->data);
-
-  else
-    printf (" set `%s' to `%s'\n",
-            (char *) name->data, (char *) value->data);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-
-
-
-
-
 /* An official subversion "read" routine, comforming to POSIX standards. 
    This one reads our XML filehandle, passed in as our baton.  */
 static svn_error_t *
@@ -473,7 +445,6 @@ main (int argc, char *argv[])
 
   my_editor.change_file_prop   = test_change_file_prop;
   my_editor.change_dir_prop    = test_change_dir_prop;
-  my_editor.change_dirent_prop = test_change_dirent_prop;
 
   my_editor.close_edit         = NULL;
 

@@ -520,18 +520,6 @@ typedef struct svn_delta_edit_fns_t
                                    svn_string_t *name,
                                    svn_string_t *value);
 
-  /* Change the value of a directory entry's property.
-     - DIR_BATON specifies the directory.
-     - ENTRY is the name of the entry in that directory whose property 
-       should be changed.
-     - NAME is the name of the property to change.
-     - VALUE is the new value of the property, or zero if the property
-     should be removed altogether.  */
-  svn_error_t *(*change_dirent_prop) (void *dir_baton,
-                                      svn_string_t *entry,
-                                      svn_string_t *name,
-                                      svn_string_t *value);
-
   /* We are done processing a subdirectory, whose baton is DIR_BATON
      (set by add_directory or replace_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
