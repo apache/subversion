@@ -3,20 +3,22 @@
 
   <simplesect>
 
-    <para>Now we will go into the details of using Subversion in your
-      day to day work.  By the time you reach the end of this chapter,
-      you will be able to perform almost all the tasks you need to use
-      Subversion in a normal day's work.  You'll start with an initial
-      checkout of your code, and walk through making changes and
-      examining those changes. You'll also see how to bring changes
-      made by others into your working copy, examine them, and work
-      through any conflicts that might arise.</para>
+    <para>Now we will go into the details of using Subversion.  By the
+      time you reach the end of this chapter, you will be able to
+      perform almost all the tasks you need to use Subversion in a
+      normal day's work.  You'll start with an initial checkout of
+      your code, and walk through making changes and examining those
+      changes. You'll also see how to bring changes made by others
+      into your working copy, examine them, and work through any
+      conflicts that might arise.</para>
 
     <para>Note that this chapter is not meant to be an exhaustive list
       of all Subversion's commands&mdash;rather, it's a conversational
       introduction to the most common Subversion tasks you'll
-      encounter.  For a complete reference of all commands, see <xref
-      linkend="svn-ch-8"/>.</para>
+      encounter.  This chapter assumes that you've read and understood
+      <xref linkend="svn-ch-2"/> and are familiar with the general
+      model of Subversion.  For a complete reference of all commands,
+      see <xref linkend="svn-ch-8"/>.</para>
 
   </simplesect>
 
@@ -42,11 +44,12 @@
   <sect1 id="svn-ch-3-sect-2">
     <title>Import</title>
 
-    <para><command>svn import</command> is used to import a new
+    <para>You use <command>svn import</command> to import a new
     project into a Subversion repository.  While this is most likely
     the very first thing you will do when you set up your Subversion
     server, it's not something that happens very often.  For a
-    detailed description of import, see <xref linkend="svn-ch-5"/>.
+    detailed description of import, see <xref
+    linkend="svn-ch-3-sect-7.3"/> later in this chapter.
     </para>
 
   </sect1>
@@ -59,10 +62,10 @@
 
     <para>Most of the time, you will start using a Subversion
       repository by doing a <firstterm>checkout</firstterm> of your
-      project.  <quote>Checking out</quote> will provide you with a
-      local copy of the <literal>HEAD</literal> (latest revision) of
-      the Subversion repository that you specify on the command
-      line.</para>
+      project.  <quote>Checking out</quote> a repository creates a
+      copy of it on your local machine.  This copy contains the
+      <literal>HEAD</literal> (latest revision) of the Subversion
+      repository that you specify on the command line:</para>
     
 
     <screen>
@@ -86,12 +89,12 @@ Checked out revision 2499.
         top-level directories: <literal>trunk</literal>,
         <literal>tags</literal>, and <literal>branches</literal>.
         This may seem a little odd at the moment, but we'll talk a lot
-        more about these in <xref linkend="svn-ch-5"/>.</para>
+        more about these in <xref linkend="svn-ch-4"/>.</para>
 
     </sidebar>
 
     <para>Although the above example checks out the trunk directory,
-      you can just as easily checkout any deep subdirectory of a
+      you can just as easily check out any deep subdirectory of a
       repository by specifying the subdirectory in the checkout
       URL:</para>
     
@@ -107,14 +110,14 @@ Checked out revision 3678.
     </screen>
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
-      model instead of <quote>lock-modify-unlock,</quote> (See <xref
+      model instead of <quote>lock-modify-unlock,</quote> (see <xref
       linkend="svn-ch-2"/>) you're now ready to start making changes
-      to the files that you've checked out, known collectively as your
-      <firstterm>working copy</firstterm>. You can even delete the
-      entire working copy and forget about it&mdash;there's
-      no need to notify the Subversion server unless you're ready to
-      <firstterm>check in</firstterm> changes, a new file, or even a
-      directory.</para>
+      to the files and directories that you've checked out, known
+      collectively as your <firstterm>working copy</firstterm>. You
+      can even delete the entire working copy and forget about
+      it&mdash;there's no need to notify the Subversion server unless
+      you're ready to <firstterm>commit</firstterm> a new file or
+      directory, or changes to existing ones.</para>
 
     <sidebar>
       <title>What's with the <filename>.svn</filename> directory?</title>
@@ -130,8 +133,8 @@ Checked out revision 3678.
     </sidebar>
 
     <para>While you can certainly check out a working copy with the
-      url of the repository as the only argument, you can also specify
-      a directory after your repository url.  This places your working
+      URL of the repository as the only argument, you can also specify
+      a directory after your repository URL.  This places your working
       copy into the new directory that you name.  For example:</para>
     
     <screen>
@@ -147,7 +150,7 @@ Checked out revision 2499.
     
     <para>That will place your working copy in a directory named
       <literal>subv</literal> instead of a directory named
-      <literal>trunk</literal> as was the case above.</para>
+      <literal>trunk</literal> as we did previously.</para>
 
   </sect1>
 
@@ -162,7 +165,7 @@ Checked out revision 2499.
       this section we'll run through the most common things that you might
       find yourself doing with Subversion in the course of a day's work.</para>
     
-    <para>The typical work cycle looks like this</para>
+    <para>The typical work cycle looks like this:</para>
 
     <itemizedlist>
 
@@ -193,12 +196,13 @@ Checked out revision 2499.
 
       <para>When working on a project with a team, you'll want to
         <firstterm>update</firstterm> your working copy: that is,
-        receive any changes from other developers on the project.
-        <command>svn update</command> brings your working copy
-        in sync with the latest revision in the repository.</para>
+        receive any changes from other developers on the
+        project. You'll use <command>svn update</command> to bring
+        your working copy into sync with the latest revision in the
+        repository.</para>
       
       <screen>
-$ svn up
+$ svn update
 U  ./foo.c
 U  ./bar.c
 Updated to revision 2.
@@ -213,7 +217,7 @@ Updated to revision 2.
         a bit more.  When the server sends changes to your working
         copy, a letter code is displayed next to each item to let you
         know what actions Subversion performed to bring your working
-        copy up to date:</para>
+        copy up-to-date:</para>
 
       <variablelist>
 
@@ -261,7 +265,7 @@ Updated to revision 2.
           <listitem>
             <para>File <filename>foo</filename> received new changes
               from the repository, but your local copy of the file had
-              changes that you made.  The changes did not intersect,
+              your modifications.  The changes did not intersect,
               however, so Subversion has
               mer<computeroutput>G</computeroutput>ed the repository's
               changes into the file without a problem.</para>
@@ -288,26 +292,26 @@ Updated to revision 2.
       <title>Make Changes to Your Working Copy</title>
       
       <para>Now you can to get to work and make changes in your
-        working copy. It's usually most convenient to create a
-        <quote>task</quote> for yourself, such as writing a new
-        feature, fixing a bug, etc.  The Subversion commands that you
-        will use here are <command>svn add</command>, <command>svn
-        delete</command>, <command>svn copy</command>, and
-        <command>svn move</command>.  However, if you are merely
+        working copy. It's usually most convenient to decide on a
+        particular change (or set of changes) to make, such as writing
+        a new feature, fixing a bug, etc.  The Subversion commands
+        that you will use here are <command>svn add</command>,
+        <command>svn delete</command>, <command>svn copy</command>,
+        and <command>svn move</command>.  However, if you are merely
         editing a file (or files) that is already in Subversion, you
-        may not need to use any of these commands until you commit.</para>
+        may not need to use any of these commands until you commit.
+        Changes you can make to your working copy:</para>
       
       <variablelist>
-        <title>Changes you can make to your working copy:</title>
         
         <varlistentry>
           <term>File changes</term>
           <listitem>
-            <para>This is the simplest sort of change.  Unlike other
-              version control systems, you don't need to tell
-              Subversion that you intend to change a file; just make
-              your changes.  Subversion will be able to automatically
-              detect which files have been changed.</para>
+            <para>This is the simplest sort of change.  You don't need
+              to tell Subversion that you intend to change a file;
+              just make your changes.  Subversion will be able to
+              automatically detect which files have been
+              changed.</para>
           </listitem>
         </varlistentry>
 
@@ -327,9 +331,8 @@ Updated to revision 2.
       
       <para>To make file changes, just use your text editor, word
         processor, or graphics program&mdash;whatever tool you would
-        normally use.  A file needn't be in text-format; Subversion
-        handles binary files just as easily as it handles text file
-        (and just as efficiently too).</para>
+        normally use.  Subversion handles binary files just as easily
+        as it handles text files (and just as efficiently too).</para>
       
       <para>Here is an overview of the four Subversion subcommands
         that you'll use most often to make tree changes (we'll cover
@@ -343,12 +346,12 @@ Updated to revision 2.
           <listitem>
             <para>Schedule <filename>foo</filename> to be added to the
               repository.  When you next commit,
-              <filename>foo</filename> will become a permanent child
-              of its parent directory.  Note that if
-              <filename>foo</filename> is a directory, only the
-              directory itself will be scheduled for addition.  If you
-              want to add its contents as well, pass the
-              <option>--recursive</option> (<option>-r</option>) switch.</para>
+              <filename>foo</filename> will become a child of its
+              parent directory.  Note that if <filename>foo</filename>
+              is a directory, only the directory itself will be
+              scheduled for addition.  If you want to add its contents
+              as well, pass the <option>--recursive</option>
+              (<option>-R</option>) switch.</para>
           </listitem>
         </varlistentry>
 
@@ -357,9 +360,7 @@ Updated to revision 2.
           <listitem>
             <para>Schedule <filename>foo</filename> to be deleted from
               the repository.  If <filename>foo</filename> is a file,
-              it is immediately deleted from your working
-              copy&mdash;but it can be recovered with <command>svn
-              revert</command> (discussed later).  If
+              it is immediately deleted from your working copy.  If
               <filename>foo</filename> is a directory, it is not
               deleted, but Subversion schedules it for deletion.  When
               you commit your changes, <filename>foo</filename> will
@@ -376,7 +377,7 @@ Updated to revision 2.
         <varlistentry>
           <term><command>svn copy foo bar</command></term>
           <listitem>
-            <para>Create new item <filename>bar</filename> as a
+            <para>Create a new item <filename>bar</filename> as a
               duplicate of <filename>foo</filename>.
               <filename>bar</filename> is automatically scheduled for
               addition.  When <filename>bar</filename> is added to the
@@ -390,17 +391,18 @@ Updated to revision 2.
           <term><command>svn move foo bar</command></term>
           <listitem>
             <para>This command is exactly the same as running
-              <command>svn cp foo bar; svn rm foo</command>.  That is,
-              <filename>bar</filename> is scheduled for addition as a
-              copy of <filename>foo</filename>, and
-              <filename>foo</filename> is scheduled for removal.</para>
+              <command>svn copy foo bar; svn delete foo</command>.
+              That is, <filename>bar</filename> is scheduled for
+              addition as a copy of <filename>foo</filename>, and
+              <filename>foo</filename> is scheduled for
+              removal.</para>
           </listitem>
         </varlistentry>
 
       </variablelist>
 
       <sidebar>
-        <title>Changing the repository without committing</title>
+        <title>Changing the Repository Without a Working Copy</title>
         
         <para>Earlier in this chapter, we said that you have to commit
           any changes that you make in order for the repository to
@@ -409,9 +411,9 @@ Updated to revision 2.
           commit tree changes to the repository.  This only happens
           when a subcommand is operating directly on a URL, rather
           than on a working-copy path. (In particular, specific uses
-          of <command>svn mkdir</command>, <command>svn cp</command>,
-          <command>svn mv</command>, and <command>svn rm</command> can
-          work with URLs).</para>
+          of <command>svn mkdir</command>, <command>svn
+          copy</command>, <command>svn move</command>, and
+          <command>svn delete</command> can work with URLs).</para>
 
         <para>URL operations behave in this manner because commands
           that operate on a working copy can use the working copy as a
@@ -428,31 +430,32 @@ Updated to revision 2.
     <sect2 id="svn-ch-3-sect-4.3">
       <title>Examine Your Changes</title>
       
+      <para>Once you've finished making changes, you need to commit
+        them to the repository, but before you do so, it's usually a
+        good idea to take a look at exactly what you've changed.  By
+        examining your changes before you commit, you can not only
+        make a more accurate log message, but you may discover that
+        you've inadvertently changed a file, and this gives you a
+        chance to revert those changes before committing.  You can see
+        exactly what changes you've made by using <command>svn
+        status</command>, <command>svn diff</command>, and
+        <command>svn revert</command>.  You will usually use the first
+        two commands to find out what files have changed in your
+        working copy, and then perhaps the third to revert some (or
+        all) of those changes.</para>
+      
+      <para>Subversion has been optimized to help you with this task,
+        and is able to do many things without communicating with the
+        repository.  In particular, your working copy contains a
+        secret cached <quote>pristine</quote> copy of each version
+        controlled file within the <filename>.svn</filename> area.
+        Because of this, Subversion can quickly show you how your
+        working files have changed, or even allow you to undo your
+        changes without contacting the repository.</para>
+      
       <sect3 id="svn-ch-3-sect-4.3.1">
         <title><command>svn status</command></title>
-
-        <para>Once you've finished making changes, you need to commit
-          them to the repository, but before you do so, it's usually a
-          good idea to take a look at exactly what you've changed.  By
-          examining your changes before you commit, you can not only
-          make a more accurate log message, but you may discover that
-          you've inadvertently changed a file, and this gives you a
-          chance to revert those changes before committing.  You can
-          see exactly what changes you've made by using <command>svn
-          status</command>, <command>svn diff</command>, and
-          <command>svn revert</command> to find out what files have
-          changed where and possibly remove these changes.</para>
-      
-        <para>Subversion has been optimized to help you with this
-          task, and is able to do many things without communicating
-          with the repository.  In particular, your working copy
-          contains a secret cached <quote>pristine</quote> copy of
-          each version controlled file within the
-          <filename>.svn</filename> area.  Because of this, Subversion
-          can quickly show you how your working files have changed, or
-          even allow you to undo your changes without contacting the
-          repository.</para>
-
+        
         <para>You'll probably use the <command>svn status</command>
           command more than any other Subversion command.</para>
         
