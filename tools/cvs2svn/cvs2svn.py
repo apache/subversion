@@ -150,6 +150,7 @@ class CollectData(rcsparse.Sink):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
       self.set_branch_name(revision, name)
+      self.add_branch_point(revision[:revision.rfind(".")], name)
     else:
       if not self.taglist.has_key(revision):
         self.taglist[revision] = []
@@ -380,40 +381,47 @@ class RepositoryMirror:
     root_key = self.revs_db[str(self.youngest)]
     self._stabilize_directory(root_key)
 
-  def probe_path(self, path, revision=-1):
-    # For debugging -- print information about the repository mirror's
-    # path down to some file, in REVISION (or youngest if -1).
+  def probe_path(self, path, revision=-1, debugging=None):
+    """If PATH exists in REVISION of the svn repository mirror,
+    return its leaf value, else return None.
+    If DEBUGGING is true, then print trace output to stdout.
+    REVISION defaults to youngest, and PATH must not start with '/'."""
     components = string.split(path, '/')
     if revision == -1:
       revision = self.youngest
-    print "PROBING path: '%s' in %d" % (path, revision)
+
+    if debugging: print "PROBING path: '%s' in %d" % (path, revision)
 
     parent_key = self.revs_db[str(revision)]
     parent = marshal.loads(self.nodes_db[parent_key])
-    last_component = "/"
+    previous_component = "/"
 
     i = 1
     for component in components:
-      for n in range(i):
-        print "  ",
-      print "'%s' key: %s, val:" % (last_component, parent_key), parent
+
+      if debugging:
+        for n in range(i): print "  ",
+        print "'%s' key: %s, val:" % (previous_component, parent_key), parent
 
       if not parent.has_key(component):
-        print "  PROBE ABANDONED: '%s' does not contain '%s'" \
-              % (last_component, component)
-        return
+        if debugging:
+          print "  PROBE ABANDONED: '%s' does not contain '%s'" \
+                % (previous_component, component)
+        return None
 
       this_entry_key = parent[component]
       this_entry_val = marshal.loads(self.nodes_db[this_entry_key])
       parent_key = this_entry_key
       parent = this_entry_val
-      last_component = component
+      previous_component = component
       i = i + 1
   
-    for n in range(i):
-      print "  ",
-    print "parent_key: %s, val:" % parent_key, parent
+    if debugging:
+      for n in range(i): print "  ",
+      print "parent_key: %s, val:" % parent_key, parent
 
+    # It's not actually a parent at this point, it's the leaf node.
+    return parent
 
   def change_path(self, path, tags, branches, intermediate_dir_func=None):
     """Record a change to PATH.  PATH may not have a leading slash.
@@ -563,12 +571,12 @@ class RepositoryMirror:
     parent_chain = [ ]
     parent_chain.insert(0, (None, parent_key))
 
-    def is_prunable(dir, mutable_flag):
+    def is_prunable(dir):
       """Return true if DIR, a dictionary representing a directory,
-      has just zero or one entry other than MUTABLE_FLAG, else return
-      false.  (In a pure world, we'd just ask len(DIR) > 1; it's only
-      because the directory might have a mutable flag that we need
-      this function at all.)"""
+      has just zero or one non-special entry, else return false.
+      (In a pure world, we'd just ask len(DIR) > 1; it's only
+      because the directory might have mutable flags and other special
+      entries that we need this function at all.)"""
       num_items = len(dir)
       if num_items > 3:
         return None
@@ -618,7 +626,7 @@ class RepositoryMirror:
       pkey = parent_item[1]
       pval = marshal.loads(self.nodes_db[pkey])
       if prune:
-        if (new_key == None) and is_prunable(pval, self.mutable_flag):
+        if (new_key == None) and is_prunable(pval):
           pruned_count = pruned_count + 1
           pass
           # Do nothing more.  All the action takes place when we hit a
@@ -651,7 +659,7 @@ class RepositoryMirror:
     self.revs_db[str(self.youngest)] = new_key
 
     if pruned_count > len(components):
-      sys.stdout.write("Error: deleting '%s' tried to prune %d components."
+      sys.stderr.write("Error: deleting '%s' tried to prune %d components."
                        % (path, pruned_count))
       exit(1)
 
@@ -676,10 +684,10 @@ class RepositoryMirror:
 
 
 class Dump:
-  def __init__(self, dumpfile_path, revision):
+  def __init__(self, dumpfile_path):
     'Open DUMPFILE_PATH, and initialize revision to REVISION.'
     self.dumpfile_path = dumpfile_path
-    self.revision = revision
+    self.revision = 0
     self.dumpfile = open(dumpfile_path, 'wb')
     self.repos_mirror = RepositoryMirror()
 
@@ -696,6 +704,8 @@ class Dump:
   def start_revision(self, props):
     """Write the next revision, with properties, to the dumpfile.
     Return the newly started revision."""
+
+    self.revision = self.revision + 1
 
     # A revision typically looks like this:
     # 
@@ -756,7 +766,6 @@ class Dump:
     self.dumpfile.write('PROPS-END\n')
     self.dumpfile.write('\n')
 
-    self.revision = self.revision + 1
     self.repos_mirror.new_revision()
     return self.revision
 
@@ -770,6 +779,31 @@ class Dump:
                         "PROPS-END\n"
                         "\n"
                         "\n" % path)
+
+  def probe_path(self, path):
+    """Return true if PATH exists in the youngest tree of the svn
+    repository, else return None.  PATH does not start with '/'."""
+    if self.repos_mirror.probe_path(path) == None: return None
+    else:                                          return 1
+
+  def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path):
+    ### FIXME: There's a loader question here -- do we need to say
+    ### "Node-kind: file|dir" for a copied node?  It would make sense
+    ### to omit it, since the only contribution it could make would be
+    ### to differ from the copy-source's actual node kind, and thereby
+    ### cause an error :-), but something tells me we need the header
+    ### to be present and to match the source node.
+    ###
+    ### The plan, after talking to Mike and Greg S, is to change the
+    ### loader to stop looking for this header when copyfrom history
+    ### is present.
+    self.dumpfile.write('Node-path: %s\n'
+                        ### 'Node-kind: file|dir\n'
+                        'Node-action: add\n'
+                        'Node-copyfrom-rev: %d\n'
+                        'Node-copyfrom-path: /%s\n'
+                        '\n'
+                        % (svn_dst_path, svn_src_rev, svn_src_path))
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
                          tags, branches):
@@ -970,19 +1004,28 @@ class SymbolicNameTracker:
     # with any real entry.
     self.opening_revs_key = "/opening"
     self.closing_revs_key = "/closing"
+    self.copyfrom_rev_key = "/copyfrom-rev"
 
-  def probe_path(self, components):
-    # Print information about a path in the sym name tree (for debugging).
-    print "PROBING SYMBOLIC NAME:\n", components
+  def probe_path(self, symbolic_name, path, debugging=None):
+    """If 'SYMBOLIC_NAME/PATH' exists in the symbolic name tree,
+    return the value of its last component, else return None.
+    PATH may be None, but may not start with '/'.
+    If DEBUGGING is true, then print trace output to stdout."""
+    if path:
+      components = [symbolic_name] + string.split(path, '/')
+    else:
+      components = [symbolic_name]
+    
+    if debugging: print "PROBING SYMBOLIC NAME:\n", components
 
     parent_key = self.root_key
     parent = marshal.loads(self.db[parent_key])
     last_component = "/"
     i = 1
     for component in components:
-      for n in range(i):
-        print "  ",
-      print "'%s' key: %s, val:" % (last_component, parent_key), parent
+      if debugging:
+        for n in range(i): print "  ",
+        print "'%s' key: %s, val:" % (last_component, parent_key), parent
 
       if not parent.has_key(component):
         sys.stderr.write("SYM PROBE FAILED: '%s' does not contain '%s'\n" \
@@ -996,9 +1039,12 @@ class SymbolicNameTracker:
       last_component = component
       i = i + 1
   
-    for n in range(i):
-      print "  ",
-    print "parent_key: %s, val:" % parent_key, parent
+    if debugging:
+      for n in range(i): print "  ",
+      print "parent_key: %s, val:" % parent_key, parent
+
+    # It's not actually a parent at this point, it's the leaf node.
+    return parent
 
   def bump_rev_count(self, item_key, rev, revlist_key):
     """Increment REV's count in opening or closing list under KEY.
@@ -1058,6 +1104,7 @@ class SymbolicNameTracker:
     if not (tags or branches): return  # early out
     for name in tags + branches:
       components = [name] + string.split(svn_path, '/')
+      # print "KFF enrooting ('%s') " % name, components
 
       parent_key = self.root_key
       for component in components:
@@ -1100,6 +1147,112 @@ class SymbolicNameTracker:
         parent = this_entry_val
 
       self.bump_rev_count(parent_key, svn_rev, self.closing_revs_key)
+
+  def score_revisions(self, openings, closings):
+    """Return a list of revisions and scores based on OPENINGS and
+    CLOSINGS.  The returned list looks like:
+
+       [(REV1 SCORE1), (REV2 SCORE2), ...]
+
+    where REV2 > REV1 and all scores are > 0.  OPENINGS and CLOSINGS
+    are the values of self.opening_revs_key and self.closing_revs_key
+    from some file or directory node, or None.
+
+    Each score indicates that copying the corresponding revision of
+    the object in question would yield that many correct paths at or
+    underneath the object.  There may be other paths underneath it
+    which are not correct and need to be deleted or recopied; those
+    can only be detected by descending and examining their scores.
+
+    If OPENINGS is false, return the empty list, else if CLOSINGS is
+    false, return OPENINGS."""
+
+    # First look for easy outs.
+    if not openings: return []
+    if not closings: return openings
+      
+    # No easy out, so wish for lexical closures and calculate the scores :-). 
+    scores = []
+    opening_score_accum = 0
+    for i in range(len(openings)):
+      pair = openings[i]
+      opening_score_accum = opening_score_accum + pair[1]
+      scores.append((pair[0], opening_score_accum))
+    min = 0
+    for i in range(len(closings)):
+      closing_rev   = closings[i][0]
+      closing_score = closings[i][1]
+      for j in range(min, len(scores)):
+        opening_pair = scores[j]
+        if closing_rev <= opening_pair[0]:
+          scores[j] = (opening_pair[0], opening_pair[1] - closing_score)
+        else:
+          min = j + 1
+    return scores
+  
+  def best_rev(self, scores):
+    """Return the revision with the highest score from SCORES, a list
+    returned by score_revisions()."""
+    max_score = 0
+    rev = SVN_INVALID_REVNUM
+    for pair in scores:
+      if pair[1] > max_score:
+        max_score = pair[1]
+        rev = pair[0]
+    return rev
+
+  def fill_branch(self, dumper, ctx, branch, svn_rev, svn_path):
+    """Use DUMPER to create all currently available parts of BRANCH
+    that have not been created already, and make sure that SVN_REV of
+    SVN_PATH is in the branch afterwards."""
+    parent_key = self.root_key
+    parent = marshal.loads(self.db[parent_key])
+
+    if not parent.has_key(branch):
+      sys.stderr.write("No origin records for branch '%s'." % branch)
+      sys.exit(1)
+    
+    def copy_descend(dumper, ctx, branch, parent, entry_name,
+                     path_so_far, parent_rev):
+      key = parent[entry_name]
+      val = marshal.loads(self.db[key])
+      scores = self.score_revisions(val.get(self.opening_revs_key),
+                                    val.get(self.closing_revs_key))
+      rev = self.best_rev(scores)
+      if ((rev != parent_rev) and not val.has_key(self.copyfrom_rev_key)):
+        parent_rev = rev
+        # print "KFF parent:", parent
+        # print "KFF entry_name: '%s'" % entry_name
+        # print "KFF openings:", val.get(self.opening_revs_key)
+        # print "KFF closings:", val.get(self.closing_revs_key)
+        # print "KFF scores:", scores
+        # print "KFF copyfrom-path: '%s'" % path_so_far
+        # print "KFF copyfrom-rev: '%s'" % parent_rev
+        ### FIXME: todo -- working here
+        ### This path is all wrong, of course.  We need to get
+        ### the source and dest to start at the same "level" in the
+        ### copy descent, so first we need to fix path generation for
+        ### projects.
+        dst_path = make_path(ctx, path_so_far, branch)
+        # print "KFF dst_path: '%s'" % dst_path
+        dumper.copy_path(path_so_far, parent_rev, dst_path)
+        # Record that this copy is done.
+        val[self.copyfrom_rev_key] = parent_rev
+        # print "KFF new val:", val
+        self.db[key] = marshal.dumps(val)
+      else:
+        # print "KFF filled by implication: '%s'" % path_so_far
+        pass
+      for ent in val.keys():
+        if not ent[0] == '/':
+          if path_so_far: next_path = path_so_far + '/' + ent
+          else:           next_path = ent
+          copy_descend(dumper, ctx, branch, val, ent, next_path, parent_rev)
+
+    # print ""
+    # print "KFF filling path: '%s'" % svn_path
+    copy_descend(dumper, ctx, branch, parent, branch, "", SVN_INVALID_REVNUM)
+    # print ""
 
 
 class Commit:
@@ -1218,6 +1371,16 @@ class Commit:
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dump.start_revision(props)
       sym_tracker.enroot_names(svn_path, svn_rev, tags, branches)
+      if br:
+        ### FIXME: Here is an obvious optimization point.  Probably
+        ### dump.probe_path(PATH) is kind of slow, because it does N
+        ### database lookups for the N components in PATH.  If this
+        ### turns out to be a performance bottleneck, we can just
+        ### maintain a database mirroring just the head tree, but
+        ### keyed on full paths, to reduce the check to a quick
+        ### constant time query.
+        if not dump.probe_path(svn_path):
+          sym_tracker.fill_branch(dump, ctx, br, svn_rev, svn_path)
       closed_names = dump.add_or_change_path(cvs_path, svn_path,
                                              cvs_rev, rcs_file,
                                              tags, branches)
@@ -1534,7 +1697,7 @@ def pass4(ctx):
   count = 0
 
   # Start the dumpfile object.
-  dump = Dump(ctx.dumpfile, ctx.initial_revision)
+  dump = Dump(ctx.dumpfile)
 
   # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
@@ -1660,7 +1823,6 @@ def main():
   ctx.target = SVNROOT
   ctx.log_fname_base = DATAFILE
   ctx.dumpfile = DUMPFILE
-  ctx.initial_revision = 1  ### Should we take a --initial-revision option?
   ctx.verbose = 0
   ctx.dry_run = 0
   ctx.prune = 1
