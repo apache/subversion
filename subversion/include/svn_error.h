@@ -274,6 +274,14 @@ typedef enum svn_errno_t {
 
 /*** Wrappers around APR pools, so we get error pools. ***/
 
+/* If you want pool usage debug info dumped to stderr (in environments
+ * that support that kind of thing), #define SVN_POOL_DEBUG here.
+ */
+/*
+#define SVN_POOL_DEBUG 
+*/
+
+
 
 /* THE ERROR POOL
  *
@@ -334,6 +342,8 @@ apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 apr_size_t svn_pool_get_size (apr_pool_t *pool);
 
 
+
+#ifndef SVN_POOL_DEBUG
 /* Return a new pool.  If PARENT_POOL is non-null, then the new
  * pool will be a subpool of it, and will inherit the containing
  * pool's dedicated error subpool.
@@ -348,11 +358,16 @@ apr_size_t svn_pool_get_size (apr_pool_t *pool);
  */
 apr_pool_t *svn_pool_create (apr_pool_t *parent_pool);
 
+#else /* SVN_POOL_DEBUG */
+apr_pool_t *svn_pool_create_debug (apr_pool_t *parent_pool,
+                                   const char *file,
+                                   int line);
+#define svn_pool_create(p) svn_pool_create_debug(p, __FILE__, __LINE__)
+#endif /* SVN_POOL_DEBUG */
 
-/* Destroy a POOL */
-void svn_pool_destroy (apr_pool_t *pool);
 
 
+#ifndef SVN_POOL_DEBUG
 /* Clear the passed in pool.
  *
  * The reason we need this wrapper to apr_pool_clear, is because
@@ -363,6 +378,32 @@ void svn_pool_destroy (apr_pool_t *pool);
  * If anything goes wrong, an abort function will be called.
  */
 void svn_pool_clear (apr_pool_t *p);
+
+#else /* SVN_POOL_DEBUG */
+void svn_pool_clear_debug (apr_pool_t *p,
+                           const char *file,
+                           int line);
+#define svn_pool_clear(p) svn_pool_clear_debug(p, __FILE__, __LINE__)
+#endif /* SVN_POOL_DEBUG */
+
+
+#ifndef SVN_POOL_DEBUG
+
+/* Destroy a POOL and all of its children. 
+ *
+ * This wrapper to apr_pool_destroy exists for symmatry (the
+ * not-so-grand reason) and for the existence of a great memory usage
+ * debugging hook (the grand reason).
+ */
+void svn_pool_destroy (apr_pool_t *p);
+
+#else /* SVN_POOL_DEBUG */
+void svn_pool_destroy_debug (apr_pool_t *p,
+                             const char *file,
+                             int line);
+#define svn_pool_destroy(p) svn_pool_destroy_debug(p, __FILE__, __LINE__)
+#endif /* SVN_POOL_DEBUG */
+
 
 
 

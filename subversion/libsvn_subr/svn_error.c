@@ -206,8 +206,34 @@ svn_pool_get_size (apr_pool_t *p)
 }
 
 
+#ifdef SVN_POOL_DEBUG
+/* Find the oldest living ancestor of pool P (which could very well be
+   P itself) */
+static apr_pool_t *
+find_oldest_pool_ancestor (apr_pool_t *p)
+{
+  apr_pool_t *ret_pool = p;
+
+  if (ret_pool != NULL)
+    {
+      while (ret_pool->parent)
+        ret_pool = ret_pool->parent;
+    }
+  return ret_pool;
+}
+#endif /* SVN_POOL_DEBUG */
+
+
+
+#ifndef SVN_POOL_DEBUG
 apr_pool_t *
 svn_pool_create (apr_pool_t *parent_pool)
+#else /* SVN_POOL_DEBUG */
+apr_pool_t *
+svn_pool_create_debug (apr_pool_t *parent_pool,
+                       const char *file,
+                       int line)
+#endif /* SVN_POOL_DEBUG */
 {
   apr_pool_t *ret_pool;
 
@@ -224,18 +250,42 @@ svn_pool_create (apr_pool_t *parent_pool)
     }
   else
     svn_pool__inherit_error_pool (ret_pool);
-  
+
+#ifdef SVN_POOL_DEBUG
+  {
+    fprintf (stderr, "Pool 0x%08X created at %s:%d\n", 
+             (unsigned int)ret_pool, file, line);
+  }
+#endif /* SVN_POOL_DEBUG */
+
   return ret_pool;
 }
 
 
-
+#ifndef SVN_POOL_DEBUG
 void 
 svn_pool_clear (apr_pool_t *p)
+#else /* SVN_POOL_DEBUG */
+void 
+svn_pool_clear_debug (apr_pool_t *p,
+                      const char *file,
+                      int line)
+#endif /* SVN_POOL_DEBUG */
 {
   apr_pool_t *error_pool;
   svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
     
+#ifdef SVN_POOL_DEBUG
+  {
+    apr_size_t num_bytes = svn_pool_get_size (p);
+    apr_size_t global_num_bytes = 
+      svn_pool_get_size (find_oldest_pool_ancestor (p));
+    
+    fprintf (stderr, "Pool 0x%08X cleared at %s:%d (%d/%d bytes)\n", 
+             (unsigned int)p, file, line, num_bytes, global_num_bytes);
+  }
+#endif /* SVN_POOL_DEBUG */
+
   if (p->parent)
     svn_error__get_error_pool (p->parent, &error_pool, &subpool_of_p_p);
   else
@@ -261,9 +311,27 @@ svn_pool_clear (apr_pool_t *p)
 }
 
 
+#ifndef SVN_POOL_DEBUG
 void
 svn_pool_destroy (apr_pool_t *p)
+#else /* SVN_POOL_DEBUG */
+void
+svn_pool_destroy_debug (apr_pool_t *p,
+                        const char *file,
+                        int line)
+#endif /* SVN_POOL_DEBUG */
 {
+#ifdef SVN_POOL_DEBUG
+  {
+    apr_size_t num_bytes = svn_pool_get_size (p);
+    apr_size_t global_num_bytes = 
+      svn_pool_get_size (find_oldest_pool_ancestor (p));
+    
+    fprintf (stderr, "Pool 0x%08X destroyed at %s:%d (%d/%d bytes)\n", 
+             (unsigned int)p, file, line, num_bytes, global_num_bytes);
+  }
+#endif /* SVN_POOL_DEBUG */
+
   apr_pool_destroy (p);
 }
 
