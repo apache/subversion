@@ -608,8 +608,8 @@ prune_deleted (svn_wc_adm_access_t *adm_access)
            hi = apr_hash_next (hi))
         {
           void *val;
-          apr_hash_this (hi, NULL, NULL, &val);
           svn_wc_entry_t *entry;
+          apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
           if (entry->deleted)
             break;
