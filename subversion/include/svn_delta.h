@@ -138,7 +138,7 @@ typedef struct svn_delta_window_t {
 
   /* The sub-pool that this window is living in, needed for
      svn_free_delta_window() */
-  apr_pool_t *my_pool;
+  apr_pool_t *pool;
 
 } svn_delta_window_t;
 

@@ -217,6 +217,7 @@ static svn_error_t *
 window_handler (svn_delta_window_t *window, void *baton)
 {
   int i;
+  apr_file_t *dest = (apr_file_t *) baton;
 
   for (i = 0; i < window->num_ops; i++)
     {
@@ -233,8 +234,20 @@ window_handler (svn_delta_window_t *window, void *baton)
 
         case svn_delta_new:
           {
+            apr_status_t apr_err;
+            apr_size_t written;
             const char *data = ((svn_string_t *) (window->new))->data;
+
             printf ("%.*s", (int) this_op.length, (data + this_op.offset));
+            apr_err = apr_full_write (dest, (data + this_op.offset),
+                                      this_op.length, &written);
+            if (apr_err)
+              {
+                /* kff todo: hey, is this pool appropriate to use? */
+                return svn_create_error
+                  (apr_err, 0, NULL, NULL, window->pool);
+              }
+
             break;
           }
         }
@@ -294,24 +307,20 @@ begin_textdelta (void *walk_baton, void *parent_baton,
      applying a text-delta, eventually.  And operate on a tmp file
      first, for atomicity/crash-recovery, etc, etc. */
 
-  svn_string_t *fname = (svn_string_t *) parent_baton;
-
-#if 0 /* kff todo */
   struct w_baton *wb = (struct w_baton *) walk_baton;
+  svn_string_t *fname = (svn_string_t *) parent_baton;
   apr_file_t *sink = NULL;
   apr_status_t apr_err;
+
   apr_err = apr_open (&sink, fname->data,
                       (APR_WRITE | APR_CREATE),
                       APR_OS_DEFAULT,
                       wb->pool);
 
   if (apr_err)
-    return svn_create_error (apr_err, 0, fname->data, NULL, pool);
+    return svn_create_error (apr_err, 0, fname->data, NULL, wb->pool);
 
   *handler_baton = sink;
-#endif /* 0 */
-
-  *handler_baton = fname;   /* for now */
   *handler = window_handler;
 
   return 0;
@@ -321,17 +330,14 @@ begin_textdelta (void *walk_baton, void *parent_baton,
 static svn_error_t *
 finish_textdelta (void *walk_baton, void *parent_baton, void *handler_baton)
 {
-#if 0   /* kff todo */
-  /* This doesn't work.  We need a way to get the window_handler's
-     handler_baton in here, because that's the apr_file_t pointer. */
+  struct w_baton *wb = (struct w_baton *) walk_baton;
   apr_file_t *f = (apr_file_t *) handler_baton;
-  apr_err = apr_close (f);
+  apr_status_t apr_err = apr_close (f);
   
   if (apr_err)
-    return svn_create_error (apr_err, 0, NULL, NULL, pool);
-#endif /* 0 */
-
-  return 0;
+    return svn_create_error (apr_err, 0, NULL, NULL, wb->pool);
+  else
+    return 0;
 }
 
 
