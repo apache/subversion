@@ -874,6 +874,7 @@ svn_client_relocate (const char *dir,
                      const char *from,
                      const char *to,
                      svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 

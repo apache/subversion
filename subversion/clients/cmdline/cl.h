@@ -59,7 +59,7 @@ typedef enum {
   svn_cl__non_interactive_opt,
   svn_cl__no_diff_deleted,
   svn_cl__dry_run_opt,
-  svn_cl__relocate_opt
+  svn_cl__relocate_opt,
   svn_cl__revprop_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__merge_cmd_opt,

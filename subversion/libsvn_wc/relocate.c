@@ -23,10 +23,12 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
+#include "svn_path.h"
 #include "svn_io.h"
 
 #include "wc.h"
 #include "entries.h"
+#include "props.h"
 
 
 svn_error_t *
@@ -35,6 +37,8 @@ svn_wc_relocate (const char *path,
                  const char *from,
                  const char *to,
                  svn_boolean_t recurse,
+                 void *validator_baton,
+                 svn_wc_relocation_validator *validator,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -69,8 +73,10 @@ svn_wc_relocate (const char *path,
 
       if (!strncmp(entry->url, from, from_len))
         {
-          entry->url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
-                                    "%s%s", to, entry->url + from_len);
+          char *url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
+                                   "%s%s", to, entry->url + from_len);
+          SVN_ERR(validator(validator_baton, entry->uuid, url));
+          entry->url = url;
           SVN_ERR(svn_wc__entries_write (entries, adm_access, pool));
         }
 
@@ -94,18 +100,22 @@ svn_wc_relocate (const char *path,
           const char *subdir = svn_path_join (path, key, pool);
           SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, subdir,
                                       pool));
-          SVN_ERR(svn_wc_relocate(subdir, subdir_access, from,
-                                   to, recurse, pool));
+          SVN_ERR(svn_wc_relocate(subdir, subdir_access, from, to,
+                                  recurse, validator_baton, validator, pool));
         }
 
       if (entry->url &&
-          (strncmp(entry->url, from, from_len) == 0))
-        entry->url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
-                                  "%s%s", to, entry->url + from_len);
+          (strncmp(entry->url, from, from_len) == 0)) 
+        {
+          char *url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
+                                   "%s%s", to, entry->url + from_len);
+          SVN_ERR(validator(validator_baton, entry->uuid, url));
+          entry->url = url;
+        }
     }
 
+  SVN_ERR(svn_wc__remove_wcprops (adm_access, FALSE, pool));
   SVN_ERR(svn_wc__entries_write (entries, adm_access, pool));
-
-  SVN_ERR(svn_wc__wcprops_remove (adm_access, pool));
   return SVN_NO_ERROR;
 }
+
