@@ -92,8 +92,8 @@ For example, this is bad:
    storing in twirling_baton_*.
 
 Later on, when someone is trying to figure out what happened to
-`twirling_baton_fast', they may not find it if they search for
-"quickly".  A better entry would be:
+`twirling_baton_fast', they may not find it if they just search for
+"fast".  A better entry would be:
 
    (twirling_baton_fast, twirling_baton_slow): removed these obsolete
    structures. 
