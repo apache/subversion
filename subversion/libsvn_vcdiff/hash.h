@@ -51,6 +51,12 @@
 /* *********************** Data Structures ************************** */
 
 
+
+#include <stdlib.h>
+#include <stddef.h>
+
+
+
 /* One entry in a hash table. */
 typedef struct hash_entry_t
 {
@@ -76,7 +82,7 @@ typedef struct hash_entry_t
 typedef struct hash_table_t
 {
   size_t size;
-  hash_entry_t *table;
+  hash_entry_t **table;
 } hash_table_t;
 
 
@@ -88,8 +94,7 @@ void free_hash_table (hash_table_t *table);
 
 /* Return the position associated with the match, if any, else -1. 
    Put STR into the hash_table in any case. */
-long int try_match (unsigned char *str, long int len, long int pos,
-                    hash_table_t *);
+hash_entry_t *try_match (char *str, size_t len, size_t pos, hash_table_t *t);
 
 
 
