@@ -65,7 +65,6 @@ mandir = @mandir@
 srcdir = @srcdir@
 infodir = @infodir@
 datadir = @datadir@
-templatedir = @templatedir@
 docdir = @docdir@
 
 # where to install libsvn_swig_*

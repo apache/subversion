@@ -832,12 +832,13 @@ clear_and_close (void *arg)
 
 
 static void
-init_repos_dirs (svn_repos_t *repos, apr_pool_t *pool)
+init_repos_dirs (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 {
-  repos->db_path = svn_path_join (repos->path, SVN_REPOS__DB_DIR, pool);
-  repos->dav_path = svn_path_join (repos->path, SVN_REPOS__DAV_DIR, pool);
-  repos->hook_path = svn_path_join (repos->path, SVN_REPOS__HOOK_DIR, pool);
-  repos->lock_path = svn_path_join (repos->path, SVN_REPOS__LOCK_DIR, pool);
+  repos->path = apr_pstrdup (pool, path);
+  repos->db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
+  repos->dav_path = svn_path_join (path, SVN_REPOS__DAV_DIR, pool);
+  repos->hook_path = svn_path_join (path, SVN_REPOS__HOOK_DIR, pool);
+  repos->lock_path = svn_path_join (path, SVN_REPOS__LOCK_DIR, pool);
 }
 
 
@@ -913,124 +914,26 @@ create_repos_structure (svn_repos_t *repos,
 }
 
 
-struct copy_ctx_t {
-  const char *path;     /* target location to construct */
-  apr_size_t base_len;  /* length of the template dir path */
-};
-
-static svn_error_t *copy_structure (void *baton,
-                                    const char *path,
-                                    const apr_finfo_t *finfo,
-                                    apr_pool_t *pool)
-{
-  const struct copy_ctx_t *cc = baton;
-  apr_size_t len = strlen (path);
-  const char *target;
-
-  if (len == cc->base_len)
-    {
-      /* The walked-path is the template base. Therefore, target is
-         the repository base path.  */
-      target = cc->path;
-    }
-  else
-    {
-      /* Take whatever is after the template base path, and append that
-         to the repository base path. Note that we get the right
-         slashes in here, based on how we slice the walked-pat.  */
-      target = apr_pstrcat (pool, cc->path, &path[cc->base_len], NULL);
-    }
-
-  if (finfo->filetype == APR_DIR)
-    {
-      SVN_ERR (create_repos_dir (target, pool));
-    }
-  else
-    {
-      apr_status_t apr_err;
-
-      assert (finfo->filetype == APR_REG);
-
-      apr_err = apr_file_copy (path, target, APR_FILE_SOURCE_PERMS, pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, NULL,
-                                  "could not copy `%s'", path);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_repos_create (svn_repos_t **repos_p,
                   const char *path,
-                  const char *on_disk_template,
-                  const char *in_repos_template,
+                  const char *unused_1,
+                  const char *unused_2,
                   apr_hash_t *config,
                   apr_hash_t *fs_config,
                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  svn_error_t *err;
-  const char *template_root = NULL;
-  const char *template_path;
-  struct copy_ctx_t cc;
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
 
   /* Initialize the repository paths. */
-  repos->path = apr_pstrdup (pool, path);
-  init_repos_dirs (repos, pool);
+  init_repos_dirs (repos, path, pool);
 
-  /* If the template is just a name, then look for it in the standard
-     templates. Otherwise, we'll assume it is a path.  */
-  if (on_disk_template == NULL || strchr(on_disk_template, '/') == NULL)
-    {
-      /* Get the root directory of the standard templates */
-      svn_config_t *cfg = config ? apr_hash_get (config, 
-                                                 SVN_CONFIG_CATEGORY_CONFIG, 
-                                                 APR_HASH_KEY_STRING) : NULL;
-      svn_config_get (cfg, &template_root, SVN_CONFIG_SECTION_MISCELLANY, 
-                      SVN_CONFIG_OPTION_TEMPLATE_ROOT, SVN_TEMPLATE_ROOT_DIR);
-
-      template_path = svn_path_join_many (pool,
-                                          template_root,
-                                          "on-disk",
-                                          on_disk_template
-                                            ? on_disk_template
-                                            : DEFAULT_TEMPLATE_NAME,
-                                          NULL);
-    }
-  else
-    template_path = on_disk_template;
-
-  /* Set up the baton and attempt to walk over the template, copying
-     its files and directories to the repository location.  */
-  cc.path = path;
-  cc.base_len = strlen (template_path);
-  err = svn_io_dir_walk (template_path,
-                         0,
-                         copy_structure,
-                         &cc,
-                         pool);
-  if (err)
-    {
-      /* We could not use the specified template. If the user
-         actually specified one, then bail.  */
-      if (on_disk_template != NULL)
-        return err;
-
-      /* Don't need the error any more. */
-      svn_error_clear (err);
-
-      /* We were trying the default, but for some reason it didn't
-         work... Anyway, fall back to the builtin structure.  */
-      SVN_ERR_W (create_repos_structure (repos, path, pool),
-                 "repository creation failed");
-    }
-
-  /* The on-disk structure should be built now. */
+  /* Create the various files and subdirectories for the repository. */
+  SVN_ERR_W (create_repos_structure (repos, path, pool),
+             "repository creation failed");
   
   /* Initialize the filesystem object. */
   repos->fs = svn_fs_new (fs_config, pool);
@@ -1131,8 +1034,7 @@ get_repos (svn_repos_t **repos_p,
   repos = apr_pcalloc (pool, sizeof (*repos));
 
   /* Initialize the repository paths. */
-  repos->path = apr_pstrdup (pool, path);
-  init_repos_dirs (repos, pool);
+  init_repos_dirs (repos, path, pool);
 
   /* Initialize the filesystem object. */
   repos->fs = svn_fs_new (NULL, pool);
@@ -1184,11 +1086,11 @@ get_repos (svn_repos_t **repos_p,
 
 
 
-char *
+const char *
 svn_repos_find_root_path (const char *path,
                           apr_pool_t *pool)
 {
-  char *candidate = apr_pstrdup (pool, path);
+  const char *candidate = path;
 
   while (1)
     {
@@ -1269,9 +1171,9 @@ svn_repos_recover (const char *path,
        which would hang.   So we replicate a bit of get_repos's code
        here: */
     SVN_ERR (check_repos_version (path, subpool));
+
     locked_repos = apr_pcalloc (subpool, sizeof (*locked_repos));
-    locked_repos->path = apr_pstrdup (subpool, path);
-    init_repos_dirs (locked_repos, subpool);
+    init_repos_dirs (locked_repos, path, subpool);
     
     /* Get a filehandle for the wedged repository's db lockfile. */
     lockfile_path = svn_repos_db_lockfile (locked_repos, subpool);

@@ -172,17 +172,6 @@ dnl evaluate it so that later changes in datadir will propagate properly
 svndatadir='${datadir}/subversion'
 
 
-dnl ### do we want this to be alterable via a cmdline switch?
-templatedir="${svndatadir}/${svn_version}/templates"
-AC_SUBST(templatedir)
-
-dnl We want to fully evaluate the template directory for the constant
-dnl that we compile into the code.
-def_template_dir="`eval echo ${templatedir}`"
-def_template_dir="`eval echo ${def_template_dir}`"
-AC_DEFINE_UNQUOTED(SVN_TEMPLATE_ROOT_DIR, "$def_template_dir",
-                   [Location of the on-disk and in-repos templates.])
-
 docdir='${datadir}/doc'
 docdir="${docdir}/subversion-${svn_version}"
 AC_SUBST(docdir)

@@ -49,10 +49,11 @@ typedef struct svn_repos_t svn_repos_t;
  * likely repository root path is found.
  *
  * If a repository was found, the path to the root of the repository
- * is returned, else @c NULL.
+ * is returned, else @c NULL. The pointer to the returned path may be
+ @ equal to @a path argument.
  */
-char *svn_repos_find_root_path (const char *path,
-                                apr_pool_t *pool);
+const char *svn_repos_find_root_path (const char *path,
+                                      apr_pool_t *pool);
 
 /** Set @a *repos_p to a repository object for the repository at @a path.
  *
@@ -72,29 +73,17 @@ svn_error_t *svn_repos_open (svn_repos_t **repos_p,
  * and so on.  Return the (open) repository object in @a *repos_p,
  * allocated in @a pool.
  *
- * The directory structure will be created based on the @a on_disk_template
- * argument. If NULL, then the default template will be used (or an
- * internal, hard-coded fallback if the default cannot be found). If
- * the argument contains a path separate ('/'), then it is assumed to
- * specify a template directory. Otherwise, it is assumed to be the name
- * of a template from the standard set of installed templates.
- *
- * Once the repository directory has been constructed, and the Berkeley DB
- * filesystem set up, then the @a in_repos_template will be used to
- * specify an initial structure to import into the repository. Hooks will
- * not be run for this import. The argument specifies a template name or
- * a path to a template, similar to @a on_disk_template. If NULL is passed,
- * then nothing will be imported.
- *
  * @a config is a client configuration hash of @c svn_config_t * items
  * keyed on config category names, and may be NULL.
  *
  * @a fs_config is passed to the filesystem, and may be NULL.
+ *
+ * @a unused_1 and @a unused_2 are not used and should be NULL.
  */
 svn_error_t *svn_repos_create (svn_repos_t **repos_p, 
                                const char *path,
-                               const char *on_disk_template,
-                               const char *in_repos_template,
+                               const char *unused_1,
+                               const char *unused_2,
                                apr_hash_t *config,
                                apr_hash_t *fs_config,
                                apr_pool_t *pool);
