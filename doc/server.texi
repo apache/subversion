@@ -37,8 +37,6 @@ and the @dfn{Main Subversion} library.
   @itemize
   @item
     a reasonable about of writable disk space
-  @item
-    an operating system that supports interprocess communication (IPC)
   @end itemize
 @item
   @b{Provides:}
@@ -169,139 +167,79 @@ root directory.
 
 @subsection API
 
-@subsubsection Data Types
+@c  @subsubsection Data Types
 
-The filesystem API routines require and return a number of data types
-specific to Subversion's model and schema.
+@c  The filesystem API routines require and return a number of data types
+@c  specific to Subversion's model and schema.
 
-@dfn{bool} is a simple Boolean value, used to indicate success or
-failure.
+@c  @dfn{bool} is a simple Boolean value, used to indicate success or
+@c  failure.
 
-A @dfn{user} is a username (presumed to be previously authenticated by
-the network layer) which is attempting to perform a filesystem action.
+@c  A @dfn{user} is a username (presumed to be previously authenticated by
+@c  the network layer) which is attempting to perform a filesystem action.
 
-A @dfn{path} refers to an absolute path in the Subversion filesystem,
-e.g. @code{/trunk/gdb/i386.c}
+@c  A @dfn{path} refers to an absolute path in the Subversion filesystem,
+@c  e.g. @code{/trunk/gdb/i386.c}
 
-A @dfn{proplist} is a list of properties (key/value pairs).
+@c  A @dfn{proplist} is a list of properties (key/value pairs).
 
-A @dfn{propname} is a particular property key.
+@c  A @dfn{propname} is a particular property key.
 
-A @dfn{propnamelist} is a list of all the keys in a proplist.
+@c  A @dfn{propnamelist} is a list of all the keys in a proplist.
 
-A @dfn{file} is a string of bytes that contains both a ``text stream''
-and a ``property stream''.  The text stream contains the main contents
-of the file, while the property stream decodes into a proplist.
+@c  A @dfn{file} is a string of bytes that contains both a ``text stream''
+@c  and a ``property stream''.  The text stream contains the main contents
+@c  of the file, while the property stream decodes into a proplist.
 
-A @dfn{directory entry} (@dfn{dirent}) points to a file or directory.
+@c  A @dfn{directory entry} (@dfn{dirent}) points to a file or directory.
 
-A @dfn{directory} (@dfn{dir}) is a list of directory entries.
+@c  A @dfn{directory} (@dfn{dir}) is a list of directory entries.
 
-A @dfn{filesystem object} (@dfn{fs_obj}) contains either a file or
-a directory. 
+@c  A @dfn{filesystem object} (@dfn{fs_obj}) contains either a file or
+@c  a directory. 
 
-A @dfn{version} (abbreviated @dfn{ver}) refers to a global version
-number in a repository's history.
+@c  A @dfn{version} (abbreviated @dfn{ver}) refers to a global version
+@c  number in a repository's history.
 
-A @dfn{diff} is a standard GNU diff, a textual context diff.
+@c  A @dfn{diff} is a standard GNU diff, a textual context diff.
 
-A @dfn{delta} is a structure that describes a difference between two
-file trees.  For a detailed discussion, @xref{Protocol}.
+@c  A @dfn{delta} is a structure that describes a difference between two
+@c  file trees.  For a detailed discussion, @xref{Protocol}.
 
-A @dfn{skelta} A @dfn{skelta} is the skeleton of a delta: while it does
-indicate which files are changed, it does not describe the specific
-changes to the files' text.  This datatype allows the filesystem to
-detect conflicts between transactions before the client has computed or
-transmitted the (possibly large) textual deltas.
+@c  A @dfn{skelta} A @dfn{skelta} is the skeleton of a delta: while it does
+@c  indicate which files are changed, it does not describe the specific
+@c  changes to the files' text.  This datatype allows the filesystem to
+@c  detect conflicts between transactions before the client has computed or
+@c  transmitted the (possibly large) textual deltas.
 
-A @dfn{token} is a token used to represent a write transaction in
-progress.
+@c  A @dfn{token} is a token used to represent a write transaction in
+@c  progress.
 
+@c ---------------------
 
-@subsubsection Reading History
-
-@table @code
-@item ver latest (user)
- returns the latest global version of a repository's tree
-@item proplist get_ver_proplist(user, ver)
-  return all properties of a version
-@item propnames get_ver_propnames(user, ver)
-  return all property keys for a version
-@item char *get_ver_prop(user, ver, propname)
-  return the value of @emph{propname} for a version (such as the log message)
-@end table
-
-
-@subsubsection Reading Nodes
-
-These are routines for retrieving information about the
-properties of a file, dirent, or dir.
+This is the same API that the client calls;  for a full explanation, see
+@xref{The repository access library}.
 
 @table @code
-@item fs_obj read (user, version, path)
- if path is a file, return full contents in fs_obj;@*
- if path is a directory, return list of directory entries in fs_obj
-@item char *get_node_prop(user, ver, path, propname)
-  return the value of @emph{propname} for a file or directory
-@item char *get_dirent_prop(user, ver, path, propname)
-  return the value of @emph{propname} for a directory entry
-@item proplist get_node_proplist(user, ver, path)
-  return all properties of a file or directory
-@item proplist get_dirent_proplist(user, ver, path)
-  return all properties of a directory entry
-@item propnames get_node_propnames(user, ver, path)
-  return all property keys for a file or directory
-@item propnames get_node_propnames(user, ver, path)
-  return all property keys for a file or directory
-@item propnames get_dirent_propnames(user, ver, path)
-  return all property keys for a directory entry
+@item ver_t latest (repos, user)
+@item prop_t get_ver_prop (repos, user, ver, propname)
+@item proplist_t get_ver_proplist (repos, user, ver)
+@item proplist_t get_ver_propnames (repos, user, ver)
+@item node_t read (repos, user, ver, path)
+@item str_t get_node_prop (repos, user, ver, path, propname)
+@item str_t get_dirent_prop (repos, user, ver, path, propname)
+@item proplist_t get_node_proplist (repos, ver, path)
+@item proplist_t get_dirent_proplist (repos, user, ver, path)
+@item proplist_t get_node_propnames (repos, user, ver, path)
+@item proplist_t get_dirent_propnames (repos, user, ver, path)
+@item skelta_t get_status (repos, user, skelta)
+@item delta_t get_update (repos, user, skelta)
+@item delta_t get_delta (repos, user, ver1, path1, ver2, path2)
+@item diff_t get_diff (repos, user, ver1, path1, ver2, path2)
+@item token_t submit (repos, user, skelta)
+@item ver_t write (repos, user, delta, token)
+@item bool_t abandon (repos, user, token)
 @end table
-
-
-@subsubsection Difference Queries
-
-@table @code
-@item skelta status (user, skelta)
- walk the latest tree in the repository, compare to the skelta tree, and
- return any version differences in a new skelta
-@item delta update (user, skelta)
- same as status, but returns a filled delta object
-@item delta get_delta (user, versionX, pathX, versionY, pathY)
- return a delta object which converts subtree X into subtree Y
-@item diff get_diff (user, versionX, pathX, versionY, pathY)
- return a diff between any two files in the repository
-@end table
-
-
-@subsubsection Writing
-
-If a program needs to modify a repository's filesystem in any way (even
-if just modifying properties), it must do three things:
-
-@enumerate
-@item
-  Build a delta object, representing a group of changes against some
-  base revision of a tree.
-@item
-  Request permission from the server to write the delta as a transaction.
-@item
-  If permission is granted, apply the delta.
-@end enumerate
-
-@table @code
-@item token submit (user, skelta)
-  ask filesystem's lock manager for approval of skelta; returns either a
-  transaction token or failure.  A skelta is used so that the caller can
-  check a transaction for conflicts without having to use text deltas.
-@item ver write (user, delta, token)
-  actually write the delta into the filesystem
-@item bool abandon (user, token)
-  tell lock manager that the delta will @emph{not} be written (despite
-  previous approval)
-@end table
-
-A more detailed description of Subversion's write-locking mechanism is
-explained in the next section.
 
 
 @c -----------------
