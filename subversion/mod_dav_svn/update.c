@@ -161,7 +161,7 @@ static void replace_helper(svn_boolean_t is_dir,
   child = make_child_baton(parent, name, is_dir);
 
   qname = apr_xml_quote_string(child->pool, name, 1);
-  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
+  send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%ld\">" DEBUG_CR,
 	   DIR_OR_FILE(is_dir), qname, base_revision);
 
   send_vsn_url(child);
