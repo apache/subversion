@@ -48,6 +48,7 @@ A start on global options:
   --dry-run                      Like cvs -n
   -q                             Quiet.  (No need for two levels of this?)
   -v --version                   Print program name, version, and url.
+  -V --verbose                   Run with a wordily prolix verbositude.
 
 And the commands will look a lot like CVS's, though there are some
 newcomers:
