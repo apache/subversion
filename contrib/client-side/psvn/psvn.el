@@ -95,7 +95,8 @@
 ;; locl = local base revision
 ;; chgd = last changed revision
 ;; author = author of change
-;; em = "**" if external modified
+;; em = "**" or "(Update Available)" [see `svn-status-short-mod-flag-p']
+;;      if file can be updated
 ;; file = path/filename
 ;;
 
@@ -375,6 +376,12 @@ Otherwise, return \"\"."
       (require 'cl-macs)))
 (if (not (fboundp 'puthash))
     (defalias 'puthash 'cl-puthash))
+
+; xemacs
+(if (fboundp 'match-string-no-properties)
+    nil ;; great
+  (defsubst match-string-no-properties (match)
+    (buffer-substring-no-properties (match-beginning match) (match-end match))))
 
 (defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
@@ -849,7 +856,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-property-map (kbd "k") 'svn-status-property-set-keyword-list)
   (define-key svn-status-mode-property-map (kbd "y") 'svn-status-property-set-eol-style)
   (define-key svn-status-mode-property-map (kbd "x") 'svn-status-property-set-executable)
-  (define-key svn-status-mode-property-map (kbd "p") 'svn-status-property-parse)
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map (kbd "P") svn-status-mode-property-map))
@@ -882,6 +888,7 @@ A and B must be line-info's."
      )
     ["svn cat ..." svn-status-get-specific-revision t]
     ["svn add" svn-status-add-file t]
+    ["svn add recursively" svn-status-add-file-recursively t]
     ["svn mkdir..." svn-status-make-directory t]
     ["svn mv..." svn-status-mv t]
     ["svn rm..." svn-status-rm t]
@@ -914,6 +921,7 @@ A and B must be line-info's."
      )
     ("Trac"
      ["Browse timeline" svn-trac-browse-timeline t]
+     ["Set Trac project root" svn-status-set-trac-project-root t]
      )
     "---"
     ["Edit Next SVN Cmd Line" svn-status-toggle-edit-cmd-flag t]
@@ -1442,7 +1450,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     (insert "\n "
             (format svn-status-line-format
                     70 80 72 "locl" "chgd" "author")
-            "em file\n")
+            (if svn-status-short-mod-flag-p "em " "")
+            "file\n")
     (setq svn-start-of-file-list-line-number (+ (count-lines (point-min) (point)) 1))
     (if fname
         (progn
@@ -2274,11 +2283,6 @@ Note: use C-q C-j to send a line termination character."
 (defun svn-status-proplist-start ()
   (svn-run-svn t t 'proplist-parse "proplist" (svn-status-line-info->filename
                                                (svn-status-get-line-information))))
-
-(defun svn-status-property-parse ()
-  (interactive)
-  (svn-status-proplist-start))
-
 (defun svn-status-property-edit-one-entry (arg)
   "Edit a property.
 When called with a prefix argument, it is possible to enter a new property."
@@ -2311,23 +2315,7 @@ When called with a prefix argument, it is possible to enter a new property."
         (setq pl (append pl (list (match-string 1))))
         (forward-line 1)))
     ;(cond last-command: svn-status-property-set, svn-status-property-edit-one-entry
-    ;svn-status-property-parse:
-    (cond ((eq last-command 'svn-status-property-parse)
-           ;(message "%S %S" pl last-command)
-           (while pl
-             (svn-run-svn nil t 'propget-parse "propget" (car pl)
-                          (svn-status-line-info->filename
-                           (svn-status-get-line-information)))
-             (save-excursion
-               (set-buffer "*svn-process*")
-               (setq pfl (append pfl (list
-                                      (list
-                                       (car pl)
-                                       (buffer-substring
-                                        (point-min) (- (point-max) 1)))))))
-             (setq pl (cdr pl))
-             (message "%S" pfl)))
-          ((eq last-command 'svn-status-property-edit-one-entry)
+    (cond ((eq last-command 'svn-status-property-edit-one-entry)
            ;;(message "svn-status-property-edit-one-entry")
            (setq prop-name
                  (completing-read "Set Property - Name: " (mapcar 'list pl)
@@ -2349,7 +2337,7 @@ When called with a prefix argument, it is possible to enter a new property."
                         (svn-status-marked-file-names))
                (let ((file-names (svn-status-marked-file-names)))
                  (when file-names
-                   (svn-run-svn nil t 'propset 
+                   (svn-run-svn nil t 'propset
                                 (append (list "propset" prop-name prop-value) file-names))
                    )
                  )
@@ -2565,7 +2553,8 @@ Commands:
            (mapcar 'svn-status-line-info->filename svn-status-propedit-file-list))
   (save-excursion
     (set-buffer (get-buffer "*svn-property-edit*"))
-    (set-buffer-file-coding-system 'undecided-unix nil)
+    (when (fboundp 'set-buffer-file-coding-system)
+      (set-buffer-file-coding-system 'undecided-unix nil))
     (setq svn-status-temp-file-to-remove
           (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
     (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
@@ -2650,7 +2639,8 @@ Commands:
     (set-buffer (get-buffer "*svn-log-edit*"))
     (when svn-log-edit-insert-files-to-commit
       (svn-log-edit-remove-comment-lines))
-    (set-buffer-file-coding-system 'undecided-unix nil)
+    (when (fboundp 'set-buffer-file-coding-system)
+      (set-buffer-file-coding-system 'undecided-unix nil))
     (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
       (setq svn-status-temp-file-to-remove
             (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
