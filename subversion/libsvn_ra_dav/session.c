@@ -145,10 +145,10 @@ static int request_auth(void *userdata, const char *realm, int attempt,
    config */
 static svn_error_t *
 server_ssl_file_first_credentials(void **credentials,
-				  void **iter_baton,
-				  void *provider_baton,
-				  apr_hash_t *parameters,
-				  apr_pool_t *pool)
+                                  void **iter_baton,
+                                  void *provider_baton,
+                                  apr_hash_t *parameters,
+                                  apr_pool_t *pool)
 {
   const char *temp_setting;
   svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
@@ -159,13 +159,13 @@ server_ssl_file_first_credentials(void **credentials,
 
   cred->failures_allow = 0;
   temp_setting = get_server_setting(cfg, server_group, 
-				    "ignore-ssl-unknown-ca", NULL);
+                                    "ignore-ssl-unknown-ca", NULL);
   cred->failures_allow = temp_setting ? NE_SSL_UNKNOWNCA : 0;
   temp_setting = get_server_setting(cfg, server_group, 
-				    "ignore-ssl-host-mismatch", NULL);
+                                    "ignore-ssl-host-mismatch", NULL);
   cred->failures_allow |= temp_setting ? NE_SSL_CNMISMATCH : 0;
   temp_setting = get_server_setting(cfg, server_group, 
-				    "ignore-ssl-invalid-date", NULL);
+                                    "ignore-ssl-invalid-date", NULL);
   cred->failures_allow |= temp_setting ? (NE_SSL_NOTYETVALID|NE_SSL_EXPIRED) : 0;
   return NULL;
 }
@@ -174,10 +174,10 @@ server_ssl_file_first_credentials(void **credentials,
    config */
 static svn_error_t *
 client_ssl_cert_file_first_credentials(void **credentials,
-				       void **iter_baton,
-				       void *provider_baton,
-				       apr_hash_t *parameters,
-				       apr_pool_t *pool)
+                                       void **iter_baton,
+                                       void *provider_baton,
+                                       apr_hash_t *parameters,
+                                       apr_pool_t *pool)
 {
   /* does nothing so far */
   *credentials = NULL;
@@ -188,10 +188,10 @@ client_ssl_cert_file_first_credentials(void **credentials,
    file */
 static svn_error_t *
 client_ssl_pw_file_first_credentials(void **credentials,
-				     void **iter_baton,
-				     void *provider_baton,
-				     apr_hash_t *parameters,
-				     apr_pool_t *pool)
+                                     void **iter_baton,
+                                     void *provider_baton,
+                                     apr_hash_t *parameters,
+                                     apr_pool_t *pool)
 {
   /* does nothing so far */
   *credentials = NULL;
@@ -225,24 +225,24 @@ static const svn_auth_provider_t client_ssl_pw_file_provider =
 
 void 
 svn_ra_dav_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
-					 void **provider_baton,
-					 apr_pool_t *pool)
+                                         void **provider_baton,
+                                         apr_pool_t *pool)
 {
   *provider = &server_ssl_file_provider;
 }
 
 void 
 svn_ra_dav_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
-					 void **provider_baton,
-					 apr_pool_t *pool)
+                                         void **provider_baton,
+                                         apr_pool_t *pool)
 {
   *provider = &client_ssl_cert_file_provider;
 }
 
 void
 svn_ra_dav_get_ssl_client_password_file_provider (const svn_auth_provider_t **provider,
-						  void **provider_baton,
-						  apr_pool_t *pool)
+                                                  void **provider_baton,
+                                                  apr_pool_t *pool)
 {
   *provider = &client_ssl_pw_file_provider;
 }
@@ -252,8 +252,8 @@ svn_ra_dav_get_ssl_client_password_file_provider (const svn_auth_provider_t **pr
    is unknown or there are other SSL certificate problems. */
 static int
 server_ssl_callback(void *userdata,
-		    int failures,
-		    const ne_ssl_certificate *cert)
+                    int failures,
+                    const ne_ssl_certificate *cert)
 {
   svn_ra_session_t *ras = userdata;
   svn_auth_cred_server_ssl_t *credentials;
@@ -269,9 +269,9 @@ server_ssl_callback(void *userdata,
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
-				     SVN_AUTH_CRED_SERVER_SSL,
-				     ras->callbacks->auth_baton,
-				     pool);
+                                     SVN_AUTH_CRED_SERVER_SSL,
+                                     ras->callbacks->auth_baton,
+                                     pool);
   failures_allowed = (credentials) ? credentials->failures_allow : 0;
   apr_pool_destroy(pool);
 
@@ -289,9 +289,9 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
-				     SVN_AUTH_CRED_CLIENT_PASS_SSL,
-				     ras->callbacks->auth_baton,
-				     pool);
+                                     SVN_AUTH_CRED_CLIENT_PASS_SSL,
+                                     ras->callbacks->auth_baton,
+                                     pool);
   if (credentials)
     {
       strncpy(pwbuf, credentials->password, len);
@@ -302,7 +302,7 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
 
 static void
 client_ssl_callback(void *userdata, ne_session *sess,
-		    const ne_ssl_dname *server)
+                    const ne_ssl_dname *server)
 {
   svn_ra_session_t *ras = userdata;
   svn_auth_cred_client_ssl_t *credentials;
@@ -312,9 +312,9 @@ client_ssl_callback(void *userdata, ne_session *sess,
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
-				     SVN_AUTH_CRED_CLIENT_SSL,
-				     ras->callbacks->auth_baton,
-				     pool);
+                                     SVN_AUTH_CRED_CLIENT_SSL,
+                                     ras->callbacks->auth_baton,
+                                     pool);
   apr_pool_destroy(pool);
 }
 
@@ -582,8 +582,8 @@ svn_ra_dav__open (void **session_baton,
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
 
   cfg = config ? apr_hash_get (config, 
-			       SVN_CONFIG_CATEGORY_SERVERS,
-			       APR_HASH_KEY_STRING) : NULL;
+                               SVN_CONFIG_CATEGORY_SERVERS,
+                               APR_HASH_KEY_STRING) : NULL;
   if (cfg)
     server_group = svn_config_find_group(cfg, uri.host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
@@ -698,8 +698,8 @@ svn_ra_dav__open (void **session_baton,
         }
 
       /* When the CA certificate or server certificate has
-	 verification problems, neon will call our verify function before
-	 outright rejection of the connection.*/
+         verification problems, neon will call our verify function before
+         outright rejection of the connection.*/
       ne_ssl_set_verify(sess, server_ssl_callback, ras);
       ne_ssl_set_verify(sess2, server_ssl_callback, ras);
       /* For client connections, we register a callback for if the server
@@ -707,7 +707,7 @@ svn_ra_dav__open (void **session_baton,
       ne_ssl_provide_ccert(sess, client_ssl_callback, ras);
       ne_ssl_provide_ccert(sess2, client_ssl_callback, ras);
       /* For the certificate certificate, register a callback in case
-	 a password is needed for the key. */
+         a password is needed for the key. */
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
     }

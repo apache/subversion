@@ -696,8 +696,8 @@ main (int argc, const char * const *argv)
         }
         break;
       case svn_cl__targets_opt:
-	{
- 	  svn_stringbuf_t *buffer, *buffer_utf8;
+        {
+          svn_stringbuf_t *buffer, *buffer_utf8;
 
           /* We need to convert to UTF-8 now, even before we divide
              the targets into an array, because otherwise we wouldn't
@@ -709,15 +709,15 @@ main (int argc, const char * const *argv)
             err = svn_stringbuf_from_file (&buffer, utf8_opt_arg, pool);
           if (! err)
             err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
-  	  if (err)
-  	    {
-  	      svn_handle_error (err, stdout, FALSE);
-  	      svn_pool_destroy (pool);
-  	      return EXIT_FAILURE;
-  	    }
-	  opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
+          if (err)
+            {
+              svn_handle_error (err, stdout, FALSE);
+              svn_pool_destroy (pool);
+              return EXIT_FAILURE;
+            }
+          opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
                                                  TRUE, pool);
-	}
+        }
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;
@@ -790,10 +790,10 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__diff_cmd_opt:
         opt_state.diff_cmd = apr_pstrdup (pool, opt_arg);
-	break;
+        break;
       case svn_cl__merge_cmd_opt:
         opt_state.merge_cmd = apr_pstrdup (pool, opt_arg);
-	break;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
