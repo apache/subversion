@@ -77,7 +77,7 @@ Prompter *Prompter::makeCPrompter(jobject jpromper)
 	bool v3 = false;
 	if(v2)
 	{
-		jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
+		jclass clazz3 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
 		if(JNIUtil::isJavaExceptionThrown())
 		{
 			return NULL;
@@ -412,7 +412,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 		static jmethodID mid2 = 0;
 		if(mid == 0)
 		{
-			jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+			jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
 			if(JNIUtil::isJavaExceptionThrown())
 			{
 				return false;
