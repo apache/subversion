@@ -1714,7 +1714,7 @@ everyone = harry, sally, joe, frank, sally, jane
 </screen>
 
         <para>Groups can be granted access control just like users.
-          Distinguish them with an ampersane (<literal>@</literal>)
+          Distinguish them with an <quote>at</quote> (<literal>@</literal>)
           prefix:</para>
 
         <screen>
