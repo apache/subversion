@@ -231,23 +231,17 @@ cleanup_dir_baton (void *dir_baton)
   err = svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
                              db->path, apr_pool_parent_get (db->pool));
 
-  if (err)
+  if (! err)
     {
-      apr_err = err->apr_err;
-      svn_error_clear (err);
-      return apr_err;
+      err = svn_wc__run_log (adm_access, NULL, apr_pool_parent_get (db->pool));
+      
+      if (! err)
+        return APR_SUCCESS;
     }
-
-  err = svn_wc__run_log (adm_access, NULL, apr_pool_parent_get (db->pool));
-
-  if (err)
-    {
-      apr_err = err->apr_err;
-      svn_error_clear (err);
-      return apr_err;
-    }
-
-  return APR_SUCCESS;
+  
+  apr_err = err->apr_err;
+  svn_error_clear (err);
+  return apr_err;
 }
 
 /* An APR pool cleanup handler.  This is a child handler, it removes
@@ -864,9 +858,7 @@ do_entry_deletion (struct edit_baton *eb,
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                 parent_path, pool));
 
-  logfile_name = apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
-                               (*log_number == 0) ? ""
-                               : apr_psprintf (pool, ".%d", *log_number));
+  logfile_name = svn_wc__logfile_path (*log_number, pool);
   
   logfile_path = svn_wc__adm_path (parent_path, FALSE, pool,
                                    logfile_name, NULL);
@@ -1207,9 +1199,7 @@ close_directory (void *dir_baton,
       /* to hold log messages: */
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
-      logfile_name = apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
-                                   (db->log_number == 0) ? ""
-                                   : apr_psprintf (pool, ".%d", db->log_number));
+      logfile_name = svn_wc__logfile_path (db->log_number, pool);
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -1803,7 +1793,7 @@ install_file (svn_wc_notify_state_t *content_state,
   svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
-  enum svn_wc_merge_outcome_t merge_outcome;
+  enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   const char *logfile_name;
 
   /* The code flow does not depend upon these being set to NULL, but
@@ -1837,9 +1827,7 @@ install_file (svn_wc_notify_state_t *content_state,
 
   /* Open a log file.  This is safe because the adm area is locked
      right now. */
-  logfile_name = apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
-                               (*log_number == 0) ? ""
-                               : apr_psprintf (pool, ".%d", *log_number));
+  logfile_name = svn_wc__logfile_path (*log_number, pool);
 
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   parent_dir,
