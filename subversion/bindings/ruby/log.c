@@ -30,7 +30,8 @@ svn_ruby_log_receiver (void *baton,
                        svn_revnum_t revision,
                        const char *author,
                        const char *date,
-                       const char *message)
+                       const char *message,
+                       apr_pool_t *pool)
 {
   svn_ruby_log_receiver_baton_t *bt = baton;
   VALUE paths;
@@ -49,7 +50,7 @@ svn_ruby_log_receiver (void *baton,
       apr_hash_index_t *hi;
       paths = rb_hash_new ();
 
-      for (hi = apr_hash_first (bt->pool, changed_paths); hi;
+      for (hi = apr_hash_first (pool, changed_paths); hi;
 	   hi = apr_hash_next (hi))
 	{
 	  const void *key;
@@ -58,7 +59,7 @@ svn_ruby_log_receiver (void *baton,
 	  char action;
 
 	  apr_hash_this (hi, &key, &key_len, &val);
-	  action = (char) ((int) val);
+	  action = (char) ((svn_log_changed_path_t *) val)->action;
 	  rb_hash_aset (paths, rb_str_new (key, key_len),
 			rb_str_new (&action, 1));
 
@@ -72,15 +73,12 @@ svn_ruby_log_receiver (void *baton,
   rb_protect (svn_ruby_protect_call5, (VALUE) args, &error);
 
   if (error)
-    return svn_ruby_error ("message receiver", bt->pool);
+    return svn_ruby_error ("message receiver", pool);
 
   return SVN_NO_ERROR;
 }
 
-/* Get args for ra->get_log and svn_client_log.
-   This function is tricky because it tries to delay pool creation until
-   Ruby can't throw exception.
-   New subpool is created and stored into baton->pool. */
+/* Get args for ra->get_log and svn_client_log. */
 void
 svn_ruby_get_log_args (int argc,
                        VALUE *argv,
@@ -89,6 +87,7 @@ svn_ruby_get_log_args (int argc,
                        VALUE *start,
                        VALUE *end,
                        VALUE *discover_changed_paths,
+                       VALUE *strict_node_history,
                        svn_ruby_log_receiver_baton_t *baton,
                        apr_pool_t *pool)
 {
@@ -96,8 +95,8 @@ svn_ruby_get_log_args (int argc,
   apr_pool_t *subpool;
   VALUE aPaths, receiver;
 
-  rb_scan_args (argc, argv, "40&", &aPaths, start, end,
-                discover_changed_paths, &receiver);
+  rb_scan_args (argc, argv, "50&", &aPaths, start, end,
+                discover_changed_paths, strict_node_history, &receiver);
   if (receiver == Qnil)
     rb_raise (rb_eRuntimeError, "no block is given");
 
@@ -105,15 +104,15 @@ svn_ruby_get_log_args (int argc,
   for (i = 0; i < RARRAY (aPaths)->len; i++)
     Check_Type (RARRAY (aPaths)->ptr[i], T_STRING);
 
-  subpool = svn_pool_create (pool);
-  *paths = apr_array_make (subpool, RARRAY (aPaths)->len,
-                           sizeof (svn_stringbuf_t *));
+  *paths = apr_array_make (pool, RARRAY (aPaths)->len, sizeof (char *));
+
+  /* XXX not sure if we need to strdup these...  might be able to just use 
+   * StringValuePtr. */
   for (i = 0; i < RARRAY (aPaths)->len; i++)
-    (*((svn_stringbuf_t **) apr_array_push (*paths))) =
-      svn_stringbuf_create (StringValuePtr (RARRAY (aPaths)->ptr[i]), subpool);
+    (*((char **) apr_array_push (*paths))) =
+      apr_pstrdup (pool, StringValuePtr (RARRAY (aPaths)->ptr[i]));
 
   baton->proc = receiver;
-  baton->pool = subpool;
 
   /* GC protect */
   rb_iv_set (self, "@receiver", receiver);
