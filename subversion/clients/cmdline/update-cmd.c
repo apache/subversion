@@ -48,7 +48,7 @@ svn_cl__update (apr_getopt_t *os,
   svn_opt_push_implicit_dot_target (targets, pool);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, 
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, 
                           FALSE, FALSE, FALSE, pool);
 
   SVN_ERR (svn_client_update2 (NULL, targets,
