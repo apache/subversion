@@ -37,6 +37,7 @@ struct edit_baton
   svn_revnum_t target_revision;
   svn_boolean_t is_checkout;
   svn_boolean_t suppress_final_line;
+  svn_boolean_t received_some_change;
 };
 
 
@@ -141,6 +142,7 @@ delete_entry (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  eb->received_some_change = TRUE;
   printf ("D  %s\n", svn_path_join (eb->path->data, path, pool));
   return SVN_NO_ERROR;
 }
@@ -158,6 +160,7 @@ add_directory (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *new_db = make_dir_baton (path, eb, pb, pool);
 
+  eb->received_some_change = TRUE;
   printf ("A  %s\n", new_db->path->data);
   *child_baton = new_db;
   return SVN_NO_ERROR;
@@ -286,6 +289,7 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
+  fb->edit_baton->received_some_change = TRUE;
   fb->text_changed = TRUE;
   *handler = NULL;
   *handler_baton = NULL;
@@ -303,6 +307,7 @@ add_file (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *new_fb = make_file_baton (path, pb, TRUE, pool);
+  new_fb->edit_baton->received_some_change = TRUE;
   *file_baton = new_fb;
   return SVN_NO_ERROR;
 }
@@ -331,6 +336,10 @@ change_file_prop (void *file_baton,
   struct file_baton *fb = file_baton;
   if (svn_wc_is_normal_prop (name))
     fb->prop_changed = TRUE;
+
+  if (svn_wc_is_normal_prop (name))
+    fb->edit_baton->received_some_change = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -344,6 +353,10 @@ change_dir_prop (void *parent_baton,
   struct dir_baton *db = parent_baton;
   if (svn_wc_is_normal_prop (name))
     db->prop_changed = TRUE;
+
+  if (svn_wc_is_normal_prop (name))
+    db->edit_baton->received_some_change = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -359,8 +372,14 @@ close_edit (void *edit_baton)
         printf ("Checked out revision %" SVN_REVNUM_T_FMT ".\n",
                 eb->target_revision);
       else
-        printf ("Updated to revision %" SVN_REVNUM_T_FMT ".\n",
-                eb->target_revision);
+        {
+          if (eb->received_some_change)
+            printf ("Updated to revision %" SVN_REVNUM_T_FMT ".\n",
+                    eb->target_revision);
+          else
+            printf ("At revision %" SVN_REVNUM_T_FMT ".\n",
+                    eb->target_revision);
+        }
     }
 
   svn_pool_destroy (eb->pool);
@@ -390,6 +409,7 @@ svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
   eb->target_revision = SVN_INVALID_REVNUM;
   eb->is_checkout = is_checkout;
   eb->suppress_final_line = suppress_final_line;
+  eb->received_some_change = FALSE;
 
   /* Set up the editor. */
   trace_editor->open_root = open_root;
