@@ -14,14 +14,18 @@ ch00.xml. -->
     asked.  Perhaps you've seen the type before: </para>
 
     <blockquote>
-    Q: How can I use Glorbosoft XYZ to maximize team productivity?
+      <para>Q: How can I use Glorbosoft XYZ to maximize team
+        productivity?</para>
     </blockquote>
 
     <blockquote>
-    A: Many of our customers want to know how they can maximize
-    productivity through our patented office groupware innovations.
-    The answer is simple: first, click on 
-    <guimenu>File</guimenu>--&gt;<guimenuitem>Increase&nbsp;Productivity</guimenuitem>, then&hellip;
+      <para>A: Many of our customers want to know how they can
+        maximize productivity through our patented office groupware
+        innovations.  The answer is simple: first, click on the
+        <quote><literal>File</literal></quote> menu, scroll down to
+        <quote><literal>Increase&nbsp;Productivity</literal></quote>,
+        then&hellip;
+        </para>
     </blockquote>
 
     <para>The problem with such FAQs is that they are not, in a
