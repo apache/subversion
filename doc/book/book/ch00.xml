@@ -2,20 +2,80 @@
   <title>Preface</title>
 
   <simplesect>
+    
+    <blockquote>
+      <!-- ### find a quote -->
+      <para>"Find a good opening quote."  --Anonymous</para>
+    </blockquote>
+
     <para>
-      This will be the start of the preface.  WRITE ME.
+      Version control is the art of managing change to information
+      over time.  It has long been a critical tool to programmers, who
+      typically spend their time making small changes to software and
+      then undoing those changes the next day.  Imagine a team of
+      these programmers working concurrently, and you can see why a
+      good version control system is needed to manage the potential
+      mess.
     </para>
+
+    <para>
+      In the open-source world, CVS has long been the tool of choice
+      for version control.  And rightly so.  CVS itself is free
+      software, and its wonderful "non locking" development model
+      &mdash; which allows dozens of far-flung programmers to share
+      their work &mdash; fits the collaborative model of open-source
+      world very well.  In fact, one might argue that without CVS,
+      it's doubtful whether sites like Freshmeat or Sourceforge would
+      ever have flourished as they do now.  CVS and its semi-chaotic
+      development model have become cornerstones of open-source
+      culture.
+    </para>
+
+    <para>
+      But like many tools, CVS is starting to show its age.
+      Subversion is a relatively new system designed to be the
+      successor to CVS.  The designers set out to win over the hearts
+      of CVS users in two ways; first, by creating a open-source
+      version control system with a similar design (or "look and
+      feel") as CVS, and second, by attempting to fix the most
+      noticeable flaws in CVS.  While the result isn't necessarily the
+      next great evolution in version control design, Subversion
+      <emphasis>is</emphasis> something that is very powerful, very
+      useable, and very flexible.
+    </para>
+
   </simplesect>
+
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-1">
 
-    <title>Version Control</title>
+    <title>Audience</title>
+    
+    <para>This book is written for computer literate folk who want to
+      use Subversion to manage their data.  While Subversion runs on a
+      number of different operating systems, its primary user
+      interface is command-line based.  For that reason, the examples
+      in this book assume the reader is using a Unix-like operating
+      system, and is relatively comfortable with Unix and command-line
+      interfaces.</para>
 
-    <para>### Explain version control in the most general sense, and
-      the problem it solves.  Why do we need it?</para>
+    <para>Most readers are probably programmers or sysadmins who need
+      to track changes to source code; this is the most common use for
+      Subversion, and therefore it is the scenario underlying all of
+      the book's examples.  But keep in mind that Subversion can be
+      used to manage changes to any sort of information: images,
+      music, databases, literature, and so on.  To Subversion, all
+      data is just data.</para>
+    
+    <para>While this book is written with the assumption that the
+      reader has never used version control, we've also tried to make
+      it easy for former CVS users to get up to speed quickly.
+      Special sidebars may discuss CVS from time to time, and a
+      special appendix summarizes most of the differences between CVS
+      and Subversion.</para>
 
   </sect1>
 
@@ -23,29 +83,47 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-2">
+    <title>How This Book is Organized</title>
 
-    <title>Target audience</title>
-    
-    <para>The intended audience of this book is anyone who has used a
-      version control system before, although perhaps not Subversion
-      or CVS.  It assumes that the reader is computer-literate, and
-      reasonably comfortable at a Unix command-line.</para>
+    <para>The first three chapters of this book form a general
+      introduction to Subversion.  We begin with a discussion of
+      Subversion's features, discuss its design and user model, and
+      then lead into a guided tour.  All readers, regardless of
+      experience, should read these chapters.  They form the backbone
+      of the rest of the book.</para>
 
-    <para>People familiar with CVS may want to skip some of the introductory
-      sections that describe Subversion's concurrent versioning model.
-      Also, there is a quick guide for CVS users attached as an appendix
-      <xref linkend="svn-ap-a"/></para>
-    
+    <para>Chapters four, five, and six discuss the more complex topics
+      of branching, repository administration, and other advanced
+      features such as properties, modules, and access control.
+      Sysadmins and power-users will definitely want to read these
+      chapters.</para>
+
+    <para>Chapter seven is specially written for programmers who want
+      to use Subversion's APIs in their own software, or want to work
+      on Subversion itself.</para>
+
+    <para>The book ends with reference material.  Chapter eight is a
+      reference guide for all Subversion commands, and the appendices
+      cover a number of useful topics.  These are the chapters you're
+      mostly likely to use after you've finished the book.</para>
+
   </sect1>
-
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-3">
-    <title>How This Book is Organized</title>
+    <title>Conventions used in this book</title>
 
-    <para>## write me.  Maybe O'Reilly needs to fill this in.</para>
+    <para>### O'Reilly almost certainly needs to fill this in,
+      depending on how they typeset the book.</para>
+
+    <para>Note that the source code examples are just
+      that&mdash;examples. While they will compile with the proper
+      compiler incantations, they are intended to illustrate the
+      problem at hand. So don't be surprised if an example is lacking
+      error checking code and other bits that you would expect from
+      production-quality code.</para>
 
   </sect1>
 
@@ -53,17 +131,40 @@
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-4">
-    <title>Conventions used in this book</title>
+    <title>This Book is Free</title>
 
-    <para>The source code examples are just that&mdash;examples. While
-      they will compile with the proper compiler incantations, they
-      are intended to illustrate the problem at hand. So don't be
-      surprised if an example is lacking error checking code and other
-      bits that you would expect from production-quality code.
-    </para>
+    <para>This book started out as bits of documentation written by
+      Subversion project developers, which were then coalesced into a
+      single work and rewritten.  As such, it has always had the same
+      free, open-source license as Subversion itself.  In fact, the
+      book was written in the public eye, directly in Subverion's own
+      source tree.  This means two things:</para>
 
-    <para>O'Reilly almost certainly needs to fill this in, according
-    to their typesetting standards.</para>
+    <itemizedlist>
+      <listitem>
+        <para>You will always find the latest version of this book in
+          Subversion's own source tree.  The Subversion project
+          homepage is at <systemitem
+          class="url">http://subversion.tigris.org</systemitem>, and
+          <xref linkend="svn-ch-7-sect-6"/> describes how to get the
+          latest Subversion source.</para>
+      </listitem>
+
+      <listitem>
+        <para>You can distribute and make changes to this book however
+          you wish &mdash; it's under a free license.  Of course,
+          rather than fork the book, we'd much rather you send
+          feedback and patches to the Subversion developer
+          community.</para>
+      </listitem>
+    </itemizedlist>
+    
+    <para>You can send publishing comments and questions to O'Reilly
+      here: ###insert boilerplate.</para>
+
+    <para>A relatively recent online version of this book can be found
+      at <systemitem
+      class="url">http://www.svnbook.org</systemitem>.</para>
 
   </sect1>
 
@@ -71,25 +172,13 @@
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-5">
-    <title>This Book is Free</title>
-
-    <para>### Explain that the book is free, and how to get it, and
-      how to send patches.</para>
-    
-    <para>### Also insert O'Reilly boilerplate here, regarding general
-      comments, questions, and feedback.</para>
-
-  </sect1>
-
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 6 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-0-sect-6">
     <title>Acknowledgements</title>
 
     <para>### Huge list of thanks to the many svn developers who sent
       patches/feedback on this book. </para>
 
+    <para>### Also, individual-author acknowledgements to specific
+      friends and family.</para>
 
   </sect1>
 
