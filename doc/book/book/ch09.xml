@@ -5110,7 +5110,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
             but this time showing the property values as well:</para>
 
           <screen>
-$ svnlook proplist /usr/local/svn/repos /trunk/README
+$ svnlook --verbose proplist /usr/local/svn/repos /trunk/README
   original-author : fitz
   svn:mime-type : text/plain
 </screen>
