@@ -3658,8 +3658,9 @@ Updated to revision 30.
             <para>By default, when loading data into repository that
             already contains revisions, <command>svnadmin</command>
             will ignore the <literal>UUID</literal> from the dump
-            stream.  This switch will cause the repository's UUID to
-            be set to the UUID from the stream.</para>
+            stream.  This switch will cause the repository's
+            <literal>UUID</literal> to be set to the
+            <literal>UUID</literal> from the stream.</para>
           </listitem>
         </varlistentry>
 
@@ -3853,7 +3854,7 @@ Content-length: 101
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnadmin help OLD_REPOS_PATH NEW_REPOS_PATH</programlisting>
+          <programlisting>svnadmin hotcopy OLD_REPOS_PATH NEW_REPOS_PATH</programlisting>
         </refsect1>
 
         <refsect1>
@@ -4595,6 +4596,11 @@ trunk/vendors/deli/
             and forgot to invite it to your last party.</para>
         </refsect1>
 
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>?, h</para>
+        </refsect1>
+
       </refentry>
 
       <!-- ================================================================= -->
@@ -4741,6 +4747,54 @@ Rearrange lunch.
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
+          <refname>svnlook propget</refname>
+          <refpurpose>Print the raw value of a property on a path in
+            the repository.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>List the value of a property on a path in the
+            repository.</para>
+
+          </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>pg, pget</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--revision (-r)
+--transaction (-t)
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>This shows the value of the file
+            <filename>/trunk/sandwich</filename> in the HEAD
+            revision:</para>
+
+          <screen>
+$ svnlook pg /usr/local/svn/repos seasonings /trunk/sandwich
+mustard
+          </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
           <refname>svnlook proplist</refname>
           <refpurpose>Print the names and values of versioned file and
             directory properties.</refpurpose>
@@ -4756,6 +4810,11 @@ Rearrange lunch.
             -v, show the property values too.</para>
 
           </refsect1>
+
+        <refsect1>
+          <title>Alternate Names</title>
+          <para>pl, plist</para>
+        </refsect1>
 
         <refsect1>
           <title>Switches</title>
@@ -4842,6 +4901,39 @@ $ svnlook tree -r 40 /usr/local/svn/repos --show-ids
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
+          <refname>svnlook uuid</refname>
+          <refpurpose>Print the repository's
+          <literal>UUID</literal>.</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnlook uuid REPOS_PATH</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Print the <literal>UUID</literal> for the repository.
+            the UUID is the repository's
+            <emphasis>U</emphasis>niversal <emphasis>U</emphasis>nique
+            <emphasis>ID</emphasis>entifier.  The Subversion client
+            uses this identifier to differentiate between one
+            repository and another.</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <screen>          
+$ svnlook uuid /usr/local/svn/repos
+e7fe1b91-8cd5-0310-98dd-2f12e793c5e8
+          </screen>
+
+        </refsect1>
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
           <refname>svnlook youngest</refname>
           <refpurpose>Print the youngest revision number.</refpurpose>
         </refnamediv>
@@ -4868,6 +4960,7 @@ $ svnlook youngest /tmp/repos/
 
         </refsect1>
       </refentry>
+
     </sect2>
   </sect1>
 </chapter>
