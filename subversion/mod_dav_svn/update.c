@@ -270,12 +270,9 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
 
           /* ugh, build_uri ignores the path and just builds the root
              of the baseline collection.  we have to tack the
-             real_path on manually. */
-          if (real_path)
-            {
-              char *base = apr_pstrndup (pool, bc_url, strlen(bc_url)-1);
-              bc_url = apr_psprintf (pool, "%s%s", base, real_path);
-            }
+             real_path on manually, ignoring its leading slash. */
+          if (real_path && (! svn_path_is_empty(real_path)))
+            bc_url = svn_path_url_add_component(bc_url, real_path+1, pool);
         }
 
 
@@ -309,7 +306,7 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
                                qname, qcopy, copyfrom_revision, chk_attr);
         }
 
-      send_xml(child->uc, elt);
+      send_xml(child->uc, "%s", elt);
     }
 
   send_vsn_url(child, pool);

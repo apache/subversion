@@ -1203,6 +1203,7 @@ test_list = [ None,
               update_receive_illegal_name,
               update_deleted_missing_dir,
               XFail(another_hudson_problem),
+              new_dir_with_spaces,
              ]
 
 if __name__ == '__main__':
