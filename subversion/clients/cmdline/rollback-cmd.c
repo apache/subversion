@@ -70,12 +70,8 @@ svn_cl__rollback (apr_getopt_t *os,
   opt_state->end_revision.kind = svn_client_revision_number;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
-  
-  if (targets->nelts < 1)
-    {
-      return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
-                               "Need at least one target.");
-    }
+ 
+  svn_cl__push_implicit_dot_target (targets, pool);
 
   for (i = 0; i < targets->nelts; ++i)
     {

@@ -303,7 +303,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
  
   { "rollback", svn_cl__rollback, {0},
     "Revert a specific revision in the working copy.\n"
-    "usage: rollback -r REVNUM TARGET1 [TARGET2 [TARGET3 ... ]]\n\n",
+    "usage: rollback -r REVNUM [TARGETS]\n\n",
     {'r', svn_cl__targets_opt} },
  
   { "status", svn_cl__status, {"stat", "st"},
