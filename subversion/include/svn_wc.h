@@ -62,6 +62,10 @@ extern "C" {
  */
 typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
+typedef svn_error_t *svn_wc_relocation_validator(void *baton,
+                                                 const char *old,
+                                                 const char *new);
+
 /** Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
  * @a write_lock is true the baton will include a write lock, otherwise the
@@ -1865,6 +1869,34 @@ svn_wc_cleanup (const char *path,
                 void *cancel_baton,
                 apr_pool_t *pool);
 
+/**
+ * Changing repository references at @a path that begin with
+ * @a from to begin with @a to instead.  Perform necessary allocations in
+ * @a pool.  If @a recurse is true, do so.
+ *
+ * @a adm_access is an access baton for the directory containing
+ * @a path. @a adm_access must not be NULL.
+ *
+ * @a validator will be called for each newly generated URL.
+ *
+ * @param path Working copy directory
+ * @param adm_access Admin access baton (may not be NULL)
+ * @param from Original URL
+ * @param to New URL
+ * @param recurse Whether to recurse into subdirectories
+ * @param validator URL change-validation callback
+ * @param validator_baton Baton for validator
+ * @param pool The pool from which to perform memory allocations
+ **/
+svn_error_t *
+svn_wc_relocate (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 void *validator_baton,
+                 svn_wc_relocation_validator *validator,
+                 apr_pool_t *pool);
 
 /** Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
  * necessary allocations in @a pool.
