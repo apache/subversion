@@ -1628,10 +1628,7 @@ txn_body_merge (void *baton, trail_t *trail)
     }
   else
     {
-      svn_fs_root_t *target_root;
       const svn_fs_id_t *ancestor_id, *target_id;
-
-      SVN_ERR (svn_fs_txn_root (&target_root, args->txn, trail->pool));
 
       SVN_ERR (merge (&(args->conflict),
                       "",
