@@ -570,6 +570,15 @@ void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 
 
+/* Set the "ancestor" URL field of DIRPATH's entry to ANCESTOR, and
+   recursively tweak all its children to have URLs that are derived
+   therefrom. */
+svn_error_t *svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
+                                                   svn_stringbuf_t *ancestor,
+                                                   apr_pool_t *pool);
+
+
+
 
 
 /*** General utilities that may get moved upstairs at some point. */

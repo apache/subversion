@@ -26,6 +26,7 @@
 #include "svn_error.h"
 #include "svn_types.h"
 #include "svn_time.h"
+#include "svn_pools.h"
 
 
 /*------------------------------------------------------------------*/
@@ -1121,11 +1122,12 @@ fold_entry (apr_hash_t *entries,
   normalize_entry (entry, pool);
 
   /* Remove any attributes named for removal. */
-  {
-    const char *remove_me;
-    while ((remove_me = va_arg (ap, const char *)) != NULL)
-      apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
-  }
+  if (ap)
+    {
+      const char *remove_me;
+      while ((remove_me = va_arg (ap, const char *)) != NULL)
+        apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
+    }
 
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
@@ -1485,6 +1487,83 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 }
 
 
+
+
+
+svn_error_t *
+svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
+                                      svn_stringbuf_t *ancestor,
+                                      apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_wc_entry_t *this_dir;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  /* Read DIRPATH's entries. */
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
+
+  /* Tweak THIS_DIR's URL */
+  this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR,
+                           APR_HASH_KEY_STRING);
+  fold_entry (entries, svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool),
+              SVN_WC__ENTRY_MODIFY_ANCESTOR,
+              SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
+              ancestor, NULL, subpool, NULL);
+
+  /* Recursively loop over all children. */
+  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      const char *name;
+      svn_wc_entry_t *current_entry;
+      svn_stringbuf_t *child_url;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      name = (const char *) key;
+      current_entry = (svn_wc_entry_t *) val;
+
+      /* Ignore the "this dir" entry. */
+      if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+        continue;
+
+      /* Derive the new URL for the current entry */
+      child_url = svn_stringbuf_dup (ancestor, subpool);
+      svn_path_add_component_nts (child_url, name, svn_path_url_style);
+
+      /* If a file, tweak the entry's URL. */
+      if (current_entry->kind == svn_node_file)
+        fold_entry (entries, svn_stringbuf_create (name, subpool),
+                    SVN_WC__ENTRY_MODIFY_ANCESTOR,
+                    SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
+                    child_url, NULL, subpool, NULL);
+
+      /* If a dir, recurse. */
+      else if (current_entry->kind == svn_node_dir)
+        {
+          svn_stringbuf_t *child_path = svn_stringbuf_dup (dirpath, subpool);
+          svn_path_add_component_nts (child_path, name, svn_path_local_style);
+
+          SVN_ERR (svn_wc__recursively_rewrite_ancestry 
+                   (child_path, child_url, subpool));
+        }
+    }
+
+  /* Write a shiny new entries file to disk. */
+  SVN_ERR (svn_wc__entries_write (entries, dirpath, subpool));
+
+  /* Cleanup */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
 
 #if 0
 /*** Recursion on entries. ***/
@@ -1616,7 +1695,7 @@ svn_wc__compose_paths (apr_hash_t *paths, apr_pool_t *pool)
               apr_hash_set (paths, path->data, path->len, NULL);
           }
       }
-    }
+ }
 }
 #endif /* 0 */
 
