@@ -247,11 +247,57 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       ctarget = None
       for src, reldir in self.get_win_sources(target):
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
+
+        if isinstance(target, gen_base.TargetJavaHeaders):
+          dirs = string.split(rsrc, '\\')
+          classname = target.package + "." + string.split(dirs[-1],".")[0]
+
+          classes = os.path.join(rootpath, target.classes)
+          if self.junit_path is not None:
+            classes = "%s;%s" % (classes, self.junit_path)
+
+          headers = os.path.join(rootpath, target.headers)
+
+          cbuild = "javah -verbose -force -classpath %s -d %s %s" \
+                   % (self.quote(classes), self.quote(headers), classname)
+
+          ### why are we reseting this value here?
+          target.path = "../" + target.headers
+
+          classesdir = os.path.join(rootpath, target.classes)
+          classpart = rsrc[len(classesdir)+1:]
+          headername = string.split(classpart,".")[0]+".h"
+          headername = string.replace(headername,"\\","_")
+          ctarget = os.path.join(rootpath, target.headers, headername)
+
+        elif isinstance(target, gen_base.TargetJavaClasses):
+          dirs = string.split(rsrc, '/')
+          sourcedirs = dirs[:-1]  # Last element is the .java file name.
+          while sourcedirs:
+            if sourcedirs.pop() in target.packages:
+              # Java package root found.
+              sourcepath = os.path.join(*sourcedirs)
+              break
+          else:
+            raise gen_base.GenError('Unable to find Java package root in path "%s"' % rsrc)
+
+          classes = targetdir = os.path.join(rootpath, target.classes)
+          if self.junit_path is not None:
+            classes = "%s;%s" % (classes, self.junit_path)
+
+          cbuild = "javac -g -classpath %s -d %s -sourcepath %s $(InputPath)" \
+                   % tuple(map(self.quote, (classes, targetdir, sourcepath)))
+
+          ctarget = os.path.join(rootpath, target.classes,
+                                 *dirs[len(sourcedirs):-1] + 
+                                 [dirs[-1][:-5] + target.objext]
+                                 )
+
+          ### why are we reseting this value here?
+          target.path = "../" + target.classes
+
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
-        if target.needs_windows_custom_build is not None:
-          cbuild = target.get_windows_custom_build(self, rsrc, rootpath)
-          ctarget = target.get_windows_custom_target(rsrc, rootpath)
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget))
 
@@ -264,11 +310,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
               if isinstance(target, gen_base.TargetSWIGRuntime):
                 bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
-                cbuild = "python $(InputPath) " + target.lang + " " + csrc + " "
-                cbuild = cbuild + self.get_project_quote()+self.swig_libdir
-                cbuild = cbuild + self.get_project_quote()
-                sources.append(ProjectItem(path=bsrc, reldir=None, 
-                                           custom_build=cbuild, 
+                cbuild = "python $(InputPath) %s %s %s" \
+                         % (target.lang, csrc, self.quote(self.swig_libdir))
+                sources.append(ProjectItem(path=bsrc, reldir=None,
+                                           custom_build=cbuild,
                                            custom_target=csrc,
                                            user_deps=[]))
                 continue
@@ -288,12 +333,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                 if not isinstance(iobj, gen_base.SWIGSource):
                   user_deps.append(isrc)
                   continue
-		cbuild = "swig "+self.swig_options+" -"+target.lang
-		for include in self.get_win_includes(target, rootpath):
-		  cbuild = cbuild + " -I" + self.get_project_quote() + include
-		  cbuild = cbuild + self.get_project_quote()
-		cbuild = cbuild + " -o " + self.get_project_quote() + cout
-		cbuild = cbuild + self.get_project_quote() + " $(InputPath)"
+
+                includes = self.get_win_includes(target, rootpath)
+                cbuild = "swig %s -%s %s -o %s $(InputPath)" % \
+                         (self.swig_options, target.lang,
+                          string.join(map(lambda x: "-I%s" % self.quote(x),
+                                          includes)),
+                          self.quote(cout))
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,

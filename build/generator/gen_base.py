@@ -335,8 +335,7 @@ class Target(DependencyNode):
     self.path = options.get('path', '')
     self.add_deps = options.get('add-deps', '')
     self.msvc_name = options.get('msvc-name') # override project name
-    self.needs_windows_custom_build = None
-    
+
     # true if several targets share the same directory, as is the case
     # with SWIG bindings.
     self.shared_dir = None
@@ -681,7 +680,6 @@ class TargetJavaHeaders(TargetJava):
     self.classes = options.get('classes')
     self.package = options.get('package')
     self.output_dir = self.headers
-    self.needs_windows_custom_build = "Yes"
 
   def add_dependencies(self, graph, cfg, extmap):
     sources = _collect_paths(self.sources, self.path)
@@ -726,39 +724,6 @@ class TargetJavaHeaders(TargetJava):
 
     graph.add(DT_INSTALL, self.name, self)
 
-  def get_windows_custom_build(self, generator, source, rootpath):
-    junit_path = "";
-    if not generator.junit_path is None:
-      junit_path = ";" + generator.junit_path
-
-    dirs = string.split(source, '\\')
-    i = len(dirs) - 1  # Last element is the .java file name.
-
-    classname = self.package + "." + string.split(dirs[i],".")[0]
-
-    classes = os.path.join(rootpath, self.classes)
-    classpath = generator.get_project_quote() + classes + junit_path
-    classpath = classpath + generator.get_project_quote()
-    headers = os.path.join(rootpath, self.headers)
-    targetdir = generator.get_project_quote() + headers
-    targetdir = targetdir + generator.get_project_quote()
-    cbuild = "javah -verbose -force -classpath " + classpath + " -d " +targetdir
-    cbuild = cbuild + " " +classname
-    self.path = "../" + self.headers
-    return cbuild   
- 
-    
-  def get_windows_custom_target(self, source, rootpath):
-    classesdir = os.path.join(rootpath, self.classes)
-    classpart = source[len(classesdir)+1:]
-    headername = string.split(classpart,".")[0]+".h"
-    headername = string.replace(headername,"\\","_")
-    target = os.path.join(rootpath, self.headers, headername)
-    return target
-    
-  def get_dep_targets(self, target):
-    return [ self.target ]
-
 class TargetJavaClasses(TargetJava):
   def __init__(self, name, options, cfg, extmap):
     TargetJava.__init__(self, name, options, cfg, extmap)
@@ -766,7 +731,6 @@ class TargetJavaClasses(TargetJava):
     self.lang = 'java'
     self.classes = options.get('classes')
     self.output_dir = self.classes
-    self.needs_windows_custom_build = "Yes"
 
   def add_dependencies(self, graph, cfg, extmap):
     ### FIXME: SWIG/Java's generated .java source directory and files
@@ -825,55 +789,6 @@ class TargetJavaClasses(TargetJava):
                                                         pattern[:idx]))
 
     graph.add(DT_INSTALL, self.name, self)
- 
-  def get_windows_custom_build(self, generator, source, rootpath):
-    junit_path = "";
-    if not generator.junit_path is None:
-      junit_path = ";" + generator.junit_path
-    dirs = string.split(source, '/')
-    i = len(dirs) - 2  # Last element is the .java file name.
-    while i >= 0:
-      if dirs[i] in self.packages:
-        # Java package root found.
-        sourcepath = os.path.join(string.join(dirs[:i], os.sep))
-        break
-      i = i - 1
-    if i < 0:
-      raise GenError('Unable to find Java package root in path "' +
-  	              source + '"')
-
-
-    sourcepath = generator.get_project_quote() + sourcepath
-    sourcepath = sourcepath + generator.get_project_quote()
-    classes = os.path.join(rootpath, self.classes)
-    classpath = generator.get_project_quote() + classes + junit_path
-    classpath = classpath + generator.get_project_quote()
-    targetdir = generator.get_project_quote() + classes
-    targetdir = targetdir + generator.get_project_quote()
-    cbuild = "javac -g -classpath " + classpath + " -d " +targetdir
-    cbuild = cbuild + " -sourcepath " + sourcepath + " $(InputPath)"
-    self.path = "../" + self.classes
-    return cbuild   
- 
-  def get_windows_custom_target(self, source, rootpath):
-    objname = source[:-5] + self.objext
-
-    # As .class files are likely not generated into the same
-    # directory as the source files, the object path may need
-    # adjustment.  To this effect, take "target_ob.classes" into
-    # account.
-    dirs = string.split(objname, '/')
-    i = len(dirs) - 2  # Last element is the .class file name.
-    while i >= 0:
-      if dirs[i] in self.packages:
-        # Java package root found.
-        objname = os.path.join(rootpath, self.classes, string.join(dirs[i:], os.sep))
-        break
-      i = i - 1
-    if i < 0:
-      raise GenError('Unable to find Java package root in path "' +
-                      objname + '"')
-    return objname
 
   class Section(TargetLib.Section):
     def create_targets(self, graph, name, cfg, extmap):

@@ -21,8 +21,8 @@ class Generator(gen_win.WinGeneratorBase):
   def default_output(self, conf_path):
     return 'subversion_msvc.dsw'
 
-  def get_project_quote(self):
-    return '"'
+  def quote(self, str):
+    return '"%s"' % str
 
   def write_project(self, target, fname, rootpath):
     "Write a Project (.dsp)"
