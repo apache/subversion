@@ -1132,7 +1132,8 @@ svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               apr_pool_t *pool);
 
 /* Set wc property NAME to VALUE for PATH.  Do any temporary
-   allocation in POOL. */
+   allocation in POOL. If NAME is not a valid property for PATH, return
+   SVN_ERR_ILLEGAL_TARGET. */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
                               const char *path,

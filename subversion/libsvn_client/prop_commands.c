@@ -79,17 +79,20 @@ svn_client_propset (const char *propname,
 
           if (current_entry->schedule != svn_wc_schedule_delete)
             {
+              svn_error_t *err;
               if (current_entry->kind == svn_node_dir && current_entry_name)
                 {
-                  SVN_ERR (svn_client_propset (propname, propval,
-                                               full_entry_path->data, recurse,
-                                               pool));
+                  err = svn_client_propset (propname, propval,
+                                            full_entry_path->data, recurse,
+                                            pool);
                 }
               else
                 {
-                  SVN_ERR (svn_wc_prop_set (propname, propval,
-                                            full_entry_path->data, pool));
+                  err = svn_wc_prop_set (propname, propval,
+                                         full_entry_path->data, pool);
                 }
+              if (err && err->apr_err != SVN_ERR_ILLEGAL_TARGET)
+                return err;
             }
         }
       
