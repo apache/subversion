@@ -908,7 +908,7 @@ svn_error_t *svn_fs_dir_delta (svn_fs_root_t *source_root,
                                apr_hash_t *source_rev_diffs,
                                svn_fs_root_t *target_root,
                                const char *target_path,
-                               svn_delta_edit_fns_t *editor,
+                               const svn_delta_edit_fns_t *editor,
                                void *edit_baton,
                                apr_pool_t *pool);
 
