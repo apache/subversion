@@ -79,13 +79,17 @@
 
 /* The root structure.  */
 
-/* Structure for svn_fs_root_t's node_cache hash values. */
-struct dag_node_cache_t
+/* Structure for svn_fs_root_t's node_cache hash values.  Cache items
+   are arranged in a circular LRU list with a dummy entry, and also
+   indexed with a hash table. */
+typedef struct dag_node_cache_t
 {
-  dag_node_t *node; /* NODE to be cached. */
-  int idx;          /* Index into the keys array for this cache item's key. */
-  apr_pool_t *pool; /* Pool in which NODE is allocated. */
-};
+  const char *path;               /* Path of cached node */
+  dag_node_t *node;               /* Cached node */
+  struct dag_node_cache_t *prev;  /* Next node in LRU list */
+  struct dag_node_cache_t *next;  /* Previous node in LRU list */
+  apr_pool_t *pool;               /* Pool in which node is allocated */
+} dag_node_cache_t;
 
 
 typedef enum root_kind_t {
@@ -103,11 +107,9 @@ typedef struct
      the transaction may have disappeared altogether.  */
   dag_node_t *root_dir;
 
-  /* Cache structures, for mapping const char * PATH to const
-     struct dag_node_cache_t * structures. */
+  /* Dummy entry for circular LRU cache, and associated hash table. */
+  dag_node_cache_t node_list;
   apr_hash_t *node_cache;
-  const char *node_cache_keys[SVN_FS_NODE_CACHE_MAX_KEYS];
-  int node_cache_idx;
 
   /* Cache structure for mapping const char * PATH to const char
      *COPYFROM_STRING, so that paths_changed can remember all the
@@ -138,15 +140,26 @@ dag_node_cache_get (svn_fs_root_t *root,
                     apr_pool_t *pool)
 {
   fs_root_data_t *frd = root->fsap_data;
-  struct dag_node_cache_t *cache_item;
+  dag_node_cache_t *item;
 
   /* Assert valid input. */
   assert (*path == '/');
 
   /* Look in the cache for our desired item. */
-  cache_item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
-  if (cache_item && cache_item->node)
-    return svn_fs_fs__dag_dup (cache_item->node, pool);
+  item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
+  if (item && item->node)
+    {
+      /* Move this cache item to the front of the LRU list. */
+      item->prev->next = item->next;
+      item->next->prev = item->prev;
+      item->prev = &frd->node_list;
+      item->next = frd->node_list.next;
+      item->prev->next = item;
+      item->next->prev = item;
+
+      /* Return the cached node. */
+      return svn_fs_fs__dag_dup (item->node, pool);
+    }
 
   return NULL;
 }
@@ -159,10 +172,8 @@ dag_node_cache_set (svn_fs_root_t *root,
                     dag_node_t *node)
 {
   fs_root_data_t *frd = root->fsap_data;
-  const char *cache_path;
-  apr_pool_t *cache_pool;
-  struct dag_node_cache_t *cache_item;
-  int num_keys = apr_hash_count (frd->node_cache);
+  dag_node_cache_t *item;
+  apr_pool_t *pool;
 
   /* What?  No POOL passed to this function?
 
@@ -176,50 +187,41 @@ dag_node_cache_set (svn_fs_root_t *root,
 
   /* Assert valid input and state. */
   assert (*path == '/');
-  assert ((frd->node_cache_idx <= num_keys)
-          && (num_keys <= SVN_FS_NODE_CACHE_MAX_KEYS));
 
-  cache_item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
-  if (cache_item)
-    {
-      /* Reuse the existing cache item.  (In theory we should unset
-         the hash entry, clear the pool, rebuild the cache item, and
-         reset the hash entry, but it's unlikely that the same path
-         will be replaced many times in a single transaction.) */
-      cache_item->node = svn_fs_fs__dag_dup (node, cache_item->pool);
-      return;
-    }
+  /* If we have an existing entry for this path, reuse it. */
+  item = apr_hash_get (frd->node_cache, path, APR_HASH_KEY_STRING);
 
-  /* We're adding a new cache item.  First, see if we have room for it
-     (otherwise, make some room). */
-  if (num_keys == SVN_FS_NODE_CACHE_MAX_KEYS)
+  /* Otherwise, if the cache is full, reuse the tail of the LRU list. */
+  if (!item && apr_hash_count (frd->node_cache) == SVN_FS_NODE_CACHE_MAX_KEYS)
+    item = frd->node_list.prev;
+
+  if (item)
     {
-      /* No room.  Expire the oldest thing. */
-      cache_path = frd->node_cache_keys[frd->node_cache_idx];
-      cache_item = apr_hash_get (frd->node_cache, cache_path,
-                                 APR_HASH_KEY_STRING);
-      apr_hash_set (frd->node_cache, cache_path, APR_HASH_KEY_STRING, NULL);
-      cache_pool = cache_item->pool;
-      svn_pool_clear (cache_pool);
+      /* Remove the existing item from the cache and reuse its pool. */
+      item->prev->next = item->next;
+      item->next->prev = item->prev;
+      apr_hash_set (frd->node_cache, item->path, APR_HASH_KEY_STRING, NULL);
+      pool = item->pool;
+      svn_pool_clear (pool);
     }
   else
     {
-      cache_pool = svn_pool_create (root->pool);
+      /* Allocate a new pool. */
+      pool = svn_pool_create (root->pool);
     }
 
-  /* Make the cache item, allocated in its own pool. */
-  cache_item = apr_palloc (cache_pool, sizeof (*cache_item));
-  cache_item->node = svn_fs_fs__dag_dup (node, cache_pool);
-  cache_item->idx = frd->node_cache_idx;
-  cache_item->pool = cache_pool;
+  /* Create and fill in the cache item. */
+  item = apr_palloc (pool, sizeof (*item));
+  item->path = apr_pstrdup (pool, path);
+  item->node = svn_fs_fs__dag_dup (node, pool);
+  item->pool = pool;
 
-  /* Now add it to the cache. */
-  cache_path = apr_pstrdup (cache_pool, path);
-  apr_hash_set (frd->node_cache, cache_path, APR_HASH_KEY_STRING, cache_item);
-  frd->node_cache_keys[frd->node_cache_idx] = cache_path;
-
-  /* Advance the cache pointer. */
-  frd->node_cache_idx = (frd->node_cache_idx + 1) % SVN_FS_NODE_CACHE_MAX_KEYS;
+  /* Link it into the head of the LRU list and hash table. */
+  item->prev = &frd->node_list;
+  item->next = frd->node_list.next;
+  item->prev->next = item;
+  item->next->prev = item;
+  apr_hash_set (frd->node_cache, item->path, APR_HASH_KEY_STRING, item);
 }
 
 
@@ -229,19 +231,15 @@ dag_node_cache_invalidate (svn_fs_root_t *root,
                            const char *path)
 {
   fs_root_data_t *frd = root->fsap_data;
-  int i, num_keys = apr_hash_count (frd->node_cache);
   apr_size_t len = strlen (path);
   const char *key;
-  struct dag_node_cache_t *item;
+  dag_node_cache_t *item;
 
-  for (i = 0; i < num_keys; i++)
+  for (item = frd->node_list.next; item != &frd->node_list; item = item->next)
     {
-      key = frd->node_cache_keys[i];
+      key = item->path;
       if (strncmp (key, path, len) == 0 && (key[len] == '/' || !key[len]))
-        {
-          item = apr_hash_get (frd->node_cache, key, APR_HASH_KEY_STRING);
-          item->node = NULL;
-        }
+        item->node = NULL;
     }
 }
 
@@ -3309,7 +3307,8 @@ make_root (svn_fs_t *fs,
 
   /* Init the node ID cache. */
   frd->node_cache = apr_hash_make (subpool);
-  frd->node_cache_idx = 0;
+  frd->node_list.prev = &frd->node_list;
+  frd->node_list.next = &frd->node_list;
   frd->copyfrom_cache = apr_hash_make (subpool);
   root->vtable = &root_vtable;
   root->fsap_data = frd;
