@@ -78,7 +78,6 @@ add_directory (svn_string_t *name,
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_string_dup (parent_d->path, child_d->edit_baton->pool);
   svn_path_add_component (child_d->path, name, svn_path_local_style);
-  child_d->added = TRUE;
 
   *child_baton = child_d;
 
@@ -109,13 +108,12 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_file (void *file_baton)
 {
-  svn_error_t *err;
   struct file_baton *fb = file_baton;
+  svn_string_t **receiver;
 
-  apr_hash_set (d->edit_baton->closer->target_array,
-                fb->path->data,
-                fb->path->len,
-                1);
+  receiver = (svn_string_t **) apr_array_push
+    (fb->parent_dir_baton->edit_baton->closer->target_array);
+  *receiver = fb->path;
 
   return SVN_NO_ERROR;
 }
@@ -150,7 +148,6 @@ add_file (svn_string_t *name,
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_string_dup (parent_d->path, parent_d->edit_baton->pool);
   svn_path_add_component (child_fb->path, name, svn_path_local_style);
-  child_fb->added = TRUE;
 
   *file_baton = child_fb;
 
@@ -187,7 +184,6 @@ svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                        apr_pool_t *pool,
                                        svn_ra_local__commit_closer_t *closer)
 {
-  svn_error_t *err;
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   svn_delta_edit_fns_t *track_editor = svn_delta_default_editor (pool);
 
@@ -207,7 +203,6 @@ svn_ra_local__get_commit_track_editor (svn_delta_edit_fns_t **editor,
      bumping its revision number.  So, delete_entry is left in the
      default implementation as well. */
   track_editor->replace_root = replace_root;
-  track_editor->delete_entry = delete_entry;
   track_editor->add_directory = add_directory;
   track_editor->replace_directory = replace_directory;
   track_editor->add_file = add_file;
