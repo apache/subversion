@@ -330,11 +330,13 @@ import (const svn_stringbuf_t *path,
     {
       const void *key;
       apr_ssize_t keylen;
+      void *val;
       struct imported_file *value;
       svn_stringbuf_t *full_path;
       
-      apr_hash_this (hi, &key, &keylen, (void **) &value);
-      full_path = svn_stringbuf_create ((char *) key, value->subpool);
+      apr_hash_this (hi, &key, &keylen, &val);
+      value = val;
+      full_path = svn_stringbuf_create (key, value->subpool);
       SVN_ERR (send_file_contents (full_path, value->file_baton, 
                                    editor, value->subpool));
       SVN_ERR (editor->close_file (value->file_baton));

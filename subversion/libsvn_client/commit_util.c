@@ -834,9 +834,7 @@ do_item_commit (const char *url,
                                     item->revision,
                                     file_pool, &file_baton));
 
-      /* Copy in the contents of the mod structure to the array.  Note
-         that this is NOT a copy of a pointer reference, but a copy of
-         the structure's contents!! */
+      /* Add this file mod to the FILE_MODS hash. */
       mod->subpool = file_pool;
       mod->item = item;
       mod->file_baton = file_baton;
@@ -997,12 +995,14 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
       apr_ssize_t klen;
       struct file_mod_t *mod;
       svn_client_commit_item_t *item;
+      void *val;
       void *file_baton;
       svn_stringbuf_t *tempfile;
       svn_boolean_t fulltext = FALSE;
       
       /* Get the next entry. */
-      apr_hash_this (hi, &key, &klen, (void **) &mod);
+      apr_hash_this (hi, &key, &klen, &val);
+      mod = val;
 
       /* Transmit the entry. */
       item = mod->item;
