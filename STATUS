@@ -61,5 +61,5 @@ Candidate changes:
     Justification: hole allows users to copy trees that aren't 100% readable,
                    thereby circumventing read-restriction on subtrees.
     Votes:
-      +0: sussman (not yet reviewed)
-      +1: striker, breser
+      +1: striker, sussman (though I think he'll change his mind)
+      -1: breser (violates compatbility rules) 
