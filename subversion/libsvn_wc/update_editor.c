@@ -1098,7 +1098,6 @@ change_file_prop (void *file_baton,
 
 
 
-
 /* This is the small planet.  It has the complex responsibility of
    "integrating" a new revision of a file into a working copy.  It's
    used extensively by the update-editor, as well as by
@@ -1118,6 +1117,7 @@ svn_wc_install_file (const char *file_path,
   svn_stringbuf_t *file_path_str, *parent_dir, *basename;
   svn_stringbuf_t *log_accum, *txtb, *tmp_txtb;
   svn_boolean_t is_locally_modified;
+  svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
   apr_hash_t *prop_conflicts;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
@@ -1245,6 +1245,22 @@ svn_wc_install_file (const char *file_path,
       
       /* Now that we have the list of diffs... */
       
+      /* Determine if any of the propchanges are the "magic" ones that
+         might require changing the working file. */
+      {
+        int i;
+        for (i = 0; i < propchanges->nelts; i++)
+          {
+            svn_prop_t *propchange
+              = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+            
+            if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+                || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
+                || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE)))
+              magic_props_changed = TRUE;
+          }
+      }
+
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
@@ -1328,12 +1344,12 @@ svn_wc_install_file (const char *file_path,
    So the first thing we do is figure out where we are in the
    matrix. */
 
+  /* Has the user made local mods to the working file?  */
+  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
+                                   file_path_str, pool));
+
   if (new_text_path)   /* is there a new text-base to install? */
     {
-      /* Has the user made local mods to the working file?  */
-      SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                       file_path_str, pool));
-
       txtb     = svn_wc__text_base_path (basename, 0, pool);
       tmp_txtb = svn_wc__text_base_path (basename, 1, pool);
 
@@ -1419,7 +1435,35 @@ svn_wc_install_file (const char *file_path,
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     }  /* end:  "textual" merging process */
-  
+
+
+  /* Special edge-case: it's possible that this file installation only
+     involves propchanges, but that some of those props still require
+     a retranslation of the working file. */
+  if ((! new_text_path) && magic_props_changed)
+    {
+      svn_stringbuf_t *tmptext = 
+        svn_wc__text_base_path (basename, 1, pool);
+
+      /* A log command which copies and DEtranslates the working file
+         to a tmp-text-base. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_DETRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, basename,
+                             SVN_WC__LOG_ATTR_DEST, tmptext,
+                             NULL);
+
+      /* A log command that copies the tmp-text-base and REtranslates
+         the tmp-text-base back to the working file. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_TRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, tmptext,
+                             SVN_WC__LOG_ATTR_DEST, basename,
+                             NULL);
+    }
+
   /* Write log entry which will bump the revision number:  */
   revision_str = apr_psprintf (pool, "%ld", new_revision);
   svn_xml_make_open_tag (&log_accum,
@@ -1439,7 +1483,7 @@ svn_wc_install_file (const char *file_path,
   /* Possibly write log commands to tweak text/prop entry timestamps:
      */
 
-  if (new_text_path)
+  if (new_text_path || magic_props_caused_tweak)
     {
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
