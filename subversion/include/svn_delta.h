@@ -87,7 +87,7 @@
    assemble new target string text by pulling together substrings from:
      - the source file,
      - the target file text so far, and
-     - a string of new data.  */
+     - a string of new data (accessible to this window only).  */
 
 /* A single text delta instruction.  */
 typedef struct svn_delta_insn_t {
@@ -171,6 +171,8 @@ typedef svn_error_t *(*svn_delta_read_fn_t) (void *data,
    allows us to process the data as we go.  When we call
    `svn_next_delta_window' on STREAM, it will call upon its SOURCE and
    TARGET `read'-like functions to gather as much data as it needs.  */
+/* kff todo: shouln't we remove one star from all the "_fn_t"
+   parameters below, since that's already a pointer type? */
 extern svn_error_t *svn_text_delta (svn_delta_read_fn_t *source,
                                     void *source_data,
                                     svn_delta_read_fn_t *target,
@@ -194,8 +196,6 @@ extern svn_error_t *svn_vcdiff_to_delta (svn_delta_read_fn_t *read_fn,
                                          void *data,
                                          svn_delta_stream_t **stream);
 
-
-/* A 
 
 
 /* Property deltas.  */
@@ -342,13 +342,6 @@ typedef struct svn_delta_digger_t
 
 
 
-/* Creates a parser with the common callbacks and userData registered. */
-void svn_walk_delta (svn_delta_t *delta,
-                     ((svn_error_t *user_callback) *)
-                     (void *delta_component, int kind, void *user_data),
-                     void *user_data);
-
-
 /* Creates a parser with the common callbacks and userData registered. */
 XML_Parser svn_delta_make_xml_parser (svn_delta_digger_t *diggy);
 
