@@ -130,7 +130,7 @@ Bindings changes that affect the build system:
      Justification: Shouldn't require in tree apr or apache.
      Votes:
       +1: breser (for 8280, concept +1 for 8279)
-      +1: mbk
+      +1: mbk, epg
 
     * r8290
      Applying r8279 + r8290 for javahl
