@@ -27,7 +27,6 @@
 #include "svn_types.h"
 #include "svn_xml.h"
 #include "svn_path.h"
-#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -222,12 +221,10 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                               "The request does not contain the 'svn:' "
-                               "namespace, so it is not going to have certain "
-                               "required elements.",
-                               SVN_DAV_ERROR_NAMESPACE,
-                               SVN_DAV_ERROR_TAG);
+      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                           "The request does not contain the 'svn:' "
+                           "namespace, so it is not going to have certain "
+                           "required elements.");
     }
   
   /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
@@ -269,16 +266,8 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
              directory to get the log of, and we need a path to call
              svn_fs_revisions_changed on. */
           if (child->first_cdata.first)
-            {
-              if (! svn_path_is_canonical(child->first_cdata.first->text))
-                return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                  "The request's 'path' element is not canonicalized; "
-                  "there is a problem with the client.",
-                  SVN_DAV_ERROR_NAMESPACE,
-                  SVN_DAV_ERROR_TAG);
-              target = svn_path_join(target, child->first_cdata.first->text,
-                                     resource->pool);
-            }
+            target = svn_path_join(target, child->first_cdata.first->text,
+                                   resource->pool);
 
           (*((const char **)(apr_array_push (paths)))) = target;
         }
