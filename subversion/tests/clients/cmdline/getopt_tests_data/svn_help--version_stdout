@@ -3,4 +3,5 @@ usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]
 
 Valid options:
   --version                : print client version info
+  -q [--quiet]             : print as little as possible
 

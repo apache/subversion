@@ -68,6 +68,9 @@ rep_lines_res = [
                  # "Subversion Client, version 0.10.2 (r1729)"
                  (re.compile(r'version \d+\.\d+\.\d+ \(.*\)'),
                   'version X.Y.Z '),
+                 # In 'svn --version --quiet', we print only the version
+                 # number in a single line.
+                 (re.compile(r'^\d+\.\d+\.\d+$'), 'X.Y.Z\n'),
                 ]
 
 def process_lines(lines):
@@ -125,37 +128,34 @@ def run_one_test(sbox, basename, *varargs):
 
 def getopt_no_args(sbox):
   "run svn with no arguments"
-
   return run_one_test(sbox, 'svn')
 
 def getopt__version(sbox):
   "run svn --version"
-
   return run_one_test(sbox, 'svn--version', '--version')
+
+def getopt__version__quiet(sbox):
+  "run svn --version --quiet"
+  return run_one_test(sbox, 'svn--version--quiet', '--version', '--quiet')
 
 def getopt__help(sbox):
   "run svn --help"
-
   return run_one_test(sbox, 'svn--help', '--help')
 
 def getopt_help(sbox):
   "run svn help"
-
   return run_one_test(sbox, 'svn_help', 'help')
 
 def getopt_help__version(sbox):
   "run svn help --version"
-
   return run_one_test(sbox, 'svn_help--version', 'help', '--version')
 
 def getopt_help_log_switch(sbox):
   "run svn help log switch"
-
   return run_one_test(sbox, 'svn_help_log_switch', 'help', 'log', 'switch')
 
 def getopt_help_bogus_cmd(sbox):
   "run svn help bogus-cmd"
-
   return run_one_test(sbox, 'svn_help_bogus-cmd', 'help', 'bogus-cmd')
 
 ########################################################################
@@ -166,6 +166,7 @@ def getopt_help_bogus_cmd(sbox):
 test_list = [ None,
               getopt_no_args,
               getopt__version,
+              getopt__version__quiet,
               getopt__help,
               getopt_help,
               getopt_help__version,
