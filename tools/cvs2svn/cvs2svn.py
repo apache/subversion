@@ -784,18 +784,9 @@ class Dumper:
     else:                                          return 1
 
   def copy_path(self, svn_src_path, svn_src_rev, svn_dst_path):
-    ### FIXME: There's a loader question here -- do we need to say
-    ### "Node-kind: file|dir" for a copied node?  It would make sense
-    ### to omit it, since the only contribution it could make would be
-    ### to differ from the copy-source's actual node kind, and thereby
-    ### cause an error :-), but something tells me we need the header
-    ### to be present and to match the source node.
-    ###
-    ### The plan, after talking to Mike and Greg S, is to change the
-    ### loader to stop looking for this header when copyfrom history
-    ### is present.
+    # We don't need to include "Node-kind:" for copies; the loader
+    # ignores it anyway and just uses the source kind instead.
     self.dumpfile.write('Node-path: %s\n'
-                        ### 'Node-kind: file|dir\n'
                         'Node-action: add\n'
                         'Node-copyfrom-rev: %d\n'
                         'Node-copyfrom-path: /%s\n'
