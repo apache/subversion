@@ -114,10 +114,11 @@ svn_cl__proplist (apr_getopt_t *os,
                     {
                       svn_handle_warning (stderr, err);
                     }
+                  svn_error_clear (err);
                   continue;
                 }
               else
-                  return err;
+                return err;
             }
 
           for (j = 0; j < props->nelts; ++j)

@@ -75,10 +75,11 @@ svn_cl__revert (apr_getopt_t *os,
                 {
                   svn_handle_warning (stderr, err);
                 }
+              svn_error_clear (err);
               continue;
             }
           else
-              return err;
+            return err;
         }
 
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
