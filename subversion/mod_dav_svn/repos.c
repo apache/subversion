@@ -730,6 +730,7 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   ctx.params = params;
 
   ctx.wres.walk_ctx = params->walk_ctx;
+  ctx.wres.pool = params->pool;
   ctx.wres.resource = &ctx.res;
 
   /* copy the resource over and adjust the "info" reference */
