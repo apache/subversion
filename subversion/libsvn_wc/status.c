@@ -377,7 +377,7 @@ assemble_status (svn_wc_status_t **status,
       else if (path_kind == svn_node_none)
         {
           if (final_text_status != svn_wc_status_deleted)
-            final_text_status = svn_wc_status_absent;
+            final_text_status = svn_wc_status_missing;
         }
       else if (path_kind != entry->kind)
         final_text_status = svn_wc_status_obstructed;
@@ -961,7 +961,7 @@ make_dir_baton (void **dir_baton,
   if (parent_status
       && (parent_status->text_status != svn_wc_status_unversioned)
       && (parent_status->text_status != svn_wc_status_deleted)
-      && (parent_status->text_status != svn_wc_status_absent)
+      && (parent_status->text_status != svn_wc_status_missing)
       && (parent_status->text_status != svn_wc_status_obstructed)
       && (parent_status->entry->kind == svn_node_dir)
       && (eb->descend || (! pb)))

@@ -66,7 +66,7 @@ find_undeletables (void *baton,
   
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
-            && status->text_status != svn_wc_status_absent)
+            && status->text_status != svn_wc_status_missing)
            ||
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
