@@ -180,6 +180,21 @@ install-misc-pdf: $(MDOCS_PDF_TARGET) $(MDOCS_INSTALL_DIR)
 install-misc-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 	$(INSTALL) $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 
+build: htmlbook copytobuild
+
+htmlbook:
+	$(MAKE) clean && $(MAKE) all-html
+
+copytobuild:
+	mkdir build.tmp
+	rmdir build.tmp
+	svn co http://svn.sunbase.org/repos/svnbook_nb/build build.tmp
+	find build.tmp -type f | grep -v '/\.svn/' | xargs rm
+	cp -a book/html-chunk build.tmp/
+	cp -p book/svn-book.html build.tmp/
+	cp -a book/html-chunk/images build.tmp/
+	cp -a book/styles.css build.tmp/
+
 editmode:
 	for _prc in $(BOOKFILES); do \
 		echo -n "$$_prc: convert..."; \
