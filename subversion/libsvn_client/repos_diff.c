@@ -16,17 +16,16 @@
  * ====================================================================
  */
 
-/* This code uses an svn_delta_edit_fns_t editor driven by a tree delta
- * between two repository revisions (REV1 and REV2). For each file
- * encountered in the delta the editor constructs two temporary files, one
- * for each revision. This necessitates a separate request for the REV1
- * version of the file when the delta shows the file being modified or
- * deleted. Files that are added by the delta do not require a separate
- * request, the REV1 version is empty and the delta is sufficient to
- * construct the REV2 version. When both versions of each file have been
- * created the diff callback is invoked to display the difference between
- * the two files.
- */
+/* This code uses an editor driven by a tree delta between two
+ * repository revisions (REV1 and REV2). For each file encountered in
+ * the delta the editor constructs two temporary files, one for each
+ * revision. This necessitates a separate request for the REV1 version
+ * of the file when the delta shows the file being modified or
+ * deleted. Files that are added by the delta do not require a
+ * separate request, the REV1 version is empty and the delta is
+ * sufficient to construct the REV2 version. When both versions of
+ * each file have been created the diff callback is invoked to display
+ * the difference between the two files.  */
 
 #include "svn_client.h"
 #include "svn_wc.h"
@@ -37,8 +36,7 @@
 
 #include "client.h"
 
-/* Overall crawler editor baton.
- */
+/* Overall crawler editor baton.  */
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
      URL open in RA_SESSION below. */
@@ -386,9 +384,7 @@ get_empty_file (struct edit_baton *b,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function. The root of the comparison
- * hierarchy
- */
+/* An editor function. The root of the comparison hierarchy */
 static svn_error_t *
 set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 {
@@ -398,9 +394,7 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function. The root of the comparison
- * hierarchy
- */
+/* An editor function. The root of the comparison hierarchy */
 static svn_error_t *
 open_root (void *edit_baton,
            svn_revnum_t base_revision,
@@ -423,8 +417,7 @@ open_root (void *edit_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 delete_entry (const char *path,
               svn_revnum_t base_revision,
@@ -487,8 +480,7 @@ delete_entry (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 add_directory (const char *path,
                void *parent_baton,
@@ -525,8 +517,7 @@ add_directory (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 open_directory (const char *path,
                 void *parent_baton,
@@ -546,8 +537,7 @@ open_directory (const char *path,
 }
 
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 add_file (const char *path,
           void *parent_baton,
@@ -569,8 +559,7 @@ add_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 open_file (const char *path,
            void *parent_baton,
@@ -589,9 +578,7 @@ open_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.  Do the work of applying the
- * text delta.
- */
+/* An editor function.  Do the work of applying the text delta.  */
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window,
                 void *window_baton)
@@ -620,8 +607,7 @@ window_handler (svn_txdelta_window_t *window,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
@@ -652,10 +638,9 @@ apply_textdelta (void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.  When the file is closed we
- * have a temporary file containing a pristine version of the repository
- * file. This can be compared against the working copy.
- */
+/* An editor function.  When the file is closed we have a temporary
+ * file containing a pristine version of the repository file. This can
+ * be compared against the working copy.  */
 static svn_error_t *
 close_file (void *file_baton)
 {
@@ -715,8 +700,7 @@ close_file (void *file_baton)
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 close_directory (void *dir_baton)
 {
@@ -750,8 +734,7 @@ close_directory (void *dir_baton)
 }
 
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 change_file_prop (void *file_baton,
                   const char *name,
@@ -768,8 +751,7 @@ change_file_prop (void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 change_dir_prop (void *dir_baton,
                  const char *name,
@@ -787,8 +769,7 @@ change_dir_prop (void *dir_baton,
 }
 
 
-/* An svn_delta_edit_fns_t editor function.
- */
+/* An editor function.  */
 static svn_error_t *
 close_edit (void *edit_baton)
 {
@@ -799,8 +780,7 @@ close_edit (void *edit_baton)
   return SVN_NO_ERROR;
 }
 
-/* Create a repository diff editor and baton.
- */
+/* Create a repository diff editor and baton.  */
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
                              svn_wc_adm_access_t *adm_access,

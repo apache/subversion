@@ -30,7 +30,7 @@ Version 0.14.4 [Alpha Interim 4] (released DD MMMM 2002, revision RRRR)
  * many SWIG binding improvements:
     - better overall coverage of apr and libsvn_* library symbols
     - new 'make swig-py-ext' and 'make install-swig-py-ext' targets
- * nearly finish conversion of all editor/drivers to "new" style (#737)
+ * finish conversion of all editor/drivers to "new" style (#737)
  * removed xml-delta editors and editor drivers and related tests
  * new predicate-logic system added to automated-test system ("skip" support)
  * more work on mailer.py
