@@ -38,19 +38,19 @@
 
 
 
-/* Retrieve a named configuration value, specifying a default.
-   The configuration will first be checked for a configured default
-   (in the "default" group), then will check the specified server
-   group for an override. If nothing is found in either the default
-   section or the server section, the default value will be returned
-*/
+/** Retrieve a named configuration value, specifying a default.
+ *
+ * The @a cfg will first be checked for a configured default
+ * (in the @c "default" group) for @a option_name, then will check the
+ * specified @a server_group for an override. If neither declares a
+ * value, the @a default_value will be returned */
 static const char*
 get_server_setting(svn_config_t *cfg,
-                   const char* server_group,
-                   const char* option_name,
-                   const char* default_value)
+                   const char *server_group,
+                   const char *option_name,
+                   const char *default_value)
 {
-  const char* retval;
+  const char *retval;
   svn_config_get(cfg, &retval, "default", option_name, default_value);
   if (server_group)
     {
@@ -60,13 +60,14 @@ get_server_setting(svn_config_t *cfg,
 }
 
 
-/*  Retrieve a named configuration value, specifying a default.
-   The configuration will first be checked for a configured default
-   (in the "default" group), then will check the specified server
-   group for an override. If nothing is found in either the default
-   section or the server section, the default value will be
-   returned. an error will be returned if the value is not a valid
-   number. */
+/** Retrieve a named configuration value, specifying a default.
+ *
+ * The @a cfg will first be checked for a configured default
+ * (in the @c "default" group) for @a option_name, then will check the
+ * specified @a server_group for an override. If neither declares a
+ * value, the @a default_value will returned in @a result_value.  An
+ * @c svn_error_t will be returned if the value specified in the
+ * configuration is not a valid number. */ 
 static svn_error_t*
 get_server_setting_int(svn_config_t *cfg,
                        const char *server_group,
@@ -75,8 +76,8 @@ get_server_setting_int(svn_config_t *cfg,
                        apr_int64_t *result_value,
                        apr_pool_t *pool)
 {
-  const char* tmp_value;
-  char* end_pos;
+  const char *tmp_value;
+  char *end_pos;
   char *default_value_str = apr_psprintf(pool,
                                          "%" APR_INT64_T_FMT,
                                          default_value); 
