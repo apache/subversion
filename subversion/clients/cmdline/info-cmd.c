@@ -34,7 +34,7 @@
 
 /*** Code. ***/
 
-static void
+static svn_error_t *
 svn_cl__info_print_time (apr_time_t atime,
                          const char *desc,
                          apr_pool_t *pool)
@@ -45,6 +45,7 @@ svn_cl__info_print_time (apr_time_t atime,
   time_utf8 = svn_time_to_human_cstring (atime, pool);
   SVN_ERR (svn_utf_cstring_from_utf8 (&time_stdout, time_utf8, pool));
   printf ("%s: %s\n", desc, time_stdout);
+  return SVN_NO_ERROR;
 }
 
 
@@ -168,14 +169,16 @@ print_entry (const char *target,
     printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
 
   if (entry->cmt_date)
-    svn_cl__info_print_time (entry->cmt_date, "Last Changed Date", pool);
+    SVN_ERR (svn_cl__info_print_time (entry->cmt_date, 
+                                      "Last Changed Date", pool));
 
   if (entry->text_time)
-    svn_cl__info_print_time (entry->text_time, "Text Last Updated", pool);
+    SVN_ERR (svn_cl__info_print_time (entry->text_time, 
+                                      "Text Last Updated", pool));
 
   if (entry->prop_time)
-    svn_cl__info_print_time (entry->prop_time, "Properties Last Updated",
-                             pool);
+    SVN_ERR (svn_cl__info_print_time (entry->prop_time, 
+                                      "Properties Last Updated", pool));
  
   if (entry->checksum) 
     {
