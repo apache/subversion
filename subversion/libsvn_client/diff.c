@@ -288,7 +288,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       /* We don't currently support any options (well, other than -u, since we 
          default to unified diff output anyway), so if we received anything 
          other than that it's an error. */
-      if (diff_cmd_baton->options && diff_cmd_baton->options->nelts)
+      if (diff_cmd_baton->options)
         {
           int i;
 
