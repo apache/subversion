@@ -254,14 +254,16 @@ stuck to that same standard.</p>
 href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
 portability layer.  The Subversion client will run anywhere APR runs,
 which is most places.  The Subversion server (i.e., the repository
-side) is the same, except that it will not work on Win9x platforms
-(Win95/Win98/WinME), because it depends on <a
-href="http://www.sleepycat.com">Berkeley DB</a>, which has
-shared-memory segment problems on Win9x.</p>
+side) is the same, except that it will not host a BDB repository
+on Win9x platforms (Win95/Win98/WinME), because <a
+href="http://www.sleepycat.com">Berkeley DB</a> has
+shared-memory segment problems on Win9x.  FSFS repositories
+(introduced in version 1.1) do not have this restriction.</p>
 
-<p>To reiterate, a Subversion server can be run on all platforms
-except Win95/Win98/WinMe.  The Subversion client can be used on any
-platform where APR runs.</p>
+<p>To reiterate, the Subversion client can be run on any platform
+where APR runs. The Subversion server can also be run on any
+platform where APR runs, but cannot host a BDB repository
+on Win95/Win98/WinMe.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
