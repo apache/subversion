@@ -92,12 +92,18 @@ def guarantee_greek_repository(path):
   shutil.copytree(main.pristine_dir, path)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  os.system('chmod -R a+rw ' + path)
-    
-  if os.path.exists(main.current_repo_dir):
-    os.unlink(main.current_repo_dir)                              
-  os.symlink(os.path.basename(path), main.current_repo_dir)
-  
+  main.chmod_tree(path, 0666, 0666)
+
+  if main.windows:
+    if os.path.exists(main.current_repo_dir):
+      shutil.rmtree(main.current_repo_dir)
+    shutil.copytree(path, main.current_repo_dir)
+    main.chmod_tree(main.current_repo_dir, 0666, 0666)
+  else:
+    if os.path.exists(main.current_repo_dir):
+      os.unlink(main.current_repo_dir)
+    os.symlink(os.path.basename(path), main.current_repo_dir)
+
 
 ######################################################################
 # Subversion Actions
@@ -222,7 +228,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   details.  Return 0 if successful."""
 
   # Commit.
-  output, errput = main.run_svn(error_re_string, 'ci', '-m', '"log msg"',*args)
+  output, errput = main.run_svn(error_re_string, 'ci', '-m', 'log msg', *args)
 
   if (error_re_string):
     rm = re.compile(error_re_string)
