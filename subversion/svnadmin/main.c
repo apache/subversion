@@ -357,6 +357,36 @@ struct svnadmin_opt_state
 };
 
 
+/* Set *REVNUM to the revision specified by REVISION (or to
+   SVN_INVALID_REVNUM if that has the type 'unspecified'),
+   possibly making use of the YOUNGEST revision number in REPOS. */
+static svn_error_t *
+get_revnum (svn_revnum_t *revnum, const svn_opt_revision_t *revision, 
+            svn_revnum_t youngest, svn_repos_t *repos, apr_pool_t *pool)
+{
+  if (revision->kind == svn_opt_revision_number)
+    *revnum = revision->value.number;
+  else if (revision->kind == svn_opt_revision_head)
+    *revnum = youngest;
+  else if (revision->kind == svn_opt_revision_date)
+    SVN_ERR (svn_repos_dated_revision
+             (revnum, repos, revision->value.date, pool));
+  else if (revision->kind == svn_opt_revision_unspecified)
+    *revnum = SVN_INVALID_REVNUM;
+  else
+    return svn_error_create
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL, "Invalid revision specifier");
+
+  if (*revnum > youngest)
+    return svn_error_createf
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       "Revisions must not be greater than the youngest revision (%" 
+       SVN_REVNUM_T_FMT ")", youngest);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -403,20 +433,11 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   fs = svn_repos_fs (repos);
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
-  /* ### We only handle revision numbers right now, not dates. */
-  if (opt_state->start_revision.kind == svn_opt_revision_number)
-    start = opt_state->start_revision.value.number;
-  else if (opt_state->start_revision.kind == svn_opt_revision_head)
-    start = youngest;
-  else
-    start = SVN_INVALID_REVNUM;
-
-  if (opt_state->end_revision.kind == svn_opt_revision_number)
-    end = opt_state->end_revision.value.number;
-  else if (opt_state->end_revision.kind == svn_opt_revision_head)
-    end = youngest;
-  else
-    end = SVN_INVALID_REVNUM;
+  /* Find the revision numbers at which to start and end. */
+  SVN_ERR (get_revnum (&start, &opt_state->start_revision,
+                       youngest, repos, pool));
+  SVN_ERR (get_revnum (&end, &opt_state->end_revision,
+                       youngest, repos, pool));
 
   /* Fill in implied revisions if necessary. */
   if (start == SVN_INVALID_REVNUM)
@@ -428,11 +449,6 @@ subcommand_deltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
-  if ((start > youngest) || (end > youngest))
-    return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       _("Revisions must not be greater than the youngest revision (%ld)"),
-       youngest);
 
   /* Loop over the requested revision range, performing the
      predecessor deltification on paths changed in each. */
@@ -466,20 +482,11 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   fs = svn_repos_fs (repos);
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
 
-  /* ### We only handle revision numbers right now, not dates. */
-  if (opt_state->start_revision.kind == svn_opt_revision_number)
-    lower = opt_state->start_revision.value.number;
-  else if (opt_state->start_revision.kind == svn_opt_revision_head)
-    lower = youngest;
-  else
-    lower = SVN_INVALID_REVNUM;
-
-  if (opt_state->end_revision.kind == svn_opt_revision_number)
-    upper = opt_state->end_revision.value.number;
-  else if (opt_state->end_revision.kind == svn_opt_revision_head)
-    upper = youngest;
-  else
-    upper = SVN_INVALID_REVNUM;
+  /* Find the revision numbers at which to start and end. */
+  SVN_ERR (get_revnum (&lower, &opt_state->start_revision,
+                       youngest, repos, pool));
+  SVN_ERR (get_revnum (&upper, &opt_state->end_revision,
+                       youngest, repos, pool));
 
   /* Fill in implied revisions if necessary. */
   if (lower == SVN_INVALID_REVNUM)
@@ -496,11 +503,6 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
-  if ((lower > youngest) || (upper > youngest))
-    return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       _("Revisions must not be greater than the youngest revision (%ld)"),
-       youngest);
 
   /* Run the dump to STDOUT.  Let the user redirect output into
      a file if they want.  :-)  */
