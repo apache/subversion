@@ -266,8 +266,10 @@ $ svn commit -m "They don't make Sunday."
           <listitem>
             <para>Shows files in the status listing that would
               normally be omitted since they match a pattern in the
-              svn:ignore property. See <xref
-              linkend="svn-ch-7-sect-1.3.2"/> for more
+              <literal>global-ignores</literal> configuration option
+              or the <literal>svn:ignore</literal> property. See <xref
+              linkend="svn-ch-7-sect-1.3.2"/> and <xref
+              linkend="svn-ch-7-sect-2.3.3"/> for more
               information.</para>
           </listitem>
         </varlistentry>
