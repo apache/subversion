@@ -74,7 +74,8 @@ section for approved changes.)
      Votes:
       +1: mbk, ghudson, dionisos, epg
       +0: cmpilato
-      -1: gstein (why such a change now? sheesh)
+      -1: gstein. see:
+           http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=53839
 
 
    * r8035, r8036, r8037, r8128, r8156
