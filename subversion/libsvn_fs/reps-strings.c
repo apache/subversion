@@ -798,11 +798,20 @@ rep_read_contents (void *baton, char *buf, apr_size_t *len)
   if (rb->trail)
     SVN_ERR (txn_body_read_rep (&args, rb->trail));
   else
-    SVN_ERR (svn_fs__retry_txn (rb->fs,
-                                txn_body_read_rep,
-                                &args,
-                                rb->pool));
-  
+    {
+      /* Hey, guess what?  trails don't clear their own subpools.  In
+         the case of reading from the db, any returned data should
+         live in our pre-allocated buffer, so the whole operation can
+         happen within a single malloc/free cycle.  This prevents us
+         from creating millions of unnecessary trail subpools when
+         reading a big file. */
+      apr_pool_t *subpool = svn_pool_create (rb->pool);
+      SVN_ERR (svn_fs__retry_txn (rb->fs,
+                                  txn_body_read_rep,
+                                  &args,
+                                  subpool));
+      svn_pool_destroy (subpool);
+    }
   return SVN_NO_ERROR;
 }
 
