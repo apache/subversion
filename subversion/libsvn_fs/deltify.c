@@ -42,15 +42,7 @@ deltify (svn_fs_id_t *target_id,
          int props_only,
          trail_t *trail)
 {
-  svn_fs__node_revision_t 
-    *source_nr,           /* source node revision */
-    *target_nr;           /* target node revision */
-
-  const char
-    *target_pkey,         /* target property rep key  */
-    *target_dkey,         /* target data rep key      */
-    *source_pkey,         /* source property rep key  */
-    *source_dkey;         /* source data rep key      */
+  svn_fs__node_revision_t *source_nr, *target_nr;
 
   /* Turn those IDs into skels, so we can get the rep keys. */
   SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
@@ -62,19 +54,18 @@ deltify (svn_fs_id_t *target_id,
   if ((target_nr == NULL) || (source_nr == NULL))
     return SVN_NO_ERROR;
 
-  /* We have a target and a source.  Get all the rep keys... */
-  target_pkey = target_nr->prop_key;
-  target_dkey = target_nr->data_key;
-  source_pkey = source_nr->prop_key;
-  source_dkey = source_nr->data_key;
+  /* If there are props to deltify, deltify them. */
+  if ((target_nr->prop_key && source_nr->prop_key)
+      && (strcmp (target_nr->prop_key, source_nr->prop_key)))
+    SVN_ERR (svn_fs__rep_deltify (fs, target_nr->prop_key, 
+                                  source_nr->prop_key, trail));
 
-  if ((target_pkey && source_pkey)
-      && (strcmp (target_pkey, source_pkey)))
-    SVN_ERR (svn_fs__rep_deltify (fs, target_pkey, source_pkey, trail));
-
-  if ((target_dkey && source_dkey) && (! props_only)
-      && (strcmp (target_dkey, source_dkey)))     
-   SVN_ERR (svn_fs__rep_deltify (fs, target_dkey, source_dkey, trail));
+  /* If there are contents to deltify (and we're not only looking at
+     props), deltify them. */
+  if ((target_nr->data_key && source_nr->data_key) && (! props_only)
+      && (strcmp (target_nr->data_key, source_nr->data_key)))     
+   SVN_ERR (svn_fs__rep_deltify (fs, target_nr->data_key, 
+                                 source_nr->data_key, trail));
 
   return SVN_NO_ERROR;
 }
@@ -112,9 +103,9 @@ undeltify (svn_fs_id_t *id,
 
 
 
-/* Deltify TARGET_ID in FS against its immediately successor (also in
-   FS).  Pass IS_DIR through to deltify(), and do all of this stuff as
-   part of TRAIL.  */
+/* Deltify TARGET_ID in FS against its immediately successor if that
+   successor exists in FS and is immutable.  Pass IS_DIR through to
+   deltify(), and do all of this stuff as part of TRAIL.  */
 static svn_error_t *
 deltify_by_id (svn_fs_t *fs,
                svn_fs_id_t *target_id,
@@ -124,6 +115,7 @@ deltify_by_id (svn_fs_t *fs,
   svn_fs_id_t *source_id = NULL, *tmp_id;
   apr_size_t len = svn_fs__id_length (target_id);
   dag_node_t *node;
+  int is_mutable = 0;
 
   /* Increment TMP_ID as a regular successor of TARGET_ID, and see if
      it exists in FS. */
@@ -131,12 +123,16 @@ deltify_by_id (svn_fs_t *fs,
   tmp_id->digits[len - 1]++;
   if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
     {
-      source_id = tmp_id;
+      /* If TMP_ID is *immutable*, we'll use that our deltification
+         baseline. */
+      SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+      if (! is_mutable)
+        source_id = tmp_id;
     }
   else
     {
       /* If that doesn't exist, we'll branch TARGET_ID, and see if
-         that exists. */
+         that exists.  */
       tmp_id = apr_palloc (trail->pool, sizeof (*tmp_id));
       tmp_id->digits = apr_pmemdup (trail->pool, target_id->digits, 
                                     (len + 3) * sizeof (target_id->digits[0]));
@@ -145,7 +141,13 @@ deltify_by_id (svn_fs_t *fs,
       tmp_id->digits[len + 2] = -1;
       
       if (SVN_NO_ERROR == svn_fs__dag_get_node (&node, fs, tmp_id, trail))
-        source_id = tmp_id;
+        {
+          /* If TMP_ID is *immutable*, we'll use that our deltification
+             baseline. */
+          SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+          if (! is_mutable)
+            source_id = tmp_id;
+        }
     }
 
   /* If we found a valid source ID, perform the deltification step. */

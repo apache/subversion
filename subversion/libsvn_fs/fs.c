@@ -396,7 +396,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   /* Create the directory for the new Berkeley DB environment.  */
   apr_err = apr_dir_make (fs->path, APR_OS_DEFAULT, fs->pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err != APR_SUCCESS)
     return svn_error_createf (apr_err, 0, 0, fs->pool,
                               "creating Berkeley DB environment dir `%s'",
                               fs->path);
@@ -591,7 +591,6 @@ svn_error_t *
 svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   int db_err;
   DB_ENV *env;
 
@@ -603,12 +602,9 @@ svn_fs_delete_berkeley (const char *path,
   db_err = env->remove (env, path, DB_FORCE);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
-  
+
   /* Remove the environment directory. */
-  apr_err = apr_dir_remove_recursively (path, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (apr_err, 0, 0, pool,
-                              "recursively removing `%s'", path);
+  SVN_ERR (svn_io_remove_dir (path, pool));
 
   return SVN_NO_ERROR;
 }
