@@ -351,7 +351,10 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
   *rsrc = apr_hash_get(props, url, APR_HASH_KEY_STRING);
   if (*rsrc == NULL)
     {
-      /* ### should have been in there... */
+      /* ### hmmm, should have been in there... */
+      return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
+                               "failed to find label \"%s\" for url \"%s\"",
+                               label, url);
     }
 
   return SVN_NO_ERROR;
