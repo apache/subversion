@@ -128,10 +128,10 @@ svn_error_t *svn_fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool);
  * Note: this is just what was passed to @c svn_fs_create() or
  * @a svn_fs_open() -- might be absolute, might not.
  */
-const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool, apr_pool_t *pool);
+const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool);
 
 /** Delete the filesystem at @a path. */
-svn_error_t *svn_fs_delete (const char *path, apr_pool_t *pool);
+svn_error_t *svn_fs_delete_fs (const char *path, apr_pool_t *pool);
 
 /** Copy a possibly live Subversion filesystem from @a src_path to
  * @a dest_path.  If @a clean is @c TRUE, perform cleanup on the

@@ -17,6 +17,8 @@
  */
 
 
+#include "svn_types.h"
+#include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
@@ -43,6 +45,7 @@ static svn_error_t *
 get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
                     apr_pool_t *pool)
 {
+#if 0
   /* XXX Placeholder implementation.  The real implementation should
      support DSO-loading of back-end libraries and should return an
      error rather than aborting if fsap_name is unrecognized. */
@@ -52,6 +55,7 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
     *vtable = svn_fs_fs__vtable;
   else
     abort();
+#endif
   return SVN_NO_ERROR;
 }
 
@@ -94,11 +98,11 @@ write_fsap_name (const char *path, const char *fsap_name, apr_pool_t *pool)
   const char *fsap_filename;
   apr_file_t *file;
 
-  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT));
+  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   fsap_filename = svn_path_join (path, FSAP_NAME_FILENAME, pool);
   SVN_ERR (svn_io_file_open (&file, fsap_filename,
                              APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
-                             APR_OS_DEFAULT));
+                             APR_OS_DEFAULT, pool));
   SVN_ERR (svn_io_file_write_full (file, fsap_name, strlen(fsap_name), NULL,
                                    pool));
   SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
@@ -149,7 +153,7 @@ svn_fs_create (svn_fs_t *fs, const char *path, const char *fsap_name,
   SVN_ERR (write_fsap_name (path, fsap_name, pool));
 
   /* Perform the actual creation. */
-  return vtable->create (fs, path);
+  return vtable->create (fs, path, pool);
 }
 
 svn_error_t *
@@ -162,13 +166,13 @@ svn_fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 }
 
 const char *
-svn_fs_path (svn_fs_t *fs, apr_pool_t *pool, apr_pool_t *pool)
+svn_fs_path (svn_fs_t *fs, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, fs->path);
 }
 
 svn_error_t *
-svn_fs_delete (const char *path, apr_pool_t *pool)
+svn_fs_delete_fs (const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
@@ -198,7 +202,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   /* Create the FS directory and write out the fsap-name file. */
   SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, fs->pool));
-  SVN_ERR (write_fsap_name (path, fsap_name, fs->pool));
+  SVN_ERR (write_fsap_name (path, DEFAULT_FSAP_NAME, fs->pool));
 
   /* Perform the actual creation. */
   return vtable->create (fs, path, fs->pool);
@@ -224,7 +228,7 @@ svn_fs_delete_berkeley (const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, pool));
   return vtable->delete_fs (path, pool);
 }
 
@@ -234,7 +238,7 @@ svn_fs_hotcopy_berkeley (const char *src_path, const char *dest_path,
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, pool));
   return vtable->hotcopy (src_path, dest_path, clean_logs, pool);
 }
 
@@ -243,7 +247,7 @@ svn_fs_berkeley_recover (const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, pool));
   return vtable->bdb_recover (path, pool);
 }
 
@@ -265,7 +269,7 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FSAP_NAME, pool));
   return vtable->bdb_logfiles (logfiles, path, only_unused, pool);
 }
 
@@ -430,7 +434,7 @@ svn_error_t *
 svn_fs_history_location (const char **path, svn_revnum_t *revision,
                          svn_fs_history_t *history, apr_pool_t *pool)
 {
-  return history->vtable->lcation (path, revision, history, pool);
+  return history->vtable->location (path, revision, history, pool);
 }
 
 svn_error_t *
@@ -495,7 +499,7 @@ svn_fs_change_node_prop (svn_fs_root_t *root, const char *path,
                          const char *name, const svn_string_t *value,
                          apr_pool_t *pool)
 {
-  return root->vtable->node_prop (root, path, name, value, pool);
+  return root->vtable->change_node_prop (root, path, name, value, pool);
 }
 
 svn_error_t *
@@ -503,8 +507,8 @@ svn_fs_props_changed (svn_boolean_t *changed_p, svn_fs_root_t *root1,
                       const char *path1, svn_fs_root_t *root2,
                       const char *path2, apr_pool_t *pool)
 {
-  return root->vtable->props_changed (changed_p, root1, path1, root2, path2,
-                                      pool);
+  return root1->vtable->props_changed (changed_p, root1, path1, root2, path2,
+                                       pool);
 }
 
 svn_error_t *

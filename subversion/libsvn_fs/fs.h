@@ -64,14 +64,12 @@ typedef struct fs_vtable_t
                                    const char *name,
                                    const svn_string_t *value,
                                    apr_pool_t *pool);
-  svn_error_t *(get_uuid) (svn_fs_t *fs, const char **uuid, apr_pool_t *pool);
-  svn_error_t *(set_uuid) (svn_fs_t *fs, const char *uuid, 
-                           apr_pool_t *pool);
+  svn_error_t *(*get_uuid) (svn_fs_t *fs, const char **uuid, apr_pool_t *pool);
+  svn_error_t *(*set_uuid) (svn_fs_t *fs, const char *uuid, apr_pool_t *pool);
   svn_error_t *(*revision_root) (svn_fs_root_t **root_p, svn_fs_t *fs,
                                  svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*begin_txn) (svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                             svn_revnum_t rev, svn_config_t *cfg, 
-                             apr_pool_t *pool);
+                             svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*open_txn) (svn_fs_txn_t **txn, svn_fs_t *fs,
                             const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn) (svn_fs_t *fs, const char *txn_id,
@@ -94,8 +92,13 @@ typedef struct txn_vtable_t
 			       const svn_string_t *value, apr_pool_t *pool);
   svn_error_t *(*root) (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
 			apr_pool_t *pool);
-};
+} txn_vtable_t;
 
+/* Some of these operations accept multiple root arguments.  Since the
+   roots may not all have the same vtable, we need a rule to determine
+   which root's vtable is used.  The rule is: if one of the roots is
+   named "target", we use that root's vtable; otherwise, we use the
+   first root argument's vtable. */
 typedef struct root_vtable_t
 {
   /* Determining what has changed in a root */
@@ -104,8 +107,8 @@ typedef struct root_vtable_t
                                  apr_pool_t *pool);
 
   /* Generic node operations */
-  svn_error_t (*check_path) (svn_node_kind_t *kind_p, svn_fs_root_t *root,
-			     const char *path, apr_pool_t *pool);
+  svn_error_t *(*check_path) (svn_node_kind_t *kind_p, svn_fs_root_t *root,
+                              const char *path, apr_pool_t *pool);
   svn_error_t *(*node_history) (svn_fs_history_t **history_p,
                                 svn_fs_root_t *root, const char *path,
                                 apr_pool_t *pool);
@@ -153,7 +156,7 @@ typedef struct root_vtable_t
                                  apr_pool_t *pool);
 
   /* Files */
-  svn_error_t *(*file_length) (apr_off_t *length_p, svn_fs_root_t *root,
+  svn_error_t *(*file_length) (svn_filesize_t *length_p, svn_fs_root_t *root,
                                const char *path, apr_pool_t *pool);
   svn_error_t *(*file_md5_checksum) (unsigned char digest[],
 				     svn_fs_root_t *root,
@@ -218,7 +221,7 @@ struct svn_fs_t
   void *warning_baton;
 
   /* The filesystem configuration */
-  svn_config_t *config;
+  apr_hash_t *config;
 
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
