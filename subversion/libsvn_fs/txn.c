@@ -117,7 +117,7 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
 
 svn_error_t *
-svn_fs_txn_name (char **name_p,
+svn_fs_txn_name (const char **name_p,
                  svn_fs_txn_t *txn,
                  apr_pool_t *pool)
 {
