@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.37 $ of this document.)
+              ($Revision: 1.38 $ of this document.)
 
 * Introduction
 
@@ -199,9 +199,9 @@ A small matter, but one dear to our hearts...
 
 Log messages are a matter of project policy, not version control
 software policy.  If you give no log message, then Inversion defaults
-to an empty message -- unless the project admin sets the right
-configuration option, in which case log messages will be required *for
-that project only*.
+to an empty message.  Maybe there can be a per-project configuration
+option, requiring non-empty log messages for commits *in that project
+only*, though I have doubts about even the usefulness of that.
 
 (CVS tries to require log messages, but fails: we've all seen
 thousands of empty log messages in CVS, meaning the user committed
