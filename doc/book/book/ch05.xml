@@ -924,7 +924,10 @@ Available commands:
           use the <literal>cat</literal> command to display the
           contents of a file.</para>
 
-        <screen>
+        <example id="svn-ch-7-sect-3.1.3-ex-1">
+          <title>Using svnshell to navigate the repository</title>
+
+          <screen>
 &lt;rev: 2 /&gt;$ ls
    REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
 ----------------------------------------------------------------------------
@@ -956,6 +959,7 @@ This is the file 'iota'.
 &lt;rev: 1 /&gt;$ exit
 $
 </screen>
+        </example>
 
         <para>As you can see in the previous example, multiple
           commands may be specified at a single command prompt,
@@ -1190,7 +1194,7 @@ $
         each outstanding transaction in your repository:</para>
 
       <example id="svn-ch-5-sect-3.2-ex-1">
-        <title>Reporting outstanding transactions</title>
+        <title>txn-info.sh (reporting outstanding transactions)</title>
 
         <programlisting>
 #!/bin/sh
@@ -1436,7 +1440,7 @@ $ svnadmin dump myrepos &gt; dumpfile
         Subversion repository dump file, and effectively replays those
         dumped revisions into the target repository for that
         operation.  It also gives informative feedback, this time
-        using the standard output stream.</para>
+        using the standard output stream:</para>
 
       <screen>
 $ svnadmin load newrepos &lt; dumpfile
@@ -1761,15 +1765,15 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
         that will reside in the same parent directory on your local
         disk, you can use an alternative directive, the
         <literal>SVNParentPath</literal> directive, to indicate that
-        common parent directory.  For example, if you know you will
-        be creating multiple Subversion repositories in a directory
+        common parent directory.  For example, if you know you will be
+        creating multiple Subversion repositories in a directory
         <filename>/usr/local/svn</filename> that would be accessed via
         URLs like <systemitem
         class="url">http://my.server.com/svn/repos1</systemitem>,
         <systemitem
         class="url">http://my.server.com/svn/repos2</systemitem>, and
-        so on, you could use the following
-        <filename>httpd.conf</filename> configuration syntax:</para>
+        so on, you could use the <filename>httpd.conf</filename>
+        configuration syntax in the following example:</para>
             
       <screen>
 &lt;Location /svn&gt;
@@ -2204,6 +2208,27 @@ $
         linkend="svn-ch-3"/>.</para>
 
     </sect2>
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 6:  SUMMARY                                         *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ch-5-sect-6">
+    <title>Summary</title>
+
+    <para>In this chapter, we've provided useful information about how
+      to administer Subversion repositories.  We've introduced various
+      tools&mdash;the <command>svnadmin</command>,
+      <command>svnlook</command> programs, the Berkeley DB utilities,
+      and others&mdash;for assisting you with this task.  We've also
+      covered some of the basic Apache configuration steps necessary
+      for making your repository accessible over a network.  And
+      throughout the chapter, we've noted common administration
+      pitfalls, and suggestions for avoiding them.</para>
+
+      <!-- ### cmpilato : where's the hook?  why can't i come up with
+           something clever to say?  bummer... -->
+
   </sect1>
 </chapter>
 
