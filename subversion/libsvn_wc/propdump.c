@@ -94,6 +94,7 @@
 
 
 
+#include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
@@ -115,8 +116,8 @@
  *
  * If bad base, or anything else is wrong, returns -1.
  */
-static size_t
-num_into_string (char *buf, int num, int base)
+static long int
+num_into_string (char *buf, long int num, int base)
 {
   char *p, *flip;
   size_t len;
@@ -142,25 +143,22 @@ num_into_string (char *buf, int num, int base)
 
   /* Why do you always have to be so negative? */
   if (num < 0)
-  {
     negative = 1;
-    num = -num;
-  }
 
-  while (num > 0)
-  {
+  do {
     int i;
-
-    i = (num % base);
-
+    
+    /* abs() is not a macro, according to K&R. */
+    i = abs (num % base);
+    
     /* Ascii numerology -- skip across the gap between digits and letters. */
     if (i > 9)
       i += ('A' - ('9' + 1));
-
+    
     *p++ = '0' + i;   /* '0' + num  ==>  ascii value of num */
     num /= base;
-  }
-
+  } while (num != 0);
+  
   if (negative)
     *p++ = '-';
 
@@ -186,9 +184,9 @@ num_into_string (char *buf, int num, int base)
 }
 
 
-/* kff todo: there's that pesky size_t to int conversion happening
- * again.  I think it's safe in the ranges we're dealing with here,
- * but this could be a gotcha... Jim, Greg, anyone want to comment?
+/* kff todo: there's that pesky size_t to long int conversion
+ * happening again.  Must ask Jim or Greg; I think I don't fully
+ * understand arithmetic type conversion in C...
  */
 static size_t      /* Returns number of bytes in result. */
 size_t_into_string (char *buf, size_t num)
