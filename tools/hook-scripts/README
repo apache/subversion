@@ -24,3 +24,8 @@ Your Mileage May Vary.
    4. svnperms.py, svnperms.conf.example
       Similar to commit-access-control.pl, but uses a different
       syntax.  Run 'svnperms.py -h' for usage.
+
+   5. propchange-email.pl
+      Uses the `svnlook' program to send revision property change notice
+      emails.  Invoke it from `repository/hook/post-revprop-change'.  Run
+      the script with no arguments for usage.

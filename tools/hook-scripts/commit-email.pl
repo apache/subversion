@@ -192,15 +192,15 @@ chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # Get the author, date, and log from svnlook.
-my @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'info');
+my @svnlooklines = &read_from_process($svnlook, 'info', $repos, '-r', $rev)
 my $author = shift @svnlooklines;
 my $date = shift @svnlooklines;
 shift @svnlooklines;
 my @log = map { "$_\n" } @svnlooklines;
 
 # Figure out what directories have changed using svnlook.
-my @dirschanged = &read_from_process($svnlook, $repos,
-                                     'rev', $rev, 'dirs-changed');
+my @dirschanged = &read_from_process($svnlook, 'dirs-changed', $repos, 
+                                     '-r', $rev);
 
 # Lose the trailing slash in the directory names if one exists, except
 # in the case of '/'.
@@ -218,7 +218,7 @@ for (my $i=0; $i<@dirschanged; ++$i)
   }
 
 # Figure out what files have changed using svnlook.
-@svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'changed');
+@svnlooklines = &read_from_process($svnlook, 'changed', $repos, '-r', $rev);
 
 # Parse the changed nodes.
 my @adds;
@@ -252,7 +252,7 @@ foreach my $line (@svnlooklines)
   }
 
 # Get the diff from svnlook.
-my @difflines = &read_from_process($svnlook, $repos, 'rev', $rev, 'diff');
+my @difflines = &read_from_process($svnlook, 'diff', $repos, '-r', $rev)
 
 ######################################################################
 # Modified directory name collapsing.

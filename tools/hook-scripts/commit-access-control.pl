@@ -176,7 +176,7 @@ chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # Get the author from svnlook.
-my @svnlooklines = &read_from_process($svnlook, $repos, 'txn', $txn, 'author');
+my @svnlooklines = &read_from_process($svnlook, 'author', $repos, '-t', $txn);
 my $author = shift @svnlooklines;
 unless (length $author)
   {
@@ -184,8 +184,8 @@ unless (length $author)
   }
 
 # Figure out what directories have changed using svnlook..
-my @dirs_changed = &read_from_process($svnlook, $repos,
-                                      'txn', $txn, 'dirs-changed');
+my @dirs_changed = &read_from_process($svnlook, 'dirs-changed', $repos,
+                                      '-t', $txn);
 
 # Lose the trailing slash in the directory names if one exists, except
 # in the case of '/'.
@@ -204,7 +204,7 @@ for (my $i=0; $i<@dirs_changed; ++$i)
 
 # Figure out what files have changed using svnlook.
 my @files_changed;
-foreach my $line (&read_from_process($svnlook, $repos, 'txn', $txn, 'changed'))
+foreach my $line (&read_from_process($svnlook, 'changed', $repos, '-t', $txn))
   {
     # Split the line up into the modification code and path, ignoring
     # property modifications.
