@@ -98,7 +98,18 @@ svn_cl__import (apr_getopt_t *os,
 
   /* Optionally get the dest entry name. */
   if (targets->nelts < 3)
-    new_entry = NULL;
+    {
+      /* If no entry name is supplied, try to derive it from the local
+         path. */
+      if (svn_path_is_empty (path, svn_path_local_style))
+        return svn_error_create
+          (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+           "unable to determine repository entry name from local path");
+      else
+        new_entry = svn_path_last_component (path,
+                                             svn_path_local_style,
+                                             pool);
+    }
   else if (targets->nelts == 3)
     new_entry = ((svn_string_t **) (targets->elts))[2];
   else
@@ -110,7 +121,7 @@ svn_cl__import (apr_getopt_t *os,
                                             &trace_edit_baton,
                                             path,
                                             pool));
-  
+
   SVN_ERR (svn_client_import (NULL, NULL,
                               trace_editor, trace_edit_baton,
                               path,
