@@ -66,7 +66,7 @@ parse_str (svn_stringbuf_t *str, apr_pool_t *pool)
 
 /* Parse a skeleton from a C string.  */
 static skel_t *
-parse_cstr (char *str, apr_pool_t *pool)
+parse_cstr (const char *str, apr_pool_t *pool)
 {
   return svn_fs_base__parse_skel (str, strlen (str), pool);
 }
@@ -436,7 +436,7 @@ parse_invalid_atoms (const char **msg,
     {
       if (ia->type == 1)
         {
-          skel_t *skel = parse_cstr ((char *) ia->data, pool);
+          skel_t *skel = parse_cstr (ia->data, pool);
           if (check_atom (skel, ia->data, ia->len))
             return fail (pool, 
                          "failed to detect parsing error in '%s'", ia->data);
