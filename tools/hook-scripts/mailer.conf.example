@@ -49,16 +49,19 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 #
 # The subset of user-defined groups identified by the repository are further
 # refined based on the for_paths option. A group is selected if at least
-# one path(*) in the commit matches the for_paths regular expression.
+# one path(*) in the commit matches the for_paths regular expression. Note
+# that the paths are relative to the root of the repository and do not
+# have a leading slash.
 #
 # (*) Actually, each path will select just one group. Thus, it is possible
 # that one group will match against all paths, while another group matches
-# none of the paths, even though its for_paths would make that possible.
+# none of the paths, even though its for_paths would have selected some of
+# the paths in the commit.
 #
 # Groups are matched in no particular order. Do not depend upon their
 # order within this configuration file. The values from [defaults] will
 # be used if no group is matched or an option in a group does not override
-# the corresponding value from [options].
+# the corresponding value from [defaults].
 #
 # Generally, a commit email is generated for each group that has been
 # selected. The script will try to minimize mails, so it may be possible
@@ -85,7 +88,7 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 #
 # The client name can be extracted with a regular expression like:
 #
-#   for_paths = /clients/(?P<client>[^/]*)($|/)
+#   for_paths = clients/(?P<client>[^/]*)($|/)
 #
 # The substitution is performed using Python's dict-based string
 # interpolation syntax:
