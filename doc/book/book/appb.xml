@@ -15,7 +15,7 @@
     <para>The tool is called <filename>cvs2svn.py</filename>, and it's a
       python script that lives within Subversion's source tree in the
       <filename>tools</filename> subdirectory.  In order to run this
-      program, you need a number of external things:</para>
+      program, you need a couple of external things:</para>
     
     <variablelist>
       
@@ -40,17 +40,6 @@
             drop this module into a place where python can find it,
             somewhere like
             <filename>/usr/local/lib/python2.2/</filename>.</para></listitem>
-      </varlistentry>
-      
-      <varlistentry>
-        <term>svn python bindings</term> 
-        
-        <listitem><para>The SWIG-generated python bindings to the
-            Subversion libraries must be installed.  In particular,
-            <filename>cvs2svn.py</filename> needs to make calls into
-            <filename>libsvn_fs</filename> so it can commit data into
-            a Subversion repository.  (See <xref
-              linkend="svn-ch-7-sect-2.3"/>.)  </para></listitem>
       </varlistentry>
       
     </variablelist>
