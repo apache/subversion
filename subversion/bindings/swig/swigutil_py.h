@@ -1,5 +1,5 @@
 /*
- * swigutil.h :  utility functions and stuff for the SWIG bindings
+ * swigutil_py.h :  utility functions and stuff for the SWIG Python bindings
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -17,8 +17,10 @@
  */
 
 
-#ifndef SVN_SWIG_SWIGUTIL_H
-#define SVN_SWIG_SWIGUTIL_H
+#ifndef SVN_SWIG_SWIGUTIL_PY_H
+#define SVN_SWIG_SWIGUTIL_PY_H
+
+#include <Python.h>
 
 #include <apr.h>
 #include <apr_pools.h>
@@ -28,10 +30,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
-
-#ifdef SWIGPYTHON
-#include <Python.h>
-#endif
+#include "svn_delta.h"
 
 
 #ifdef __cplusplus
@@ -52,39 +51,45 @@ extern "C" {
 
 typedef struct _unnamed swig_type_info;
 PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
+swig_type_info *SWIG_TypeQuery(const char *name);
 
 #endif /* SVN_NEED_SWIG_TYPES */
 
 
-#ifdef SWIGPYTHON
-
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Python dict */
-PyObject *svn_swig_prophash_to_dict(apr_hash_t *hash);
+PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
-PyObject *svn_swig_convert_hash(apr_hash_t *hash, swig_type_info *type);
+PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type);
 
 /* helper function to convert a 'char ***' into a Python list of string
    objects */
-PyObject *svn_swig_c_strings_to_list(char **strings);
+PyObject *svn_swig_py_c_strings_to_list(char **strings);
+
+/* helper function to convert an array of 'const char *' to a Python lis
+   of string objects */
+PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
    objects must remain alive -- the values are not copied. This is
    appropriate for incoming arguments which are defined to last the
    duration of the function's execution.  */
-const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
-                                                    apr_pool_t *pool);
+const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
+                                                       apr_pool_t *pool);
 
-#endif /* SWIGPYTHON */
-
+/* make a editor that "thunks" from C callbacks up to Python */
+void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             PyObject *py_editor,
+                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* SVN_SWIG_SWIGUTIL_H */
+#endif  /* SVN_SWIG_SWIGUTIL_PY_H */
 
 
 /* ----------------------------------------------------------------

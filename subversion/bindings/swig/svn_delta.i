@@ -32,7 +32,8 @@
     void **,
     svn_delta_xml_parser_t **,
     svn_txdelta_window_t **,
-    svn_delta_edit_fns_t **,
+    const svn_delta_editor_t **,
+    const svn_delta_edit_fns_t **,
     struct svn_pipe_edit_baton **,
     svn_txdelta_window_handler_t *
 };
@@ -58,9 +59,24 @@
 %ignore svn_txdelta_window_t::new_data;
 // [swig 1.3.12] %immutable svn_txdelta_window_t::new_data;
 
+/* -----------------------------------------------------------------------
+   thunk editors for the various language bindings.
+*/
+
+#ifdef SWIGPYTHON
+void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             PyObject *py_editor,
+                             apr_pool_t *pool);
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_delta.h
 %{
 #include "svn_delta.h"
+
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
 %}
