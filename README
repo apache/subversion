@@ -129,7 +129,7 @@ IV.   QUICKSTART GUIDE
       Note: The repository should NOT be on a remote filesystem like
       NFS or AFS.  For details see:
 
-          http://www.sleepycat.com/docs/ref/env/remote.html
+          http://subversion.tigris.org/project_faq.html#nfs
 
 
       3.  Creating a Subversion Server
