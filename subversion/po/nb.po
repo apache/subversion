@@ -332,7 +332,7 @@ msgstr ""
 "ARG (noen kommadoer tar også \"ARG1:ARG2\"-områder)\n"
 "                             Et revisjonsargument kan være en av:\n"
 "                                NUMMER       revisjonsnummer\n"
-"                                \"{\" DATE \"}\" revisjonen som begynner på\n"
+"                                \"{\" DATO \"}\" revisjonen som begynner på\n"
 "                                             angitt dag\n"
 "                                \"HEAD\"       seneste revisjon i depotet\n"
 "                                \"BASE\"       baserevisjon for objektets\n"
@@ -913,8 +913,8 @@ msgstr ""
 "\n"
 "  Både KILDE og MÅL kan være filstier til arbeidskopi (WC) eller nett-\n"
 "  adresser:\n"
-"    WC  -> WC   Flytt og forbered for innsending (med historikk).\n"
-"    URL -> URL: Komplett omdøpning på server-siden.\n"
+"    WC  -> WC:  Flytt og forbered for innsending (med historikk).\n"
+"    URL -> URL: Komplett omdøping på server-siden.\n"
 
 #: clients/cmdline/main.c:456
 msgid ""
@@ -1469,11 +1469,11 @@ msgstr "Ekstern eksport er ferdig.\n"
 
 #: clients/cmdline/notify.c:260
 msgid "Export complete.\n"
-msgstr "Eksport er ferdig.\n"
+msgstr "Eksport fullført.\n"
 
 #: clients/cmdline/notify.c:267
 msgid "External checkout complete.\n"
-msgstr "Uthenting av eksternt objekt er ferdig.\n"
+msgstr "Uthenting av eksternt objekt fullført.\n"
 
 #: clients/cmdline/notify.c:268
 msgid "Checkout complete.\n"
@@ -1481,7 +1481,7 @@ msgstr "Uthenting ferdig.\n"
 
 #: clients/cmdline/notify.c:275
 msgid "External update complete.\n"
-msgstr "Oppdatering av eksternt objekt er ferdig.\n"
+msgstr "Oppdatering av eksternt objekt fullført.\n"
 
 #: clients/cmdline/notify.c:276
 msgid "Update complete.\n"
@@ -1559,7 +1559,7 @@ msgstr "Passord for '%s': "
 #: clients/cmdline/prompt.c:248
 #, c-format
 msgid "Error validating server certificate for '%s':\n"
-msgstr "Feil under godkjenning av tjener-sertifikat for '%s':\n"
+msgstr "Feil under godkjenning av tjenersertifikat for '%s':\n"
 
 #: clients/cmdline/prompt.c:254
 msgid ""
@@ -1655,12 +1655,12 @@ msgstr "Feil kodingsparameter: Egenskapsverdi er ikke lagret som UTF8"
 #: clients/cmdline/propedit-cmd.c:132
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
-msgstr "Sett ny verdi for egenskap '%s' på revisjon %ld\n"
+msgstr "Satte ny verdi for egenskapen '%s' på revisjon %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:138
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
-msgstr "Ingen endringer til egenskap '%s' på revisjon %ld\n"
+msgstr "Ingen endringer for egenskapen '%s' på revisjon %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:146
 #, c-format
@@ -1733,7 +1733,7 @@ msgid ""
 "Committed revision %ld.\n"
 msgstr ""
 "\n"
-"Innsendt revisjon %ld.\n"
+"La inn revisjon %ld.\n"
 
 #: clients/cmdline/util.c:128
 msgid ""
@@ -1950,7 +1950,7 @@ msgstr "Problem med å kjøre logg"
 
 #: include/svn_error_codes.h:314
 msgid "Can't find a working copy path"
-msgstr "Finner en ikke filsti for arbeidskopi"
+msgstr "Finner ikke filsti for arbeidskopi"
 
 #: include/svn_error_codes.h:318
 msgid "Working copy is not up-to-date"
@@ -2802,7 +2802,7 @@ msgstr "'%s' er endret lokalt"
 #: libsvn_client/diff.c:92
 #, c-format
 msgid "%sProperty changes on: %s%s"
-msgstr "%sEgenskap endres på: %s%s"
+msgstr "%sEgenskapsforandringer på: %s%s"
 
 #: libsvn_client/diff.c:114
 #, c-format
@@ -3593,7 +3593,7 @@ msgstr "Overskred tidsgrensen under venting på tjener"
 
 #: libsvn_ra_dav/util.c:467
 msgid "Can't calculate the request body size"
-msgstr "Kan ikke regne ut størrelsen på forespørsels-innholdet"
+msgstr "Kan ikke regne ut størrelsen på forespørselsinnholdet"
 
 #: libsvn_ra_dav/util.c:653
 #, c-format
