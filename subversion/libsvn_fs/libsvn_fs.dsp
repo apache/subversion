@@ -127,10 +127,6 @@ SOURCE=".\nodes-table.c"
 # End Source File
 # Begin Source File
 
-SOURCE=.\proplist.c
-# End Source File
-# Begin Source File
-
 SOURCE=".\reps-strings.c"
 # End Source File
 # Begin Source File
@@ -212,10 +208,6 @@ SOURCE=".\node-rev.h"
 # Begin Source File
 
 SOURCE=".\nodes-table.h"
-# End Source File
-# Begin Source File
-
-SOURCE=.\proplist.h
 # End Source File
 # Begin Source File
 
