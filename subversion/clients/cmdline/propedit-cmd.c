@@ -114,7 +114,7 @@ svn_cl__propedit (apr_getopt_t *os,
       /* Run the editor on a temporary file in '.' which contains the
          original property value... */
       SVN_ERR (svn_cl__edit_externally (&new_propval, ".",
-                                        propval->data,
+                                        propval->data, "svn-prop",
                                         pool));
       
       /* ...and re-set the property's value accordingly. */
@@ -174,6 +174,7 @@ svn_cl__propedit (apr_getopt_t *os,
           SVN_ERR (svn_cl__edit_externally (&new_propval,
                                             base_dir,
                                             propval->data,
+                                            "svn-prop",
                                             pool));
           
           SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));

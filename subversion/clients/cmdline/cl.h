@@ -184,13 +184,15 @@ svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
    and invoke it to edit CONTENTS (using a temporary file created in
    directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
    or set *EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
-   for all allocations. 
+   for all allocations.  Use PREFIX as the prefix for the temporary
+   file used by the editor.
 
    If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents,
                          const char *base_dir,
                          const char *contents,
+                         const char *prefix,
                          apr_pool_t *pool);
 
 
