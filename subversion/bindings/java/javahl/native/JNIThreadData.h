@@ -29,21 +29,38 @@
 #include "JNIUtil.h"
 struct apr_threadkey_t;
 class Pool;
-class JNIThreadData  
+/**
+ * this class implements thread local storage for JNIUtil.
+ */
+class JNIThreadData
 {
 public:
-	static void del(void *);
-	static JNIThreadData * getThreadData();
-	static bool initThreadData();
-	JNIThreadData();
-	~JNIThreadData();
-	JNIEnv *m_env;
-	bool m_exceptionThrown;
-	char m_formatBuffer[JNIUtil::formatBufferSize];
-	bool m_bInCatchEveryThing;
+    static void del(void *);
+    static JNIThreadData * getThreadData();
+    static bool initThreadData();
+    JNIThreadData();
+    ~JNIThreadData();
+    /**
+     * the current JNI environment
+     */
+    JNIEnv *m_env;
+    /**
+     * flag that a java execption has been detected
+     */
+    bool m_exceptionThrown;
+    /**
+     * a buffer used for formating messages
+     */
+    char m_formatBuffer[JNIUtil::formatBufferSize];
+    /**
+     * the pool for the current request (call)
+     */
     Pool *m_requestPool;
 private:
-	static apr_threadkey_t * g_key;
+    /**
+     * the key to address this thread local storage
+     */
+    static apr_threadkey_t * g_key;
 };
-
-#endif // !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)
+// !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)
+#endif 

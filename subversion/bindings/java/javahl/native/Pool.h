@@ -27,20 +27,24 @@
 #endif // _MSC_VER > 1000
 
 struct apr_pool_t;
-class Pool  
+
+/**
+ * this class manages one apr pool. Objects of this class are allocated on
+ * the stack of the SVNClient & SVNAdmin methods as the request pool. 
+ * Leaving the methods will destroy the pool.
+ */
+class Pool
 {
 public:
-	Pool(bool exclusive = false);
-	~Pool();
+    Pool();
+    ~Pool();
     apr_pool_t * pool () const;
-
-  private:
+private:
+    /**
+     * the apr pool request pool
+     */
     apr_pool_t * m_pool;
 
-    Pool& operator=(const Pool&);
-
-    Pool (const Pool &);
-
 };
-
-#endif // !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
+// !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
+#endif 

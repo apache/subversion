@@ -31,20 +31,19 @@ class Pool;
 #include "Path.h"
 #include <vector>
 
-class Targets  
+class Targets
 {
 private:
     std::vector<Path> m_targets;
-	jobjectArray m_targetArray;
+    jobjectArray m_targetArray;
 
 public:
-	Targets(jobjectArray jtargets);
-	Targets(const char *path);
-	void add(const char *path);
-	~Targets();
+    Targets(jobjectArray jtargets);
+    Targets(const char *path);
+    void add(const char *path);
+    ~Targets();
     const apr_array_header_t *array (const Pool & pool);
 
 };
-
-#endif
 // !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
+#endif

@@ -29,18 +29,25 @@
 #include <svn_io.h>
 #include "Pool.h"
 
-class Outputer  
+/**
+ * This class contains a java objects implementing the interface Outputer and
+ * implements the functions write & close of svn_stream_t
+ */
+class Outputer
 {
-	jobject m_jthis;
-	static svn_error_t *write(void *baton,
+    /**
+     * a local reference to the java object
+     */
+    jobject m_jthis;
+    static svn_error_t *write(void *baton,
                                   const char *buffer, apr_size_t *len);
-	static svn_error_t *close(void *baton);
+    static svn_error_t *close(void *baton);
 public:
-	Outputer(jobject jthis);
-	~Outputer();
-	svn_stream_t *getStream(const Pool & pool);
+    Outputer(jobject jthis);
+    ~Outputer();
+    svn_stream_t *getStream(const Pool & pool);
 
 };
 
-#endif
 // !defined(AFX_OUTPUTER_H__C4342EBB_BD8A_4DA3_A6B8_BC28CF9B3DF1__INCLUDED_)
+#endif

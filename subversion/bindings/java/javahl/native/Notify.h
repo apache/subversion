@@ -27,17 +27,23 @@
 #endif // _MSC_VER > 1000
 #include <jni.h>
 #include <svn_wc.h>
-
-class Notify  
+/**
+ *  this class passes notification from subversion to a java object
+ */
+class Notify
 {
 private:
-	jobject m_notify;
-	Notify(jobject notify);
+    /**
+     * the java object to receive the notifications. This is a global reference
+     * because it has to live longer than the SVNClient.notification call
+     */ 
+    jobject m_notify;
+    Notify(jobject notify);
 public:
-	static jint mapState(svn_wc_notify_state_t);
-	static Notify * makeCNotify(jobject notify);
-	virtual ~Notify();
-  /** 
+    static jint mapState(svn_wc_notify_state_t);
+    static Notify * makeCNotify(jobject notify);
+    ~Notify();
+  /**
    * notification function passed as svn_wc_notify_func_t
    * @param baton notification instance is passed using this parameter
    * @param path on which action happen
@@ -48,15 +54,15 @@ public:
    * @param prop_state state of properties after action occurred
    * @param revision revision number after action occurred
    */
-  static void notify (
-    void *baton,
-    const char *path,
-    svn_wc_notify_action_t action,
-    svn_node_kind_t kind,
-    const char *mime_type,
-    svn_wc_notify_state_t content_state,
-    svn_wc_notify_state_t prop_state,
-    svn_revnum_t revision);
+    static void notify (
+        void *baton,
+        const char *path,
+        svn_wc_notify_action_t action,
+        svn_node_kind_t kind,
+        const char *mime_type,
+        svn_wc_notify_state_t content_state,
+        svn_wc_notify_state_t prop_state,
+        svn_revnum_t revision);
   /**
    * Handler for Subversion notifications.
    *
@@ -68,16 +74,15 @@ public:
    * @param prop_state state of properties after action occurred
    * @param revision revision number  after action occurred
    */
-  void onNotify (
-    const char *path,
-    svn_wc_notify_action_t action,
-    svn_node_kind_t kind,
-    const char *mime_type,
-    svn_wc_notify_state_t content_state,
-    svn_wc_notify_state_t prop_state,
-    svn_revnum_t revision); 
+    void onNotify (
+        const char *path,
+        svn_wc_notify_action_t action,
+        svn_node_kind_t kind,
+        const char *mime_type,
+        svn_wc_notify_state_t content_state,
+        svn_wc_notify_state_t prop_state,
+        svn_revnum_t revision);
 
 };
-
-#endif
 // !defined(AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
+#endif
