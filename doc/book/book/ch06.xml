@@ -49,7 +49,7 @@
       each accessing your repositories in its own way, and each
       without hindering the other (see <xref
       linkend="svn-ch-6-sect-5"/>).  Here's a brief overview and
-      comparison of of the two available Subversion servers&mdash; as
+      comparison of the two available Subversion servers&mdash; as
       an administrator, it's up to you to choose whatever works best
       for you and your users.</para>
       
