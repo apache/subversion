@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.2
 #
-# USAGE: dumprops.py [-r REV] [-h DBHOME] repos-path
+# USAGE: dumprops.py [-r REV] repos-path [file]
 #
 # dump out the properties on a given path (recursively if given a dir)
 #
@@ -10,25 +10,24 @@ import os
 import getopt
 import pprint
 
-from svn import fs, core
+from svn import fs, core, repos
 
 
-def dumpprops(pool, path='', rev=None, home='.'):
+def dumpprops(pool, path, filename='', rev=None):
 
-  db_path = os.path.join(home, 'db')
-  if not os.path.exists(db_path):
-    db_path = home
+  if path[-1] == "/":
+     path = path[:-1]
 
-  fsob = fs.new(pool)
-  fs.open_berkeley(fsob, db_path)
+  repos_ptr = repos.svn_repos_open(path, pool)
+  fsob = repos.svn_repos_fs(repos_ptr)
 
   if rev is None:
     rev = fs.youngest_rev(fsob, pool)
 
   root = fs.revision_root(fsob, rev, pool)
-  print_props(root, path, pool)
-  if fs.is_dir(root, path, pool):
-    walk_tree(root, path, pool)
+  print_props(root, filename, pool)
+  if fs.is_dir(root, filename, pool):
+    walk_tree(root, filename, pool)
 
 def print_props(root, path, pool):
   raw_props = fs.node_proplist(root, path, pool)
@@ -42,8 +41,8 @@ def print_props(root, path, pool):
 
 def walk_tree(root, path, pool):
   subpool = core.svn_pool_create(pool)
-  try:
-    for name in fs.entries(root, path, subpool).keys():
+  try: 
+    for name in fs.dir_entries(root, path, subpool).keys():
       full = path + '/' + name
       print_props(root, full, subpool)
       if fs.is_dir(root, full, subpool):
@@ -53,21 +52,21 @@ def walk_tree(root, path, pool):
     core.svn_pool_destroy(subpool)
 
 def usage():
-  print "USAGE: dumpprops.py [-r REV] [-h DBHOME] repos-path"
+  print "USAGE: dumpprops.py [-r REV] repos-path [file]"
   sys.exit(1)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], 'r:h:')
-  if len(args) != 1:
-    usage()
+  opts, args = getopt.getopt(sys.argv[1:], 'r:')
   rev = None
-  home = '.'
   for name, value in opts:
     if name == '-r':
       rev = int(value)
-    elif name == '-h':
-      home = value
-  core.run_app(dumpprops, args[0], rev, home)
+  if len(args) == 2:
+    core.run_app(dumpprops, args[0], args[1], rev)
+  elif len(args) == 1:
+    core.run_app(dumpprops, args[0], "", rev)
+  else:
+    usage()
 
 if __name__ == '__main__':
   main()
