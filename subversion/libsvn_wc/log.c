@@ -135,32 +135,23 @@ set_entry (svn_string_t *path,
            apr_pool_t *pool)
 {
   svn_string_t *sname = svn_string_create (name, pool);
-  svn_string_t *timestamp_string;
+  apr_time_t t;
+  svn_string_t *timestamp;
+  svn_string_t *local_file;
+  svn_error_t *err;
 
-  {
-    /* Get the working file's timestamp. */
-    apr_status_t apr_err;
-    svn_error_t *err;
-    apr_time_t t;
-    char timebuf[APR_RFC822_DATE_LEN];
-    svn_string_t *local_file;
-
-    local_file = svn_string_dup (path, pool);
-    svn_path_add_component (local_file, sname, SVN_PATH_LOCAL_STYLE, pool);
-    err = svn_wc__file_affected_time (&t, local_file, pool);
-    if (err)
-      return err;
-    apr_err = apr_rfc822_date (timebuf, t);
-    if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool,
-                                "set_entry: error formatting date");
-    timestamp_string = svn_string_ncreate (timebuf, APR_RFC822_DATE_LEN, pool);
-  }
+  /* Get the working file's timestamp. */
+  local_file = svn_string_dup (path, pool);
+  svn_path_add_component (local_file, sname, SVN_PATH_LOCAL_STYLE, pool);
+  err = svn_wc__file_affected_time (&t, local_file, pool);
+  if (err)
+    return err;
+  timestamp = svn_wc__time_to_string (t, pool);
 
   /* This operation is idempotent, so just do it without worrying
      whether it's been done before. */
   return svn_wc__entry_set (path, sname, version, svn_file_kind, pool,
-                            SVN_WC__ENTRIES_ATTR_TIMESTAMP, timestamp_string,
+                            SVN_WC__ENTRIES_ATTR_TIMESTAMP, timestamp,
                             NULL);
 }
 
