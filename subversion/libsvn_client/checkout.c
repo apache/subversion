@@ -113,6 +113,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
          revnum, that means RA will fetch the latest revision.  */
       SVN_ERR (ra_lib->do_checkout (session,
                                     revision,
+                                    recurse,
                                     checkout_editor,
                                     checkout_edit_baton));
 

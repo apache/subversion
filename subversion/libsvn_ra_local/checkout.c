@@ -128,6 +128,7 @@ walk_tree (svn_fs_root_t *root,
            const svn_delta_edit_fns_t *editor, 
            void *edit_baton,
            svn_stringbuf_t *URL,
+           svn_boolean_t recurse,
            apr_pool_t *pool)
 {
   apr_hash_t *dirents;
@@ -159,7 +160,7 @@ walk_tree (svn_fs_root_t *root,
       SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, iter_pool));
       SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, iter_pool));
 
-      if (is_dir)
+      if (is_dir && recurse)
         {
           void *new_dir_baton;
 
@@ -174,8 +175,8 @@ walk_tree (svn_fs_root_t *root,
           SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
                                   editor, 1, iter_pool));
           /* Recurse */
-          SVN_ERR (walk_tree (root, dirent_path, new_dir_baton,
-                              editor, edit_baton, URL_path, iter_pool));
+          SVN_ERR (walk_tree (root, dirent_path, new_dir_baton, editor,
+                              edit_baton, URL_path, recurse, iter_pool));
         }
         
       else if (is_file)
@@ -218,6 +219,7 @@ walk_tree (svn_fs_root_t *root,
 svn_error_t *
 svn_ra_local__checkout (svn_fs_t *fs, 
                         svn_revnum_t revnum, 
+                        svn_boolean_t recurse,
                         svn_stringbuf_t *URL,
                         svn_stringbuf_t *fs_path,
                         const svn_delta_edit_fns_t *editor, 
@@ -234,7 +236,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
                                  &root_dir_baton));
 
   SVN_ERR (walk_tree (root, fs_path, root_dir_baton,
-                      editor, edit_baton, URL, pool));
+                      editor, edit_baton, URL, recurse, pool));
 
   SVN_ERR (editor->close_edit (edit_baton));
 

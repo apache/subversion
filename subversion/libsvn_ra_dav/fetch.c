@@ -543,11 +543,11 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 
 svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                       svn_revnum_t revision,
+                                      svn_boolean_t recurse,
                                       const svn_delta_edit_fns_t *editor,
                                       void *edit_baton)
 {
   svn_ra_session_t *ras = session_baton;
-  int recurse = 1;      /* ### until it gets passed to us */
 
   svn_error_t *err;
   void *root_baton;

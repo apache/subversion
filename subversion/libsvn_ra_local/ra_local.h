@@ -111,6 +111,7 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
 svn_error_t *
 svn_ra_local__checkout (svn_fs_t *fs, 
                         svn_revnum_t revnum, 
+                        svn_boolean_t recurse,
                         svn_stringbuf_t *URL,
                         svn_stringbuf_t *fs_path,
                         const svn_delta_edit_fns_t *editor, 
