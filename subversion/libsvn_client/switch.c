@@ -69,7 +69,6 @@ svn_client_switch (svn_revnum_t *result_rev,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access, *dir_access;
-  svn_node_kind_t kind;
   const char *diff3_cmd;
   svn_boolean_t timestamp_sleep = FALSE;  
   svn_boolean_t use_commit_times;
@@ -94,19 +93,11 @@ svn_client_switch (svn_revnum_t *result_rev,
   assert (path);
   assert (switch_url && (switch_url[0] != '\0'));
 
-  /* Use PATH to get the update's anchor and targets and get a write lock */
-  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-
-  /* Get a write-lock on the anchor and target.  We need a lock on
-     the whole target tree so we can invalidate wcprops on it. */
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, TRUE,
-                             *target ? 0 : -1, pool));
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (*target && (kind == svn_node_dir))
-    SVN_ERR (svn_wc_adm_open2 (&dir_access, adm_access, path,
-                               TRUE, -1, pool));
-  else
-    dir_access = adm_access;
+  /* ### Need to lock the whole target tree to invalidate wcprops. Does
+     non-recursive switch really need to invalidate the whole tree? */
+  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &dir_access, &target, path,
+                                   TRUE, -1, pool));
+  anchor = svn_wc_adm_access_path (adm_access);
 
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)

@@ -2697,6 +2697,7 @@ check_wc_root (svn_boolean_t *wc_root,
   const char *parent, *base_name;
   const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
+  svn_wc_adm_access_t *p_access;
 
   /* Go ahead and initialize our return value to the most common
      (code-wise) values. */
@@ -2717,10 +2718,17 @@ check_wc_root (svn_boolean_t *wc_root,
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
   p_entry = NULL;
   svn_path_split (path, &parent, &base_name, pool);
-  err = svn_wc_adm_probe_open2 (&adm_access, NULL, parent, FALSE, 0,
-                                pool);
+  SVN_ERR (svn_wc__adm_retrieve_internal (&p_access, adm_access, parent,
+                                          pool));
+  err = SVN_NO_ERROR;
+  if (! p_access)
+    /* For historical reasons we cannot rely on the caller having opened
+       the parent, so try it here.  I'd like this bit to go away.  */
+    err = svn_wc_adm_probe_open2 (&p_access, NULL, parent, FALSE, 0, pool);
+
   if (! err)
-    err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
+    err = svn_wc_entry (&p_entry, parent, p_access, FALSE, pool);
+
   if (err || (! p_entry))
     {
       svn_error_clear (err);
@@ -2744,7 +2752,7 @@ check_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH's parent in the repository is not its parent in the WC,
      PATH is a WC root. */
-  SVN_ERR (svn_wc_entry (&p_entry, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&p_entry, path, p_access, FALSE, pool));
   if (! p_entry)
       return SVN_NO_ERROR;
 

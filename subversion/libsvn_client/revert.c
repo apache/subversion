@@ -42,75 +42,30 @@ revert (const char *path,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  svn_boolean_t wc_root;
+  svn_wc_adm_access_t *adm_access, *target_access;
   svn_boolean_t use_commit_times;
-  svn_error_t *err, *err2;
+  const char *target;
+  svn_config_t *cfg;
 
-  /* We need to open the parent of PATH, if PATH is not a wc root, but we
-     don't know if path is a directory.  It gets a bit messy. */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE,
-                                   recursive ? -1 : 0, pool));
-  if ((err = svn_wc_is_wc_root (&wc_root, path, adm_access, pool)))
-    goto out;
-  if (! wc_root)
-    {
-      const svn_wc_entry_t *entry;
-      if ((err = svn_wc_entry (&entry, path, adm_access, FALSE, pool)))
-        goto out;
+  cfg = ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                                    APR_HASH_KEY_STRING) : NULL;
 
-      if (entry->kind == svn_node_dir)
-        {
-          svn_node_kind_t kind;
+  SVN_ERR (svn_config_get_bool (cfg, &use_commit_times,
+                                SVN_CONFIG_SECTION_MISCELLANY,
+                                SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
+                                FALSE));
 
-          if ((err = svn_io_check_path (path, &kind, pool)))
-            goto out;
-          if (kind == svn_node_dir)
-            {
-              /* While we could add the parent to the access baton set, there
-                 is no way to close such a set. */
-              svn_wc_adm_access_t *dir_access;
-              if ((err = svn_wc_adm_close (adm_access))
-                  || (err = svn_wc_adm_open2 (&adm_access, NULL,
-                                              svn_path_dirname (path, pool),
-                                              TRUE, 0, pool))
-                  || (err = svn_wc_adm_open2 (&dir_access, adm_access,
-                                              path, TRUE,
-                                              recursive ? -1 : 0, pool)))
-                goto out;
-            }
-        }
-    }
+  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_access, &target, path,
+                                   TRUE, recursive ? -1 : 0, pool));
 
-  /* Look for run-time config variables that affect behavior. */
-  {
-    svn_config_t *cfg = ctx->config
-      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
-                      APR_HASH_KEY_STRING)
-      : NULL;
+  SVN_ERR (svn_wc_revert (path, adm_access, recursive, use_commit_times,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          ctx->notify_func, ctx->notify_baton,
+                          pool));
 
-    if ((err = svn_config_get_bool (cfg, &use_commit_times,
-                                    SVN_CONFIG_SECTION_MISCELLANY,
-                                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
-                                    FALSE)))
-      goto out;
-  }
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
-  err = svn_wc_revert (path, adm_access, recursive, use_commit_times,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       ctx->notify_func, ctx->notify_baton,
-                       pool);
-
- out:
-  /* Close the ADM, but only return errors from that operation if we
-     aren't already in an errorful state. */
-  err2 = svn_wc_adm_close (adm_access);
-  if (err && err2)
-    svn_error_clear (err2);
-  else if (err2)
-    err = err2;
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 

@@ -97,60 +97,14 @@ svn_client_status (svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  svn_error_t *err;
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
 
-  /* First checks do not require a lock on the working copy.  We will
-     reopen the working copy with a lock later. */
-  SVN_ERR (svn_wc_adm_probe_open2 (&target_access, NULL, path, 
-                                   FALSE, 0, pool));
-
-  /* Get the entry for this path so we can determine our anchor and
-     target.  If the path is unversioned, and the caller requested
-     that we contact the repository, we error. */
-  SVN_ERR (svn_wc_entry (&entry, path, target_access, FALSE, pool));
-
-  /* Close up our ADM area and reopen it with the depth we want. */
-  SVN_ERR (svn_wc_adm_close (target_access));
-
-  if (entry)
-    SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  else if (! update)
-    svn_path_split (path, &anchor, &target, pool);
-  else
-    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), path);
-  
-  /* Need to lock the tree.  We lock the anchor first, to not lock too much
-     if we have a target.  We need to lock the target and immediate children
-     if the status is non-recursive.  Else, we lock the whole hierarchy
-     under target.  */
-
-  SVN_ERR (svn_wc_adm_probe_open2 (&anchor_access, NULL, anchor, FALSE,
-                                   *target ? 0 : (descend ? -1 : 1), pool));
-  if (*target)
-    {
-      /* Careful! svn_adm_probe_open2 may lock the parent in certain
-         situations, which results in an already locked error.  We use the
-         svn_wc_adm_open2 function instead, since we already have the
-         parent locked. */
-      err = svn_wc_adm_open2 (&target_access, anchor_access, path,
-                              FALSE, descend ? -1 : 1, pool);
-      /* If target is not a versioned directory, then that's fine: we need
-         no locking. */
-      if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
-        {
-          svn_error_clear (err);
-          target_access = anchor_access;
-        }
-      else
-        SVN_ERR (err);
-    }
-  else
-    target_access = anchor_access;
+  SVN_ERR (svn_wc_adm_open_anchor (&anchor_access, &target_access, &target,
+                                   path, FALSE, descend ? -1 : 1, pool));
+  anchor = svn_wc_adm_access_path (anchor_access);
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
