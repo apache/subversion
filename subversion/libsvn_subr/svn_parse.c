@@ -175,10 +175,9 @@ slurp__to (const svn_string_t *searchstr,
    values.  :) */
 
 
-ap_hash_t *
-svn_parse (svn_string_t *filename, ap_pool_t *pool)
+svn_error_t *
+svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
 {
-  ap_hash_t *uberhash;      /* our hash of hashes */
   ap_hash_t *current_hash;  /* the hash we're currently storing vals in */
 
   ap_pool_t *scratchpool;
@@ -188,7 +187,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 
   
   /* Create our uberhash */
-  uberhash = ap_make_hash (pool);
+  *uberhash = ap_make_hash (pool);
 
   /* Open the config file */
   result = ap_open (&FILE,
@@ -203,15 +202,13 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
         ("svn_parse(): can't open for reading, file ", pool);
       svn_string_appendstr (msg, filename, pool);
 
-      /* Declare this a fatal error! */
-      svn_handle_error (svn_create_error (result, SVN_FATAL, msg, pool));
+      return (svn_create_error (result, SVN_NON_FATAL, msg, pool));
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
   if ((result = ap_create_pool (&scratchpool, NULL)) != APR_SUCCESS)
     {
-      /* hoo boy, look at this yummy syntax: */
-      svn_handle_error 
+      return
         (svn_create_error 
          (result, SVN_FATAL, 
           svn_string_create ("svn_parse(): fatal: can't create scratchpool",
@@ -268,7 +265,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                   svn_string_create 
                   ("svn_parse(): warning: skipping malformed line: ", pool);
                 svn_string_appendstr (msg, currentline, pool);
-                
+
+                /* Instead of returning an error, just print warning */
                 svn_handle_error (svn_create_error 
                                   (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
                                    msg, pool));
@@ -283,7 +281,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
             current_hash = new_section_hash;  
 
             /* store this new hash in our uberhash */
-            ap_hash_set (uberhash, 
+            ap_hash_set (*uberhash, 
                          new_section,         /* key: ptr to bytestring */
                          sizeof(svn_string_t),/* the length of the key */
                          new_section_hash);   /* val: ptr to the new hash */
@@ -312,7 +310,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                   svn_string_create 
                   ("svn_parse(): warning: skipping malformed line: ", pool);
                 svn_string_appendstr (msg, currentline, pool);
-                
+               
+                /* Instead of returning an error, just print warning */
                 svn_handle_error (svn_create_error 
                                   (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
                                    msg, pool));
@@ -358,16 +357,16 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
         ("svn_parse(): warning: can't close file ", pool);
       svn_string_appendstr (msg, filename, pool);
       
-      /* Not fatal, just annoying */
+      /* Not fatal, just annoying.  Send a warning instead returning error. */
       svn_handle_error (svn_create_error (result, SVN_NON_FATAL, msg, pool));
     }
   
   ap_destroy_pool (scratchpool);
 
 
-  /* Return the hash of hashes */
+  /* Return success */
 
-  return uberhash;
+  return 0;
 }
 
 

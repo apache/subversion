@@ -74,7 +74,7 @@
 typedef struct svn_error_t
 {
   ap_status_t err;             /* native OS errno */
-  svn_boolean_t fatal;         /* is this a fatal error? */
+  svn_boolean_t fatal;         /* does the creator think this a fatal error? */
   svn_string_t *message;       /* description from top-level caller */
   char *description;           /* generic description from ap_strerror() */
   int canonical_errno;         /* "canonicalized" errno from APR */ 
