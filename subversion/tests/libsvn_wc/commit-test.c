@@ -45,6 +45,7 @@ main (int argc, char *argv[])
   void *my_edit_baton;
 
   svn_string_t *rootdir;
+  apr_array_header_t *targets;
 
   svn_boolean_t use_xml = FALSE;
 
@@ -62,7 +63,9 @@ main (int argc, char *argv[])
   apr_initialize ();
   globalpool = svn_pool_create (NULL);
 
+  targets = apr_array_make (globalpool, 1, sizeof (svn_string_t *));
   rootdir = svn_string_create (argv[1], globalpool);
+  (*((svn_string_t**) apr_array_push (targets))) = rootdir;
 
   if (argc > 2)
     if (! strcmp (argv[2], "-x"))
@@ -81,11 +84,7 @@ main (int argc, char *argv[])
                                       &my_editor, &my_edit_baton,
                                       globalpool);
       if (err)
-        {
-          svn_handle_error (err, stderr, 0);
-          svn_pool_destroy (globalpool);
-          exit (1);
-        }
+        goto handle_error;
     }
 
   else  /* human-readable output */
@@ -96,19 +95,29 @@ main (int argc, char *argv[])
       err = svn_test_get_editor (&my_editor, &my_edit_baton,
                                  out_stream, 3, rootdir, globalpool);
       if (err)
-        {
-          svn_handle_error (err, stderr, 0);
-          svn_pool_destroy (globalpool);
-          exit (1);
-        }
+        goto handle_error;
     }
 
-  /* Call the commit-crawler with the editor. */
-  err = svn_wc_crawl_local_mods (rootdir,
-                                 my_editor, my_edit_baton,
-                                 globalpool);
+  {
+    /* Condense the targets, although we happen to know in this case
+       that it's essentially a no-op -- there's only one target. */
+    apr_array_header_t *condensed_targets;
+    
+    err = svn_path_condense_targets (&rootdir, &condensed_targets,
+                                     targets, globalpool);
+    if (err)
+      goto handle_error;
+
+    /* Commit. */
+    err = svn_wc_crawl_local_mods (rootdir,
+                                   condensed_targets,
+                                   my_editor, my_edit_baton,
+                                   globalpool);
+  }
+
   if (err)
     {
+    handle_error:
       svn_handle_error (err, stderr, 0);
       svn_pool_destroy (globalpool);
       exit (1);

@@ -118,10 +118,10 @@ svn_path_split_if_file(svn_string_t *path,
 }
 
 svn_error_t *
-svn_path_condense_targets(svn_string_t **pbasedir,
-                          apr_array_header_t ** pcondensed_targets,
-                          const apr_array_header_t *targets,
-                          apr_pool_t *pool)
+svn_path_condense_targets (svn_string_t **pbasedir,
+                           apr_array_header_t ** pcondensed_targets,
+                           const apr_array_header_t *targets,
+                           apr_pool_t *pool)
 {
   if (targets->nelts <=0)
     {
@@ -133,22 +133,28 @@ svn_path_condense_targets(svn_string_t **pbasedir,
     {
       int i, j, num_condensed = targets->nelts;
       svn_string_t *file;
-      svn_boolean_t *removed = apr_pcalloc(pool,
-                                           targets->nelts*sizeof(svn_boolean_t));
-
-      /* Copy the targets array, but with absolute paths instead of relative.
-         Also, find the pbasedir argument by finding what is common in all
-         of the absolute paths. NOTE: This is not as efficient as it could be
-         The calculation of the the basedir could be done in the loop below, which would
-         save some calls to svn_path_get_longest_ancestor.  I decided to do it this way
-         because I thought it would simpler, since this way, we don't even do the loop
-         if we don't need to condense the targets. */
-      apr_array_header_t *abs_targets = apr_array_make(pool,
-                                                       targets->nelts,
-                                                       sizeof(svn_string_t*));
-      SVN_ERR(svn_path_get_absolute(pbasedir, ((svn_string_t **)targets->elts)[0], pool));
+      svn_boolean_t *removed
+        = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));
+      
+      /* Copy the targets array, but with absolute paths instead of
+         relative.  Also, find the pbasedir argument by finding what is
+         common in all of the absolute paths. NOTE: This is not as
+         efficient as it could be The calculation of the the basedir
+         could be done in the loop below, which would save some calls to
+         svn_path_get_longest_ancestor.  I decided to do it this way
+         because I thought it would simpler, since this way, we don't
+         even do the loop if we don't need to condense the targets. */
+      
+      apr_array_header_t *abs_targets
+        = apr_array_make (pool, targets->nelts, sizeof (svn_string_t*));
+      
+      SVN_ERR (svn_path_get_absolute (pbasedir,
+                                      ((svn_string_t **) targets->elts)[0],
+                                      pool));
+      
       (*((svn_string_t**)apr_array_push(abs_targets))) = *pbasedir;
-      for(i = 1; i < targets->nelts; ++i)
+      
+      for (i = 1; i < targets->nelts; ++i)
         {
           svn_string_t *rel = ((svn_string_t **)targets->elts)[i];
           svn_string_t *absolute;
@@ -156,36 +162,40 @@ svn_path_condense_targets(svn_string_t **pbasedir,
           (*((svn_string_t **)apr_array_push(abs_targets))) = absolute;
           *pbasedir = svn_path_get_longest_ancestor(*pbasedir, absolute, pool);
         }
-
+      
       /* If we need to find the targets, find the common part of each pair
          of targets.  If common part is equal to one of the paths, the other
-         is a child of it, and can be removed. */
+         is a child of it, and can be removed.  If a target is equal to
+         *pbasedir, it can also be removed. */
       if (pcondensed_targets != NULL)
         {
-          for (i = 0; i < abs_targets->nelts - 1; ++i)
+          /* First pass: when one non-removed target is a child of
+             another non-removed target, remove the child. */
+          for (i = 0; i < abs_targets->nelts; ++i)
             {
               if (!removed[i])
                 {
                   for (j = i + 1; j < abs_targets->nelts; ++j)
                     {
-                      if (!removed[i] && !removed[j])
+                      if (!removed[j])
                         {
                           svn_string_t *abs_targets_i = ((svn_string_t **)
                                                          abs_targets->elts)[i];
                           svn_string_t *abs_targets_j = ((svn_string_t **)
                                                          abs_targets->elts)[j];
                           svn_string_t *ancestor
-                            = svn_path_get_longest_ancestor(abs_targets_i,
-                                                            abs_targets_j,
-                                                            pool);
+                            = svn_path_get_longest_ancestor (abs_targets_i,
+                                                             abs_targets_j,
+                                                             pool);
                           if (ancestor != NULL)
                             {
-                              if (svn_string_compare(ancestor, abs_targets_i))
+                              if (svn_string_compare (ancestor, abs_targets_i))
                                 {
                                   removed[j] = TRUE;
                                   num_condensed--;
                                 }
-                              else if (svn_string_compare(ancestor,abs_targets_j))
+                              else if (svn_string_compare (ancestor,
+                                                           abs_targets_j))
                                 {
                                   removed[i] = TRUE;
                                   num_condensed--;
@@ -195,32 +205,47 @@ svn_path_condense_targets(svn_string_t **pbasedir,
                     }
                 }
             }
-
+          
+          /* Second pass: when a target is the same as *pbasedir,
+             remove the target. */
+          for (i = 0; i < abs_targets->nelts; ++i)
+            {
+              svn_string_t *abs_targets_i = ((svn_string_t **)
+                                             abs_targets->elts)[i];
+              if (svn_string_compare (abs_targets_i, *pbasedir))
+                removed[i] = TRUE;
+            }
+          
           /* Now create the return array, and copy the non-removed items */
-          *pcondensed_targets = apr_array_make(pool, num_condensed,
-                                               sizeof(svn_string_t*));
+          *pcondensed_targets = apr_array_make (pool, num_condensed,
+                                                sizeof (svn_string_t*));
+          
           for (i = 0; i < abs_targets->nelts; ++i)
             {
               if (!removed[i])
                 {
-                  char * rel_item = ((svn_string_t**)abs_targets->elts)[i]->data;
+                  char *rel_item
+                    = ((svn_string_t**)abs_targets->elts)[i]->data;
+
                   rel_item += (*pbasedir)->len + 1;
                   (*((svn_string_t**)apr_array_push(*pcondensed_targets)))
-                    = svn_string_create(rel_item, pool);
+                    = svn_string_create (rel_item, pool);
                 }
             }
         }
-
+      
       /* Finally check if pbasedir is a dir or a file. */
-      SVN_ERR(svn_path_split_if_file(*pbasedir, pbasedir, &file, pool));
+      SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
       if (pcondensed_targets != NULL)
         {
-          /* If we have only one element, then it is currently the empty string.
-             Set it to the file if we found one, or the empty string, if not. */
+          /* If we have only one element, then it is currently the
+             empty string.  Set it to the file if we found one, or the
+             empty string, if not. */
           if (num_condensed == 1)
             ((svn_string_t **)(*pcondensed_targets)->elts)[0] = file;
         }
     }
+  
   return SVN_NO_ERROR;
 }
 

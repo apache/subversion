@@ -316,8 +316,12 @@ import (svn_string_t *path,
  *
  * Record LOG_MSG as the log message for the new revision.
  * 
- * PATH is the path to local import source tree or working copy.  It
- * can be a file or directory.
+ * BASE_PATH is the common prefix of all the targets.
+ * 
+ * If committing, CONDENSED_TARGETS is all the targets under BASE_PATH
+ * but with the BASE_PATH prefix removed; else if importing,
+ * CONDENSED_TARGETS is required to be null (you can only import one
+ * thing at a time anyway, so it must be BASE_PATH).
  *
  * URL is null if not importing.  If non-null, then this is an import,
  * and URL is the repository directory where the imported data is
@@ -332,17 +336,19 @@ import (svn_string_t *path,
  *
  * When importing:
  *
- *   If PATH is a file, that file is imported as NEW_ENTRY.  If PATH
- *   is a directory, the contents of that directory are imported,
- *   under a new directory the NEW_ENTRY in the repository.  Note and
- *   the directory itself is not imported; that is, the basename of
- *   PATH is not part of the import.
+ *   If BASE_PATH is a file, that file is imported as NEW_ENTRY.  If
+ *   BASE_PATH is a directory, the contents of that directory are
+ *   imported, under a new directory the NEW_ENTRY in the repository.
+ *   Note that the directory itself is not imported; that is, the
+ *   basename of BASE_PATH is not part of the import.
  *
- *   If PATH is a directory and NEW_ENTRY is null, then the contents
- *   of PATH are imported directly into the repository directory
- *   identified by URL.  NEW_ENTRY may not be the empty string.
+ *   If BASE_PATH is a directory and NEW_ENTRY is null, then the
+ *   contents of BASE_PATH are imported directly into the repository
+ *   directory identified by URL.  NEW_ENTRY may not be the empty
+ *   string.
  *
- *   If NEW_ENTRY already exists in the youngest revision, return error.
+ *   If NEW_ENTRY already exists in the youngest revision, return
+ *   error.
  * 
  *   ### kff todo: This import is similar to cvs import, in that it
  *   does not change the source tree into a working copy.  However,
@@ -356,7 +362,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                void *before_edit_baton,
                const svn_delta_edit_fns_t *after_editor,
                void *after_edit_baton,                   
-               svn_string_t *path,
+               svn_string_t *base_dir,
+               apr_array_header_t *condensed_targets,
                svn_string_t *url,            /* null unless importing */
                svn_string_t *new_entry,      /* null except when importing */
                svn_string_t *log_msg,
@@ -374,9 +381,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_boolean_t is_import;
-  struct svn_wc_close_commit_baton ccb = {path, pool};
-  apr_array_header_t *tgt_array = apr_array_make (pool, 1,
-                                                  sizeof(svn_string_t *));
+  struct svn_wc_close_commit_baton ccb = {base_dir, pool};
+  apr_array_header_t *tgt_array
+    = apr_array_make (pool, 1, sizeof (svn_string_t *));
   
   if (url) 
     is_import = TRUE;
@@ -438,7 +445,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       if (! is_import)
         {
           /* Construct full URL from PATH. */
-          SVN_ERR (svn_wc_entry (&entry, path, pool));
+          SVN_ERR (svn_wc_entry (&entry, base_dir, pool));
           url = entry->ancestor;
         }
       
@@ -479,13 +486,16 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   if (is_import)
     {
       /* Crawl a directory tree, importing. */
-      SVN_ERR (import (path, new_entry, editor, edit_baton, pool));
+      SVN_ERR (import (base_dir, new_entry, editor, edit_baton, pool));
     }
   else
     {
       /* Crawl local mods and report changes to EDITOR.  When
          close_edit() is called, revisions will be bumped. */
-      SVN_ERR (svn_wc_crawl_local_mods (path, editor, edit_baton, pool));
+      SVN_ERR (svn_wc_crawl_local_mods (base_dir,
+                                        condensed_targets,
+                                        editor, edit_baton,
+                                        pool));
     }
 
 
@@ -523,7 +533,8 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
 {
   SVN_ERR (send_to_repos (before_editor, before_edit_baton,
                           after_editor, after_edit_baton,                   
-                          path, url, new_entry,
+                          path, NULL,
+                          url, new_entry,
                           log_msg, 
                           xml_dst, revision,
                           pool));
@@ -537,15 +548,25 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,                   
-                   svn_string_t *path,
+                   const apr_array_header_t *targets,
                    svn_string_t *log_msg,
                    svn_string_t *xml_dst,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
+  svn_string_t *base_dir;
+  apr_array_header_t *condensed_targets;
+
+  SVN_ERR (svn_path_condense_targets (&base_dir,
+                                      &condensed_targets,
+                                      targets,
+                                      pool));
+
   SVN_ERR (send_to_repos (before_editor, before_edit_baton,
                           after_editor, after_edit_baton,                   
-                          path, NULL, NULL,  /* NULLs because not importing */
+                          base_dir,
+                          condensed_targets,
+                          NULL, NULL,  /* NULLs because not importing */
                           log_msg,
                           xml_dst, revision,
                           pool));
@@ -553,34 +574,6 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   return SVN_NO_ERROR;
 }
 
-ifdef #0
-
-  /* This all needs to happen in libsvn_client */
-  {
-    apr_array_header_t *condensed_targets = 
-      apr_array_make (pool, 0, sizeof(svn_string_t *));
-    
-    /* Canonicalize the targets: remove redundancies and find the common
-       parent dir. */
-    SVN_ERR (svn_path_condense_targets (&parent_dir,
-                                        &condensed_targets,
-                                        targets, pool));
-    
-    /* Sort the condensed targets alphabetically.  This is *very*
-       important, since it will cause targets that share common
-       "sub-parents" to be grouped together.  This is how we guarantee a
-       depth-first drive of the editor.  */
-    
-    /* ####### TODO.  Also re-append parent_dir to all the condensed
-       targets.  The paths that we store in stack frames need to be
-       full ones, not relative to parent_dir.  */
-
-    /* Temporary */
-    printf ("Starting descent from parent '%s'\n", parent_dir->data);
-    /* ## TODO:  print sorted list as a sanity check. */
-  }
-
-#endif
 
 
 /* 

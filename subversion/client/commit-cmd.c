@@ -63,7 +63,7 @@ svn_cl__commit (apr_getopt_t *os,
       
       err = svn_client_commit (NULL, NULL,
                                trace_editor, trace_edit_baton,
-                               target,
+                               targets,
                                message,
                                opt_state->xml_file,
                                opt_state->revision,
