@@ -345,9 +345,6 @@ handle_end_tag (void *userData, const char *tagname)
                                                           baton->pool),
                                        "version",
                                        svn_string_create (verstr, baton->pool),
-                                       "karl-is-just-testing-some-stuff",
-                                       svn_string_create ("please ignore",
-                                                          baton->pool),
                                        NULL);
               if (err)
                 {
@@ -378,7 +375,7 @@ do_parse (svn_wc__version_baton_t *baton)
   svn_error_t *err;
   svn_xml_parser_t *svn_parser;
   char buf[BUFSIZ];
-  apr_status_t status;
+  apr_status_t apr_err;
   apr_size_t bytes_read;
 
   /* Create a custom XML parser */
@@ -394,20 +391,19 @@ do_parse (svn_wc__version_baton_t *baton)
 
   /* Parse the xml in infile, and write new versions of it back out to
      outfile. */
-  while (status != APR_EOF)
-    {
-      status = apr_full_read (baton->infile, buf, BUFSIZ, &bytes_read);
-      if (status && (status != APR_EOF))
-        return svn_error_create 
-          (status, 0, NULL, baton->pool,
-           "svn_wc__set_versions_entry: apr_full_read choked");
-
-      err = svn_xml_parse (svn_parser, buf, bytes_read, (status == APR_EOF));
-      if (err)
-        return svn_error_quick_wrap 
-          (err,
-           "svn_wc__set_versions_entry:  xml parser failed.");
-    }
+  do {
+    apr_err = apr_full_read (baton->infile, buf, BUFSIZ, &bytes_read);
+    if (apr_err && (apr_err != APR_EOF))
+      return svn_error_create 
+        (apr_err, 0, NULL, baton->pool,
+         "svn_wc__set_versions_entry: apr_full_read choked");
+    
+    err = svn_xml_parse (svn_parser, buf, bytes_read, (apr_err == APR_EOF));
+    if (err)
+      return svn_error_quick_wrap 
+        (err,
+         "svn_wc__set_versions_entry:  xml parser failed.");
+  } while (apr_err != APR_EOF);
 
 
   /* Clean up xml parser */
