@@ -131,12 +131,16 @@ svn_test__create_repos (svn_repos_t **repos_p,
   fs_config = apr_hash_make (pool);
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
                 APR_HASH_KEY_STRING, "1");
+  if (getenv ("FS_TYPE"))
+    apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE, APR_HASH_KEY_STRING,
+                  getenv ("FS_TYPE"));
   SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, NULL,
                              fs_config, pool));
-  
-  /* Provide a handler for Berkeley DB error messages.  */
-  SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
-                                        berkeley_error_handler));
+
+  /* Provide a handler for Berkeley DB error messages if we're using bdb.  */
+  if (getenv ("FS_TYPE") == NULL || strcmp (getenv ("FS_TYPE"), "bdb") == 0)
+    SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
+                                          berkeley_error_handler));
 
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup (name);
