@@ -117,6 +117,10 @@ typedef struct svn_ver_t
 
 typedef long int svn_vernum_t;
 
+/* This is never a valid version number.  (Actually, anything less
+   than 0 is never a valid version number.) */
+#define SVN_INVALID_VERNUM -1
+
 
 /* These things aren't critical to define yet; I'll leave them to
    jimb, who's writing the filesystem: */
