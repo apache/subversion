@@ -1275,7 +1275,7 @@ def commit_rmd_and_deleted_file(sbox):
   svntest.main.run_svn(None, 'rm', mu_path)
 
   # Commit, hoping to see no errors
-  out, err = svntest.main.run_svn(None, 'commit', '-m', '"logmsg"', mu_path)
+  out, err = svntest.main.run_svn(None, 'commit', '-m', 'logmsg', mu_path)
   if len(err) != 0:
     return 1
 

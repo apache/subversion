@@ -384,7 +384,7 @@ def update_ignores_added(sbox):
   # Commit something so there's actually a new revision to update to.
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(rho_path, "\nMore stuff in rho.")
-  svntest.main.run_svn(None, 'ci', '-m', '"log msg"', rho_path)  
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho_path)  
 
   # Create a new file, 'zeta', and schedule it for addition.
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')

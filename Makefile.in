@@ -125,7 +125,7 @@ local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
-	$(PYTHON) $(top_srcdir)/build/run-tests.py \
+	$(PYTHON) $(top_srcdir)/build/run_tests.py \
 		'$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
 		$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
