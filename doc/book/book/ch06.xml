@@ -490,24 +490,13 @@ collabnet = svn.collab.net
   <sect1 id="svn-ch-6-sect-2">
     <title>Properties</title>
 
-    <!-- ### cmpilato todo: come back to this, and use this layout:
-
-         - Manipulating properties (pset, pget, plist, pdel, pedit)
-         - Special properties
-             - svn:eol-style
-             - svn:keywords
-             - svn:mimetype
-             - svn:ignore
-             - svn:executable
-    -->
-
     <para>We've already covered in detail how Subversion stores and
       retrieves various versions of files and directories in its
       repository.  Whole chapters have been devoted to this most
       foundational piece of functionality provided by the tool.  And
       if the versioning support stopped there, Subversion would still
       be complete from version control perspective.  But it
-      doesn't.</para>
+      doesn't stop there.</para>
 
     <para>In addition to versioning your directories and files,
       Subversion provides interfaces for adding, modifying, and
@@ -525,63 +514,82 @@ collabnet = svn.collab.net
       receive other people's property changes as you update your
       working copy.</para>
 
-    <para>Properties show up elsewhere in Subversion, too.  Just as
-      files and directories may have arbitrary property names and
-      values attached to them, each revision as a whole may have
-      arbitrary properties attached to it.  The same constraints
-      apply&mdash;human-readable, text names and anything-you-want,
-      binary values&mdash;except that revision properties are not
-      versioned.  See <xref linkend="svn-ch-5-sect-1.2" /> for more
-      information on these unversioned properties.</para>
+    <sidebar>
+      <title>Other Properties in Subversion</title>
 
-    <para>Properties can be very useful additions to your working
-      copy.  In fact, Subversion itself uses properties to house
-      special information, and as a way to denote that certain special
-      processing might be needed.  Likewise, you can use properties
-      for your own purposes.  Of course, anything you can do with
-      properties you could also do using regular versioned files, but
-      consider the following example of Subversion property use.</para>
+      <para>Properties show up elsewhere in Subversion, too.  Just as
+        files and directories may have arbitrary property names and
+        values attached to them, each revision as a whole may have
+        arbitrary properties attached to it.  The same constraints
+        apply&mdash;human-readable, text names and anything-you-want,
+        binary values&mdash;except that revision properties are not
+        versioned.  See <xref linkend="svn-ch-5-sect-1.2" /> for more
+        information on these unversioned properties.</para>
+    </sidebar>
 
-    <para>Say you wish to design a website that houses many digital
-      photos, and displays them with captions and a datestamp.  Now,
-      your set of photos is constantly changing, so you'd like to have
-      as much of this site automated as possible.  These photos can be
-      quite large, so as is common with sites of this nature, you want
-      to provide smaller thumbnail images to your site visitors.  You
-      can do this with traditional files.  That is, you can have your
-      <filename>image123.jpg</filename> and an
-      <filename>image123-thumbnail.jpg</filename> side-by-side in a
-      directory.  Or if you want to keep the filenames the same, you
-      might have your thumbnails in a different directory, like
-      <filename>thumbnails/image123.jpg</filename>.  You can also
-      store your captions and datestamps in a similar fashion, again
-      separated from the original image file.  Soon, your tree of
-      files is a mess, and grows in multiples with each new photo
-      added to the site.</para>
-
-    <para>Now consider the same setup using Subversion's file
-      properties.  Imagine having a single image file,
-      <filename>image123.jpg</filename>, and then properties set on
-      that file named <literal>caption</literal>,
-      <literal>datestamp</literal>, and even
-      <literal>thumbnail</literal>.  Now your working copy directory
-      looks much more manageable&mdash;in fact, it looks like there
-      are nothing but image files in it.  But your automation scripts
-      know better.  They know that they can use <command>svn</command>
-      (or better yet, they can use the Subversion language
-      bindings&mdash;see <xref linkend="svn-ch-7-sect-2.3" />) to dig
-      out the extra information that your site needs to display
-      without having to read an index file or play path manipulation
-      games.</para>
-
-    <para>Of course, how (and if) you use Subversion properties is up
-      to you.  As we mentioned, Subversion has it own uses for
-      properties.  In the following sections, you'll about those uses.
-      But first, let's discuss how to manipulate options using the
-      <command>svn</command> program.</para>
+    <para>In this section, we will examine the utility&mdash;both to
+      users of Subversion, and to Subversion itself&mdash;of property
+      support.  You'll learn about the property-related
+      <command>svn</command> subcommands, and how property
+      modifications affect your normal Subversion workflow.
+      Hopefully, you'll be convinced that Subversion properties can
+      enhance your version control experience.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-2.1">
+      <title>Why Properties?</title>
+
+      <para>Properties can be very useful additions to your working
+        copy.  In fact, Subversion itself uses properties to house
+        special information, and as a way to denote that certain
+        special processing might be needed.  Likewise, you can use
+        properties for your own purposes.  Of course, anything you can
+        do with properties you could also do using regular versioned
+        files, but consider the following example of Subversion
+        property use.</para>
+
+      <para>Say you wish to design a website that houses many digital
+        photos, and displays them with captions and a datestamp.  Now,
+        your set of photos is constantly changing, so you'd like to
+        have as much of this site automated as possible.  These photos
+        can be quite large, so as is common with sites of this nature,
+        you want to provide smaller thumbnail images to your site
+        visitors.  You can do this with traditional files.  That is,
+        you can have your <filename>image123.jpg</filename> and an
+        <filename>image123-thumbnail.jpg</filename> side-by-side in a
+        directory.  Or if you want to keep the filenames the same, you
+        might have your thumbnails in a different directory, like
+        <filename>thumbnails/image123.jpg</filename>.  You can also
+        store your captions and datestamps in a similar fashion, again
+        separated from the original image file.  Soon, your tree of
+        files is a mess, and grows in multiples with each new photo
+        added to the site.</para>
+
+     <para>Now consider the same setup using Subversion's file
+        properties.  Imagine having a single image file,
+        <filename>image123.jpg</filename>, and then properties set on
+        that file named <literal>caption</literal>,
+        <literal>datestamp</literal>, and even
+        <literal>thumbnail</literal>.  Now your working copy directory
+        looks much more manageable&mdash;in fact, it looks like there
+        are nothing but image files in it.  But your automation
+        scripts know better.  They know that they can use
+        <command>svn</command> (or better yet, they can use the
+        Subversion language bindings&mdash;see <xref
+        linkend="svn-ch-7-sect-2.3" />) to dig out the extra
+        information that your site needs to display without having to
+        read an index file or play path manipulation games.</para>
+
+      <para>Of course, how (and if) you use Subversion properties is
+        up to you.  As we mentioned, Subversion has it own uses for
+        properties, which we'll discuss a little later in this
+        chapter.  But first, let's discuss how to manipulate options
+        using the <command>svn</command> program.</para>
+
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-6-sect-2.2">
       <title>Manipulating Properties</title>
 
       <para>The <command>svn</command> command affords a few ways to
@@ -625,11 +633,30 @@ $
         store for the property, save the temporary file, and then exit
         the editor program.  If Subversion detects that you've
         actually changed the existing value of the property, it will
-        accept that as the new property value.</para>
+        accept that as the new property value.  If you exit your
+        editor without making any changes, no property modification
+        will occur.</para>
 
-$ svn propedit copyright calc/button.c
-property `copyright' set on 'calc/button.c'
+      <screen>
+$ svn propedit copyright calc/button.c  ### exit the editor without changes
+No changes to property `copyright' on `calc/button.c'
 $
+</screen>
+
+      <para>We should note that, as with other <command>svn</command>
+        subcommands, those related to properties can act on multiple
+        paths at once.  This enables you to modify properties on whole
+        sets of files with a single command.  For example, we could
+        have done:</para>
+
+      <screen>
+$ svn propset copyright '(c) 2002 Red-Bean Software' calc/*
+property `copyright' set on 'calc/Makefile'
+property `copyright' set on 'calc/button.c'
+property `copyright' set on 'calc/integer.c'
+&hellip;
+$
+</screen>
 
       <para>All of this property adding and editing isn't really very
         useful if you can't easily get the stored property value.  So
@@ -642,7 +669,6 @@ $
         propget</command>.  This command will, given a path (or set of
         paths) and a property name, print the value of the property to
         the standard output stream.</para>
-
 
       <para>You can add file or directory properties with the
         <command>svn propset</command> command.  provides a To set or
@@ -663,11 +689,11 @@ $ svn propget copyright calc/button.c
 
       <para>There's even a variation of the
         <command>proplist</command> command which will list both the
-        names and values of the properties.  Simply supply the
+        name and value of all of the properties.  Simply supply the
         <option>--verbose (-v)</option> option.</para>
 
       <screen>
-$ svn proplist calc/button.c
+$ svn proplist --verbose calc/button.c
 Properties on 'calc/button.c':
   copyright : (c) 2003 Red-Bean Software
   license : ================================================================
@@ -677,11 +703,72 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions 
 are met:
 
-1. Redistributions of source code must beretain the above copyright
+1. Redistributions of source code must retain the above copyright
 notice, this list of conditions, and the recipe for Fitz's famous
 red-beans-and-rice.
 &hellip;
 </screen>
+
+      <para>The last property-related subcommand is
+        <command>propdel</command>.  Since Subversion allows you to
+        store properties with empty values, you can't remove a
+        property altogether using <command>propedit</command> or
+        <command>propset</command>.  For example, this command will
+        <emphasis>not</emphasis> work:</para>
+
+      <screen>
+$ svn propset license '' calc/button.c
+property `license' set on 'calc/button.c'
+$ svn proplist --verbose calc/button.c
+Properties on 'calc/button.c':
+  copyright : (c) 2003 Red-Bean Software
+  license : 
+$
+</screen>
+
+      <para>You need to use the <command>propdel</command> command to
+        delete properties altogether.  The syntax is similar to the
+        other property commands:</para>
+
+      <screen>
+$ svn propdel license calc/button.c
+property `foo' deleted from ''.
+$ svn proplist --verbose calc/button.c
+Properties on 'calc/button.c':
+  copyright : (c) 2003 Red-Bean Software
+$
+</screen>
+
+      <para>You are now familiar with all of the property-related
+        <command>svn</command> subcommands.</para>
+
+      <sidebar>
+        <title>Modifying Revision Properties</title>
+
+        <para>Remember those unversioned revision properties?  You can
+          modify those with the <command>svn</command> program, too.
+          Simply add the <option>--revprop</option> command-line
+          parameter, and specify the revision whose property you wish
+          to modify.  Since revisions are global, you don't need to
+          specify a path in this case as long as you are positioned in
+          the working copy of the repository whose revision property
+          you wish to modify.</para>
+
+        <screen>
+$ svn pset status 'compiles, but does not work' -r11 --revprop
+property `status' set on repository revision '11'
+$
+</screen>
+
+        <para>Note that the ability to modify these unversioned
+          properties must be explicitly added by the repository
+          administrator.  Since the properties aren't versioned, you
+          run the risk of losing information if you aren't careful
+          with your edits.  The repository administrator can setup
+          methods to protect against this lossage, but by default,
+          modification of unversioned properties is disabled.</para>
+
+      </sidebar>
 
       <!-- ### cmpilato wuz here. -->
 
@@ -739,7 +826,7 @@ _M   foo.c
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-6-sect-2.2">
+    <sect2 id="svn-ch-6-sect-2.3">
       
      <title>Special properties</title>
 
@@ -750,7 +837,7 @@ _M   foo.c
         properties begin with this prefix.  We'll cover these features
         here.</para>
       
-      <sect3 id="svn-ch-6-sect-2.2.1">
+      <sect3 id="svn-ch-6-sect-2.3.1">
         <title><literal>svn:executable</literal></title>
         
         <para>This is a file-only property, and can be set to any
@@ -759,7 +846,7 @@ _M   foo.c
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.2.2">
+      <sect3 id="svn-ch-6-sect-2.3.2">
         <title><literal>svn:mime-type</literal></title>
         
         <para>At the present time, Subversion examines the
@@ -796,7 +883,7 @@ _M   foo.c
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.2.3">
+      <sect3 id="svn-ch-6-sect-2.3.3">
         <title><literal>svn:ignore</literal></title>
 
         <para>If you attach this property to a directory, it causes
@@ -824,7 +911,7 @@ $ svn propget svn:ignore .
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.2.4">
+      <sect3 id="svn-ch-6-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
         <para>Subversion has the ability to substitute useful strings
@@ -935,7 +1022,7 @@ property `svn:keywords' set on 'foo.c'
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.2.5">
+      <sect3 id="svn-ch-6-sect-2.3.5">
         <title><literal>svn:eol-style</literal></title>
 
         <para>By default, Subversion doesn't pay any attention to line
@@ -971,7 +1058,7 @@ property `svn:keywords' set on 'foo.c'
 
       </sect3>
 
-      <sect3 id="svn-ch-6-sect-2.2.6">
+      <sect3 id="svn-ch-6-sect-2.3.6">
         <title><literal>svn:externals</literal></title>
 
         <para>See <xref linkend="svn-ch-6-sect-3"/>.</para>
