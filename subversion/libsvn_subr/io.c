@@ -232,7 +232,7 @@ svn_io_temp_dir (const char **dir,
   static const char *try_envs[] = { "TMP", "TEMP", "TMPDIR" };
   const char *temp_dir;
   char *cwd;
-  int i;
+  apr_size_t i;
 
   /* Our goal is to find a temporary directory suitable for writing
      into.  We'll only pay the price once if we're successful -- we
