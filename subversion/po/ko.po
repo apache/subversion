@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "POT-Creation-Date: 2004-09-30 16:40+0900\n"
-"PO-Revision-Date: 2004-10-22 00:17+0900\n"
-"Last-Translator: Hojin Choi <pynoos@users.kldp.net>\n"
+"PO-Revision-Date: 2004-10-26 11:37+0900\n"
+"Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -3145,7 +3145,7 @@ msgstr "리비전 파일내에 잘못된 형식의 헤더가 있습니다."
 #: libsvn_fs_fs/fs_fs.c:516
 #: libsvn_fs_fs/fs_fs.c:524
 msgid "Malformed text rep offset line in node-rev"
-msgstr ""
+msgstr "node-rev 에 잘못된 텍스트 rep 옵셋 라인"
 
 #: libsvn_fs_fs/fs_fs.c:593
 msgid "Missing kind field in node-rev"
@@ -3394,7 +3394,7 @@ msgstr "알 수 없는 XML 인코딩: '%s'"
 
 #: libsvn_ra_dav/fetch.c:2413
 msgid "REPORT response handling failed to complete the editor drive"
-msgstr ""
+msgstr "REPORT 응답 처리가 편집기 구동을 완료하는데 실패하였습니다."
 
 #: libsvn_ra_dav/file_revs.c:360
 msgid "get-file-revs REPORT not implemented"
@@ -3515,7 +3515,7 @@ msgstr "잘못된 설정: 인증서 파일 '%s' 를 읽을 수 없습니다."
 
 #: libsvn_ra_dav/session.c:812
 msgid "The UUID property was not found on the resource or any of its parents"
-msgstr ""
+msgstr "UUID 속성이 대상이나 대상의 어떤 상위에서도 발견되지 않았습니다"
 
 #: libsvn_ra_dav/session.c:820
 msgid "Please upgrade the server to 0.19 or later"
@@ -3875,7 +3875,7 @@ msgstr ""
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
 msgid "Failed to find time on revision %ld"
-msgstr ""
+msgstr "리비젼 %ld 에서 time을 발견 할 수 없습니다"
 
 #: libsvn_repos/rev_hunt.c:219
 #, c-format
@@ -4884,78 +4884,78 @@ msgstr "디렉토리 추가 실패 '%s': 같은 이름의 개체를 이미 추�
 
 #: libsvn_wc/update_editor.c:1269
 msgid "Couldn't do property merge"
-msgstr ""
+msgstr "속성을 병합할 수 없습니다"
 
 #: libsvn_wc/update_editor.c:1362
 #, c-format
 msgid "Failed to mark '%s' absent: item of the same name is already scheduled for addition"
-msgstr ""
+msgstr "'%s' 를 없는 것으로 표시할 수 없습니다: 이미 같은 이름의 항목이 추가되도록 스케쥴되어 있습니다"
 
 #: libsvn_wc/update_editor.c:1453
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
-msgstr ""
+msgstr "파일 '%s'를 추가할 수 없습니다: 같은 이름의 대상이 이미 존재합니다"
 
 #: libsvn_wc/update_editor.c:1474
 #, c-format
 msgid "Failed to add file '%s': object of the same name is already scheduled for addition"
-msgstr ""
+msgstr "파일 '%s'를 추가 할수 없습니다: 이미 같은 이름의 대상이 추가되도록 스케쥴되어 있습니다"
 
 #: libsvn_wc/update_editor.c:1481
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
-msgstr ""
+msgstr "디렉토리 '%s' 의 파일 '%s'는 버젼 관리 대상이 아닙니다"
 
 #: libsvn_wc/update_editor.c:1601
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
-msgstr ""
+msgstr "'%s' 에 대한 체크섬이 일치하지 않습니다; 기록된 것:'%s', 실제:'%s'"
 
 #: libsvn_wc/update_editor.c:1897
 msgid "Move failed"
-msgstr ""
+msgstr "이동 실패"
 
 #: libsvn_wc/update_editor.c:2735
 #, c-format
 msgid "'%s' has no ancestry information"
-msgstr ""
+msgstr "'%s'가 히스토리를 갖고 있시 않습니다"
 
 #: libsvn_wc/util.c:84
 msgid "Unable to make any directories"
-msgstr ""
+msgstr "어떤 디렉토리도 만들 수 없습니다"
 
 #: svnadmin/main.c:92
 #: svndumpfilter/main.c:62
 msgid "Can't open stdio file"
-msgstr ""
+msgstr "stdio 파일을 열 수 없습니다"
 
 #: svnadmin/main.c:121
 msgid "Repository argument required"
-msgstr ""
+msgstr "저장소 인자가 팔요합니다"
 
 #: svnadmin/main.c:126
 #, c-format
 msgid "'%s' is an URL when it should be a path"
-msgstr ""
+msgstr "'%s'는 그것이 경로로 존재할 때만 URL 입니다"
 
 #: svnadmin/main.c:227
 #: svndumpfilter/main.c:705
 #: svnlook/main.c:95
 #: svnversion/main.c:201
 msgid "show version information"
-msgstr ""
+msgstr "버젼 정보를 보여줍니다"
 
 #: svnadmin/main.c:230
 msgid "specify revision number ARG (or X:Y range)"
-msgstr ""
+msgstr "리비젼 넘버 ARG ( 또는 X:Y 범위 )를 지정합니다"
 
 #: svnadmin/main.c:233
 msgid "dump incrementally"
-msgstr ""
+msgstr "incremental 적재를 합니다."
 
 #: svnadmin/main.c:236
 msgid "use deltas in dump output"
-msgstr ""
+msgstr "적재된 결과물에 deltas를 사용합니다"
 
 #: svnadmin/main.c:239
 msgid "bypass the repository hook system"
@@ -4967,37 +4967,39 @@ msgstr ""
 
 #: svnadmin/main.c:245
 msgid "ignore any repos UUID found in the stream"
-msgstr ""
+msgstr "스트림에 어떤 repos UUID가 발견되어도 무시합니다"
 
 #: svnadmin/main.c:248
 msgid "set repos UUID to that found in stream, if any"
-msgstr ""
+msgstr "만약 있다면, repos UUID 를 스트림에서 발견된 것에 설정합니다,"
 
 #: svnadmin/main.c:251
 msgid "type of repository: 'bdb' or 'fsfs'"
-msgstr ""
+msgstr "저장소 타입: 'bdb' 또는 'fsfs'"
 
 #: svnadmin/main.c:254
 msgid "load at specified directory in repository"
-msgstr ""
+msgstr "저장소의 지정된 디렉토리에 로드합니다"
 
 #: svnadmin/main.c:257
 msgid "disable fsync at transaction commit [Berkeley DB]"
-msgstr ""
+msgstr "트랜잭션을 커밋에서 fsync를 비활성화합니다[Berkeley DB] "
 
 #: svnadmin/main.c:260
 msgid "disable automatic log file removal [Berkeley DB]"
-msgstr ""
+msgstr "자동 로그 파일 삭제를 비활성화 합니다 [Berkeley DB]"
 
 #: svnadmin/main.c:266
 msgid "remove redundant log files from source repository"
-msgstr ""
+msgstr "원본 저장소로 부터 중복된 로그 파일을 제거합니다"
 
 #: svnadmin/main.c:269
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
 msgstr ""
+"만약 저장소가 다른 프로세스에 의해 사용되고 있다면\n"
+"빠져나가지 않고 기다립니다"
 
 #: svnadmin/main.c:282
 msgid ""
@@ -5005,6 +5007,9 @@ msgid ""
 "\n"
 "Create a new, empty repository at REPOS_PATH.\n"
 msgstr ""
+"사용법: svnadmin create REPOS_PATH\n"
+"\n"
+"REPOS_PATH 에 새로운 빈 저장소를 생성합니다.\n"
 
 #: svnadmin/main.c:288
 msgid ""
@@ -5120,16 +5125,16 @@ msgstr ""
 #: svnadmin/main.c:496
 #: svnadmin/main.c:551
 msgid "First revision cannot be higher than second"
-msgstr ""
+msgstr "첫번 째 리비젼이 두번째 보다 더 높을 수 없습니다."
 
 #: svnadmin/main.c:505
 #, c-format
 msgid "Deltifying revision %ld..."
-msgstr ""
+msgstr "리비젼 %ld 를 deltifying 합니다"
 
 #: svnadmin/main.c:509
 msgid "done.\n"
-msgstr ""
+msgstr "처리되었습니다.\n"
 
 #: svnadmin/main.c:578
 msgid ""
@@ -5144,50 +5149,56 @@ msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
 msgstr ""
+"저장소 잠금을 획득했습니다.\n"
+"기다려 주십시오; 저장소 복구는 시간이 소요될 수 있습니다...\n"
 
 #: svnadmin/main.c:688
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
 msgstr ""
+"배타적인 저장소 접근을 얻을 수 없습니다; 혹시 httpd, \n"
+"svnserve 나 svn 같은 다른 프로세스들에 의해 열려있습니까?"
 
 #: svnadmin/main.c:693
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr ""
+msgstr "저장소 잠금을 기다리고 있습니다: 혹시 다른 프로세스에 의해 열려 있지 않습니까?\n"
 
 #: svnadmin/main.c:700
 msgid ""
 "\n"
 "Recovery completed.\n"
 msgstr ""
+"\n"
+"복구가 완료되었습니다.\n"
 
 #: svnadmin/main.c:707
 #, c-format
 msgid "The latest repos revision is %ld.\n"
-msgstr ""
+msgstr "가장 최근의 repos 리비젼은 %ld 입니다.\n"
 
 #: svnadmin/main.c:815
 #, c-format
 msgid "Transaction '%s' removed.\n"
-msgstr ""
+msgstr "트랜잭션 '%s' 가 제거되었습니다.\n"
 
 #: svnadmin/main.c:839
 msgid "Missing revision"
-msgstr ""
+msgstr "리비젼이 누락되었습니다"
 
 #: svnadmin/main.c:842
 msgid "Only one revision allowed"
-msgstr ""
+msgstr "오직 하나의 리비젼만이 허용됩니다"
 
 #: svnadmin/main.c:848
 msgid "Exactly one file argument required"
-msgstr ""
+msgstr "정확하게 하나의 파일 인자만 필요합니다"
 
 #: svnadmin/main.c:1121
 #: svndumpfilter/main.c:1103
 #: svnlook/main.c:1945
 msgid "subcommand argument required\n"
-msgstr ""
+msgstr "subcommand 인자가 필요합니다\n"
 
 #: svnadmin/main.c:1211
 #, c-format
@@ -5195,11 +5206,13 @@ msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnadmin help %s' for usage.\n"
 msgstr ""
+"subcommand '%s' 는 옵션 '%s'를 허용할 수 없습니다\n"
+"사용법 'svnadmin help %s' 을 통해 얻을 수 있습니다.\n"
 
 #: svndumpfilter/main.c:363
 #, c-format
 msgid "Invalid copy source path '%s'"
-msgstr ""
+msgstr "원본 경로 '%s' 에 대한 잘못된 복제입니다"
 
 #: svndumpfilter/main.c:414
 msgid "Node with dropped parent sneaked in"
@@ -5207,33 +5220,33 @@ msgstr ""
 
 #: svndumpfilter/main.c:586
 msgid "This is an empty revision for padding."
-msgstr ""
+msgstr "이것은 padding을 위한 빈 리비젼입니다."
 
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
-msgstr ""
+msgstr "리비젼 %ld 는 %ld 로 커밋되었습니다.\n"
 
 #: svndumpfilter/main.c:649
 #, c-format
 msgid "Revision %ld skipped.\n"
-msgstr ""
+msgstr "리비젼 %ld 는 무시되었습니다.\n"
 
 #: svndumpfilter/main.c:707
 msgid "Do not display filtering statistics."
-msgstr ""
+msgstr "필터링 통계를 표시 하지 마십시오."
 
 #: svndumpfilter/main.c:709
 msgid "Remove revisions emptied by filtering."
-msgstr ""
+msgstr "필터링에 의해 비워진 리비젼을 제거합니다"
 
 #: svndumpfilter/main.c:711
 msgid "Renumber revisions left after filtering."
-msgstr ""
+msgstr "필터링 후에 남겨진 리비젼에 다시 번호를 매깁니다"
 
 #: svndumpfilter/main.c:713
 msgid "Don't filter revision properties."
-msgstr ""
+msgstr "리비젼 속성을 필터하지 마십시오."
 
 #: svndumpfilter/main.c:724
 msgid ""
@@ -5252,6 +5265,8 @@ msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
+"이 프로그램의 사용법 이나 그것의 subcommands 에 대해 설명합니다.\n"
+"사용법: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:799
 msgid ""
@@ -5320,22 +5335,24 @@ msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
+"subcommand '%s' 는 옵션 '%s'를 허용할 수 없습니다\n"
+"사용법 'svnadmin help %s' 을 통해 얻을 수 있습니다.\n"
 
 #: svnlook/main.c:98
 msgid "specify revision number ARG"
-msgstr ""
+msgstr "리비젼 번호로 ARG를 지정합니다"
 
 #: svnlook/main.c:101
 msgid "specify transaction name ARG"
-msgstr ""
+msgstr "om"
 
 #: svnlook/main.c:104
 msgid "be verbose"
-msgstr ""
+msgstr "verbose 합니다."
 
 #: svnlook/main.c:107
 msgid "show node revision ids for each path"
-msgstr ""
+msgstr "각 경로에 대한 노드 리비젼 아이디를 보여줍니다"
 
 #: svnlook/main.c:122
 msgid ""
