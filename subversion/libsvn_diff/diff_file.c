@@ -935,7 +935,6 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   char *endp;
   char *eol;
   apr_size_t len;
-  apr_status_t rv;
 
   curp = baton->curp[idx];
   endp = baton->endp[idx];
