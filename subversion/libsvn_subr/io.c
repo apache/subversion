@@ -558,14 +558,13 @@ svn_io_filesizes_different_p (svn_boolean_t *different_p,
 
 
 svn_error_t *
-svn_io_file_checksum (svn_stringbuf_t **checksum_p,
+svn_io_file_checksum (unsigned char digest[],
                       const char *file,
                       apr_pool_t *pool)
 {
   struct apr_md5_ctx_t context;
   apr_file_t *f = NULL;
   apr_status_t apr_err;
-  unsigned char digest[MD5_DIGESTSIZE];
   char buf[BUFSIZ];  /* What's a good size for a read chunk? */
 
   /* ### The apr_md5 functions return apr_status_t, but they only
@@ -597,7 +596,6 @@ svn_io_file_checksum (svn_stringbuf_t **checksum_p,
        "svn_io_file_checksum: error closing '%s'", file);
 
   apr_md5_final (digest, &context);
-  *checksum_p = svn_base64_from_md5 (digest, pool);
 
   return SVN_NO_ERROR;
 }

@@ -26,6 +26,7 @@
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
 #include "svn_types.h"
@@ -36,6 +37,7 @@
 #include "svn_path.h"
 #include "svn_wc.h"
 #include "svn_io.h"
+#include "svn_md5.h"
 
 #include "wc.h"
 #include "log.h"
@@ -189,7 +191,7 @@ svn_wc_process_committed (const char *path,
   svn_stringbuf_t *logtags;
   apr_file_t *log_fp = NULL;
   char *revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revnum);
-  svn_stringbuf_t *checksum = NULL;
+  const char *hex_digest = NULL;
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
@@ -211,6 +213,7 @@ svn_wc_process_committed (const char *path,
     {
       /* PATH must be some sort of file */
       const char *tmp_text_base;
+      unsigned char digest[MD5_DIGESTSIZE];
       svn_error_t *err;
 
       /* We know that the new text base is sitting in the adm tmp area
@@ -227,7 +230,8 @@ svn_wc_process_committed (const char *path,
          unexpected and hard-to-maintain dependencies.  Ick.
 
          So instead we just do the checksum from scratch.  Ick. */
-      err = svn_io_file_checksum (&checksum, tmp_text_base, pool);
+      err = svn_io_file_checksum (digest, tmp_text_base, pool);
+      hex_digest = svn_md5_digest_to_cstring (digest, pool);
       if (err)
          svn_error_clear (err); 
 
@@ -268,12 +272,12 @@ svn_wc_process_committed (const char *path,
                            rev_author,
                            NULL);
 
-  if (checksum)
+  if (hex_digest)
     svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
                            SVN_WC__LOG_MODIFY_ENTRY,
                            SVN_WC__LOG_ATTR_NAME, base_name,
                            SVN_WC__ENTRY_ATTR_CHECKSUM,
-                           checksum->data,
+                           hex_digest,
                            NULL);
 
   /* Regardless of whether it's a file or dir, the "main" logfile

@@ -280,13 +280,11 @@ svn_error_t *svn_io_filesizes_different_p (svn_boolean_t *different_p,
                                            apr_pool_t *pool);
 
 
-/** Get the md5 checksum of @a file.
- *
- * Store a base64-encoded md5 checksum of @a file's contents in
- * @a *checksum_p.  @a file is utf8-encoded.  Allocate @a checksum_p in 
- * @a pool, and use @a pool for any temporary allocation.
+/** Put the md5 checksum of @a file into @a digest.
+ * @a digest points to MD5_DIGESTSIZE bytes of storage.
+ * Use @a pool only for temporary allocations.
  */
-svn_error_t *svn_io_file_checksum (svn_stringbuf_t **checksum_p,
+svn_error_t *svn_io_file_checksum (unsigned char digest[],
                                    const char *file,
                                    apr_pool_t *pool);
 
