@@ -154,7 +154,7 @@ _svn()
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
 		;;
 	unlock)
-		cmdOpts="$mOpts --targets --editor-cmd --force $pOpts"
+		cmdOpts="--targets --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
