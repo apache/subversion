@@ -27,18 +27,6 @@
 #include "../libsvn_fs/fs-loader.h"
 
 
-static svn_error_t *
-check_lock_expired (svn_lock_t *lock, trail_t *trail)
-{
-  if (! lock->expiration_date
-      || (lock->expiration_date > apr_time_now()))   
-    return SVN_NO_ERROR;
-
-  SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs, lock->token, trail));
-  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock->path, trail));
-  
-  return svn_error_create (SVN_ERR_FS_LOCK_EXPIRED, 0, "Lock expired.");
-}
 
 
 svn_error_t *
@@ -66,13 +54,16 @@ static svn_error_t *
 txn_body_unlock (void *baton, trail_t *trail)
 {
   struct unlock_args *args = baton;
+  svn_node_kind_t kind = svn_node_none;
   svn_lock_t *lock;
 
-  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN */
+
+  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, args->token, trail));
   
-  /* This could return SVN_ERR_FS_LOCK_EXPIRED */
-  SVN_ERR (check_lock_expired (lock, trail));
+  /* ### Figure out the node kind of lock->path.  Call a helper that
+     takes a trail. */
+  
 
   /* There better be a username attached to the fs. */
   if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
@@ -85,8 +76,9 @@ txn_body_unlock (void *baton, trail_t *trail)
              trail->fs->access_ctx->username,
              lock->owner);
 
-  SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs, lock->token, trail));
-  return svn_fs_bdb__lock_delete (trail->fs, lock->path, trail);
+  /* Remove a row from each of the locking tables. */
+  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock->token, trail));
+  return svn_fs_bdb__lock_token_delete (trail->fs, lock->path, kind, trail);
 }
 
 
@@ -109,13 +101,19 @@ svn_fs_base__unlock (svn_fs_t *fs,
 svn_error_t *
 svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
                                         const char *path,
+                                        const svn_node_kind_t kind,
                                         trail_t *trail)
 {
   const char *lock_token;
   svn_error_t *err;
   
-  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs, path, trail);
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
+  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs, path, kind, trail);
+
+  /* We've deliberately decided that this function doesn't tell the
+     caller *why* the lock is unavailable.  */
+  if (err && ((err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
+              || (err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+              || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
     {
       svn_error_clear (err);
       *lock_p = NULL;
@@ -124,15 +122,17 @@ svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
   else
     SVN_ERR (err);
 
-  SVN_ERR (svn_fs_bdb__lock_get (lock_p, trail->fs, lock_token, trail));
-
-  err = check_lock_expired (*lock_p, trail);
-  if (err && err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+  /* Same situation here.  */
+  err = svn_fs_bdb__lock_get (lock_p, trail->fs, lock_token, trail);
+  if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+              || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
     {
       svn_error_clear (err);
       *lock_p = NULL;
       return SVN_NO_ERROR;
     }
+  else
+    SVN_ERR (err);
 
   return err;
 }
@@ -149,8 +149,14 @@ static svn_error_t *
 txn_body_get_lock_from_path (void *baton, trail_t *trail)
 {
   struct lock_token_get_args *args = baton;
-  return svn_fs_base__get_lock_from_path_helper (args->lock_p, args->path,
-                                                 trail);
+  svn_node_kind_t kind = svn_node_none;
+
+  /* ### Figure out the node kind of lock->path.  Call a helper that
+     takes a trail. */
+
+
+  return svn_fs_base__get_lock_from_path_helper (args->lock_p,
+                                                 args->path, kind, trail);
 }
 
 
@@ -185,10 +191,8 @@ txn_body_get_lock_from_token (void *baton, trail_t *trail)
 {
   struct lock_get_args *args = baton;
   
-  SVN_ERR (svn_fs_bdb__lock_get (args->lock_p, trail->fs,
-                                 args->lock_token, trail));
-  
-  return check_lock_expired (*args->lock_p, trail);
+  return svn_fs_bdb__lock_get (args->lock_p, trail->fs,
+                               args->lock_token, trail);
 }
 
 
@@ -213,40 +217,10 @@ svn_fs_base__get_lock_from_token (svn_lock_t **lock,
 svn_error_t *
 svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
                                const char *path,
+                               const svn_node_kind_t kind,
                                trail_t *trail)
 {
-  apr_hash_index_t *hi;
-
-  SVN_ERR (svn_fs_bdb__lock_tokens_get (locks_p, trail->fs, path, trail));
-
-  hi = apr_hash_first (trail->pool, *locks_p);
-  while (hi)
-    {
-      const void *key;
-      apr_ssize_t keylen;
-      void *token;
-      svn_lock_t *lock;
-      svn_error_t *err;
-
-      apr_hash_this (hi, &key, &keylen, &token);
-      hi = apr_hash_next (hi);
-
-      SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, token, trail));
-      err = check_lock_expired (lock, trail);
-
-      /* If the lock has expired, simply remove it from the hash */
-      if (err && err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
-        {
-          svn_error_clear (err);
-          lock = NULL;
-        }
-      else
-        SVN_ERR (err);
-
-      apr_hash_set (*locks_p, key, keylen, lock);
-    }
-
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__locks_get (locks_p, trail->fs, path, kind, trail);
 }
 
 
@@ -261,7 +235,14 @@ static svn_error_t *
 txn_body_get_locks (void *baton, trail_t *trail)
 {
   struct locks_get_args *args = baton;
-  return svn_fs_base__get_locks_helper (args->locks_p, args->path, trail);
+  svn_node_kind_t kind = svn_node_none;
+
+  /* ### Figure out the node kind of lock->path.  Call a helper that
+     takes a trail. */
+
+
+  return svn_fs_base__get_locks_helper (args->locks_p, args->path,
+                                        kind, trail);
 }
 
 
@@ -291,17 +272,12 @@ svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
 {
   *allow = FALSE;
 
-  /* In order for partial-key match to work properly, a directory
-     must end with '/'.  */
-  if (kind == svn_node_dir)
-    path = apr_pstrcat (trail->pool, path, "/", NULL);
-
   if (kind == svn_node_dir && recurse)
     {
       apr_hash_t *locks;
       
       /* Discover all locks at or below the path. */
-      SVN_ERR (svn_fs_base__get_locks_helper (&locks, path, trail));
+      SVN_ERR (svn_fs_base__get_locks_helper (&locks, path, kind, trail));
 
       /* Easy out. */
       if (apr_hash_count (locks) == 0)
@@ -320,7 +296,8 @@ svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
       svn_lock_t *lock;
 
       /* Discover any lock attached to the path. */
-      SVN_ERR (svn_fs_base__get_lock_from_path_helper (&lock, path, trail));
+      SVN_ERR (svn_fs_base__get_lock_from_path_helper (&lock, path,
+                                                       kind, trail));
 
       /* Easy out. */
       if (! lock)

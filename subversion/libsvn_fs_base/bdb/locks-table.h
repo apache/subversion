@@ -64,11 +64,35 @@ svn_error_t *svn_fs_bdb__lock_delete (svn_fs_t *fs,
    TRAIL->pool.
 
    Return SVN_ERR_FS_BAD_LOCK_TOKEN if LOCK_TOKEN does not exist as a
-   table key. */
+   table key.
+
+   Before returning LOCK_P, check its expiration date.  If expired,
+   remove the row from the `locks' table and return SVN_ERR_FS_LOCK_EXPIRED.
+ */
 svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
                                    svn_fs_t *fs,
                                    const char *lock_token,
                                    trail_t *trail);
+
+
+/* Retrieve a hash of locks in *LOCKS_P, representing all locks
+   that exist at or below PATH in FS.  KIND indicates whether PATH is
+   a file or directory.
+
+   The hash maps (const char *)path -> (svn_lock_t *)lock.  All
+   allocations are made in TRAIL->pool.
+
+   If no locks exist below PATH, return an empty hash.
+
+   This function promises that to auto-expire any locks encountered
+   while building the hash.  That means that the caller can trust that
+   each returned lock hasn't yet expired.
+*/
+svn_error_t *svn_fs_bdb__locks_get (apr_hash_t **locks_p,
+                                    svn_fs_t *fs,
+                                    const char *path,
+                                    const svn_node_kind_t kind,
+                                    trail_t *trail);
 
 
 

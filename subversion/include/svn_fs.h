@@ -1428,6 +1428,30 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 
 /* Filesystem locks.  (@since New in 1.2.) */
 
+/** A lock represents one user's exclusive right to modify a path in a
+ * filesystem.  In order to create or destroy a lock, a username must
+ * be associated with the filesystem's access context (see @c
+ * svn_fs_access_t).
+ *
+ * When a lock is created, a 'lock-token' is returned.  The lock-token
+ * is a unique string that represents the lock, and is required to
+ * make further use of the lock (including removal of the lock.)  A
+ * lock-token can also be queried to return a svn_lock_t structure
+ * that describes the details of the lock.  
+ *
+ * Locks are not secret; anyone can view existing locks in a
+ * filesystem.  Locks are not omnipotent: they can broken and stolen
+ * by people who don't "own" the lock.  (Though admins can tailor a
+ * custom break/steal policy via libsvn_repos pre-lock hook script.)
+ *
+ * Locks can be created with an optional 'timeout', meaning that they
+ * expire after a certain amount of time.  If a lock has an expiration
+ * date, then act of fetching/reading it might cause it automatically
+ * expire, returning either nothing or an expiration error (depending
+ * on the API).
+ */
+
+
 /** Lock @a path in @a fs, and set @a *lock to a lock
  * representing the new lock, allocated in @a pool.
  *

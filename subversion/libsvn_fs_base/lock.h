@@ -60,21 +60,28 @@ svn_error_t *svn_fs_base__get_locks (apr_hash_t **locks,
 
 
 
-/* These next functions are 'helpers' for internal libsvn_fs_base use. */
+/* These next functions are 'helpers' for internal fs use:
+   if a fs function's txn_body needs to enforce existing locks, it
+   should use these routines:
+*/
 
 
 /* Implements main logic of 'svn_fs_get_lock_from_path' (or in this
    case, svn_fs_base__get_lock_from_path() above.)  See svn_fs.h. */
-svn_error_t *svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
-                                                     const char *path,
-                                                     trail_t *trail);
-
+svn_error_t *
+svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
+                                        const char *path,
+                                        const svn_node_kind_t kind,
+                                        trail_t *trail);
+  
 
 /* Implements main logic of 'svn_fs_get_locks' (or in this case,
-   svn_fs_base__get_lock_from_path() above.)  See svn_fs.h */
-svn_error_t *svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
-                                            const char *path,
-                                            trail_t *trail);
+   svn_fs_base__get_locks_from_path() above.)  See svn_fs.h */
+svn_error_t *
+svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
+                               const char *path,
+                               const svn_node_kind_t kind,
+                               trail_t *trail);
 
 
 /* Examine PATH (of kind KIND) for locks.  
@@ -84,7 +91,7 @@ svn_error_t *svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
    set), then set *ALLOW to true iff:
 
       1. for every lock discovered, an appropriate lock token has been
-         passed into TRAIL->fs, and
+         passed into TRAIL->fs's access-context, and
 
       2. for every lock discovered, the current username in the access
          context of TRAIL->fs matches the "owner" of the lock.

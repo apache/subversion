@@ -30,7 +30,7 @@
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 #include "locks-table.h"
-
+#include "lock-tokens-table.h"
 
 
 
@@ -134,7 +134,121 @@ svn_fs_bdb__lock_get (svn_lock_t **lock_p,
   /* Convert skel to native type. */
   SVN_ERR (svn_fs_base__parse_lock_skel (&lock, skel,
                                          trail->pool));
+
+  /* Possibly auto-expire the lock. */
+  if (lock->expiration_date
+      && (apr_time_now() > lock->expiration_date))
+    {
+      SVN_ERR (svn_fs_bdb__lock_delete (fs, lock_token, trail));
+      return svn_fs_base__err_lock_expired (fs, lock_token);
+    }
+
   *lock_p = lock;
+  return SVN_NO_ERROR;
+}
+
+
+
+
+svn_error_t *
+svn_fs_bdb__locks_get (apr_hash_t **locks_p,
+                       svn_fs_t *fs,
+                       const char *path,
+                       const svn_node_kind_t kind,
+                       trail_t *trail)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  const char *lookup_path = path;
+  DBC *cursor;
+  DBT key, value;
+  int db_err;
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
+
+  apr_hash_t *locks = apr_hash_make(trail->pool);
+
+  if (kind == svn_node_dir)
+    lookup_path = apr_pstrcat (trail->pool, path, "/", NULL);
+
+  svn_fs_base__trail_debug (trail, "lock-tokens", "cursor");
+  db_err = bfd->lock_tokens->cursor (bfd->lock_tokens, trail->db_txn,
+                                     &cursor, 0);  
+  SVN_ERR (BDB_WRAP (fs, "creating cursor for reading lock tokens", db_err));
+
+  /* Since the key is going to be returned as well as the value
+   * make sure BDB malloc's the returned key.
+   */
+  svn_fs_base__str_to_dbt (&key, lookup_path);
+  key.flags |= DB_DBT_MALLOC;
+
+  /* Get the first matching key that is either equal or greater
+   * than the one passed in, by passing in the DB_RANGE_SET flag.
+   */
+  db_err = cursor->c_get(cursor, &key, svn_fs_base__result_dbt (&value),
+                         DB_SET_RANGE);
+
+  /* As long as the prefix of the returned KEY matches LOOKUP_PATH 
+   * we know it is either LOOKUP_PATH or a decendant thereof.
+   */
+  while (! db_err && strncmp(lookup_path, key.data, key.size) != 0)
+    {
+      const char *lock_token;
+      char *child_path;
+      svn_node_kind_t child_kind;
+      svn_lock_t *lock;
+      svn_error_t *err;
+
+      svn_pool_clear (subpool);
+
+      svn_fs_base__track_dbt (&key, subpool);      
+      svn_fs_base__track_dbt (&value, subpool);
+
+      /* Create a usable path and token in temporary memory. */
+      child_path = apr_pstrmemdup (subpool, key.data, key.size);
+      lock_token = apr_pstrmemdup (subpool, value.data, value.size);
+
+      /* Figure out the node_kind of this child path. */
+      child_kind =
+        (child_path[key.size - 1] == '/') ? svn_node_dir : svn_node_file;
+
+      /* If the child_path has a trailing '/', we need to remove it,
+         to stay compatible with the rest of the fs library. */
+      if (child_path[key.size - 1] == '/')
+          child_path[key.size - 1] = '\0';
+
+      /* Make sure the token points to an existing, non-expired lock,
+         by doing a lookup in the `locks' table. */
+      err = svn_fs_bdb__lock_get (&lock, fs, lock_token, trail);
+      if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+                  || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
+        {
+          svn_error_clear (err);
+
+          /* If `locks' doesn't have the lock, then we should lose it
+             from `lock-tokens' table as well, then skip to the next
+             matching path-key. */
+          SVN_ERR (svn_fs_bdb__lock_token_delete (fs, child_path,
+                                                  child_kind, trail));
+          continue;
+        }
+      else if (err)
+        return err;
+
+      /* Lock is verified, return it in the hash. */
+      apr_hash_set (locks, apr_pstrdup(trail->pool, child_path), 
+                    APR_HASH_KEY_STRING, lock);
+
+      svn_fs_base__result_dbt (&key);
+      svn_fs_base__result_dbt (&value);
+      db_err = cursor->c_get(cursor, &key, &value, DB_NEXT);
+    }
+
+  svn_pool_destroy (subpool);
+  cursor->c_close(cursor);
+
+  if (db_err && (db_err != DB_NOTFOUND)) 
+    SVN_ERR (BDB_WRAP (fs, "fetching lock tokens", db_err));
+
+  *locks_p = locks;
   return SVN_NO_ERROR;
 }
 

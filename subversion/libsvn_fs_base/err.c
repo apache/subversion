@@ -253,6 +253,18 @@ svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path)
      path, fs->path);
 }
 
+
+svn_error_t *
+svn_fs_base__err_lock_expired (svn_fs_t *fs, const char *token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_LOCK, 0,
+     "Lock has expired:  lock-token '%s' in filesystem '%s'",
+     token, fs->path);
+}
+
+
 svn_error_t *
 svn_fs_base__err_no_user (svn_fs_t *fs)
 {

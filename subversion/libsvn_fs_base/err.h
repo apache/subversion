@@ -116,6 +116,9 @@ svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
 /* SVN_ERR_FS_NO_SUCH_LOCK: there is no lock on PATH in FS.  */
 svn_error_t *svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path);
 
+/* SVN_ERR_FS_LOCK_EXPIRED: TOKEN's lock in FS has been auto-expired. */
+svn_error_t *svn_fs_base__err_lock_expired (svn_fs_t *fs, const char *token);
+
 /* SVN_ERR_FS_NO_USER: there is username associated with FS.  */
 svn_error_t *svn_fs_base__err_no_user (svn_fs_t *fs);
 
