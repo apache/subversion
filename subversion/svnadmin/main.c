@@ -634,7 +634,7 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   err = svn_repos_recover2 (opt_state->repository_path, TRUE, pool);
   if (err)
     {
-      if (APR_STATUS_IS_EAGAIN(err->apr_err))
+      if (APR_STATUS_IS_EAGAIN (err->apr_err))
         return err;
       svn_error_clear (err);
       SVN_ERR (svn_cmdline_printf (pool,
