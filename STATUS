@@ -57,7 +57,7 @@ section for approved changes.)
      Justification: API change; avoid permanent support for bizarre and
      unpredictable date formats.
      Votes:
-      +1: mbk, ghudson, dionisos, epg
+      +1: mbk, ghudson, dionisos, epg, striker
       +0: cmpilato
       -1: gstein. see:
            http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=53839
@@ -70,7 +70,7 @@ section for approved changes.)
      Justification: Packaging fixes and additions.
      Votes:
       +1 (concept): gstein
-      +1: kfogel, david
+      +1: kfogel, david, striker
 
 
    * Issue #1682
@@ -79,19 +79,22 @@ section for approved changes.)
      Notes: bindings would need updating
      Votes:
       +1: mbk
-      -1: kfogel (see mailing list thread foo, meaning, I'll put the
-            URL and Message-ID here as soon as I've got them. :-) )
-
+      -1: kfogel. see:
+           http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54039
+           Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
    * Issue #1693
      Improved signal handling for svnadmin, svnlook and svn
      Justification: Avoids uncontrolled termination resulting in
         wedged repositories. API change. Low risk.
      Votes:
-      +1: bliss, rooneg, ghudson
+      +1: bliss, rooneg, ghudson, striker
       -1: gstein
           -- seems like a SIGPIPE should cause a graceful exit, rather
              than to have it continue chewing CPU.
+          -- Rebuttal, see:
+          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54076
+          Message-Id:  <1073614613.32657.258.camel@error-messages.mit.edu>
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
@@ -105,7 +108,7 @@ the section for unapproved changes.)
             that change, so it needs to be listed separately for now.
      Votes:
       +1: rooneg, ghudson, dionisos
-      +1 (concept): jerenkrantz, gstein
+      +1 (concept): jerenkrantz, gstein, striker
       +0: cmpilato
 
 
@@ -114,7 +117,7 @@ the section for unapproved changes.)
      Justification: Constructor helps with backward compatibility.
      Votes:
       +1: rooneg, ghudson, sussman
-      +0: jerenkrantz, gstein, cmpilato
+      +0: jerenkrantz, gstein, cmpilato, striker
 
 
    * Issue #999
@@ -133,7 +136,7 @@ the section for unapproved changes.)
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
      Votes:
-      +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00), epg
+      +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00), epg, striker
       +0: cmpilato
 
 
@@ -151,7 +154,7 @@ the section for unapproved changes.)
      Fix a handle leak that caused a test failure on Windows.
      Justification: Windows correctness, test failure, and went into 0.35.1.
      Votes:
-      +1: brane, jerenkrantz, ghudson, dionisos, gstein
+      +1: brane, jerenkrantz, ghudson, dionisos, gstein, striker
       +0: cmpilato
 
 
@@ -167,7 +170,7 @@ the section for unapproved changes.)
      'svn revert' performance improvement (timestamp sleep once, not N times)
      Justification: trivial; API change; makes error returns correct priority
      Votes:
-      +1: jerenkrantz, rooneg, ghudson, dionisos, epg, cmpilato
+      +1: jerenkrantz, rooneg, ghudson, dionisos, epg, cmpilato, striker
       -0: gstein (revert of many files is uncommon)
 
 
@@ -178,7 +181,7 @@ the section for unapproved changes.)
             doc bug in this.  I (kfogel) have removed my veto on this,
             because r8101 has three votes now.
      Votes:
-      +1: jerenkrantz, bliss, ghudson, epg, sussman
+      +1: jerenkrantz, bliss, ghudson, epg, sussman, striker
       -0: gstein
 
 
@@ -187,7 +190,7 @@ the section for unapproved changes.)
      Justification: Better external API documentation, ultra-low risk.
      Notes: See Concerns field of r8013 above.
      Votes:
-      +1: bliss, ghudson, sussman
+      +1: bliss, ghudson, sussman, striker
       +0: gstein, cmpilato
 
 
@@ -196,6 +199,7 @@ the section for unapproved changes.)
      Justification: API, consistency with other auth provider behavior
      Votes:
       +1: jerenkrantz, bliss, ghudson, epg
+      +1 (concept): striker
       +0: gstein
 
 
@@ -203,7 +207,7 @@ the section for unapproved changes.)
      Update references to BDB version in documentation.
      Justification: very low risk, and accurate documentation is good
      Votes:
-      +1: jerenkrantz, rooneg, ghudson, dionisos, gstein
+      +1: jerenkrantz, rooneg, ghudson, dionisos, gstein, striker
 
 
    * Issue #1652
@@ -222,7 +226,7 @@ the section for unapproved changes.)
      Justification: API stability; and, old name was overly restrictive.
      Votes:
       +1: jerenkrantz, jszakmeister, epg, cmpilato
-      +0: sussman
+      +0: sussman, striker
       -0: gstein
 
 
@@ -230,7 +234,7 @@ the section for unapproved changes.)
      Add a pool parameter to finish_abort and abort_report.
      Justification: API stability; low risk
      Votes:
-      +1: jerenkrantz, ghudson, bliss, jszakmeister, epg, cmpilato
+      +1: jerenkrantz, ghudson, bliss, jszakmeister, epg, cmpilato, striker
       -0: gstein
 
 
@@ -254,7 +258,7 @@ the section for unapproved changes.)
      Rename 'store-password' option renamed to 'store-auth-creds'
      Justification: API stability; low risk;  more accurate name.
      Votes:
-      +1: bliss, cmpilato, sussman
+      +1: bliss, cmpilato, sussman, striker
       -0: gstein
 
 
@@ -263,7 +267,7 @@ the section for unapproved changes.)
      Justification: API stability; essentially zero risk
      Votes:
       +1: ghudson, jszakmeister, epg
-      +0: gstein, cmpilato
+      +0: gstein, cmpilato, striker
 
 
    * r8114
@@ -293,7 +297,7 @@ the section for unapproved changes.)
      Fix a compiler warning.
      Justification: trivially fixes embarassing warning; zero risk.
      Votes:
-      +1: mbk, ghudson, dionisos, jszakmeister, gstein, epg, cmpilato
+      +1: mbk, ghudson, dionisos, jszakmeister, gstein, epg, cmpilato, striker
 
 
    * r8129
@@ -311,7 +315,7 @@ the section for unapproved changes.)
              (history-wise) to trigger this bug (seen by the inability
              to run 'svn blame' on certain files in the repository).
      Votes:
-      +1: cmpilato, jerenkrantz, jszakmeister
+      +1: cmpilato, jerenkrantz, jszakmeister, striker
       +1 (concept): gstein
 
 
@@ -347,7 +351,7 @@ the section for unapproved changes.)
      Clean up structure definitions.
      Justification: Negligible risk, API cleanliness and stability.
      Votes:
-      +1: ghudson, kfogel, dlr
+      +1: ghudson, kfogel, dlr, striker
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
@@ -363,7 +367,7 @@ Bindings changes that affect the build system:
      Fix for bindings build on Windows. Related to issue 1666.
      Justification: Python bindings will not build otherwise. Low risk.
      Votes:
-       +1: brane, jerenkrantz, gstein
+       +1: brane, jerenkrantz, gstein, striker
        +0: cmpilato
 
 
