@@ -1,3 +1,5 @@
+								-*-text-*-
+
 If you're looking for a task to take on, please see the TASKS file.
 
 This file merely lists immediate, short-term (next few days) stuff on
@@ -17,6 +19,9 @@ General Problems (someone grab these):
    - unable to update specific targets right now;  we need to
      distinguish between specific targets and general full recursive
      updates.
+
+   - don't use stdio's BUFSIZ (portability?). define an SVN specific
+     constant and use it throughout.
 
 Ben & Karl todo:
 

@@ -275,7 +275,7 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
   svn_string_t *res;
   apr_status_t apr_err;
   char buf[BUFSIZ];
-  apr_size_t len = BUFSIZ;
+  apr_size_t len;
   apr_file_t *f = NULL;
 
   res = svn_string_create ("", pool);
@@ -287,7 +287,7 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
                               filename);
       
   do {
-    apr_err = apr_full_read (f, buf, len, &len);
+    apr_err = apr_full_read (f, buf, sizeof(buf), &len);
     if (apr_err && !APR_STATUS_IS_EOF (apr_err))
       return svn_error_createf (apr_err, 0, NULL, pool,
                                 "read_from_file: failed to read '%s'",

@@ -443,7 +443,7 @@ read_entries (apr_hash_t *entries, svn_string_t *path, apr_pool_t *pool)
 
   /* Parse. */
   do {
-    apr_err = apr_full_read (infile, buf, BUFSIZ, &bytes_read);
+    apr_err = apr_full_read (infile, buf, sizeof(buf), &bytes_read);
     if (apr_err && !APR_STATUS_IS_EOF(apr_err))
       return svn_error_create 
         (apr_err, 0, NULL, pool, "read_entries: apr_full_read choked");
