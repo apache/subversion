@@ -101,7 +101,7 @@ svn_error_t *svn_wc_delete (apr_array_header_t *paths);
    the parser to this routine.  This is how local changes in the
    working copy are ultimately translated into network requests.  */
 svn_error_t * svn_wc_crawl_local_mods (svn_string_t *root_directory,
-                                       svn_xml_parser_t *xml_parser,
+                                       svn_delta_edit_fns_t *edit_fns,
                                        apr_pool_t *pool);
 
 
