@@ -266,6 +266,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
   f->name       = name;
   f->path       = path;
   f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
+  f->wcpropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
 
   parent_dir_baton->ref_count++;
 
@@ -1311,19 +1312,6 @@ close_file (void *file_baton)
           svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
     }
 
-  /* Dump any stored-up "wc" props */
-  if (fb->wcprop_changed)
-    {
-      int i;
-      for (i = 0; i < fb->wcpropchanges->nelts; i++)
-        {
-          svn_prop_t *prop;
-          prop = (((svn_prop_t **)(fb->wcpropchanges)->elts)[i]);
-          SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value, 
-                                       fb->path, fb->pool));
-        }
-    }
-
 
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
@@ -1417,6 +1405,20 @@ close_file (void *file_baton)
   err = svn_wc__run_log (fb->dir_baton->path, fb->pool);
   if (err)
     return err;
+
+  /* Dump any stored-up "wc" props, now that the file really exists. */
+  if (fb->wcprop_changed)
+    {
+      int i;
+      for (i = 0; i < fb->wcpropchanges->nelts; i++)
+        {
+          svn_prop_t *prop;
+          prop = (((svn_prop_t **)(fb->wcpropchanges)->elts)[i]);
+          SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value, 
+                                       fb->path, fb->pool));
+        }
+    }
+
 
   /* Unlock, we're done with this whole file-update. */
   err = svn_wc__unlock (fb->dir_baton->path, fb->pool);
