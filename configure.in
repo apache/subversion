@@ -143,12 +143,10 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   FS_BASED_DIRS="libsvn_fs libsvn_repos libsvn_ra_local svnadmin"
   FS_BASED_TESTS="libsvn_fs libsvn_repos libsvn_ra_local"
   FS_RULES="fs-libs fs-programs"
-  FS_LIBS=$SVN_LIBSVN_FS_LIBS
 fi
 AC_SUBST(FS_BASED_DIRS)
 AC_SUBST(FS_BASED_TESTS)
 AC_SUBST(FS_RULES)
-AC_SUBST(FS_LIBS)
 
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MAJOR,
                    [The desired major version for the Berkeley DB])

@@ -2,8 +2,6 @@
 top_builddir = @abs_builddir@
 top_srcdir = @top_srcdir@
 
-SVN_TEST_FS_LIBS = @FS_LIBS@
-
 SVN_CLIENT_DEPS = @LIBSVN_CLIENT_DEPS@
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
@@ -21,6 +19,12 @@ libdir = @libdir@
 sbindir = @sbindir@
 bindir = @bindir@
 includedir = @includedir@
+
+### should search for these...
+MAKEINFO = makeinfo
+TEXI2DVI = texi2dvi
+DVIPS = dvips
+DVIPDF = dvipdf
 
 CC = @CC@
 
@@ -124,3 +128,24 @@ changelog:
 
 .la.la-a:
 	sed "/library_names/s/'.*'/''/" $< > $@
+
+
+.texi.info:
+	@cd $(srcdir) && rm -f $@ $@-[0-9] $@-[0-9][0-9]
+	cd $(srcdir) \
+	  && $(MAKEINFO) `echo $< | sed 's,.*/,,'`
+
+.texi.dvi:
+	MAKEINFO='$(MAKEINFO) -I $(srcdir)' $(TEXI2DVI) $<
+
+.texi.txt:
+	$(MAKEINFO) --no-headers $< > $@
+
+.texi.html:
+	$(MAKEINFO) --no-headers --html $< > $@
+
+.dvi.ps:
+	$(DVIPS) $< -o $@
+
+.dvi.pdf:
+	$(DVIPDF) $< $@
