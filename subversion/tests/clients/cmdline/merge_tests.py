@@ -1135,8 +1135,7 @@ def merge_with_prev (sbox):
     os.chdir(os.path.join(other_wc, 'A'))
 
     # Try to revert the last change to mu via svn merge
-    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV',
-                                    'mu')
+    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV', 'mu')
     if err:
       raise svntest.Failure
 
@@ -1247,6 +1246,45 @@ def merge_binary_file (sbox):
                                        None, None, None, None, None,
                                        1)
 
+#----------------------------------------------------------------------
+# Regression test for Issue #1297:
+# A merge that creates a new file followed by an immediate diff
+# The diff should succeed.
+
+def merge_in_new_file_and_diff(sbox):
+  "diff the results of a merge that creates a new file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  trunk_url = svntest.main.current_repo_url + '/A/B/E';
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     trunk_url,
+                                     svntest.main.current_repo_url + '/branch',
+                                     '-m', "Creating the Branch")
+ 
+  # Update to revision 2.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  
+  new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile');
+  fp = open(new_file_path, 'w')
+  fp.write("newfile")
+  fp.close()
+
+  # Add the new file, and commit revision 3.
+  svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Changing the trunk.", wc_dir)
+
+  # Merge our addition into the branch.
+  branch_path = os.path.join(wc_dir, "branch")
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-r', '1:HEAD', 
+                                     trunk_url, branch_path)
+
+  # Finally, run diff.
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff', branch_path)
+
 
 ########################################################################
 # Run the tests
@@ -1265,6 +1303,7 @@ test_list = [ None,
               merge_with_prev,
               merge_binary_file,
               merge_one_file,
+              XFail(merge_in_new_file_and_diff),
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
