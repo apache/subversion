@@ -2249,6 +2249,10 @@ class _ctx:
 def convert(ctx, start_pass=1):
   "Convert a CVS repository to an SVN repository."
 
+  if not os.path.exists(ctx.cvsroot):
+    sys.stderr.write(error_prefix + ': \'%s\' does not exist.\n' % ctx.cvsroot)
+    sys.exit(1)
+
   times = [ None ] * len(_passes)
   for i in range(start_pass - 1, len(_passes)):
     times[i] = time.time()
