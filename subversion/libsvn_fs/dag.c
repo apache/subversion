@@ -132,6 +132,7 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
   nr->kind = noderev->kind;
   if (noderev->predecessor_id)
     nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
+  nr->predecessor_count = noderev->predecessor_count;
   if (noderev->prop_key)
     nr->prop_key = apr_pstrdup (pool, noderev->prop_key);
   if (noderev->data_key)
@@ -293,6 +294,19 @@ svn_fs__dag_get_predecessor_id (const svn_fs_id_t **id_p,
   
   SVN_ERR (get_node_revision (&noderev, node, trail));
   *id_p = noderev->predecessor_id;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__dag_get_predecessor_count (int *count,
+                                   dag_node_t *node,
+                                   trail_t *trail)
+{
+  svn_fs__node_revision_t *noderev;
+  
+  SVN_ERR (get_node_revision (&noderev, node, trail));
+  *count = noderev->predecessor_count;
   return SVN_NO_ERROR;
 }
 
@@ -833,6 +847,8 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
       
       /* Do the clone thingy here. */
       noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, trail->pool);
+      if (noderev->predecessor_count != -1)
+        noderev->predecessor_count++;
       SVN_ERR (svn_fs__create_successor (&new_node_id, fs, cur_entry->id, 
                                          noderev, copy_id, txn_id, trail));
       
@@ -875,6 +891,8 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
          the root node?  That is, does this function need a copy_id
          passed in?  */
       noderev->predecessor_id = svn_fs__id_copy (base_root_id, trail->pool);
+      if (noderev->predecessor_count != -1)
+        noderev->predecessor_count++;
       SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, 
                                          noderev, 
                                          svn_fs__id_copy_id (base_root_id),
@@ -1426,6 +1444,8 @@ svn_fs__dag_copy (dag_node_t *to_node,
       /* Create a successor with its predecessor pointing at the copy
          source. */
       to_noderev->predecessor_id = svn_fs__id_copy (src_id, trail->pool);
+      if (to_noderev->predecessor_count != -1)
+        to_noderev->predecessor_count++;
       SVN_ERR (svn_fs__create_successor (&id, fs, src_id, to_noderev,
                                          copy_id, txn_id, trail));
 

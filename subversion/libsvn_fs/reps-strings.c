@@ -1288,55 +1288,43 @@ svn_fs__rep_deltify (svn_fs_t *fs,
        "svn_fs__rep_deltify: failed to calculate MD5 digest for %s",
        source);
 
-  /* Get the size of the target's original string data.  Note that we
-     don't use svn_fs__rep_contents_size() for this; that function
-     always returns the fulltext size, whereas we need to know the
-     actual amount of storage used by this representation.  Check the
-     size of the new string.  If it is larger than the old one, this
-     whole deltafication might not be such a bright idea.  While we're
-     at it, we might as well figure out all the strings currently used
-     by REP so we can potentially delete them later. */
+  /* Construct a list of the strings used by the old representation so
+     that we can delete them later.  While we are here, if the old
+     representation was a fulltext, check to make sure the delta we're
+     replacing it with is actually smaller.  (Don't perform this check
+     if we're replacing a delta; in that case, we're going for a time
+     optimization, not a space optimization.)  */
   {
     svn_fs__representation_t *old_rep;
-    apr_size_t old_size = 0;
     const char *str_key;
 
     SVN_ERR (svn_fs__read_rep (&old_rep, fs, target, trail));
     if (old_rep->kind == svn_fs__rep_kind_fulltext)
       {
+        apr_size_t old_size = 0;
+
         str_key = old_rep->contents.fulltext.string_key;
         SVN_ERR (svn_fs__string_size (&old_size, fs, str_key, trail));
         orig_str_keys = apr_array_make (pool, 1, sizeof (str_key));
         (*((const char **)(apr_array_push (orig_str_keys)))) = str_key;
+
+        /* If the new data is NOT an space optimization, destroy the
+           string(s) we created, and get outta here. */
+        if (diffsize >= old_size)
+          {
+            int i;
+            for (i = 0; i < windows->nelts; i++)
+              {
+                ww = ((window_write_t **) windows->elts)[i];
+                SVN_ERR (svn_fs__string_delete (fs, ww->key, trail));
+              }
+            return SVN_NO_ERROR;
+          }
       }
     else if (old_rep->kind == svn_fs__rep_kind_delta)
-      {
-        int i;
-        apr_size_t my_size;
-        
-        SVN_ERR (delta_string_keys (&orig_str_keys, old_rep, pool));
-        for (i = 0; i < orig_str_keys->nelts; i++)
-          {
-            str_key = ((const char **) orig_str_keys->elts)[i];
-            SVN_ERR (svn_fs__string_size (&my_size, fs, str_key, trail));
-            old_size += my_size;
-          }
-      }
+      SVN_ERR (delta_string_keys (&orig_str_keys, old_rep, pool));
     else /* unknown kind */
       abort ();
-
-    /* If the new data is NOT an space optimization, destroy the
-       string(s) we created, and get outta here. */
-    if (diffsize >= old_size)
-      {
-        int i;
-        for (i = 0; i < windows->nelts; i++)
-          {
-            ww = ((window_write_t **) windows->elts)[i];
-            SVN_ERR (svn_fs__string_delete (fs, ww->key, trail));
-          }
-        return SVN_NO_ERROR;
-      }
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by

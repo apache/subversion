@@ -204,6 +204,13 @@ is_valid_node_revision_header_skel (skel_t *skel, skel_t **kind_p)
       && skel->children->next->is_atom)
     return 1;
 
+  /* or with predecessor and predecessor count... */
+  if ((len == 3)
+      && skel->children->is_atom
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom)
+    return 1;
+
   return 0;
 }
 
@@ -550,6 +557,17 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
       noderev->predecessor_id 
         = svn_fs_parse_id (header_skel->children->next->data,
                            header_skel->children->next->len, pool);
+
+      /* PREDECESSOR-COUNT */
+      if (header_skel->children->next->next)
+        {
+          noderev->predecessor_count =
+            atoi (apr_pstrmemdup (pool,
+                                  header_skel->children->next->next->data,
+                                  header_skel->children->next->next->len));
+        }
+      else if (noderev->predecessor_id)
+        noderev->predecessor_count = -1;
     }
       
   /* PROP-KEY */
@@ -972,6 +990,14 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
   header_skel = svn_fs__make_empty_list (pool);
+
+  /* PREDECESSOR-COUNT */
+  if (noderev->predecessor_count != -1)
+    {
+      const char *count_str = apr_psprintf(pool, "%d",
+                                           noderev->predecessor_count);
+      svn_fs__prepend (svn_fs__str_atom (count_str, pool), header_skel);
+    }
 
   /* PREDECESSOR-ID */
   if (noderev->predecessor_id)
