@@ -350,8 +350,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   svn_error_t *err;
   int code;
   int decompress_rv;
-  svn_ra_ne_session_baton_t *sess_baton =
-    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+  svn_ra_session_t *ras = ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -393,7 +392,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  if (sess_baton->compression) {
+  if (ras->compression) {
     decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
   }
   else {

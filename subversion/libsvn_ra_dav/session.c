@@ -575,6 +575,7 @@ svn_ra_dav__open (void **session_baton,
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
+  ras->compression = compression;
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, cfg);
@@ -593,15 +594,11 @@ svn_ra_dav__open (void **session_baton,
   ne_set_server_auth(sess, request_auth, ras);
   ne_set_server_auth(sess2, request_auth, ras);
 
-  /* Setup and register the private session data on the Neon
-     sessions. */
-  {
-    svn_ra_ne_session_baton_t *bt;
-    bt = apr_palloc(pool, sizeof(*bt));
-    bt->compression = compression;
-    ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, bt);
-    ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, bt);
-  }
+  /* Store our RA session baton in Neon's private data slot so we can
+     get at it in functions that take only ne_session_t *sess
+     (instead of the full svn_ra_session_t *ras). */
+  ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, ras);
+  ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, ras);
 
   if (is_ssl_session)
     {
