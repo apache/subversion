@@ -353,7 +353,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
     {
       *modified_p = FALSE;
       goto cleanup;
-    }              
+    }
 
   /* Get the full path of the textbase revision of filename */
   textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
