@@ -20,508 +20,959 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
+#include "svn_md5.h"
 #include "repos.h"
+
+#define NUM_CACHED_SOURCE_ROOTS 4
+
+/* Theory of operation: we write report operations out to a temporary
+   file as we receive them.  When the report is finished, we read the
+   operations back out again, using them to guide the progression of
+   the delta between the source and target revs.
+
+   Temporary file format: we use a simple ad-hoc format to store the
+   report operations.  Each report operation is the concatention of
+   the following ("+/-" indicates the single character '+' or '-';
+   <length> and <revnum> are written out as decimal strings):
+
+     +/-                      '-' marks the end of the report
+     If previous is +:
+       <length>:<bytes>       Length-counted path string
+       +/-                    '+' indicates the presence of link_path
+       If previous is +:
+         <length>:<bytes>     Length-counted link_path string
+       +/-                    '+' indicates presence of revnum
+       If previous is +:
+         <revnum>             Revnum of set_path or link_path
+       +/-                    '+' indicates start_empty field set
+
+   Terminology: for brevity, this file frequently uses the prefixes
+   "s_" for source, "t_" for target, and "e_" for editor.  Also, to
+   avoid overloading the word "target", we talk about the source
+   "anchor and operand", rather than the usual "anchor and target". */
+
+/* Describes the state of a working copy subtree, as given by a
+   report.  Because we keep a lookahead pathinfo, we need to allocate
+   each one of these things in a subpool of the report baton and free
+   it when done. */
+typedef struct path_info_t
+{
+  const char *path;            /* path, munged to be anchor-relative */
+  const char *link_path;       /* NULL for set_path or delete_path */
+  svn_revnum_t rev;            /* SVN_INVALID_REVNUM for delete_path */
+  svn_boolean_t start_empty;   /* Meaningless for delete_path */
+  apr_pool_t *pool;            /* Container pool */
+} path_info_t;
 
 /* A structure used by the routines within the `reporter' vtable,
    driven by the client as it describes its working copy revisions. */
 typedef struct report_baton_t
 {
+  /* Parameters remembered from svn_repos_begin_report */
   svn_repos_t *repos;
-
-  /* The revision on which we will base our transaction.  This start
-     off as SVN_INVALID_REVNUM, and then is set by the first call to
-     set_path().  */
-  svn_revnum_t txn_base_rev;
-
-  /* The transaction being built in the repository, a mirror of the
-     working copy. */
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-
-  /* An optional second transaction used when preserving linked paths
-     in the delta report. */
-  svn_fs_txn_t *txn2;
-  svn_fs_root_t *txn2_root;
-
-  /* Which user is doing the update (building the temporary txn) */
-  const char *username;
-
-  /* The fs path under which all reporting will happen */
-  const char *base_path;
-
-  /* The actual target of the report */
-  const char *target;
-
-  /* -- These items are used by finish_report() when it calls
-        svn_repos_dir_delta(): --  */
-
-  /* whether or not to generate text-deltas */
-  svn_boolean_t text_deltas; 
-
-  /* which revision to compare against */
-  svn_revnum_t revnum_to_update_to; 
-
-  /* The fs path that will be the 'target' of dir_delta.
-     In the case of 'svn switch', this is probably distinct from BASE_PATH.
-     In the case of 'svn update', this is probably identical to BASE_PATH */
-  const char *tgt_path;
-
-  /* Whether or not to recurse into the directories */
+  const char *fs_base;         /* FS path corresponding to wc anchor */
+  const char *s_operand;       /* Anchor-relative wc target (may be empty) */
+  svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
+  const char *t_path;          /* FS path the edit will bring the wc to */
+  svn_boolean_t text_deltas;   /* Whether to report text deltas */
   svn_boolean_t recurse;
-
-  /* Whether or not to ignore ancestry in dir_delta */
   svn_boolean_t ignore_ancestry;
-
-  /* the editor to drive */
-  const svn_delta_editor_t *update_editor;
-  void *update_edit_baton; 
-
-  /* Authz callback for svn_repos_dir_delta.  These may be NULL. */
+  svn_boolean_t is_switch;
+  const svn_delta_editor_t *editor;
+  void *edit_baton; 
   svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
 
-  /* This hash contains any `linked paths', and what they were linked
-     from. */
-  apr_hash_t *linked_paths;
+  /* The temporary file in which we are stashing the report. */
+  apr_file_t *tempfile;
 
-  /* Pool from the session baton. */
+  /* For the actual editor drive, we'll need a lookahead path info
+     entry, a cache of FS roots, and a pool to store them. */
+  path_info_t *lookahead;
+  svn_fs_root_t *t_root;
+  svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
   apr_pool_t *pool;
-
 } report_baton_t;
 
+/* The type of a function that accepts changes to an object's property
+   list.  OBJECT is the object whose properties are being changed.
+   NAME is the name of the property to change.  VALUE is the new value
+   for the property, or zero if the property should be deleted. */
+typedef svn_error_t *proplist_change_fn_t (report_baton_t *b, void *object,
+                                           const char *name,
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool);
 
-/* add PATH to the pathmap HASH with a repository path of LINKPATH.
-   if LINKPATH is NULL, PATH will map to itself. */
-static void add_to_path_map(apr_hash_t *hash,
-                            const char *path,
-                            const char *linkpath)
+static svn_error_t *delta_dirs (report_baton_t *b, svn_revnum_t s_rev,
+                                const char *s_path, const char *t_path,
+                                void *dir_baton, const char *e_path,
+                                svn_boolean_t start_empty, apr_pool_t *pool);
+
+/* --- READING PREVIOUSLY STORED REPORT INFORMATION --- */
+
+static svn_error_t *
+read_number (apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
 {
-  /* normalize 'root paths' to have a slash */
-  const char *norm_path = strcmp (path, "") ? path : "/";
+  char c;
 
-  /* if there is an actual linkpath given, it is the repos path, else
-     our path maps to itself. */
-  const char *repos_path = linkpath ? linkpath : norm_path;
-
-  /* now, geez, put the path in the map already! */
-  apr_hash_set (hash,
-                apr_pstrdup (apr_hash_pool_get (hash), path),
-                APR_HASH_KEY_STRING, 
-                apr_pstrdup (apr_hash_pool_get (hash), repos_path));
-}
-
-
-/* return the actual repository path referred to by the editor's PATH,
-   allocated in POOL, determined by examining the pathmap HASH. */
-static const char *get_from_path_map(apr_hash_t *hash,
-                                     const char *path,
-                                     apr_pool_t *pool)
-{
-  const char *repos_path;
-  svn_stringbuf_t *my_path;
-  
-  /* no hash means no map.  that's easy enough. */
-  if (! hash)
-    return apr_pstrdup (pool, path);
-  
-  if ((repos_path = apr_hash_get (hash, path, APR_HASH_KEY_STRING)))
+  *num = 0;
+  while (1)
     {
-      /* what luck!  this path is a hash key!  if there is a linkpath,
-         use that, else return the path itself. */
-      return apr_pstrdup (pool, repos_path);
-    }
-
-  /* bummer.  PATH wasn't a key in path map, so we get to start
-     hacking off components and looking for a parent from which to
-     derive a repos_path.  use a stringbuf for convenience. */
-  my_path = svn_stringbuf_create (path, pool);
-  do 
-    {
-      apr_size_t len = my_path->len;
-      svn_path_remove_component (my_path);
-      if (my_path->len == len)
+      SVN_ERR (svn_io_file_getc (&c, temp, pool));
+      if (c == ':')
         break;
-      if ((repos_path = apr_hash_get (hash, my_path->data, my_path->len)))
-        {
-          /* we found a mapping ... but of one of PATH's parents.
-             soooo, we get to re-append the chunks of PATH that we
-             broke off to the REPOS_PATH we found. */
-          return apr_pstrcat (pool, repos_path, "/", 
-                              path + my_path->len + 1, NULL);
-        }
+      *num = *num * 10 + (c - '0');
     }
-  while (! svn_path_is_empty (my_path->data));
-  
-  /* well, we simply never found anything worth mentioning the map.
-     PATH is its own default finding, then. */
-  return apr_pstrdup (pool, path);
-}
-
-
-/* Use POOL to delete all children and props of directory PATH in TXN_ROOT. */
-static svn_error_t *
-gut_directory (const char *path,
-               svn_fs_root_t *txn_root,
-               apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_hash_t *children, *props;
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  /* First, kill PATH's children. */
-  SVN_ERR (svn_fs_dir_entries (&children, txn_root, path, pool));
-  for (hi = apr_hash_first (pool, children); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      svn_pool_clear (subpool);
-      apr_hash_this (hi, &key, NULL, NULL);
-      SVN_ERR (svn_fs_delete (txn_root, 
-                              svn_path_join (path, key, subpool),
-                              subpool));
-    }
-
-  /* Then kill its properties. */
-  SVN_ERR (svn_fs_node_proplist (&props, txn_root, path, pool));
-  for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      svn_pool_clear (subpool);
-      apr_hash_this (hi, &key, NULL, NULL);
-      SVN_ERR (svn_fs_change_node_prop (txn_root, path, key, NULL, subpool));
-    }
-
-  svn_pool_destroy (subpool);  
   return SVN_NO_ERROR;
 }
 
-
 static svn_error_t *
-begin_txn (report_baton_t *rbaton)
+read_string (const char **str, apr_file_t *temp, apr_pool_t *pool)
 {
-  /* Start a transaction based on initial_rev. */
-  SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn),
-                                              rbaton->repos,
-                                              rbaton->txn_base_rev,
-                                              rbaton->username,
-                                              rbaton->pool));
-  SVN_ERR (svn_fs_txn_root (&(rbaton->txn_root), rbaton->txn, rbaton->pool));
+  apr_uint64_t len;
+  char *buf;
+
+  SVN_ERR (read_number (&len, temp, pool));
+  buf = apr_palloc (pool, len + 1);
+  SVN_ERR (svn_io_file_read_full (temp, buf, len, NULL, pool));
+  buf[len] = 0;
+  *str = buf;
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_repos_set_path (void *report_baton,
-                    const char *path,
-                    svn_revnum_t revision,
-                    svn_boolean_t start_empty,
-                    apr_pool_t *pool)
+static svn_error_t *
+read_rev (svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
 {
-  report_baton_t *rbaton = report_baton;
-  svn_boolean_t first_time = FALSE;
+  char c;
+  apr_uint64_t num;
 
-  /* Sanity check: make that we didn't call this with a bogus revision. */
-  if (! SVN_IS_VALID_REVNUM (revision))
-    return svn_error_create
-      (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-       "Invalid revision passed to report");
+  SVN_ERR (svn_io_file_getc (&c, temp, pool));
+  if (c == '+')
+    {
+      SVN_ERR (read_number (&num, temp, pool));
+      *rev = num;
+    }
+  else
+    *rev = SVN_INVALID_REVNUM;
+  return SVN_NO_ERROR;
+}
 
-  if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
-    { 
-      /* Sanity check: make that we didn't call this with real data
-         before simply informing the reporter of our base revision. */
-      if (! svn_path_is_empty (path))
-        return svn_error_create
-          (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-           "Initial revision report was bogus");
+/* Read a report operation *PI out of TEMP.  Set *PI to NULL if we
+   have reached the end of the report. */
+static svn_error_t *
+read_path_info (path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
+{
+  char c;
 
-      /* Barring previous problems, squirrel away our based-on revision. */
-      rbaton->txn_base_rev = revision;
-      first_time = TRUE;
+  SVN_ERR (svn_io_file_getc (&c, temp, pool));
+  if (c == '-')
+    {
+      *pi = NULL;
+      return SVN_NO_ERROR;
     }
 
-  /* If we haven't yet created a transaction, we either haven't made
-     it past our first set_path, or we haven't seen any interesting
-     reporter calls yet.  So what's interesting?  link_path()s,
-     delete_path()s, and set_path()s with either a different REVISION
-     than the based-on revision, or the START_EMPTY flag set. */
-  if ((! rbaton->txn) && (revision == rbaton->txn_base_rev) && (! start_empty))
-    return SVN_NO_ERROR;
-  
-  if (first_time)
+  *pi = apr_palloc (pool, sizeof (**pi));
+  SVN_ERR (read_string (&(*pi)->path, temp, pool));
+  SVN_ERR (svn_io_file_getc (&c, temp, pool));
+  if (c == '+')
+    SVN_ERR (read_string (&(*pi)->link_path, temp, pool));
+  else
+    (*pi)->link_path = NULL;
+  SVN_ERR (read_rev (&(*pi)->rev, temp, pool));
+  SVN_ERR (svn_io_file_getc (&c, temp, pool));
+  (*pi)->start_empty = (c == '+');
+  (*pi)->pool = pool;
+  return SVN_NO_ERROR;
+}
+
+/* Return true if PI's path is a child of PREFIX (which has length PLEN). */
+static svn_boolean_t 
+relevant (path_info_t *pi, const char *prefix, apr_size_t plen)
+{
+  return (pi && strncmp (pi->path, prefix, plen) == 0 &&
+          (!*prefix || pi->path[plen] == '/'));
+}
+
+/* Fetch the next pathinfo from B->tempfile for a descendent of
+   PREFIX.  If the next pathinfo is for an immediate child of PREFIX,
+   set *ENTRY to the path component of the report information and
+   *INFO to the path information for that entry.  If the next pathinfo
+   is for a grandchild or other more remote descendent of PREFIX, set
+   *ENTRY to the immediate child corresponding to that descendent and
+   set *INFO to NULL.  If the next pathinfo is not for a descendent of
+   PREFIX, or if we reach the end of the report, set both *ENTRY and
+   *INFO to NULL.
+
+   At all times, B->lookahead is presumed to be the next pathinfo not
+   yet returned as an immediate child, or NULL if we have reached the
+   end of the report.  Because we use a lookahead element, we can't
+   rely on he usual nested pool lifetimes, so allocate each pathinfo
+   in a subpool of the report baton's pool.  The caller should delete
+   (*INFO)->pool when it is done with the information. */
+static svn_error_t *
+fetch_path_info (report_baton_t *b, const char **entry, path_info_t **info,
+                 const char *prefix, apr_pool_t *pool)
+{
+  apr_size_t plen = strlen (prefix);
+  const char *relpath, *sep;
+  apr_pool_t *subpool;
+
+  if (!relevant (b->lookahead, prefix, plen))
     {
-      if (start_empty)
-        {
-          /* If our first call has START_EMPTY set, we need to start
-             up the transaction stuffs and then clean out the starting
-             directory. */
-          SVN_ERR (begin_txn (rbaton));
-          SVN_ERR (gut_directory (rbaton->base_path, rbaton->txn_root, pool));
-        }
+      /* No more entries relevant to prefix. */
+      *entry = NULL;
+      *info = NULL;
     }
   else
     {
-      const char *from_path;
-      svn_fs_root_t *from_root;
-      const char *link_path;
-
-      /* Create the transaction if we haven't yet done so. */
-      if (! rbaton->txn)
-        SVN_ERR (begin_txn (rbaton));
-
-      /* The path we are dealing with is the anchor (where the
-         reporter is rooted) + target (the top-level thing being
-         reported) + path (stuff relative to the target...this is the
-         empty string in the file case since the target is the file
-         itself, not a directory containing the file). */
-      from_path = svn_path_join_many (pool,
-                                      rbaton->base_path,
-                                      rbaton->target,
-                                      path,
-                                      NULL);
-
-      /* However, the path may be the child of a linked thing, in
-         which case we'll be linking from somewhere entirely
-         different. */
-      link_path = get_from_path_map (rbaton->linked_paths, from_path, pool);
-          
-      /* Create the "from" root. */
-      SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
-                                     revision, pool));
-      
-      /* Copy into our txn (use svn_fs_revision_link if we can). */
-      if (strcmp (link_path, from_path))
-        SVN_ERR (svn_fs_copy (from_root, link_path,
-                              rbaton->txn_root, from_path, pool));
-      else
-        SVN_ERR (svn_fs_revision_link (from_root, rbaton->txn_root, 
-                                       from_path, pool));
-
-      if (start_empty)
+      /* Take a look at the prefix-relative part of the path. */
+      relpath = b->lookahead->path + (*prefix ? plen + 1 : 0);
+      sep = strchr (relpath, '/');
+      if (sep)
         {
-          /* Destroy any children & props of the path.  We assume that
-             the client will (later) re-add the entries it knows about. */
-          SVN_ERR (gut_directory (from_path, rbaton->txn_root, pool));
+          /* Return the immediate child part; do not advance. */
+          *entry = apr_pstrmemdup (pool, relpath, sep - relpath);
+          *info = NULL;
         }
+      else
+        {
+          /* This is an immediate child; return it and advance. */
+          *entry = relpath;
+          *info = b->lookahead;
+          subpool = svn_pool_create (b->pool);
+          SVN_ERR (read_path_info (&b->lookahead, b->tempfile, subpool));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Skip all path info entries relevant to *PREFIX.  Call this when the
+   editor drive skips a directory. */
+static svn_error_t *
+skip_path_info (report_baton_t *b, const char *prefix)
+{
+  apr_size_t plen = strlen (prefix);
+  apr_pool_t *subpool;
+
+  while (relevant (b->lookahead, prefix, plen))
+    {
+      svn_pool_destroy (b->lookahead->pool);
+      subpool = svn_pool_create (b->pool);
+      SVN_ERR (read_path_info (&b->lookahead, b->tempfile, subpool));
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Return true if there is at least one path info entry relevant to *PREFIX. */
+static svn_boolean_t
+any_path_info (report_baton_t *b, const char *prefix)
+{
+  return relevant (b->lookahead, prefix, strlen(prefix));
+}
+
+/* --- DRIVING THE EDITOR ONCE THE REPORT IS FINISHED --- */
+
+/* While driving the editor, the target root will remain constant, but
+   we may have to jump around between source roots depending on the
+   state of the working copy.  If we were to open a root each time we
+   revisit a rev, we would get no benefit from node-id caching; on the
+   other hand, if we hold open all the roots we ever visit, we'll use
+   an unbounded amount of memory.  As a compromise, we maintain a
+   fixed-size LRU cache of source roots.  get_source_root retrieves a
+   root from the cache, using POOL to allocate the new root if
+   necessary.  Be careful not to hold onto the root for too long,
+   particularly after recursing, since another call to get_source_root
+   can close it. */
+static svn_error_t *
+get_source_root (report_baton_t *b, svn_fs_root_t **s_root, svn_revnum_t rev)
+{
+  int i;
+  svn_fs_root_t *root, *prev = NULL;
+
+  /* Look for the desired root in the cache, sliding all the unmatched
+     entries backwards a slot to make room for the right one. */
+  for (i = 0; i < NUM_CACHED_SOURCE_ROOTS; i++)
+    {
+      root = b->s_roots[i];
+      b->s_roots[i] = prev;
+      if (root && svn_fs_revision_root_revision (root) == rev)
+        break;
+      prev = root;
+    }
+
+  /* If we didn't find it, throw out the oldest root and open a new one. */
+  if (i == NUM_CACHED_SOURCE_ROOTS)
+    {
+      if (prev)
+        svn_fs_close_root (prev);
+      SVN_ERR (svn_fs_revision_root (&root, b->repos->fs, rev, b->pool));
+    }
+
+  /* Assign the desired root to the first cache slot and hand it back. */
+  b->s_roots[0] = root;
+  *s_root = root;
+  return SVN_NO_ERROR;
+}
+
+/* Call the directory property-setting function of B->editor to set
+   the property NAME to VALUE on DIR_BATON. */
+static svn_error_t *
+change_dir_prop (report_baton_t *b, void *dir_baton, const char *name, 
+                 const svn_string_t *value, apr_pool_t *pool)
+{
+  return b->editor->change_dir_prop (dir_baton, name, value, pool);
+}
+
+/* Call the file property-setting function of B->editor to set the
+   property NAME to VALUE on FILE_BATON. */
+static svn_error_t *
+change_file_prop (report_baton_t *b, void *file_baton, const char *name, 
+                  const svn_string_t *value, apr_pool_t *pool)
+{
+  return b->editor->change_file_prop (file_baton, name, value, pool);
+}
+
+/* Generate the appropriate property editing calls to turn the
+   properties of S_REV/S_PATH into those of B->t_root/T_PATH.  If
+   S_PATH is NULL, this is an add, so assume the target starts with no
+   properties.  Pass OBJECT on to the editor function wrapper
+   CHANGE_FN. */
+static svn_error_t *
+delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
+                 const char *t_path, proplist_change_fn_t *change_fn,
+                 void *object, apr_pool_t *pool)
+{
+  svn_fs_root_t *s_root;
+  apr_hash_t *s_props, *t_props;
+  apr_array_header_t *prop_diffs;
+  int i;
+  svn_revnum_t crev;
+  const char *uuid;
+  svn_string_t *cr_str, *cdate, *last_author;
+  svn_boolean_t changed;
+  const svn_prop_t *pc;
+
+  /* Fetch the created-rev and send entry props. */
+  SVN_ERR (svn_fs_node_created_rev (&crev, b->t_root, t_path, pool));
+  if (SVN_IS_VALID_REVNUM (crev))
+    {
+      /* Transmit the committed-rev. */
+      cr_str = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT, crev);
+      SVN_ERR (change_fn (b, object,
+                          SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
+
+      /* Transmit the committed-date. */
+      SVN_ERR (svn_fs_revision_prop (&cdate, b->repos->fs, crev,
+                                     SVN_PROP_REVISION_DATE, pool));
+      if (cdate || s_path)
+        SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                            cdate, pool));
+
+      /* Transmit the last-author. */
+      SVN_ERR (svn_fs_revision_prop (&last_author, b->repos->fs, crev,
+                                     SVN_PROP_REVISION_AUTHOR, pool));
+      if (last_author || s_path)
+        SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_LAST_AUTHOR,
+                            last_author, pool));
+
+      /* Transmit the UUID. */
+      SVN_ERR (svn_fs_get_uuid (b->repos->fs, &uuid, pool));
+      if (uuid || s_path)
+        SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_UUID,
+                            svn_string_create (uuid, pool), pool));
+    }
+
+  if (s_path)
+    {
+      SVN_ERR (get_source_root (b, &s_root, s_rev));
+
+      /* Is this deltification worth our time? */
+      SVN_ERR (svn_fs_props_changed (&changed, b->t_root, t_path, s_root,
+                                     s_path, pool));
+      if (! changed)
+        return SVN_NO_ERROR;
+
+      /* If so, go ahead and get the source path's properties. */
+      SVN_ERR (svn_fs_node_proplist (&s_props, s_root, s_path, pool));
+    }
+  else
+    s_props = apr_hash_make (pool);
+
+  /* Get the target path's properties */
+  SVN_ERR (svn_fs_node_proplist (&t_props, b->t_root, t_path, pool));
+
+  /* Now transmit the differences. */
+  SVN_ERR (svn_prop_diffs (&prop_diffs, t_props, s_props, pool));
+  for (i = 0; i < prop_diffs->nelts; i++)
+    {
+      pc = &APR_ARRAY_IDX (prop_diffs, i, svn_prop_t);
+      SVN_ERR (change_fn (b, object, pc->name, pc->value, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
+/* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
+   different contents, FALSE if they have the same contents. */
+static svn_error_t *
+compare_files (svn_boolean_t *changed_p, svn_fs_root_t *root1,
+               const char *path1, svn_fs_root_t *root2, const char *path2,
+               apr_pool_t *pool)
+{
+  svn_filesize_t size1, size2;
+  unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
+  svn_stream_t *stream1, *stream2;
+  char buf1[SVN_STREAM_CHUNK_SIZE], buf2[SVN_STREAM_CHUNK_SIZE];
+  apr_size_t len1, len2;
+
+  /* If the filesystem claims the things haven't changed, then they
+     haven't changed. */
+  SVN_ERR (svn_fs_contents_changed (changed_p, root1, path1,
+                                    root2, path2, pool));
+  if (!*changed_p)
+    return SVN_NO_ERROR;
+
+  /* From this point on, assume things haven't changed. */
+  *changed_p = FALSE;
+
+  /* So, things have changed.  But we need to know if the two sets of
+     file contents are actually different.  If they have differing
+     sizes, then we know they differ. */
+  SVN_ERR (svn_fs_file_length (&size1, root1, path1, pool));
+  SVN_ERR (svn_fs_file_length (&size2, root2, path2, pool));
+  if (size1 != size2)
+    {
+      *changed_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Same sizes, huh?  Well, if their checksums differ, we know they
+     differ. */
+  SVN_ERR (svn_fs_file_md5_checksum (digest1, root1, path1, pool));
+  SVN_ERR (svn_fs_file_md5_checksum (digest2, root2, path2, pool));
+  if (!svn_md5_digests_match (digest1, digest2))
+    {
+      *changed_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Same sizes, same checksums.  Chances are reallllly good that they
+     don't differ, but to be absolute sure, we need to compare bytes. */
+  SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
+  SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
+
+  do
+    {
+      len1 = len2 = SVN_STREAM_CHUNK_SIZE;
+      SVN_ERR (svn_stream_read (stream1, buf1, &len1));
+      SVN_ERR (svn_stream_read (stream2, buf2, &len2));
+      
+      if (len1 != len2 || memcmp (buf1, buf2, len1))
+        {
+          *changed_p = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+  while (len1 > 0);
+
+  return SVN_NO_ERROR;
+}
+
+/* Make the appropriate edits on FILE_BATON to change its contents and
+   properties from those in S_REV/S_PATH to those in B->t_root/T_PATH. */
+static svn_error_t *
+delta_files (report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
+             const char *s_path, const char *t_path, apr_pool_t *pool)
+{
+  svn_boolean_t changed;
+  svn_fs_root_t *s_root = NULL;
+  svn_txdelta_stream_t *dstream = NULL;
+  unsigned char s_digest[APR_MD5_DIGESTSIZE];
+  const char *s_hex_digest = NULL;
+  svn_txdelta_window_handler_t dhandler;
+  void *dbaton;
+
+  /* Compare the files' property lists.  */
+  SVN_ERR (delta_proplists (b, s_rev, s_path, t_path, change_file_prop,
+                            file_baton, pool));
+
+  if (s_path)
+    {
+      SVN_ERR (get_source_root (b, &s_root, s_rev));
+
+      /* Is this delta calculation worth our time?  If we are ignoring
+         ancestry, then our editor implementor isn't concerned by the
+         theoretical differences between "has contents which have not
+         changed with respect to" and "has the same actual contents
+         as".  We'll do everything we can to avoid transmitting even
+         an empty text-delta in that case.  */
+      if (b->ignore_ancestry)
+        SVN_ERR (compare_files (&changed, b->t_root, t_path, s_root, s_path,
+                                pool));
+      else
+        SVN_ERR (svn_fs_contents_changed (&changed, b->t_root, t_path, s_root,
+                                          s_path, pool));
+      if (!changed)
+        return SVN_NO_ERROR;
+
+      SVN_ERR (svn_fs_file_md5_checksum (s_digest, s_root, s_path, pool));
+      s_hex_digest = svn_md5_digest_to_cstring (s_digest, pool);
+    }
+
+  /* Send the delta stream if desired, or just a NULL window if not. */
+  SVN_ERR (b->editor->apply_textdelta (file_baton, s_hex_digest, pool,
+                                       &dhandler, &dbaton));
+  if (b->text_deltas)
+    {
+      SVN_ERR (svn_fs_get_file_delta_stream (&dstream, s_root, s_path,
+                                             b->t_root, t_path, pool));
+      return svn_txdelta_send_txstream (dstream, dhandler, dbaton, pool);
+    }
+  else
+    return dhandler (NULL, dbaton);
+}
+
+/* Determine if the user is authorized to view B->t_root/PATH. */
+static svn_error_t *
+check_auth (report_baton_t *b, svn_boolean_t *allowed, const char *path,
+            apr_pool_t *pool)
+{
+  if (b->authz_read_func)
+    return b->authz_read_func (allowed, b->t_root, path,
+                               b->authz_read_baton, pool);
+  *allowed = TRUE;
+  return SVN_NO_ERROR;
+}
+
+/* Create a dirent in *ENTRY for the given ROOT and PATH.  We use this to
+   replace the source or target dirent when a report pathinfo tells us to
+   change paths or revisions. */
+static svn_error_t *
+fake_dirent (const svn_fs_dirent_t **entry, svn_fs_root_t *root,
+             const char *path, apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  svn_fs_dirent_t *ent;
+
+  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  if (kind == svn_node_none)
+    *entry = NULL;
+  else
+    {
+      ent = apr_palloc (pool, sizeof (**entry));
+      ent->name = svn_path_basename (path, pool);
+      SVN_ERR (svn_fs_node_id (&ent->id, root, path, pool));
+      ent->kind = kind;
+      *entry = ent;
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* Emit an appropriate edit to transform the entry E_PATH under
+   DIR_BATON with the changes between S_REV/S_PATH (with contents
+   S_ENTRY) and B->t_root/T_PATH (with contents T_ENTRY).
+   S_PATH/S_ENTRY or T_PATH/T_ENTRY may be NULL if the entry does not
+   exist in the source or target.  The source and to some extent the
+   target may be modified by INFO.  S_PATH may be set and S_ENTRY may
+   be NULL if the caller expects report information to modify the
+   source to an existing location.  If RECURSE is not set, avoid
+   operating on directories.  (Normally RECURSE is simply taken from
+   B->recurse, but drive() needs to force us to recurse into the
+   target even if that flag is not set.) */
+static svn_error_t *
+update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
+              const svn_fs_dirent_t *s_entry, const char *t_path,
+              const svn_fs_dirent_t *t_entry, void *dir_baton,
+              const char *e_path, path_info_t *info, svn_boolean_t recurse,
+              apr_pool_t *pool)
+{
+  svn_fs_root_t *s_root;
+  svn_boolean_t allowed, related;
+  void *new_baton;
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  const char *hex_digest;
+  int distance;
+
+  /* For non-switch operations, follow link_path in the target. */
+  if (info && info->link_path && !b->is_switch)
+    {
+      t_path = info->link_path;
+      SVN_ERR (fake_dirent (&t_entry, b->t_root, t_path, pool));
+    }
+
+  if (info && !SVN_IS_VALID_REVNUM (info->rev))
+    {
+      /* Delete this entry in the source. */
+      s_path = NULL;
+      s_entry = NULL;
+    }
+  else if (info && s_path)
+    {
+      /* Follow the rev and possibly path in this entry. */
+      s_path = (info->link_path) ? info->link_path : s_path;
+      s_rev = info->rev;
+      SVN_ERR (get_source_root (b, &s_root, s_rev));
+      SVN_ERR (fake_dirent (&s_entry, s_root, s_path, pool));
+    }
+
+  /* Don't let the report carry us somewhere nonexistent. */
+  if (s_path && !s_entry)
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "Working copy path '%s' does not exist in "
+                              "repository", e_path);
+
+  if (!recurse && ((s_entry && s_entry->kind == svn_node_dir)
+                   || (t_entry && t_entry->kind == svn_node_dir)))
+    return skip_path_info (b, e_path);
+
+  /* If the source and target both exist and are of the same kind,
+     then find out whether they're related.  If they're exactly the
+     same, then we don't have to do anything.  If we're ignoring
+     ancestry, then any two nodes of the same type are related enough
+     for us. */
+  related = FALSE;
+  if (s_entry && t_entry && s_entry->kind == t_entry->kind)
+    {
+      distance = svn_fs_compare_ids (s_entry->id, t_entry->id);
+      if (distance == 0 && !any_path_info (b, e_path))
+        return SVN_NO_ERROR;
+      else if (distance != -1 || b->ignore_ancestry)
+        related = TRUE;
+    }
+
+  /* If there's a source and it's not related to the target, nuke it. */
+  if (s_entry && !related)
+    {
+      SVN_ERR (b->editor->delete_entry (e_path, SVN_INVALID_REVNUM, dir_baton,
+                                        pool));
+      s_path = NULL;
+    }
+
+  /* If there's no target, we have nothing more to do. */
+  if (!t_entry)
+    return skip_path_info (b, e_path);
+
+  /* Check if the user is authorized to find out about the target. */
+  SVN_ERR (check_auth (b, &allowed, t_path, pool));
+  if (!allowed)
+    {
+      if (t_entry->kind == svn_node_dir)
+        SVN_ERR (b->editor->absent_directory (e_path, dir_baton, pool));
+      else
+        SVN_ERR (b->editor->absent_file (e_path, dir_baton, pool));
+      return skip_path_info (b, e_path);
+    }
+
+  if (t_entry->kind == svn_node_dir)
+    {
+      if (related)
+        SVN_ERR (b->editor->open_directory (e_path, dir_baton, s_rev, pool, 
+                                            &new_baton));
+      else
+        SVN_ERR (b->editor->add_directory (e_path, dir_baton, NULL,
+                                           SVN_INVALID_REVNUM, pool,
+                                           &new_baton));
+      SVN_ERR (delta_dirs (b, s_rev, s_path, t_path, new_baton, e_path,
+                           info ? info->start_empty : FALSE, pool));
+      return b->editor->close_directory (new_baton, pool);
+    }
+  else
+    {
+      if (related)
+        SVN_ERR (b->editor->open_file (e_path, dir_baton, s_rev, pool,
+                                       &new_baton));
+      else
+        SVN_ERR (b->editor->add_file (e_path, dir_baton, NULL,
+                                      SVN_INVALID_REVNUM, pool, &new_baton));
+      SVN_ERR (delta_files (b, new_baton, s_rev, s_path, t_path, pool));
+      SVN_ERR (svn_fs_file_md5_checksum (digest, b->t_root, t_path, pool));
+      hex_digest = svn_md5_digest_to_cstring (digest, pool);
+      return b->editor->close_file (new_baton, hex_digest, pool);
+    }
+}
+
+
+/* Emit edits within directory DIR_BATON (with corresponding path
+   E_PATH) with the changes from the directory S_REV/S_PATH to the
+   directory B->t_rev/T_PATH.  S_PATH may be NULL if the entry does
+   not exist in the source. */
+static svn_error_t *
+delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
+            const char *t_path, void *dir_baton, const char *e_path,
+            svn_boolean_t start_empty, apr_pool_t *pool)
+{
+  svn_fs_root_t *s_root;
+  apr_hash_t *s_entries = NULL, *t_entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool;
+  const svn_fs_dirent_t *s_entry, *t_entry;
+  void *val;
+  const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
+  path_info_t *info;
+
+  /* Compare the property lists.  */
+  SVN_ERR (delta_proplists (b, s_rev, s_path, t_path, change_dir_prop,
+                            dir_baton, pool));
+
+  /* Get the list of entries in each of source and target.  */
+  if (s_path && !start_empty)
+    {
+      SVN_ERR (get_source_root (b, &s_root, s_rev));
+      SVN_ERR (svn_fs_dir_entries (&s_entries, s_root, s_path, pool));
+    }
+  SVN_ERR (svn_fs_dir_entries (&t_entries, b->t_root, t_path, pool));
+
+  /* Iterate over the report information for this directory. */
+  subpool = svn_pool_create (pool);
+
+  while (1)
+    {
+      svn_pool_clear (subpool);
+      SVN_ERR (fetch_path_info (b, &name, &info, e_path, subpool));
+      if (!name)
+        break;
+      e_fullpath = svn_path_join (e_path, name, subpool);
+      t_fullpath = svn_path_join (t_path, name, subpool);
+      t_entry = apr_hash_get (t_entries, name, APR_HASH_KEY_STRING);
+      s_fullpath = s_path ? svn_path_join (s_path, name, subpool) : NULL;
+      s_entry = s_entries ?
+        apr_hash_get (t_entries, name, APR_HASH_KEY_STRING) : NULL;
+
+      SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, t_fullpath,
+                             t_entry, dir_baton, e_fullpath, info,
+                             b->recurse, subpool));
+
+      /* Don't revisit this name in the target or source entries. */
+      apr_hash_set (t_entries, name, APR_HASH_KEY_STRING, NULL);
+      if (s_entries)
+        apr_hash_set (s_entries, name, APR_HASH_KEY_STRING, NULL);
+
+      /* pathinfo entries live in their own subpools due to lookahead,
+         so we need to clear each one out as we finish with it. */
+      if (info)
+        svn_pool_destroy (info->pool);
+    }
+
+  /* Loop over the remaining dirents in the target. */
+  for (hi = apr_hash_first (pool, t_entries); hi; hi = apr_hash_next (hi))
+    {
+      svn_pool_clear (subpool);
+      apr_hash_this (hi, NULL, NULL, &val);
+      t_entry = val;
+
+      /* Compose the report, editor, and target paths for this entry. */
+      e_fullpath = svn_path_join (e_path, t_entry->name, subpool);
+      t_fullpath = svn_path_join (t_path, t_entry->name, subpool);
+
+      /* Look for an entry with the same name in the source dirents. */
+      s_entry = s_entries ?
+        apr_hash_get (s_entries, t_entry->name, APR_HASH_KEY_STRING) : NULL;
+      s_fullpath = s_entry ? svn_path_join (s_path, t_entry->name, subpool)
+        : NULL;
+
+      SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, t_fullpath,
+                             t_entry, dir_baton, e_fullpath, NULL,
+                             b->recurse, subpool));
+
+      /* Don't revisit this name in the source entries. */
+      if (s_entries)
+        apr_hash_set (s_entries, t_entry->name, APR_HASH_KEY_STRING, NULL);
+    }
+
+  /* Loop over the remaining dirents in the source. */
+  if (s_entries)
+    {
+      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
+        {
+          svn_pool_clear (subpool);
+          apr_hash_this (hi, NULL, NULL, &val);
+          s_entry = val;
+
+          /* We know there is no corresponding target entry, so just delete. */
+          e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
+          if (b->recurse || s_entry->kind != svn_node_dir)
+            SVN_ERR (b->editor->delete_entry (e_fullpath, SVN_INVALID_REVNUM,
+                                              dir_baton, subpool));
+        }
+    }
+
+  /* Destroy iteration subpool. */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
+       apr_pool_t *pool)
+{
+  const char *t_anchor, *s_fullpath;
+  svn_boolean_t allowed, info_is_set_path;
+  svn_fs_root_t *s_root;
+  const svn_fs_dirent_t *s_entry, *t_entry;
+  void *root_baton;
+
+  /* Compute the target path corresponding to the working copy anchor,
+     and check its authorization. */
+  t_anchor = *b->s_operand ? svn_path_dirname (b->t_path, pool) : b->t_path;
+  SVN_ERR (check_auth (b, &allowed, t_anchor, pool));
+  if (!allowed)
+    return svn_error_create (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
+                             "Not authorized to open root of edit operation.");
+
+  SVN_ERR (b->editor->set_target_revision (b->edit_baton, b->t_rev, pool));
+
+  /* Collect information about the source and target nodes. */
+  s_fullpath = svn_path_join (b->fs_base, b->s_operand, pool);
+  SVN_ERR (get_source_root (b, &s_root, s_rev));
+  SVN_ERR (fake_dirent (&s_entry, s_root, s_fullpath, pool));
+  SVN_ERR (fake_dirent (&t_entry, b->t_root, b->t_path, pool));
+
+  /* If the operand is a locally added file or directory, it won't
+     exist in the source, so accept that. */
+  info_is_set_path = (SVN_IS_VALID_REVNUM (info->rev) && !info->link_path);
+  if (info_is_set_path && !s_entry)
+    s_fullpath = NULL;
+
+  SVN_ERR (b->editor->open_root (b->edit_baton, s_rev, pool, &root_baton));
+
+  if (!*b->s_operand)
+    {
+      /* The wc anchor is the operand, so just diff the two directories. */
+      if (!s_entry || s_entry->kind != svn_node_dir
+          || !t_entry || t_entry->kind != svn_node_dir)
+        return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
+                                 "Cannot replace a directory from within");
+      SVN_ERR (delta_dirs (b, s_rev, s_fullpath, b->t_path, root_baton,
+                           "", info->start_empty, pool));
+    }
+  else  /* Update the operand within the anchor directory. */
+    SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, b->t_path,
+                           t_entry, root_baton, b->s_operand,
+                           (info_is_set_path) ? NULL : info, TRUE, pool));
+
+  SVN_ERR (b->editor->close_directory (root_baton, pool));
+  SVN_ERR (b->editor->close_edit (b->edit_baton, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Initialize the baton fields for editor-driving, and drive the editor. */
+static svn_error_t *
+finish_report (report_baton_t *b, apr_pool_t *pool)
+{
+  apr_off_t offset;
+  path_info_t *info;
+  apr_pool_t *subpool;
+  svn_revnum_t s_rev;
+  int i;
+
+  /* Save our pool to manage the lookahead and fs_root cache with. */
+  b->pool = pool;
+
+  /* Add an end marker and rewind the temporary file. */
+  SVN_ERR (svn_io_file_write_full (b->tempfile, "-", 1, NULL, pool));
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (b->tempfile, APR_SET, &offset, pool));
+
+  /* Read the first pathinfo from the report and verify that it is a top-level
+     set_path entry. */
+  SVN_ERR (read_path_info (&info, b->tempfile, pool));
+  if (!info || strcmp (info->path, b->s_operand) != 0
+      || info->link_path || !SVN_IS_VALID_REVNUM(info->rev))
+    return svn_error_create (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                             "Invalid report for top level of working copy");
+  s_rev = info->rev;
+
+  /* Initialize the lookahead pathinfo. */
+  subpool = svn_pool_create (pool);
+  SVN_ERR (read_path_info (&b->lookahead, b->tempfile, subpool));
+
+  if (b->lookahead && strcmp(b->lookahead->path, b->s_operand) == 0)
+    {
+      /* If the operand of the wc operation is switched or deleted,
+         then info above is just a place-holder, and the only thing we
+         have to do is pass the revision it contains to open_root.
+         The next pathinfo actually describes the target. */
+      if (!*b->s_operand)
+        return svn_error_create (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                                 "Two top-level reports with no target");
+      info = b->lookahead;
+      SVN_ERR (read_path_info (&b->lookahead, b->tempfile, subpool));
+    }
+
+  /* Open the target root and initialize the source root cache. */
+  SVN_ERR (svn_fs_revision_root (&b->t_root, b->repos->fs, b->t_rev, pool));
+  for (i = 0; i < NUM_CACHED_SOURCE_ROOTS; i++)
+    b->s_roots[i] = NULL;
+
+  return drive (b, s_rev, info, pool);
+}
+
+/* --- COLLECTING THE REPORT INFORMATION --- */
+
+/* Record a report operation into the temporary file. */
+static svn_error_t *
+write_path_info (report_baton_t *b, const char *path, const char *lpath,
+                 svn_revnum_t rev, svn_boolean_t start_empty, apr_pool_t *pool)
+{
+  const char *lrep, *rrep, *rep;
+
+  /* Munge the path to be anchor-relative, so that we can use edit paths
+     as report paths. */
+  path = svn_path_join (b->s_operand, path, pool);
+
+  lrep = lpath ? apr_psprintf (pool, "+%d:%s", strlen(lpath), lpath) : "-";
+  rrep = (SVN_IS_VALID_REVNUM (rev)) ?
+    apr_psprintf (pool, "+%" SVN_REVNUM_T_FMT ":", rev) : "-";
+  rep = apr_psprintf (pool, "+%d:%s%s%s%c", strlen(path), path, lrep, rrep,
+                      start_empty ? '+' : '-');
+  return svn_io_file_write_full (b->tempfile, rep, strlen(rep), NULL, pool);
+}
+
 svn_error_t *
-svn_repos_link_path (void *report_baton,
-                     const char *path,
-                     const char *link_path,
-                     svn_revnum_t revision,
-                     svn_boolean_t start_empty,
+svn_repos_set_path (void *baton, const char *path, svn_revnum_t rev,
+                    svn_boolean_t start_empty, apr_pool_t *pool)
+{
+  return write_path_info (baton, path, NULL, rev, start_empty, pool);
+}
+
+svn_error_t *
+svn_repos_link_path (void *baton, const char *path, const char *link_path,
+                     svn_revnum_t rev, svn_boolean_t start_empty,
                      apr_pool_t *pool)
 {
-  svn_fs_root_t *from_root;
-  const char *from_path;
-  report_baton_t *rbaton = report_baton;
-
-  /* If we haven't already started a main transaction, we need to do
-     so now. */
-  if (! rbaton->txn)
-    SVN_ERR (begin_txn (rbaton));
-
-  /* If this is the very first call, no second txn exists yet.  Of
-     course, we'll only use it if we're "updating", not when we're
-     "switching" */
-  if ((! rbaton->txn2) && (! rbaton->tgt_path))
-    {
-      /* Start a transaction based on the revision to which we to
-         update. */
-      SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn2),
-                                                  rbaton->repos,
-                                                  rbaton->revnum_to_update_to,
-                                                  rbaton->username,
-                                                  rbaton->pool));
-      SVN_ERR (svn_fs_txn_root (&(rbaton->txn2_root), rbaton->txn2,
-                                rbaton->pool));
-      
-    }
-
-  /* The path we are dealing with is the anchor (where the
-     reporter is rooted) + target (the top-level thing being
-     reported) + path (stuff relative to the target...this is the
-     empty string in the file case since the target is the file
-     itself, not a directory containing the file). */
-  from_path = svn_path_join_many (pool,
-                                  rbaton->base_path,
-                                  rbaton->target,
-                                  path,
-                                  NULL);
-
-  /* Copy into our txn. */
-  SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
-                                 revision, pool));
-  SVN_ERR (svn_fs_copy (from_root, link_path,
-                        rbaton->txn_root, from_path, pool));
-
-  /* Copy into our second "goal" txn (re-use FROM_ROOT) if we're using
-     it. */
-  if (rbaton->txn2)
-    {
-      SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
-                                     rbaton->revnum_to_update_to, 
-                                     pool));
-      SVN_ERR (svn_fs_copy (from_root, link_path,
-                            rbaton->txn2_root, from_path, pool));
-    }
-
-  /* Remove this path/link_path in our hashtable of linked paths. */
-  if (! rbaton->linked_paths)
-    rbaton->linked_paths = apr_hash_make (rbaton->pool);
-  add_to_path_map (rbaton->linked_paths, from_path, link_path);
-  
-  if (start_empty)
-    /* Destroy any children & props of the path.  We assume that the
-       client will (later) re-add the entries it knows about.  */
-    SVN_ERR (gut_directory (from_path, rbaton->txn_root, pool));
-
-  return SVN_NO_ERROR;
+  return write_path_info (baton, path, link_path, rev, start_empty, pool);
 }
-
 
 svn_error_t *
-svn_repos_delete_path (void *report_baton,
-                       const char *path,
-                       apr_pool_t *pool)
+svn_repos_delete_path (void *baton, const char *path, apr_pool_t *pool)
 {
-  svn_error_t *err;
-  const char *delete_path;
-  report_baton_t *rbaton = report_baton;
-  
-  /* If we haven't already started a main transaction, we need to do
-     so now. */
-  if (! rbaton->txn)
-    SVN_ERR (begin_txn (rbaton));
-
-  /* The path we are dealing with is the anchor (where the
-     reporter is rooted) + target (the top-level thing being
-     reported) + path (stuff relative to the target...this is the
-     empty string in the file case since the target is the file
-     itself, not a directory containing the file). */
-  delete_path = svn_path_join_many (pool,
-                                    rbaton->base_path,
-                                    rbaton->target,
-                                    path,
-                                    NULL);
-
-  /* Remove the file or directory (recursively) from the txn. */
-  err = svn_fs_delete (rbaton->txn_root, delete_path, pool);
-
-  /* If the delete is a no-op, don't throw an error;  just ignore. */
-  if (err)
-    {
-      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
-        return err;
-      svn_error_clear (err);
-    }
-
-  return SVN_NO_ERROR;
+  return write_path_info (baton, path, NULL, SVN_INVALID_REVNUM, FALSE, pool);
 }
-
-
-
-
-/* Implements the bulk of svn_repos_finish_report, that's everything except
- * aborting any txns.  This function can return an error and still rely on
- * any txns being aborted.
- */
-static svn_error_t *
-finish_report (void *report_baton,
-               apr_pool_t *pool)
-{
-  svn_fs_root_t *root1, *root2;
-  report_baton_t *rbaton = report_baton;
-  const char *tgt_path;
-
-  /* If nothing was described, then we have an error */
-  if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
-    return svn_error_create (SVN_ERR_REPOS_NO_DATA_FOR_REPORT, NULL,
-                             "No transaction was "
-                             "present, meaning no data was provided");
-
-  /* Use the first transaction as a source if we made one, else get
-     the root of the revision we would have based a transaction on. */
-  if (rbaton->txn)
-    root1 = rbaton->txn_root;
-  else
-    SVN_ERR (svn_fs_revision_root (&root1, rbaton->repos->fs,
-                                   rbaton->txn_base_rev,
-                                   rbaton->pool));
-
-  /* Use the second transacation as a target if we made one, else get
-     the root of the revision we want to update to. */
-  if (rbaton->txn2)
-    root2 = rbaton->txn2_root;
-  else
-    SVN_ERR (svn_fs_revision_root (&root2, rbaton->repos->fs,
-                                   rbaton->revnum_to_update_to,
-                                   rbaton->pool));
-
-  /* Calculate the tgt_path if none was given. */
-  if (rbaton->tgt_path)
-    tgt_path = rbaton->tgt_path;
-  else
-    tgt_path = svn_path_join (rbaton->base_path, rbaton->target, rbaton->pool);
-
-  /* Drive the update-editor. */
-  SVN_ERR (svn_repos_dir_delta (root1,
-                                rbaton->base_path, 
-                                rbaton->target,
-                                root2,
-                                tgt_path,
-                                rbaton->update_editor,
-                                rbaton->update_edit_baton,
-                                rbaton->authz_read_func,
-                                rbaton->authz_read_baton,
-                                rbaton->text_deltas,
-                                rbaton->recurse,
-                                TRUE,
-                                rbaton->ignore_ancestry,
-                                rbaton->pool));
-  return SVN_NO_ERROR;
-}
-  
-/* Wrapper to call finish_report, and then abort any txns even if
- * finish_report returns an error.
- */
-svn_error_t *
-svn_repos_finish_report (void *report_baton,
-                         apr_pool_t *pool)
-{
-  svn_error_t *err1 = finish_report (report_baton, pool);
-  svn_error_t *err2 = svn_repos_abort_report (report_baton, pool);
-  if (err1)
-    {
-      svn_error_clear (err2);
-      return err1;
-    }
-  return err2;
-}
-
 
 svn_error_t *
-svn_repos_abort_report (void *report_baton,
-                        apr_pool_t *pool)
+svn_repos_finish_report (void *baton, apr_pool_t *pool)
 {
-  report_baton_t *rbaton = report_baton;
+  report_baton_t *b = baton;
+  svn_error_t *finish_err, *close_err;
 
-  /* ### To avoid uncommitted txns, perhaps we should we try to abort the
-     ### second transacation even if aborting the first returns an
-     ### error? */
-  if (rbaton->txn)
-    SVN_ERR (svn_fs_abort_txn (rbaton->txn, rbaton->pool));
-  if (rbaton->txn2)
-    SVN_ERR (svn_fs_abort_txn (rbaton->txn2, rbaton->pool));
-
-  return SVN_NO_ERROR;
+  finish_err = finish_report (b, pool);
+  close_err = svn_io_file_close (b->tempfile, pool);
+  if (finish_err)
+    svn_error_clear (close_err);
+  return finish_err ? finish_err : close_err;
 }
 
+svn_error_t *
+svn_repos_abort_report (void *baton, apr_pool_t *pool)
+{
+  report_baton_t *b = baton;
 
+  return svn_io_file_close (b->tempfile, pool);
+}
 
+/* --- BEGINNING THE REPORT --- */
 
 svn_error_t *
 svn_repos_begin_report (void **report_baton,
@@ -529,8 +980,8 @@ svn_repos_begin_report (void **report_baton,
                         const char *username,
                         svn_repos_t *repos,
                         const char *fs_base,
-                        const char *target,
-                        const char *tgt_path,
+                        const char *s_operand,
+                        const char *switch_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         svn_boolean_t ignore_ancestry,
@@ -540,30 +991,33 @@ svn_repos_begin_report (void **report_baton,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
-  report_baton_t *rbaton;
+  report_baton_t *b;
+  const char *tempdir, *dummy;
 
-  /* Build a reporter baton. */
-  rbaton = apr_pcalloc (pool, sizeof(*rbaton));
-  rbaton->txn_base_rev = SVN_INVALID_REVNUM;
-  rbaton->revnum_to_update_to = revnum;
-  rbaton->update_editor = editor;
-  rbaton->update_edit_baton = edit_baton;
-  rbaton->repos = repos;
-  rbaton->text_deltas = text_deltas;
-  rbaton->recurse = recurse;
-  rbaton->ignore_ancestry = ignore_ancestry;
-  rbaton->pool = pool;
-  rbaton->authz_read_func = authz_read_func;
-  rbaton->authz_read_baton = authz_read_baton;
+  /* Build a reporter baton.  Copy strings in case the caller doesn't
+     keep track of them. */
+  b = apr_palloc (pool, sizeof (*b));
+  b->repos = repos;
+  b->fs_base = apr_pstrdup (pool, fs_base);
+  b->s_operand = apr_pstrdup (pool, s_operand);
+  b->t_rev = revnum;
+  b->t_path = switch_path ? switch_path
+    : svn_path_join (fs_base, s_operand, pool);
+  b->text_deltas = text_deltas;
+  b->recurse = recurse;
+  b->ignore_ancestry = ignore_ancestry;
+  b->is_switch = (switch_path != NULL);
+  b->editor = editor;
+  b->edit_baton = edit_baton;
+  b->authz_read_func = authz_read_func;
+  b->authz_read_baton = authz_read_baton;
 
-  /* Copy these since we're keeping them past the end of this function call.
-     We don't know what the caller might do with them after we return... */
-  rbaton->username = username ? apr_pstrdup (pool, username) : NULL;
-  rbaton->base_path = apr_pstrdup (pool, fs_base);
-  rbaton->target = apr_pstrdup (pool, target);
-  rbaton->tgt_path = tgt_path ? apr_pstrdup (pool, tgt_path) : NULL;
+  SVN_ERR (svn_io_temp_dir (&tempdir, pool));
+  SVN_ERR (svn_io_open_unique_file (&b->tempfile, &dummy,
+                                    apr_psprintf (pool, "%s/report", tempdir),
+                                    ".tmp", TRUE, pool));
 
   /* Hand reporter back to client. */
-  *report_baton = rbaton;
+  *report_baton = b;
   return SVN_NO_ERROR;
 }
