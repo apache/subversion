@@ -27,6 +27,10 @@ Karl working copy todo:
    - check apr_open calls, do they assume failure implies null handle?
    - fix working copy identification/allergy code
    - make sure type-changing replacements work right
+   - recursive call in svn_wc__statuses() is inefficient because it
+     keeps rereading the entries file.  Also, it uses
+     APR_HASH_KEY_STRING when it has basename->len available.
+   - in get_editor.c, `wfile_status' is misnamed
 
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats

@@ -474,7 +474,7 @@ check_for_unresolved_file_conflict (svn_string_t *full_path_to_file,
   apr_time_t wc_time;
 
   /* Get the timestamp from the working copy file */
-  err = svn_wc__file_affected_time (&wc_time, full_path_to_file, pool);
+  err = svn_io_file_affected_time (&wc_time, full_path_to_file, pool);
   if (err) return err;
 
   /* If the working copy has a later timestamp than the entry, then

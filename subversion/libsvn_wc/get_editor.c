@@ -1043,16 +1043,16 @@ close_file (void *file_baton)
 
   if (fb->text_changed)
     {
-      enum svn_node_kind wfile_status = svn_node_unknown;
+      enum svn_node_kind wfile_kind = svn_node_unknown;
       svn_string_t *tmp_txtb  = svn_wc__text_base_path (fb->name, 1, fb->pool);
       svn_string_t *txtb      = svn_wc__text_base_path (fb->name, 0, fb->pool);
       svn_string_t *received_diff_filename;
       
-      err = svn_io_check_path (fb->path, &wfile_status, fb->pool);
+      err = svn_io_check_path (fb->path, &wfile_kind, fb->pool);
       if (err)
         return err;
       
-      if (wfile_status == svn_node_file)
+      if (wfile_kind == svn_node_file)
         {
           /* To preserve local changes dominantly over received
              changes, we record the received changes as a diff, to be
@@ -1190,7 +1190,7 @@ close_file (void *file_baton)
                              txtb,
                              NULL);
       
-      if (wfile_status == svn_node_none)
+      if (wfile_kind == svn_node_none)
         {
           /* Copy the new base text to the working file. */
           svn_xml_make_open_tag (&entry_accum,
@@ -1203,7 +1203,7 @@ close_file (void *file_baton)
                                  fb->name,
                                  NULL);
         }
-      else if (wfile_status == svn_node_file)
+      else if (wfile_kind == svn_node_file)
         {
           /* Patch repos changes into an existing local file. */
           svn_string_t *patch_cmd = svn_string_create ("patch", fb->pool);
