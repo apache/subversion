@@ -491,7 +491,10 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   if (err) return err;
   if (kind != svn_node_file)
     {
-      *modified_p = FALSE;
+      /* If we get here, we know that the property file exists, but
+         the base property file doesn't.  Somebody must have started
+         adding properties, so that's a local change! */
+      *modified_p = TRUE;
       return SVN_NO_ERROR;
     }              
   
