@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Doc fixes are pretty safe, and not lying to users is good.
     Votes:
-      +1: ghudson, maxb
+      +1: ghudson, maxb, lundblad
 
   * r10599
     Make the perl bindings testing work before the svn libs have been installed.
@@ -36,14 +36,14 @@ Candidate changes:
     Justification:
       Tiny patch; creates a useful error message where none existed (#1988)
     Votes:
-      +1: sussman, ghudson
+      +1: sussman, ghudson, lundblad
 
   * r10608
     Fix issue 1674: "svnadmin load" crashes on contentful rev 0.
     Justification:
       Trivial fix. Never crash.
     Votes:
-      +1: maxb, ghudson
+      +1: maxb, ghudson, lundblad
 
   * r10616
     Work around directory creation bug in APR shipped with httpd 2.0.50.
