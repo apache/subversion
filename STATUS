@@ -95,13 +95,6 @@ the section for unapproved changes.)
       Votes:
        +1: ghudson, cmpilato, brane
 
-    * r8287
-      Check the ABI versions in the RA plugins.
-      Justification: What's the point of the RA plugin ABI version if
-      the 1.0 plugins don't check it?
-      Votes:
-       +1: bliss, ghudson, sussman
-
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
