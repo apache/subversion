@@ -107,6 +107,7 @@ svn_cl__checkout (apr_getopt_t *os,
       
       err = svn_client_checkout (NULL, NULL,
                                  trace_editor, trace_edit_baton,
+                                 svn_cl__prompt_user, NULL,
                                  repos_url,
                                  local_dir,
                                  opt_state->revision,

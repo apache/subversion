@@ -68,6 +68,7 @@ svn_cl__update (apr_getopt_t *os,
 
       SVN_ERR (svn_client_update (NULL, NULL,
                                   trace_editor, trace_edit_baton,
+                                  svn_cl__prompt_user, NULL,
                                   target,
                                   opt_state->xml_file,
                                   opt_state->revision,

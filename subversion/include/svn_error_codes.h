@@ -66,9 +66,6 @@ extern "C" {
    apr_errno.h).  */
 SVN_ERROR_START
 
-  SVN_ERRDEF (SVN_ERR_NOT_AUTHORIZED,
-              "Not authorized")
-
   SVN_ERRDEF (SVN_ERR_PLUGIN_LOAD_FAILURE,
               "Failure loading plugin")
 
@@ -265,6 +262,12 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_RA_ILLEGAL_URL,
               "Bad URL passed to RA layer")
+
+  SVN_ERRDEF (SVN_ERR_RA_NOT_AUTHORIZED,
+              "Authorization failed")
+
+  SVN_ERRDEF (SVN_ERR_RA_UNKNOWN_AUTH,
+              "Unknown authorization method")
 
   /* These RA errors are specific to ra_dav */
 

@@ -65,6 +65,8 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
+                     svn_client_auth_info_callback_t callback,
+                     void *callback_baton,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
@@ -106,8 +108,9 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
       /* Open an RA session to URL */
-      SVN_ERR (ra_lib->open (&session, URL, pool));
-      
+      SVN_ERR (svn_client_authenticate (&session, ra_lib, URL, 
+                                        callback, callback_baton, pool));
+
       /* Decide which revision to get: */
 
       /* If both REVISION and TM are specified, this is an error.

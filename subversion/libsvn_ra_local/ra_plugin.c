@@ -70,40 +70,80 @@ static const svn_ra_reporter_t ra_local_reporter =
 
 /** The RA plugin routines **/
 
-
+/* Lives with in the authenticator */
 static svn_error_t *
-open (void **session_baton,
-      svn_stringbuf_t *repository_URL,
-      apr_pool_t *pool)
+authenticate (void **sbaton, void *pbaton)
 {
-  svn_ra_local__session_baton_t *baton;
+  svn_ra_local__session_baton_t *session_baton =
+    (svn_ra_local__session_baton_t *) pbaton;
 
-  /* When we close the session_baton later, we don't necessarily want
-     to kill the main caller's pool; so let's subpool and work from
-     there. */
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  /* Allocate the session_baton the parent pool */ 
-  baton = apr_pcalloc (pool, sizeof(*baton));
-
-  /* And let all other session_baton data use session's subpool */
-  baton->pool = subpool;
-  baton->repository_URL = repository_URL;
-  baton->fs = svn_fs_new (subpool);
+  /* Make a filesystem. */
+  session_baton->fs = svn_fs_new (session_baton->pool);
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR (svn_ra_local__split_URL (&(baton->repos_path),
-                                    &(baton->fs_path),
-                                    baton->repository_URL,
-                                    subpool));
+  SVN_ERR (svn_ra_local__split_URL (&(session_baton->repos_path),
+                                    &(session_baton->fs_path),
+                                    session_baton->repository_URL,
+                                    session_baton->pool));
 
   /* Open the filesystem at located at environment `repos_path' */
-  SVN_ERR (svn_fs_open_berkeley (baton->fs, baton->repos_path->data));
+  SVN_ERR (svn_fs_open_berkeley (session_baton->fs,
+                                 session_baton->repos_path->data));
 
-  /* Return the session baton */
-  *session_baton = baton;
+  /* Return the session baton, heh, even though the caller unknowingly
+     already has it as 'pbaton'.  :-) */
+  *sbaton = session_baton;
+  return SVN_NO_ERROR;
+}
+
+
+/* Lives within the authenticator. */
+static svn_error_t *
+set_username (char *username, void *pbaton)
+{
+  svn_ra_local__session_baton_t *session_baton =
+    (svn_ra_local__session_baton_t *) pbaton;
+
+  /* copy the username for safety. */
+  session_baton->username = apr_pstrdup (session_baton->pool,
+                                         username);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Return the authenticator vtable for username-only auth. */
+static svn_error_t *
+get_authenticator (void **authenticator,
+                   svn_stringbuf_t *repos_URL,
+                   apr_uint64_t method,
+                   apr_pool_t *pool)
+{
+  svn_ra_username_authenticator_t *auth_obj;
+  svn_ra_local__session_baton_t *session_baton;
+
+  /* Sanity check -- this RA library only supports one method. */
+  if (method != SVN_RA_AUTH_USERNAME)
+    return 
+      svn_error_create (SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, pool,
+                        "ra_local only supports the AUTH_USERNAME method.");
+
+  /* Allocate the authenticator object;  be sneaky and optimize by
+     creating the session_baton as the 'pbaton' field as well.  */
+  auth_obj = apr_pcalloc (pool, sizeof(*auth_obj));
+  session_baton = apr_pcalloc (pool, sizeof(*session_baton));
+  auth_obj->pbaton = session_baton;
+  auth_obj->set_username = set_username;
+  auth_obj->authenticate = authenticate;
+
+  /* Stash the session_baton args we have already. */
+  session_baton->pool = pool;
+  session_baton->repository_URL = repos_URL;
+  
+  *authenticator = auth_obj;
+  
   return SVN_NO_ERROR;
 }
 
@@ -115,11 +155,9 @@ close (void *session_baton)
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  /* Close the repository filesystem */
+  /* Close the repository filesystem, which will free any memory used
+     by it. */
   SVN_ERR (svn_fs_close_fs (baton->fs));
-
-  /* Free all memory allocated during this ra session.  */
-  svn_pool_destroy (baton->pool);
 
   return SVN_NO_ERROR;
 }
@@ -160,7 +198,6 @@ static svn_error_t *
 get_commit_editor (void *session_baton,
                    const svn_delta_edit_fns_t **editor,
                    void **edit_baton,
-                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_ra_get_wc_prop_func_t get_func,
                    svn_ra_set_wc_prop_func_t set_func,
@@ -189,7 +226,7 @@ get_commit_editor (void *session_baton,
   SVN_ERR (svn_repos_get_editor (&commit_editor, &commit_editor_baton,
                                  sess_baton->fs, 
                                  sess_baton->fs_path,
-                                 user,
+                                 sess_baton->username,
                                  log_msg,
                                  cleanup_commit, closer, /* fs will call
                                                             this when done.*/
@@ -288,7 +325,8 @@ static const svn_ra_plugin_t ra_local_plugin =
 {
   "ra_local",
   "Module for accessing a repository on local disk.",
-  open,
+  SVN_RA_AUTH_USERNAME,
+  get_authenticator,
   close,
   get_latest_revnum,
   get_dated_revision,

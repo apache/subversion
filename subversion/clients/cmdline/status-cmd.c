@@ -53,7 +53,8 @@ svn_cl__status (apr_getopt_t *os,
          received from caller, which in turn would set it according
          to a command-line argument telling svn whether to recurse
          fully or just do immediate children. */
-      err = svn_client_status (&statushash, target, 1, pool);
+      err = svn_client_status (&statushash, target, 1, 
+                               svn_cl__prompt_user, NULL, pool);
       if (err)
         return err;
 

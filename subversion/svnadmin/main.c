@@ -193,8 +193,11 @@ main (int argc, const char * const *argv)
           svn_fs_txn_t *txn;
           svn_fs_root_t *this_root;
           svn_stringbuf_t *datestamp;
+          svn_stringbuf_t *author;
           svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
                                     strlen(SVN_PROP_REVISION_DATE)};
+          svn_string_t auth_prop = {SVN_PROP_REVISION_AUTHOR,
+                                    strlen(SVN_PROP_REVISION_AUTHOR)};
           apr_pool_t *this_pool = svn_pool_create (pool);
 
           err = svn_fs_open_txn (&txn, fs, txn_name, this_pool);
@@ -205,8 +208,13 @@ main (int argc, const char * const *argv)
 
           err = svn_fs_txn_prop (&datestamp, txn, &date_prop, this_pool);
           if (err) goto error;
-
+          err = svn_fs_txn_prop (&author, txn, &auth_prop, this_pool);
+          if (err) goto error;
+          if (! author)
+            author = svn_stringbuf_create ("<none>", this_pool);
+          
           printf ("Txn %s:\n", txn_name);
+          printf ("Author: %s\n", author->data);
           printf ("Created: %s\n", datestamp->data);
           printf ("==========================================\n");
           print_tree (this_root, "", 1, this_pool);
@@ -247,9 +255,12 @@ main (int argc, const char * const *argv)
         {
           svn_fs_root_t *this_root;
           svn_stringbuf_t *datestamp;
+          svn_stringbuf_t *author;
           apr_pool_t *this_pool = svn_pool_create (pool);
           svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
                                     strlen(SVN_PROP_REVISION_DATE)};
+          svn_string_t auth_prop = {SVN_PROP_REVISION_AUTHOR,
+                                    strlen(SVN_PROP_REVISION_AUTHOR)};
            
           err = svn_fs_revision_root (&this_root, fs, this, this_pool);
           if (err) goto error;
@@ -257,8 +268,14 @@ main (int argc, const char * const *argv)
           err = svn_fs_revision_prop (&datestamp, fs, this,
                                       &date_prop, this_pool);
           if (err) goto error;
+          err = svn_fs_revision_prop (&author, fs, this,
+                                      &auth_prop, this_pool);
+          if (err) goto error;
+          if (! author)
+            author = svn_stringbuf_create ("<none>", this_pool);
 
           printf ("Revision %ld\n", (long int) this);
+          printf ("Author: %s\n", author->data);
           printf ("Created: %s\n", datestamp->data);
           printf ("==========================================\n");
           print_tree (this_root, "", 1, this_pool);

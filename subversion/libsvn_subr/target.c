@@ -57,7 +57,7 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
       switch (errno)
         {
         case EACCES:
-            return svn_error_createf(APR_SUCCESS, SVN_ERR_NOT_AUTHORIZED,
+            return svn_error_createf(APR_SUCCESS, SVN_ERR_RA_NOT_AUTHORIZED,
                                      NULL, pool, "Could not get absolute path "
                                      "for %s, because you lack permissions",
                                      relative->data);

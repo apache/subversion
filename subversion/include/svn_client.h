@@ -37,13 +37,24 @@ extern "C" {
 #include "svn_error.h"
 
 
-/* ### TODO:  Multiple Targets
+/*  A callback function type defined by the top-level client
+    application (the user of libsvn_client.)
 
-    - We eventually want svn_client_commit to take multiple targets.
-    Commits need to be atomic, so this change bubbles all the way down
-    int svn_wc_crawl_local_mods().  crawl_local_mods must start
-    crawling from the _parent_ of all targets and drive the commit
-    editor correctly;  any error at all causes the driver to bail.
+    If libsvn_client is unable to retrieve certain authorization
+    information, it can use this callback; the application will then
+    directly query the user with PROMPT and return the answer in INFO,
+    allocated in POOL.  BATON is provided at the same time as the
+    callback, and HIDE indicates that the user's answer should not be
+    displayed on the screen. */
+typedef svn_error_t *(*svn_client_auth_info_callback_t)
+       (char **info,
+        char *prompt,
+        svn_boolean_t hide,
+        void *baton,
+        apr_pool_t *pool);
+
+
+/* ### TODO:  Multiple Targets
 
     - Up for debate:  an update on multiple targets is *not* atomic.
     Right now, svn_client_update only takes one path.  What's
@@ -57,7 +68,24 @@ extern "C" {
 
 
 
-/*** Milestone 2 Interfaces ***/
+/*** Milestone 3 Interfaces ***/
+
+
+/* Open a session to REPOS_URL using RA_LIB.  
+   This routine will negotiate with the RA library and authenticate
+   the user.  If successful, *SESSION_BATON will be set to an object
+   that represents an "open", authenticated session with the
+   repository.  (The session_baton is necessary for further
+   interaction with RA layer.) */
+svn_error_t *
+svn_client_authenticate (void **session_baton,
+                         svn_ra_plugin_t *ra_lib,
+                         svn_stringbuf_t *repos_URL,
+                         svn_client_auth_info_callback_t callback,
+                         void *callback_baton,
+                         apr_pool_t *pool);
+
+
 
 
 /* Perform a checkout from URL, providing pre- and post-checkout hook
@@ -87,6 +115,8 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
+                     svn_client_auth_info_callback_t callback,
+                     void *callback_baton,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
@@ -120,6 +150,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
+                   svn_client_auth_info_callback_t callback,
+                   void *callback_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
@@ -191,7 +223,9 @@ svn_client_undelete (svn_stringbuf_t *path,
 svn_error_t *svn_client_import (const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
-                                void *after_edit_baton,                   
+                                void *after_edit_baton,    
+                                svn_client_auth_info_callback_t callback,
+                                void *callback_baton,
                                 svn_stringbuf_t *path,
                                 svn_stringbuf_t *url,
                                 svn_stringbuf_t *new_entry,
@@ -227,9 +261,10 @@ svn_error_t *
 svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
-                   void *after_edit_baton,                   
+                   void *after_edit_baton,
+                   svn_client_auth_info_callback_t callback,
+                   void *callback_baton,
                    const apr_array_header_t *targets,
-                   const char *user,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */
@@ -245,6 +280,8 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
                    svn_boolean_t descend,
+                   svn_client_auth_info_callback_t callback,
+                   void *callback_baton,
                    apr_pool_t *pool);
 
 
