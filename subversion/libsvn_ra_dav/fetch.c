@@ -1567,14 +1567,14 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
          to attempt the PROPPATCH if the deltaV server is going to do
          auto-versioning and create a new baseline! */
 
-   make_ne_propname(&prop, name);
+  make_ne_propname(&prop, name);
 
-   if (propval)
-     {
-       svn_stringbuf_t *propesc = NULL;
-       svn_xml_escape_cdata_cstring(&propesc, propval->data, pool);
-       val = propesc->data;
-     }
+  if (propval)
+    {
+      svn_stringbuf_t *propesc = NULL;
+      svn_xml_escape_cdata_cstring(&propesc, propval->data, pool);
+      val = propesc->data;
+    }
 
   po[0].name = &prop;
   po[0].type = value ? ne_propset : ne_propremove;
