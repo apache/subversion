@@ -47,6 +47,41 @@ svn_fs__open_transactions_table (DB **transactions_p,
 }
 
 
+/* Store ROOT_ID and BASE_ROOT_ID as the roots of SVN_TXN in FS, as
+   part of TRAIL.  */
+static svn_error_t *
+set_txn (svn_fs_t *fs,
+	 const char *svn_txn,
+	 const svn_fs_id_t *root_id,
+	 const svn_fs_id_t *base_root_id,
+	 trail_t *trail)
+{
+  apr_pool_t *pool = trail->pool;
+  svn_string_t *unparsed_root_id = svn_fs_unparse_id (root_id, pool);
+  svn_string_t *unparsed_base_root_id = svn_fs_unparse_id (base_root_id, pool);
+  skel_t *txn_skel = svn_fs__make_empty_list (pool);
+  DBT key, value;
+
+  svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
+				     unparsed_root_id->len,
+				     pool),
+		   txn_skel);
+  svn_fs__prepend (svn_fs__mem_atom (unparsed_base_root_id->data,
+				     unparsed_base_root_id->len,
+				     pool),
+		   txn_skel);
+  svn_fs__prepend (svn_fs__str_atom ("transaction", pool), txn_skel);
+
+  svn_fs__str_to_dbt (&key, svn_txn);
+  svn_fs__skel_to_dbt (&value, txn_skel, pool);
+  SVN_ERR (DB_WRAP (fs, "storing transaction record",
+		    fs->transactions->put (fs->transactions, trail->db_txn,
+					   &key, &value, 0)));
+
+  return 0;
+}
+
+
 /* Allocate a Subversion transaction ID in FS, as part of TRAIL.  Set
    *ID_P to the new transaction ID.  */
 static svn_error_t *
@@ -105,29 +140,25 @@ svn_fs__create_txn (char **txn_id_p,
 		    const svn_fs_id_t *root_id,
 		    trail_t *trail)
 {
-  apr_pool_t *pool = trail->pool;
-  char *svn_txn_id;
-  skel_t *txn_skel;
-  svn_string_t *unparsed_root_id = svn_fs_unparse_id (root_id, pool);
-  DBT key, value;
+  char *svn_txn;
 
-  SVN_ERR (allocate_txn_id (&svn_txn_id, fs, trail));
-  txn_skel = svn_fs__make_empty_list (pool);
-  svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
-				     unparsed_root_id->len,
-				     pool),
-		   txn_skel);
-  svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
-				     unparsed_root_id->len,
-				     pool),
-		   txn_skel);
-  svn_fs__prepend (svn_fs__str_atom ("transaction", pool), txn_skel);
+  SVN_ERR (allocate_txn_id (&svn_txn, fs, trail));
+  SVN_ERR (set_txn (fs, svn_txn, root_id, root_id, trail));
 
-  svn_fs__str_to_dbt (&key, svn_txn_id);
-  svn_fs__skel_to_dbt (&value, txn_skel, pool);
-  SVN_ERR (DB_WRAP (fs, "creating transaction record",
-		    fs->transactions->put (fs->transactions, trail->db_txn,
-					   &key, &value, 0)));
+  return 0;
+}
+
+
+static int
+is_valid_transaction (skel_t *skel)
+{
+  int len = svn_fs__list_length (skel);
+
+  if (len == 3
+      && svn_fs__is_atom (skel->children, "transaction")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom)
+    return 1;
 
   return 0;
 }
@@ -140,7 +171,36 @@ svn_fs__get_txn (svn_fs_id_t **root_id_p,
 		 const char *svn_txn,
 		 trail_t *trail)
 {
-  abort ();
+  DBT key, value;
+  skel_t *transaction;
+
+  SVN_ERR (DB_WRAP (fs, "reading transaction",
+		    fs->transactions->get (fs->transactions, trail->db_txn,
+					   svn_fs__str_to_dbt (&key, svn_txn),
+					   svn_fs__result_dbt (&value),
+					   0)));
+  svn_fs__track_dbt (&value, trail->pool);
+  transaction = svn_fs__parse_skel (value.data, value.size, trail->pool);
+  if (! transaction
+      || ! is_valid_transaction (transaction))
+    return svn_fs__err_corrupt_txn (fs, svn_txn);
+
+  {
+    skel_t *root_id_skel = transaction->children->next;
+    skel_t *base_root_id_skel = transaction->children->next->next;
+    svn_fs_id_t *root_id = svn_fs_parse_id (root_id_skel->data,
+					    root_id_skel->len,
+					    trail->pool);
+    svn_fs_id_t *base_root_id = svn_fs_parse_id (base_root_id_skel->data,
+						 base_root_id_skel->len,
+						 trail->pool);
+    if (! root_id || ! base_root_id)
+      return svn_fs__err_corrupt_txn (fs, svn_txn);
+
+    *root_id_p = root_id;
+    *base_root_id_p = base_root_id;
+    return 0;
+  }
 }
 
 
@@ -150,5 +210,11 @@ svn_fs__set_txn_root (svn_fs_t *fs,
 		      const svn_fs_id_t *root_id,
 		      trail_t *trail)
 {
-  abort ();
+  svn_fs_id_t *old_root_id, *base_root_id;
+
+  SVN_ERR (svn_fs__get_txn (&old_root_id, &base_root_id, fs, svn_txn, trail));
+  if (! svn_fs_id_eq (old_root_id, root_id))
+    SVN_ERR (set_txn (fs, svn_txn, root_id, base_root_id, trail));
+
+  return 0;
 }
