@@ -31,30 +31,21 @@ static svn_error_t *
 send_file_contents (svn_fs_root_t *root,
                     svn_stringbuf_t *path,
                     void *file_baton,
-                    const svn_delta_edit_fns_t *editor,
+                    const svn_delta_editor_t *editor,
                     apr_pool_t *pool)
 {
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
   
-  /* Get a subpool for local allocations.  */
-  apr_pool_t *subpool = svn_pool_create (pool);
-
   /* Get a readable stream of the file's contents. */
-  SVN_ERR (svn_fs_file_contents (&contents, root, path->data, subpool));  
+  SVN_ERR (svn_fs_file_contents (&contents, root, path->data, pool));  
 
   /* Get an editor func that wants to consume the delta stream. */
   SVN_ERR (editor->apply_textdelta (file_baton, &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR (svn_txdelta_send_stream (contents,
-                                    handler,
-                                    handler_baton,
-                                    subpool));
-
-  /* Cleanup our subpool */
-  svn_pool_destroy (subpool);
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -67,7 +58,7 @@ static svn_error_t *
 set_any_props (svn_fs_root_t *root,
                const svn_string_t *path,
                void *object_baton,
-               const svn_delta_edit_fns_t *editor,
+               const svn_delta_editor_t *editor,
                int is_dir,
                apr_pool_t *pool)
 {
@@ -112,16 +103,17 @@ set_any_props (svn_fs_root_t *root,
       const void *key;
       void *val;
       apr_ssize_t klen;
-      svn_stringbuf_t *name, *value;
+      const char *name;
+      svn_string_t *value;
 
       apr_hash_this (hi, &key, &klen, &val);
-      name = svn_stringbuf_ncreate (key, klen, pool);
-      value = svn_stringbuf_create_from_string ((svn_string_t *) val, pool);
+      name = apr_pstrndup (pool, key, klen);
+      value = val;
       
       if (is_dir)
-        SVN_ERR (editor->change_dir_prop (object_baton, name, value));
+        SVN_ERR (editor->change_dir_prop (object_baton, name, value, pool));
       else
-        SVN_ERR (editor->change_file_prop (object_baton, name, value));  
+        SVN_ERR (editor->change_file_prop (object_baton, name, value, pool));  
     }
 
   return SVN_NO_ERROR;
@@ -130,8 +122,10 @@ set_any_props (svn_fs_root_t *root,
 
 
 /* A depth-first recursive walk of DIR_PATH under a fs ROOT that adds
-   dirs and files via EDITOR and DIR_BATON.   URL represents the
+   dirs and files via EDITOR and DIR_BATON.  URL represents the
    current repos location, and is stored in DIR_BATON's working copy.
+   EDIT_PATH keeps track of this directory's path relative to the root
+   of the edit.
 
    Note: we're conspicuously creating a subpool in POOL and freeing it
    at each level of subdir recursion; this is a safety measure that
@@ -146,8 +140,9 @@ set_any_props (svn_fs_root_t *root,
 static svn_error_t *
 walk_tree (svn_fs_root_t *root,
            const svn_string_t *dir_path,
+           svn_stringbuf_t *edit_path,
            void *dir_baton,
-           const svn_delta_edit_fns_t *editor, 
+           const svn_delta_editor_t *editor, 
            void *edit_baton,
            svn_stringbuf_t *URL,
            svn_boolean_t recurse,
@@ -156,12 +151,17 @@ walk_tree (svn_fs_root_t *root,
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_pool_t *iter_pool = svn_pool_create (subpool);
+  svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, pool);
+  svn_stringbuf_t *dirent_path = 
+    svn_stringbuf_create_from_string (dir_path, pool);
 
-  SVN_ERR (svn_fs_dir_entries (&dirents, root, dir_path->data, subpool));
+  if (! edit_path)
+    edit_path = svn_stringbuf_create ("", pool);
+
+  SVN_ERR (svn_fs_dir_entries (&dirents, root, dir_path->data, pool));
 
   /* Loop over this directory's dirents: */
-  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
       int is_dir, is_file;
       const void *key;
@@ -169,21 +169,20 @@ walk_tree (svn_fs_root_t *root,
       apr_ssize_t klen;
       svn_fs_dirent_t *dirent;
       svn_stringbuf_t *dirent_name;
-      svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, iter_pool);
-      svn_stringbuf_t *dirent_path;
       svn_string_t dirent_str;
-
-      dirent_path = svn_stringbuf_create_from_string (dir_path, iter_pool);
 
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
-      dirent_name = svn_stringbuf_create (dirent->name, iter_pool);
+      dirent_name = svn_stringbuf_create (dirent->name, subpool);
+
+      /* Extend our various paths by DIRENT_NAME. */
       svn_path_add_component (dirent_path, dirent_name);
       svn_path_add_component (URL_path, dirent_name);
+      svn_path_add_component (edit_path, dirent_name);
 
       /* What is dirent? */
-      SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, iter_pool));
-      SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, iter_pool));
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, subpool));
+      SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, subpool));
 
       dirent_str.data = dirent_path->data;
       dirent_str.len = dirent_path->len;
@@ -196,28 +195,28 @@ walk_tree (svn_fs_root_t *root,
              to infer them via inheritance.  We do *not* pass real
              args, since we're not referencing any existing working
              copy paths.  We don't want the editor to "copy" anything. */
-          SVN_ERR (editor->add_directory (dirent_name, dir_baton,
-                                          NULL,
-                                          SVN_INVALID_REVNUM, 
-                                          &new_dir_baton));
+          SVN_ERR (editor->add_directory (edit_path->data, dir_baton,
+                                          NULL, SVN_INVALID_REVNUM, 
+                                          subpool, &new_dir_baton));
           SVN_ERR (set_any_props (root, &dirent_str, new_dir_baton,
-                                  editor, 1, iter_pool));
+                                  editor, 1, subpool));
           /* Recurse */
-          SVN_ERR (walk_tree (root, &dirent_str, new_dir_baton, editor,
-                              edit_baton, URL_path, recurse, iter_pool));
+          SVN_ERR (walk_tree (root, &dirent_str, edit_path,
+                              new_dir_baton, editor, edit_baton, 
+                              URL_path, recurse, subpool));
         }
         
       else if (is_file)
         {
           void *file_baton;
 
-          SVN_ERR (editor->add_file (dirent_name, dir_baton,
-                                     URL_path, SVN_INVALID_REVNUM, 
-                                     &file_baton));          
+          SVN_ERR (editor->add_file (edit_path->data, dir_baton,
+                                     URL_path->data, SVN_INVALID_REVNUM, 
+                                     subpool, &file_baton));          
           SVN_ERR (set_any_props (root, &dirent_str, file_baton,
-                                  editor, 0, iter_pool));
+                                  editor, 0, subpool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
-                                       editor, iter_pool));
+                                       editor, subpool));
           SVN_ERR (editor->close_file (file_baton));
         }
 
@@ -227,15 +226,20 @@ walk_tree (svn_fs_root_t *root,
              returning an error, let's just ignore the thing. */ 
         }
 
+      /* Restore EDIT_PATH. URL_PATH, and DIRENT_PATH to their
+         original selves. */
+      svn_stringbuf_chop (edit_path, dirent_name->len + 1);
+      svn_stringbuf_chop (URL_path, dirent_name->len + 1);
+      svn_stringbuf_chop (dirent_path, dirent_name->len + 1);
+
       /* Clear out our per-iteration pool. */
-      svn_pool_clear (iter_pool);
+      svn_pool_clear (subpool);
     }
 
   /* Close the dir and remove the subpool we used at this level. */
   SVN_ERR (editor->close_directory (dir_baton));
 
-  /* Destory our subpool (which also destroys its child, the
-     per-iteration pool. */
+  /* Destory our subpool. */
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
@@ -250,26 +254,26 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         svn_boolean_t recurse,
                         svn_stringbuf_t *URL,
                         const svn_string_t *fs_path,
-                        const svn_delta_edit_fns_t *editor, 
+                        const svn_delta_editor_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool)
 {
   svn_fs_root_t *root;
-  void *root_dir_baton;
+  void *baton;
 
+  /* Get the revision that is being checked out. */
   SVN_ERR (svn_fs_revision_root (&root, fs, revnum, pool));
 
+  /* Call some initial editor functions. */
   SVN_ERR (editor->set_target_revision (edit_baton, revnum));
+  SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, pool, &baton));
+  SVN_ERR (set_any_props (root, fs_path, baton, editor, 1, pool));
 
-  SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM,
-                              &root_dir_baton));
+  /* Walk the tree. */
+  SVN_ERR (walk_tree (root, fs_path, NULL, baton, editor, edit_baton, 
+                      URL, recurse, pool));
 
-  SVN_ERR (set_any_props (root, fs_path, root_dir_baton,
-                          editor, 1, pool));
-
-  SVN_ERR (walk_tree (root, fs_path, root_dir_baton,
-                      editor, edit_baton, URL, recurse, pool));
-
+  /* Finalize the edit drive. */
   SVN_ERR (editor->close_edit (edit_baton));
 
   return SVN_NO_ERROR;

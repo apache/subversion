@@ -707,36 +707,21 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
     {    
       const svn_delta_editor_t *editor;
       void *edit_baton;
-      const svn_delta_editor_t *wrap_editor;
-      void *wrap_edit_baton;
-      const svn_delta_edit_fns_t *wrapped_old_editor;
-      void *wrapped_old_edit_baton;
 
       /* Get a checkout editor and wrap it. */
-      SVN_ERR (svn_wc_get_checkout_editor (dst_path,
-                                           src_url,
-                                           src_revnum,
-                                           1,
-                                           &editor,
-                                           &edit_baton,
-                                           pool));
+      SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
+                                           &editor, &edit_baton, pool));
       
-      svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
+      svn_delta_wrap_editor (&editor, &edit_baton,
                              before_editor, before_edit_baton,
                              editor, edit_baton,
                              after_editor, after_edit_baton, pool);
 
-      /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-         can use it with an old driver. */
-      svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                             wrap_editor, wrap_edit_baton, pool);
-
-      
       /* Check out the new tree.  The parent dir will get no entry, so
          it will be as if the new tree isn't really there yet. */
       SVN_ERR (ra_lib->do_checkout (sess, src_revnum, 1, 
-                                    wrapped_old_editor,
-                                    wrapped_old_edit_baton));
+                                    editor,
+                                    edit_baton));
 
       if (! SVN_IS_VALID_REVNUM(src_revnum))
         {

@@ -858,7 +858,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                       svn_revnum_t revision,
                                       svn_boolean_t recurse,
-                                      const svn_delta_edit_fns_t *editor,
+                                      const svn_delta_editor_t *editor,
                                       void *edit_baton)
 {
   svn_ra_session_t *ras = session_baton;
@@ -875,8 +875,15 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   apr_array_header_t *subdirs;  /* subdirs to scan (subdir_t *) */
   apr_array_header_t *files;    /* files to grab (svn_ra_dav_resource_t *) */
   apr_pool_t *subpool;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
 
   /* ### use quick_wrap rather than SVN_ERR on some of these? */
+
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap(&wrap_editor, &wrap_edit_baton, 
+                        editor, edit_baton, ras->pool);
 
   /* this subpool will be used during various iteration loops, and cleared
      each time. long-lived stuff should go into ras->pool. */
@@ -887,12 +894,12 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                           &bc_root) );
 
   /* all the files we checkout will have TARGET_REV for the revision */
-  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev) );
+  SVN_ERR( (*wrap_editor->set_target_revision)(wrap_edit_baton, target_rev) );
 
   /* In the checkout case, we don't really have a base revision, so
      pass SVN_IGNORED_REVNUM. */
-  SVN_ERR( (*editor->open_root)(edit_baton, SVN_IGNORED_REVNUM,
-                                &root_baton) );
+  SVN_ERR( (*wrap_editor->open_root)(wrap_edit_baton, SVN_IGNORED_REVNUM,
+                                     &root_baton) );
 
   /* store the subdirs into an array for processing, rather than recursing */
   subdirs = apr_array_make(ras->pool, 5, sizeof(subdir_t *));
@@ -938,14 +945,14 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
             }
           /* sentinel reached. close the dir. possibly done! */
 
-          err = (*editor->close_directory) (parent_baton);
+          err = (*wrap_editor->close_directory) (parent_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not finish directory");
 
           if (subdirs->nelts == 0)
             {
               /* Finish the edit */
-              SVN_ERR( ((*editor->close_edit) (edit_baton)) );
+              SVN_ERR( ((*wrap_editor->close_edit) (wrap_edit_baton)) );
 
               /* Store auth info if necessary */
               SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
@@ -961,9 +968,9 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           /* We're not in the root, add a directory */
           name = my_basename(url, subpool);
 
-          SVN_ERR_W( (*editor->add_directory) (name, parent_baton,
-                                               NULL, SVN_INVALID_REVNUM,
-                                               &this_baton),
+          SVN_ERR_W( (*wrap_editor->add_directory) (name, parent_baton,
+                                                    NULL, SVN_INVALID_REVNUM,
+                                                    &this_baton),
                      "could not add directory");
         }
       else 
@@ -978,7 +985,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                               NULL,
                                               NULL,
                                               subpool));
-      add_props(rsrc, editor->change_dir_prop, this_baton, subpool);
+      add_props(rsrc, wrap_editor->change_dir_prop, this_baton, subpool);
 
       /* finished processing the directory. clear out the gunk. */
       svn_pool_clear(subpool);
@@ -990,7 +997,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       PUSH_SUBDIR(subdirs, subdir);
 
       err = fetch_dirents(ras, url, this_baton, recurse, subdirs, files,
-                          editor->change_dir_prop, &vuh, ras->pool);
+                          wrap_editor->change_dir_prop, &vuh, ras->pool);
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
 
@@ -998,8 +1005,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       /* store the activity URL as a property */
       /* ### should we close the dir batons before returning?? */
-      SVN_ERR_W( (*editor->change_dir_prop)(this_baton, act_coll_name,
-                                            act_coll_value),
+      SVN_ERR_W( (*wrap_editor->change_dir_prop)(this_baton, act_coll_name,
+                                                 act_coll_value),
                  "could not save the URL to indicate "
                  "where to create activities");
 
@@ -1009,7 +1016,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
 
           /* ### should we close the dir batons first? */
-          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, &vuh, editor,
+          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, &vuh, wrap_editor,
                                 subpool),
                      "could not checkout a file");
 
@@ -1025,7 +1032,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   /* ### should never reach??? */
 
   /* Finish the edit */
-  SVN_ERR( ((*editor->close_edit) (edit_baton)) );
+  SVN_ERR( ((*wrap_editor->close_edit) (wrap_edit_baton)) );
 
   /* Store auth info if necessary */
   SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
