@@ -723,6 +723,10 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
    current contents.  Set *CONTENTS_BATON_P to a baton to pass to
    *CONTENTS_P.
 
+   If PATH does not exist in ROOT, return an error.  (You cannot use
+   this routine to create new files;  use svn_fs_make_file to create
+   an empty file first.)
+
    Do any necessary temporary allocation in POOL.  */
 svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
                                      void **contents_baton_p,
