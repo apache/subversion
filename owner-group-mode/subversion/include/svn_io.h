@@ -28,6 +28,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_user.h>
 #include <apr_thread_proc.h>
 
 #include "svn_types.h"
@@ -873,6 +874,36 @@ svn_io_read_version_file (int *version, const char *path, apr_pool_t *pool);
  */
 svn_error_t *
 svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
+
+/** Return a string for the userid in @a owner in the format "uid name".
+ * Use @a pool for all allocations.
+ */
+svn_string_t *
+svn_io_file_owner_string (apr_uid_t owner,
+                              apr_pool_t *pool);
+
+/** Return a string for the @a group in the format "uid name".
+ * Use @a pool for all allocations.
+ */
+svn_string_t *
+svn_io_file_group_string (apr_gid_t group,
+                              apr_pool_t *pool);
+
+/** Return a string for the @a mode in octal, ie. unix-like.
+ * Use @a pool for all allocations.
+ */
+svn_string_t *
+svn_io_file_mode_string(apr_fileperms_t mode,
+                        apr_pool_t *pool);
+
+/** Set the file's owner, group, and mode, if specified.
+ */
+svn_error_t *
+svn_io_file_set_file_owner_group_mode (const char *path,
+                                       const svn_string_t *owner,
+                                       const svn_string_t *group,
+                                       const svn_string_t *mode,
+                                       apr_pool_t *pool);
 
 /** @} */
 

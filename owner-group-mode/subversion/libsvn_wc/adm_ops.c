@@ -1311,6 +1311,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
           if (use_commit_times && (! special))
             {
               const svn_string_t *mtime;
+              const svn_string_t *owner, *group, *mode;
 
               SVN_ERR (svn_wc_prop_get (&mtime, SVN_PROP_TEXT_TIME, 
                                         fullpath, adm_access, pool));
@@ -1322,6 +1323,22 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
               SVN_ERR (svn_io_set_file_affected_time (tstamp,
                                                       fullpath, pool));
               tstamp = entry->cmt_date;
+
+
+              /* if any of owner, group, or unix-mode are set,
+               * use this information
+               * */
+              SVN_ERR (svn_wc_prop_get (&owner, SVN_PROP_OWNER,
+                                        fullpath, adm_access, pool));
+              SVN_ERR (svn_wc_prop_get (&group, SVN_PROP_GROUP,
+                                        fullpath, adm_access, pool));
+              SVN_ERR (svn_wc_prop_get (&mode, SVN_PROP_UNIX_MODE,
+                                        fullpath, adm_access, pool));
+              SVN_ERR (svn_io_file_set_file_owner_group_mode (fullpath,
+                                                              owner,
+                                                              group,
+                                                              mode,
+                                                              pool) );
             }
           else
             {

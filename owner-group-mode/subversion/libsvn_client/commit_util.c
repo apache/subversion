@@ -30,6 +30,8 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_props.h"
+#include "svn_string.h"
+#include "svn_time.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
@@ -419,7 +421,12 @@ harvest_committables (apr_hash_t *committables,
   /* Set text/prop modification flags accordingly. */
   if (text_mod)
     {
-    state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
+      apr_finfo_t finfo;
+
+
+      state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
+
+      SVN_ERR( svn_io_stat(&finfo, path, APR_FINFO_NORM, pool) );
 
       SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_TEXT_TIME, path, adm_access,
                                 pool));
@@ -427,17 +434,45 @@ harvest_committables (apr_hash_t *committables,
        * should be recorded, there's an property modification too. */
       if (propval)
         {
-          apr_time_t mtime;
-
-          SVN_ERR (svn_io_file_affected_time (&mtime, path, pool) );
           propval=svn_string_create( 
-                                    svn_time_to_cstring (mtime, pool),
+                                    svn_time_to_cstring (finfo.mtime, pool),
                                     pool );
           SVN_ERR (svn_wc_prop_set (SVN_PROP_TEXT_TIME, 
                                     propval, path, adm_access, pool) );
           state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+
         }
 
+      /* Check for svn:owner, svn:group, and svn:unix-mode */
+      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_OWNER, path, adm_access,
+                                pool));
+      if (propval)
+        {
+          propval=svn_io_file_owner_string(finfo.user, pool);
+          SVN_ERR (svn_wc_prop_set (SVN_PROP_OWNER, 
+                                    propval, path, adm_access, pool) );
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+        }
+
+      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_GROUP, path, adm_access,
+                                pool));
+      if (propval)
+        {
+          propval=svn_io_file_group_string(finfo.group, pool);
+          SVN_ERR (svn_wc_prop_set (SVN_PROP_GROUP, 
+                                    propval, path, adm_access, pool) );
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+        }
+
+      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_UNIX_MODE, path, adm_access,
+                                pool));
+      if (propval)
+        {
+          propval=svn_io_file_mode_string(finfo.protection, pool);
+          SVN_ERR (svn_wc_prop_set (SVN_PROP_UNIX_MODE, 
+                                    propval, path, adm_access, pool) );
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+        }
     }
 
   if (prop_mod)

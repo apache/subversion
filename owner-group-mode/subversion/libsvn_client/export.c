@@ -103,7 +103,8 @@ copy_one_versioned_file (const char *from,
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   const char *base;
-  svn_string_t *eol_style, *keywords, *executable, *externals, *special, *text_time;
+  svn_string_t *eol_style, *keywords, *executable, *externals,
+               *special, *text_time, *owner, *group, *mode;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
@@ -155,7 +156,13 @@ copy_one_versioned_file (const char *from,
                           APR_HASH_KEY_STRING);
   text_time = apr_hash_get (props, SVN_PROP_TEXT_TIME,
                             APR_HASH_KEY_STRING);
-  
+  owner = apr_hash_get (props, SVN_PROP_OWNER,
+                        APR_HASH_KEY_STRING);
+  group = apr_hash_get (props, SVN_PROP_GROUP,
+                        APR_HASH_KEY_STRING);
+  mode = apr_hash_get (props, SVN_PROP_UNIX_MODE,
+                       APR_HASH_KEY_STRING);
+
   if (eol_style)
     SVN_ERR (get_eol_style (&style, &eol, eol_style->data, native_eol));
   
@@ -208,7 +215,15 @@ copy_one_versioned_file (const char *from,
                                          FALSE, pool));
 
   if (! special)
-    SVN_ERR (svn_io_set_file_affected_time (tm, to, pool));
+    {
+      SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
+
+      SVN_ERR (svn_io_file_set_file_owner_group_mode (copy_to,
+                                                      owner,
+                                                      group,
+                                                      mode,
+                                                      iterpool) );
+    }
 
   return SVN_NO_ERROR;
 }
@@ -439,6 +454,9 @@ struct file_baton
   const svn_string_t *executable_val;
   svn_boolean_t special;
 
+  /* unix owner, group, and mode will be restaured */
+  svn_string_t *owner, *group, *mode;
+
   /* Any keyword vals to be substituted */
   const char *revision;
   const char *url;
@@ -643,6 +661,14 @@ change_file_prop (void *file_baton,
       SVN_ERR (svn_time_from_cstring (&fb->date, value->data, fb->pool));
     }
 
+  /* save owner, group and unix-mode */
+  else if (strcmp (name, SVN_PROP_OWNER) == 0)
+    fb->owner = svn_string_dup (value, fb->pool);
+  else if (strcmp (name, SVN_PROP_GROUP) == 0)
+    fb->group = svn_string_dup (value, fb->pool);
+  else if (strcmp (name, SVN_PROP_UNIX_MODE) == 0)
+    fb->mode = svn_string_dup (value, fb->pool);
+
   /* Try to fill out the baton's keywords-structure too. */
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
     fb->revision = apr_pstrdup (fb->pool, value->data);
@@ -744,6 +770,13 @@ close_file (void *file_baton,
 
   if (fb->date && (! fb->special))
     SVN_ERR (svn_io_set_file_affected_time (fb->date, fb->path, pool));
+
+  if (!fb->special)
+    SVN_ERR (svn_io_file_set_file_owner_group_mode (fb->path,
+                                                    fb->owner,
+                                                    fb->group,
+                                                    fb->mode,
+                                                    pool) );
 
   if (fb->edit_baton->notify_func)
     (*fb->edit_baton->notify_func) (fb->edit_baton->notify_baton,

@@ -527,6 +527,9 @@ struct file_baton
   const char *last_changed_date;
   svn_boolean_t last_changed_is_for_entry;
 
+  /* The fields for owner, group, and mode of this file */
+  svn_string_t *owner, *group, *mode;
+
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
 
@@ -1706,7 +1709,19 @@ change_file_prop (void *file_baton,
       if ( (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0) &&
            !fb->last_changed_is_for_entry)
         fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
-    }
+      if ( (strcmp (name, SVN_PROP_OWNER) == 0) )
+        {
+          fb->owner = svn_string_dup (value, fb->pool);
+        }
+      if ( (strcmp (name, SVN_PROP_GROUP) == 0) )
+        {
+          fb->group = svn_string_dup (value, fb->pool);
+        }
+      if ( (strcmp (name, SVN_PROP_UNIX_MODE) == 0) )
+        {
+          fb->mode = svn_string_dup (value, fb->pool);
+        }
+  }
 
   return SVN_NO_ERROR;
 }

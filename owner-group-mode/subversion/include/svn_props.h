@@ -191,6 +191,16 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /** The files' last modification time */
 #define SVN_PROP_TEXT_TIME  SVN_PROP_PREFIX "text-time"
 
+/** The files' owner */
+#define SVN_PROP_OWNER SVN_PROP_PREFIX "owner"
+
+/** The files' group */
+#define SVN_PROP_GROUP  SVN_PROP_PREFIX "group"
+
+/** The files' unix-mode */
+#define SVN_PROP_UNIX_MODE  SVN_PROP_PREFIX "unix-mode"
+
+
 /** Describes external items to check out into this directory. 
  *
  * The format is a series of lines, such as:

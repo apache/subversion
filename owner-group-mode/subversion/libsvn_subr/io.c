@@ -43,6 +43,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
+#include <apr_user.h>
 #include <apr_general.h>
 #include <apr_strings.h>
 #include <apr_portable.h>
@@ -2714,7 +2715,183 @@ svn_io_files_contents_same_p (svn_boolean_t *same,
   if (q)
     *same = 1;
   else
-    *same = 0;
+	  *same = 0;
 
   return SVN_NO_ERROR;
 }
+
+
+svn_string_t *
+svn_io_file_owner_string (apr_uid_t owner,
+                          apr_pool_t *pool)
+{
+  svn_string_t *out;
+  char *username;
+
+  if (apr_uid_name_get (&username, owner, pool) != APR_SUCCESS)
+    username="";
+  out=svn_string_createf(pool, "%d %s", owner, username);
+
+  return out;
+}
+
+
+
+svn_string_t *
+svn_io_file_group_string (apr_gid_t group,
+                          apr_pool_t *pool)
+{
+  svn_string_t *out;
+  char *groupname;
+
+  if (apr_gid_name_get (&groupname, group, pool) != APR_SUCCESS )
+    groupname="";
+  out=svn_string_createf(pool, "%d %s", group, groupname);
+
+  return out;
+}
+
+svn_string_t *
+svn_io_file_mode_string(apr_fileperms_t perms,
+                        apr_pool_t *pool)
+{
+  return svn_string_createf(pool, "0%o", apr_unix_perms2mode(perms));
+}
+
+
+svn_error_t *
+svn_io_file_owner_id (apr_uid_t *uid,
+                      svn_string_t *owner,
+                      apr_pool_t *pool)
+{
+  apr_gid_t gid;
+  apr_array_header_t *list;
+
+  if (!owner || !owner->data) goto invalid;
+
+  list=svn_cstring_split (owner->data, " \t\r\n\f", TRUE, pool);
+  if (list->nelts>=2)
+    {
+      /* Use the name, if available. Else use the numeric id. */
+      if (apr_uid_get(uid, &gid, APR_ARRAY_IDX(list, 1, char*), pool) 
+          != APR_SUCCESS)
+        {
+          /* should use strtol or some such for error detection */
+          if ( apr_isdigit(* APR_ARRAY_IDX(list, 0, char*) ) )
+              *uid=svn__atoui64( APR_ARRAY_IDX(list, 0, char*) );
+          else
+            goto invalid;
+        }
+    }
+
+  return SVN_NO_ERROR;
+
+invalid:
+  return svn_error_create (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+                           "value of " SVN_PROP_OWNER " is invalid");
+}
+
+
+svn_error_t *
+svn_io_file_group_id (apr_gid_t *gid,
+                      svn_string_t *group,
+                      apr_pool_t *pool)
+{
+  apr_array_header_t *list;
+
+  if (!group || !group->data)
+    goto invalid;
+
+  list=svn_cstring_split (group->data, " \t\r\n\f", TRUE, pool);
+  if (list->nelts>=2)
+    {
+      /* Use the name, if available. Else use the numeric id. */
+      if (apr_gid_get(gid, APR_ARRAY_IDX(list, 1, char*), pool) != 
+          APR_SUCCESS)
+        {
+          /* should use strtol or some such for error detection */
+          if ( apr_isdigit(* APR_ARRAY_IDX(list, 0, char*) ) )
+            *gid=svn__atoui64( APR_ARRAY_IDX(list, 0, char*) );
+          else
+            goto invalid;
+        }
+    }
+
+  return SVN_NO_ERROR;
+
+invalid:
+  return svn_error_create (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+                           "value of " SVN_PROP_GROUP " is invalid");
+}
+
+
+
+svn_error_t *
+svn_io_file_set_file_owner_group_mode (const char *path,
+                                       const svn_string_t *owner,
+                                       const svn_string_t *group,
+                                       const svn_string_t *mode,
+                                       apr_pool_t *pool)
+{
+  apr_gid_t gid;
+  apr_uid_t uid;
+  apr_finfo_t finfo;
+  apr_fileperms_t perms;
+  char *errorptr;
+
+  /* this function should move to apr */
+#ifdef _WIN32
+#else
+
+  if (owner || group)
+    {
+      if (owner && owner->data)
+        if (svn_io_file_owner_id(&uid, owner, pool) != SVN_NO_ERROR)
+          uid=-1;
+
+      if (group && group)
+        if (svn_io_file_group_id(&gid, group, pool) != SVN_NO_ERROR)
+          gid=-1;
+
+      if (uid != -1 && gid != -1)
+        {
+          /* only if at least one value defined */
+          if (uid == -1 || gid == -1)
+            {
+              /* chown changes owner and group.
+               * if there's only one set, we have to query the original value.
+               * */
+              SVN_ERR( svn_io_stat(&finfo, path, APR_FINFO_NORM, pool) );
+              if (gid == -1) uid=finfo.group;
+              if (uid == -1) uid=finfo.user;
+            }
+
+          /* can only be done be uid 0, or by user with special priviledges.
+           * easiest thing is to try, and ignore an error 
+           * */
+          chown(path, uid, gid);
+        }
+    }
+
+  if (mode && mode->data && apr_isdigit(mode->data[0]))
+    {
+      apr_status_t status;
+      /* use strtoul, which auto-detects the mode (octal, decimal, etc.) 
+       * Normally the value is written in octal
+       *
+       * For now don't allow sticky bits.
+       * That should probably be configured with some option. */
+      perms=apr_unix_mode2perms(
+		      strtoul(mode->data, NULL, 0) & 0777
+		      );
+      status= apr_file_perms_set(path, perms);
+      if (status != APR_SUCCESS)
+        return svn_error_wrap_apr (status,
+                                   "Can't set file permissions on file '%s'", 
+                                   path);
+    }
+#endif
+
+  return SVN_NO_ERROR;
+}
+

@@ -36,6 +36,7 @@
 #include "svn_base64.h"
 #include "svn_delta.h"
 #include "svn_path.h"
+#include "svn_time.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -69,6 +70,7 @@ restore_file (const char *file_path,
   const char *bname;
   apr_uint32_t modify_flags = 0;
   svn_boolean_t special;
+  const svn_string_t *owner, *group, *mode;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
   tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
@@ -129,7 +131,19 @@ restore_file (const char *file_path,
     {
       SVN_ERR (svn_io_file_affected_time (&tstamp, file_path, pool));
     }
-  
+
+  SVN_ERR (svn_wc_prop_get(&owner, SVN_PROP_OWNER,
+                           file_path, adm_access, pool));
+  SVN_ERR (svn_wc_prop_get(&group, SVN_PROP_GROUP,
+                           file_path, adm_access, pool));
+  SVN_ERR (svn_wc_prop_get(&mode, SVN_PROP_UNIX_MODE,
+                           file_path, adm_access, pool));
+  SVN_ERR (svn_io_file_set_file_owner_group_mode (file_path,
+                                                  owner,
+                                                  group,
+                                                  mode,
+                                                  pool) );
+
   /* Modify our entry's text-timestamp to match the working file. */
   modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
   newentry.text_time = tstamp;

@@ -32,6 +32,7 @@
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_props.h"
+#include "svn_time.h"
 
 #include "client.h"
 
@@ -145,6 +146,9 @@ struct file_baton {
 
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
+
+  /* a cache for the file's meta-information */
+  apr_finfo_t *file_info;
 
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
@@ -894,6 +898,21 @@ close_directory (void *dir_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+populate_finfo (struct file_baton *fb,
+                  const char *name,
+                  apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+
+  if (!fb->file_info)
+    {
+      fb->file_info=apr_palloc(pool, sizeof(*fb->file_info));
+      SVN_ERR (svn_io_stat (fb->file_info, name, APR_FINFO_NORM, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* An editor function.  */
 static svn_error_t *
@@ -914,16 +933,33 @@ change_file_prop (void *file_baton,
     {
       apr_time_t mtime;
 
-      SVN_ERR (svn_io_file_affected_time (&mtime, b->path, b->pool) );
+      SVN_ERR (populate_finfo(b, name, pool));
       propchange->value=svn_string_create( 
-                                          svn_time_to_cstring (mtime, b->pool),
+                                          svn_time_to_cstring (b->file_info->mtime, b->pool),
                                           b->pool );
+    }
+  /* do likewise for owner, group, mode */
+  else if (strcmp (name, SVN_PROP_OWNER) == 0)
+    {
+      SVN_ERR (populate_finfo(b, name, pool));
+      propchange->value=svn_io_file_owner_string( b->file_info->user, b->pool);
+    }
+  else if (strcmp (name, SVN_PROP_GROUP) == 0)
+    {
+      SVN_ERR (populate_finfo(b, name, pool));
+      propchange->value=svn_io_file_group_string( b->file_info->group, b->pool);
+    }
+  else if (strcmp (name, SVN_PROP_UNIX_MODE) == 0)
+    {
+      SVN_ERR (populate_finfo(b, name, pool));
+      propchange->value=svn_io_file_mode_string( b->file_info->protection, pool);
     }
   else
     {
-  propchange->value = value ? svn_string_dup (value, b->pool) : NULL;
+      propchange->value = value ? svn_string_dup (value, b->pool) : NULL;
     }
-  
+
+
   return SVN_NO_ERROR;
 }
 
