@@ -192,13 +192,13 @@ def break_lock(sbox):
                                      'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-m', 'trying to break', file_path_b)
+                                     file_path_b)
 
   svntest.actions.run_and_verify_svn(None, None, None,
                                      'unlock', '--force',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-m', 'trying to break', file_path_b)
+                                     file_path_b)
 
 #----------------------------------------------------------------------
 # II.C.2.d: Lock a file in wc A as user FOO.  Attempt to lock same
@@ -315,7 +315,7 @@ def handle_defunct_lock(sbox):
   svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-m', '', file_path_b)
+                                     file_path_b)
 
 
   # update the 1st wc, which should clear the lock there
@@ -381,7 +381,7 @@ def enforce_lock(sbox):
     svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
-                                       '-m', '', iota_path)
+                                       iota_path)
 
     # ...and verify that the write bit gets unset
     if (os.stat (iota_path)[0] & mode):
