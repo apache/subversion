@@ -37,38 +37,47 @@ def entries(root, path, pool):
     e[name] = dirent_t_id_get(entry)
   return e
 
-def diff_files(root1, path1, root2, path2, pool, diffoptions=None):
-  """Checkout ROOT1/PATH1 and ROOT2/PATH2 into a temporary directory,
-  then run `diff` on the two files using the optional DIFFOPTIONS and
-  LABELs.  If either path doesn't exist, an empty file will be used in
-  its place."""
-  assert(not ((path1 is None) and (path2 is None)))
-  if path1 is None:
-    label = path1
-  else:
-    label = path2
 
-  tempfile1 = tempfile.mktemp()
-  contents = ''
-  if path1 is not None:
-    len = file_length(root1, path1, pool)
-    stream = file_contents(root1, path1, pool)
-    contents = _util.svn_stream_read(stream, len)
-  fp = open(tempfile1, 'w+')
-  fp.write(contents)
-  fp.close()
+class FileDiff:
+  def __init__(self, root1, path1, root2, path2, pool, diffoptions=None):
+    assert(not ((path1 is None) and (path2 is None)))
+    self.tempfile1 = None
+    self.tempfile2 = None
+    self.root1 = root1
+    self.path1 = path1
+    self.root2 = root2
+    self.path2 = path2
+    self.pool = pool
+    if diffoptions is None:
+      diffoptions = ''
+    self.diffoptions = diffoptions
 
-  tempfile2 = tempfile.mktemp()
-  contents = ''
-  if path2 is not None:
-    len = file_length(root2, path2, pool)
-    stream = file_contents(root2, path2, pool)
-    contents = _util.svn_stream_read(stream, len)
-  fp = open(tempfile2, 'w+')
-  fp.write(contents)
-  fp.close()
+  def get_pipe(self):
+    self.tempfile1 = tempfile.mktemp()
+    contents = ''
+    if self.path1 is not None:
+      len = file_length(self.root1, self.path1, self.pool)
+      stream = file_contents(self.root1, self.path1, self.pool)
+      contents = _util.svn_stream_read(stream, len)
+    fp = open(self.tempfile1, 'w+')
+    fp.write(contents)
+    fp.close()
 
-  if diffoptions is None:
-    diffoptions = ''
-  cmd = "diff %s %s %s" % (diffoptions, tempfile1, tempfile2)
-  return (os.popen(cmd), tempfile1, tempfile2)
+    self.tempfile2 = tempfile.mktemp()
+    contents = ''
+    if self.path2 is not None:
+      len = file_length(self.root2, self.path2, self.pool)
+      stream = file_contents(self.root2, self.path2, self.pool)
+      contents = _util.svn_stream_read(stream, len)
+    fp = open(self.tempfile2, 'w+')
+    fp.write(contents)
+    fp.close()
+
+    return os.popen("diff %s %s %s"
+                    % (self.diffoptions, self.tempfile1, self.tempfile2))
+
+  def __del__(self):
+    if self.tempfile1 is not None:
+      os.remove(self.tempfile1)
+    if self.tempfile2 is not None:
+      os.remove(self.tempfile2)
