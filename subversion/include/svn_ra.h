@@ -507,7 +507,8 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
  * @a *fetched_rev to the actual revision that was retrieved.  (Some
  * callers want to know, and some don't.) 
  *
- * If @a stream is non @c NULL, push the contents of the file at @a stream.
+ * If @a stream is non @c NULL, push the contents of the file at @a
+ * stream, do not call svn_stream_close when finished.
  *
  * If @a props is non @c NULL, set @a *props to contain the properties of 
  * the file.  This means @em all properties: not just ones controlled by

@@ -913,7 +913,6 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
            path, expected_checksum, hex_digest);
     }
 
-  SVN_ERR(svn_stream_close(stream));
   return SVN_NO_ERROR;
 }
 
