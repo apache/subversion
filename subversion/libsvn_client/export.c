@@ -119,9 +119,18 @@ copy_one_versioned_file (const char *from,
   
   /* Only export 'added' files when the revision is WORKING.
      Otherwise, skip the 'added' files, since they didn't exist
-     in the BASE revision and don't have an associated text-base. */
-  if (! entry || (revision->kind != svn_opt_revision_working &&
-                  entry->schedule == svn_wc_schedule_add))
+     in the BASE revision and don't have an associated text-base.
+
+     Don't export 'deleted' files and directories unless it's a
+     revision other than WORKING.  These files and directories
+     don't really exists in WORKING.
+
+     Finally, don't export an unversioned item. */
+  if (! entry ||
+      (revision->kind != svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_add) ||
+      (revision->kind == svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
   if (revision->kind != svn_opt_revision_working)
@@ -223,7 +232,7 @@ copy_versioned_files (const char *from,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
   apr_pool_t *iterpool;
-  apr_hash_t *dirents;
+  apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_finfo_t finfo;
 
@@ -246,11 +255,17 @@ copy_versioned_files (const char *from,
       return SVN_NO_ERROR;
     }
 
-  /* Only export entries with the 'added' status if revision
-     is WORKING.  Otherwise, skip it, as it doesn't exist in any
-     revision other than WORKING. */
-  if (revision->kind != svn_opt_revision_working &&
-      entry->schedule == svn_wc_schedule_add)
+  /* Only export 'added' files when the revision is WORKING.
+     Otherwise, skip the 'added' files, since they didn't exist
+     in the BASE revision and don't have an associated text-base.
+
+     Don't export 'deleted' files and directories unless it's a
+     revision other than WORKING.  These files and directories
+     don't really exists in WORKING. */
+  if ((revision->kind != svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_add) ||
+      (revision->kind == svn_opt_revision_working &&
+       entry->schedule == svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_dir)
@@ -271,12 +286,11 @@ copy_versioned_files (const char *from,
             svn_error_clear (err);
         }
 
-      SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
 
       iterpool = svn_pool_create (pool);
-      for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
-          const svn_node_kind_t *type;
           const char *item;
           const void *key;
           void *val;
@@ -286,7 +300,7 @@ copy_versioned_files (const char *from,
           apr_hash_this (hi, &key, NULL, &val);
           
           item = key;
-          type = val;
+          entry = val;
           
           if (ctx->cancel_func)
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
@@ -294,11 +308,12 @@ copy_versioned_files (const char *from,
           /* ### We could also invoke ctx->notify_func somewhere in
              ### here... Is it called for, though?  Not sure. */ 
           
-          if (*type == svn_node_dir)
+          if (entry->kind == svn_node_dir)
             {
-              if (strcmp (item, SVN_WC_ADM_DIR_NAME) == 0)
+              if (strcmp (item, SVN_WC_ENTRY_THIS_DIR) == 0)
                 {
-                  ; /* skip this, it's an administrative directory. */
+                  ; /* skip this, it's the current directory that we're
+                       handling now. */
                 }
               else
                 {
@@ -315,7 +330,7 @@ copy_versioned_files (const char *from,
                     }
                 }
             }
-          else if (*type == svn_node_file)
+          else if (entry->kind == svn_node_file)
             {
               const char *new_from = svn_path_join (from, item, iterpool);
               const char *new_to = svn_path_join (to, item, iterpool);
