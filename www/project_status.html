@@ -3,7 +3,7 @@
 <center>
 <img src="/subversion.jpg">
 <h2>Weekly Status</h2>
-$Date: 2001-07-06 23:56:56 $
+$Date: 2001-07-13 00:23:32 $
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -49,9 +49,9 @@ $Date: 2001-07-06 23:56:56 $
     <td align="left">Versioning Filesystem</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=352 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>88%</font></td>
-          <td width=48 bgcolor="FF0000">&nbsp;</td>
+          <td width=380 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>95%</font></td>
+          <td width=20 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -60,9 +60,9 @@ $Date: 2001-07-06 23:56:56 $
     <td align="left">Networking Layer</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=344 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>86%</font></td>
-          <td width=56 bgcolor="FF0000">&nbsp;</td>
+          <td width=360 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>90%</font></td>
+          <td width=40 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -71,9 +71,9 @@ $Date: 2001-07-06 23:56:56 $
     <td align="left">Client Libraries</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=320 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>80%</font></td>
-          <td width=80 bgcolor="FF0000">&nbsp;</td>
+          <td width=340 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>85%</font></td>
+          <td width=60 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -104,9 +104,9 @@ $Date: 2001-07-06 23:56:56 $
     <td align="left">Tests</td>
     <td>
         <table cellspacing="0" cellpadding="0" border=0><tr>
-          <td width=200 bgcolor="0000FF" align=right>
-          <font color=FFFFFF>50%</font></td>
-          <td width=200 bgcolor="FF0000">&nbsp;</td>
+          <td width=240 bgcolor="0000FF" align=right>
+          <font color=FFFFFF>60%</font></td>
+          <td width=160 bgcolor="FF0000">&nbsp;</td>
         </tr></table>
     </td>
   </tr>
@@ -121,18 +121,23 @@ $Date: 2001-07-06 23:56:56 $
 <h3>Recent Activities</h3>
 
 <p>
-Ben Collins-Sussman has been dealing with all the random issues, plus
-working on the test framework, client code, and configuration issues.
-On a lark, Ben and Karl also implemented commit datestamping.
+Ben Collins-Sussman is organizing the resolution of various issues
+related to directory versioning (the so-called "Greg Hudson" issues,
+because Greg raised them in an email some time ago).  Ben is also
+patiently dealing with lots of little issues: configuration stuff,
+list watching, tests, various cleanups, etc.
 <p>
-Mo DeJong (plus others?) have been making conf patches.
+Joe Orton is making properties-over-DAV work; seems to be done, or
+almost done, now.
 <p>
-Joe Orton has taken on the properties-over-DAV work.
+Karl Fogel and Mike Pilato finished implementing filesystem
+deltification, and are now writing various paranoid tests to make sure
+it never regresses.  After that, they will move, with Ben and anyone
+else who cares to join, on to the rest of the stuff in
+alpha-checklist.txt.
 <p>
-Karl and Brane are working on making the repository do deltified
-storage.  Delta production is done, undeltification is next.
-<p>
-Mike Pilato is on vacation 2-6 July.
+If you did something and we forgot to list it here, please send a
+patch to kfogel@collab.net, or change this file yourself.
 <p>
 
 
@@ -141,9 +146,9 @@ Mike Pilato is on vacation 2-6 July.
 <h3>What People Are Currently Working On</h3>
 
 <ul>
-<li><b>Filesystem</b>: brane, kfogel, cmpilato </li>
-<li><b>Repository Access layers</b>:  gstein, sussman </li>
-<li><b>Client libs</b>: sussman, cmpilato, fitz </li>
+<li><b>Filesystem</b>: kfogel, cmpilato </li>
+<li><b>Repository Access layers</b>:  joe orton, gstein, sussman </li>
+<li><b>Client libs</b>: sussman, cmpilato </li>
 <li><b>Migration tools</b>:  gstein </li>
 <li><b>Docs</b>: sussman </li>
 <li><b>Testing/QA</b>: sussman </li>
