@@ -17,17 +17,17 @@ struct entry
   apr_off_t text_len;    /* Serves for both the expanded and rep size */
   svn_revnum_t props_rev;
   apr_off_t props_off;
+  apr_off_t props_len;   /* Serves for both the expanded and rep size */
   svn_revnum_t node_rev;
   apr_off_t node_off;
   int pred_count;
-  svn_revnum_t pred_rev;
-  apr_off_t pred_off;
-  const char *node_id;
+  struct entry *pred;
+  int node_id;
+  int copy_id;
   const char *created_path;
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
-  svn_revnum_t copyroot_rev;
-  apr_off_t copyroot_off;
+  struct entry *copyroot;
   svn_boolean_t soft_copy;
 };
 
@@ -38,6 +38,8 @@ struct parse_baton
   svn_revnum_t current_rev;
   apr_file_t *rev_file;
   svn_stream_t *rev_stream;
+  int next_node_id;
+  int next_copy_id;
   apr_pool_t *pool;
 };
 
@@ -57,14 +59,13 @@ new_entry(apr_pool_t *pool)
   entry->node_rev = SVN_INVALID_REVNUM;
   entry->node_off = -1;
   entry->pred_count = 0;
-  entry->pred_rev = SVN_INVALID_REVNUM;
-  entry->pred_off = 0;
-  entry->node_id = "XXXidsnotimplementedyet";
+  entry->pred = NULL;
+  entry->node_id = -1;
+  entry->copy_id = -1;
   entry->created_path = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->copyfrom_path = NULL;
-  entry->copyroot_rev = SVN_INVALID_REVNUM;
-  entry->copyroot_off = -1;
+  entry->copyroot = NULL;
   entry->soft_copy = FALSE;
   return entry;
 }
@@ -106,11 +107,10 @@ copy_entry(struct parse_baton *pb, struct entry *new_entry,
   new_entry->node_rev = pb->current_rev;
   new_entry->node_off = -1;
   new_entry->pred_count = old_entry->pred_count + 1;
-  new_entry->pred_rev = old_entry->node_rev;
-  new_entry->pred_off = old_entry->node_off;
+  new_entry->pred = old_entry;
   if (is_copy)
     {
-      /* XXX node-id gets fresh copy ID */
+      new_entry->copy_id = pb->next_copy_id++;
       new_entry->copyfrom_rev = old_entry->node_rev;
       new_entry->copyfrom_path = old_entry->created_path;
       new_entry->soft_copy = soft_copy;
@@ -118,15 +118,10 @@ copy_entry(struct parse_baton *pb, struct entry *new_entry,
   else
     {
       /* Make the new node-rev a change of the old one. */
-      /* XXX node-id gets new txn id */
       new_entry->copyfrom_rev = SVN_INVALID_REVNUM;
       new_entry->copyfrom_path = NULL;
-      if (SVN_IS_VALID_REVNUM(old_entry->copyfrom_rev)
-          || !SVN_IS_VALID_REVNUM(old_entry->pred_rev))
-        {
-          new_entry->copyroot_rev = old_entry->node_rev;
-          new_entry->copyroot_off = old_entry->node_off;
-        }
+      if (SVN_IS_VALID_REVNUM(old_entry->copyfrom_rev) || !old_entry->pred)
+        new_entry->copyroot = old_entry;
     }
 }
 
@@ -172,6 +167,15 @@ follow_path(struct parse_baton *pb, const char *path, apr_pool_t *pool)
   for (i = 0; i < elems->nelts; i++)
     entry = get_child(pb, entry, APR_ARRAY_IDX(elems, i, const char *), pool);
   return entry;
+}
+
+/* Return the node-rev ID of ENTRY in string form. */
+static const char *
+node_rev_id(struct entry *entry, apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%d.%d.r%" SVN_REVNUM_T_FMT "/%" APR_OFF_T_FMT,
+                      entry->node_id, entry->copy_id, entry->node_rev,
+                      entry->node_off);
 }
 
 static void
@@ -220,7 +224,7 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
   void *val;
   svn_stream_t *out = pb->rev_stream;
   struct entry *child;
-  const char *name, *rep;
+  const char *name, *id;
   apr_off_t offset;
 
   /* Record the rev file offset of the directory data. */
@@ -236,12 +240,10 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
       apr_hash_this(hi, &key, NULL, &val);
       name = key;
       child = val;
-      rep = apr_psprintf(pool, "%s %s %" SVN_REVNUM_T_FMT " %" APR_OFF_T_FMT,
-                         (child->children == NULL) ? "file" : "dir",
-                         child->node_id, child->node_rev, child->node_off);
+      id = node_rev_id(child, pool);
       SVN_ERR(svn_stream_printf(out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
-                                strlen(name), name, strlen(rep), rep));
+                                strlen(name), name, strlen(id), id));
     }
 
   /* Record the length of the directory data. */
@@ -249,7 +251,7 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pool));
   entry->text_len = offset - entry->text_off - 6;
 
-  SVN_ERR(svn_stream_printf(out, pool, "END\n"));
+  SVN_ERR(svn_stream_printf(out, pool, "ENDREP\n"));
   return SVN_NO_ERROR;
 }
 
@@ -258,21 +260,27 @@ write_props(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
 {
   apr_off_t offset;
 
-  /* Get the rev file offset of the prop data. */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pool));
+  /* Record the rev file offset of the prop data. */
+  entry->props_rev = pb->current_rev;
+  entry->props_off = 0;
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &entry->props_off, pool));
+
+  /* Write out a rep header. */
+  svn_stream_printf(pb->rev_stream, pool, "PLAIN\n");
 
   /* Write the props hash out to the rev file. */
   SVN_ERR(svn_hash_write(entry->props, pb->rev_file, pool));
 
-  /* Record the location of the props. */
-  entry->props_rev = pb->current_rev;
-  entry->props_off = offset;
+  /* Record the length of the props data. */
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pool));
+  entry->props_len = offset - entry->props_off - 6;
 
   /* We don't need the props hash any more. */
   entry->props = NULL;
   svn_pool_destroy(entry->props_pool);
 
+  SVN_ERR(svn_stream_printf(pb->rev_stream, pool, "ENDREP\n"));
   return SVN_NO_ERROR;
 }
 
@@ -285,23 +293,24 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
   entry->node_off = 0;
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &entry->node_off, pool));
 
-  SVN_ERR(svn_stream_printf(out, pool, "id: %s\n", entry->node_id));
+  SVN_ERR(svn_stream_printf(out, pool, "id: %s\n", node_rev_id(entry, pool)));
   SVN_ERR(svn_stream_printf(out, pool, "type: %s\n",
                             entry->children ? "dir" : "file"));
-  if (SVN_IS_VALID_REVNUM(entry->pred_rev))
-    SVN_ERR(svn_stream_printf(out, pool, "pred: %" SVN_REVNUM_T_FMT
-                              " %" APR_OFF_T_FMT "\n",
-                              entry->pred_rev, entry->pred_off));
+  if (entry->pred)
+    SVN_ERR(svn_stream_printf(out, pool, "pred: %s\n",
+                              node_rev_id(entry->pred, pool)));
   SVN_ERR(svn_stream_printf(out, pool, "count: %d\n", entry->pred_count));
-  SVN_ERR(svn_stream_printf(out, pool, "rep: %" SVN_REVNUM_T_FMT
+  SVN_ERR(svn_stream_printf(out, pool, "text: %" SVN_REVNUM_T_FMT
                             " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
                             " %" APR_OFF_T_FMT "\n",
                             entry->text_rev, entry->text_off,
                             entry->text_len, entry->text_len));
   if (SVN_IS_VALID_REVNUM(entry->props_rev))
-    SVN_ERR(svn_stream_printf(out, pool, "props: %" SVN_REVNUM_T_FMT
-                              " %" APR_OFF_T_FMT "\n", entry->props_rev,
-                              entry->props_off));
+    SVN_ERR(svn_stream_printf(out, pool, "rep: %" SVN_REVNUM_T_FMT
+                              " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
+                              " %" APR_OFF_T_FMT "\n",
+                              entry->props_rev, entry->props_off,
+                              entry->props_len, entry->props_len));
   /* XXX use length-counted field format */
   SVN_ERR(svn_stream_printf(out, pool, "cpath: %s\n", entry->created_path));
   if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
@@ -309,13 +318,9 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
     SVN_ERR(svn_stream_printf(out, pool, "copyfrom: %s %" SVN_REVNUM_T_FMT
                               "%s\n", (entry->soft_copy) ? "soft" : "hard",
                               entry->copyfrom_rev, entry->copyfrom_path));
-  else if (SVN_IS_VALID_REVNUM(entry->copyroot_rev))
-    SVN_ERR(svn_stream_printf(out, pool, "copyroot: %" SVN_REVNUM_T_FMT
-                              " %" APR_OFF_T_FMT "\n", entry->copyroot_rev,
-                              entry->copyroot_off));
-  else if (pb->current_rev == 0) /* Root of rev 0 uses self as copy root */
-    SVN_ERR(svn_stream_printf(out, pool, "copyroot: 0 %" APR_OFF_T_FMT "\n",
-                              entry->node_off));
+  else
+    SVN_ERR(svn_stream_printf(out, pool, "copyroot: %s\n",
+                              node_rev_id(entry->copyroot, pool)));
 
   return SVN_NO_ERROR;
 }
@@ -387,7 +392,13 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
   if (rev != 0)
     copy_entry(pb, root, get_root(pb, rev - 1), FALSE, FALSE);
   else
-    root->children = apr_hash_make(pb->pool);
+    {
+      root->node_id = pb->next_node_id++;
+      root->copy_id = pb->next_copy_id++;
+      root->children = apr_hash_make(pb->pool);
+      root->copyroot = root;
+      root->node_rev = 0;
+    }
   root->created_path = "";
   APR_ARRAY_PUSH(pb->roots, struct entry *) = root;
 
@@ -436,13 +447,13 @@ new_node_record(void **node_baton, apr_hash_t *headers, void *baton,
         }
       else
         {
-          /* XXX node-id: copy ID inherited from parent */
+          entry->node_id = pb->next_node_id++;
+          entry->copy_id = parent->copy_id;
           if (kind == svn_node_dir)
             entry->children = apr_hash_make(pb->pool);
           entry->node_rev = pb->current_rev;
           entry->node_off = -1;
-          entry->copyroot_rev = parent->copyroot_rev;
-          entry->copyroot_off = parent->copyroot_off;
+          entry->copyroot = parent->copyroot;
         }
       entry->created_path = apr_pstrdup(pb->pool, path);
       name = apr_pstrdup(pb->pool, name);
@@ -538,7 +549,7 @@ close_node(void *baton)
       pb->current_node->text_len = offset - pb->current_node->text_off - 6;
 
       /* Write a representation trailer to the rev file. */
-      SVN_ERR(svn_stream_printf(pb->rev_stream, pb->pool, "END\n"));
+      SVN_ERR(svn_stream_printf(pb->rev_stream, pb->pool, "ENDREP\n"));
     }
 
   return SVN_NO_ERROR;
@@ -552,6 +563,7 @@ svn_error_t *close_revision(void *baton)
   SVN_ERR(write_entry(pb, get_root(pb, pb->current_rev), pool));
   SVN_ERR(svn_io_file_close(pb->rev_file, pool));
   /* XXX changed-path data goes here */
+  /* XXX offsets to root node and changed-path data go here */
   svn_pool_destroy(pool);
   return SVN_NO_ERROR;
 }
@@ -586,6 +598,8 @@ int main()
   pb.current_rev = SVN_INVALID_REVNUM;
   pb.rev_file = NULL;
   pb.rev_stream = NULL;
+  pb.next_node_id = 0;
+  pb.next_copy_id = 0;
   pb.pool = pool;
   err = svn_repos_parse_dumpstream2(instream, &parser, &pb, NULL, NULL, pool);
   if (err)
