@@ -38,67 +38,6 @@
 
 /*** Code. ***/
 
-/* Parse a working-copy or url PATH, looking for an "@" sign, e.g.
-
-         foo/bar/baz@13
-         http://blah/bloo@27
-         blarg/snarf@HEAD
-
-   If an "@" is found, return the two halves in *TRUEPATH and *REV,
-   allocating in POOL.
-
-   If no "@" is found, set *TRUEPATH to PATH and *REV to kind 'unspecified'.
-*/
-static svn_error_t *
-parse_path (svn_opt_revision_t *rev,
-            const char **truepath,
-            const char *path /* UTF-8! */,
-            apr_pool_t *pool)
-{
-  int i;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_opt_revision_t start_revision, end_revision;
-
-  /* scanning from right to left, just to be friendly to any
-     screwed-up filenames that might *actually* contain @-signs.  :-) */
-  for (i = (strlen (path) - 1); i >= 0; i--)
-    {
-      /* If we hit a path separator, stop looking. */
-      if (path[i] == '/')
-        break;
-
-      if (path[i] == '@')
-        {
-          const char *native_rev;
-
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
-                                              subpool));
-
-          if (svn_opt_parse_revision (&start_revision,
-                                      &end_revision,
-                                      native_rev, subpool))
-            return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      _("Syntax error parsing revision '%s'"),
-                                      path + i + 1);
-
-          *truepath = apr_pstrndup (pool, path, i);
-          rev->kind = start_revision.kind;
-          rev->value = start_revision.value;
-
-          svn_pool_destroy (subpool);
-          return SVN_NO_ERROR;
-        }
-    }
-
-  /* Didn't find an @-sign. */
-  *truepath = path;
-  rev->kind = svn_opt_revision_unspecified;
-
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
-}
-
-
 /* An svn_opt_subcommand_t to handle the 'diff' command.
    This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -273,8 +212,8 @@ svn_cl__diff (apr_getopt_t *os,
           svn_opt_revision_t peg_revision;
           
           /* First check for a peg revision. */
-          SVN_ERR (parse_path (&peg_revision, &truepath, path, pool));
-          
+          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, path, pool));
+
           /* Set the default peg revision if one was not specified. */
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_path_is_url (path)

@@ -456,22 +456,11 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
 }
 
 
-/* Parse a working-copy or url PATH, looking for an "@" sign, e.g.
-
-         foo/bar/baz@13
-         http://blah/bloo@27
-         blarg/snarf@HEAD
-
-   If an "@" is found, return the two halves in *TRUEPATH and *REV,
-   allocating in POOL.
-
-   If no "@" is found, set *TRUEPATH to PATH and *REV to kind 'unspecified'.
-*/
-static svn_error_t *
-parse_path (svn_opt_revision_t *rev,
-            const char **truepath,
-            const char *path /* UTF-8! */,
-            apr_pool_t *pool)
+svn_error_t *
+svn_opt_parse_path (svn_opt_revision_t *rev,
+                    const char **truepath,
+                    const char *path /* UTF-8! */,
+                    apr_pool_t *pool)
 {
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -630,7 +619,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
       if (output_targets->nelts > 0)
         {
           path = ((const char **) (output_targets->elts))[0];
-          SVN_ERR (parse_path (&temprev, &path, path, pool));
+          SVN_ERR (svn_opt_parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
               ((const char **) (output_targets->elts))[0] = 
@@ -642,7 +631,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
       if (output_targets->nelts > 1)
         {
           path = ((const char **) (output_targets->elts))[1];
-          SVN_ERR (parse_path (&temprev, &path, path, pool));
+          SVN_ERR (svn_opt_parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
               ((const char **) (output_targets->elts))[1] = 
