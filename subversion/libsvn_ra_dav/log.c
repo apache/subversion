@@ -386,6 +386,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                       ras->root.path,
                                       request_body->data,
                                       0,  /* ignored */
+                                      NULL,
                                       log_report_elements, 
                                       log_validate,
                                       log_start_element,

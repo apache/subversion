@@ -407,24 +407,31 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
  * element, and end element handlers, respectively.  BATON is passed
  * to each as userdata.
  *
+ * SET_PARSER is a callback function which, if non-NULL, is called
+ * with the XML parser and BATON.  This is useful for providers of
+ * validation and element handlers which require access to the parser.
+ *
  * EXTRA_HEADERS is a hash of (const char *) key/value pairs to be
  * inserted as extra headers in the request.  Can be NULL.
  *
  * Use POOL for any temporary allocation.
  */
-svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
-                                        const char *method,
-                                        const char *url,
-                                        const char *body,
-                                        apr_file_t *body_file,
-                                        const struct ne_xml_elm *elements, 
-                                        ne_xml_validate_cb validate_cb,
-                                        ne_xml_startelm_cb startelm_cb, 
-                                        ne_xml_endelm_cb endelm_cb,
-                                        void *baton,
-                                        apr_hash_t *extra_headers,
-                                        apr_pool_t *pool);
-
+svn_error_t *
+svn_ra_dav__parsed_request(ne_session *sess,
+                           const char *method,
+                           const char *url,
+                           const char *body,
+                           apr_file_t *body_file,
+                           void set_parser (ne_xml_parser *parser,
+                                            void *baton),
+                           const struct ne_xml_elm *elements, 
+                           ne_xml_validate_cb validate_cb,
+                           ne_xml_startelm_cb startelm_cb, 
+                           ne_xml_endelm_cb endelm_cb,
+                           void *baton,
+                           apr_hash_t *extra_headers,
+                           apr_pool_t *pool);
+  
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {

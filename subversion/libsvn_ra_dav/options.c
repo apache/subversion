@@ -115,7 +115,7 @@ svn_error_t * svn_ra_dav__get_activity_collection(
                                       "encoding=\"utf-8\"?>"
                                       "<D:options xmlns:D=\"DAV:\">"
                                       "<D:activity-collection-set/>"
-                                      "</D:options>", 0,
+                                      "</D:options>", 0, NULL,
                                       options_elements, validate_element,
                                       start_element, end_element, &oc,
                                       NULL, pool) );
