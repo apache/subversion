@@ -988,6 +988,10 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
     {
       memcpy (canon, path, src - path);
       dst += (src - path);
+
+      /* Skip over the hostname. */
+      while(*src && *src != '/')
+        *(dst++) = *(src++);
     }
   else
     src = path;
