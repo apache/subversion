@@ -617,7 +617,6 @@ svn_config_ensure (apr_pool_t *pool)
    "     whitespace around each element of the list is trimmed."
    APR_EOL_STR
    APR_EOL_STR
-#if 0   /* expansion not implemented yet */
    "   - Option values may be expanded within a value by enclosing the"
    APR_EOL_STR
    "     option name in parentheses, preceded by a percent sign:"
@@ -644,7 +643,6 @@ svn_config_ensure (apr_pool_t *pool)
    "     will take the modifications into account."
    APR_EOL_STR
    APR_EOL_STR
-#endif /* 0 */
    APR_EOL_STR
    "Configuration data in the Windows registry"
    APR_EOL_STR
@@ -670,17 +668,11 @@ svn_config_ensure (apr_pool_t *pool)
    APR_EOL_STR
    "   HKCU for HKEY_CURRENT_USER"
    APR_EOL_STR
-#if 0   /* expansion not implemented yet */
    APR_EOL_STR
    "The values in config-key represent the options in the [DEFAULT] section."
    APR_EOL_STR
    "The keys below config-key represent other sections, and their values"
    APR_EOL_STR
-#else
-   APR_EOL_STR
-   "The keys below config-key represent the sections, and their values"
-   APR_EOL_STR
-#endif /* 0 */
    "represent the options. Only values of type REG_SZ whose name doesn't"
    APR_EOL_STR
    "start with a '#' will be used; other values, as well as the keys'"
@@ -699,37 +691,53 @@ svn_config_ensure (apr_pool_t *pool)
    "configuration,"
    APR_EOL_STR
    APR_EOL_STR
-   "  /etc/subversion/servers"
+   "  Unix:"
    APR_EOL_STR
-   "  /etc/subversion/config"
+   "    /etc/subversion/servers"
    APR_EOL_STR
-   "  /etc/subversion/hairstyles"
+   "    /etc/subversion/config"
    APR_EOL_STR
-   "     -- or --"
+   "    /etc/subversion/hairstyles"
    APR_EOL_STR
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers"
+   "  Windows:"
    APR_EOL_STR
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config"
+   "    %ALLUSERSPROFILE%\\Application Data\\Subversion\\servers"
    APR_EOL_STR
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles"
+   "    %ALLUSERSPROFILE%\\Application Data\\Subversion\\config"
+   APR_EOL_STR
+   "    %ALLUSERSPROFILE%\\Application Data\\Subversion\\hairstyles"
+   APR_EOL_STR
+   "    REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers"
+   APR_EOL_STR
+   "    REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config"
+   APR_EOL_STR
+   "    REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles"
    APR_EOL_STR
    APR_EOL_STR
    "and one for per-user configuration:"
    APR_EOL_STR
    APR_EOL_STR
-   "  ~/.subversion/servers"
+   "  Unix:"
    APR_EOL_STR
-   "  ~/.subversion/config"
+   "    ~/.subversion/servers"
    APR_EOL_STR
-   "  ~/.subversion/hairstyles"
+   "    ~/.subversion/config"
    APR_EOL_STR
-   "     -- or --"
+   "    ~/.subversion/hairstyles"
    APR_EOL_STR
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers"
+   "  Windows:"
    APR_EOL_STR
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config"
+   "    %APPDATA%\\Subversion\\servers"
    APR_EOL_STR
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles"
+   "    %APPDATA%\\Subversion\\config"
+   APR_EOL_STR
+   "    %APPDATA%\\Subversion\\hairstyles"
+   APR_EOL_STR
+   "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers"
+   APR_EOL_STR
+   "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config"
+   APR_EOL_STR
+   "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles"
    APR_EOL_STR
    APR_EOL_STR;
 
