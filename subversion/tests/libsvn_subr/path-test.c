@@ -656,7 +656,7 @@ test_canonicalize (const char **msg,
   };
   int i;
 
-  *msg = "test svn_path_decompose";
+  *msg = "test svn_path_canonicalize";
   if (msg_only)
     return SVN_NO_ERROR;
 
