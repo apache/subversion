@@ -130,6 +130,11 @@ svn_cl__checkout (apr_getopt_t *os,
           target_dir = svn_path_join (local_dir, target_dir, subpool);
         }
 
+      /* svn_client_checkout() doesn't accept an unspecified revision,
+         so default to HEAD. */
+      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
+        opt_state->start_revision.kind = svn_opt_revision_head;
+
       SVN_ERR (svn_client_checkout (repos_url,
                                     target_dir,
                                     &(opt_state->start_revision),

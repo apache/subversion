@@ -772,6 +772,28 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
                                           apr_pool_t *pool);
                        
 
+
+/* Ensure that an administrative area exists for PATH, so that PATH is a
+ * working copy subdir based on URL at REVISION.
+ *
+ * If the administrative area does not exist then it will be created and
+ * initialized to a unlocked state.
+ *
+ * If the administrative area already exists then the given URL must match
+ * the URL in the administrative area or an error will be returned. The
+ * given REVISION must also match except for the special case of adding a
+ * directory that has a name matching one scheduled for deletion, in which
+ * case REVISION must be zero.
+ *
+ * Do not ensure existence of PATH itself; if PATH does not exist,
+ * return error. 
+ */
+svn_error_t *svn_wc_ensure_adm (const char *path,
+                                const char *url,
+                                svn_revnum_t revision,
+                                apr_pool_t *pool);
+
+
 
 /** 
  * @defgroup svn_wc_status working copy status.
