@@ -76,6 +76,7 @@
 # can be quite hypnotic!
 
 
+use IPC::Open3;
 use Getopt::Std;
 use File::Find;
 use File::Path;
@@ -144,18 +145,10 @@ sub status_update_commit
     # while other errors are not.  Thus there is a need to check the
     # return value and parse the error text.
 
-    pipe COMMIT_ERR_READ, COMMIT_ERR_WRITE or die "pipe: $!\n";
-    my $pid = fork();
-    die "fork failed: $!\n" if not defined $pid;
-    if ( not $pid )
-      {
-        # This is the child process
-        open( STDERR, ">&COMMIT_ERR_WRITE" ) or die "redirect failed: $!\n";
-        exec $svn_cmd or die "exec $svn_cmd failed: $!\n";
-      }
+    my $pid = open3( \*COMMIT_WRITE, \*COMMIT_READ, \*COMMIT_ERR_READ,
+                     $svn_cmd);
 
-    # This is the main parent process, look for acceptable errors
-    close COMMIT_ERR_WRITE or die "close COMMIT_ERR_WRITE: $!\n";
+    # Look for "acceptable" errors, those that occur when commits conflict
     my $acceptable_error = 0;
     while ( <COMMIT_ERR_READ> )
       {
@@ -171,6 +164,9 @@ sub status_update_commit
                                    $/x );
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
+    close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
+    print while ( <COMMIT_READ> );
+    close COMMIT_READ or die "close COMMIT_READ: $!\n";
 
     # Get commit subprocess exit status
     die "waitpid: $!\n" if $pid != waitpid $pid, 0;
