@@ -114,13 +114,6 @@ Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
 
-    * r8361
-      Fix wc-to-wc copies with non-ASCII characters in a non-UTF-8 locale.
-      Justification: obvious run-time bug, trivial fix
-      Votes:
-       +1: philip, ghudson, jszakmeister
-
-
     * r8390
       Make 'svn merge' notice ancestry by default.
       Justification:  ignoring copies can produce garbage local mods,

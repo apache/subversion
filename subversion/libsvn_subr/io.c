@@ -381,8 +381,7 @@ svn_io_copy_file (const char *src,
       apr_file_t *s;
       apr_finfo_t finfo;
 
-      SVN_ERR (svn_io_file_open (&s, src_apr, 
-                                 APR_READ, APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool));
       SVN_ERR (svn_io_file_info_get (&finfo, APR_FINFO_PROT, s, pool));
       SVN_ERR (svn_io_file_close (s, pool));
 
