@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path
+import string, sys, os.path, re
 
 # Our testing module
 import svntest
@@ -166,15 +166,13 @@ def status_missing_file(sbox):
 
   os.remove('iota')
 
-  # ### todo: passing expected err output here, just so we don't get
-  # ### stderr printed when we run the test.  But when the bug is
-  # ### fixed, we should pass None as the first arg to run_svn, and
-  # ### check that stat_output has a `!' line for the missing file.
-  stat_output, err_output = svntest.main.run_svn \
-                            ('iota: No such file or directory', 'status')
+  stat_output, err_output = svntest.main.run_svn(None, 'status')
   if err_output:
     return 1
-
+  for line in stat_output:
+    if not re.match("! +iota", line):
+      return 1
+  
   os.chdir(was_cwd)
 
   return 0
@@ -192,18 +190,15 @@ def status_type_change(sbox):
   os.chdir(wc_dir)
 
   os.rename('iota', 'was_iota')
-  os.rename('A', 'was_A')
-  svntest.main.file_append('A', "This file was directory A")
-  os.mkdir('iota')
+  os.rename('A', 'iota')
+  os.rename('was_iota', 'A')
 
-  # ### todo: passing expected err output here, just so we don't get
-  # ### stderr printed when we run the test.  But when the bug is
-  # ### fixed, we should pass None as the first arg to run_svn, and
-  # ### check that stat_output has the appropriate `~' lines.
-  stat_output, err_output = svntest.main.run_svn \
-                            ('Unexpected node kind found', 'status')
+  stat_output, err_output = svntest.main.run_svn(None, 'status')
   if err_output:
     return 1
+  for line in stat_output:
+    if not re.match("~ +(iota|A)", line):
+      return 1
 
   os.chdir(was_cwd)
 
@@ -219,8 +214,8 @@ test_list = [ None,
               status_unversioned_file_in_current_dir,
               status_update_with_nested_adds,
               status_shows_all_in_current_dir,
-              (status_missing_file, svntest.main.XFAIL),
-              (status_type_change, svntest.main.XFAIL),
+              status_missing_file,
+              status_type_change,
              ]
 
 if __name__ == '__main__':

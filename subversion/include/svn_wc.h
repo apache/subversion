@@ -646,36 +646,19 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * a directory; its status will simply be stored in STATUSHASH like
  * any other.
  *
- * If STRICT is set, then if we encounter a path that is missing from
- * the wc, or is obstructing a resource in the wc, we'll return an
- * error.  Else if STRICT is unset, then just use the appropriate
- * status codes for entries that would have caused an error if STRICT
- * were set: that is, missing items produce status code
- * `svn_wc_status_absent', and items which exist but whose actual type
- * does not match their entry type get `svn_wc_status_obstructed'.
- *
- * If STRICT is set, then: if what should be a versioned directory
- * appears to be unversioned, return SVN_ERR_WC_NOT_DIRECTORY; else if
- * the item on disk is simply a different kind from what's expected by
- * the entry, then return SVN_ERR_NODE_UNEXPECTED_KIND; else if the
- * item is missing from disk, return APR_ENOENT.
- *
  * Assuming PATH is a directory, then:
  * 
- * If GET_ALL is zero, then only locally-modified entries will be
- * returned.  If non-zero, then all entries will be returned.
+ * If GET_ALL is unset, then only locally-modified entries will be
+ * returned.  If set, then all entries will be returned.
  *
- * If DESCEND is zero, statushash will contain paths for PATH and
- * its entries.
- *
- * If DESCEND is non-zero, statushash will contain statuses for PATH
- * and everything below it, including subdirectories.  In other
- * words, a full recursion.  */
+ * If DESCEND is unset, statushash will contain statuses for PATH and
+ * its entries.  Else if DESCEND is set, statushash will contain
+ * statuses for PATH and everything below it, including
+ * subdirectories.  In other words, a full recursion. */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               const char *path,
                               svn_boolean_t descend,
                               svn_boolean_t get_all,
-                              svn_boolean_t strict,
                               svn_boolean_t no_ignore,
                               apr_pool_t *pool);
 
