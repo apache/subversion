@@ -1339,19 +1339,15 @@ svn_wc_get_auth_file (svn_stringbuf_t *path,
                       svn_stringbuf_t **contents,
                       apr_pool_t *pool)
 {
-  svn_stringbuf_t *full_path_to_file =
-    svn_wc__adm_path (path, 0, pool, SVN_WC__ADM_AUTH_DIR, filename, NULL);
-  
-  /* Sanity check */
-  if (! svn_wc__adm_path_exists (path, 0, pool,
-                                 SVN_WC__ADM_AUTH_DIR, filename, NULL))
-    return 
-      svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-                         "auth file '%s' not found in adm area of '%s'",
-                         filename, path->data);
+  apr_file_t *file;
+  svn_stringbuf_t *fname = svn_stringbuf_create(filename, pool);
+  SVN_ERR (svn_wc__open_auth_file (&file, path, fname, APR_READ, pool));
 
   /* Read the file's contents into a stringbuf, allocated in POOL. */
-  SVN_ERR (svn_string_from_file (contents, full_path_to_file->data, pool));
+  SVN_ERR (svn_string_from_aprfile (contents, file, pool));
+
+  SVN_ERR (svn_wc__close_auth_file (file, path, fname,
+                                    0 /* Don't sync */, pool));
 
   return SVN_NO_ERROR;
 }

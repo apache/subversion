@@ -261,6 +261,13 @@ svn_error_t *svn_string_from_file (svn_stringbuf_t **result,
                                    const char *filename, 
                                    apr_pool_t *pool);
 
+/* Sets *RESULT to a string containing the contents of the already opened
+   FILE.  Reads from the current position in file to the end.  Does not
+   close the file or reset the cursor position.*/
+svn_error_t *svn_string_from_aprfile (svn_stringbuf_t **result,
+                                      apr_file_t *file,
+                                      apr_pool_t *pool);
+
 /* Recursively remove directory PATH. */
 apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
 
