@@ -373,13 +373,7 @@ write_field(struct parse_baton *pb, apr_pool_t *pool, const char *name,
   val = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
 
-  /* Write it out using the normal or length-counted field format as needed. */
-  if (strchr(val, '\n') == NULL)
-    return svn_stream_printf(pb->rev_stream, pool, "%s: %s\n", name, val);
-  else
-    return svn_stream_printf(pb->rev_stream, pool,
-                             "%s:%" APR_SIZE_T_FMT ":%s\n",
-                             name, strlen(val), val);
+  return svn_stream_printf(pb->rev_stream, pool, "%s: %s\n", name, val);
 }
 
 static svn_error_t *
@@ -464,10 +458,10 @@ write_change(svn_stream_t *out, const char *path, struct entry *entry,
       text_mod = (entry->text_rep.rev == entry->node_rev);
       props_mod = (entry->props_rep.rev == entry->node_rev);
     }
-  return svn_stream_printf(out, pool, "%" APR_SIZE_T_FMT ":%s %s %s %s %s\n",
-                           strlen(path), path, node_rev_id(entry, pool),
-                           action, text_mod ? "true" : "false",
-                           props_mod ? "true" : "false");
+  return svn_stream_printf(out, pool, "%s %s %s %s %s\n",
+                           node_rev_id(entry, pool), action,
+                           text_mod ? "true" : "false",
+                           props_mod ? "true" : "false", path);
 }
 
 static svn_error_t *

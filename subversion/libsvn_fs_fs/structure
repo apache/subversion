@@ -70,13 +70,11 @@ in the form of a dumped hash map mapping property names to property
 values.
 
 The marshalling syntax for node-revs is a series of fields terminated
-by a blank line.  Fields have either the syntax "<name>: <value>\n" or
-"<name>:<length>:<value>\n", where <name> is a symbolic field name
-(each symbolic name is used only once in a given node-rev), <length>
-is the length of the value if given (not including the cosmetic
-newline), and <value> is the value data.  If no length is given, the
-value must contain no newlines.  Unrecognized fields are ignored, for
-extensibility.  The following fields are defined:
+by a blank line.  Fields havethe syntax "<name>: <value>\n", where
+<name> is a symbolic field name (each symbolic name is used only once
+in a given node-rev) and <value> is the value data.  Unrecognized
+fields are ignored, for extensibility.  The following fields are
+defined:
 
   id        The ID of the node-rev
   type      "file" or "dir"
@@ -105,13 +103,13 @@ type, than the node-rev itself does.)
 A node-revision with no properties may omit the "props" field.
 
 Changed-path data is represented as a series of lines, each containing
-"<len>:<path> <id> <action> <text-mod> <prop-mod>\n", where
-<len>:<path> is a counted string representation of the pathname, <id>
-is the node-rev ID of the new node-rev, <action> is "add", "delete",
-"replace", or "modify", and <text-mod> and <prop-mod> are "true" or
-"false" indicating whether the text and/or properties changed.  For
-deletes, <id> is the node-rev ID of the deleted node-rev, and
-<text-mod> and <prop-mod> are always "false".
+"<id> <action> <text-mod> <prop-mod> <path>\n", where <id> is the
+node-rev ID of the new node-rev, <action> is "add", "delete",
+"replace", or "modify", <text-mod> and <prop-mod> are "true" or
+"false" indicating whether the text and/or properties changed, and
+<path> is the changed pathname.  For deletes, <id> is the node-rev ID
+of the deleted node-rev, and <text-mod> and <prop-mod> are always
+"false".
 
 [NOTE: We could speed up svn_repos_get_logs significantly by storing
 copy history in the changed-path data and caching it upon reading the
