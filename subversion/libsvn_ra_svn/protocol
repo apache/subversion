@@ -1,5 +1,7 @@
-Syntactic structure
--------------------
+This file documents version 2 of the svn protocol.
+
+1. Syntactic structure
+----------------------
 
 The Subversion protocol is specified in terms of the following
 syntactic elements, specified using ABNF [RFC 2234]:
@@ -67,42 +69,52 @@ is defined as follows:
 The interpretation of parameters in a successful command response is
 context-dependent.
 
-Connection establishment and protocol setup
--------------------------------------------
+2. Connection establishment and protocol setup
+----------------------------------------------
 
 By default, the client connects to the server on port 3690.
 
 Upon receiving a connection, the server sends a greeting, using a
 command response whose parameters match the prototype:
 
-  greeting: ( minver:number maxver:number
-              ( mech:word ... ) ( cap:word ... ) )
+  greeting: ( minver:number maxver:number mechs:list ( cap:word ... ) )
 
 minver and maxver give the minimum and maximum Subversion protocol
-versions supported by the server.  The mech values give a list of SASL
-[RFC 2222] mechanisms supported by the server.  The cap values give a
-list of server capabilities; no capabilities are currently defined.
+versions supported by the server.  mechs is present for historical
+reasons, and is ignored by the client.  The cap values give a list of
+server capabilities; no capabilities are currently defined.
 
 If the client does not support a protocol version within the specified
 range, or does not support any of the specified SASL mechanisms, it
 closes the connection.  Otherwise, the client responds to the greeting
 with an item matching the prototype:
 
-  response: ( version:number mech:word [ mecharg:string ] ( cap:word ... ) )
+  response: ( version:number ( cap:word ... ) url:string )
 
-version gives the protocol version selected by the client, mech gives
-the SASL authentication mechanism, and mecharg gives the initial
-response for the authentication exchange.  mecharg must be omitted if
-the selected mechanism does not begin with an initial client response.
-(Calling this an "initial response" is confusing, but technically
-correct; SASL talks in terms of server challenges and client
-responses, even when the mechanism begins with information from the
-client or ends with information from the server.)  The cap values give
-a list of client capabilities; no capabilities are currently defined.
+version gives the protocol version selected by the client.  The cap
+values give a list of client capabilities; no capabilities are
+currently defined.  url gives the URL the client is accessing.
 
 Upon receiving the client's response to the greeting, the server sends
-a series of challenges.  Each challenge is a tuple matching the
-prototype:
+an authentication request, which is a command response whose arguments
+match the prototype:
+
+  auth-request: ( ( mech:word ... ) realm:string )
+
+The mech values give a list of SASL mechanisms supported by the
+server.  The realm string is similar to an HTTP authentication realm
+as defined in [RFC 2617]; it allows the server to indicate which of
+several protection spaces the server wishes to authenticate in.  If
+the mechanism list is empty, then no authentication is required and no
+further action takes place as part of the authentication challenge;
+otherwise, the client responds with a tuple matching the prototype:
+
+  auth-response: ( mech:word [ token:string ] )
+
+mech specifies the SASL mechanism and token, if present, gives the
+"initial response" of the authentication exchange.  Upon receiving the
+client's auth-response, the server sends a series of challenges, each
+a tuple matching the prototype:
 
   challenge: ( step ( token:string ) )
            | ( failure ( message:string ) )
@@ -119,24 +131,21 @@ successful.  If a token is provided, it should be interpreted by the
 authentication mechanism, but there is no response.
 
 If the first word of the challenge is "failure", the authentication
-exchange is unsuccessful.  After sending a failure notification, the
-server must close the connection, as no further action is possible.
+exchange is unsuccessful.  The client may then give up, or make
+another auth-response and restart the authentication process.
 
 RFC 2222 requires that a protocol profile define a service name for
 the sake of the GSSAPI mechanism.  The service name for this protocol
 is "svn".
 
-Upon receiving a success notification from the server, the security
-layer (if any) goes into effect, starting with the next message from
-the client.  The client passes its URL to the server in a tuple
-matching the prototype:
+After a successful authentication exchange, the server sends a command
+response whose parameters match the prototype:
 
-  url: ( client-url:string )
+  repos-info: ( uuid:string repos-url:string )
 
-The server decomposes the client url into repository path and root fs
-path, and sends back either a successful command response with no
-parameters or an error response as appropriate.  (See section 3.)  The
-client may now begin sending commands from the main command set.
+uuid gives the universal unique identifier of the repository, and
+repos-url gives the URL of the repository's root directory.  The
+client can now begin sending commands from the main command set.
 
 3. Commands
 
@@ -168,7 +177,12 @@ can change the command set and possibly the direction of control.
 
 3.1.1. Main Command Set
 
-The main command set corresponds to the svn_ra interfaces.
+The main command set corresponds to the svn_ra interfaces.  After each
+main command is issued by the client, the server sends an auth-request
+as described in section 2.  (If no new authentication is required, the
+auth-reuqest contains an empty mechanism list, and the server proceeds
+immediately to sending the command response.)  Some commands include a
+second place for auth-request point as noted below.
 
   get-latest-rev
     params:   ( )
@@ -194,7 +208,8 @@ The main command set corresponds to the svn_ra interfaces.
     params:   ( logmsg:string )
     response: ( )
     Upon receiving response, client switches to editor command set.
-    Upon successful completion of edit, server sends commit-info.
+    Upon successful completion of edit, server sends auth-request.
+    After auth exchange completes, server sends commit-info.
     commit-info: ( new-rev:number date:string author:string )
 
   get-file
@@ -215,25 +230,33 @@ The main command set corresponds to the svn_ra interfaces.
   update
     params:   ( [ rev:number ] target:string recurse:bool )
     Client switches to report command set.
-    Upon finish-report, server switches to editor command set.
+    Upon finish-report, server sends auth-request.
+    After auth exchange completes, server switches to editor command set.
+    After edit completes, server sends response.
     response: ( )
 
   switch
     params:   ( [ rev:number ] target:string recurse:bool url:string )
     Client switches to report command set.
-    Upon finish-report, server switches to editor command set.
+    Upon finish-report, server sends auth-request.
+    After auth exchange completes, server switches to editor command set.
+    After edit completes, server sends response.
     response: ( )
 
   status
     params:   ( target:string recurse:bool )
     Client switches to report command set.
-    Upon finish-report, server switches to editor command set.
+    Upon finish-report, server sends auth-request.
+    After auth exchange completes, server switches to editor command set.
+    After edit completes, server sends response.
     response: ( )
 
   diff
     params:   ( [ rev:number ] target:string recurse:bool url:string )
     Client switches to report command set.
-    Upon finish-report, server switches to editor command set.
+    Upon finish-report, server sends auth-request.
+    After auth exchange completes, server switches to editor command set.
+    After edit completes, server sends response.
     response: ( )
 
   log
