@@ -276,3 +276,24 @@ already know about.)
      unpredictable date formats.
      Votes:
       +1: mbk, ghudson
+
+
+   * r8080
+     Fix a compiler warning.
+     Justification: trivially fixes embarassing warning; zero risk.
+     Votes:
+      +1: mbk
+
+
+   * r8035, r8036, r8037
+     Assign no blame to unprocessed revisions and handle an edge case.
+     Justification: much nicer user experience; low risk.
+     Votes:
+      +1: mbk
+
+
+   * r8001, r8002
+     Implement "--listen-port" and "--listen-host" svnserve options.
+     Justification: useful features for 1.0, low risk.
+     Votes:
+      +1: mbk
