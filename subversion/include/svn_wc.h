@@ -405,7 +405,7 @@ svn_error_t *svn_wc_get_wc_prop (void *baton,
                                  svn_stringbuf_t **value);
 
 /* This is a function of type svn_ra_set_wc_prop_t. Set property NAME
-   to VALUE on TARGET. */
+   to VALUE on TARGET.  */
 svn_error_t *svn_wc_set_wc_prop (void *baton,
                                  svn_stringbuf_t *target,
                                  svn_stringbuf_t *name,
@@ -557,23 +557,33 @@ svn_error_t *svn_wc_make_delta (void *delta_src,
  * difference.
  */
 
-/* Given a PATH to a node in the working copy, return all of its
-   properties in PROPS.  (If the node has no properties, an empty hash
-   is returned.) */
+/* Set *PROPS to a hash table mapping char * names onto
+   svn_stringbuf_t * values for all the properties of PATH.  Allocate
+   the table, names, and values in POOL.  If the node has no
+   properties, an empty hash is returned.
+
+   ### todo (issue #406): values could be svn_string_t instead of
+   svn_stringbuf_t.  */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                svn_stringbuf_t *path,
                                apr_pool_t *pool);
 
 
 /* Return local VALUE of property NAME for the file or directory PATH.
-   If property name doesn't exist, VALUE is returned as NULL.  */
+   If property name doesn't exist, VALUE is returned as NULL.
+
+   ### todo (issue #406): name could be const char *, value
+   svn_string_t instead of svn_stringbuf_t.  */
 svn_error_t *svn_wc_prop_get (svn_stringbuf_t **value,
                               svn_stringbuf_t *name,
                               svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
 /* Set a local value of property NAME to VALUE for the file or
-   directory PATH. */
+   directory PATH.
+
+   ### todo (issue #406): name could be const char *, value
+   svn_string_t instead of svn_stringbuf_t.  */
 svn_error_t *svn_wc_prop_set (svn_stringbuf_t *name,
                               svn_stringbuf_t *value,
                               svn_stringbuf_t *path,
