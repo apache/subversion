@@ -105,6 +105,7 @@ use strict;
 #  SETUP 
 
 my $svnadmin_cmd = '/home/cmpilato/bin/svnadmin-2092b';
+my $svnlook_cmd = '/home/cmpilato/bin/svnlook-2092b';
 
 #
 #############################################################################
@@ -157,7 +158,7 @@ if ($next_arg eq '')
 # Use the REPOS argument to first figure out the youngest revision in
 # the repository.
 $repos = $next_arg;
-$youngest = `$svnadmin_cmd youngest $repos`;
+$youngest = `$svnlook_cmd youngest $repos`;
 chomp $youngest;
 
 # Setup the default argument list, a backwards walk of all revisions
