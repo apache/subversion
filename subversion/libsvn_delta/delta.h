@@ -232,10 +232,6 @@ typedef struct svn_xml__digger_t
   svn_write_fn_t *svndiff_write;
   void *svndiff_baton;
 
-  /* TEMPORARY WORKAROUND for inability to encode svndiff data in XML.  */
-  svn_txdelta_window_handler_t *window_consumer;
-  void *consumer_baton;
-
   /* A hashtable: text-delta-ref-IDs ==> file_batons.  
      Used for "postfix" text-deltas. */
   apr_hash_t *postfix_hash;

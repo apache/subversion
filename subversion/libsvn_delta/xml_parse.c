@@ -74,6 +74,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_xml.h"
+#include "svn_base64.h"
 #include "apr_strings.h"
 #include "xmlparse.h"
 #include "delta.h"
@@ -685,8 +686,10 @@ do_begin_textdelta (svn_xml__digger_t *digger)
 {
   svn_error_t *err;
   svn_txdelta_window_handler_t *window_consumer = NULL;
+  svn_write_fn_t *intermediate_write;
   void *file_baton = NULL;
   void *consumer_baton = NULL;
+  void *intermediate_baton = NULL;
 
   /* Sanity check: skip everything if the editor doesn't know how to
      receive text-deltas in the first place.  */
@@ -740,13 +743,10 @@ do_begin_textdelta (svn_xml__digger_t *digger)
     return err;
 
   /* Now create an svndiff parser based on the consumer/baton we got. */
-  svn_txdelta_parse_svndiff (window_consumer, consumer_baton,
-                             digger->pool,
-                             &digger->svndiff_write, &digger->svndiff_baton);
-
-  /* TEMPORARY WORKAROUND for inability to encode svndiff data in XML.  */
-  digger->window_consumer = window_consumer;
-  digger->consumer_baton = consumer_baton;
+  svn_txdelta_parse_svndiff (window_consumer, consumer_baton, digger->pool,
+                             &intermediate_write, &intermediate_baton);
+  svn_base64_decode (intermediate_write, intermediate_baton, digger->pool,
+                     &digger->svndiff_write, &digger->svndiff_baton);
   
   return SVN_NO_ERROR;
 }
@@ -1170,7 +1170,6 @@ xml_handle_end (void *userData, const char *name)
   /* EVENT: when we get a </text-delta>, do major cleanup.  */
   if (strcmp (name, "text-delta") == 0)
     {
-#if 0 /* Reenable when we can embed svndiff data in XML */
       if (digger->svndiff_write != NULL)
         {     
           /* (length = 0) implies that we're done parsing svndiff stream.
@@ -1182,7 +1181,6 @@ xml_handle_end (void *userData, const char *name)
           if (err)
             svn_xml_signal_bailout (err, digger->svn_parser);
         }
-#endif
 
       /* If we're finishing a "postfix" text-delta, we must
          deliberately close the file_baton, since no </file> tag will
@@ -1278,7 +1276,6 @@ xml_handle_data (void *userData, const char *data, int len)
       if (digger->svndiff_write == NULL)
         return;
 
-#if 0 /* Reenable when we can embed svndiff data in XML */
       /* Pass the data to our current svndiff parser.  When the parser
          has received enough bytes to make a "window", it pushes the
          window to the uber-caller's own window-consumer routine. */
@@ -1292,23 +1289,6 @@ xml_handle_data (void *userData, const char *data, int len)
              digger->svn_parser);
           return;
         }                          
-#else
-      {
-        svn_txdelta_window_t *window;
-
-        window = svn_txdelta__make_window (digger->pool);
-        window->tview_len = length;
-        window->num_ops = 1;
-        window->ops_size = 1;
-        window->ops = apr_palloc (window->pool, sizeof (*window->ops));
-        window->ops[0].action_code = svn_txdelta_new;
-        window->ops[0].offset = 0;
-        window->ops[0].length = length;
-        svn_string_appendbytes (window->new, data, length, window->pool);
-        digger->window_consumer (window, digger->consumer_baton);
-        svn_txdelta_free_window (window);
-      }
-#endif
     }
 
   else if (youngest_frame->tag == svn_delta__XML_set)
