@@ -1015,7 +1015,93 @@ Available subcommands:
       <sect3 id="svn-ch-5-sect-3.1.3">
         <title>svndumpfilter</title>
 
-        <para>### TODO ###</para>
+        <para>Since Subversion stores everything in an opaque database
+          system, attempting manual tweaks is unwise, if not quite
+          difficult.  And once data has been stored in your
+          repository, Subversion generally doesn't really provide an
+          easy way to remove that data.
+          <footnote>
+            <para>That, by the way, is a <emphasis>feature</emphasis>,
+              not a bug.</para>
+          </footnote>
+          But inevitably, there will be times when you would like to
+          manipulate the history of your repository.  You might need
+          to strip out all instances of a file that was accidentally
+          added to the repository (and shouldn't be there for whatever
+          reason).  Or, perhaps you have multiple projects sharing a
+          single repository, and you decide to split them up into
+          their own repositories.  To accomplish tasks like this,
+          administrators need an more manageable representation of the
+          data in their repositories&mdash;the Subversion repository
+          dump format.</para>
+
+        <para>The Subversion repository dump format is a
+          human-readable representation of the changes that you've
+          made to your versioned data over time.  You use the
+          <command>svnadmin dump</command> command to generate the
+          dump data, and <command>svnadmin load</command> to populate
+          a new repository with it (for more about this process, see
+          <xref linkend="svn-ch-5-sect-3.5"/>).  The great thing about
+          the human-readibility aspect of the dump format is that, if
+          you aren't careless about it, you can manually inspect and
+          modify it.  Of course, the downside is that if you have two
+          years' worth of repository activity encapsulated in what is
+          likely to be a very large file, it could take you a long,
+          long time to manually inspect and modify it.</para>
+
+        <para>While it won't be the most commonly used tool at the
+          administrator's disposal, <command>svndumpfilter</command>
+          provides a very particular brand of useful
+          functionality&mdash;the ability to quickly and easily modify
+          that dumpfile data by acting as a path-based filter.  Simply
+          give it either a list of paths you wish to keep, or a list
+          of paths you wish to not keep, then pipe your repository
+          dump data through this filter.  The result will be a
+          modified stream of dump data that contains only the
+          versioned paths you (explicitly or implicitly) requested.</para>
+
+        <para>The syntax of <command>svndumpfilter</command> is as
+          follows:</para>
+
+        <screen>
+$ svndumpfilter help
+general usage: svndumpfilter SUBCOMMAND [ARGS &amp; OPTIONS ...]
+Type "svndumpfilter help &lt;subcommand&gt;" for help on a specific subcommand.
+
+Available subcommands:
+   exclude
+   include
+   help (?, h)
+</screen>
+
+        <para>There are only two interesting subcommands.  They allow
+          you to make the choice between explicit or implicit
+          inclusion of paths in the stream:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>exclude</literal></term>
+            <listitem>
+              <para>Filter out a set of paths from the dump data
+                stream.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>include</literal></term>
+            <listitem>
+              <para>Allow only the requested set of paths to pass
+                through the dump data stream.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>Let's look a realistic example of how you might use this
+          program.  ### TODO ###</para>
+
+        <para>Unfortunately, there are some gotchas.  ### TODO ###
+           (copyfrom sources in excluded path set; others?)</para>
+
       </sect3>
 
       <sect3 id="svn-ch-5-sect-3.1.4">
