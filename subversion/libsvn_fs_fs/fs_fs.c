@@ -673,6 +673,9 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   if ((noderev->kind == svn_node_dir) && noderev->data_rep)
     noderev->data_rep->is_directory_contents = TRUE;
+
+  if (! noderev->copyroot)
+    noderev->copyroot = svn_fs__id_copy (noderev->id, pool);
   
   *noderev_p = noderev;
   
@@ -749,7 +752,7 @@ write_noderev_txn (apr_file_t *file,
                                 noderev->copyfrom_rev,
                                 noderev->copyfrom_path));
 
-  if (noderev->copyroot)
+  if (svn_fs_compare_ids (noderev->copyroot, noderev->id) != 0)
     SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYROOT ": %s\n",
                                 svn_fs_unparse_id (noderev->copyroot,
                                                    pool)->data));
@@ -1780,6 +1783,11 @@ create_new_txn_noderev_from_rev (svn_fs_t *fs,
   noderev->copyfrom_path = NULL;
   noderev->copyfrom_rev = SVN_INVALID_REVNUM;
 
+  /* For the transaction root, the copyroot is always the copyroot of
+     the predecessor transaction root. */
+  if (! noderev->copyroot)
+    noderev->copyroot = svn_fs__id_copy (noderev->id, pool);
+
   my_id = svn_fs__id_copy (noderev->id, pool);
   my_id->txn_id = apr_pstrdup (pool, txn_id);
   my_id->rev = SVN_INVALID_REVNUM;
@@ -2085,14 +2093,14 @@ svn_fs__fs_purge_txn (svn_fs_t *fs,
                       const char *txn_id,
                       apr_pool_t *pool)
 {
-  const char *txn_dir;
-
+  /* No-op for debugging purposes. */
+  /*
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                 apr_pstrcat (pool, txn_id,
                                              SVN_FS_FS__TXNS_EXT, NULL), NULL);
 
   SVN_ERR (svn_io_remove_dir (txn_dir, pool));
-
+  */
   return SVN_NO_ERROR;
 }
 
@@ -2448,11 +2456,14 @@ svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
 {
   const svn_fs_id_t *id;
 
-  id = svn_fs__create_id (svn_fs__id_node_id (old_idp), copy_id,
+  id = svn_fs__create_id (svn_fs__id_node_id (old_idp), copy_id ?
+                          copy_id : svn_fs__id_copy_id (old_idp),
                           apr_pstrcat (pool, "t", txn_id, NULL),
                           pool);
 
   new_noderev->id = id;
+  if (! new_noderev->copyroot)
+    new_noderev->copyroot = svn_fs__id_copy (id, pool);
 
   SVN_ERR (svn_fs__fs_put_node_revision (fs, new_noderev->id, new_noderev,
                                          pool));
@@ -2603,6 +2614,7 @@ write_final_rev (const svn_fs_id_t **new_id_p,
   char my_node_id[SVN_FS__MAX_KEY_SIZE + 2];
   char my_copy_id[SVN_FS__MAX_KEY_SIZE + 2];
   const char *my_txn_id;
+  const svn_fs_id_t *new_id;
 
   *new_id_p = NULL;
   
@@ -2627,8 +2639,6 @@ write_final_rev (const svn_fs_id_t **new_id_p,
 
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
         {
-          const svn_fs_id_t *new_id;
-          
           svn_pool_clear (subpool);
           apr_hash_this (hi, NULL, NULL, &val);
           dirent = val;
@@ -2704,7 +2714,11 @@ write_final_rev (const svn_fs_id_t **new_id_p,
   my_txn_id = apr_psprintf (pool, "r%" SVN_REVNUM_T_FMT "/%" APR_OFF_T_FMT,
                             rev, my_offset);
 
-  noderev->id = svn_fs__create_id (my_node_id, my_copy_id, my_txn_id, pool);
+  new_id = svn_fs__create_id (my_node_id, my_copy_id, my_txn_id, pool);
+  if (svn_fs_compare_ids (noderev->id, noderev->copyroot) == 0)
+    noderev->copyroot = svn_fs__id_copy (new_id, pool);
+
+  noderev->id = new_id;
 
   /* Write out our new node-revision. */
   SVN_ERR (write_noderev_txn (file, noderev, pool));
@@ -3002,7 +3016,7 @@ svn_fs__fs_create (svn_fs_t *fs,
 
   SVN_ERR (svn_io_file_create (svn_path_join (path,
                                               SVN_FS_FS__CURRENT, pool),
-                               "0 1 0\n", pool));
+                               "0 1 1\n", pool));
 
   fs->fs_path = apr_pstrdup (pool, path);
 
@@ -3073,8 +3087,8 @@ svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs)
                                "count: 0\n"
                                "text: 0 0 4 4 "
                                "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                               "cpath: \n"
-                               "\n\n17 106\n", pool));
+                               "cpath: /\n"
+                               "\n\n17 107\n", pool));
 
   return SVN_NO_ERROR;
 }

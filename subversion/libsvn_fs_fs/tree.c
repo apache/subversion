@@ -634,9 +634,9 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
     return SVN_NO_ERROR;
   
   /* Compare the copy IDs of the child and its parent.  If they are
-          the same, then the child is already on the same branch as the
-               parent, and should use the same mutability copy ID that the
-               parent will use. */
+     the same, then the child is already on the same branch as the
+     parent, and should use the same mutability copy ID that the
+     parent will use. */
   if (svn_fs__key_compare (child_copy_id, parent_copy_id) == 0)
     return SVN_NO_ERROR;
 
@@ -648,7 +648,7 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, child_id, pool));
-  if (noderev->copyroot)
+  if (svn_fs_compare_ids (noderev->copyroot, child_id) == -1)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -661,8 +661,8 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
     }
 
   /* We are pretty sure that the child node is an unedited nested
-          branched node.  When it needs to be made mutable, it should claim
-          a new copy ID. */
+     branched node.  When it needs to be made mutable, it should claim
+     a new copy ID. */
   *inherit_p = copy_id_inherit_new;
   *copy_src_path = id_path;
   return SVN_NO_ERROR;
@@ -932,7 +932,8 @@ make_path_mutable (svn_fs_root_t *root,
           break;
           
         case copy_id_inherit_new:
-          abort ();
+          SVN_ERR (svn_fs__fs_reserve_copy_id (&copy_id, root->fs, txn_id,
+                                               pool));
           break;
 
         case copy_id_inherit_self:

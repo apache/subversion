@@ -110,8 +110,7 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
   if (noderev->copyfrom_path)
     nr->copyfrom_path = apr_pstrdup (pool, noderev->copyfrom_path);
   nr->copyfrom_rev = noderev->copyfrom_rev;
-  if (noderev->copyroot)
-    nr->copyroot = svn_fs__id_copy (noderev->copyroot, pool);
+  nr->copyroot = svn_fs__id_copy (noderev->copyroot, pool);
   nr->predecessor_count = noderev->predecessor_count;
   nr->data_rep = svn_fs__fs_rep_copy (noderev->data_rep, pool);
   nr->prop_rep = svn_fs__fs_rep_copy (noderev->prop_rep, pool);
@@ -381,7 +380,7 @@ make_entry (dag_node_t **child_p,
             apr_pool_t *pool)
 {
   const svn_fs_id_t *new_node_id;
-  svn_fs__node_revision_t new_noderev;
+  svn_fs__node_revision_t new_noderev, *parent_noderev;
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
@@ -412,6 +411,10 @@ make_entry (dag_node_t **child_p,
   memset (&new_noderev, 0, sizeof (new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
   new_noderev.created_path = svn_path_join (parent_path, name, pool);
+
+  SVN_ERR (get_node_revision (&parent_noderev, parent, pool));
+  new_noderev.copyroot = svn_fs__id_copy (parent_noderev->copyroot, pool);
+  
   SVN_ERR (svn_fs__fs_create_node
            (&new_node_id, svn_fs__dag_get_fs (parent),
             &new_noderev, svn_fs__id_copy_id (svn_fs__dag_get_id (parent)),
@@ -595,25 +598,41 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
     }
   else
     {
-      svn_fs__node_revision_t *noderev;
+      svn_fs__node_revision_t *noderev, *parent_noderev;
       
       /* Go get a fresh NODE-REVISION for current child node. */
       SVN_ERR (get_node_revision (&noderev, cur_entry, pool));
-      
+
       /* Do the clone thingy here. */
+      if (is_copy)
+        {
+          noderev->copyfrom_path = noderev->created_path;
+          noderev->copyfrom_rev = svn_fs__id_rev (noderev->id);
+          noderev->copykind = svn_fs__copy_kind_soft;
+          /* Set the copyroot equal to our own ID. */
+          noderev->copyroot = NULL;
+        }
+      else
+        {
+          noderev->copyfrom_path = NULL;
+          noderev->copyfrom_rev = SVN_INVALID_REVNUM;
+          if ((strcmp (svn_fs__id_node_id (noderev->id),
+                       svn_fs__id_node_id (noderev->copyroot)) != 0))
+            {
+              SVN_ERR (get_node_revision (&parent_noderev, parent, pool));
+              noderev->copyroot = svn_fs__id_copy (parent_noderev->copyroot,
+                                                   pool);
+            }
+        }
+      
       noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
       noderev->created_path = svn_path_join (parent_path, name, pool);
-      if (is_copy)
-        {
-          noderev->copyfrom_path = parent->created_path;
-          noderev->copyfrom_rev = 0;
-          noderev->copykind = svn_fs__copy_kind_soft;
-        }
+      
       SVN_ERR (svn_fs__fs_create_successor (&new_node_id, fs, cur_entry->id, 
                                             noderev, copy_id, txn_id, pool));
-      
+
       /* Replace the ID in the parent's ENTRY list with the ID which
          refers to the mutable clone of this child. */
       SVN_ERR (set_entry (parent, name, new_node_id, noderev->kind, txn_id,
@@ -1031,6 +1050,8 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev->copyfrom_path = svn_fs__dag_get_created_path (from_node);
       to_noderev->copyfrom_rev = from_rev;
       to_noderev->copykind = svn_fs__copy_kind_real;
+      /* Set the coyproot equal to our own id. */
+      to_noderev->copyroot = NULL;
 
       SVN_ERR (svn_fs__fs_create_successor (&id, fs, src_id, to_noderev,
                                             copy_id, txn_id, pool));
