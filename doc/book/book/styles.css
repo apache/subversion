@@ -1,50 +1,56 @@
 /************************************************************************/
 /* Custom style-sheet stuffs for the Subversion book in HTML form.      */
-/*                                                                      */
-/* If you prefer sans-serif fonts, just replace all the instances of    */
-/* 'times new roman,times,serif' with 'arial,helvetica,sans-serif'.     */
 /************************************************************************/
-
-
-/* Generic tag-level style definitions */
 
 BODY
 {
     background: white;
-    padding: 0.5in;
+    margin: 0.5in;
+    font-family: arial,helvetica,sans-serif;
 }
 
-H1
+H1.title
 {
-    font-family: times new roman,times,serif;
     font-size: 250%;
     font-style: normal;
     font-weight: bold;
     color: black;
 }
 
-H2
+H2.subtitle
 {
-    font-family: times new roman,times,serif;
+    font-size: 150%;
+    font-style: italic;
+    color: black;
+}
+
+H2.title
+{
     font-size: 150%;
     font-style: normal;
     font-weight: bold;
     color: black;
 }
 
-H3
+H3.title
 {
-    font-family: times new roman,times,serif;
     font-size: 125%;
     font-style: normal;
     font-weight: bold;
     color: black;
 }
 
-H4
+H4.title
 {
-    font-family: times new roman,times,serif;
     font-size: 100%;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+.toc B
+{
+    font-size: 125%;
     font-style: normal;
     font-weight: bold;
     color: black;
@@ -52,7 +58,6 @@ H4
 
 P,LI,UL,OL,DD,DT,TD
 {
-    font-family: times new roman,times,serif;
     font-style: normal;
     font-weight: normal;
     color: black;
@@ -91,11 +96,8 @@ IMG
     padding: 0.5in;
 }
 
-/* Overrides for individual classes */
-
 .author
 {
-    font-family: times new roman,times,serif;
     font-size: 100%;
     font-style: italic;
     font-weight: normal;
@@ -106,18 +108,23 @@ IMG
 {
     border: 1px solid;
     border-color: black;
-    background: rgb(75%,75%,75%);
+    background: rgb(90%,90%,90%);
     padding: 0.12in;
+    margin: 0 0.5in;
 }
 
 .tip
 {
-    border: none;
-    background: rgb(50%,100%,50%);
+    border: black solid 1px;
+    background: url(./images/info.png) no-repeat;
+    margin: 0.12in 0;
+    padding: 0 55px;
 }
 
 .warning
 {
-    border: none;
-    background: rgb(100%,100%,50%);
+    border: black solid 1px;
+    background: url(./images/warning.png) no-repeat;
+    margin: 0.12in 0;
+    padding: 0 55px;
 }
