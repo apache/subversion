@@ -2103,7 +2103,7 @@ typedef struct txdelta_baton_t
      library;  it uniquely knows how to read data from our designated
      "source" stream, interpret the window, and write data to our
      designated "target" stream (in this case, our repos file.) */
-  svn_txdelta_window_handler_t *interpreter;
+  svn_txdelta_window_handler_t interpreter;
   void *interpreter_baton;
 
   /* This string holds the entire "growing" target in memory.  Yes,
@@ -2208,7 +2208,7 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
 
 
 svn_error_t *
-svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
+svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                         void **contents_baton_p,
                         svn_fs_root_t *root,
                         const char *path,

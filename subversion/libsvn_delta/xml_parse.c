@@ -640,7 +640,7 @@ static svn_error_t *
 do_begin_textdelta (svn_xml__digger_t *digger, svn_string_t *encoding)
 {
   svn_error_t *err;
-  svn_txdelta_window_handler_t *window_consumer = NULL;
+  svn_txdelta_window_handler_t window_consumer = NULL;
   svn_stream_t *intermediate;
   void *file_baton = NULL;
   void *consumer_baton = NULL;

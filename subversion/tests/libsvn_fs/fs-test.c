@@ -122,7 +122,7 @@ set_file_contents (svn_fs_root_t *root,
                    const char *path,
                    const char *contents)
 {
-  svn_txdelta_window_handler_t *consumer_func;
+  svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
   svn_string_t *wstring = svn_string_create (contents, pool);
 

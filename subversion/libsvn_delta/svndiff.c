@@ -172,7 +172,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 void
 svn_txdelta_to_svndiff (svn_stream_t *output,
 			apr_pool_t *pool,
-			svn_txdelta_window_handler_t **handler,
+			svn_txdelta_window_handler_t *handler,
 			void **handler_baton)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -196,7 +196,7 @@ struct decode_baton
 {
   /* Once the svndiff parser has enough data buffered to create a
      "window", it passes this window to the caller's consumer routine.  */
-  svn_txdelta_window_handler_t *consumer_func;
+  svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
 
   /* Pool to create subpools from; each developing window will be a
@@ -478,7 +478,7 @@ close_handler (void *baton)
 
 
 svn_stream_t *
-svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
+svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                            void *handler_baton,
                            apr_pool_t *pool)
 {

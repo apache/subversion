@@ -75,9 +75,7 @@ extern "C" {
    property allows us to apply deltas to non-seekable source streams
    without making a full copy of the source stream.  */
 
-/* A single text delta instruction.  */
-typedef struct svn_txdelta_op_t {
-  enum {
+enum svn_delta_action {
     /* Append the LEN bytes at OFFSET in the source view to the
        target.  It must be the case that 0 <= OFFSET < OFFSET + LEN <=
        size of source view.  */
@@ -105,8 +103,11 @@ typedef struct svn_txdelta_op_t {
        order with no overlap at the moment; svn_txdelta_to_svndiff
        depends on this.  */
     svn_txdelta_new
-  } action_code;
-  
+};
+
+/* A single text delta instruction.  */
+typedef struct svn_txdelta_op_t {
+  enum svn_delta_action action_code;
   apr_off_t offset;
   apr_off_t length;
 } svn_txdelta_op_t;
@@ -147,8 +148,8 @@ typedef struct svn_txdelta_window_t {
    apply the delta windows to produce some file, or save the windows
    somewhere.  At the end of the delta window stream, you must call
    this function passing zero for the WINDOW argument.  */
-typedef svn_error_t *(svn_txdelta_window_handler_t)
-                     (svn_txdelta_window_t *window, void *baton);
+typedef svn_error_t * (*svn_txdelta_window_handler_t)
+                      (svn_txdelta_window_t *window, void *baton);
 
 
 /* A delta stream --- this is the hat from which we pull a series of
@@ -185,7 +186,7 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
 
 /* Send the contents of STRING to window-handler HANDLER.  */
 svn_error_t *svn_txdelta_send_string (svn_string_t *string,
-                                      svn_txdelta_window_handler_t *handler,
+                                      svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
   
@@ -203,7 +204,7 @@ void svn_txdelta_free (svn_txdelta_stream_t *stream);
 void svn_txdelta_apply (svn_stream_t *source,
                         svn_stream_t *target,
                         apr_pool_t *pool,
-                        svn_txdelta_window_handler_t **handler,
+                        svn_txdelta_window_handler_t *handler,
                         void **handler_baton);
 
 
@@ -217,13 +218,13 @@ void svn_txdelta_apply (svn_stream_t *source,
    the value to pass as the BATON argument to *HANDLER.  */
 void svn_txdelta_to_svndiff (svn_stream_t *output,
                              apr_pool_t *pool,
-                             svn_txdelta_window_handler_t **handler,
+                             svn_txdelta_window_handler_t *handler,
                              void **handler_baton);
 
 /* Return a writable generic stream which will parse svndiff-format
    data into a text delta, invoking HANDLER with HANDLER_BATON
    whenever a new window is ready.  */
-svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
+svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                                          void *handler_baton,
                                          apr_pool_t *pool);
 
@@ -508,7 +509,7 @@ typedef struct svn_delta_edit_fns_t
      *HANDLER_BATON to the value we should pass as the BATON
      argument to *HANDLER.  */
   svn_error_t *(*apply_textdelta) (void *file_baton, 
-                                   svn_txdelta_window_handler_t **handler,
+                                   svn_txdelta_window_handler_t *handler,
                                    void **handler_baton);
 
   /* Change the value of a file's property.
@@ -609,6 +610,11 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 
 
 
+/* A function type that can be used for bumping revision numbers. */
+typedef svn_error_t * (*svn_bump_func_t) (void *baton,
+                                          svn_string_t *path,
+                                          svn_revnum_t new_rev);
+
 /* Return an *EDITOR (and *EDIT_BATON) which notices paths that are
    committed.  Each commited path is pushed onto ARRAY, allocated from
    POOL.  ARRAY must be initialized to store (svn_string_t *) objects.
@@ -624,10 +630,7 @@ svn_delta_get_commit_track_editor (svn_delta_edit_fns_t **editor,
                                    apr_pool_t *pool,
                                    apr_array_header_t *array,
                                    svn_revnum_t new_rev,
-                                   svn_error_t *(*bump_func) 
-                                     (void *baton,
-                                      svn_string_t *path,
-                                      svn_revnum_t new_rev),
+                                   svn_bump_func_t bump_func,
                                    void *bump_baton);
 
 

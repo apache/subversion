@@ -286,7 +286,7 @@ test_close_edit (void *edit_baton)
 
 static svn_error_t *
 test_apply_textdelta (void *file_baton,
-                      svn_txdelta_window_handler_t **handler,
+                      svn_txdelta_window_handler_t *handler,
                       void **handler_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;

@@ -94,7 +94,7 @@ typedef struct {
   dav_propfind_handler *dph;
 
   /* used during fetch_file() */
-  svn_txdelta_window_handler_t *handler;
+  svn_txdelta_window_handler_t handler;
   void *handler_baton;
 
 } fetch_ctx_t;
@@ -440,6 +440,7 @@ static svn_error_t * begin_checkout(fetch_ctx_t *fc,
 }
 
 svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
+                                       svn_revnum_t revision,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton)
 {

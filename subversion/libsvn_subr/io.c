@@ -29,9 +29,9 @@
 
 struct svn_stream_t {
   void *baton;
-  svn_read_fn_t *read_fn;
-  svn_write_fn_t *write_fn;
-  svn_close_fn_t *close_fn;
+  svn_read_fn_t read_fn;
+  svn_write_fn_t write_fn;
+  svn_close_fn_t close_fn;
 };
 
 

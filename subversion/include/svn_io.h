@@ -163,15 +163,15 @@ typedef struct svn_stream_t svn_stream_t;
 
 /* Handler functions to implement the operations on a generic stream.  */
 
-typedef svn_error_t *svn_read_fn_t (void *baton,
-                                    char *buffer,
-                                    apr_size_t *len);
+typedef svn_error_t *(*svn_read_fn_t) (void *baton,
+                                       char *buffer,
+                                       apr_size_t *len);
 
-typedef svn_error_t *svn_write_fn_t (void *baton,
-                                     const char *data,
-                                     apr_size_t *len);
+typedef svn_error_t *(*svn_write_fn_t) (void *baton,
+                                        const char *data,
+                                        apr_size_t *len);
 
-typedef svn_error_t *svn_close_fn_t (void *baton);
+typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 
 
 /* Functions for creating generic streams.  */

@@ -249,7 +249,7 @@ close_file (void *file_baton)
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
-                 svn_txdelta_window_handler_t **handler,
+                 svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;

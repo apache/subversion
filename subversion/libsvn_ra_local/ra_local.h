@@ -61,11 +61,11 @@ typedef struct svn_ra_local__commit_closer_t
 
   /* A function given to RA by the client;  allows RA to bump WC
      revision numbers of targets. */
-  svn_ra_close_commit_func_t *close_func;
+  svn_ra_close_commit_func_t close_func;
   
   /* A function given to RA by the client;  allows RA to store WC
      properties on targets.  (Wonder if ra_local will ever use this?!?) */
-  svn_ra_set_wc_prop_func_t *set_func;
+  svn_ra_set_wc_prop_func_t set_func;
 
   /* The baton to use with above functions */
   void *close_baton;

@@ -30,7 +30,7 @@ send_file_contents (svn_fs_root_t *root,
                     apr_pool_t *pool)
 {
   svn_stream_t *contents;
-  svn_txdelta_window_handler_t *handler;
+  svn_txdelta_window_handler_t handler;
   void *handler_baton;
   svn_txdelta_stream_t *delta_stream;
   svn_txdelta_window_t *window;
