@@ -602,7 +602,7 @@ install-info: doc-all-info
         done
 
 install-swig-py: install-swig-py-lib
-
+install-swig-rb: install-swig-rb-lib
 install-swig-java: install-swig-java-lib
 
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
