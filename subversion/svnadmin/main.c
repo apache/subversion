@@ -457,9 +457,9 @@ main (int argc, const char * const *argv)
 
       /* do the (un-)deltification */
       if (is_deltify)
-        err = svn_fs_deltify (rev_root, node, is_dir ? TRUE : FALSE, pool);
+        err = svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool);
       else
-        err = svn_fs_undeltify (rev_root, node, is_dir ? TRUE : FALSE, pool);
+        err = svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool);
         
       if (err) goto error;
     }
