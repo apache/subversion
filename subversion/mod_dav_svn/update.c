@@ -296,17 +296,17 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
           if (bc_url)
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
                                "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                               SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
-                               DIR_OR_FILE(is_dir),
-                               qname, qcopy, copyfrom_revision, chk_attr);
-          else
-            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
                                SVN_REVNUM_T_FMT "\" "
                                "bc-url=\"%s\"%s>" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision,
                                bc_url, chk_attr);
+          else
+            elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                               SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
+                               DIR_OR_FILE(is_dir),
+                               qname, qcopy, copyfrom_revision, chk_attr);
         }
 
       send_xml(child->uc, elt);
