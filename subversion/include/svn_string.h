@@ -29,8 +29,48 @@ extern "C" {
 
 
 
-/* The svn_stringbuf_t data type.  Pretty much what you expected. */
-typedef struct svn_stringbuf_t
+/* DATA TYPES
+
+   There are two string datatypes: svn_string_t and svn_stringbuf_t.
+   The former is a simple pointer/length pair useful for passing around
+   strings (or arbitrary bytes) with a counted length. svn_stringbuf_t is
+   buffered to enable efficient appending of strings without an allocation
+   and copy for each append operation.
+
+   svn_string_t contains a "const char *" for its data, so it is most
+   appropriate for constant data and for functions which expect constant,
+   counted data. Functions should generally use "const svn_string_t *" as
+   their parameter to indicate they are expecting a constant, counted
+   string.
+
+   svn_string_t uses a plain "char *" for its data, so it is most appropriate
+   for modifiable data.
+
+
+   INVARIANT
+
+   Both structures maintain a significant invariant:
+
+       s->data[s->len] == '\0'
+
+   The functions defined within this header file will maintain the invariant
+   (which does imply that memory is allocated/defined as len+1 bytes). If
+   code outside of the svn_string.h functions manually builds these
+   structures, then they must enforce this invariant.
+
+   Note that an svn_string(buf)_t may contain binary data, which means that
+   strlen(s->data) does not have to equal s->len. The null terminator is
+   provided to make it easier to pass s->data to C string interfaces.
+*/
+
+typedef struct
+{
+  const char *data;
+  apr_size_t len;
+} svn_string_t;
+
+
+typedef struct
 {
   char *data;                /* pointer to the bytestring */
   apr_size_t len;            /* length of bytestring */
@@ -46,22 +86,23 @@ typedef struct svn_stringbuf_t
 /* Create a new bytestring containing a C string (null-terminated), or
    containing a generic string of bytes (NON-null-terminated) */
 svn_stringbuf_t * svn_string_create (const char *cstring, 
-                                  apr_pool_t *pool);
-svn_stringbuf_t * svn_string_ncreate (const char *bytes, const apr_size_t size, 
-                                   apr_pool_t *pool);
+                                     apr_pool_t *pool);
+svn_stringbuf_t * svn_string_ncreate (const char *bytes,
+                                      const apr_size_t size, 
+                                      apr_pool_t *pool);
 
 /* Create a new bytestring by formatting CSTRING (null-terminated)
    from varargs, which are as appropriate for apr_psprintf. */
 svn_stringbuf_t *svn_string_createf (apr_pool_t *pool,
-                                  const char *fmt,
-                                  ...)
+                                     const char *fmt,
+                                     ...)
        __attribute__ ((format (printf, 2, 3)));
 
 /* Create a new bytestring by formatting CSTRING (null-terminated)
    from a va_list (see svn_string_createf). */
 svn_stringbuf_t *svn_string_createv (apr_pool_t *pool,
-                                  const char *fmt,
-                                  va_list ap)
+                                     const char *fmt,
+                                     va_list ap)
        __attribute__ ((format (printf, 2, 0)));
 
 /* Make sure that the string STR has at least MINIMUM_SIZE bytes of
@@ -98,7 +139,7 @@ void svn_string_appendcstr (svn_stringbuf_t *targetstr,
 
 /* Return a duplicate of ORIGNAL_STRING. */
 svn_stringbuf_t *svn_string_dup (const svn_stringbuf_t *original_string,
-                              apr_pool_t *pool);
+                                 apr_pool_t *pool);
 
 
 /* Return TRUE iff STR1 and STR2 have identical length and data. */
