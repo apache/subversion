@@ -3703,10 +3703,10 @@ sort_keys (const void *a, const void *b)
 
 
 /* Derive the oldest of a set of copies which took place in filesystem
-   FS -- bounded by the transactions START_TXN_ID and END_TXN_ID, and
+   FS -- bounded by the revisions START_REV and END_REV, and
    by the copy ids START_COPY_ID and END_COPY_ID -- which resulted in
-   the creation of END_PATH.  Return the previous location of the
-   END_PATH as *SRC_REV/SRC_PATH, and the revision in which the copy
+   the creation of DST_PATH.  Return the previous location of the
+   DST_PATH as *SRC_REV/SRC_PATH, and the revision in which the copy
    occured as *DST_REV.  Do all of this as part of TRAIL.
 
    NOTE: END_COPY_ID may be NULL to indicate "the youngest committed
