@@ -11,8 +11,10 @@ module SvnTestUtil
     @realm = "sample realm"
     @pool = Svn::Core::Pool.new(nil)
     @repos_path = File.join("test", "repos")
-    @repos_uri = "file://#{File.expand_path(@repos_path)}"
-    @repos_svnserve_uri = "svn://localhost#{File.expand_path(@repos_path)}"
+    @full_repos_path = File.expand_path(@repos_path)
+    @repos_uri = "file://#{@full_repos_path}"
+    @svnserve_host = "127.0.0.1"
+    @repos_svnserve_uri = "svn://#{@svnserve_host}#{@full_repos_path}"
     @wc_path = File.join("test", "wc")
     setup_repository(@repos_path)
     @repos = Svn::Repos.open(@repos_path, @pool)
@@ -43,11 +45,19 @@ module SvnTestUtil
   end
 
   def setup_svnserve
-    @svnserve_pid = fork {exec("svnserve", "-d", "--foreground")}
+    @svnserve_pid = fork {
+      exec("svnserve", "--listen-host", @svnserve_host,  "-d", "--foreground")
+    }
   end
 
   def teardown_svnserve
-    Process.kill(:TERM, @svnserve_pid) if @svnserve_pid
+    if @svnserve_pid
+      Process.kill(:TERM, @svnserve_pid)
+      begin
+        Process.waitpid(@svnserve_pid)
+      rescue Errno::ECHILD
+      end
+    end
   end
   
   def add_authentication
