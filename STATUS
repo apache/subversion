@@ -79,14 +79,6 @@ section for approved changes.)
       +1: kfogel, david
 
 
-   * Issue #1681
-     Make svnserve require --inetd to use stdin/stdout.
-     Justification: Make svnserve more user friendly, low risk.
-     Votes:
-      +1: bliss, ghudson, kfogel
-      +0: cmpilato
-      -0: gstein, sussman
-
    * Issue #1682
      'svn blame' should adjust to max username width
      Justification: Improved blame display, API change, low risk.
@@ -381,6 +373,15 @@ the section for unapproved changes.)
      Justification: Negligible risk, API cleanliness and stability.
      Votes:
       +1: ghudson, kfogel, dlr
+
+
+   * Issue #1681
+     Make svnserve require --inetd to use stdin/stdout.
+     Justification: Make svnserve more user friendly, low risk.
+     Votes:
+      +1: bliss, ghudson, kfogel
+      +0: cmpilato
+      -0: gstein, sussman
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
