@@ -28,11 +28,13 @@
 #include <apr_strings.h>
 #include <apr_thread_proc.h>
 #include <apr_portable.h>
+#include <apr_md5.h>
 #include "svn_types.h"
 #include "svn_path.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_base64.h"
 #include "svn_pools.h"
 #include "svn_private_config.h" /* for SVN_CLIENT_DIFF */
 
@@ -389,6 +391,64 @@ svn_io_filesizes_different_p (svn_boolean_t *different_p,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_io_file_checksum (svn_stringbuf_t **checksum_p,
+                      const char *file,
+                      apr_pool_t *pool)
+{
+  struct apr_md5_ctx_t context;
+  apr_file_t *f = NULL;
+  apr_status_t apr_err;
+  unsigned char digest[MD5_DIGESTSIZE];
+  char buf[BUFSIZ];  /* What's a good size for a read chunk? */
+  svn_stringbuf_t *md5str;
+
+  /* ### The apr_md5 functions return apr_status_t, but they only
+     return success, and really, what could go wrong?  So below, we
+     ignore their return values. */
+
+  apr_md5_init (&context);
+
+  apr_err = apr_file_open (&f, file, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_io_file_checksum: error opening '%s' for reading", file);
+  
+  do { 
+    apr_size_t len = BUFSIZ;
+
+    apr_err = apr_file_read (f, buf, &len);
+
+    if ((! (APR_STATUS_IS_SUCCESS (apr_err))) && (apr_err != APR_EOF))
+      return svn_error_createf
+        (apr_err, 0, NULL, pool,
+         "svn_io_file_checksum: error reading from '%s'", file);
+
+    apr_md5_update (&context, buf, len);
+
+  } while (apr_err != APR_EOF);
+
+  apr_err = apr_file_close (f);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_io_file_checksum: error closing '%s'", file);
+
+  apr_md5_final (digest, &context);
+  md5str = svn_stringbuf_ncreate (digest, MD5_DIGESTSIZE, pool);
+  *checksum_p = svn_base64_encode_string (md5str, pool);
+  
+  /* ### Our base64-encoding routines append a final newline if any
+     data was created at all, so let's hack that off. */
+  if ((*checksum_p)->len)
+    {
+      (*checksum_p)->len--;
+      (*checksum_p)->data[(*checksum_p)->len] = 0;
+    }
+  return SVN_NO_ERROR;
+}
 
 
 /*** Permissions and modes. ***/

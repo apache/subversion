@@ -211,11 +211,16 @@ void svn_xml_hash_atts_overlaying (const char **atts,
 void svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool);
 
 
-/* Makes an XML open tag named TAGNAME.  Varargs are used to specify a
-   NULL-terminated list of alternating const char *Key and
-   svn_stringbuf_t *Val.
+/* Store a new xml tag TAGNAME in *STR.
 
-   STYLE must be one of the enumerated styles in svn_xml_open_tag_style. */
+   If STR is NULL, allocate *STR in POOL; else append the new tag to
+   *STR, allocating in STR's pool
+
+   Take the tag's attributes from varargs, a NULL-terminated list of
+   alternating const char *Key and svn_stringbuf_t *Val.  Do
+   xml-escaping on each Val.
+
+   STYLE is one of the enumerated styles in svn_xml_open_tag_style. */
 void svn_xml_make_open_tag (svn_stringbuf_t **str,
 			    apr_pool_t *pool,
 			    enum svn_xml_open_tag_style style,

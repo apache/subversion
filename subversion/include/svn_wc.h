@@ -177,6 +177,10 @@ typedef struct svn_wc_entry_t
   apr_time_t text_time;          /* last up-to-date time for text contents */
   apr_time_t prop_time;          /* last up-to-date time for properties */
 
+  /* Checksum.  Optional; can be NULL for backwards compatibility. */
+  svn_stringbuf_t *checksum;     /* base64-encoded checksum for the
+                                    untranslated text base file. */
+
   /* "Entry props" */
   svn_revnum_t cmt_rev;          /* last revision this was changed */
   apr_time_t cmt_date;           /* last date this was changed */
@@ -545,22 +549,7 @@ svn_error_t *svn_wc_resolve_conflict (svn_stringbuf_t *path,
 
 /*** Commits. ***/
 
-/* The RA layer needs 3 functions when doing a commit: */
-
-/* Publically declared, so libsvn_client can pass it off to the RA
-   layer to use with any of the next three functions. */
-struct svn_wc_close_commit_baton
-{
-  /* The "prefix" path that must be prepended to each target that
-     comes in here.  It's the original path that the user specified to
-     the `svn commit' command. */
-  svn_stringbuf_t *prefix_path;
-};
-
-
-/* This is of type `svn_ra_close_commit_func_t'.
-
-   Bump each committed PATH to NEW_REVNUM, one at a time, after a
+/* Bump a successfully committed absolute PATH to NEW_REVNUM after a
    commit succeeds.  REV_DATE and REV_AUTHOR are the (server-side)
    date and author of the new revision; one or both may be NULL.
 

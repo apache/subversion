@@ -199,6 +199,14 @@ svn_error_t *svn_io_filesizes_different_p (svn_boolean_t *different_p,
                                            apr_pool_t *pool);
 
 
+/* Store a base64-encoded MD5 checksum of FILE's contents in
+   *CHECKSUM_P.  Allocate CHECKSUM_P in POOL, and use POOL for any
+   temporary allocation. */
+svn_error_t *svn_io_file_checksum (svn_stringbuf_t **checksum_p,
+                                   const char *file,
+                                   apr_pool_t *pool);
+
+
 /* Return a POSIX-like file descriptor from FILE.
 
    We need this because on some platforms, notably Windows, apr_file_t
