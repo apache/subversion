@@ -1,3 +1,35 @@
+Version 1.0.1
+(branching XX March 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/XXX
+
+ User-visible changes:
+ * mod_authz_svn now works with SVNParentPath (issue #1588)
+ * implement anonymous access checking in mod_authz_svn
+ * fix potential segfault in mod_dav_svn. 
+ * fix improper BDB cursor shutdown in libsvn_fs, which can wedge repos.
+ * allow checkout of repository with space in path. (issue #1694)
+ * make 'svn propget URL' work correctly over svn://. (issue #1752)
+ * fix failed 'svn merge URL' when URL contains user@host. (issue #1759)
+ * ensure 'svn blame' fails on files marked as binary. (issue #1733)
+ * fixed invalid http REPORT response when updating a deleted wc. (issue #1721)
+ * improve presentation of directory property conflicts.
+ * make svnlook use apr_tempdir(), instead of writing in '.'
+ * fix merge --dry-run bug on added-files with props. (issue #1738)
+ * make failed direct-URL commits clean up their fs txns. (issue #1726)
+ * fix obscure bugs in time/date string formatting. (issue #1692)
+ * detect invalid UTF8 filenames when native locale is UTF8.
+ * more book updates.
+
+ Developer-visible changes:
+ * remove obsolete auth provider examples.
+ * prevent potential ra_dav commit race-condition.
+ * fix svn_io_dir_walk 'dot-first' ordering required by 'svnadmin hotcopy'.
+ * upgrade win32 innosettup tools and redhat RPMs.
+ * fix bindings on win32.
+ * fix perl bindings build on OS X.
+ * fix perl bindings:  bug which rejects string revnums.
+
+
 Version 1.0.0
 (branching 23 February 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.0
