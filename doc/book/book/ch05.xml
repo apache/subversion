@@ -620,6 +620,14 @@ pre-commit.tmpl
     <sect2 id="svn-ch-5-sect-3.1">
       <title>An Administrator's Toolkit</title>
 
+      <para>Subversion provides a handful of utilities useful for
+        creating, inspecting, modifying and repairing your repository.
+        Let's look more closely at each of those tools.  Afterward,
+        we'll briefly examine some of the utilities included in the
+        Berkeley DB distribution that provide functionality specific
+        to your repository's database backend not otherwise provided
+        by Subversion's own tools.</para>
+
       <sect3 id="svn-ch-5-sect-3.1.1">
         <title>svnlook</title>
             
