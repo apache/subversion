@@ -52,6 +52,9 @@ already know about.)
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
+These changes are to the "core" of Subversion:
+
+
    * r8016, r8019, r8028
      Copyright notice fixes.
      Justification: Why have copyright notices at all unless legally proper?
@@ -66,14 +69,6 @@ already know about.)
      Votes:
       +0: jerenkrantz, gstein
       +1: rooneg, ghudson
-
-
-   * r8057
-     Constructor for svn_client_ctx_t used in javahl bindings.
-     Justification: Implementation of above API change in javahl bindings.
-     Notes: this obviously assumes svn_client_ctx_t gets imp'd (see above)
-     Votes:
-      +1: ghudson, rooneg, gstein
 
 
    * Issue #999
@@ -137,26 +132,12 @@ already know about.)
       -0: gstein (revert of many files is uncommon)
 
 
-   * r8031
-     Implementing API change of r8021 in javahl bindings.
-     Justification: with 8021 and without 8031 javahl breaks. Local change.
-     Votes:
-      +1: ghudson, gstein (assuming above)
-
-
    * r8006
      Add prompting and retry count (at most 2) to SSL auth providers
      Justification: API, consistency with other auth provider behavior
      Votes:
       +1: jerenkrantz, bliss, ghudson, epg
       +0: gstein
-
-
-   * r8012
-     Implementing API change of r8006 in javahl bindings.
-     Justification: with 8006 and without 8012 javahl breaks. Local change.
-     Votes:
-      +1: ghudson, gstein (assuming above)
 
 
    * r8013
@@ -181,12 +162,6 @@ already know about.)
       +1: bliss, ghudson
       +0: gstein
 
-
-   * r8015,r8020
-     Implementing API change of r8013 in javahl bindings.
-     Justification: with 8013 and without 8015,8020 javahl breaks. Local change
-     Votes:
-      +1: gstein (assuming base change is imp'd)
 
    * r8065
      Update references to BDB version in documentation.
@@ -242,27 +217,12 @@ already know about.)
       +1: ghudson, epg
 
 
-   * Issue #8014 (r8014)
-     Rename SVN_CONFIG_OPTION_STORE_PASSWORD to
-     SVN_CONFIG_OPTION_STORE_AUTH_CREDS.
-     Justification: API stability; low risk
+   * Issue #1639 (r8014)
+     Rename 'store-password' option renamed to 'store-auth-creds'
+     Justification: API stability; low risk;  more accurate name.
      Votes:
       +1: bliss
       -0: gstein
-
-
-   * r8022, r8024, r8038
-     Improved interface for blame in javahl bindings.
-     Justification: API stability; low risk because of bindings only change.
-     Votes:
-      +0: gstein
-
-
-   * r8039
-     javahl bindings did not know status external.
-     Justification: API stability; low risk because of bindings only change.
-     Votes:
-      +0: gstein
 
 
    * Issue #1677
@@ -351,9 +311,12 @@ already know about.)
      Notes: this shouldn't be applicable -- this page from the website
             shouldn't even be in the release. maybe move /trunk/www up
             to a peer of trunk, tags, and branches?
+            BEN SEZ:  why is a www/ change in here?  www/ changes don't
+                      need to be merged to a 1.0-branch.
      Votes:
       +1: jszakmeister
       -0: gstein
+      -1: sussman:  can I remove this item?  it's just a website change.
 
 
    * r8140
@@ -378,7 +341,50 @@ already know about.)
      Votes:
       +1: bliss, ghudson
       -0: gstein
+     
 
+-*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
+These changes are to Subversion bindings.  Many are dependent on
+specific "core" changes in the previous section.
+
+
+   * r8057 (depends on core changes r8053, r8054)
+     Constructor for svn_client_ctx_t used in javahl bindings.
+     Justification: Implementation of above API change in javahl bindings.
+     Notes: this obviously assumes svn_client_ctx_t gets imp'd (see above)
+     Votes:
+      +1: ghudson, rooneg, gstein
+
+   * r8031  ('svn revert' performance fix, API change)
+     Implementing API change of r8021 in javahl bindings.
+     Justification: with 8021 and without 8031 javahl breaks. Local change.
+     Votes:
+      +1: ghudson, gstein (assuming above)
+
+   * r8012 (add retry-count to SSL auth providers)
+     Implementing API change of r8006 in javahl bindings.
+     Justification: with 8006 and without 8012 javahl breaks. Local change.
+     Votes:
+      +1: ghudson, gstein (assuming above)
+
+   * r8015,r8020  (add 'may_save' option to auth providers, for GUIs)
+     Implementing API change of r8013 in javahl bindings.
+     Justification: with 8013 and without 8015,8020 javahl breaks. Local change
+     Votes:
+      +1: gstein (assuming base change is imp'd)
+
+   * r8022, r8024, r8038
+     Improved interface for blame in javahl bindings.
+     Justification: API stability; low risk because of bindings only change.
+     Votes:
+      +0: gstein
+
+   * r8039
+     javahl bindings did not know status external.
+     Justification: API stability; low risk because of bindings only change.
+     Votes:
+      +0: gstein
 
    * r7998, r8000, r8018, r8075, r8117, r8118, r8158
      Perl bindings fixes and enhacements to date.
@@ -388,11 +394,12 @@ already know about.)
                     latest version in order to provide better supports.
      Votes:
       +1: clkao, epg
-     
 
    * r8106
      Add --enable-swig-bindings option to select build targets
      included in standard make.
+     Notes:  this is bindings change, but potentially higher risk,
+             because it touches the core build system.
 
      Votes:
       +1: clkao, epg
