@@ -220,12 +220,48 @@ merge_file_added (const char *mine,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+  enum svn_node_kind kind;
 
-  /* ### if file already exists, this should call svn_wc_merge. */
-  
-  SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
-  SVN_ERR (svn_client_add (svn_stringbuf_create (mine, subpool), 
-                           FALSE, NULL, NULL, subpool));
+  SVN_ERR (svn_io_check_path (mine, &kind, subpool));
+  switch (kind)
+    {
+    case svn_node_none:
+      SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
+      SVN_ERR (svn_client_add (svn_stringbuf_create (mine, subpool), 
+                               FALSE, NULL, NULL, subpool));      
+      break;
+    case svn_node_dir:
+      /* ### create a .drej conflict or something someday? */
+      return svn_error_createf (SVN_ERR_WC_NOT_FILE, 0, NULL, subpool,
+                                "Cannot create file '%s' for addition, "
+                                "because a directory by that name "
+                                "already exists.", mine);
+    case svn_node_file:
+      {
+        /* file already exists, is it under version control? */
+        svn_wc_entry_t *entry;
+        SVN_ERR (svn_wc_entry (&entry, svn_stringbuf_create (mine, subpool),
+                               subpool));
+        if (entry)
+          {
+            svn_error_t *err;
+            err = svn_wc_merge (older, yours, mine,
+                                ".older", ".yours", ".working", /* ###? */
+                                subpool);
+            if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+              return err;  
+          }
+        else
+          return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, 
+                                    subpool,
+                                    "Cannot create file '%s' for addition, "
+                                    "because an unversioned file by that name "
+                                    "already exists.", mine);
+        break;      
+      }
+    default:
+      break;
+    }
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -239,14 +275,30 @@ merge_file_deleted (const char *mine,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+  enum svn_node_kind kind;
 
-  /* ### if file is already non-existent, this should be a no-op. */
-
-  SVN_ERR (svn_client_delete (NULL, 
-                              svn_stringbuf_create (mine, subpool),
-                              FALSE, /* don't force */
-                              NULL, NULL, NULL, NULL, subpool));
-  
+  SVN_ERR (svn_io_check_path (mine, &kind, subpool));
+  switch (kind)
+    {
+    case svn_node_file:
+      SVN_ERR (svn_client_delete (NULL, 
+                                  svn_stringbuf_create (mine, subpool),
+                                  FALSE, /* don't force */
+                                  NULL, NULL, NULL, NULL, subpool));
+      break;
+    case svn_node_dir:
+      /* ### create a .drej conflict or something someday? */
+      return svn_error_createf (SVN_ERR_WC_NOT_FILE, 0, NULL, subpool,
+                                "Cannot schedule file '%s' for deletion, "
+                                "because a directory by that name "
+                                "already exists.", mine);
+    case svn_node_none:
+      /* file is already non-existent, this is a no-op. */
+      break;
+    default:
+      break;
+    }
+    
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
@@ -258,8 +310,33 @@ merge_dir_added (const char *path,
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   svn_stringbuf_t *path_s = svn_stringbuf_create (path, subpool);
+  enum svn_node_kind kind;
+  svn_boolean_t is_wc;
 
-  /* ### if directory already exists, this should be a no-op */
+  SVN_ERR (svn_io_check_path (path, &kind, subpool));
+  switch (kind)
+    {
+    case svn_node_none:
+      SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL,
+                                 NULL, NULL, subpool));
+      SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));
+      break;
+    case svn_node_dir:
+      /* dir already exists.  make sure it's under version control. */
+      SVN_ERR (svn_wc_check_wc (path_s, &is_wc, subpool));
+      if (! is_wc)
+        SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));        
+      break;
+    case svn_node_file:
+      /* ### create a .drej conflict or something someday? */
+      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, subpool,
+                                "Cannot create directory '%s' for addition, "
+                                "because a file by that name "
+                                "already exists.", path);
+      break;
+    default:
+      break;
+    }
 
   SVN_ERR (svn_client_mkdir (NULL, path_s, NULL, NULL, NULL, NULL, subpool));
   SVN_ERR (svn_client_add (path_s, FALSE, NULL, NULL, subpool));
@@ -274,14 +351,30 @@ merge_dir_deleted (const char *path,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-
-  /* ### if directory is already non-existent, this should be a no-op */
-
-  SVN_ERR (svn_client_delete (NULL, 
-                              svn_stringbuf_create (path, subpool),
-                              FALSE, /* don't force */
-                              NULL, NULL, NULL, NULL, subpool));
+  enum svn_node_kind kind;
   
+  SVN_ERR (svn_io_check_path (path, &kind, subpool));
+  switch (kind)
+    {
+    case svn_node_dir:
+      SVN_ERR (svn_client_delete (NULL, 
+                                  svn_stringbuf_create (path, subpool),
+                                  FALSE, /* don't force */
+                                  NULL, NULL, NULL, NULL, subpool));
+      break;
+    case svn_node_file:
+      /* ### create a .drej conflict or something someday? */
+      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, subpool,
+                                "Cannot schedule directory '%s' for deletion, "
+                                "because a file by that name "
+                                "already exists.", path);
+    case svn_node_none:
+      /* dir is already non-existent, this is a no-op. */
+      break;
+    default:
+      break;
+    }
+
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
