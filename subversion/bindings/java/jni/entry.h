@@ -34,39 +34,76 @@ entry__create_from_svn_wc_entry_t(JNIEnv *env, jboolean *hasException,
 
 void 
 entry__set_url(JNIEnv *env, jboolean *hasException,
-                    jobject jentry, jstring jurl);
+               jobject jentry, jstring jurl);
+
+jstring
+entry__get_url(JNIEnv *env, jboolean *hasException,
+               jobject jentry);
 
 void
 entry__set_revision(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jrevision);
 
+jobject
+entry__get_revision(JNIEnv *env, jboolean *hasException,
+                    jobject jentry);
+
 void
 entry__set_kind(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jnodekind);
+
+jobject
+entry__get_kind(JNIEnv *env, jboolean *hasException,
+                    jobject jentry);
 
 void
 entry__set_schedule(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jschedule);
 
+jobject
+entry__get_schedule(JNIEnv *env, jboolean *hasException,
+                    jobject jentry);
+
 void 
 entry__set_conflicted(JNIEnv *env, jboolean *hasException,
                       jobject jentry, jboolean jconflicted);
+
+jboolean
+entry__get_conflicted(JNIEnv *env, jboolean *hasException,
+                      jobject jentry);
 
 void
 entry__set_copied(JNIEnv *env, jboolean *hasException,
                   jobject jentry, jboolean jcopied);
 
+jboolean
+entry__get_copied(JNIEnv *env, jboolean *hasException,
+                  jobject jentry);
+
 void 
 entry__set_texttime(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jtexttime);
+
+jobject
+entry__get_texttime(JNIEnv *env, jboolean *hasException,
+                    jobject jentry);
 
 void 
 entry__set_proptime(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jproptime);
 
+jobject
+entry__get_proptime(JNIEnv *env, jboolean *hasException,
+                    jobject jentry);
+
 void 
 entry__set_attributes(JNIEnv *env, jboolean *hasException,
                       jobject jentry, jobject jattributes);
+
+jobject
+entry__get_attributes(JNIEnv *env, jboolean *hasException,
+                      jobject jentry);
+
 #endif
 
 /* 
@@ -74,3 +111,4 @@ entry__set_attributes(JNIEnv *env, jboolean *hasException,
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
+

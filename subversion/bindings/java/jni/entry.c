@@ -34,27 +34,51 @@
 #define SVN_JNI_ENTRY__CLASS "org/tigris/subversion/lib/Entry"
 #define SVN_JNI_ENTRY__SIG "()V"
 #define SVN_JNI_ENTRY__SET_URL "setUrl"
-#define SVN_JNI_ENTRY__SET_URL_SIG "(Ljava/lang/String;)V"
+#define SVN_JNI_ENTRY__SET_URL_SIG \
+"(Ljava/lang/String;)V"
+#define SVN_JNI_ENTRY__GET_URL "getUrl"
+#define SVN_JNI_ENTRY__GET_URL_SIG \
+"()Ljava/lang/String;"
 #define SVN_JNI_ENTRY__SET_REVISION "setRevision"
 #define SVN_JNI_ENTRY__SET_REVISION_SIG \
 "(Lorg/tigris/subversion/lib/Revision;)V"
+#define SVN_JNI_ENTRY__GET_REVISION "getRevision"
+#define SVN_JNI_ENTRY__GET_REVISION_SIG \
+"()Lorg/tigris/subversion/lib/Revision;"
 #define SVN_JNI_ENTRY__SET_KIND "setKind"
 #define SVN_JNI_ENTRY__SET_KIND_SIG \
 "(Lorg/tigris/subversion/lib/Nodekind;)V"
+#define SVN_JNI_ENTRY__GET_KIND "getKind"
+#define SVN_JNI_ENTRY__GET_KIND_SIG \
+"()Lorg/tigris/subversion/lib/Nodekind;"
 #define SVN_JNI_ENTRY__SET_SCHEDULE "setSchedule"
 #define SVN_JNI_ENTRY__SET_SCHEDULE_SIG \
 "(Lorg/tigris/subversion/lib/Schedule;)V"
+#define SVN_JNI_ENTRY__GET_SCHEDULE "getSchedule"
+#define SVN_JNI_ENTRY__GET_SCHEDULE_SIG \
+"()Lorg/tigris/subversion/lib/Schedule;"
 #define SVN_JNI_ENTRY__SET_CONFLICTED "setConflicted"
+#define SVN_JNI_ENTRY__GET_CONFLICTED "getConflicted"
 #define SVN_JNI_ENTRY__SET_COPIED "setCopied"
+#define SVN_JNI_ENTRY__GET_COPIED "getCopied"
 #define SVN_JNI_ENTRY__SET_TEXTTIME "setTexttime"
 #define SVN_JNI_ENTRY__SET_TEXTTIME_SIG \
 "(Ljava/util/Date;)V"
+#define SVN_JNI_ENTRY__GET_TEXTTIME "getTexttime"
+#define SVN_JNI_ENTRY__GET_TEXTTIME_SIG \
+"()Ljava/util/Date;"
 #define SVN_JNI_ENTRY__SET_PROPTIME "setProptime"
 #define SVN_JNI_ENTRY__SET_PROPTIME_SIG \
 "(Ljava/util/Date;)V"
+#define SVN_JNI_ENTRY__GET_PROPTIME "getProptime"
+#define SVN_JNI_ENTRY__GET_PROPTIME_SIG \
+"()Ljava/util/Date;"
 #define SVN_JNI_ENTRY__SET_ATTRIBUTES "setAttributes"
 #define SVN_JNI_ENTRY__SET_ATTRIBUTES_SIG \
 "(Ljava/util/Hashtable;)V"
+#define SVN_JNI_ENTRY__GET_ATTRIBUTES "getAttributes"
+#define SVN_JNI_ENTRY__GET_ATTRIBUTES_SIG \
+"()Ljava/util/Hashtable;"
 
 /*
  * Do you want to debug code in this file?
@@ -328,6 +352,25 @@ entry__set_url(JNIEnv *env, jboolean *hasException,
 #endif
 }
 
+jstring
+entry__get_url(JNIEnv *env, jboolean *hasException,
+               jobject jentry)
+{
+  jstring result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_url\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_URL,
+                        SVN_JNI_ENTRY__GET_URL_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_url\n");
+#endif
+  return result;
+}
+
 void
 entry__set_revision(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jrevision)
@@ -346,6 +389,25 @@ entry__set_revision(JNIEnv *env, jboolean *hasException,
 #ifdef SVN_JNI__DEBUG_ENTRY
   fprintf(stderr, "\n<<<entry__set_revision\n");
 #endif
+}
+
+jobject
+entry__get_revision(JNIEnv *env, jboolean *hasException,
+                    jobject jentry)
+{
+  jobject result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_revision\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_REVISION,
+                        SVN_JNI_ENTRY__GET_REVISION_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_revision\n");
+#endif
+  return result;
 }
 
 void
@@ -368,6 +430,25 @@ entry__set_kind(JNIEnv *env, jboolean *hasException,
 #endif
 }
 
+jobject
+entry__get_kind(JNIEnv *env, jboolean *hasException,
+                    jobject jentry)
+{
+  jobject result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_kind\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_KIND,
+                        SVN_JNI_ENTRY__GET_KIND_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_kind\n");
+#endif
+  return result;
+}
+
 void
 entry__set_schedule(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jobject jschedule)
@@ -388,6 +469,25 @@ entry__set_schedule(JNIEnv *env, jboolean *hasException,
 #endif
 }
 
+jobject
+entry__get_schedule(JNIEnv *env, jboolean *hasException,
+                    jobject jentry)
+{
+  jobject result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_schedule\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_SCHEDULE,
+                        SVN_JNI_ENTRY__GET_SCHEDULE_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_schedule\n");
+#endif
+  return result;
+}
+
 void 
 entry__set_conflicted(JNIEnv *env, jboolean *hasException,
                       jobject jentry, jboolean jconflicted)
@@ -406,6 +506,24 @@ entry__set_conflicted(JNIEnv *env, jboolean *hasException,
 #endif
 }
 
+jboolean
+entry__get_conflicted(JNIEnv *env, jboolean *hasException,
+                      jobject jentry)
+{
+  jboolean result = JNI_FALSE;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_conflicted\n");
+#endif
+  result= j__get_boolean(env, hasException,
+                         SVN_JNI_ENTRY__CLASS,
+                         SVN_JNI_ENTRY__GET_CONFLICTED,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_conflicted\n");
+#endif
+  return result;
+}
+
 void 
 entry__set_copied(JNIEnv *env, jboolean *hasException,
                   jobject jentry, jboolean jcopied)
@@ -422,6 +540,24 @@ entry__set_copied(JNIEnv *env, jboolean *hasException,
 #ifdef SVN_JNI__DEBUG_ENTRY
   fprintf(stderr, "\n<<<entry__set_copied\n");
 #endif
+}
+
+jboolean
+entry__get_copied(JNIEnv *env, jboolean *hasException,
+                  jobject jentry)
+{
+  jboolean result = JNI_FALSE;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_copied\n");
+#endif
+  result= j__get_boolean(env, hasException,
+                         SVN_JNI_ENTRY__CLASS,
+                         SVN_JNI_ENTRY__GET_COPIED,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_copied\n");
+#endif
+  return result;
 }
 
 void 
@@ -444,6 +580,25 @@ entry__set_texttime(JNIEnv *env, jboolean *hasException,
 #endif
 }
 
+jobject
+entry__get_texttime(JNIEnv *env, jboolean *hasException,
+                    jobject jentry)
+{
+  jobject result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_texttime\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_TEXTTIME,
+                        SVN_JNI_ENTRY__GET_TEXTTIME_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_texttime\n");
+#endif
+  return result;
+}
+
 void 
 entry__set_proptime(JNIEnv *env, jboolean *hasException,
                      jobject jentry, jobject jproptime)
@@ -462,6 +617,25 @@ entry__set_proptime(JNIEnv *env, jboolean *hasException,
 #ifdef SVN_JNI__DEBUG_ENTRY
   fprintf(stderr, "\n<<<entry_set_proptime\n");
 #endif
+}
+
+jobject
+entry__get_proptime(JNIEnv *env, jboolean *hasException,
+                    jobject jentry)
+{
+  jobject result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_proptime\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_PROPTIME,
+                        SVN_JNI_ENTRY__GET_PROPTIME_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_proptime\n");
+#endif
+  return result;
 }
 
 void 
@@ -483,6 +657,26 @@ entry__set_attributes(JNIEnv *env, jboolean *hasException,
   fprintf(stderr, "\n<<<entry__set_attributes\n");
 #endif
 }
+
+jobject
+entry__get_attributes(JNIEnv *env, jboolean *hasException,
+                      jobject jentry)
+{
+  jobject result = NULL;
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__get_attributes\n");
+#endif
+  result= j__get_object(env, hasException,
+                        SVN_JNI_ENTRY__CLASS,
+                        SVN_JNI_ENTRY__GET_ATTRIBUTES,
+                        SVN_JNI_ENTRY__GET_ATTRIBUTES_SIG,
+                        jentry);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__get_attributes\n");
+#endif
+  return result;
+}
+
 
 /* 
  * local variables:
