@@ -154,7 +154,7 @@ kill_svnserve() {
 ts_start=`$DATE +"%s"`
 
 START "make $CHECK_TARGET" "Testing $RA_TYPE on $FS_TYPE..."
-CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}_${FS_TYPE}"
+CHECK_LOG_FILE="$LOG_FILE_DIR/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}_${FS_TYPE}"
 cd $TEST_ROOT/$OBJ
 if test "$CHECK_TARGET" = "davcheck";
 then
@@ -172,7 +172,7 @@ test $? = 0 || {
 
     # Prepare the log file for the mailer
     $GZIP_C < "tests.log" \
-            > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
+            > "$LOG_FILE_DIR/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
     FAIL kill_svnserve
 }
 PASS

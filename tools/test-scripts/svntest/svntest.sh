@@ -9,6 +9,9 @@ EXEC_PATH="`dirname $0`"
     exit
 }
 
+# ensure that we have a place where to put logs
+$MKDIR_P "$LOG_FILE_DIR"
+
 # Remove log files from previous runs
 $RM_F "$LOG_FILE_PREFIX.update"
 $RM_F "$LOG_FILE_PREFIX.shared"

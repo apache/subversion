@@ -57,47 +57,47 @@ UPDATE_REBUILD_FLAG () {
 
 # Update apr, apr-util, httpd
 START "update $APR_NAME" "Updating $APR_NAME..."
-cd $APR_REPO && $SVN update > "$TEST_ROOT/LOG_up_apr" 2>&1
+cd $APR_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_apr" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_up_apr"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_up_apr"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_apr" "$APR_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_apr" "$TEST_ROOT/$APR_NAME.rb"
 
 START "update $APU_NAME" "Updating $APU_NAME..."
-cd $APU_REPO && $SVN update > "$TEST_ROOT/LOG_up_apu" 2>&1
+cd $APU_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_apu" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_up_apu"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_up_apu"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_apu" "$APU_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_apu" "$TEST_ROOT/$APU_NAME.rb"
 
 START "update $HTTPD_NAME" "Updating $HTTPD_NAME..."
-cd $HTTPD_REPO && $SVN update > "$TEST_ROOT/LOG_up_httpd" 2>&1
+cd $HTTPD_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_httpd" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_up_httpd"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_up_httpd"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_httpd" "$HTTPD_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_httpd" "$TEST_ROOT/$HTTPD_NAME.rb"
 
 # Update svn
 START "update subversion" "Updating Subversion..."
-cd $SVN_REPO && $SVN update > "$TEST_ROOT/LOG_up_svn" 2>&1
+cd $SVN_REPO && $SVN update > "$LOG_FILE_DIR/LOG_up_svn" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_up_svn"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_up_svn"
     FAIL
 }
 PASS
-UPDATE_REBUILD_FLAG SVN "$TEST_ROOT/LOG_up_svn" "$SVN_REPO.rb"
+UPDATE_REBUILD_FLAG SVN "$LOG_FILE_DIR/LOG_up_svn" "$TEST_ROOT/$SVN_NAME.rb"
 
 # Run autogen.sh
 START "autogen.sh" "Running autogen.sh..."
-cd $SVN_REPO && ./autogen.sh > "$TEST_ROOT/LOG_svn_autogen" 2>&1
+cd $SVN_REPO && ./autogen.sh > "$LOG_FILE_DIR/LOG_svn_autogen" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_autogen"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_autogen"
     FAIL
 }
 PASS
