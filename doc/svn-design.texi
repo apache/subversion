@@ -90,12 +90,8 @@ system.
 
 @end ifinfo
 
-@c Division of labor:
-@c
-@c    jimb ==> model (including repository), protocol (such as it is)
-@c    ben  ==> architecture, server
-@c    karl ==> goals, client, future, read entire doc at intervals
-@c
+@summarycontents
+@contents
 
 @menu
 * Goals::                        The goals of the Subversion project.
@@ -108,7 +104,6 @@ system.
 * License::                      Copyright.
 @end menu
 
-
 @include goals.texi
 @include model.texi
 @include architecture.texi
@@ -120,5 +115,4 @@ system.
 
 @c @include indices.texi
 
-@contents
 @bye
