@@ -5,6 +5,8 @@ top_srcdir = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
+EXTERNAL_PROJECT_DIRS = neon apr
+
 SVN_APR_LIBS = @SVN_APR_LIBS@
 
 #SVN_DB_LIBS = -L/usr/local/BerkeleyDB.3.2/lib -ldb
@@ -59,25 +61,31 @@ INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -a
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
 
-all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
+all: external-all local-all
+clean: external-clean local-clean
+distclean: external-distclean local-distclean
+extraclean: external-extraclean local-extraclean
+install: external-install local-install
 
 @INCLUDE_OUTPUTS@
 
-clean:
+local-all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
+
+local-clean:
 	@list='$(CLEAN_DIRS)'; for i in $$list; do \
 	    echo "Cleaning $$i ..." ; \
 	    (cd $$i && rm -f *.o *.lo *.a *.la *.so *.obj && rm -rf .libs) ; \
 	done
 	rm -f $(CLEAN_FILES)
 
-distclean: clean
+local-distclean: local-clean
 	rm -f Makefile config.cache config.log config.status libtool \
 		svn_private_config.h
 
-extraclean: distclean
+local-extraclean: local-distclean
 	rm -f build-outputs.mk svn_private_config.in aclocal.m4 configure
 
-install: install-lib install-include install-bin install-sbin \
+local-install: install-lib install-include install-bin install-sbin \
 		$(INSTALL_APACHE_RULE)
 
 ### the chmod really sucks, but some repository files don't have it like
@@ -108,6 +116,17 @@ check: $(TEST_DEPS)
 	if test "$$failed" = "yes"; then \
 	    grep FAIL $$logfile || /bin/true ; \
 	fi
+
+# recursive targets to handle external projects (e.g. APR, Neon)
+external-all external-clean external-distclean external-extraclean \
+	external-install:
+	@target=`echo $@ | sed s/external-//`; \
+	list='$(EXTERNAL_PROJECT_DIRS)'; \
+	for i in $$list; do \
+	    echo "------ making $$target in $$i"; \
+	    (cd $$i && $(MAKE) $$target) || exit 1; \
+	    echo "------ completed $$target in $$i"; \
+	done;
 
 ## Use Karl's script to create a Changelog from CVS.
 

@@ -318,7 +318,6 @@ _default_sources = {
   }
 
 _predef_sections = [
-  'external',
   'includes',
   'static-apache',
   'test-scripts',
