@@ -156,7 +156,7 @@ Bindings changes that don't affect the build system:
      Fix perl bindings to work with new date format. 
      Justification: Perl bindings won't even build now without this.
      Votes:
-      +1: breser
+      +1: breser, epg
 
      * r8348
      Don't assume an int is the same size as a long in perl bindings.
