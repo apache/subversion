@@ -101,7 +101,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
                        "do not print differences for deleted files"},
     {"notice-ancestry", svn_cl__notice_ancestry_opt, 0,
-                       "ignore ancestry when calculating differences"},
+                       "notice ancestry when calculating differences"},
     {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
                       "use ARG as diff command"},
     {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
