@@ -963,9 +963,9 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 /* TODO write test for these two functions, then refactor. */
 
 svn_error_t *
-svn_string_from_file (svn_stringbuf_t **result,
-                      const char *filename,
-                      apr_pool_t *pool)
+svn_stringbuf_from_file (svn_stringbuf_t **result,
+                         const char *filename,
+                         apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *f = NULL;
@@ -973,26 +973,26 @@ svn_string_from_file (svn_stringbuf_t **result,
   if (filename[0] == '-' && filename[1] == '\0')
     return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-         "svn_string_from_file: "
+         "svn_stringbuf_from_file: "
          "reading from stdin is currently broken, so disabled");
 
   SVN_ERR (svn_io_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool));
 
-  SVN_ERR (svn_string_from_aprfile (result, f, pool));
+  SVN_ERR (svn_stringbuf_from_aprfile (result, f, pool));
 
   apr_err = apr_file_close (f);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
-                              "svn_string_from_file: failed to close '%s'",
+                              "svn_stringbuf_from_file: failed to close '%s'",
                               filename);
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_string_from_aprfile (svn_stringbuf_t **result,
-                         apr_file_t *file,
-                         apr_pool_t *pool)
+svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
+                            apr_file_t *file,
+                            apr_pool_t *pool)
 {
   apr_size_t len;
   apr_status_t apr_err;
@@ -1006,7 +1006,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
   if (apr_err)
     return svn_error_create
       (apr_err, 0, NULL, pool,
-       "svn_string_from_aprfile: failed to get filename");
+       "svn_stringbuf_from_aprfile: failed to get filename");
 
   /* If the apr_file_t was opened with apr_file_open_std{in,out,err}, then we
    * wont get a filename for it. We assume that since we are reading, that in
@@ -1034,7 +1034,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
       
       return svn_error_createf 
         (apr_err, 0, NULL, pool,
-         "svn_string_from_aprfile: EOF not seen for '%s'", fname_utf8);
+         "svn_stringbuf_from_aprfile: EOF not seen for '%s'", fname_utf8);
     }
 
   /* Null terminate the stringbuf. */

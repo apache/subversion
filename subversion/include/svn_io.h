@@ -387,16 +387,16 @@ svn_stream_readline (svn_stream_t *stream,
    disallow stdin reading and invoking the editor, but how to do that
    reliably?
 */
-svn_error_t *svn_string_from_file (svn_stringbuf_t **result, 
-                                   const char *filename, 
-                                   apr_pool_t *pool);
+svn_error_t *svn_stringbuf_from_file (svn_stringbuf_t **result, 
+                                      const char *filename, 
+                                      apr_pool_t *pool);
 
 /* Sets *RESULT to a string containing the contents of the already opened
    FILE.  Reads from the current position in file to the end.  Does not
    close the file or reset the cursor position.*/
-svn_error_t *svn_string_from_aprfile (svn_stringbuf_t **result,
-                                      apr_file_t *file,
-                                      apr_pool_t *pool);
+svn_error_t *svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
+                                         apr_file_t *file,
+                                         apr_pool_t *pool);
 
 /* Remove file PATH, a utf8-encoded path.  This wraps
    apr_file_remove(), converting any error to a Subversion error. */

@@ -196,7 +196,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       (finfo_before.size != finfo_after.size))
     {
       svn_stringbuf_t *edited_contents_s;
-      err = svn_string_from_file (&edited_contents_s, tmpfile_name, pool);
+      err = svn_stringbuf_from_file (&edited_contents_s, tmpfile_name, pool);
       if (!err)
         err = svn_utf_cstring_to_utf8 (edited_contents,
                                        edited_contents_s->data, NULL, pool);
