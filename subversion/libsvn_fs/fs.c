@@ -611,13 +611,10 @@ svn_error_t *
 svn_fs_berkeley_recover (const char *path,
                          apr_pool_t *pool)
 {
-  int db_err;
   DB_ENV *env;
   const char *path_native;
 
-  db_err = db_env_create (&env, 0);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  SVN_BDB_ERR (db_env_create (&env, 0));
 
   /* Here's the comment copied from db_recover.c:
    
@@ -631,17 +628,12 @@ svn_fs_berkeley_recover (const char *path,
      incorrectly sized (and probably terribly small) caches.  */
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  db_err = env->open (env, path_native, (DB_RECOVER | DB_CREATE
-                                         | DB_INIT_LOCK | DB_INIT_LOG
-                                         | DB_INIT_MPOOL | DB_INIT_TXN
-                                         | DB_PRIVATE),
-                      0666);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
-
-  db_err = env->close (env, 0);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER | DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN
+                                             | DB_PRIVATE),
+                          0666));
+  SVN_BDB_ERR (env->close (env, 0));
 
   return SVN_NO_ERROR;
 }
@@ -651,38 +643,45 @@ svn_fs_berkeley_recover (const char *path,
 /* Running the 'archive' command on a Berkeley DB-based filesystem.  */
 
 
-svn_error_t *
-svn_fs_berkeley_archive (char ***logfiles,
-                         const char *path,
-                         apr_pool_t *pool)
+svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
+                                       const char *path,
+                                       svn_boolean_t only_unused,
+                                       apr_pool_t *pool)
 {
-  int db_err;
   DB_ENV *env;
   const char *path_native;
   char **filelist;
+  char **filename;
+  u_int32_t flags = only_unused ? 0 : DB_ARCH_LOG;
 
-  db_err = db_env_create (&env, 0);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  *logfiles = apr_array_make (pool, 4, sizeof (const char *));
+
+  SVN_BDB_ERR (db_env_create (&env, 0));
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  db_err = env->open (env, path_native, (DB_CREATE
-                                         | DB_INIT_LOCK | DB_INIT_LOG
-                                         | DB_INIT_MPOOL | DB_INIT_TXN
-                                         | DB_PRIVATE), 0666);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN
+                                             | DB_PRIVATE), 0666));
+  SVN_BDB_ERR (env->log_archive (env, &filelist, flags));
 
-  db_err = env->log_archive (env, &filelist,
-                             DB_ARCH_ABS /* return absolute paths */);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  if (filelist == NULL)
+    {
+      SVN_BDB_ERR (env->close (env, 0));
+      return SVN_NO_ERROR;
+    }
 
-  db_err = env->close (env, 0);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  for (filename = filelist; *filename != NULL; ++filename)
+    {
+      APR_ARRAY_PUSH (*logfiles, const char *) = apr_pstrdup (pool, *filename);
+    }
 
-  *logfiles = filelist;
+  /* allocate_env sets malloc and free as the memory management functions,
+     therefore we use free to release memory allocated by DB_ENV */
+  free (filelist);
+  
+  SVN_BDB_ERR (env->close (env, 0));
+
   return SVN_NO_ERROR;
 }
 
@@ -696,20 +695,14 @@ svn_error_t *
 svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
-  int db_err;
   DB_ENV *env;
   const char *path_native;
 
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
-  db_err = db_env_create (&env, 0);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
-
+  SVN_BDB_ERR (db_env_create (&env, 0));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  db_err = env->remove (env, path_native, DB_FORCE);
-  if (db_err)
-    return svn_fs__bdb_dberr (db_err);
+  SVN_BDB_ERR (env->remove (env, path_native, DB_FORCE));
 
   /* Remove the environment directory. */
   SVN_ERR (svn_io_remove_dir (path, pool));

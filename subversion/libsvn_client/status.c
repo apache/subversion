@@ -72,6 +72,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   const char *anchor, *target, *URL;
   svn_wc_adm_access_t *anchor_access;
   const svn_wc_entry_t *entry;
+  svn_node_kind_t kind;
 
   /* Use PATH to get the update's anchor and targets. */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
@@ -106,6 +107,32 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                         anchor_access, NULL, TRUE, TRUE, 
                                         ctx, pool));
 
+  /* Verify that URL exists in HEAD.  If it doesn't, this can save us
+     a whole lot of hassle; if it does, the cost of this request
+     should be minimal compared to the size of getting back the
+     average amount of "out-of-date" information. */
+  SVN_ERR (ra_lib->check_path (&kind, session, "", SVN_INVALID_REVNUM, pool));
+  if (kind == svn_node_none)
+    {
+      svn_wc_status_t *status_item;
+
+      /* This code SHOULD be marking the whole tree under ANCHOR as
+         deleted, but that would cause it to be inconsistent with a
+         bug that currently runs freely in the working copy status
+         editor (see issue #1469).  So, for now, we'll just mark the
+         path that corresponds to the ANCHOR as deleted. */
+      status_item = apr_hash_get (statushash, anchor, APR_HASH_KEY_STRING);
+      if (! status_item)
+        {
+          SVN_ERR (svn_wc_status (&status_item, anchor, adm_access, pool));
+          apr_hash_set (statushash, 
+                        apr_pstrdup (apr_hash_pool_get (statushash), anchor), 
+                        APR_HASH_KEY_STRING, status_item);
+        }
+      status_item->repos_text_status = svn_wc_status_deleted;
+      return SVN_NO_ERROR;
+    }
+  
   /* Tell RA to drive a status-editor; this will fill in the
      repos_status_* fields in each status struct. */
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &status_edit_baton,
@@ -151,6 +178,7 @@ svn_client_status (apr_hash_t **statushash,
 {
   apr_hash_t *hash = apr_hash_make (pool);
   svn_wc_adm_access_t *adm_access;
+  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
 
   /* Need to lock the tree as even a non-recursive status requires the
      immediate directories to be locked. */
@@ -163,7 +191,15 @@ svn_client_status (apr_hash_t **statushash,
                             descend, get_all, no_ignore,
                             ctx->notify_func, ctx->notify_baton,
                             ctx->cancel_func, ctx->cancel_baton,
-                            ctx->config, pool));
+                            ctx->config, traversal_info, pool));
+
+  /* If there are svn:externals set, we don't want those to show up as
+     unversioned or unrecognized, so patchup the hash.  If callers wants
+     all the statuses, we will change unversioned status items that
+     are interesting to an svn:externals property to
+     svn_wc_status_unversioned, otherwise we'll just remove the status
+     item altogether. */
+  SVN_ERR (svn_client__recognize_externals (hash, traversal_info, pool));
 
   if (update)    
     {

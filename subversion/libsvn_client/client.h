@@ -536,6 +536,17 @@ svn_error_t *svn_client__handle_externals
     svn_client_ctx_t *ctx,
     apr_pool_t *pool);
 
+/* Fixup the STATUS_HASH in light of the existence of local
+   directories that are unversioned, but which exist because of the
+   procession that svn:externals properties (as defined in
+   TRAVERSAL_INFO) perform.  Such status items will be modified from
+   svn_wc_status_unversioned to svn_wc_status_external.
+
+   Use POOL for all scratchwork. */
+svn_error_t *svn_client__recognize_externals
+   (apr_hash_t *status_hash,
+    svn_wc_traversal_info_t *traversal_info,
+    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

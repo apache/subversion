@@ -40,14 +40,15 @@ SWIG_DIRS = subversion/bindings/swig/python     \
             subversion/bindings/swig/java/org   \
             subversion/bindings/swig/java/org/tigris \
             subversion/bindings/swig/java/org/tigris/subversion \
-            subversion/bindings/swig/java/org/tigris/subversion/swig
+            subversion/bindings/swig/java/org/tigris/subversion/swig \
+            subversion/bindings/swig/perl
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
 NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
-SVN_DB_LIBS = @SVN_DB_LIBS@
+SVN_DB_LIBS =
 
 LIBS = @LIBS@
 
@@ -70,11 +71,13 @@ docdir = @docdir@
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
 swig_java_libdir = @libdir@
+swig_pl_libdir = @libdir@
 
 ### these possibly need further discussion
 swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
+swig_pldir = @libdir@/svn-perl
 
 ### should search for these...
 MAKEINFO = @MAKEINFO@
@@ -92,7 +95,7 @@ LTFLAGS = --silent
 LT_LDFLAGS = @LT_LDFLAGS@
 
 INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@                    \
-           @SVN_DB_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@
+           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -109,6 +112,9 @@ SWIG_PY_LINK = @SWIG_PY_LINK@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
 SWIG_JAVA_COMPILE = $(CC) -DNDEBUG -g -O3 -Wall -Wstrict-prototypes -fPIC
 SWIG_JAVA_LINK = $(CC) -shared
+SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
+SWIG_PL_COMPILE = @SWIG_PL_COMPILE@
+SWIG_PL_LINK = @SWIG_PL_LINK@
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
@@ -129,6 +135,7 @@ COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CF
 # special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
 COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c
+COMPILE_SWIG_PL = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_PL_INCLUDES) $(INCLUDES) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 
@@ -138,15 +145,18 @@ LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS
 # these commands run SWIG to generate wrapper source files (*.c)
 ### should we protect against swig not being available?
 RUN_SWIG_PY = $(SWIG) -c -python $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_PL = $(SWIG) -c -perl $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -o $@
 RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
 COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PL_COMPILE) $(SWIG_INCLUDES) $(SWIG_PL_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
+LINK_PL_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PL_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pldir) -avoid-version -module
 
 
 INSTALL = @INSTALL@
@@ -166,6 +176,8 @@ INSTALL_SWIG_PY = $(INSTALL_LIB)
 INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
+INSTALL_SWIG_PL = $(INSTALL_LIB)
+INSTALL_SWIG_PL_LIB = $(INSTALL_LIB)
 
 # additional installation rules for the SWIG wrappers
 INSTALL_EXTRA_SWIG_PY=\
@@ -252,17 +264,17 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 # First, set up Apache as documented in
 # subversion/tests/clients/cmdline/README.
 davcheck: 
-	@make check BASE_URL=http://localhost
+	@$(MAKE) check BASE_URL=http://localhost
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
 svncheck: 
-	@make check BASE_URL=svn://localhost
+	@$(MAKE) check BASE_URL=svn://localhost
 
 # First make sure you can ssh to localhost and that "svnserve" is in
 # the path of the resulting shell.
 svnsshcheck:
-	@make check \
+	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/clients/cmdline
 
 check-clean:
@@ -353,20 +365,20 @@ doc-design-pdf: doc/programmer/design/svn-design.pdf
 # Different outputs for the main Subversion 'book', written in docbook.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-book-html:
-	cd ${BOOK_TOP} && make book-html
+	cd ${BOOK_TOP} && $(MAKE) book-html
 doc-book-pdf:
-	cd ${BOOK_TOP} && make book-pdf
+	cd ${BOOK_TOP} && $(MAKE) book-pdf
 doc-book-ps:
-	cd ${BOOK_TOP} && make book-ps
+	cd ${BOOK_TOP} && $(MAKE) book-ps
 
 # Different outputs for the misc docs.
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
-	cd ${BOOK_TOP} && make misc-docs-html
+	cd ${BOOK_TOP} && $(MAKE) misc-docs-html
 doc-misc-docs-pdf:
-	cd ${BOOK_TOP} && make misc-docs-pdf
+	cd ${BOOK_TOP} && $(MAKE) misc-docs-pdf
 doc-misc-docs-ps:
-	cd ${BOOK_TOP} && make misc-docs-ps
+	cd ${BOOK_TOP} && $(MAKE) misc-docs-ps
 
 
 doc-clean:

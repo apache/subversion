@@ -675,17 +675,17 @@ static const apr_getopt_option_t options_table[] =
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
     {"exclude", subcommand_exclude, {0},
-     "usage: svndumpfilter exclude PATH_PREFIX [PATH_PREFIX ...]\n\n"
+     "usage: svndumpfilter exclude PATH_PREFIX...\n\n"
      "Filter out nodes with given prefixes from dumpstream.\n",
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
 
     {"include", subcommand_include, {0},
-     "usage: svndumpfilter include PATH_PREFIX [PATH_PREFIX ...]\n\n"
+     "usage: svndumpfilter include PATH_PREFIX...\n\n"
      "Filter out nodes without given prefixes from dumpstream.\n",
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs} },
 
     {"help", subcommand_help, {"?", "h"},
-     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "usage: svndumpfilter help [SUBCOMMAND...]\n\n"
      "Display this usage message.\n",
      {0} },
 
@@ -765,7 +765,7 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   const char *header =
     "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-    "Type \"svndumfilter help <subcommand>\" for help on a "
+    "Type \"svndumpfilter help <subcommand>\" for help on a "
     "specific subcommand.\n"
     "\n"
     "Available subcommands:\n";

@@ -262,7 +262,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                            TRUE, /* expand keywords */
                                            pool));
 
-  SVN_ERR (svn_wc__files_contents_same_p (&same, tmp_wfile, filepath, pool));
+  SVN_ERR (svn_io_files_contents_same_p (&same, tmp_wfile, filepath, pool));
   
   if (! same)
     {
@@ -865,7 +865,7 @@ log_do_committed (struct log_runner *loggy,
         
         /* We need to decide which prop-timestamp to use, just like we
            did with text-time above. */
-        if ((err = svn_wc__files_contents_same_p (&same, wf, tmpf, pool)))
+        if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
                                     "error comparing `%s' and `%s'",
                                     wf, tmpf);
@@ -1291,6 +1291,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
+                const char *diff3_cmd,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool)
@@ -1339,7 +1340,7 @@ svn_wc_cleanup (const char *path,
           const char *subdir = svn_path_join (path, key, pool);
           SVN_ERR (svn_io_check_path (subdir, &kind, pool));
           if (kind == svn_node_dir)
-            SVN_ERR (svn_wc_cleanup (subdir, adm_access,
+            SVN_ERR (svn_wc_cleanup (subdir, adm_access, diff3_cmd,
                                      cancel_func, cancel_baton, pool));
         }
     }
@@ -1354,7 +1355,7 @@ svn_wc_cleanup (const char *path,
       /* Is there a log?  If so, run it. */
       SVN_ERR (svn_io_check_path (log_path, &kind, pool));
       if (kind == svn_node_file)
-        SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
+        SVN_ERR (svn_wc__run_log (adm_access, diff3_cmd, pool));
     }
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not

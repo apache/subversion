@@ -29,18 +29,20 @@
    then includes svn_types.h, making further includes get skipped. we want
    to actually generate wrappers, so manage svn_types.h right here.
 */
-%ignore svn_error;
-
-/* ### for now, let's not try to handle these structures. swig complains
-   ### about setting the 'const char *' inside the struct might leak mem  */
-%ignore svn_log_changed_path_t;
-
-/* ### We also get complaints about possible memory leakage for svn_dirent,
-   ### but we can live with it for now. */
-/* %ignore svn_dirent; */
 
 /* ### for now, let's ignore this thing. */
 %ignore svn_prop_t;
+
+/* -----------------------------------------------------------------------
+   The following struct members have to be read-only because otherwise
+   strings assigned to then would never be freed, resulting in memory
+   leaks. This prevents the swig warning "Warning(451): Setting const
+   char * member may leak memory."
+*/
+%immutable svn_log_changed_path_t::copyfrom_path;
+%immutable svn_dirent::last_author;
+%immutable svn_error::message;
+%immutable svn_error::file;
 
 %include svn_types.h
 

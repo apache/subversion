@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_config.h"
 #include "client.h"
 
 
@@ -40,6 +41,11 @@ svn_client_cleanup (const char *dir,
                     apr_pool_t *pool)
 {
   svn_node_kind_t kind;
+  const char *diff3_cmd;
+  svn_config_t *cfg = ctx->config
+    ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                    APR_HASH_KEY_STRING)
+    : NULL;
 
   SVN_ERR (svn_io_check_path (dir, &kind, pool));
   if (kind != svn_node_dir)
@@ -47,5 +53,9 @@ svn_client_cleanup (const char *dir,
                               "Cannot cleanup '%s' -- not a directory", 
                               dir);
 
-  return svn_wc_cleanup (dir, NULL, ctx->cancel_func, ctx->cancel_baton, pool);
+  svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+  return svn_wc_cleanup (dir, NULL, diff3_cmd,
+                         ctx->cancel_func, ctx->cancel_baton, pool);
 }

@@ -188,7 +188,7 @@ public class SVNClient
      * Removes the 'conflicted' state on a file.
      * @exception ClientException
      */
-    public native void resolve(String path, boolean recurse) throws ClientException;
+    public native void resolved(String path, boolean recurse) throws ClientException;
     /**
      * Exports the contents of either a subversion repository into a
      * 'clean' directory (meaning a directory with no administrative

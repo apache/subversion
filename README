@@ -74,20 +74,22 @@ IV.   QUICKSTART GUIDE
       like so:
 
           $ svn --version
-          svn, version 0.19.1
-             compiled March 13 2003, 16:43:58
+          svn, version X.YY.Z (rXXXX)
+             compiled Jul 10 2003, 11:49:32
 
           Copyright (C) 2000-2003 CollabNet.
           Subversion is open source software, see http://subversion.tigris.org/
 
           The following repository access (RA) modules are available:
 
-           * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
-             - handles 'http' schema
-           * ra_local : Module for accessing a repository on local disk.
-             - handles 'file' schema
-           * ra_svn : Module for accessing a repository using the svn network protocol.
-             - handles 'svn' schema
+          * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
+            - handles 'http' schema
+            - handles 'https' schema
+          * ra_local : Module for accessing a repository on local disk.
+            - handles 'file' schema
+          * ra_svn : Module for accessing a repository using the svn network protocol.
+            - handles 'svn' schema
+
 
       If you don't see ra_local, it probably means that Berkeley DB
       wasn't found when compiling your client binary.  If you don't
@@ -106,12 +108,12 @@ IV.   QUICKSTART GUIDE
       many things, but its most important feature is creating an empty
       repository:
 
-          $ svnadmin create /usr/local/svn/repos1
+        $ svnadmin create /usr/local/svn/repos1
 
       After the repository is created, you can initially import data
       into it, using libsvn_ra_local (invoked by using a 'file' URL):
 
-          $ svn import file:///usr/local/svn/repos1 some/local/dir/
+        $ svn import -m "log msg" some/local/dir/ file:///usr/local/svn/repos1 
 
       The above example imports the contents of some/local/dir/ right
       into the root of the repository.  If you want to put these
@@ -152,9 +154,9 @@ IV.   QUICKSTART GUIDE
       Here are some simple examples of how one might use the svn
       client.  In general, things are designed to be similar to CVS.
       But many things are different.  *PLEASE* read the Subversion
-      book (in doc/book/, or on the website) -- in particular the 
-      'SVN for CVS Users' appendix -- to understand the broader
-      concepts of what's going on!
+      book (in doc/book/, or online at http://svnbook.red-bean.com/)
+      -- in particular the 'SVN for CVS Users' appendix -- to
+      understand the broader concepts of what's going on!
 
           # Checkout a working copy.  This can either be a file: or
           #  http: url, depending on which RA modules are available.

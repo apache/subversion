@@ -145,8 +145,8 @@ Notify::onNotify (
 	case svn_wc_notify_failed_revert:
 		jAction = org_tigris_subversion_javahl_Notify_Action_failed_revert;
 		break;
-	case svn_wc_notify_resolve:
-		jAction = org_tigris_subversion_javahl_Notify_Action_resolve;
+	case svn_wc_notify_resolved:
+		jAction = org_tigris_subversion_javahl_Notify_Action_resolved;
 		break;
 	case svn_wc_notify_status:
 		jAction = org_tigris_subversion_javahl_Notify_Action_status;

@@ -371,8 +371,8 @@ def update_conflict_props(sbox):
     raise svntest.SVNUnexpectedOutput
 
   # Resolve the conflicts
-  svntest.main.run_svn(None, 'resolve', mu_path)
-  svntest.main.run_svn(None, 'resolve', A_path)
+  svntest.main.run_svn(None, 'resolved', mu_path)
+  svntest.main.run_svn(None, 'resolved', A_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', 'A', status=' M')
@@ -615,8 +615,8 @@ def inappropriate_props(sbox):
 # and svn:mime-type values as though the file is brand new, instead
 # use the copied file's property values.
 
-def copy_should_use_copied_executable_and_mime_type_values(sbox):
-  "copying a file should use the original svn:executable and svn:mime-type"
+def copy_inherits_special_props(sbox):
+  "file copies inherit (not re-derive) special props"
 
   # Bootstrap
   sbox.build()
@@ -922,7 +922,7 @@ test_list = [ None,
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,
-              copy_should_use_copied_executable_and_mime_type_values,
+              copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
               Skip(revprop_change, (os.name != 'posix')),

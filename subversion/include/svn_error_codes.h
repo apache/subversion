@@ -551,6 +551,11 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 6,
               "Invalid configuration value")
 
+  SVN_ERRDEF (SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+              SVN_ERR_RA_DAV_CATEGORY_START + 7,
+              "HTTP Path Not Found")
+
+
   /* ra_local errors */
   
   SVN_ERRDEF (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
@@ -691,6 +696,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_RELOCATION,
               SVN_ERR_CLIENT_CATEGORY_START + 9,
               "Inter-repository relocation not allowed")
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
+              SVN_ERR_CLIENT_CATEGORY_START + 10,
+              SVN_PROP_REVISION_AUTHOR " contains a newline.")
 
   /* misc errors */
 

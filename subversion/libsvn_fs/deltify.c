@@ -126,8 +126,8 @@ svn_fs_undeltify (svn_fs_root_t *root,
     {
       const void *key;
       apr_hash_this (hi, &key, NULL, NULL);
-      svn_fs_undeltify (root, svn_path_join (path, key, subpool),
-                        recursive, subpool);
+      SVN_ERR (svn_fs_undeltify (root, svn_path_join (path, key, subpool),
+                                 recursive, subpool));
       svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);

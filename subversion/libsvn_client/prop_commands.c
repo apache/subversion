@@ -143,11 +143,18 @@ svn_client_revprop_set (const char *propname,
                         const svn_opt_revision_t *revision,
                         svn_revnum_t *set_rev,
                         svn_client_ctx_t *ctx,
+                        svn_boolean_t force,
                         apr_pool_t *pool)
 {
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const char *auth_dir;
+
+  if (strcmp (propname, SVN_PROP_REVISION_AUTHOR) == 0
+      && strchr (propval->data, '\n') != NULL && !force)
+    return svn_error_create (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
+                             NULL,
+                             "Pass --force to override this restriction");
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data,

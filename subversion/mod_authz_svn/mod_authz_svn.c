@@ -149,7 +149,6 @@ static int check_access(svn_config_t *cfg,
                         const char *repos_path, const char *user,
                         int required_access, apr_pool_t *pool)
 {
-    const char *dirpath;
     const char *base_name;
     struct parse_authz_line_baton baton = { 0 };
 
@@ -168,16 +167,15 @@ static int check_access(svn_config_t *cfg,
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
 
+    base_name = repos_path;
     while (!(baton.deny & required_access)
            && !(baton.allow & required_access)) {
-        svn_path_split(repos_path, &dirpath, &base_name, pool);
-
-        if (*base_name == '\0') {
+        if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
             return 0;
         }
 
-        repos_path = dirpath;
+        svn_path_split(repos_path, &repos_path, &base_name, pool);
         svn_config_enumerate(cfg, repos_path,
                              parse_authz_line, &baton);
     }
@@ -309,17 +307,8 @@ static int auth_checker(request_rec *r)
 
     apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
 
-    if (strcmp(parsed_dest_uri.hostname, r->parsed_uri.hostname)
-        || strcmp(parsed_dest_uri.scheme, r->parsed_uri.scheme)) {
-        /* Don't allow this, operation between different hosts/schemes.
-         * XXX: Maybe we should DECLINE instead and rely on mod_dav to
-         * XXX: throw an error.
-         */
-        return HTTP_BAD_REQUEST;
-    }
-
     dest_uri = parsed_dest_uri.path;
-    if (!strncmp(conf->base_path, dest_uri, strlen(conf->base_path))) {
+    if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
         /* If it is not the same location, then we don't allow it.
          * XXX: Instead we could compare repository uuids, but that
          * XXX: seems a bit over the top.

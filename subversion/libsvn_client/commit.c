@@ -677,23 +677,38 @@ remove_tmpfiles (apr_hash_t *tempfiles,
                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
+  apr_pool_t *subpool;
 
   /* Split if there's nothing to be done. */
   if (! tempfiles)
     return SVN_NO_ERROR;
+
+  /* Make a subpool. */
+  subpool = svn_pool_create (pool);
 
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first (pool, tempfiles); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
-      svn_node_kind_t kind;
+      svn_error_t *err;
 
+      svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
-      SVN_ERR (svn_io_check_path ((const char *)key, &kind, pool));
-      if (kind == svn_node_file)
-        SVN_ERR (svn_io_remove_file ((const char *)key, pool));
+
+      err = svn_io_remove_file ((const char *)key, subpool);
+
+      if (err)
+        {
+          if (! APR_STATUS_IS_ENOENT (err->apr_err))
+            return err;
+          else
+            svn_error_clear (err);
+        }
     }
+
+  /* Remove the subpool. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1031,11 +1046,18 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (commit_in_progress)
     editor->abort_edit (edit_baton, pool); /* ignore return value */
 
-  /* ### Under what conditions should we remove the locks? */
-  unlock_err = svn_wc_adm_close (base_dir_access);
+  /* A bump error is likely to occur while running a working copy log file,
+     explicitly unlocking and removing temporary files would be wrong in
+     that case.  A commit error (cmt_err) should only occur before any
+     attempt to modify the working copy, so it doesn't prevent explict
+     clean-up. */
+  if (! bump_err)
+    {
+      unlock_err = svn_wc_adm_close (base_dir_access);
 
-  /* Remove any outstanding temporary text-base files. */
-  cleanup_err = remove_tmpfiles (tempfiles, pool);
+      if (! unlock_err)
+        cleanup_err = remove_tmpfiles (tempfiles, pool);
+    }
 
   /* Fill in the commit_info structure */
   *commit_info = svn_client__make_commit_info (committed_rev, 

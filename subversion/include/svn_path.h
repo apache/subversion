@@ -112,7 +112,7 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
  * Get the dirname of the specified @a path, defined as the path with its
  * basename removed.  If @a path is root ("/"), it is returned unchanged.
  *
- * The returned basename will be allocated in @a pool.
+ * The returned dirname will be allocated in @a pool.
  */
 char *svn_path_dirname (const char *path, apr_pool_t *pool);
 
@@ -145,7 +145,7 @@ void svn_path_remove_component (svn_stringbuf_t *path);
  *   examples:
  *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
  *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and ""</pre>
+ *             - <pre>"/"             ==>  "/"  and "/"</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  */

@@ -40,6 +40,120 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+
+/* Rename these types and constants to abstract from Neon */
+
+#ifdef NE_XML_VALID /* Neon 0.23.9 */
+
+#define SVN_RA_DAV__XML_VALID   NE_XML_VALID
+#define SVN_RA_DAV__XML_INVALID NE_XML_INVALID
+#define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
+
+#define SVN_RA_DAV__XML_CDATA   NE_XML_CDATA
+#define SVN_RA_DAV__XML_COLLECT NE_XML_COLLECT
+
+typedef ne_xml_elmid       svn_ra_dav__xml_elmid;
+typedef struct ne_xml_elm  svn_ra_dav__xml_elm_t;
+typedef ne_xml_validate_cb svn_ra_dav__xml_validate_cb;
+typedef ne_xml_startelm_cb svn_ra_dav__xml_startelm_cb;
+typedef ne_xml_endelm_cb   svn_ra_dav__xml_endelm_cb;
+
+#else /* Neon 0.24 (definitions repeated after Neon 0.23.9) */
+
+#define SVN_RA_DAV__NEED_NEON_SHIM
+
+#define SVN_RA_DAV__XML_VALID   (0)
+#define SVN_RA_DAV__XML_INVALID (-1)
+#define SVN_RA_DAV__XML_DECLINE (-2)
+
+#define SVN_RA_DAV__XML_CDATA   (1<<1)
+#define SVN_RA_DAV__XML_COLLECT ((1<<2) | SVN_RA_DAV__XML_CDATA)
+
+typedef int svn_ra_dav__xml_elmid;
+
+/** XML element */
+typedef struct {
+  /** XML namespace. */
+  const char *nspace;
+
+  /** XML tag name. */
+  const char *name;
+
+  /** XML tag id to be passed to a handler. */
+  svn_ra_dav__xml_elmid id;
+
+  /** Processing flags for this namespace:tag.
+   *
+   * 0 (zero)                - regular element, may have children,
+   * SVN_RA_DAV__XML_CDATA   - child-less element,
+   * SVN_RA_DAV__XML_COLLECT - complete contents of such element must be
+   *                           collected as CDATA, includes *_CDATA flag. */
+  unsigned int flags;
+
+} svn_ra_dav__xml_elm_t;
+
+
+/** (Neon 0.23) Validate a new child element.
+ *
+ * Callback for @c svn_ra_dav__xml_push_handler. @a parent and @a child
+ * are element ids found in the array of elements, @a userdata is a user
+ * baton. Returns:
+ * SVN_RA_DAV__XML_VALID   - this is a valid element processed by this
+ *                           handler;
+ * SVN_RA_DAV__XML_INVALID - this is not a valid element, parsing should
+ *                           stop;
+ * SVN_RA_DAV__XML_DECLINE - this handler doesn't know about this element,
+ *                           someone else may handle it. */
+typedef int svn_ra_dav__xml_validate_cb(void *userdata,
+                                        svn_ra_dav__xml_elmid parent,
+                                        svn_ra_dav__xml_elmid child);
+
+/** (Neon 0.23) Start parsing a new child element.
+ *
+ * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
+ * baton. @elm is a member of elements array, and @a atts is an array
+ * of name-value XML attributes.
+ * See @c svn_ra_dav__xml_validate_cb for return values. */
+typedef int svn_ra_dav__xml_startelm_cb(void *userdata,
+                                        const svn_ra_dav__xml_elm_t *elm,
+                                        const char **atts);
+
+/** (Neon 0.23) Finish parsing a child element.
+ *
+ * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
+ * baton. @elm is a member of elements array, and @a cdata is the contents
+ * of the element.
+ * See @c svn_ra_dav__xml_validate_cb for return values. */
+typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
+                                      const svn_ra_dav__xml_elm_t *elm,
+                                      const char *cdata);
+
+#endif /* Neon version */
+
+/** Push an XML handler onto Neon's handler stack.
+ *
+ * Parser @a p uses a stack of handlers to process XML. The handler is
+ * composed of validation callback @a validate_cb, start-element
+ * callback @a startelm_cb, and end-element callback @a endelm_cb, which
+ * collectively handle elements supplied in an array @a elements. Parser
+ * passes given user baton @a userdata to all callbacks.
+ * This is a new function on top of ne_xml_push_handler, adds memory pool
+ * @a pool as the last parameter. This parameter is not used with Neon
+ * 0.23.9, but will be with Neon 0.24. When Neon 0.24 is used, ra_dav
+ * receives calls from the new interface and performs functions described
+ * above by itself, using @a elements and calling callbacks according to
+ * 0.23 interface.
+ */
+void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
+                                  const svn_ra_dav__xml_elm_t *elements,
+                                  svn_ra_dav__xml_validate_cb validate_cb,
+                                  svn_ra_dav__xml_startelm_cb startelm_cb,
+                                  svn_ra_dav__xml_endelm_cb endelm_cb,
+                                  void *userdata,
+                                  apr_pool_t *pool);
+
+
 
 typedef struct {
   apr_pool_t *pool;
@@ -55,19 +169,15 @@ typedef struct {
 
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
 
+  svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
 } svn_ra_session_t;
 
 
-/* A baton which is attached to Neon session's to hold session-related
-   private data. */
-typedef struct {
-  svn_boolean_t compression;            /* should we use http compression? */
-} svn_ra_ne_session_baton_t;
-
 /* Id used with ne_set_session_private() and ne_get_session_private()
-   to retrieve the associated svn_ra_ne_session_baton_t baton. */
+   to retrieve the userdata (which is currently the RA session baton!) */
 #define SVN_RA_NE_SESSION_ID   "SVN"
+
 
 #ifdef SVN_DEBUG
 #define DEBUG_CR "\n"
@@ -284,6 +394,21 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
                                              const char *label,
                                              apr_pool_t *pool);
 
+/* Shared helper func: given a public URL which may not exist in HEAD,
+   use SESS to search up parent directories until we can retrieve a
+   *RSRC (allocated in POOL) containing a standard set of "starting"
+   props: {VCC, resourcetype, baseline-relative-path}.  
+
+   Also return *MISSING_PATH (allocated in POOL), which is the
+   trailing portion of the URL that did not exist.  If an error
+   occurs, *MISSING_PATH isn't changed. */
+svn_error_t * 
+svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+                                      const char **missing_path,
+                                      ne_session *sess,
+                                      const char *url,
+                                      apr_pool_t *pool);
+
 /* fetch a single property from a single resource */
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
                                        ne_session *sess,
@@ -406,6 +531,9 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
  * EXTRA_HEADERS is a hash of (const char *) key/value pairs to be
  * inserted as extra headers in the request.  Can be NULL.
  *
+ * STATUS_CODE is an optional 'out' parameter; if non-NULL, then set
+ * *STATUS_CODE to the http status code returned by the server.
+ *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
@@ -416,19 +544,56 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser (ne_xml_parser *parser,
                                             void *baton),
-                           const struct ne_xml_elm *elements, 
-                           ne_xml_validate_cb validate_cb,
-                           ne_xml_startelm_cb startelm_cb, 
-                           ne_xml_endelm_cb endelm_cb,
+                           const svn_ra_dav__xml_elm_t *elements, 
+                           svn_ra_dav__xml_validate_cb validate_cb,
+                           svn_ra_dav__xml_startelm_cb startelm_cb, 
+                           svn_ra_dav__xml_endelm_cb endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
+                           int *status_code,
                            apr_pool_t *pool);
   
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
+  /* Redefine Neon elements */
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
+  ELEM_unknown = NE_ELM_unknown,
+  ELEM_root = NE_ELM_root,
+  ELEM_UNUSED = NE_ELM_UNUSED,
+  ELEM_207_first = NE_ELM_207_first,
+  ELEM_multistatus = NE_ELM_multistatus,
+  ELEM_response = NE_ELM_response,
+  ELEM_responsedescription = NE_ELM_responsedescription,
+  ELEM_href = NE_ELM_href,
+  ELEM_propstat = NE_ELM_propstat,
+  ELEM_prop = NE_ELM_prop, /* `prop' tag in the DAV namespace */
+  ELEM_status = NE_ELM_status,
+  ELEM_207_UNUSED = NE_ELM_207_UNUSED,
+  ELEM_PROPS_UNUSED = NE_ELM_PROPS_UNUSED,
+#else /* Neon 0.24 (definitions repeated after Neon 0.23.9, except `unknown') */
+  /* With the new API, we need to be able to use element id also as a return
+   * value from the new `startelm' callback, hence all element ids must be
+   * positive. Root element id is the only id that is not positive, it's zero.
+   * `Root state' is never returned by a callback, it's only passed into it.
+   * Therefore, negative element ids are forbidden from now on. */
+  ELEM_unknown = 1, /* was (-1), see above why it's (1) now */
+  ELEM_root = NE_XML_STATEROOT, /* (0) */
+  ELEM_UNUSED = 100,
+  ELEM_207_first = ELEM_UNUSED,
+  ELEM_multistatus = ELEM_207_first,
+  ELEM_response = ELEM_207_first + 1,
+  ELEM_responsedescription = ELEM_207_first + 2,
+  ELEM_href = ELEM_207_first + 3,
+  ELEM_propstat = ELEM_207_first + 4,
+  ELEM_prop = ELEM_207_first + 5, /* `prop' tag in the DAV namespace */
+  ELEM_status = ELEM_207_first + 6,
+  ELEM_207_UNUSED = ELEM_UNUSED + 100,
+  ELEM_PROPS_UNUSED = ELEM_207_UNUSED + 100,
+#endif /* Neon version */
+
   /* DAV elements */
-  ELEM_activity_coll_set = NE_ELM_207_UNUSED,
+  ELEM_activity_coll_set = ELEM_207_UNUSED,
   ELEM_baseline,
   ELEM_baseline_coll,
   ELEM_checked_in,
@@ -469,7 +634,7 @@ enum {
   ELEM_update_report,
   ELEM_resource_walk,
   ELEM_resource,
-  ELEM_prop,
+  ELEM_SVN_prop, /* `prop' tag in the Subversion namespace */
   ELEM_dated_rev_report,
   ELEM_name_version_name,
   ELEM_name_creationdate,

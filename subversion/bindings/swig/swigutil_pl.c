@@ -1,4 +1,6 @@
 /*
+ * swigutil_py.c: utility functions for the SWIG Perl bindings
+ *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
@@ -13,27 +15,3 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef SVN_RUBY__UTIL_H
-#define SVN_RUBY__UTIL_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-VALUE svn_ruby_protect_call0 (VALUE arg);
-VALUE svn_ruby_protect_call1 (VALUE arg);
-VALUE svn_ruby_protect_call2 (VALUE arg);
-VALUE svn_ruby_protect_call3 (VALUE arg);
-VALUE svn_ruby_protect_call5 (VALUE arg);
-apr_status_t svn_ruby_set_refcount (apr_pool_t *pool, long count);
-long svn_ruby_get_refcount (apr_pool_t *pool);
-
-VALUE svn_ruby_str_hash (apr_hash_t *hash, apr_pool_t *pool);
-VALUE svn_ruby_strbuf_hash (apr_hash_t *hash, apr_pool_t *pool);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* SVN_RUBY__UTIL_H */
-

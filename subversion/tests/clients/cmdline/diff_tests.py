@@ -92,6 +92,15 @@ def count_diff_output(diff_output):
 
   return diff_count
 
+def verify_expected_output(diff_output, expected):
+  "verify given line exists in diff output"
+  for line in diff_output:
+    if line.find(expected) != -1:
+      break
+  else:
+    raise svntest.Failure
+
+
 ######################################################################
 # diff on a repository subset and check the output
 
@@ -1157,14 +1166,6 @@ def diff_targets(sbox):
   
 
 #----------------------------------------------------------------------
-def verify_expected_output(diff_output, expected):
-  "verify given line exists in diff output"
-  for line in diff_output:
-    if line.find(expected) != -1:
-      break
-  else:
-    raise svntest.Failure
-
 def diff_branches(sbox):
   "diff for branches"
 
@@ -1211,26 +1212,6 @@ def diff_branches(sbox):
   verify_expected_output(diff_output, "-foo")
   verify_expected_output(diff_output, "+bar")
 
-  # Compare working file on one branch against repository file on
-  # another branch
-  A_path = os.path.join(sbox.wc_dir, 'A')
-  diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                 '--old', A2_url,
-                                                 '--new', A_path,
-                                                 rel_path)
-  if err_output: raise svntest.Failure
-  verify_expected_output(diff_output, "-bar")
-  verify_expected_output(diff_output, "+foo")
-  verify_expected_output(diff_output, "+zig")
-
-  # Same again but using whole branch, hmm this doesn't work
-  #diff_output, err_output = svntest.main.run_svn(None, 'diff',
-  #                                               '--old', A2_url,
-  #                                               '--new', A_path)
-  #verify_expected_output(diff_output, "-bar")
-  #verify_expected_output(diff_output, "+foo")
-  #verify_expected_output(diff_output, "+zig")
-
   # Compare two repository files on different branches
   diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                  A_url + '/B/E/alpha',
@@ -1252,6 +1233,111 @@ def diff_branches(sbox):
                                                  A2_url + '/B/E/alpha@3')
   if diff_output or err_output: raise svntest.Failure
 
+
+#----------------------------------------------------------------------
+def diff_repos_and_wc(sbox):
+  "diff between repos URLs and WC paths"
+
+  sbox.build()
+
+  A_url = svntest.main.current_repo_url + '/A'
+  A2_url = svntest.main.current_repo_url + '/A2'
+
+  out, err = svntest.main.run_svn(None, 'cp', '-m', 'log msg', A_url, A2_url)
+  if err: raise svntest.Failure
+
+  out, err = svntest.main.run_svn(None, 'up', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  A_alpha = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
+  A2_alpha = os.path.join(sbox.wc_dir, 'A2', 'B', 'E', 'alpha')
+
+  svntest.main.file_append(A_alpha, "\nfoo\n")
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  svntest.main.file_append(A2_alpha, "\nbar\n")
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  svntest.main.file_append(A_alpha, "zig\n")
+
+  # Compare working file on one branch against repository file on
+  # another branch
+  A_path = os.path.join(sbox.wc_dir, 'A')
+  rel_path = os.path.join('B', 'E', 'alpha')
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', A2_url,
+                                                 '--new', A_path,
+                                                 rel_path)
+  if err_output: raise svntest.Failure
+  verify_expected_output(diff_output, "-bar")
+  verify_expected_output(diff_output, "+foo")
+  verify_expected_output(diff_output, "+zig")
+
+  # Same again but using whole branch
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 '--old', A2_url,
+                                                 '--new', A_path)
+  verify_expected_output(diff_output, "-bar")
+  verify_expected_output(diff_output, "+foo")
+  verify_expected_output(diff_output, "+zig")
+
+#----------------------------------------------------------------------
+def diff_file_urls(sbox):
+  "diff between two file URLs (issue #1311)"
+
+  sbox.build()
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_copy_path = os.path.join(sbox.wc_dir, 'A', 'iota')
+  iota_copy_url = svntest.main.current_repo_url + '/A/iota'
+  iota_copy2_url = svntest.main.current_repo_url + '/A/iota2'
+
+  # Put some different text into iota, and commit.
+  os.remove(iota_path)
+  svntest.main.file_append(iota_path, "foo\nbar\nsnafu\n")
+  
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', iota_path)
+  if err: raise svntest.Failure
+
+  # Now, copy the file elsewhere, twice.
+  out, err = svntest.main.run_svn(None, 'cp', '-m', 'log msg',
+                                  iota_url, iota_copy_url)
+  if err: raise svntest.Failure
+
+  out, err = svntest.main.run_svn(None, 'cp', '-m', 'log msg',
+                                  iota_url, iota_copy2_url)
+  if err: raise svntest.Failure
+
+  # Update (to get the copies)
+  out, err = svntest.main.run_svn(None, 'up', sbox.wc_dir)
+  if err: raise svntest.Failure
+
+  # Now, make edits to one of the copies of iota, and commit.
+  os.remove(iota_copy_path)
+  svntest.main.file_append(iota_copy_path, "foo\nsnafu\nabcdefg\nopqrstuv\n")
+
+  out, err = svntest.main.run_svn(None, 'ci', '-m', 'log msg', iota_copy_path)
+  if err: raise svntest.Failure
+
+  # Finally, do a diff between the first and second copies of iota,
+  # and verify that we got the expected lines.  And then do it in reverse!
+  out, err = svntest.main.run_svn(None, 'diff', iota_copy_url, iota_copy2_url)
+  if err: raise svntest.Failure
+
+  verify_expected_output(out, "+bar")
+  verify_expected_output(out, "-abcdefg")
+  verify_expected_output(out, "-opqrstuv")
+
+  out, err = svntest.main.run_svn(None, 'diff', iota_copy2_url, iota_copy_url)
+  if err: raise svntest.Failure
+
+  verify_expected_output(out, "-bar")
+  verify_expected_output(out, "+abcdefg")
+  verify_expected_output(out, "+opqrstuv")
+  
 ########################################################################
 #Run the tests
 
@@ -1275,6 +1361,8 @@ test_list = [ None,
               diff_deleted_in_head,
               diff_targets,
               diff_branches,
+              diff_repos_and_wc,
+              diff_file_urls,
               ]
 
 if __name__ == '__main__':

@@ -431,7 +431,9 @@ void SVNClient::remove(const char *path, const char *message, bool force)
 		return;
 	}
 
-    svn_error_t *Err = svn_client_delete (&commit_info, m_lastPath.c_str (), force,
+	Targets targets(path);
+
+    svn_error_t *Err = svn_client_delete (&commit_info, targets.array(subPool), force,
 								ctx, apr_pool);
     if(Err != NULL)
  		JNIUtil::handleSVNError(Err, NULL);
@@ -582,8 +584,9 @@ void SVNClient::mkdir(const char *path, const char *message)
 		return;
 	}
 
+	Targets targets(path);
     svn_error_t *Err = svn_client_mkdir (&commit_info,
-                              path,
+                              targets.array(subPool),
 							  ctx,
                               apr_pool);
 
@@ -609,7 +612,7 @@ void SVNClient::cleanup(const char *path)
 
 }
 
-void SVNClient::resolve(const char *path, bool recurse)
+void SVNClient::resolved(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
@@ -619,7 +622,7 @@ void SVNClient::resolve(const char *path, bool recurse)
 	{
 		return;
 	}
-    svn_error_t *Err = svn_client_resolve (m_lastPath.c_str (),
+    svn_error_t *Err = svn_client_resolved (m_lastPath.c_str (),
                                 recurse,
 							    ctx,
                                 apr_pool);
@@ -644,6 +647,7 @@ void SVNClient::doExport(const char *srcPath, const char *destPath, Revision &re
                                m_lastPath.c_str (),
                                const_cast<svn_opt_revision_t*>(
                                  revision.revision ()),
+							   false, // force
 							   ctx,
                                apr_pool);
 
@@ -690,7 +694,7 @@ void SVNClient::doImport(const char *path, const char *url, const char *newEntry
     svn_error_t *Err = svn_client_import (&commit_info,
                                m_lastPath.c_str (),
                                url,
-                               newEntry,
+                               //newEntry,
                                !recurse,
 							   ctx,
                                apr_pool);

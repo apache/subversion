@@ -58,7 +58,7 @@ I.    BUILD REQUIREMENTS
       commands described in section II.B before installing the following.
 
 
-      1.  Apache Portable Runtime
+      1.  Apache Portable Runtime 0.9.4 (http://apr.apache.org/)
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APRUTIL)
@@ -66,6 +66,14 @@ I.    BUILD REQUIREMENTS
       release versions of APR/APRUTIL available, but Subversion tries
       to stay compatible with the versions bundled within the latest
       httpd-2.0 release.
+
+      Therefore, the easiest way to get apr/apr-util is to download
+      the latest release of the httpd source, and use the apr/apr-util
+      trees contained within.
+
+        $ tar zxvf httpd-2.X.YY.tar.gz
+        $ cd httpd-2.X.YY/srclib
+        $ cp -a apr apr-util /path/to/svn_wc
 
       If you already have the APR libraries compiled and do not wish to
       regenerate them from source code, then Subversion needs to be
@@ -158,7 +166,7 @@ I.    BUILD REQUIREMENTS
       Build.
 
 
-      5.  Neon library 0.23.7
+      5.  Neon library 0.23.9 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you 
@@ -169,10 +177,10 @@ I.    BUILD REQUIREMENTS
       want Subversion to build it. The source code is included with the
       latest Subversion tarball, and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.23.7.tar.gz
+          http://www.webdav.org/neon/neon-0.23.9.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
-      directory from "./neon-0.23.7/" to "./neon/".
+      directory from "./neon-0.23.9/" to "./neon/".
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
@@ -196,13 +204,8 @@ I.    BUILD REQUIREMENTS
 
           http://www.sleepycat.com/download/patchlogs.shtml
 
-      If you already have another version of Berkeley DB installed and
-      don't want to downgrade, you can unpack the Berkeley DB 4.0.14
-      distribution into a subdir named `db' in the top-level of the
-      Subversion source tree.  Then Subversion will ignore the system
-      DB and use the one it found in its own source tree.
-
-      Alternatively, you can add this flag
+      If you have Berkeley DB installed in a place not searched by default
+      for includes and libraries; add this flag
 
           --with-berkeley-db=/usr/local/BerkeleyDB.4.0
 
@@ -217,7 +220,8 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDownloadList
 
 
-      7.  Apache Web Server 2.0.46 or newer
+      7.  Apache Web Server 2.0.47 or newer
+          (http://httpd.apache.org/download.cgi)
 
       The Apache HTTP server is required if you wish to offer your
       Subversion repository over the Internet. Building Subversion, the
@@ -227,13 +231,13 @@ I.    BUILD REQUIREMENTS
       done: See section III for details.
 
 
-      8.  Python 2.0
+      8.  Python 2.0 (http://www.python.org/)
 
       If you want to run "make check" or build from the latest source
       under Unix as described in section II.B and III.D, install
       Python 2.0 or higher on your system. The majority of the test
       suite is written in Python, as is part of Subversion's build
-      system.  Get it from http://www.python.org/.
+      system.
 
 
       9.  Visual C++ 6.0 or newer (Windows Only)
@@ -382,7 +386,7 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.46 or greater)
+          apache*.i386.rpm (Version 2.0.47 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
           neon             (Version 0.23.9)
@@ -498,7 +502,7 @@ II.   INSTALLATION
 
           $ svn co http://svn.collab.net/repos/svn/trunk svn
           $ cd svn
-          $ # get neon/db/apr as required
+          $ # get neon/apr as required
           $ chmod +x autogen.sh
           $ ./autogen.sh
           $ mkdir ../obj
@@ -576,7 +580,7 @@ II.   INSTALLATION
       suite after you build the source.
 
       To build the client components, you'll need a copy of neon
-      0.23.7.  See section I.5 for details on where to get one and
+      0.23.9.  See section I.5 for details on where to get one and
       what to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
@@ -616,7 +620,7 @@ II.   INSTALLATION
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
-      To build the Apache module, you will also need the Apache 2.0.46
+      To build the Apache module, you will also need the Apache 2.0.47
       or later Win32 source. You can download it from here:
 
           http://httpd.apache.org/download.cgi
@@ -627,7 +631,7 @@ II.   INSTALLATION
       Walkthrough:
 
           Unzip the Apache source. Copy the Apache apr, apr-util, and
-          apr-iconv directories from the Apache httpd-2.0.46\srclib
+          apr-iconv directories from the Apache httpd-2.0.47\srclib
           directory to the top-level Subversion directory.
 
           Open the Apache.dsw file and build the Apache source. If you
@@ -654,13 +658,13 @@ II.   INSTALLATION
       C:\Subversion\src> ren neon-0.23.9 neon
       C:\Subversion\src> unzip ..\db-4.0.14-win32.zip
       C:\Subversion\src> cd ..
-      C:\Subversion> unzip httpd_2.0.46-win32-src.zip
-      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr src\apr
-      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr-util src\apr-util
-      C:\Subversion> xcopy /S httpd-2.0.46\srclib\apr-iconv src\apr-iconv
-      C:\Subversion> msdev httpd-2.0.46\apache.dsw /MAKE ALL
+      C:\Subversion> unzip httpd_2.0.47-win32-src.zip
+      C:\Subversion> xcopy /S httpd-2.0.47\srclib\apr src\apr
+      C:\Subversion> xcopy /S httpd-2.0.47\srclib\apr-util src\apr-util
+      C:\Subversion> xcopy /S httpd-2.0.47\srclib\apr-iconv src\apr-iconv
+      C:\Subversion> msdev httpd-2.0.47\apache.dsw /MAKE ALL
       C:\Subversion> cd src
-      C:\Subversion\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.46
+      C:\Subversion\src> python gen-make.py -t dsp --with-httpd=..\httpd-2.0.47
       C:\Subversion\src> msdev subversion_msvc.dsw /MAKE __ALL__
 
 
@@ -691,6 +695,7 @@ III.  BUILDING A SUBVERSION SERVER
       everything, checkout the "httpd-2.0" cvs module from apache.org.
       If you have questions about the Apache 2.0 build, please consult
       the HTTPD install documentation:
+
       http://httpd.apache.org/docs-2.0/install.html.  Place this
       module wherever you wish; it's an independent project.
 
@@ -764,8 +769,7 @@ III.  BUILDING A SUBVERSION SERVER
       in a non-standard location.  You can use the "--with-apxs=" option
       to locate the apxs script:
 
-          $ ./configure --with-apxs=/home/fred/apache2/bin/apxs
-
+          $ ./configure --with-apxs=/usr/local/apache2/bin/apxs
 
       Note: it *is* possible to build mod_dav_svn as a static library
       and link it directly into Apache. Possible, but painful. Stick

@@ -695,9 +695,12 @@ svn_path_is_single_path_component (const char *name)
 
 /*** URI Stuff ***/
 
-
-svn_boolean_t 
-svn_path_is_url (const char *path)
+/* Examine PATH as a potential URI, and return a substring of PATH
+   that immediately follows the (scheme):// portion of the URI, or
+   NULL if PATH doesn't appear to be a valid URI.  The returned value
+   is not alloced -- it shares memory with PATH. */
+static const char *
+skip_uri_schema (const char *path)
 {
   apr_size_t j;
   apr_size_t len = strlen (path);
@@ -705,6 +708,41 @@ svn_path_is_url (const char *path)
   /* ### Taking strlen() initially is inefficient.  It's a holdover
      from svn_stringbuf_t days. */
 
+  /* Make sure we have enough characters to even compare. */
+  if (len < 4)
+    return NULL;
+
+  /* Look for the sequence '://' */
+  for (j = 0; j < len - 3; j++)
+    {
+      /* We hit a '/' before finding the sequence. */
+      if (path[j] == '/')
+        return NULL;
+
+      /* Skip stuff up to the first ':'. */
+      if (path[j] != ':')
+        continue;
+
+      /* Current character is a ':' now.  It better not be the first
+         character. */
+      if (j == 0)
+        return NULL;
+
+      /* Expecting the next two chars to be '/' */
+
+      if ((path[j + 1] == '/')
+          && (path[j + 2] == '/'))
+        return path + j + 3;
+      
+      return NULL;
+    }
+     
+  return NULL;
+}
+
+svn_boolean_t 
+svn_path_is_url (const char *path)
+{
   /* ### This function is reaaaaaaaaaaaaaally stupid right now.
      We're just going to look for:
  
@@ -714,37 +752,7 @@ svn_path_is_url (const char *path)
 
      Someday it might be nice to have an actual URI parser here.
   */
-
-  /* Make sure we have enough characters to even compare. */
-  if (len < 4)
-    return FALSE;
-
-  /* Look for the sequence '://' */
-  for (j = 0; j < len - 3; j++)
-    {
-      /* We hit a '/' before finding the sequence. */
-      if (path[j] == '/')
-        return FALSE;
-
-      /* Skip stuff up to the first ':'. */
-      if (path[j] != ':')
-        continue;
-
-      /* Current character is a ':' now.  It better not be the first
-         character. */
-      if (j == 0)
-        return FALSE;
-
-      /* Expecting the next two chars to be '/' */
-
-      if ((path[j + 1] == '/')
-          && (path[j + 2] == '/'))
-        return TRUE;
-      
-      return FALSE;
-    }
-     
-  return FALSE;
+  return skip_uri_schema (path) ? TRUE : FALSE;
 }
 
 
@@ -791,6 +799,22 @@ svn_boolean_t
 svn_path_is_uri_safe (const char *path)
 {
   apr_size_t i;
+
+  /* Skip the schema. */
+  path = skip_uri_schema (path);
+
+  /* No schema?  Get outta here. */
+  if (! path)
+    return FALSE;
+
+  /* Skip to the first slash that's after the schema. */
+  path = strchr (path, '/');
+
+  /* If there's no first slash, then there's only a host portion;
+     therefore there couldn't be any uri-unsafe characters after the
+     host... so return true. */
+  if (path == NULL)
+    return TRUE;
 
   for (i = 0; path[i]; i++)
     {

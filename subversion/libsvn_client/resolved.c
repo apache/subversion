@@ -1,5 +1,5 @@
 /*
- * resolve.c:  wrapper around wc resolve functionality.
+ * resolved.c:  wrapper around wc resolved functionality.
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -35,18 +35,18 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_resolve (const char *path,
-                    svn_boolean_t recursive,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+svn_client_resolved (const char *path,
+                     svn_boolean_t recursive,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, TRUE, recursive,
                                   pool));
 
-  SVN_ERR (svn_wc_resolve_conflict (path, adm_access, TRUE, TRUE, recursive,
-                                    ctx->notify_func, ctx->notify_baton, pool));
+  SVN_ERR (svn_wc_resolved_conflict (path, adm_access, TRUE, TRUE, recursive,
+                                     ctx->notify_func, ctx->notify_baton, pool));
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 

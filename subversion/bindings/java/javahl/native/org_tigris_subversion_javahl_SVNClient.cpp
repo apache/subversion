@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 QintSoft.  All rights reserved.
+ * Copyright (c) 2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -11,7 +11,7 @@
  *
  * This software consists of voluntary contributions made by many
  * individuals.  For exact contribution history, see the revision
- * history and logs, available at http://svnup.tigris.org/.
+ * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  * @endcopyright
  *
@@ -581,13 +581,13 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_cleanup
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    resolve
+ * Method:    resolved
  * Signature: (Ljava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolve
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolved
   (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse)
 {
-	JNIEntry(SVNClient, resolve);
+	JNIEntry(SVNClient, resolved);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
@@ -599,7 +599,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolve
 	{
 		return;
 	}
-	cl->resolve(path, jrecurse ? true: false);
+	cl->resolved(path, jrecurse ? true: false);
 }
 
 /*

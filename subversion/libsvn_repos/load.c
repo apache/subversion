@@ -393,7 +393,6 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
   apr_pool_t *linepool = svn_pool_create (pool);
   apr_pool_t *revpool = svn_pool_create (pool);
   apr_pool_t *nodepool = svn_pool_create (pool);
-  const char *uuid;
   int version;
 
   SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
@@ -424,6 +423,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       void *node_baton;
       const char *valstr;
       svn_boolean_t found_node = FALSE;
+      const char *value;
 
       /* Clear our per-line pool. */
       svn_pool_clear (linepool);
@@ -444,7 +444,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
          Read the whole header-block into a hash. */
       SVN_ERR (read_header_block (stream, linebuf, &headers, linepool));
 
-      /* Create some kind of new record object. */
+      /*** Handle the various header blocks. ***/
 
       /* Is this a revision record? */
       if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
@@ -462,7 +462,6 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                                    headers, parse_baton,
                                                    revpool));
         }
-
       /* Or is this, perhaps, a node record? */
       else if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
                              APR_HASH_KEY_STRING))
@@ -473,14 +472,20 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                                nodepool));
           found_node = TRUE;
         }
-
       /* Or is this the repos UUID? */
-      else if (NULL != (uuid = apr_hash_get (headers, SVN_REPOS_DUMPFILE_UUID,
-                                             APR_HASH_KEY_STRING)))
+      else if ((value = apr_hash_get (headers, SVN_REPOS_DUMPFILE_UUID,
+                                      APR_HASH_KEY_STRING)))
         {
-          SVN_ERR (parse_fns->uuid_record (uuid, parse_baton, pool));
+          SVN_ERR (parse_fns->uuid_record (value, parse_baton, pool));
         }
-
+      /* Or perhaps a dumpfile format? */
+      else if ((value = apr_hash_get (headers, 
+                                      SVN_REPOS_DUMPFILE_MAGIC_HEADER,
+                                      APR_HASH_KEY_STRING)))
+        {
+          /* ### someday, switch modes of operation here. */
+          version = atoi (value);
+        }
       /* Or is this bogosity?! */
       else
         {
@@ -598,7 +603,11 @@ make_node_baton (apr_hash_t *headers,
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                            APR_HASH_KEY_STRING)))
     {
-      nb->copyfrom_path = apr_pstrdup (pool, val);
+      if (rb->pb->parent_dir)
+        nb->copyfrom_path = svn_path_join (rb->pb->parent_dir,
+                                           (*val == '/' ? val + 1 : val), pool);
+      else
+        nb->copyfrom_path = apr_pstrdup (pool, val);
     }
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,

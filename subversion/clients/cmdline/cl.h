@@ -64,7 +64,7 @@ typedef enum {
   svn_cl__revprop_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__merge_cmd_opt,
-  svn_cl__ignore_ancestry_opt,
+  svn_cl__notice_ancestry_opt,
   svn_cl__editor_cmd_opt,
   svn_cl__old_cmd_opt,
   svn_cl__new_cmd_opt
@@ -110,7 +110,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
-  svn_boolean_t ignore_ancestry; /* ignore ancestry for diff-y operations */
+  svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *diff_cmd;          /* the external diff command to use */
@@ -153,7 +153,7 @@ svn_opt_subcommand_t
   svn_cl__proplist,
   svn_cl__propset,
   svn_cl__revert,
-  svn_cl__resolve,
+  svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__update,

@@ -52,7 +52,7 @@ public interface Notify
         public static final int restore = 3;
         public static final int revert = 4;
         public static final int failed_revert = 5;
-        public static final int resolve = 6;
+        public static final int resolved = 6;
         public static final int status = 7;
         public static final int skip = 8;
 
@@ -88,7 +88,7 @@ public interface Notify
 			"restore",
 			"revert",
 			"failed revert",
-			"resolve",
+			"resolved",
 			"status",
 			"skip",
 			"update delete",

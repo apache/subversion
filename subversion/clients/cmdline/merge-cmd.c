@@ -80,8 +80,6 @@ svn_cl__merge (apr_getopt_t *os,
 
   if (using_alternate_syntax)
     {
-      const char *source, *url;
-
       if ((targets->nelts < 1) || (targets->nelts > 2))
         {
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
@@ -91,13 +89,7 @@ svn_cl__merge (apr_getopt_t *os,
         }
 
       /* the first path becomes both of the 'sources' */
-      source = ((const char **)(targets->elts))[0];
-      SVN_ERR (svn_client_url_from_path(&url, source, pool));
-      if (! url)
-        return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                  "'%s' has no URL", source);
-
-      sourcepath1 = sourcepath2 = url;
+      sourcepath1 = sourcepath2 = ((const char **)(targets->elts))[0];
       
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 2)
@@ -119,6 +111,19 @@ svn_cl__merge (apr_getopt_t *os,
       sourcepath1 = ((const char **) (targets->elts))[0];
       sourcepath2 = ((const char **) (targets->elts))[1];
       
+      /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
+         revisions--since it ignores local modifications it may not do what
+         the user expects.  Forcing the user to specify a repository
+         revision should avoid any confusion. */
+      if ((opt_state->start_revision.kind == svn_opt_revision_unspecified
+           && ! svn_path_is_url (sourcepath1))
+          ||
+          (opt_state->end_revision.kind == svn_opt_revision_unspecified
+           && ! svn_path_is_url (sourcepath2)))
+        return svn_error_create
+          (SVN_ERR_CLIENT_BAD_REVISION, 0,
+           "A working copy merge source needs an explicit revision");
+
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 3)
         targetpath = ((const char **) (targets->elts))[2];
@@ -150,18 +155,6 @@ svn_cl__merge (apr_getopt_t *os,
   if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
     opt_state->end_revision.kind = svn_opt_revision_head;
 
-  /*  ### Is anyone still using this debugging printf?
-      printf ("I would now call svn_client_merge with these arguments\n");
-      printf ("sourcepath1 = %s\nrevision1 = %ld, %d\n"
-          "sourcepath2 = %s\nrevision2 = %ld, %d\ntargetpath = %s\n",
-          sourcepath1->data, (long int) opt_state->start_revision.value.number,
-          opt_state->start_revision.kind,
-          sourcepath2->data, (long int) opt_state->end_revision.value.number,
-          opt_state->end_revision.kind,
-          targetpath->data);
-          fflush (stdout);
-  */
-
   if (! opt_state->quiet)
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
@@ -172,7 +165,7 @@ svn_cl__merge (apr_getopt_t *os,
                           &(opt_state->end_revision),
                           targetpath,
                           opt_state->nonrecursive ? FALSE : TRUE,
-                          opt_state->ignore_ancestry,
+                          opt_state->notice_ancestry ? FALSE : TRUE,
                           opt_state->force,
                           opt_state->dry_run,
                           ctx,

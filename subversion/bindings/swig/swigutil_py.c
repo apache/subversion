@@ -26,9 +26,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_portable.h>
-#ifdef WITH_THREAD
 #include <apr_thread_proc.h>
-#endif
 
 #include "svn_string.h"
 #include "svn_opt.h"
@@ -40,26 +38,30 @@
 
 /*** Manage the Global Interpreter Lock ***/
 
-/*
-  Python requires us to keep track of the PyThreadState on a per-thread
-  basis, so we have to use pthreads.  If we don't have pthreads or
-  python threading is disabled, this all becomes a no-op and the
-  python global interpreter lock will be held during calls to
-  subversion functions. 
-*/
+/* If both Python and APR have threads available, we can optimize ourselves
+ * by releasing the global interpreter lock when we drop into our SVN calls.
+ *
+ * In svn_types.i, release_py_lock is called before every function, then
+ * acquire_py_lock is called after every function.  So, if these functions
+ * become no-ops, then Python will start to block...
+ *
+ * The Subversion libraries can be assumed to be thread-safe *only* when
+ * APR_HAS_THREAD is 1.  The APR pool allocations aren't thread-safe unless
+ * APR_HAS_THREAD is 1.
+ */
 
-#if defined(WITH_THREAD) && !APR_HAS_THREADS
-#error The python bindings require threads. APR was compiled without threads.
+#if defined(WITH_THREAD) && APR_HAS_THREADS
+#define ACQUIRE_PYTHON_LOCK
 #endif
 
-#ifdef WITH_THREAD
+#ifdef ACQUIRE_PYTHON_LOCK
 static apr_threadkey_t *_saved_thread_key = NULL;
 static apr_pool_t *_saved_thread_pool = NULL;
 #endif
 
 void release_py_lock(void)
 {
-#ifdef WITH_THREAD
+#ifdef ACQUIRE_PYTHON_LOCK
   PyThreadState *thread_state;
 
   if (_saved_thread_key == NULL) {
@@ -83,7 +85,7 @@ void release_py_lock(void)
 
 void acquire_py_lock(void)
 {
-#ifdef WITH_THREAD
+#ifdef ACQUIRE_PYTHON_LOCK
   void *val;
   PyThreadState *thread_state;
   apr_threadkey_private_get(&val, _saved_thread_key);
@@ -1040,7 +1042,7 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
 {
   PyObject *receiver = baton;
   PyObject *result;
-  swig_type_info *tinfo = SWIG_TypeQuery("SWIGTYPE_p_svn_log_changed_path_t");
+  swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
   PyObject *chpaths;
   svn_error_t *err;
  

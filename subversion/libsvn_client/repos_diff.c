@@ -345,13 +345,10 @@ get_file_from_ra (struct file_baton *b)
 static svn_error_t *
 get_dirprops_from_ra (struct dir_baton *b)
 {
-  apr_hash_t *dirents; /* ### silly, we're ignoring the list of
-                          svn_dirent_t's returned to us.  */
-
   SVN_ERR (b->edit_baton->ra_lib->get_dir (b->edit_baton->ra_session,
                                            b->path,
                                            b->edit_baton->revision,
-                                           &dirents, NULL,
+                                           NULL, NULL,
                                            &(b->pristine_props),
                                            b->pool));
 
@@ -497,6 +494,8 @@ delete_entry (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
+  svn_wc_notify_action_t action;
+  svn_wc_notify_state_t state;
 
   /* We need to know if this is a directory or a file */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
@@ -526,7 +525,7 @@ delete_entry (const char *path,
         get_file_mime_types (&mimetype1, &mimetype2, b);
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
-                 (adm_access, b->wcpath,
+                 (adm_access, &state, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   mimetype1, mimetype2,
@@ -537,7 +536,7 @@ delete_entry (const char *path,
     case svn_node_dir:
       {
         SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
-                 (adm_access, svn_path_join (eb->target, path, pool),
+                 (adm_access, &state, svn_path_join (eb->target, path, pool),
                   pb->edit_baton->diff_cmd_baton));
         break;
       }
@@ -545,14 +544,18 @@ delete_entry (const char *path,
       break;
     }
 
+  if (state == svn_wc_notify_state_missing)
+    action = svn_wc_notify_skip;
+  else
+    action = svn_wc_notify_delete;
+
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
                                     svn_path_join (eb->target, path, pool),
-                                    svn_wc_notify_delete,
+                                    action,
                                     kind,
                                     NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
+                                    state, state,
                                     SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
@@ -738,12 +741,31 @@ close_file (void *file_baton,
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
   svn_wc_adm_access_t *adm_access;
+  svn_error_t *err;
+  svn_wc_notify_action_t action;
   svn_wc_notify_state_t
     content_state = svn_wc_notify_state_unknown,
     prop_state = svn_wc_notify_state_unknown;
 
-  SVN_ERR (get_parent_access (&adm_access, eb->adm_access, 
-                              b->wcpath, eb->dry_run, b->pool));
+  err = get_parent_access (&adm_access, eb->adm_access, 
+                           b->wcpath, eb->dry_run, b->pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+    {
+      /* ### maybe try to stat the local b->wcpath? */      
+      /* If the file path doesn't exist, then send a 'skipped' notification. */
+      if (eb->notify_func)
+        (*eb->notify_func) (eb->notify_baton, b->wcpath,
+                            svn_wc_notify_skip, svn_node_file, NULL,
+                            svn_wc_notify_state_missing, prop_state,
+                            SVN_INVALID_REVNUM);
+      
+      svn_error_clear (err);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
   if (b->path_end_revision)
     {
       const char *mimetype1, *mimetype2;
@@ -787,11 +809,18 @@ close_file (void *file_baton,
      outstanding.  But when we take a wc_path as an argument to
      merge, then we'll need to pass around a wc path somehow. */
 
+  if (content_state == svn_wc_notify_state_missing)
+    action = svn_wc_notify_skip;
+  else if (b->added)
+    action = svn_wc_notify_update_add;
+  else
+    action = svn_wc_notify_update_update;
+
   if (eb->notify_func)
     (*eb->notify_func)
       (eb->notify_baton,
        b->wcpath,
-       b->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
+       action,
        svn_node_file,
        NULL,
        content_state,
@@ -809,12 +838,31 @@ close_directory (void *dir_baton,
   struct dir_baton *b = dir_baton;
   struct edit_baton *eb = b->edit_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  svn_error_t *err;
 
   if (b->propchanges->nelts > 0)
     {
       svn_wc_adm_access_t *adm_access;
-      SVN_ERR (get_path_access (&adm_access, eb->adm_access, b->wcpath,
-                                eb->dry_run, b->pool));
+      err = get_path_access (&adm_access, eb->adm_access, b->wcpath,
+                             eb->dry_run, b->pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+        {
+          /* ### maybe try to stat the local b->wcpath? */          
+          /* If the path doesn't exist, then send a 'skipped' notification. */
+          if (eb->notify_func)
+            (*eb->notify_func) (eb->notify_baton, b->wcpath,
+                                svn_wc_notify_skip, svn_node_dir, NULL,
+                                svn_wc_notify_state_missing,
+                                svn_wc_notify_state_missing,
+                                SVN_INVALID_REVNUM);
+
+          svn_error_clear (err);      
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return err;
+
       /* As for close_file, whether we do this depends on whether it's a
          dry-run */
       if (! eb->dry_run || adm_access)

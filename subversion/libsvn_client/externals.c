@@ -163,6 +163,30 @@ parse_externals_description (apr_hash_t **externals_p,
              "Invalid line: '%s'", parent_directory, line);
         }
 
+      /* Make sure we don't have a reference to "../" in the tgt dir.
+       *
+       * ### Ideally, we'd prevent this at propset time, not when the
+       * client receives the external.  But that's a much larger
+       * change.  For now, the important thing is to make sure such
+       * references error and are not used, since they are a security
+       * risk (they could clobber things outside the working copy).
+       */
+      {
+        apr_ssize_t target_dir_len = strlen (item->target_dir);
+
+        if ((target_dir_len > 3)
+            && ((strncmp (item->target_dir, "../", 3) == 0)
+                || (strstr (item->target_dir, "/../") != NULL)
+                || (strncmp ((item->target_dir + target_dir_len - 3),
+                             "/..", 3) == 0)))
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
+           "Invalid line: '%s'\n"
+           "Target dir '%s' references '..', which is not allowed.",
+           parent_directory, line, item->target_dir);
+      }
+
       item->target_dir = svn_path_canonicalize (item->target_dir, pool);
       item->url = svn_path_canonicalize (item->url, pool);
 
@@ -582,5 +606,83 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
   SVN_ERR (svn_hash_diff (externals_old, externals_new,
                           handle_externals_desc_change, &cb, pool));
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t*
+svn_client__recognize_externals (apr_hash_t *status_hash,
+                                 svn_wc_traversal_info_t *traversal_info,
+                                 apr_pool_t *pool)
+{
+  apr_hash_t *externals_old, *externals_new;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* Get the values of the svn:externals properties. */
+  svn_wc_edited_externals (&externals_old, &externals_new, traversal_info);
+
+  /* Loop over the hash of new values (we don't care about the old
+     ones).  This is a mapping of versioned directories to property
+     values. */
+  for (hi = apr_hash_first (pool, externals_new); 
+       hi; 
+       hi = apr_hash_next (hi))
+    {
+      apr_hash_t *exts;
+      apr_hash_index_t *hi2;
+      const void *key;
+      void *val;
+      const char *path;
+      const char *propval;
+
+      /* Clear the subpool. */
+      svn_pool_clear (subpool);
+
+      apr_hash_this (hi, &key, NULL, &val);
+      path = key;
+      propval = val;
+
+      /* Parse the svn:externals property value.  This results in a
+         hash mapping subdirectories to externals structures. */
+      SVN_ERR (parse_externals_description (&exts, path, propval, subpool));
+
+      /* Loop over the subdir hash. */
+      for (hi2 = apr_hash_first (subpool, exts); 
+           hi2; 
+           hi2 = apr_hash_next (hi2))
+        {
+          struct external_item *external_item;
+          svn_wc_status_t *status;
+          apr_ssize_t keylen;
+          apr_array_header_t *subdir_pieces;
+          const char *extpath = path;
+          int i;
+
+          apr_hash_this (hi2, &key, NULL, &val);
+          external_item = val;
+          subdir_pieces = svn_path_decompose (key, subpool);
+       
+          /* Here's where we do the real thing we came here to do.
+             For now, we'll just remove any status hash items that are
+             unrecognized but which represent externals subdirs.  */
+          for (i = 0; i < subdir_pieces->nelts; i++)
+            {
+              extpath = svn_path_join (extpath,
+                                       APR_ARRAY_IDX (subdir_pieces, i,
+                                                      const char *),
+                                       subpool);
+              keylen = strlen (extpath);
+              status = apr_hash_get (status_hash, extpath, keylen);
+              if (status && status->text_status == svn_wc_status_unversioned)
+                {
+                  status->text_status = svn_wc_status_external;
+                  apr_hash_set (status_hash, extpath, keylen, status);
+                }
+            }
+        }
+    } 
+  
+  apr_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }

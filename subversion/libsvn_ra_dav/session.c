@@ -204,6 +204,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
       client_creds = creds;
       if (client_creds)
         {
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
           if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
             {
               ne_ssl_load_pem(sess, client_creds->cert_file,
@@ -213,6 +214,8 @@ client_ssl_callback(void *userdata, ne_session *sess,
             {
               ne_ssl_load_pkcs12(sess, client_creds->cert_file);
             }
+#else /* Neon 0.24, FIXME: Neon SSL API change */
+#endif
         }
     }
   apr_pool_destroy(pool);
@@ -248,7 +251,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
-  compress_str    = "yes";
+  compress_str    = "no";
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -355,7 +358,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   if (compress_str)
     *compression = (strcasecmp(compress_str, "yes") == 0) ? TRUE : FALSE;
   else
-    *compression = TRUE;
+    *compression = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -575,6 +578,7 @@ svn_ra_dav__open (void **session_baton,
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
+  ras->compression = compression;
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, cfg);
@@ -593,22 +597,20 @@ svn_ra_dav__open (void **session_baton,
   ne_set_server_auth(sess, request_auth, ras);
   ne_set_server_auth(sess2, request_auth, ras);
 
-  /* Setup and register the private session data on the Neon
-     sessions. */
-  {
-    svn_ra_ne_session_baton_t *bt;
-    bt = apr_palloc(pool, sizeof(*bt));
-    bt->compression = compression;
-    ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, bt);
-    ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, bt);
-  }
+  /* Store our RA session baton in Neon's private data slot so we can
+     get at it in functions that take only ne_session_t *sess
+     (instead of the full svn_ra_session_t *ras). */
+  ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, ras);
+  ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, ras);
 
   if (is_ssl_session)
     {
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
       const char *authorities_file;
-      authorities_file = svn_config_get_server_setting(cfg, server_group,
-                                                       SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
-                                                       NULL);
+      authorities_file = svn_config_get_server_setting(
+            cfg, server_group,
+            SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
+            NULL);
       
       if (authorities_file != NULL)
         {
@@ -629,6 +631,8 @@ svn_ra_dav__open (void **session_baton,
          a password is needed for the key. */
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
+#else /* Neon 0.24, FIXME: Neon SSL API change */
+#endif
     }
 
 
@@ -647,15 +651,25 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
 
   if (! ras->uuid)
     {
-      const svn_string_t *value;
-      static const ne_propname uuid_propname =
-        { SVN_DAV_PROP_NS_DAV, "repository-uuid" };
+      svn_ra_dav_resource_t *rsrc;
+      const char *lopped_path;
+      const svn_string_t *uuid_propval;
 
-      SVN_ERR( svn_ra_dav__get_one_prop(&value, ras->sess, ras->url, NULL,
-                                        &uuid_propname, pool) );
-      
-      if (value && (value->len > 0))
-        ras->uuid = apr_pstrdup(ras->pool, value->data); /* cache UUID */
+      SVN_ERR (svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
+                                                     ras->sess, ras->url,
+                                                     pool) );
+
+      uuid_propval = apr_hash_get(rsrc->propset,
+                                  SVN_RA_DAV__PROP_REPOSITORY_UUID,
+                                  APR_HASH_KEY_STRING);
+      if (uuid_propval == NULL)
+        /* ### better error reporting... */
+        return svn_error_create(APR_EGENERAL, NULL,
+                                "The UUID property was not found on the "
+                                "resource or any of its parents.");
+
+      if (uuid_propval && (uuid_propval->len > 0))
+        ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
       else
         return svn_error_create(SVN_ERR_RA_NO_REPOS_UUID, NULL,
                                 "Please upgrade the server to 0.19 or later.");

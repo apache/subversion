@@ -250,6 +250,8 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
       apr_hash_set (lock->set, lock->path, APR_HASH_KEY_STRING, lock);
     }
 
+  SVN_ERR (svn_wc_check_wc (path, &lock->wc_format, pool));
+
   lock->lock_exists = TRUE;
   *adm_access = lock;
   return SVN_NO_ERROR;
@@ -509,7 +511,7 @@ svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
     *adm_access = NULL;
   if (! *adm_access || *adm_access == &missing)
     return svn_error_createf (SVN_ERR_WC_NOT_LOCKED, NULL,
-                              "directory not locked (%s)",
+                              "directory '%s' not locked",
                               path);
   return SVN_NO_ERROR;
 }

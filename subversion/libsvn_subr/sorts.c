@@ -164,9 +164,12 @@ svn_categorize_props (const apr_array_header_t *proplist,
                       apr_pool_t *pool)
 {
   int i;
-  *entry_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
-  *wc_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
-  *regular_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  if (entry_props)
+    *entry_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  if (wc_props)
+    *wc_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  if (regular_props)
+    *regular_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   for (i = 0; i < proplist->nelts; i++)
     {
@@ -175,13 +178,23 @@ svn_categorize_props (const apr_array_header_t *proplist,
       
       prop = &APR_ARRAY_IDX (proplist, i, svn_prop_t);      
       kind = svn_property_kind (NULL, prop->name);
+      newprop = NULL;
 
       if (kind == svn_prop_regular_kind)
-        newprop = apr_array_push (*regular_props);
+        {
+          if (regular_props)
+            newprop = apr_array_push (*regular_props);
+        }
       else if (kind == svn_prop_wc_kind)
-        newprop = apr_array_push (*wc_props);
+        {
+          if (wc_props)
+            newprop = apr_array_push (*wc_props);
+        }
       else if (kind == svn_prop_entry_kind)
-        newprop = apr_array_push (*entry_props);
+        {
+          if (entry_props)
+            newprop = apr_array_push (*entry_props);
+        }
       else
         /* Technically this can't happen, but might as well have the
            code ready in case that ever changes. */
@@ -189,9 +202,87 @@ svn_categorize_props (const apr_array_header_t *proplist,
                                   "bad prop kind for property '%s'",
                                   prop->name);
 
-      newprop->name = prop->name;
-      newprop->value = prop->value;
+      if (newprop)
+        {
+          newprop->name = prop->name;
+          newprop->value = prop->value;
+        }
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_prop_diffs (apr_array_header_t **propdiffs,
+                apr_hash_t *target_props,
+                apr_hash_t *source_props,
+                apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_array_header_t *ary = apr_array_make (pool, 1, sizeof (svn_prop_t));
+
+  /* Note: we will be storing the pointers to the keys (from the hashes)
+     into the propdiffs array.  It is acceptable for us to
+     reference the same memory as the base/target_props hash. */
+
+  /* Loop over SOURCE_PROPS and examine each key.  This will allow us to
+     detect any `deletion' events or `set-modification' events.  */
+  for (hi = apr_hash_first (pool, source_props); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const svn_string_t *propval1, *propval2;
+
+      /* Get next property */
+      apr_hash_this (hi, &key, &klen, &val);
+      propval1 = val;
+
+      /* Does property name exist in TARGET_PROPS? */
+      propval2 = apr_hash_get (target_props, key, klen);
+
+      if (propval2 == NULL)
+        {
+          /* Add a delete event to the array */
+          svn_prop_t *p = apr_array_push (ary);
+          p->name = key;
+          p->value = NULL;
+        }
+      else if (! svn_string_compare (propval1, propval2))
+        {
+          /* Add a set (modification) event to the array */
+          svn_prop_t *p = apr_array_push (ary);
+          p->name = key;
+          p->value = svn_string_dup (propval2, pool);
+        }
+    }
+
+  /* Loop over TARGET_PROPS and examine each key.  This allows us to
+     detect `set-creation' events */
+  for (hi = apr_hash_first (pool, target_props); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const svn_string_t *propval;
+
+      /* Get next property */
+      apr_hash_this (hi, &key, &klen, &val);
+      propval = val;
+
+      /* Does property name exist in SOURCE_PROPS? */
+      if (NULL == apr_hash_get (source_props, key, klen))
+        {
+          /* Add a set (creation) event to the array */
+          svn_prop_t *p = apr_array_push (ary);
+          p->name = key;
+          p->value = svn_string_dup (propval, pool);
+        }
+    }
+
+  /* Done building our array of user events. */
+  *propdiffs = ary;
 
   return SVN_NO_ERROR;
 }

@@ -48,6 +48,7 @@ generate_status_code (enum svn_wc_status_kind status)
     case svn_wc_status_conflicted:  return 'C';
     case svn_wc_status_obstructed:  return '~';
     case svn_wc_status_ignored:     return 'I';
+    case svn_wc_status_external:    return 'X';
     case svn_wc_status_unversioned: return '?';
     default:                        return '?';
     }

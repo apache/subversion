@@ -136,6 +136,9 @@ class GeneratorBase:
       if isinstance(target, TargetLinked):
         for lib in self._find_libs(parser.get(name, 'libs')):
           self.graph.add(DT_LINK, name, lib)
+        for nonlib in self._find_libs(parser.get(name, 'nonlibs')):
+          self.graph.add(DT_NONLIB, name, nonlib)
+         
 
     # collect various files
     self.includes = _collect_paths(parser.get('options', 'includes'))
@@ -190,13 +193,14 @@ class GeneratorBase:
         include_deps.update(more_deps)
 
     for objname, sources in self.graph.get_deps(DT_OBJECT):
-      if isinstance(objname, SWIGObject):
-        ### the .c file is generated, so we can't scan it. this isn't a
-        ### very good test. ideally, the test would be to look for a
-        ### dependency node for the source, meaning it is generated, and
-        ### punt on it then.
-        continue
       assert len(sources) == 1
+      if isinstance(objname, SWIGObject):
+        for ifile in self.graph.get_sources(DT_SWIG_C, sources[0]):
+          if isinstance(ifile, SWIGSource):
+            for short in _find_includes(ifile.fname, include_deps):
+              self.graph.add(DT_SWIG_C, sources[0], include_deps[short][0])
+        continue
+
       hdrs = [ ]
       for short in _find_includes(sources[0].fname, include_deps):
         self.graph.add(DT_OBJECT, objname, include_deps[short][0])
@@ -255,6 +259,7 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
+  'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
   ]
 
 # create some variables for these
@@ -293,6 +298,10 @@ class SourceFile(DependencyNode):
   def __init__(self, fname, reldir):
     DependencyNode.__init__(self, fname)
     self.reldir = reldir
+class SWIGSource(SourceFile):
+  def __init__(self, fname):
+    SourceFile.__init__(self, fname, os.path.dirname(fname))
+  pass
 
 # the SWIG utility libraries
 class SWIGUtilPython(ObjectFile):
@@ -301,11 +310,15 @@ class SWIGUtilPython(ObjectFile):
 class SWIGUtilJava(ObjectFile):
   ### hmm. this is Makefile-specific
   build_cmd = '$(COMPILE_SWIG_JAVA)'
+class SWIGUtilPerl(ObjectFile):
+  ### hmm. this is Makefile-specific
+  build_cmd = '$(COMPILE_SWIG_PL)'
 
 _custom_build = {
   'apache-mod' : ApacheObject,
   'swig-py' : SWIGUtilPython,
   'swig-java' : SWIGUtilJava,
+  'swig-pl' : SWIGUtilPerl,
   }
 
 class SWIGLibrary(DependencyNode):
@@ -494,10 +507,10 @@ class TargetSWIG(Target):
     ### simple assertions for now
     assert len(sources) == 1
 
-    ifile, reldir = sources[0]
-    assert ifile[-2:] == '.i'
+    ipath, reldir = sources[0]
+    assert ipath[-2:] == '.i'
 
-    dir, iname = os.path.split(ifile)
+    dir, iname = os.path.split(ipath)
     cname = iname[:-2] + '.c'
     oname = iname[:-2] + self._objext
 
@@ -506,6 +519,8 @@ class TargetSWIG(Target):
       libname = iname[3:-2] + self._libext
     else:
       libname = '_' + iname[:-2] + self._libext
+
+    ifile = SWIGSource(ipath)
 
     for lang in self.cfg.swig_lang:
       abbrev = lang_abbrev[lang]
@@ -585,6 +600,7 @@ class GenError(Exception):
 _cfg_defaults = {
   'sources' : '',
   'libs' : '',
+  'nonlibs' : '',
   'manpages' : '',
   'custom' : '',
   'install' : '',
@@ -727,7 +743,9 @@ def _sorted_files(graph, area):
   while targets:
     # find a target that has no dependencies in our current targets list.
     for t in targets:
-      for d in graph.get_sources(DT_LINK, t.name, Target):
+      s = graph.get_sources(DT_LINK, t.name, Target) \
+          + graph.get_sources(DT_NONLIB, t.name, Target)
+      for d in s:
         if d in targets:
           break
       else:

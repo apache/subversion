@@ -466,12 +466,7 @@ typedef struct svn_ra_plugin_t
   /** Ask the network layer to 'switch' a working copy to a new
    * @a switch_url;  it's another form of @c do_update().
    *
-   *    [Please note: this function cannot be used to switch a single
-   *    file, only a working copy directory.  The main caller of this
-   *    routine, @c svn_client_switch, uses @c get_file and
-   *    @c svn_wc_install_file to switch a single file.]
-   *
-   * The client initially provides an @a update_editor/@a baton to the RA
+   * The client initially provides an @a switch_editor/@a baton to the RA
    * layer; this editor contains knowledge of where the change will
    * begin in the working copy (when @c open_root() is called). 
    *
@@ -481,33 +476,33 @@ typedef struct svn_ra_plugin_t
    * paths are relative to the URL used to create @a session_baton.
    *
    * When finished, the client calls @a reporter->finish_report().  The
-   * RA layer then does a complete drive of @a update_editor, ending with
+   * RA layer then does a complete drive of @a switch_editor, ending with
    * @c close_edit(), to switch the working copy.
    *
-   * @a update_target is an optional single path component will restrict
-   * the scope of things affected by the update to an entry in the
+   * @a switch_target is an optional single path component will restrict
+   * the scope of things affected by the switch to an entry in the
    * directory represented by the @a session_baton's URL, or @c NULL if the
-   * entire directory is meant to be updated.
+   * entire directory is meant to be switched.
    *
-   * The working copy will be updated to @a revision_to_update_to, or the
+   * The working copy will be switched to @a revision_to_switch_to, or the
    * "latest" revision if this arg is invalid.
    *
    * The caller may not perform any ra operations using
    * @a session_baton before finishing the report, and may not perform
    * any ra operations using @a session_baton from within the editing
-   * operations of @a update_editor.
+   * operations of @a switch_editor.
    *
    * Use @a pool for memory allocation.
    */
   svn_error_t *(*do_switch) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
-                             svn_revnum_t revision_to_update_to,
-                             const char *update_target,
+                             svn_revnum_t revision_to_switch_to,
+                             const char *switch_target,
                              svn_boolean_t recurse,
                              const char *switch_url,
-                             const svn_delta_editor_t *update_editor,
-                             void *update_baton,
+                             const svn_delta_editor_t *switch_editor,
+                             void *switch_baton,
                              apr_pool_t *pool);
 
   /** Ask the network layer to describe the status of a working copy

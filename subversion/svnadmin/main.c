@@ -55,7 +55,6 @@ create_stdio_stream (svn_stream_t **stream,
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
-  subcommand_archive,
   subcommand_create,
   subcommand_createtxn,
   subcommand_dump,
@@ -63,6 +62,7 @@ static svn_opt_subcommand_t
   subcommand_load,
   subcommand_lscr,
   subcommand_lstxns,
+  subcommand_lsdblogs,
   subcommand_recover,
   subcommand_rmtxns,
   subcommand_setlog;
@@ -77,7 +77,8 @@ enum
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
     svnadmin__parent_dir,
-    svnadmin__bdb_txn_nosync
+    svnadmin__bdb_txn_nosync,
+    svnadmin__only_unused
   };
 
 /* Option codes and descriptions.
@@ -128,6 +129,9 @@ static const apr_getopt_option_t options_table[] =
     {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
      "disable fsync at database transaction commit [Berkeley DB]."},
 
+    {"only-unused", svnadmin__only_unused, 0,
+     "list only unused log files, that can be archived."},
+
     {NULL}
   };
 
@@ -137,11 +141,6 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
-    {"archive", subcommand_archive, {0},
-     "usage: svnadmin archive REPOS_PATH\n\n"
-     "Ask Berkeley DB which logfiles can be safely deleted.\n\n",
-     {0} },
-
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
@@ -164,7 +163,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', svnadmin__incremental, 'q'} },
 
     {"help", subcommand_help, {"?", "h"},
-     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "usage: svnadmin help [SUBCOMMAND...]\n\n"
      "Display this usage message.\n",
      {svnadmin__version} },
 
@@ -186,6 +185,12 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "repository.)\n",
      {svnadmin__follow_copies} },
 
+    {"lsdblogs", subcommand_lsdblogs, {0},
+     "usage: svnadmin lsdblogs REPOS_PATH\n\n"
+     "List all Berkeley DB log files.\n\n",
+     {svnadmin__only_unused} },
+
+
     {"lstxns", subcommand_lstxns, {0},
      "usage: svnadmin lstxns REPOS_PATH\n\n"
      "Print the names of all uncommitted transactions.\n",
@@ -201,7 +206,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {0} },
 
     {"rmtxns", subcommand_rmtxns, {0},
-     "usage: svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]\n\n"
+     "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
      "Delete the named transaction(s).\n",
      {0} },
 
@@ -227,6 +232,7 @@ struct svnadmin_opt_state
   svn_boolean_t follow_copies;                      /* --copies */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
+  svn_boolean_t only_unused;                        /* --only-unused */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *on_disk;
@@ -488,27 +494,32 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /* This implements `svn_opt_subcommand_t'. */
 svn_error_t *
-subcommand_archive (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+subcommand_lsdblogs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  svn_repos_t *repos;
   struct svnadmin_opt_state *opt_state = baton;
-  char **logfiles;
-  char **filename;
-
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-
-  SVN_ERR (svn_fs_berkeley_archive (&logfiles,
-                                    svn_repos_db_env (repos, pool), pool));
-
-  if (logfiles == NULL)
-    return SVN_NO_ERROR;
-
-  for (filename = logfiles; *filename != NULL; ++filename)
-    printf ("%s\n", *filename);
-
+  apr_array_header_t *logfiles;
+  int i;
+  
+  SVN_ERR (svn_repos_db_logfiles (&logfiles,
+                                  opt_state->repository_path,
+                                  opt_state->only_unused,
+                                  pool));
+  
+  /* Loop, printing log files.  We append the log paths to the
+     repository path, making sure to return everything to the native
+     style and encoding before printing. */
+  for (i = 0; i < logfiles->nelts; i++)
+    {
+      const char *log_utf8, *log_native;
+      log_utf8 = svn_path_join (opt_state->repository_path,
+                                APR_ARRAY_IDX (logfiles, i, const char *),
+                                pool);
+      SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, log_utf8, pool));
+      printf ("%s\n", svn_path_local_style (log_native, pool));
+    }
+  
   return SVN_NO_ERROR;
 }
-
 
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -742,9 +753,14 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        opt_state.parent_dir = svn_path_internal_style (opt_state.parent_dir,
+                                                        pool);
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
+        break;
+      case svnadmin__only_unused:
+        opt_state.only_unused = TRUE;
         break;
       default:
         {
@@ -797,7 +813,6 @@ main (int argc, const char * const *argv)
       if (os->ind < os->argc)
         {
           opt_state.repository_path = os->argv[os->ind++];
-
           SVN_INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
                                                 opt_state.repository_path,
                                                 NULL, pool));

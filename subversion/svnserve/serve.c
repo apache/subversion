@@ -639,7 +639,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(get_fs_path(b->repos_url, switch_url, &switch_path, pool));
 
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE, recurse,
-                       FALSE);
+                       TRUE);
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,

@@ -1469,10 +1469,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
             }
           
           /* Deduce changes. */
-          SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
-                                                 new_pristine_props,
-                                                 old_pristine_props,
-                                                 pool));
+          SVN_ERR (svn_prop_diffs (&propchanges, new_pristine_props,
+                                   old_pristine_props, pool));
         }
       else
         /* The user gave us a list prop diffs directly, yay. */
@@ -2057,29 +2055,6 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
 
 
 svn_error_t *
-svn_wc_get_checkout_editor (const char *dest,
-                            const char *ancestor_url,
-                            svn_revnum_t target_revision,
-                            svn_boolean_t recurse,
-                            svn_wc_notify_func_t notify_func,
-                            void *notify_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            svn_wc_traversal_info_t *traversal_info,
-                            apr_pool_t *pool)
-{
-  return make_editor (NULL, dest, NULL, target_revision, 
-                      TRUE, ancestor_url, NULL,
-                      recurse, notify_func, notify_baton,
-                      cancel_func, cancel_baton, NULL,
-                      editor, edit_baton,
-                      traversal_info, pool);
-}
-
-
-svn_error_t *
 svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
@@ -2329,6 +2304,206 @@ svn_wc_get_actual_target (const char *path,
       *anchor = apr_pstrdup (pool, path);
       *target = NULL;
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_add_repos_file (const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_wc_add_repos_file_helper_t helper,
+                       void *helper_baton,
+                       apr_pool_t *pool)
+{
+  svn_stream_t *fstream;
+  apr_file_t *fp;
+  apr_hash_t *props;
+  svn_stringbuf_t *log_accum;
+  apr_file_t *log_fp = NULL;
+  const char *parent_dir;
+  const char *base_name;
+  apr_status_t status;
+  apr_hash_index_t *hi;
+  apr_hash_t *regular_props;
+  const char *tmp_prop_path;
+  const char *rel_real_prop_path;
+  const char *rel_tmp_prop_path;
+  const char *tmp_prop_base_path;
+  const char *rel_real_prop_base_path;
+  const char *rel_tmp_prop_base_path;
+  const char *tmp_text_base;
+  const char *rel_tmp_text_base;
+  const char *rel_real_text_base;
+
+  tmp_text_base = svn_wc__text_base_path(dst_path, TRUE, pool);
+  
+  SVN_ERR_W (svn_io_file_open (&fp, tmp_text_base,
+                               (APR_CREATE | APR_WRITE),
+                               APR_OS_DEFAULT, pool),
+             "failed to open file for writing.");
+
+  /* Create a generic stream that operates on this file.  */
+  fstream = svn_stream_from_aprfile (fp, pool);
+
+  SVN_ERR (helper (fstream, &props, helper_baton));
+
+  /* Close the file. */
+  status = apr_file_close (fp);
+  if (status)
+    return svn_error_createf (status, NULL,
+                              "failed to close file '%s'.",
+                              dst_path);
+
+  /* Write the props and prop-base file for this file */
+
+  regular_props = apr_hash_make (pool);
+  if (props)
+    {
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi)) 
+        {
+          const void *key;
+          void *val;
+          enum svn_prop_kind prop_kind;
+          
+          apr_hash_this (hi, &key, NULL, &val);
+          
+          /* We only want to set 'normal' props.  For now, we're
+             ignoring any wc props (they're not needed when we commit
+             an addition), and we're ignoring entry props (they're
+             written to the entries file as part of the post-commit
+             processing).  */
+          prop_kind = svn_property_kind (NULL, key);
+          if (prop_kind == svn_prop_regular_kind)
+            {
+              apr_hash_set (regular_props, key, APR_HASH_KEY_STRING, val);
+            }
+        }
+    }
+
+  SVN_ERR (svn_wc__prop_path (&tmp_prop_path, dst_path, adm_access, 
+                              TRUE, pool));
+  
+  SVN_ERR (svn_wc__prop_base_path (&tmp_prop_base_path, dst_path, adm_access, 
+                                   TRUE, pool));
+
+  
+  svn_wc__save_prop_file(tmp_prop_path, regular_props, pool);
+  svn_wc__save_prop_file(tmp_prop_base_path, regular_props, pool);
+
+  /*
+   * All the temp files are prepared now, let's copy them to their original
+   * filenames by opening a log and writing to it.
+   */
+ 
+  /* Split FILE_PATH. */
+  svn_path_split (dst_path, &parent_dir, &base_name, pool);
+
+
+  /* Open a log file.  This is safe because the adm area is locked
+     right now. */
+  SVN_ERR (svn_wc__open_adm_file (&log_fp,
+                                  parent_dir,
+                                  SVN_WC__ADM_LOG,
+                                  (APR_WRITE | APR_CREATE), /* not excl */
+                                  pool));
+
+  log_accum = svn_stringbuf_create ("", pool);
+
+  /*
+   * First - rename the properties - so we'll have them ready when the
+   * file contents are translated.
+   */
+
+  /* Get the relative (to the log) pathes of the property files */
+  SVN_ERR (svn_wc__prop_path (&rel_real_prop_path, base_name, adm_access,
+                              FALSE, pool));
+  SVN_ERR (svn_wc__prop_path (&rel_tmp_prop_path, base_name, adm_access,
+                              TRUE, pool));
+  
+  SVN_ERR (svn_wc__prop_base_path (&rel_real_prop_base_path, base_name,
+                                   adm_access,  FALSE, pool));
+  SVN_ERR (svn_wc__prop_base_path (&rel_tmp_prop_base_path, base_name,
+                                   adm_access, TRUE, pool));
+  
+  /* Rename the temp prop base to the real prop base */
+  svn_xml_make_open_tag (&log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MV,
+                         SVN_WC__LOG_ATTR_NAME, rel_tmp_prop_base_path,
+                         SVN_WC__LOG_ATTR_DEST, rel_real_prop_base_path,
+                         NULL);
+
+  /* Make the prop base read-only */
+  svn_xml_make_open_tag (&log_accum, pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_READONLY,
+                         SVN_WC__LOG_ATTR_NAME, rel_real_prop_base_path,
+                         NULL);
+
+  /* Rename the temp props  to the real props */
+  svn_xml_make_open_tag (&log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MV,
+                         SVN_WC__LOG_ATTR_NAME, rel_tmp_prop_path,
+                         SVN_WC__LOG_ATTR_DEST, rel_real_prop_path,
+                         NULL);
+
+  /* Make the prop base read-only */
+  svn_xml_make_open_tag (&log_accum, pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_READONLY,
+                         SVN_WC__LOG_ATTR_NAME, rel_real_prop_path,
+                         NULL);
+
+  /*
+   * Get the relative (to the log directory) pathes of the temp and real
+   * text bases.
+   * */
+  rel_tmp_text_base = svn_wc__text_base_path(base_name, TRUE, pool);
+  rel_real_text_base = svn_wc__text_base_path(base_name, FALSE, pool);
+
+  /* Rename the temp text base to the real text base */
+  svn_xml_make_open_tag (&log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MV,
+                         SVN_WC__LOG_ATTR_NAME, rel_tmp_text_base,
+                         SVN_WC__LOG_ATTR_DEST, rel_real_text_base,
+                         NULL);
+
+  /* Make the text base read-only */
+  svn_xml_make_open_tag (&log_accum, pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_READONLY,
+                         SVN_WC__LOG_ATTR_NAME, rel_real_text_base,
+                         NULL);
+
+  /* Now copy the text-base to the main file while applying the end-of-line
+   * and keywords policies */
+  svn_xml_make_open_tag (&log_accum, pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_CP_AND_TRANSLATE,
+                         SVN_WC__LOG_ATTR_NAME, rel_real_text_base, 
+                         SVN_WC__LOG_ATTR_DEST, base_name,
+                         NULL);
+  
+   /* Write our accumulation of log entries into a log file */
+  status = apr_file_write_full (log_fp, log_accum->data, 
+                                 log_accum->len, NULL);
+  if (status)
+    {
+      apr_file_close (log_fp);
+      return svn_error_createf (status, NULL,
+                                "error writing log for '%s'.",
+                                dst_path);
+    }
+
+  /* The log is ready to run.  Close it and run it! */
+  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
+                                   TRUE, /* sync */ pool));
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
 }

@@ -1,5 +1,5 @@
 /*
- * resolve-cmd.c -- Subversion resolve subcommand
+ * resolved-cmd.c -- Subversion resolved subcommand
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -39,9 +39,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__resolve (apr_getopt_t *os,
-                 void *baton,
-                 apr_pool_t *pool)
+svn_cl__resolved (apr_getopt_t *os,
+                  void *baton,
+                  apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -66,10 +66,10 @@ svn_cl__resolve (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      err = svn_client_resolve (target,
-                                opt_state->recursive,
-                                ctx,
-                                subpool);
+      err = svn_client_resolved (target,
+                                 opt_state->recursive,
+                                 ctx,
+                                 subpool);
       if (err)
         {
           svn_handle_warning (stderr, err);

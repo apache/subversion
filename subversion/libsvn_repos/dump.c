@@ -182,6 +182,10 @@ make_dir_baton (const char *path,
   else
     full_path = apr_pstrdup (pool, eb->path);
 
+  /* Remove leading slashes from copyfrom paths. */
+  if (cmp_path)
+    cmp_path = ((*cmp_path == '/') ? cmp_path + 1 : cmp_path);
+
   new_db->edit_baton = eb;
   new_db->parent_dir_baton = pb;
   new_db->path = full_path;
@@ -236,6 +240,10 @@ dump_node (struct edit_baton *eb,
   else if (kind == svn_node_dir)
     SVN_ERR (svn_stream_printf (eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_NODE_KIND ": dir\n"));
+
+  /* Remove leading slashes from copyfrom paths. */
+  if (cmp_path)
+    cmp_path = ((*cmp_path == '/') ? cmp_path + 1 : cmp_path);
 
   /* Validate the comparison path/rev. */
   if (ARE_VALID_COPY_ARGS (cmp_path, cmp_rev))

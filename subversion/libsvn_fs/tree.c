@@ -724,7 +724,10 @@ open_path (parent_path_t **parent_path_p,
       
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (! svn_fs__dag_is_directory (child))
-        return svn_fs__err_not_directory (fs, path);
+        SVN_ERR_W (svn_fs__err_not_directory 
+                   (fs, apr_pstrmemdup (pool, canon_path, 
+                                        next - canon_path -1)),
+                   apr_pstrcat (pool, "Failure opening '", path, "'", NULL));
       
       rest = next;
       here = child;

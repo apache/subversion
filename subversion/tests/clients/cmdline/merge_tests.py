@@ -214,8 +214,7 @@ def textual_merges_galore(sbox):
 
   # Do the first merge, revs 1:3.  This tests all the cases except
   # case 4, which we'll handle in a second pass.
-  expected_output = wc.State(other_wc, {'A/mu'       : Item(status='  '),
-                                        'A/B/lambda' : Item(status='U '),
+  expected_output = wc.State(other_wc, {'A/B/lambda' : Item(status='U '),
                                         'A/D/G/rho'  : Item(status='U '),
                                         'A/D/G/pi'   : Item(status='G '),
                                         'A/D/G/tau'  : Item(status='C '),
@@ -259,7 +258,7 @@ def textual_merges_galore(sbox):
     if (not re.match("tau.*\.(r\d+|working)", a.name)):
       print "Merge got unexpected singleton", a.name
       raise svntest.main.SVNTreeUnequal
-
+  return 0
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -832,16 +831,50 @@ def merge_catches_nonexistent_target(sbox):
     out, err = svntest.main.run_svn(0, 'merge', '-r', '2:3', Q_url)
     if err:
       raise svntest.Failure
-    found = None
-    for line in out:
-      if re.match("\\s+newfile", line):
-        found = 1
-    if not found:
-      print "Did not see expected output for unmerged file \'newfile\'\n"
-      raise svntest.Failure
   finally:
     os.chdir(saved_cwd)
 
+#----------------------------------------------------------------------
+
+def merge_tree_deleted_in_target(sbox):
+  "merge on deleted directory in target"
+  
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Copy B to a new directory, I. Modify B/E/alpha, Remove I/E. Now
+  # merge that change... into I.  Merge should not error
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  I_path = os.path.join(wc_dir, 'A', 'I')
+  alpha_path = os.path.join(B_path, 'E', 'alpha')
+  B_url = svntest.main.current_repo_url + '/A/B'
+  I_url = svntest.main.current_repo_url + '/A/I'
+
+  outlines,errlines = svntest.main.run_svn(None, 'cp', B_url, I_url, '-m', 'rev 2')
+  if errlines:
+    raise svntest.Failure
+
+  svntest.main.file_append(alpha_path, 'A change to alpha.\n')
+  svntest.main.file_append(os.path.join(B_path, 'lambda'), 'A change to lambda.\n')
+  
+  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 3', B_path)
+  if errlines:
+    raise svntest.Failure
+
+  E_url = svntest.main.current_repo_url + '/A/I/E'
+  outlines,errlines = svntest.main.run_svn(None, 'rm', E_url, '-m', 'rev 4')
+  if errlines:
+    raise svntest.Failure
+
+  outlines,errlines = svntest.main.run_svn(None, 'up', os.path.join(wc_dir,'A'))
+  if errlines:
+    raise svntest.Failure
+
+  outlines, errlines = svntest.main.run_svn(0, 'merge', '-r', '2:3', B_url, I_path)
+  if errlines:
+      raise svntest.Failure
 
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
@@ -906,9 +939,7 @@ def merge_similar_unrelated_trees(sbox):
 
 #----------------------------------------------------------------------
 def merge_one_file(sbox):
-  "merge one file, receive a specific error"
-
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1150. ##
+  "merge one file (issue #1150)"
 
   sbox.build()
 
@@ -957,15 +988,8 @@ def merge_one_file(sbox):
   if err:
     raise svntest.Failure
 
-  ### Okay, this is the part that issue #1150 is about.  This fails on
-  ### all RA layers right now, though I think for different reasons in
-  ### each one.  In ra_local it seems to have something to do with
-  ### delta_dirs; in ra_dav and ra_svn, something different may be
-  ### going on.
-
   # Cd into the directory and run merge with no targets.
-  # Ideally, it would still merge into rho, since the diff applies
-  # only to rho... ### But it's broken right now :-).
+  # It should still merge into rho.
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
@@ -981,77 +1005,12 @@ def merge_one_file(sbox):
   finally:
     os.chdir(saved_cwd)
 
-  # At one time (see revision 4622), the error over ra_dav looked like
-  # this:
-  #
-  #    $ cd subversion/tests/clients/cmdline/working_copies/merge_tests-5
-  #    $ svn merge -r1:2 http://localhost/repositories/merge_tests-5/A/D/G/rho
-  #    subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
-  #    svn: RA layer request failed
-  #    svn: REPORT request failed on /repositories/merge_tests-5/A/D/G/rho
-  #    subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
-  #    svn: The REPORT request returned invalid XML in the response: \
-  #    Unknown XML element `error (in DAV:)'. \
-  #    (/repositories/merge_tests-5/A/D/G/rho)
-  #    $
-  #
-  # For debugging, I suggest starting httpd -X, then ^C, then set a
-  # breakpoint in ap_process_request().  Here's the code from
-  # httpd-2.0.44/modules/http/http_request.c, minus a few comments
-  # that would only be distracting here:
-  # 
-  #    void ap_process_request(request_rec *r)
-  #    {
-  #        int access_status;
-  #    
-  #        /* (Long-ish comment omitted) */
-  #        access_status = ap_run_quick_handler(r, 0);
-  #        if (access_status == DECLINED) {
-  #            access_status = ap_process_request_internal(r);
-  #            if (access_status == OK) {
-  #                access_status = ap_invoke_handler(r);
-  #            }
-  #        }
-  #    
-  #        if (access_status == DONE) {
-  #            /* e.g., something not in storage like TRACE */
-  #            access_status = OK;
-  #        }
-  #    
-  #        if (access_status == OK) {
-  #            ap_finalize_request_protocol(r);
-  #        }
-  #        else {
-  #            ap_die(access_status, r);
-  #        }
-  #
-  #      ...
-  #   }
-  #
-  # Step through from the top.  Every time access_status is set or
-  # compared, print out its value before and after the assignment or
-  # comparison.  I mean *every time*, even if you think it couldn't
-  # possibly have been affected :-).  You'll see some pretty weird
-  # stuff -- looks like there's a stack smasher somewhere that's
-  # affecting this variable.  But even that doesn't fully explain what
-  # Ben and I were seeing.  Will have to take a look again with fresh
-  # eyes.
-  #
-  # Anyway, the result is that access_status has the wrong value
-  # coming out, so the client receives a 200 OK response when it
-  # should have received an error.  Thus svn_ra_dav__parsed_request()
-  # in libsvn_ra_dav/util.c thinks it got a successful response, but
-  # when it goes to parse that response, the response body XML is that
-  # of an error.  The success-expecting parser is not prepared for
-  # that, and that's why we see that "Unknown XML element" error from
-  # the client.
-
 
 #----------------------------------------------------------------------
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target (sbox):
-  "merging a file, with no explicitly-specified target path"
+  "merging a file with no explicit target path"
 
   sbox.build()
 
@@ -1121,6 +1080,212 @@ def merge_with_implicit_target (sbox):
 
 #----------------------------------------------------------------------
 
+def merge_with_prev (sbox):
+  "merge operations using PREV revision"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  
+  # Change mu for revision 2
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  orig_mu_text = svntest.tree.get_text(mu_path);
+  added_mu_text = ""
+  for x in range(2,11):
+    added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
+  added_mu_text += "\n"
+  svntest.main.file_append(mu_path, added_mu_text)
+
+  zot_path = os.path.join(wc_dir, 'A', 'zot')
+  
+  svntest.main.file_append(zot_path, "bar")
+  svntest.main.run_svn(None, 'add', zot_path)
+
+  # Create expected output tree for initial commit
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    'A/zot' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A', repos_rev=2)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.add({'A/zot' : Item(status='  ', wc_rev=2, repos_rev=2)})
+  
+  # Initial commit.
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None, None, None,
+                                         wc_dir)
+
+  # Make some other working copies
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+  
+  another_wc = sbox.add_wc_path('another')
+  svntest.actions.duplicate_dir(wc_dir, another_wc)
+
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(os.path.join(other_wc, 'A'))
+
+    # Try to revert the last change to mu via svn merge
+    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV', 'mu')
+    if err:
+      raise svntest.Failure
+
+    # sanity-check resulting file
+    if (svntest.tree.get_text('mu') != orig_mu_text):
+      raise svntest.Failure
+
+  finally:
+    os.chdir(was_cwd)
+
+  try:
+    os.chdir(another_wc)
+
+    # ensure 'A' will be at revision 2
+    out, err = svntest.main.run_svn(0, 'up')
+    if err:
+      raise svntest.Failure
+
+    # now try a revert on a directory, and verify that it removed the zot
+    # file we had added previously
+    out, err = svntest.main.run_svn(0, 'merge', '-r', 'COMMITTED:PREV',
+                                    'A', 'A')
+    if err:
+      raise svntest.Failure
+
+    if (svntest.tree.get_text('A/zot') != None):
+      raise svntest.Failure
+    
+  finally:
+    os.chdir(was_cwd)
+    
+#----------------------------------------------------------------------
+# Regression test for issue #1319: 'svn merge' should *not* 'C' when
+# merging a change into a binary file, unless it has local mods, or has
+# different contents from the left side of the merge.
+
+def merge_binary_file (sbox):
+  "merge change into unchanged binary file"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Add a binary file to the project
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  theta_contents = fp.read()  # suck up contents of a test .png file
+  fp.close()
+
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  fp = open(theta_path, 'w')
+  fp.write(theta_contents)    # write png filedata into 'A/theta'
+  fp.close()
+  
+  svntest.main.run_svn(None, 'add', theta_path)  
+
+  # Commit the new binary file, creating revision 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  
+  # Make the "other" working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Change the binary file in first working copy, commit revision 3.
+  svntest.main.file_append(theta_path, "some extra junk")
+  expected_output = wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # In second working copy, attempt to 'svn merge -r 2:3'.
+  # We should *not* see a conflict during the update, but a 'U'.
+  # And after the merge, the status should be 'M'.
+  expected_output = wc.State(other_wc, {
+    'A/theta' : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents + "some extra junk",
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+  expected_status = svntest.actions.get_virginal_state(other_wc, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='M ', wc_rev=2, repos_rev=3),
+    })
+  svntest.actions.run_and_verify_merge(other_wc, '2', '3',
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       None, None, None, None, None,
+                                       1)
+
+#----------------------------------------------------------------------
+# Regression test for Issue #1297:
+# A merge that creates a new file followed by an immediate diff
+# The diff should succeed.
+
+def merge_in_new_file_and_diff(sbox):
+  "diff after merge that creates a new file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  trunk_url = svntest.main.current_repo_url + '/A/B/E';
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     trunk_url,
+                                     svntest.main.current_repo_url + '/branch',
+                                     '-m', "Creating the Branch")
+ 
+  # Update to revision 2.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  
+  new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile');
+  fp = open(new_file_path, 'w')
+  fp.write("newfile")
+  fp.close()
+
+  # Add the new file, and commit revision 3.
+  svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Changing the trunk.", wc_dir)
+
+  # Merge our addition into the branch.
+  branch_path = os.path.join(wc_dir, "branch")
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-r', '1:HEAD', 
+                                     trunk_url, branch_path)
+
+  # Finally, run diff.
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff', branch_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1133,8 +1298,12 @@ test_list = [ None,
               simple_property_merges,
               merge_with_implicit_target,
               merge_catches_nonexistent_target,
-              XFail(merge_similar_unrelated_trees),
-              # merge_one_file,          # See issue #1150.
+              merge_tree_deleted_in_target,
+              merge_similar_unrelated_trees,
+              merge_with_prev,
+              merge_binary_file,
+              merge_one_file,
+              merge_in_new_file_and_diff,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

@@ -128,25 +128,24 @@ svn_client_cat (svn_stream_t *out,
 
       if (keywords)
         {
-          svn_string_t *date, *author;
-          apr_hash_t *revprops;
+          svn_string_t *cmt_rev, *cmt_date, *cmt_author;
           apr_time_t when = 0;
 
-          SVN_ERR (ra_lib->rev_proplist(session, rev, &revprops, pool));
-
-          date = apr_hash_get (revprops, SVN_PROP_REVISION_DATE,
-                               APR_HASH_KEY_STRING);
-          author = apr_hash_get (revprops, SVN_PROP_REVISION_AUTHOR,
-                                 APR_HASH_KEY_STRING);
-          if (date)
-            SVN_ERR (svn_time_from_cstring (&when, date->data, pool));
+          cmt_rev = apr_hash_get (props, SVN_PROP_ENTRY_COMMITTED_REV,
+                                  APR_HASH_KEY_STRING);
+          cmt_date = apr_hash_get (props, SVN_PROP_ENTRY_COMMITTED_DATE,
+                                   APR_HASH_KEY_STRING);
+          cmt_author = apr_hash_get (props, SVN_PROP_ENTRY_LAST_AUTHOR,
+                                     APR_HASH_KEY_STRING);
+          if (cmt_date)
+            SVN_ERR (svn_time_from_cstring (&when, cmt_date->data, pool));
 
           SVN_ERR (svn_subst_build_keywords
                    (&kw, keywords->data, 
-                    apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev),
+                    cmt_rev->data,
                     url,
                     when,
-                    author ? author->data : NULL,
+                    cmt_author ? cmt_author->data : NULL,
                     pool));
         }
 

@@ -120,6 +120,14 @@ map_or_read_file(apr_file_t **file,
         {
           *buffer = (*mm)->mm;
         }
+      else
+        {
+          /* Reset the pointer to the apr_mmap_t, since apr_mmap_create
+           * assigns something even on failure.
+           * XXX: This will be fixed in APR 0.9.4.
+           */
+          *mm = NULL;
+        }
 
       /* On failure we just fall through and try reading the file into
        * memory instead.

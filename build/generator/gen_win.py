@@ -123,6 +123,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                     self.dblibname)
     self.envvars["$(SVN_DB_LIBS)"] = [self.dblibname]
 
+    # Find the right perl library name to link swig bindings with
+    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print "$Config{revision}$Config{patchlevel}"'), 'r')
+    try:
+      num = fp.readline()
+      if num:
+        self.perl_lib = 'perl' + string.rstrip(num) + '.lib'
+        sys.stderr.write('Found installed perl version number. Perl bindings\n'
+                         '  will be linked with %s\n' % self.perl_lib)
+      else:
+        self.perl_lib = 'perl56.lib'
+        sys.stderr.write('Could not detect perl version. Perl bindings will\n'
+                         '  be linked with %s\n' % self.perl_lib)
+    finally:
+      fp.close()
+
     #Make some files for the installer so that we don't need to require sed or some other command to do it
     ### GJS: don't do this right now
     if 0:
@@ -258,7 +274,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
-        sources.append(ProjectItem(path=rsrc, reldir=reldir,
+        sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    swig_language=None))
 
     if isinstance(target, gen_base.SWIGLibrary):
@@ -267,7 +283,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
           for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
-              sources.append(ProjectItem(path=csrc, reldir=None,
+              sources.append(ProjectItem(path=csrc, reldir=None, user_deps=[],
                                          swig_language=None))
 
               # output path passed to swig has to use forward slashes,
@@ -275,10 +291,19 @@ class WinGeneratorBase(gen_base.GeneratorBase):
               # classes) will be saved to the wrong directory
               cout = string.replace(os.path.join(rootpath, cobj.fname),
                                     os.sep, '/')
+                                    
+              # included header files that the generated c file depends on
+              user_deps = []
 
-              for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
-                isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
-                sources.append(ProjectItem(path=isrc, reldir=None, 
+              for iobj in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
+                isrc = rootpath + '\\' + string.replace(str(iobj), '/', '\\')
+
+                if not isinstance(iobj, gen_base.SWIGSource):
+                  user_deps.append(isrc)
+                  continue
+
+                sources.append(ProjectItem(path=isrc, reldir=None,
+                                           user_deps=user_deps,
                                            swig_language=target.lang,
                                            swig_target=csrc, swig_output=cout))
         
@@ -491,17 +516,20 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       return libs
 
     if isinstance(target, gen_base.SWIGLibrary):
-      return [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
+      libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
                'mswsock.lib',
                'ws2_32.lib',
                'advapi32.lib',
                'rpcrt4.lib',
                'shfolder.lib' ]
+      if target.lang == 'perl':
+        libs.append(self.perl_lib)
+      return libs
 
     if not isinstance(target, gen_base.TargetExe):
       return []
 
-    nondeplibs = []
+    nondeplibs = ['setargv.obj']
     depends = [target] + self.get_win_depends(target, 1)
     for dep in depends:
       for lib in self.graph.get_sources(gen_base.DT_LINK, dep.name):
@@ -582,3 +610,11 @@ class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):
     vars(self).update(kw)
+
+if sys.platform == "win32":
+  def escape_shell_arg(str):
+    return '"' + string.replace(str, '"', '"^""') + '"'
+else:
+  def escape_shell_arg(str):
+    return "'" + string.replace(str, "'", "'\\''") + "'"
+

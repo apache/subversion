@@ -1076,6 +1076,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *repos_name;
   const char *relative;
   const char *repos_path;
+  const char *repos_key;
   const char *version_name;
   svn_error_t *serr;
   dav_error *err;
@@ -1181,15 +1182,24 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Remember who is making this request */
   repos->username = r->user;
 
-  /* open the SVN FS */
-  serr = svn_repos_open(&(repos->repos), fs_path, r->pool);
-  if (serr != NULL)
+  /* Retrieve/cache open repository */
+  repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
+  apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);
+  if (repos->repos == NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 apr_psprintf(r->pool,
-                                              "Could not open the SVN "
-                                              "filesystem at %s",
-                                              fs_path));
+      serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     apr_psprintf(r->pool,
+                                                  "Could not open the SVN "
+                                                  "filesystem at %s",
+                                                  fs_path));
+        }
+
+      /* Cache the open repos for the next request on this connection */
+      apr_pool_userdata_set(repos->repos, repos_key,
+                            NULL, r->connection->pool);
     }
 
   /* cache the filesystem object */

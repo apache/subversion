@@ -85,8 +85,8 @@ restore_file (const char *file_path,
   SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, adm_access, pool));
 
   /* Remove any text conflict */
-  SVN_ERR (svn_wc_resolve_conflict (file_path, adm_access, TRUE, FALSE, FALSE,
-                                    NULL, NULL, pool));
+  SVN_ERR (svn_wc_resolved_conflict (file_path, adm_access, TRUE, FALSE, FALSE,
+                                     NULL, NULL, pool));
 
   /* ### hey guys, shouldn't we recording the 'restored'
      working-file's timestamp in its entry?  Right now, every time we
@@ -745,8 +745,7 @@ svn_wc_transmit_prop_deltas (const char *path,
     SVN_ERR (svn_wc__load_prop_file (props_base, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
-  SVN_ERR (svn_wc_get_local_propchanges (&propmods, localprops, 
-                                         baseprops, pool));
+  SVN_ERR (svn_prop_diffs (&propmods, localprops, baseprops, pool));
 
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)

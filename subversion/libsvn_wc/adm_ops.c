@@ -193,7 +193,7 @@ svn_wc__do_update_cleanup (const char *path,
           SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
                                         base_url, new_revision,
                                         svn_wc_adm_access_pool (dir_access)));
-          SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+          SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
         }
       else
         SVN_ERR (recursively_tweak_entries (dir_access, base_url,
@@ -294,14 +294,7 @@ svn_wc_process_committed (const char *path,
   else
     {
       /* PATH must be a dir */
-      svn_wc_entry_t tmp_entry;
-
       base_name = SVN_WC_ENTRY_THIS_DIR;
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.revision = new_revnum;
-      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry, 
-                                     SVN_WC__ENTRY_MODIFY_REVISION, TRUE,
-                                     pool));
     }
 
   logtags = svn_stringbuf_create ("", pool);
@@ -1956,7 +1949,7 @@ resolve_conflict_on_entry (const char *path,
                                         entry, pool));
           if ((! (resolve_text && text_conflict))
               && (! (resolve_props && prop_conflict)))
-            (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
+            (*notify_func) (notify_baton, path, svn_wc_notify_resolved,
                             svn_node_unknown,
                             NULL,
                             svn_wc_notify_state_unknown,
@@ -2023,14 +2016,14 @@ resolve_walk_callbacks =
 
 /* The public function */
 svn_error_t *
-svn_wc_resolve_conflict (const char *path,
-                         svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t resolve_text,
-                         svn_boolean_t resolve_props,
-                         svn_boolean_t recursive,
-                         svn_wc_notify_func_t notify_func,
-                         void *notify_baton,                         
-                         apr_pool_t *pool)
+svn_wc_resolved_conflict (const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t recursive,
+                          svn_wc_notify_func_t notify_func,
+                          void *notify_baton,                         
+                          apr_pool_t *pool)
 {
   struct resolve_callback_baton *baton = apr_pcalloc (pool, sizeof(*baton));
 

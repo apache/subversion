@@ -151,7 +151,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', 't'} },
     
     {"help", subcommand_help, {"?", "h"},
-     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "usage: svnlook help [SUBCOMMAND...]\n\n"
      "Display this usage message.\n",
      {svnlook__version} },
 
@@ -177,8 +177,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      {'r', 't', 'v'} },
 
     {"tree", subcommand_tree, {0},
-     "usage: svnlook tree REPOS_PATH\n\n"
-     "Print the tree, optionally showing node revision ids.\n",
+     "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
+     "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
+     "of the tree otherwise), optionally showing node revision ids.\n",
      {'r', 't', svnlook__show_ids} },
 
     {"uuid", subcommand_uuid, {0},
@@ -673,6 +674,75 @@ generate_label (const char **label,
 }
 
 
+/*
+ * Constant diff output separator strings
+ */
+static const char equal_string[] = 
+  "===================================================================";
+static const char under_string[] =
+  "___________________________________________________________________";
+
+
+/* Helper function to display differences in properties of a file */
+static svn_error_t *
+display_prop_diffs (const apr_array_header_t *prop_diffs,
+                    apr_hash_t *orig_props,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  int i;
+
+  printf ("\nProperty changes on: %s\n%s\n", path, under_string);
+
+  for (i = 0; i < prop_diffs->nelts; i++)
+    {
+      const svn_string_t *orig_value;
+      const svn_prop_t *pc = &APR_ARRAY_IDX (prop_diffs, i, svn_prop_t);
+
+      if (orig_props)
+        orig_value = apr_hash_get (orig_props, pc->name, APR_HASH_KEY_STRING);
+      else
+        orig_value = NULL;
+
+      printf ("Name: %s\n", pc->name);
+
+      /* For now, we have a rather simple heuristic: if this is an
+         "svn:" property, then assume the value is UTF-8 and must
+         therefore be converted before printing.  Otherwise, just
+         print whatever's there and hope for the best. */
+      {
+        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop (pc->name);
+        const char *printable_val;
+
+        if (orig_value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8 (&printable_val, 
+                                                  orig_value->data, pool));
+            else
+              printable_val = orig_value->data;
+            printf ("   - %s\n", printable_val);
+          }
+
+        if (pc->value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8
+                       (&printable_val, pc->value->data, pool));
+            else
+              printable_val = pc->value->data;
+            printf ("   + %s\n", printable_val);
+          }
+      }
+    }
+
+  printf ("\n");
+  fflush (stdout);
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
 static svn_error_t *
@@ -722,7 +792,7 @@ print_diff_tree (svn_fs_root_t *root,
                                      node->copyfrom_rev, pool));
     }
 
-  /* First, we'll just print file content diffs. */
+  /*** First, we'll just print file content diffs. ***/
   if (node->kind == svn_node_file)
     {
       /* Here's the generalized way we do our diffs:
@@ -784,8 +854,7 @@ print_diff_tree (svn_fs_root_t *root,
         {
           svn_diff_t *diff;
 
-          printf ("===========================================================\
-===================\n");
+          printf ("%s\n", equal_string);
           fflush (stdout);
 
           if (binary)
@@ -827,12 +896,32 @@ print_diff_tree (svn_fs_root_t *root,
     {
       printf ("\n");
     }
-    
-  /* Now, delete any temporary files. */
+
+  /* Make sure we delete any temporary files. */
   if (orig_path)
     svn_io_remove_file (orig_path, pool);
   if (new_path)
     svn_io_remove_file (new_path, pool);
+
+  /*** Now handle property diffs ***/
+  if ((node->prop_mod) && (node->action != 'D'))
+    {
+      apr_hash_t *local_proptable;
+      apr_hash_t *base_proptable;
+      apr_array_header_t *propchanges, *props;
+
+      SVN_ERR (svn_fs_node_proplist (&local_proptable, root, path, pool));
+      if (node->action == 'A')
+        base_proptable = apr_hash_make (pool);
+      else
+        SVN_ERR (svn_fs_node_proplist (&base_proptable, base_root, 
+                                       base_path, pool));
+      SVN_ERR (svn_prop_diffs (&propchanges, local_proptable, 
+                               base_proptable, pool));
+      SVN_ERR (svn_categorize_props (propchanges, NULL, NULL, &props, pool));
+      if (props->nelts > 0)
+        SVN_ERR (display_prop_diffs (props, base_proptable, path, pool));
+    }
 
   /* Return here if the node has no children. */
   node = node->child;
@@ -1253,14 +1342,17 @@ do_plist (svnlook_ctxt_t *c,
 
 /* Print the diff between revision 0 and our root. */
 static svn_error_t *
-do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
+do_tree (svnlook_ctxt_t *c, 
+         const char *path,
+         svn_boolean_t show_ids, 
+         apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   const svn_fs_id_t *id;
 
   SVN_ERR (get_root (&root, c, pool));
-  SVN_ERR (svn_fs_node_id (&id, root, "", pool));
-  SVN_ERR (print_tree (root, "", id, 0, show_ids, pool));
+  SVN_ERR (svn_fs_node_id (&id, root, path, pool));
+  SVN_ERR (print_tree (root, path, id, 0, show_ids, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1466,7 +1558,8 @@ subcommand_tree (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svnlook_ctxt_t *c;
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
-  SVN_ERR (do_tree (c, opt_state->show_ids, pool));
+  SVN_ERR (do_tree (c, opt_state->arg1 ? opt_state->arg1 : "", 
+                    opt_state->show_ids, pool));
   return SVN_NO_ERROR;
 }
 

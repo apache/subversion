@@ -56,82 +56,6 @@
 
 /*** Deducing local changes to properties ***/
 
-svn_error_t *
-svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
-                              apr_hash_t *localprops,
-                              apr_hash_t *baseprops,
-                              apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_array_header_t *ary = apr_array_make (pool, 1, sizeof(svn_prop_t));
-
-  /* Note: we will be storing the pointers to the keys (from the hashes)
-     into the local_propchanges array. It is acceptable for us to
-     reference the same memory as the base/localprops hash. */
-
-  /* Loop over baseprops and examine each key.  This will allow us to
-     detect any `deletion' events or `set-modification' events.  */
-  for (hi = apr_hash_first (pool, baseprops); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const svn_string_t *propval1, *propval2;
-
-      /* Get next property */
-      apr_hash_this (hi, &key, &klen, &val);
-      propval1 = val;
-
-      /* Does property name exist in localprops? */
-      propval2 = apr_hash_get (localprops, key, klen);
-
-      if (propval2 == NULL)
-        {
-          /* Add a delete event to the array */
-          svn_prop_t *p = apr_array_push (ary);
-          p->name = key;
-          p->value = NULL;
-        }
-      else if (! svn_string_compare (propval1, propval2))
-        {
-          /* Add a set (modification) event to the array */
-          svn_prop_t *p = apr_array_push (ary);
-          p->name = key;
-          p->value = svn_string_dup (propval2, pool);
-        } 
-    }
-
-  /* Loop over localprops and examine each key.  This allows us to
-     detect `set-creation' events */
-  for (hi = apr_hash_first (pool, localprops); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const svn_string_t *propval;
-
-      /* Get next property */
-      apr_hash_this (hi, &key, &klen, &val);
-      propval = val;
-
-      /* Does property name exist in baseprops? */
-      if (NULL == apr_hash_get (baseprops, key, klen))
-        {
-          /* Add a set (creation) event to the array */
-          svn_prop_t *p = apr_array_push (ary);
-          p->name = key;
-          p->value = svn_string_dup (propval, pool);
-        }
-    }
-
-
-  /* Done building our array of user events. */
-  *local_propchanges = ary;
-
-  return SVN_NO_ERROR;
-}
-
-
 /*---------------------------------------------------------------------*/
 
 /*** Detecting a property conflict ***/
@@ -495,8 +419,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   
   /* Deduce any local propchanges the user has made since the last
      update.  */
-  SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
-                                         localhash, basehash, pool));
+  SVN_ERR (svn_prop_diffs (&local_propchanges, localhash, basehash, pool));
   
   if (state)
     {
@@ -1443,7 +1366,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
      guarantees about ordering.)
 
      Therefore, rather than use contents_identical_p(), we use
-     svn_wc_get_local_propchanges(). */
+     svn_prop_diffs(). */
   {
     apr_array_header_t *local_propchanges;
     apr_hash_t *localprops = apr_hash_make (subpool);
@@ -1453,10 +1376,8 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
     SVN_ERR (svn_wc__load_prop_file (prop_base_path,
                                      baseprops,
                                      subpool));
-    SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
-                                           localprops,
-                                           baseprops,
-                                           subpool));
+    SVN_ERR (svn_prop_diffs (&local_propchanges, localprops, 
+                             baseprops, subpool));
                                          
     if (local_propchanges->nelts > 0)
       *modified_p = TRUE;
@@ -1500,10 +1421,8 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
   
   if (propchanges != NULL)
     {
-      SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
-                                             localprops,
-                                             baseprops,
-                                             pool));      
+      SVN_ERR (svn_prop_diffs (&local_propchanges, localprops, 
+                               baseprops, pool));      
       *propchanges = local_propchanges;
     }
 

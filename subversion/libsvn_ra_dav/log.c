@@ -101,13 +101,14 @@ reset_log_item (struct log_baton *lb)
 
 
 /*
- * This implements the `ne_xml_validate_cb' prototype.
+ * This implements the `svn_ra_dav__xml_validate_cb' prototype.
  */
 static int
-log_validate(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
+log_validate(void *userdata, svn_ra_dav__xml_elmid parent,
+             svn_ra_dav__xml_elmid child)
 {
   /* ### todo */
-  return NE_XML_VALID;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 
@@ -120,11 +121,11 @@ static const char *get_attr(const char **atts, const char *which)
 }
 
 /*
- * This implements the `ne_xml_startelm_cb' prototype.
+ * This implements the `svn_ra_dav__xml_startelm_cb' prototype.
  */
 static int
 log_start_element(void *userdata,
-                  const struct ne_xml_elm *elm,
+                  const svn_ra_dav__xml_elm_t *elm,
                   const char **atts)
 {
   struct log_baton *lb = userdata;
@@ -173,16 +174,16 @@ log_start_element(void *userdata,
       lb->this_path_item = NULL;
       break;
     }
-  return NE_XML_VALID;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 
 /*
- * This implements the `ne_xml_endelm_cb' prototype.
+ * This implements the `svn_ra_dav__xml_endelm_cb' prototype.
  */
 static int
 log_end_element(void *userdata,
-                const struct ne_xml_elm *elm,
+                const svn_ra_dav__xml_elm_t *elm,
                 const char *cdata)
 {
   struct log_baton *lb = userdata;
@@ -228,7 +229,8 @@ log_end_element(void *userdata,
         if (err)
           {
             lb->err = err;         /* ### Wrap an existing error, if any? */
-            return NE_XML_INVALID; /* ### Any other way to express an err? */
+            return SVN_RA_DAV__XML_INVALID; /* ### Any other way to express
+                                                   an err? */
           }
       }
       break;
@@ -282,7 +284,7 @@ log_end_element(void *userdata,
       break;
     }
 
-  return NE_XML_VALID;
+  return SVN_RA_DAV__XML_VALID;
 }
 
 
@@ -311,6 +313,9 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   svn_ra_session_t *ras = session_baton;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
   struct log_baton lb;
+  svn_string_t bc_url, bc_relative;
+  const char *final_bc_url;
+  svn_revnum_t use_rev;
 
   /* ### todo: I don't understand why the static, file-global
      variables shared by update and status are called `report_head'
@@ -323,19 +328,23 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
 
   static const char log_request_tail[] = "</S:log-report>" DEBUG_CR;
   
-  static const struct ne_xml_elm log_report_elements[] =
+  static const svn_ra_dav__xml_elm_t log_report_elements[] =
     {
       { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
       { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
-      { SVN_XML_NAMESPACE, "date", ELEM_log_date, NE_XML_CDATA },
-      { SVN_XML_NAMESPACE, "added-path", ELEM_added_path, NE_XML_CDATA },
-      { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path, NE_XML_CDATA },
-      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path, NE_XML_CDATA },
-      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path, NE_XML_CDATA },
-      { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "added-path", ELEM_added_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
+        SVN_RA_DAV__XML_CDATA },
+      { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
-        NE_XML_CDATA },
-      { "DAV:", "comment", ELEM_comment, NE_XML_CDATA },
+        SVN_RA_DAV__XML_CDATA },
+      { "DAV:", "comment", ELEM_comment, SVN_RA_DAV__XML_CDATA },
       { NULL }
     };
   
@@ -381,9 +390,22 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   lb.err = NULL;
   reset_log_item (&lb);
 
+  /* ras's URL may not exist in HEAD, and thus it's not safe to send
+     it as the main argument to the the REPORT request; it might cause
+     dav_get_resource() to choke on the server.  So instead, we pass a
+     baseline-collection URL, which we get from the largest of the
+     START and END revisions. */
+  use_rev = (start > end) ? start : end;
+  SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras->sess, ras->url, use_rev,
+                                         ras->pool) );
+  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                            ras->pool);
+
+
   SVN_ERR( svn_ra_dav__parsed_request(ras->sess,
                                       "REPORT",
-                                      ras->root.path,
+                                      final_bc_url,
                                       request_body->data,
                                       0,  /* ignored */
                                       NULL,
@@ -392,6 +414,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                       log_start_element,
                                       log_end_element,
                                       &lb,
+                                      NULL, 
                                       NULL,
                                       ras->pool) );
 

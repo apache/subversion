@@ -46,6 +46,7 @@ svn_cl__mkdir (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_client_commit_info_t *commit_info = NULL;
+  svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -62,9 +63,17 @@ svn_cl__mkdir (apr_getopt_t *os,
 
   SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
                                        NULL, ctx->config, subpool));
-  SVN_ERR (svn_cl__cleanup_log_msg
-           (ctx->log_msg_baton, svn_client_mkdir (&commit_info, targets, 
-                                                  ctx, subpool)));
+  err = svn_cl__cleanup_log_msg
+    (ctx->log_msg_baton, svn_client_mkdir (&commit_info, targets, 
+                                           ctx, subpool));
+  if (err)
+    {
+      if (err->apr_err == APR_EEXIST)
+        return svn_error_quick_wrap
+          (err, "Try 'svn add' or 'svn add --non-recursive' instead?");
+      else
+        return err;
+    }
 
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);

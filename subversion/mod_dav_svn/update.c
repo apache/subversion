@@ -273,6 +273,9 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
              real_path on manually, ignoring its leading slash. */
           if (real_path && (! svn_path_is_empty(real_path)))
             bc_url = svn_path_url_add_component(bc_url, real_path+1, pool);
+
+          /* make sure that the BC_URL is xml attribute safe. */
+          bc_url = apr_xml_quote_string(pool, bc_url, 1);
         }
 
 
@@ -806,19 +809,31 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.resource = resource;
   uc.output = output;  
   uc.anchor = src_path;
+  uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  uc.pathmap = NULL;
   if (dst_path) /* we're doing a 'switch' */
     {      
-      if (target) /* if the src is split into anchor/target, so must
-                     the telescoping dst_path be. */
-        uc.dst_path = svn_path_dirname(dst_path, resource->pool);
+      if (target) 
+        {
+          /* if the src is split into anchor/target, so must the
+             telescoping dst_path be. */
+          uc.dst_path = svn_path_dirname(dst_path, resource->pool);
+
+          /* Also, the svn_repos_dir_delta() is going to preserve our
+             target's name, so we need a pathmap entry for that. */
+          if (! uc.pathmap)
+            uc.pathmap = apr_hash_make(resource->pool);
+          add_to_path_map(uc.pathmap, 
+                          svn_path_join(src_path, target, resource->pool),
+                          dst_path);
+        }
       else
-        uc.dst_path = dst_path;
+        {
+          uc.dst_path = dst_path;
+        }
     }
   else  /* we're doing an update, so src and dst are the same. */
     uc.dst_path = uc.anchor;
-
-  uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-  uc.pathmap = NULL;
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */

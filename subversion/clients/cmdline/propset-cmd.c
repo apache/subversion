@@ -119,7 +119,7 @@ svn_cl__propset (apr_getopt_t *os,
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                        URL, &(opt_state->start_revision),
-                                       &rev, ctx, pool));
+                                       &rev, ctx, opt_state->force, pool));
       if (! opt_state->quiet) 
         {
           printf ("property `%s' set on repository revision '%"
