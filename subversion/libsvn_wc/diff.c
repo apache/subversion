@@ -493,7 +493,7 @@ file_diff (struct dir_baton *dir_baton,
 
       if (! eb->use_text_base)
         SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
-                 (NULL, path, 
+                 (NULL, NULL, path, 
                   pristine_copy, 
                   empty_file,
                   pristine_mimetype,
@@ -804,7 +804,7 @@ delete_entry (const char *path,
                                                          FALSE, pool);
 
           SVN_ERR (pb->edit_baton->callbacks->file_deleted
-                   (NULL, full_path,
+                   (NULL, NULL, full_path,
                     textbase,
                     svn_wc__empty_file_path (full_path, pool),
                     pristine_mimetype,
@@ -1146,7 +1146,7 @@ close_file (void *file_baton,
          diff should show this as a delete. Thus compare the repository
          file against the empty file. */
         SVN_ERR (b->edit_baton->callbacks->file_deleted
-                 (NULL, b->path,
+                 (NULL, NULL, b->path,
                   temp_file_path,
                   svn_wc__empty_file_path (b->wc_path, b->pool),
                   pristine_mimetype,

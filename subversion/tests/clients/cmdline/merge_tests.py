@@ -834,6 +834,47 @@ def merge_catches_nonexistent_target(sbox):
   finally:
     os.chdir(saved_cwd)
 
+#----------------------------------------------------------------------
+
+def merge_tree_deleted_in_target(sbox):
+  "merge should not fail on deleted directory in target"
+  
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Copy B to a new directory, I. Modify B/E/alpha, Remove I/E. Now
+  # merge that change... into I.  Merge should not error
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  I_path = os.path.join(wc_dir, 'A', 'I')
+  alpha_path = os.path.join(B_path, 'E', 'alpha')
+  B_url = svntest.main.current_repo_url + '/A/B'
+  I_url = svntest.main.current_repo_url + '/A/I'
+
+  outlines,errlines = svntest.main.run_svn(None, 'cp', B_url, I_url, '-m', 'rev 2')
+  if errlines:
+    raise svntest.Failure
+
+  svntest.main.file_append(alpha_path, 'A change to alpha.\n')
+  svntest.main.file_append(os.path.join(B_path, 'lambda'), 'A change to lambda.\n')
+  
+  outlines,errlines = svntest.main.run_svn(None, 'ci', '-m', 'rev 3', B_path)
+  if errlines:
+    raise svntest.Failure
+
+  E_url = svntest.main.current_repo_url + '/A/I/E'
+  outlines,errlines = svntest.main.run_svn(None, 'rm', E_url, '-m', 'rev 4')
+  if errlines:
+    raise svntest.Failure
+
+  outlines,errlines = svntest.main.run_svn(None, 'up', os.path.join(wc_dir,'A'))
+  if errlines:
+    raise svntest.Failure
+
+  outlines, errlines = svntest.main.run_svn(0, 'merge', '-r', '2:3', B_url, I_path)
+  if errlines:
+      raise svntest.Failure
 
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
@@ -1213,6 +1254,7 @@ test_list = [ None,
               simple_property_merges,
               merge_with_implicit_target,
               merge_catches_nonexistent_target,
+              merge_tree_deleted_in_target,
               XFail(merge_similar_unrelated_trees),
               merge_with_prev,
               # merge_one_file,          # See issue #1150.

@@ -407,8 +407,16 @@ typedef struct svn_wc_diff_callbacks_t
    *
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
+   *
+   * If @a state is non-null, set @a *state to the state of the item
+   * after the delete operation has been performed.  (In practice,
+   * this is only useful with merge, not diff; diff callbacks will
+   * probably set @a *state to @c svn_wc_notify_state_unknown, since 
+   * they do not change the state and therefore do not bother to know 
+   * the state after the operation.)
    */
   svn_error_t *(*file_deleted) (svn_wc_adm_access_t *adm_access,
+                                svn_wc_notify_state_t *state,
                                 const char *path,
                                 const char *tmpfile1,
                                 const char *tmpfile2,
@@ -429,8 +437,16 @@ typedef struct svn_wc_diff_callbacks_t
    *
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
+   *
+   * If @a state is non-null, set @a *state to the state of the item
+   * after the delete operation has been performed.  (In practice,
+   * this is only useful with merge, not diff; diff callbacks will
+   * probably set @a *state to @c svn_wc_notify_state_unknown, since 
+   * they do not change the state and therefore do not bother to know 
+   * the state after the operation.)
    */
   svn_error_t *(*dir_deleted) (svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *state,
                                const char *path,
                                void *diff_baton);
   

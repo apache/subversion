@@ -416,6 +416,7 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *state,
                              const char *path,
                              const char *tmpfile1,
                              const char *tmpfile2,
@@ -425,13 +426,14 @@ diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
-  return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
+  return diff_file_changed (adm_access, state, path, tmpfile1, tmpfile2, 
                             diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
                             mimetype1, mimetype2, diff_baton);
 }
 
 static svn_error_t *
 diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
+                           svn_wc_notify_state_t *state,
                            const char *path,
                            const char *tmpfile1,
                            const char *tmpfile2,
@@ -440,6 +442,9 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
                            void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
+  if (state)
+    *state = svn_wc_notify_state_unknown;
 
   svn_io_file_printf(diff_cmd_baton->outfile,
                      "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
@@ -462,10 +467,13 @@ diff_dir_added (svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 diff_dir_deleted (svn_wc_adm_access_t *adm_access,
+                  svn_wc_notify_state_t *state,
                   const char *path,
                   void *diff_baton)
 {
-  /* ### todo:  send feedback to app */
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
   return SVN_NO_ERROR;
 }
   
@@ -671,6 +679,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 merge_file_deleted (svn_wc_adm_access_t *adm_access,
+                    svn_wc_notify_state_t *state,
                     const char *mine,
                     const char *older,
                     const char *yours,
@@ -693,6 +702,8 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
                                     merge_b->pool));
       SVN_ERR (svn_client__wc_delete (mine, parent_access, merge_b->force,
                                       merge_b->dry_run, merge_b->ctx, subpool));
+      if (state)
+        *state = svn_wc_notify_state_changed;
       break;
     case svn_node_dir:
       /* ### Create a .drej conflict or something someday?  If force is set
@@ -703,6 +714,8 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
                                 "already exists.", mine);
     case svn_node_none:
       /* file is already non-existent, this is a no-op. */
+      if (state)
+        *state = svn_wc_notify_state_missing;
       break;
     default:
       break;
@@ -792,6 +805,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
 
 static svn_error_t *
 merge_dir_deleted (svn_wc_adm_access_t *adm_access,
+                   svn_wc_notify_state_t *state,
                    const char *path,
                    void *baton)
 {
@@ -810,6 +824,8 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
                                     merge_b->pool));
       SVN_ERR (svn_client__wc_delete (path, parent_access, merge_b->force,
                                       merge_b->dry_run, merge_b->ctx, subpool));
+      if (state)
+        *state = svn_wc_notify_state_changed;
       break;
     case svn_node_file:
       /* ### Create a .drej conflict or something someday?  If force is set
@@ -820,6 +836,8 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
                                 "already exists.", path);
     case svn_node_none:
       /* dir is already non-existent, this is a no-op. */
+      if (state)
+        *state = svn_wc_notify_state_missing;
       break;
     default:
       break;
