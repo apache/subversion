@@ -326,7 +326,6 @@ svn_ra_local__get_commit_editor (void *session_baton,
 }
 
 
-
 static svn_error_t *
 svn_ra_local__do_checkout (void *session_baton,
                            svn_revnum_t revision,
@@ -355,6 +354,70 @@ svn_ra_local__do_checkout (void *session_baton,
 
 
 static svn_error_t *
+make_reporter (void *session_baton,
+               const svn_ra_reporter_t **reporter,
+               void **report_baton,
+               svn_revnum_t revision,
+               const char *target,
+               const char *other_url,
+               svn_boolean_t text_deltas,
+               svn_boolean_t recurse,
+               const svn_delta_edit_fns_t *editor,
+               void *edit_baton)
+{
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+  void *rbaton;
+  const char *other_repos_path = NULL, *other_fs_path = NULL;
+
+  /* Get the HEAD revision if one is not supplied. */
+  if (! SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revision));
+
+  /* If OTHER_URL was provided, validate it and convert it into a
+     regular filesystem path. */
+  if (other_url)
+    {
+      /* Pull the relevant fs-path portion out of switch_url. */
+      SVN_ERR_W (svn_ra_local__split_URL (&other_repos_path, &other_fs_path,
+                                          other_url, sbaton->pool),
+                 "Invalid switch URL");
+      
+      /* Sanity check:  the other_url better be in the same repository as
+         the original session url! */
+      if (strcmp (sbaton->repos_path, other_repos_path) != 0)
+        return svn_error_createf 
+          (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, sbaton->pool,
+           "'%s'\n"
+           "is not the same repository as\n"
+           "'%s'", other_repos_path, sbaton->repos_path);
+    }
+
+  /* Pass back our reporter */
+  *reporter = &ra_local_reporter;
+
+  /* Build a reporter baton. */
+  SVN_ERR (svn_repos_begin_report (&rbaton,
+                                   revision,
+                                   sbaton->username,
+                                   sbaton->repos, 
+                                   sbaton->fs_path,
+                                   target, 
+                                   other_fs_path,
+                                   text_deltas,
+                                   recurse,
+                                   editor, 
+                                   edit_baton,
+                                   sbaton->pool));
+  
+  /* Wrap the report baton given us by the repos layer with our own
+     reporter baton. */
+  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 svn_ra_local__do_update (void *session_baton,
                          const svn_ra_reporter_t **reporter,
                          void **report_baton,
@@ -364,35 +427,16 @@ svn_ra_local__do_update (void *session_baton,
                          const svn_delta_edit_fns_t *update_editor,
                          void *update_baton)
 {
-  svn_revnum_t revnum_to_update_to;
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-  void *rbaton;
-
-  if (! SVN_IS_VALID_REVNUM(update_revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
-  else
-    revnum_to_update_to = update_revision;
-
-  /* Pass back our reporter */
-  *reporter = &ra_local_reporter;
-
-  /* Build a reporter baton. */
-  SVN_ERR (svn_repos_begin_report (&rbaton,
-                                   revnum_to_update_to,
-                                   sbaton->username,
-                                   sbaton->repos, 
-                                   sbaton->fs_path,
-                                   update_target, 
-                                   NULL,
-                                   TRUE, /* send text-deltas */
-                                   recurse,
-                                   update_editor, update_baton,
-                                   sbaton->pool));
-  
-  /* Wrap the report baton given us by the repos layer with our own
-     reporter baton. */
-  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
-  return SVN_NO_ERROR;
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        update_revision,
+                        update_target,
+                        NULL,
+                        TRUE,
+                        recurse,
+                        update_editor,
+                        update_baton);
 }
 
 
@@ -407,52 +451,17 @@ svn_ra_local__do_switch (void *session_baton,
                          const svn_delta_edit_fns_t *update_editor,
                          void *update_baton)
 {
-  svn_revnum_t revnum_to_update_to;
-  const char *switch_repos_path, *switch_fs_path;
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-  void *rbaton;
-
-  /* Pull the relevant fs-path portion out of switch_url. */
-  SVN_ERR_W (svn_ra_local__split_URL (&switch_repos_path, &switch_fs_path,
-                                      switch_url, sbaton->pool),
-             "The 'switch' URL is invalid.");
-
-  /* Sanity check:  the switch_url better be in the same repository as
-     the original session url! */
-  if (strcmp (sbaton->repos_path, switch_repos_path) != 0)
-    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, sbaton->pool,
-                              "'%s'\n"
-                              "is not the same repository as\n"
-                              "'%s'", switch_repos_path,
-                              sbaton->repos_path);
-
-  if (! SVN_IS_VALID_REVNUM(update_revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
-  else
-    revnum_to_update_to = update_revision;
-
-  /* Pass back our reporter */
-  *reporter = &ra_local_reporter;
-
-  /* Build a reporter baton. */
-  SVN_ERR (svn_repos_begin_report (&rbaton,
-                                   revnum_to_update_to,
-                                   sbaton->username,
-                                   sbaton->repos, 
-                                   sbaton->fs_path,
-                                   update_target,
-                                   switch_fs_path,
-                                   TRUE, /* we want text-deltas */
-                                   recurse,
-                                   update_editor, update_baton,
-                                   sbaton->pool));
-
-  /* Wrap the report baton given us by the repos layer with our own
-     reporter baton. */
-  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
-  return SVN_NO_ERROR;
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        update_revision,
+                        update_target,
+                        switch_url,
+                        TRUE,
+                        recurse,
+                        update_editor,
+                        update_baton);
 }
-
 
 
 static svn_error_t *
@@ -464,32 +473,40 @@ svn_ra_local__do_status (void *session_baton,
                          const svn_delta_edit_fns_t *status_editor,
                          void *status_baton)
 {
-  svn_revnum_t revnum_to_update_to;
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-  void *rbaton;
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        SVN_INVALID_REVNUM,
+                        status_target,
+                        NULL,
+                        FALSE,
+                        recurse,
+                        status_editor,
+                        status_baton);
+}
 
-  SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
 
-  /* Pass back our reporter */
-  *reporter = &ra_local_reporter;
-
-  /* Build a reporter baton. */
-  SVN_ERR (svn_repos_begin_report (&rbaton,
-                                   revnum_to_update_to,
-                                   sbaton->username,
-                                   sbaton->repos, 
-                                   sbaton->fs_path,
-                                   status_target,
-                                   NULL,
-                                   FALSE, /* don't send text-deltas */
-                                   recurse,
-                                   status_editor, status_baton,
-                                   sbaton->pool));
-
-  /* Wrap the report baton given us by the repos layer with our own
-     reporter baton. */
-  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
-  return SVN_NO_ERROR;
+static svn_error_t *
+svn_ra_local__do_diff (void *session_baton,
+                       const svn_ra_reporter_t **reporter,
+                       void **report_baton,
+                       svn_revnum_t update_revision,
+                       const char *update_target,
+                       svn_boolean_t recurse,
+                       const char *switch_url,
+                       const svn_delta_edit_fns_t *update_editor,
+                       void *update_baton)
+{
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        update_revision,
+                        update_target,
+                        switch_url,
+                        TRUE,
+                        recurse,
+                        update_editor,
+                        update_baton);
 }
 
 
@@ -703,6 +720,7 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,
+  svn_ra_local__do_diff,
   svn_ra_local__get_log,
   svn_ra_local__do_check_path
 };

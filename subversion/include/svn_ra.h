@@ -421,10 +421,10 @@ typedef struct svn_ra_plugin_t
   /* Ask the network layer to 'switch' a working copy to a new
      SWITCH_URL;  it's another form of do_update().
 
-     [Please note: this function cannot be used to switch a single
-     file, only a working copy directory.  The main caller of this
-     routine, svn_client_switch, uses get_file and svn_wc_install_file
-     to switch a single file.
+        [Please note: this function cannot be used to switch a single
+        file, only a working copy directory.  The main caller of this
+        routine, svn_client_switch, uses get_file and
+        svn_wc_install_file to switch a single file.]
 
      The client initially provides an UPDATE_EDITOR/BATON to the RA
      layer; this editor contains knowledge of where the change will
@@ -484,6 +484,44 @@ typedef struct svn_ra_plugin_t
                              const svn_delta_edit_fns_t *status_editor,
                              void *status_baton);
 
+
+  /* Ask the network layer to 'diff' a working copy against VERSUS_URL;
+     it's another form of do_update().
+
+        [Please note: this function cannot be used to diff a single
+        file, only a working copy directory.  See the do_switch()
+        function for more details.]
+
+     The client initially provides an DIFF_EDITOR/BATON to the RA
+     layer; this editor contains knowledge of where the common diff
+     root is in the working copy (when open_root() is called). 
+
+     In return, the client receives a REPORTER/REPORT_BATON. The
+     client then describes its working-copy revision numbers by making
+     calls into the REPORTER structure; the RA layer assumes that all
+     paths are relative to the URL used to create SESSION_BATON.
+
+     When finished, the client calls REPORTER->finish_report().  The
+     RA layer then does a complete drive of DIFF_EDITOR, ending with
+     close_edit(), to transmit the diff.
+
+     DIFF_TARGET is an optional single path component will restrict
+     the scope of the diff to an entry in the directory represented by
+     the SESSION_BATON's URL, or NULL if the entire directory is meant
+     to be one of the diff paths.
+
+     The working copy will be diffed against VERSUS_URL as it exists
+     in revision REVISION, or the "latest" revision if this arg is
+     invalid. */
+  svn_error_t *(*do_diff) (void *session_baton,
+                           const svn_ra_reporter_t **reporter,
+                           void **report_baton,
+                           svn_revnum_t revision,
+                           const char *diff_target,
+                           svn_boolean_t recurse,
+                           const char *versus_url,
+                           const svn_delta_edit_fns_t *diff_editor,
+                           void *diff_baton);
 
   /* Invoke RECEIVER with RECEIVER_BATON on each log message from
      START to END.  START may be greater or less than END; this just

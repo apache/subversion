@@ -129,6 +129,17 @@ svn_error_t * svn_ra_dav__do_switch(
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
 
+svn_error_t * svn_ra_dav__do_diff(
+  void *session_baton,
+  const svn_ra_reporter_t **reporter,
+  void **report_baton,
+  svn_revnum_t revision,
+  const char *diff_target,
+  svn_boolean_t recurse,
+  const char *versus_url,
+  const svn_delta_edit_fns_t *wc_diff,
+  void *wc_diff_baton);
+
 svn_error_t * svn_ra_dav__get_log(
   void *session_baton,
   const apr_array_header_t *paths,

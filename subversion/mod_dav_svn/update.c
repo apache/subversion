@@ -548,7 +548,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
-  svn_boolean_t recurse = TRUE;
+  svn_boolean_t recurse = TRUE, resource_walk = FALSE;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
@@ -600,7 +600,13 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") == 0)
-              recurse = FALSE;
+            recurse = FALSE;
+        }
+      if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          if (strcmp(child->first_cdata.first->text, "no") != 0)
+            resource_walk = TRUE;
         }
     }
 
@@ -764,7 +770,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   serr = svn_repos_finish_report(rbaton);
 
   /* The potential "resource walk" part of the update-report. */
-  if (dst_path)  /* this was a 'switch' operation */
+  if (dst_path && resource_walk)  /* this was a 'switch' operation */
     {
       /* Sanity check: if we switched a file, we can't do a resource
          walk.  dir_delta would choke if we pass a filepath as the
