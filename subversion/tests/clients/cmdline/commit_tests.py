@@ -1171,7 +1171,50 @@ def commit_uri_unsafe():
                                             wc_dir):
     return 1
   return 0
+
+def commit_deleted_edited():
+  "commit files that have been deleted, but also edited"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(commit_deleted_edited)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Make some convenient paths.
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Edit the files.
+  svntest.main.file_append(iota_path, "This file has been edited.")
+  svntest.main.file_append(mu_path, "This file has been edited.")
+
+  # Schedule the files for removal.
+  svntest.main.run_svn(None, 'remove', iota_path)
+  svntest.main.run_svn(None, 'remove', mu_path)
+
+  # Make our output list
+  output_list = [(iota_path, None, {}, {'verb' : 'Deleting'}),
+                 (mu_path, None, {}, {'verb' : 'Deleting'})]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Items in the status list are all at rev 1, except the two things
+  # we changed...but then, they don't exist at all.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  status_list.pop(path_index(status_list, iota_path))
+  status_list.pop(path_index(status_list, mu_path))
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+  return 0
   
+
 ########################################################################
 # Run the tests
 
@@ -1192,7 +1235,8 @@ test_list = [ None,
               ## ### todo: comment this back in when it's working
               ## hook_test,
               merge_mixed_revisions,
-              commit_uri_unsafe
+              commit_uri_unsafe,
+              commit_deleted_edited
              ]
 
 if __name__ == '__main__':
