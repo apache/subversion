@@ -180,6 +180,13 @@ static const struct ne_xml_elm report_elements[] =
   { NULL }
 };
 
+/* Elements used in a dated-rev-report response */
+static const struct ne_xml_elm drev_report_elements[] =
+{
+  { SVN_XML_NAMESPACE, "dated-rev-report", ELEM_dated_rev_report, 0 },
+  { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
+  { NULL }
+};
 
 static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
 {
@@ -1448,25 +1455,78 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 }
 
 
-/* ### DUMMY FUNC.   To be marshalled over network like previous
-   routine. */
+/* -------------------------------------------------------------------------
+**
+** DATED REV REPORT HANDLING
+**
+** DeltaV provides no mechanism for mapping a date to a revision, so
+** we use a custom report, S:dated-rev-report.  The request contains a
+** DAV:creationdate element giving the requested date; the response
+** contains a DAV:version-name element giving the most recent revision
+** as of that date.
+**
+** Since this report is so simple, we don't bother with validation or
+** baton structures or anything; we just set the revision number in
+** the end-element handler for DAV:version-name.
+*/
+
+/* This implements the `ne_xml_validate_cb' prototype. */
+static int drev_validate_element(void *userdata, ne_xml_elmid parent,
+                                 ne_xml_elmid child)
+{
+  return NE_XML_VALID;
+}
+
+/* This implements the `ne_xml_startelm_cb' prototype. */
+static int drev_start_element(void *userdata, const struct ne_xml_elm *elm,
+                              const char **atts)
+{
+  return 0;
+}
+
+/* This implements the `ne_xml_endelm_cb' prototype. */
+static int drev_end_element(void *userdata, const struct ne_xml_elm *elm,
+                            const char *cdata)
+{
+  if (elm->id == ELEM_version_name)
+    *((svn_revnum_t *) userdata) = SVN_STR_TO_REV(cdata);
+
+  return 0;
+}
 
 svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
                                              apr_time_t timestamp)
 {
   svn_ra_session_t *ras = session_baton;
+  const char *body;
+  svn_error_t *err;
 
-  /* ### need to implement this function...
-     ###
-     ### marshal the query over and call svn_repos_dated_revision()
-  */
+  body = apr_psprintf(ras->pool,
+                      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                      "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                      "xmlns:D=\"DAV:\">"
+                      "<D:creationdate>%s</D:creationdate>"
+                      "</S:dated-rev-report>",
+                      svn_time_to_nts(timestamp, ras->pool));
 
   *revision = SVN_INVALID_REVNUM;
+  err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, -1,
+                                   drev_report_elements,
+                                   drev_validate_element,
+                                   drev_start_element, drev_end_element,
+                                   revision, ras->pool);
+  if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+    return svn_error_quick_wrap(err, "Server does not support date-based "
+                                "operations.");
+  else if (err)
+    return err;
 
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, ras->pool,
-                          "ra_dav does not currently support date-based "
-                          "operations.");
+  if (*revision == SVN_INVALID_REVNUM)
+    return svn_error_create(SVN_ERR_INCOMPLETE_DATA, 0, NULL, ras->pool,
+                            "Invalid server response to dated-rev request.");
+
+  return SVN_NO_ERROR;
 }
 
 

@@ -417,6 +417,7 @@ enum {
   ELEM_resource_walk,
   ELEM_resource,
   ELEM_prop,
+  ELEM_dated_rev_report,
   ELEM_name_version_name,
   ELEM_name_creationdate,
   ELEM_name_creator_displayname,
