@@ -29,9 +29,6 @@ BUGS:
    - ra_dav: fix DELETE to send multiple tokens for a directory.
      (lock_tests.py #11)   (sussman)
 
-   - Fix pool lifetime issue in mod_dav_svn when attempting to lock
-     multiple files at once (fitz).
-
    - another issuetracker sweep of 1.2 things?
 
 

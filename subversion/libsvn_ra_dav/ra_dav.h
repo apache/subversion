@@ -116,6 +116,35 @@ typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
 
 
 
+
+
+/* Context for neon request hooks; shared by the neon callbacks in
+   session.c.  */
+struct lock_request_baton
+{
+  /* The method neon is about to execute. */
+  const char *method;
+
+  /* The current working revision of item being locked. */
+  svn_revnum_t current_rev;
+
+  /* Whether client is "forcing" a lock or unlock. */
+  svn_boolean_t force;
+
+  /* The creation-date returned for newly created lock. */
+  apr_time_t creation_date;
+
+  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  ne_xml_parser *error_parser;
+
+  /* If <D:error> is returned, here's where the parsed result goes. */
+  svn_error_t *err;
+
+  /* A place for allocating fields in this structure. */
+  apr_pool_t *pool;
+};
+
+
 typedef struct {
   apr_pool_t *pool;
   const char *url;                      /* original, unparsed session url */
@@ -133,6 +162,10 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
+
+  
+  struct lock_request_baton *lrb;       /* used by lock/unlock */
+
 } svn_ra_dav__session_t;
 
 
