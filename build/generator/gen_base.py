@@ -535,21 +535,21 @@ class TargetSWIG(Target):
 
       # the library depends upon the object
       library = SWIGLibrary(os.path.join(dir, lang, libname), lang, self.desc)
-      graph.add(DT_LINK, library, ofile)
+      graph.add(DT_LINK, library.name, ofile)
 
       # add some more libraries
       for lib in self.libs:
-        graph.add(DT_LINK, library, lib)
+        graph.add(DT_LINK, library.name, lib)
 
       # add some language-specific libraries for languages other than
       # Java (SWIG doesn't seem to provide a libswigjava.so)
       if abbrev != 'java':
         ### fix this. get these from the .conf file
-        graph.add(DT_LINK, library, ExternalLibrary('-lswig' + abbrev))
+        graph.add(DT_LINK, library.name, ExternalLibrary('-lswig' + abbrev))
       ### fix this, too. find the right Target swigutil lib. we know there
       ### will be only one.
       util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
-      graph.add(DT_LINK, library, util)
+      graph.add(DT_LINK, library.name, util)
 
       # the specified install area depends upon the library
       graph.add(DT_INSTALL, self.install + '-' + abbrev, library)

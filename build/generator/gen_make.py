@@ -35,10 +35,7 @@ class Generator(gen_base.GeneratorBase):
         # there is nothing to build
         continue
 
-      if isinstance(target_ob, gen_base.SWIGLibrary):
-        sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.fname)
-      else:
-        sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
+      sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
 
       target = target_ob.name
       path = target_ob.path

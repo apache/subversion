@@ -278,16 +278,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                    swig_language=None))
 
     if isinstance(target, gen_base.SWIGLibrary):
-      for obj in self.graph.get_sources(gen_base.DT_LINK, target):
+      for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if isinstance(obj, gen_base.SWIGObject):
           for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
-              sources.append(ProjectItem(path=csrc, reldir=None, user_deps=[],
-                                         swig_language=None))
 
               # output path passed to swig has to use forward slashes,
-              # otherwise the generatated python files (for shadow
+              # otherwise the generated python files (for shadow
               # classes) will be saved to the wrong directory
               cout = string.replace(os.path.join(rootpath, cobj.fname),
                                     os.sep, '/')
@@ -366,7 +364,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       else:
         depends.extend(self.get_unique_win_depends(target))
     elif isinstance(target, gen_base.SWIGLibrary):
-      for lib in self.graph.get_sources(gen_base.DT_LINK, target):
+      for lib in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if hasattr(lib, 'proj_name'):
           depends.append(lib)
           depends.extend(self.get_win_depends(lib, 0))          
