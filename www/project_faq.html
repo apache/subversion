@@ -298,11 +298,16 @@ at section IV, the "Quickstart Guide".</p>
 <h3><a name="proxy">What if I'm behind a proxy?</a></h3>
 
 <p>The Subversion client can go through a proxy, if you configure it
-to do so.  First, edit your ~/.subversion/proxies configuration file
+to do so.  First, edit your ~/.subversion/servers configuration file
 to indicate which proxy to use.  There are comments in the file
 explaining how to do this.  If you don't have that file, get the
 latest Subversion client and run any command; this will cause the
 configuration directory and template files to be created.</p>
+
+<p>Older versions of Subversion, including the 0.14.3 bootstrap
+tarball, use the file ~/.subversion/proxies to define the proxy
+settings.  This file is ignored by the current version of
+Subversion.</p>
 
 <p>Next, you need to make sure the proxy server itself supports all
 the HTTP methods Subversion uses.  Some proxy servers do not support

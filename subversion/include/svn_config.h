@@ -60,10 +60,10 @@ typedef struct svn_config_t svn_config_t;
 svn_error_t *svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool);
 
 
-/* Merge proxy configuration information from all available sources
+/* Merge server configuration information from all available sources
    and store it in *CFGP, which is allocated in POOL.  That is, first
-   read any system-wide proxy configurations (from a file or from the
-   registry), then merge in personal proxy configurations (again from
+   read any system-wide server configurations (from a file or from the
+   registry), then merge in personal server configurations (again from
    file or registry).
 
    Under Unix, or a Unix emulator such as Cygwin, personal config is
@@ -73,7 +73,7 @@ svn_error_t *svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool);
    is merged in.  System config information under Windows is found
    only in the registry.
 
-   If no proxy config information is available, return an empty *CFGP.  
+   If no server config information is available, return an empty *CFGP.  
 
    ### Notes: This function, and future ones like it, rather obviates
    the need for svn_config_read() and svn_config_merge() as public
@@ -81,7 +81,7 @@ svn_error_t *svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool);
    clear they can be de-exported.  Hmm, funny how in this context, the
    opposite of "exported" is not "imported", eh?
 */
-svn_error_t *svn_config_read_proxies (svn_config_t **cfgp, apr_pool_t *pool);
+svn_error_t *svn_config_read_servers (svn_config_t **cfgp, apr_pool_t *pool);
 
 
 /* Read configuration data from FILE (a file or registry path) into
@@ -155,7 +155,7 @@ int svn_config_enumerate (svn_config_t *cfg, const char *section,
    temporary allocation.  
 
    Don't error if something exists but is the wrong kind (for example,
-   ~/.subversion exists but is a file, or ~/.subversion/proxies exists
+   ~/.subversion exists but is a file, or ~/.subversion/servers exists
    but is a directory).
 
    Also don't error if try to create something and fail -- it's okay
