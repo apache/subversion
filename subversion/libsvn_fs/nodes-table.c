@@ -129,9 +129,15 @@ compare_nodes_keys (DB *dummy, const DBT *ak, const DBT *bk)
     result = svn_fs__compare_dbt (ak, bk);
 
   if (a)
-    free (a);
+    {
+      free ((void*)a->node_id);  /* cast to remove const */
+      free (a);
+    }
   if (b)
-    free (b);
+    {
+      free ((void*)b->node_id);  /* cast to remove const */
+      free (b);
+    }
 
   return result;
 }
