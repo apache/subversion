@@ -60,12 +60,3 @@ Candidate changes:
     Votes:
        +1: clkao, breser
 
-  * r10841
-    Fix crash bug in "svn st -u" on out-of-sync working copies
-    Justification:
-      Crashes bad.
-    Notes:
-      (lundblad and jpieper voted for this on 1.1.x, maybe they want to
-       vote for it here)
-    Votes:
-      +1: breser, ghudson, kfogel, bliss
