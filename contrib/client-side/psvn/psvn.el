@@ -1311,15 +1311,14 @@ If the function is called with a prefix arg, unmark all these files."
     (goto-char start-pos)))
 
 (defun svn-status-find-info-for-file-name (name)
-  (save-excursion
-    (let ((info nil))
-      (goto-char (point-min))
-      (while (< (point) (point-max))
-        (goto-char (next-overlay-change (point)))
-        (when (string= name (svn-status-line-info->filename
-                             (svn-status-get-line-information)))
-          (setq info (svn-status-get-line-information))))
-      info)))
+  (let* ((st-info svn-status-info)
+         (info))
+    (while st-info
+      (when (string= name (svn-status-line-info->filename (car st-info)))
+        (setq info (car st-info))
+        (setq st-info nil)) ; terminate loop
+      (setq st-info (cdr st-info)))
+    info))
 
 (defun svn-status-marked-files ()
   "Return all files marked by `svn-status-set-user-mark',
