@@ -526,6 +526,8 @@ enum dav_svn_time_format {
    formatted according to @a format.  Use @a pool for both
    scratchwork, and to allocate @a *datestring. 
 
+   If @a timeval or @a datestring is NULL, don't touch it.
+
    Return zero on success, non-zero if an error occurs. */
 int dav_svn_get_last_modified_time (const char **datestring,
                                     apr_time_t *timeval,
