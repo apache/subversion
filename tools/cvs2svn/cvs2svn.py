@@ -17,6 +17,12 @@ import getopt
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
 
 DATAFILE = 'cvs2svn-data'
+REVS_SUFFIX = '.revs'
+CLEAN_REVS_SUFFIX = '.c-revs'
+SORTED_REVS_SUFFIX = '.s-revs'
+TAGS_SUFFIX = '.tags'
+RESYNC_SUFFIX = '.resync'
+
 SVNROOT = 'svnroot'
 ATTIC = os.sep + 'Attic'
 
@@ -31,12 +37,17 @@ verbose = 1
 
 
 class CollectData(rcsparse.Sink):
-  def __init__(self, log_fname_base):
+  def __init__(self, cvsroot, log_fname_base):
+    self.cvsroot = cvsroot
     self.revs = open(log_fname_base + '.revs', 'w')
     self.tags = open(log_fname_base + '.tags', 'w')
+    self.resync = open(log_fname_base + '.resync', 'w')
 
   def set_fname(self, fname):
+    "Prepare to receive data for a new file."
     self.fname = fname
+
+    # revision -> [timestamp, author, operation, old-timestamp]
     self.rev_data = { }
     self.prev = { }
 
@@ -50,33 +61,83 @@ class CollectData(rcsparse.Sink):
       op = OP_DELETE
     else:
       op = OP_CHANGE
-    self.rev_data[revision] = (int(timestamp), author, op)
+
+    # store the rev_data as a list in case we have to jigger the timestamp
+    self.rev_data[revision] = [int(timestamp), author, op, None]
 
     # record the previous revision for sanity checking later
     if trunk_rev.match(revision):
       self.prev[revision] = next
-    else:
+    elif next:
       self.prev[next] = revision
     for b in branches:
       self.prev[b] = revision
 
+  def tree_completed(self):
+    "The revision tree has been parsed. Analyze it for consistency."
+
+    # Our algorithm depends upon the timestamps on the revisions occuring
+    # monotonically over time. That is, we want to see rev 1.34 occur in
+    # time before rev 1.35. If we inserted 1.35 *first* (due to the time-
+    # sorting), and then tried to insert 1.34, we'd be screwed.
+
+    # to perform the analysis, we'll simply visit all of the 'previous'
+    # links that we have recorded and validate that the timestamp on the
+    # previous revision is before the specified revision
+
+    # if we have to resync some nodes, then we restart the scan. just keep
+    # looping as long as we need to restart.
+    while 1:
+      for current, prev in self.prev.items():
+        if not prev:
+          # no previous revision exists (i.e. the initial revision)
+          continue
+        t_c = self.rev_data[current][0]
+        t_p = self.rev_data[prev][0]
+        if t_p >= t_c:
+          # the previous revision occurred later than the current revision.
+          # shove the previous revision back in time (and any before it that
+          # may need to shift).
+          while t_p >= t_c:
+            self.rev_data[prev][0] = t_c - 1	# new timestamp
+            self.rev_data[prev][3] = t_p	# old timestamp
+
+            print 'RESYNC: %s (%s) : old time="%s" new time="%s"' \
+                  % (relative_name(self.cvsroot, self.fname),
+                     prev, time.ctime(t_p), time.ctime(t_c - 1))
+
+            current = prev
+            prev = self.prev[current]
+            if not prev:
+              break
+            t_c = t_c - 1		# self.rev_data[current][0]
+            t_p = self.rev_data[prev][0]
+
+          # break from the for-loop
+          break
+      else:
+        # finished the for-loop (no resyncing was performed)
+        return
+
   def set_revision_info(self, revision, log, text):
-    timestamp, author, op = self.rev_data[revision]
-    prev = self.prev[revision]
-    if prev:
-      # we will be depending on revisions occurring monotonically over time
-      # (based on the time-based sorting of the revision metadata). this is
-      # a sanity check to ensure that the previous revision occurs before
-      # the current revision; thus, when we add the current revision, it
-      # will be as a delta from the proper, previous revision. note that
-      # if we see 1 and 3, it will be successful, but we'll fail when we
-      # finally see 2, as it will occur later than 3.
-      t2, a2, o2 = self.rev_data[prev]
-      ### probably should log this, rather than assert (i.e. abort the program)
-      assert t2 <= timestamp
-    h = sha.new(log + author)
-    self.revs.write('%08lx %s %s %s %s\n' % (timestamp, h.hexdigest(),
+    timestamp, author, op, old_ts = self.rev_data[revision]
+    digest = sha.new(log + author).hexdigest()
+    if old_ts:
+      # the timestamp on this revision was changed. log it for later
+      # resynchronization of other files's revisions that occurred
+      # for this time and log message.
+      self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
+
+    self.revs.write('%08lx %s %s %s %s\n' % (timestamp, digest,
                                              op, revision, self.fname))
+
+def relative_name(cvsroot, fname):
+  l = len(cvsroot)
+  if fname[:l] == cvsroot:
+    if fname[l] == '/':
+      return fname[l+1:]
+    return fname[l:]
+  return l
 
 def visit_file(arg, dirname, files):
   cd, p, stats = arg
@@ -168,9 +229,16 @@ class Commit:
   def __init__(self):
     self.changes = [ ]
     self.deletes = [ ]
+    self.t_min = 1<<30
+    self.t_max = 0
 
   def add(self, t, op, file, rev):
-    self.last = t
+    # record the time range of this commit
+    if t < self.t_min:
+      self.t_min = t
+    if t > self.t_max:
+      self.t_max = t
+
     if op == OP_CHANGE:
       self.changes.append((file, rev))
     else:
@@ -179,35 +247,120 @@ class Commit:
 
   def commit(self):
     # commit this transaction
-    print 'committing:'
+    print 'committing: %s, over %d seconds' % (time.ctime(self.t_min),
+                                               self.t_max - self.t_min)
     for f, r in self.changes:
       print '    changing %s : %s' % (r, f)
     for f, r in self.deletes:
       print '    deleting %s : %s' % (r, f)
 
-def pass1(cvsroot):
-  cd = CollectData(DATAFILE)
+def read_resync(fname):
+  "Read the .resync file into memory."
+
+  ### note that we assume that we can hold the entire resync file in
+  ### memory. really large repositories with whacky timestamps could
+  ### bust this assumption. should that ever happen, then it is possible
+  ### to split the resync file into pieces and make multiple passes,
+  ### using each piece.
+
+  #
+  # A digest maps to a sequence of lists which specify a lower and upper
+  # time bound for matching up the commit. We keep a sequence of these
+  # because a number of checkins with the same log message (e.g. an empty
+  # log message) could need to be remapped. We also make them a list because
+  # we will dynamically expand the lower/upper bound as we find commits
+  # that fall into a particular msg and time range.
+  #
+  # resync == digest -> [ [old_time_lower, old_time_upper, new_time], ... ]
+  #
+  resync = { }
+
+  for line in fileinput.FileInput(fname):
+    t1 = int(line[:8], 16)
+    digest = line[9:DIGEST_END_IDX]
+    t2 = int(line[DIGEST_END_IDX+1:], 16)
+    t1_l = t1 - COMMIT_THRESHOLD/2
+    t1_u = t1 + COMMIT_THRESHOLD/2
+    if resync.has_key(digest):
+      resync[digest].append([t1_l, t1_u, t2])
+    else:
+      resync[digest] = [ [t1_l, t1_u, t2] ]
+  return resync
+
+def parse_revs_line(line):
+  timestamp = int(line[:8], 16)
+  id = line[9:DIGEST_END_IDX]
+  op = line[DIGEST_END_IDX + 1]
+  idx = string.find(line, ' ', DIGEST_END_IDX + 3)
+  rev = line[DIGEST_END_IDX+3:idx]
+  fname = line[idx+1:-1]
+
+  return timestamp, id, op, rev, fname
+
+
+def pass1(ctx):
+  cd = CollectData(ctx.cvsroot, DATAFILE)
   p = rcsparse.Parser()
   stats = [ 0 ]
-  os.path.walk(cvsroot, visit_file, (cd, p, stats))
-  print 'processed', stats[0], 'files'
+  os.path.walk(ctx.cvsroot, visit_file, (cd, p, stats))
+  if ctx.verbose:
+    print 'processed', stats[0], 'files'
 
-def pass2(log_fname_base):
+def pass2(ctx):
+  "Pass 2: clean up the revision information."
+
+  # We may have recorded some changes in revisions' timestamp. We need to
+  # scan for any other files which may have had the same log message and
+  # occurred at "the same time" and change their timestamps, too.
+
+  # read the resync data file
+  resync = read_resync(ctx.log_fname_base + RESYNC_SUFFIX)
+
+  output = open(ctx.log_fname_base + CLEAN_REVS_SUFFIX, 'w')
+
+  # process the revisions file, looking for items to clean up
+  for line in fileinput.FileInput(ctx.log_fname_base + REVS_SUFFIX):
+    timestamp, digest, op, rev, fname = parse_revs_line(line)
+    if not resync.has_key(digest):
+      output.write(line)
+      continue
+
+    # we have a hit. see if this is "near" any of the resync records we
+    # have recorded for this digest [of the log message].
+    for record in resync[digest]:
+      if record[0] <= timestamp <= record[1]:
+        # bingo! remap the time on this (record[2] is the new time).
+        output.write('%08lx %s %s %s %s\n'
+                     % (record[2], digest, op, rev, fname))
+
+        print 'RESYNC: %s (%s) : old time="%s" new time="%s"' \
+              % (relative_name(ctx.cvsroot, fname),
+                 rev, time.ctime(timestamp), time.ctime(record[2]))
+
+        # adjust the time range. we want the COMMIT_THRESHOLD from the
+        # bounds of the earlier/latest commit in this group.
+        record[0] = min(record[0], timestamp - COMMIT_THRESHOLD/2)
+        record[1] = max(record[1], timestamp + COMMIT_THRESHOLD/2)
+
+        # stop looking for hits
+        break
+    else:
+      # the file/rev did not need to have its time changed.
+      output.write(line)
+
+def pass3(ctx):
   # sort the log files
-  os.system('sort %s.revs > %s.s-revs' % (log_fname_base, log_fname_base))
+  os.system('sort %s > %s' % (ctx.log_fname_base + CLEAN_REVS_SUFFIX,
+                              ctx.log_fname_base + SORTED_REVS_SUFFIX))
 
-def pass3(log_fname_base, target):
+def pass4(ctx):
   # process the logfiles, creating the target
   commits = { }
   count = 0
 
-  for line in fileinput.input(log_fname_base + '.s-revs'):
-    timestamp = int(line[:8], 16)
-    id = line[9:DIGEST_END_IDX]
-    op = line[DIGEST_END_IDX + 1]
-    idx = string.find(line, ' ', DIGEST_END_IDX + 3)
-    rev = line[DIGEST_END_IDX+3:idx]
-    fname = line[idx+1:-1]
+  for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
+    timestamp, id, op, rev, fname = parse_revs_line(line)
+
     if commits.has_key(id):
       c = commits[id]
     else:
@@ -215,32 +368,53 @@ def pass3(log_fname_base, target):
     c.add(timestamp, op, fname, rev)
 
     # scan for commits to process
+    process = [ ]
     for id, c in commits.items():
-      if c.last + COMMIT_THRESHOLD < timestamp:
-        c.commit()
+      if c.t_max + COMMIT_THRESHOLD < timestamp:
+        process.append((c.t_max, c))
         del commits[id]
-        count = count + 1
 
-  print count, 'commits processed.'
+    process.sort()
+    for t_max, c in process:
+      c.commit()
+    count = count + len(process)
+
+  if ctx.verbose:
+    print count, 'commits processed.'
+
+_passes = [
+  pass1,
+  pass2,
+  pass3,
+  pass4,
+  ]
+
+class _ctx:
+  pass
 
 def convert(cvsroot, target=SVNROOT, log_fname_base=DATAFILE, start_pass=1,
             verbose=0):
-  t1 = time.time()
-  if start_pass < 2:
-    pass1(cvsroot)
-  if start_pass < 3:
-    t2 = time.time()
-    pass2(log_fname_base)
-  t3 = time.time()
-  pass3(log_fname_base, target)
-  t4 = time.time()
-  if start_pass < 2:
-    print 'pass 1:', int(t2 - t1), 'seconds'
-  if start_pass < 3:
-    print 'pass 2:', int(t3 - t2), 'seconds'
-  print 'pass 3:', int(t4 - t3), 'seconds'
-  if start_pass < 3:
-    print ' total:', int(t4 - t1), 'seconds'
+  "Convert a CVS repository to an SVN repository."
+
+  # prepare the operation context
+  ctx = _ctx()
+  ctx.cvsroot = cvsroot
+  ctx.target = target
+  ctx.log_fname_base = log_fname_base
+  ctx.verbose = verbose
+
+  times = [ None ] * len(_passes)
+  for i in range(start_pass - 1, len(_passes)):
+    times[i] = time.time()
+    if verbose:
+      print '----- pass %d -----' % (i + 1)
+    _passes[i](ctx)
+  times.append(time.time())
+
+  if verbose:
+    for i in range(start_pass, len(_passes)+1):
+      print 'pass %d: %d seconds' % (i, int(times[i] - times[i-1]))
+    print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
 def usage():
   print 'USAGE: %s [-p pass] repository-path' % sys.argv[0]
@@ -255,8 +429,9 @@ def main():
   for opt, value in opts:
     if opt == '-p':
       start_pass = int(value)
-      if start_pass < 1 or start_pass > 3:
-        print 'ERROR: illegal value (%d) for starting pass. must be 1, 2, or 3.' % start_pass
+      if start_pass < 1 or start_pass > len(_passes):
+        print 'ERROR: illegal value (%d) for starting pass. ' \
+              'must be 1 through %d.' % (start_pass, len(_passes))
         sys.exit(1)
     elif opt == '-v':
       verbose = 1
