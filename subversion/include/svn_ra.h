@@ -665,9 +665,8 @@ typedef struct svn_ra_plugin_t
                               const char *path,
                               svn_revnum_t revision);
 
-  /** Set @a *uuid to the repository's UUID.
-   *
-   * Set @a *uuid to the repository's UUID.
+  /** Set @a *uuid to the repository's UUID.  The UUID has the same lifetime
+   *  as the session_baton. 
    */
   svn_error_t *(*get_uuid) (void *session_baton,
                             const char **uuid);
