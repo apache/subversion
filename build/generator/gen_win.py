@@ -477,30 +477,29 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                     'shfolder.lib' ])
       return libs
 
-    if isinstance(target, gen_base.TargetSWIG):
-      libs = [ dblib,
-               'mswsock.lib',
-               'ws2_32.lib',
-               'advapi32.lib',
-               'rpcrt4.lib',
-               'shfolder.lib' ]
-      if target.lang == 'perl':
-        libs.append(self.perl_lib)
-      return libs
-
-    if not isinstance(target, gen_base.TargetExe):
+    if not isinstance(target, gen_base.TargetLinked):
       return []
 
-    nondeplibs = ['setargv.obj']
-    depends = [target] + self.get_win_depends(target)
-    for dep in depends:
-      if isinstance(dep, gen_base.TargetLinked):
-        nondeplibs.extend(map(lambda x: x + '.lib', dep.msvc_libs))
+    if isinstance(target, gen_base.TargetLib) and target.msvc_static:
+      return []
+
+    nondeplibs = target.msvc_libs[:]
+
+    if isinstance(target, gen_base.TargetExe):
+      nondeplibs.append('setargv.obj')
+
+    if isinstance(target, gen_base.TargetSWIG) and target.lang == 'perl':
+      nondeplibs.append(self.perl_lib)
+
+    for dep in self.get_win_depends(target):
+      if isinstance(dep, gen_base.TargetLib):
+        if dep.msvc_static:
+          nondeplibs.extend(dep.msvc_libs)
 
         if dep.external_lib == '$(SVN_DB_LIBS)':
           nondeplibs.append(dblib)
 
-    return nondeplibs
+    return gen_base.unique(nondeplibs)
 
   def get_win_sources(self, target, reldir_prefix=''):
     "Return the list of source files that need to be compliled for target"
