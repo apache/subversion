@@ -15,7 +15,7 @@
  * ====================================================================
  */
 
-#include <db.h>
+#include "bdb_compat.h"
 
 #include <apr_hash.h>
 #include <apr_tables.h>
@@ -39,16 +39,19 @@ svn_fs__open_changes_table (DB **changes_p,
                             DB_ENV *env,
                             int create)
 {
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *changes;
 
+  DB_ERR (svn_bdb__check_version());
   DB_ERR (db_create (&changes, env, 0));
 
   /* Enable duplicate keys. This allows us to store the changes
      one-per-row.  Note: this must occur before ->open().  */
   DB_ERR (changes->set_flags (changes, DB_DUP));
 
-  DB_ERR (changes->open (changes, "changes", 0, DB_BTREE,
-                         create ? (DB_CREATE | DB_EXCL) : 0,
+  DB_ERR (changes->open (SVN_BDB_OPEN_PARAMS(changes, NULL),
+                         "changes", 0, DB_BTREE,
+                         open_flags | SVN_BDB_AUTO_COMMIT,
                          0666));
 
   *changes_p = changes;

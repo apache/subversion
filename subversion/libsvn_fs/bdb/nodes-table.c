@@ -17,7 +17,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include <db.h>
+#include "bdb_compat.h"
 
 #include "svn_fs.h"
 
@@ -41,11 +41,14 @@ svn_fs__open_nodes_table (DB **nodes_p,
                           DB_ENV *env,
                           int create)
 {
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *nodes;
 
+  DB_ERR (svn_bdb__check_version());
   DB_ERR (db_create (&nodes, env, 0));
-  DB_ERR (nodes->open (nodes, "nodes", 0, DB_BTREE,
-                       create ? (DB_CREATE | DB_EXCL) : 0,
+  DB_ERR (nodes->open (SVN_BDB_OPEN_PARAMS(nodes, NULL),
+                       "nodes", 0, DB_BTREE,
+                       open_flags | SVN_BDB_AUTO_COMMIT,
                        0666));
 
   /* Create the `next-id' table entry (use '1' because '0' is
@@ -58,7 +61,7 @@ svn_fs__open_nodes_table (DB **nodes_p,
                         svn_fs__str_to_dbt (&key, 
                                             (char *) svn_fs__next_key_key),
                         svn_fs__str_to_dbt (&value, (char *) "1"),
-                        0));
+                        SVN_BDB_AUTO_COMMIT));
   }
 
   *nodes_p = nodes;

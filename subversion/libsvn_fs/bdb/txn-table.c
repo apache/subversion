@@ -16,8 +16,8 @@
  */
 
 #include <string.h>
-#include <db.h>
 #include <assert.h>
+#include "bdb_compat.h"
 
 #include "svn_pools.h"
 #include "txn-table.h"
@@ -43,11 +43,14 @@ svn_fs__open_transactions_table (DB **transactions_p,
                                  DB_ENV *env,
                                  int create)
 {
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *txns;
 
+  DB_ERR (svn_bdb__check_version());
   DB_ERR (db_create (&txns, env, 0));
-  DB_ERR (txns->open (txns, "transactions", 0, DB_BTREE,
-                      create ? (DB_CREATE | DB_EXCL) : 0,
+  DB_ERR (txns->open (SVN_BDB_OPEN_PARAMS(txns, NULL),
+                      "transactions", 0, DB_BTREE,
+                      open_flags | SVN_BDB_AUTO_COMMIT,
                       0666));
 
   /* Create the `next-id' table entry.  */
@@ -59,7 +62,7 @@ svn_fs__open_transactions_table (DB **transactions_p,
                        svn_fs__str_to_dbt (&key, 
                                            (char *) svn_fs__next_key_key),
                        svn_fs__str_to_dbt (&value, (char *) "0"),
-                       0));
+                       SVN_BDB_AUTO_COMMIT));
   }
 
   *transactions_p = txns;

@@ -34,6 +34,7 @@
 #include "dag.h"
 #include "svn_private_config.h"
 
+#include "bdb/bdb_compat.h"
 #include "bdb/nodes-table.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
@@ -45,28 +46,48 @@
 
 /* Checking for return values, and reporting errors.  */
 
+/* Check that we're using the right Berkeley DB version. */
+/* FIXME: This check should be abstracted into the DB back-end layer. */
+static svn_error_t *
+check_bdb_version (apr_pool_t *pool)
+{
+  int major, minor, patch;
+
+  db_version (&major, &minor, &patch);
+
+  /* First, check that we're using a reasonably correct of Berkeley DB. */
+  if ((major < SVN_FS_WANT_DB_MAJOR)
+      || (major == SVN_FS_WANT_DB_MAJOR && minor < SVN_FS_WANT_DB_MINOR)
+      || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
+          && patch < SVN_FS_WANT_DB_PATCH))
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0, pool,
+                              "bad database version: got %d.%d.%d,"
+                              " should be at least %d.%d.%d",
+                              major, minor, patch,
+                              SVN_FS_WANT_DB_MAJOR,
+                              SVN_FS_WANT_DB_MINOR,
+                              SVN_FS_WANT_DB_PATCH);
+
+  /* Now, check that the version we're running against is the same as
+     the one we compiled with. */
+  if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0, pool,
+                              "bad database version:"
+                              " compiled with %d.%d.%d,"
+                              " running against %d.%d.%d",
+                              DB_VERSION_MAJOR,
+                              DB_VERSION_MINOR,
+                              DB_VERSION_PATCH,
+                              major, minor, patch);
+  return SVN_NO_ERROR;
+}
+
 
 /* If FS is already open, then return an SVN_ERR_FS_ALREADY_OPEN
    error.  Otherwise, return zero.  */
 static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
-  int major, minor, patch;
-
-  /* ### check_already_open() doesn't truly have the right semantic for
-     ### this, but it is called by both create_berkeley and open_berkeley,
-     ### so it happens to be a low-cost point. probably should be
-     ### refactored to go elsewhere. note that svn_fs_new() doesn't return
-     ### an error, so it isn't quite suitable. */
-  db_version (&major, &minor, &patch);
-  if ((major < SVN_FS_WANT_DB_MAJOR)
-      || (major == SVN_FS_WANT_DB_MAJOR && minor < SVN_FS_WANT_DB_MINOR)
-      || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
-          && patch < SVN_FS_WANT_DB_PATCH))
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
-                              "bad database version: %d.%d.%d",
-                              major, minor, patch);
-
   if (fs->env)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0, 0, fs->pool,
                              "filesystem object already open");
@@ -104,6 +125,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
       *db_ptr = 0;
       db_err = db->close (db, 0);
 
+#if SVN_BDB_HAS_DB_INCOMPLETE
       /* We can ignore DB_INCOMPLETE on db->close and db->sync; it
        * just means someone else was using the db at the same time
        * we were.  See the Berkeley documentation at:
@@ -112,6 +134,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
        */
       if (db_err == DB_INCOMPLETE)
         db_err = 0;
+#endif /* SVN_BDB_HAS_DB_INCOMPLETE */
 
       SVN_ERR (DB_WRAP (fs, msg, db_err));
     }
@@ -141,11 +164,13 @@ cleanup_fs (svn_fs_t *fs)
   {
     int db_err = env->txn_checkpoint (env, 0, 0, 0);
 
+#if SVN_BDB_HAS_DB_INCOMPLETE
     while (db_err == DB_INCOMPLETE)
       {
         apr_sleep (APR_USEC_PER_SEC * 1);
         db_err = env->txn_checkpoint (env, 0, 0, 0);
       }
+#endif /* SVN_BDB_HAS_DB_INCOMPLETE */
 
     /* If the environment was not (properly) opened, then txn_checkpoint
        will typically return EINVAL. Ignore this case.
@@ -383,6 +408,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   svn_error_t *svn_err;
   const char *path_native;
 
+  SVN_ERR (check_bdb_version (fs->pool));
   SVN_ERR (check_already_open (fs));
 
   /* Initialize the fs's path. */
@@ -519,6 +545,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   svn_error_t *svn_err;
   const char *path_native;
 
+  SVN_ERR (check_bdb_version (fs->pool));
   SVN_ERR (check_already_open (fs));
 
   /* Initialize paths. */
