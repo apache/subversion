@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-10-05 22:02+0200\n"
+"POT-Creation-Date: 2004-10-12 18:28+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -2706,7 +2706,7 @@ msgstr ""
 "Objekt '%s' for innsending har kopimerke satt, men har en ugyldig revisjon"
 
 #: libsvn_client/copy.c:102 libsvn_client/copy.c:646 libsvn_client/copy.c:834
-#: libsvn_ra_dav/commit.c:869
+#: libsvn_ra_dav/commit.c:897
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Filen '%s' finnes allerede"
@@ -2890,7 +2890,7 @@ msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Minst én revisjon må være ikke-lokal for en bundet diff"
 
 #: libsvn_client/diff.c:2268 libsvn_client/diff.c:2273
-#: libsvn_client/diff.c:2384 libsvn_client/export.c:729 libsvn_client/ra.c:694
+#: libsvn_client/diff.c:2384 libsvn_client/export.c:737 libsvn_client/ra.c:694
 #: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
@@ -2901,25 +2901,25 @@ msgstr "'%s' har ingen nettadresse"
 msgid "'%s' is not a valid EOL value"
 msgstr "'%s' er ikke en gyldig EOL-verdi"
 
-#: libsvn_client/export.c:137
+#: libsvn_client/export.c:143
 msgid "Destination directory exists, and will not be overwritten unless forced"
 msgstr "Målkatalogen finnes allerede og vil ikke bli overskrevet uten tvang"
 
-#: libsvn_client/export.c:264
+#: libsvn_client/export.c:272
 msgid "(local)"
 msgstr "(lokal)"
 
-#: libsvn_client/export.c:322 libsvn_client/export.c:464
+#: libsvn_client/export.c:330 libsvn_client/export.c:472
 #, c-format
 msgid "'%s' exists and is not a directory"
 msgstr "'%s' finnes og er ikke en katalog"
 
-#: libsvn_client/export.c:325 libsvn_client/export.c:468
+#: libsvn_client/export.c:333 libsvn_client/export.c:476
 #, c-format
 msgid "'%s' already exists"
 msgstr "'%s' finnes allerede"
 
-#: libsvn_client/export.c:639 libsvn_wc/update_editor.c:1584
+#: libsvn_client/export.c:647 libsvn_wc/update_editor.c:1584
 #: libsvn_wc/update_editor.c:2331
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
@@ -3335,21 +3335,21 @@ msgstr "Adresseskjemaet '%s' er ukjent"
 msgid "  - handles '%s' schema\n"
 msgstr "  - håndterer skjemaet '%s'\n"
 
-#: libsvn_ra_dav/commit.c:150
+#: libsvn_ra_dav/commit.c:167
 #, c-format
 msgid "Could not create a request (%s '%s')"
 msgstr "Kunne ikke lage forespørsel (%s '%s')"
 
-#: libsvn_ra_dav/commit.c:984
+#: libsvn_ra_dav/commit.c:1018
 msgid "Could not write svndiff to temp file"
 msgstr "Kunne ikke skrive svndiff til midlertidig fil"
 
-#: libsvn_ra_dav/commit.c:1074
+#: libsvn_ra_dav/commit.c:1108
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
 
-#: libsvn_ra_dav/commit.c:1221
+#: libsvn_ra_dav/commit.c:1255
 #, c-format
 msgid "applying log message to %s"
 msgstr "bruker loggmelding på %s"
@@ -3387,19 +3387,19 @@ msgstr ""
 "   forventet kontrollsum:  %s\n"
 "   gjeldende kontrollsum:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1089
+#: libsvn_ra_dav/fetch.c:1087
 msgid "Server does not support date-based operations"
 msgstr "Tjeneren støtter ikke datobaserte operasjoner"
 
-#: libsvn_ra_dav/fetch.c:1096
+#: libsvn_ra_dav/fetch.c:1094
 msgid "Invalid server response to dated-rev request"
 msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
-#: libsvn_ra_dav/fetch.c:1235
+#: libsvn_ra_dav/fetch.c:1233
 msgid "get-locations REPORT not implemented"
 msgstr "get-locations REPORT er ikke implementert"
 
-#: libsvn_ra_dav/fetch.c:1303
+#: libsvn_ra_dav/fetch.c:1301
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -3407,17 +3407,17 @@ msgstr ""
 "DAV-forespørsel feilet. Det er mulig at haken til depotets pre-revprop-"
 "change enten feilet eller ikke finnes"
 
-#: libsvn_ra_dav/fetch.c:2018
+#: libsvn_ra_dav/fetch.c:2016
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Feil under skriving til '%s': Uventet EOF"
 
-#: libsvn_ra_dav/fetch.c:2155
+#: libsvn_ra_dav/fetch.c:2153
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Ukjent XML-koding: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2413
+#: libsvn_ra_dav/fetch.c:2411
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "REPORT-responsens håndtering kunne ikke fullføre kjøringen av "
@@ -3653,7 +3653,7 @@ msgstr "Lokal URL '%s' inneholder bare et vertsnavn, ingen sti"
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "Lokal URL '%s' inneholder vertsnavn som ikke er støttet"
 
-#: libsvn_ra_local/split_url.c:108 libsvn_ra_local/split_url.c:115
+#: libsvn_ra_local/split_url.c:109 libsvn_ra_local/split_url.c:116
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Kunne ikke åpne depotet '%s'"
@@ -5290,12 +5290,12 @@ msgstr "ferdig.\n"
 #: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "generell bruk: svnadmin DELKOMMANDO DEPOTSTI  [ARGUMENTER & VALG ...]\n"
-"Skriv \"svnadmin help <delkommando>\" for hjelp om en delkommando.\n"
+"Skriv 'svnadmin help <delkommando>' for hjelp om en delkommando.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -5430,12 +5430,12 @@ msgstr ""
 #: svndumpfilter/main.c:799
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "generell bruk: svndumpfilter DELKOMMANDO [ARGUMENTER & VALG ...]\n"
-"Skriv \"svndumpfilter help <delkommando>\" for hjelp til en spesifikk\n"
+"Skriv 'svndumpfilter help <delkommando>' for hjelp til en spesifikk\n"
 "delkommando.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
@@ -5473,11 +5473,6 @@ msgstr "Revisjoner renummerert slik:\n"
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (droppet)\n"
-
-#: svndumpfilter/main.c:925
-#, c-format
-msgid "   %ld => %ld\n"
-msgstr "   %ld => %ld\n"
 
 #: svndumpfilter/main.c:936
 #, c-format
@@ -5759,7 +5754,7 @@ msgid ""
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
 "      options will, if invoked without one of those options, act on\n"
 "      the repository's youngest revision.\n"
-"Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+"Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
@@ -5767,7 +5762,7 @@ msgstr ""
 "Merk: De delkommandoene som tar valgene --revision og --transaction\n"
 "      bruker depotets yngste revisjon hvis de brukes uten disse\n"
 "      valgene.\n"
-"Skriv \"svnlook help <delkommando>\" for hjelp om en delkommando.\n"
+"Skriv 'svnlook help <delkommando>' for hjelp om en delkommando.\n"
 "\n"
 "Tilgjengelige delkommandoer;\n"
 
@@ -5811,7 +5806,7 @@ msgstr ""
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
-"  Produce a compact \"version number\" for the working copy path\n"
+"  Produce a compact 'version number' for the working copy path\n"
 "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
 "  determine if WC_PATH itself is switched (detection of switches\n"
 "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
@@ -5831,13 +5826,13 @@ msgid ""
 "   4123:4168MS   mixed revision, modified, switched working copy\n"
 "\n"
 "  If invoked on a directory that is not a working copy, an\n"
-"  exported directory say, the program will output \"exported\".\n"
+"  exported directory say, the program will output 'exported'.\n"
 "\n"
 "Valid options:\n"
 msgstr ""
 "bruk: svnversion [VALG] WC_STI [TRAIL_URL]\n"
 "\n"
-"  Lager et kompakt \"versjonsnummer\" for filstien WC_STI i en arbeidskopi.\n"
+"  Lager et kompakt 'versjonsnummer' for filstien WC_STI i en arbeidskopi.\n"
 "  TRAIL_URL er den avsluttende delen av nettadressen (URL) som brukes for å\n"
 "  avgjøre om selve WC_STI er blitt byttet (TRAIL_URL behøves ikke for å\n"
 "  oppdage byttinger innenfor WC_STI). Versjonsnummeret er skrevet til\n"
@@ -5857,7 +5852,7 @@ msgstr ""
 "   4123:4168MS   blandet revisjon, endret, og byttet på\n"
 "\n"
 "  Hvis programmet kjøres i en katalog som ikke er en arbeidskopi, f.eks. en\n"
-"  eksportert katalog, skrives \"eksportert\" ut.\n"
+"  eksportert katalog, skrives 'eksportert' ut.\n"
 "\n"
 "Valg:\n"
 
@@ -5878,3 +5873,6 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' er verken versjonert eller eksportert\n"
+
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
