@@ -2385,7 +2385,8 @@ copy_helper (svn_fs_root_t *from_root,
                                  from_node,
                                  preserve_history,
                                  svn_fs_revision_root_revision (from_root),
-                                 from_path, txn_id, pool));
+                                 svn_fs__canonicalize_abspath (from_path, pool),
+                                 txn_id, pool));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, pool));

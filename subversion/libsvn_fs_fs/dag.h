@@ -419,7 +419,8 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
    If PRESERVE_HISTORY is true, the new node will record that it was
    copied from FROM_PATH in FROM_REV; therefore, FROM_NODE should be
    the node found at FROM_PATH in FROM_REV, although this is not
-   checked.  
+   checked.  FROM_PATH should be canonicalized before being passed
+   here.
 
    If PRESERVE_HISTORY is false, FROM_PATH and FROM_REV are ignored.  */
 svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
