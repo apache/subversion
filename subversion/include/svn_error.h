@@ -112,6 +112,9 @@ typedef enum svn_errno_t {
   /* Unable to find an entry.  Not always a fatal error, by the way. */
   SVN_ERR_WC_ENTRY_NOT_FOUND,
 
+  /* Entry already exists when adding a file. */
+  SVN_ERR_WC_ENTRY_EXISTS,
+
   /* Unable to get ancestry for an entry, which should never happen. */
   SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
 
