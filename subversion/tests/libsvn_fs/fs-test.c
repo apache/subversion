@@ -260,7 +260,7 @@ verify_txn_list (const char **msg)
 
 /* The test table.  */
 
-int (*test_funcs[]) (const char **msg) = {
+svn_error_t * (*test_funcs[]) (const char **msg) = {
   0,
   create_berkeley_filesystem,
   open_berkeley_filesystem,
