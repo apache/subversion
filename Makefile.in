@@ -240,7 +240,7 @@ dist:
 .dvi.pdf:
 	$(DVIPDF) $< $@
 
-install-docs: install-man install-info
+install-docs: install-man @INSTALL_INFO@
 
 manroot = $(mandir)/man
 install-man:
@@ -257,11 +257,9 @@ install-man:
 	  $(INSTALL_DATA) $$file $(DESTDIR)$(manroot)$$ext/$$inst; \
 	done
 
-# @ INSTALL_INFO @ gets replaced with a blank if makeinfo isn't found and
-# becomes $(INFOPAGES) if it is.
-install-info:
+install-info: doc-info
 	$(MKDIR) $(DESTDIR)$(infodir)
-	@list='@INSTALL_INFO@'; \
+	@list='$(INFOPAGES)'; \
 	for i in $$list; do \
 	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
 	  else file=$$i; fi; \
