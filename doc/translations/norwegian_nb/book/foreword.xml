@@ -43,16 +43,16 @@ ch00.xml. -->
       istedenfor &#229; oppdage de sp&#248;rsm&#229;leme som egentlig 
       blir stilt.
       Det &#229; sette sammen en FAQ m&#229; v&#230;re en sammenhengende 
-      og organisert prosess som varer hele levetiden til programmet,
+      og organisert prosess som varer hele levetiden til programmet, 
       innkommende sp&#248;rsm&#229;l m&#229; bli lagret, responsen 
-      fulgt,
-      og alt dette m&#229; samles i en fyldig, s&#248;kbar helhet som 
-      avspeiler den kollektive opplevelsen for brukerne ute i det fri.
+      fulgt, og alt dette m&#229; samles i en fyldig, s&#248;kbar helhet 
+      som avspeiler den kollektive opplevelsen for brukerne ute i det 
+      fri.
       Det krever en t&#229;lmodig og observant innstilling hos en som 
       befinner seg i felten.
-      Ingen store hypoteser, ingen visjon&#230;re uttalelser 
-      her&#8212;&#229;pne &#248;yne og n&#248;yaktige notater er det som 
-      trengs mest.</para>
+      Ingen store hypoteser, ingen visjon&#230;re uttalelser her &#8212; 
+      &#229;pne &#248;yne og n&#248;yaktige notater er det som trengs 
+      mest.</para>
 
     <para>Det jeg liker med denne boken er at den vokste fram nettopp 
       gjennom en slik prosess, og dette vises p&#229; hver eneste side.
@@ -69,9 +69,9 @@ ch00.xml. -->
 
     <para>Frustrert over &#229; se de samme sp&#248;rsm&#229;lene dag 
       etter dag, jobbet Ben intenst over en m&#229;ned sommeren 2002 for 
-      &#229; skrive <citetitle>The Subversion Handbook</citetitle>,
-      en 60-siders h&#229;ndbok som tok for seg all grunnleggende bruk 
-      av Subversion.
+      &#229; skrive <citetitle>The Subversion Handbook</citetitle>, en 
+      60-siders h&#229;ndbok som tok for seg all grunnleggende bruk av 
+      Subversion.
       H&#229;ndboken tok ikke m&#229;l av seg &#229; v&#230;re komplett, 
       men den ble distribuert med Subversion og hjalp brukere over den 
       innledende humpen i l&#230;rekurven.
@@ -84,13 +84,13 @@ ch00.xml. -->
       for en uvanlig mulighet.
       Offisielt var deres oppgave &#229; skrive en bok ovenfra og ned, 
       &#229; starte med innholdet og et innledende utkast.
-      Men de hadde ogs&#229; tilgang til en jevn 
-      str&#248;m&#8212;faktisk en ukontrollerbar geysir&#8212;av 
-      materiale som kom fra gressrotplan.
+      Men de hadde ogs&#229; tilgang til en jevn str&#248;m &#8212; 
+      faktisk en ukontrollerbar geysir &#8212; av materiale som kom fra 
+      gressrotplan.
       Subversion var allerede i hendene p&#229; tusenvis av tidlige 
       brukere, og disse brukerne ga tonnevis med tilbakemeldinger, ikke 
-      bare om Subversion,
-      men om den eksisterende dokumentasjonen.</para>
+      bare om Subversion, men om den eksisterende 
+      dokumentasjonen.</para>
 
     <para>Gjennom hele tiden de skrev denne boken, tr&#229;lte Ben, Mike 
       og Brian konstant malilinglisten til Subversion og fulgte med i 
@@ -135,10 +135,9 @@ ch00.xml. -->
       mange andre som har bidratt med korreksjoner og originalt 
       materiale.
       Fra fellesskapets synspunkt er det &#229; l&#248;se problemet ditt 
-      bare en behagelig bieffekt av et mye st&#248;rre 
-      prosjekt&#8212;det &#229; sakte tilpasse boken, og aller helst 
-      Subversion selv, til &#229; samsvare mer med hvordan den faktisk 
-      brukes.
+      bare en behagelig bieffekt av et mye st&#248;rre prosjekt &#8212; 
+      det &#229; sakte tilpasse boken, og aller helst Subversion selv, 
+      til &#229; samsvare mer med hvordan den faktisk brukes.
       De er ivrige etter &#229; h&#248;re fra deg, ikke bare fordi de 
       kan hjelpe deg, men fordi du kan hjelpe dem.
       Det er med Subversion som med alle aktive prosjekter innen fri 

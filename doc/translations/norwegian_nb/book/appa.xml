@@ -15,9 +15,9 @@
       fremtidens brukermasse, var det n&#248;dvendig med nye funksjoner 
       og forandringer i oppbygningen for &#229; ordne enkelte 
       <quote>&#248;delagte</quote> virkem&#229;ter i CVS.
-      Dette betyr at du som CVS-bruker kanskje m&#229; bryte 
-      vaner&#8212;av den typen du har glemt var merkelige til &#229; 
-      begynne med.</para>
+      Dette betyr at du som CVS-bruker kanskje m&#229; bryte vaner 
+      &#8212; av den typen du har glemt var merkelige til &#229; begynne 
+      med.</para>
 
   </simplesect>
 
@@ -515,8 +515,8 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
 
     <para>Med CVSs pserver er du n&#248;dt til &#229; <quote>logge 
       inn</quote> p&#229; tjeneren f&#248;r du kan utf&#248;re lese- 
-      eller skriveoperasjoner&#8212;du m&#229; til og med logge inn for 
-      anonyme operasjoner.
+      eller skriveoperasjoner &#8212; du m&#229; til og med logge inn 
+      for anonyme operasjoner.
       Med et Subversiondepot som bruker Apache HTTPD p&#229; tjeneren, 
       oppgir du ingen autentiseringsopplysninger, tjeneren vil 
       sp&#248;rre deg etter opplysningene (enten disse er brukernavn og 
@@ -573,7 +573,7 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       historien til CVS-depotet skal behandles.
       Uansett hvilket verkt&#248;y du bestemmer deg for &#229; bruke, 
       v&#230;r n&#248;ye med &#229; utf&#248;re s&#229; mye verifisering 
-      som du kan p&#229; konverteringsresultatet&#8212;n&#229;r alt 
+      som du kan p&#229; konverteringsresultatet &#8212; n&#229;r alt 
       kommer til alt har du jobbet hardt for &#229; lage denne 
       historien!</para>
 
