@@ -949,7 +949,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * Under @a path, fill @a statushash mapping paths to @c svn_wc_status_t
  * structures.  All fields in each struct will be filled in except for
  * @c repos_rev, which would presumably be filled in by the caller.
- * @a adm_access must be an access baton for @a path.
+ * @a adm_access is an access baton which holds a write-lock for @a path.
  *
  * @a path will usually be a directory, since for a regular file, you would
  * have used @c svn_wc_status().  However, it is no error if @a path is not
