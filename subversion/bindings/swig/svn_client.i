@@ -31,43 +31,46 @@
 %import svn_wc.i
 
 /* -----------------------------------------------------------------------
-   don't wrap the following items
+   %apply-ing of typemaps defined elsewhere
 */
-#ifndef SWIGPERL
-    %ignore svn_client_proplist_item_t;
-#endif
 
-/* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
-*/
 %apply SWIGTYPE **OUTPARAM {
   svn_client_commit_info_t **,
   svn_auth_provider_object_t **,
   svn_client_ctx_t **
 };
 
-/* -----------------------------------------------------------------------
-   all "targets" and "diff_options" arrays are constant inputs of
-   svn_stringbuf_t *
- */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *targets,
     const apr_array_header_t *diff_options
 };
 
-/* -----------------------------------------------------------------------
-   fix up the return hash for svn_client_propget()
-*/
+/* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
+/* svn_client_url_from_path(), svn_client_uuid_from_url()
+ * svn_client_uuid_from_path */
+%apply const char **OUTPUT {
+    const char **url,
+    const char **uuid
+};
+
 /* -----------------------------------------------------------------------
-   handle the return value for svn_client_proplist()
+   svn_client_proplist()
+   returns apr_array_header_t * <svn_client_proplist_item_t *>
 */
 
-%typemap(python,in,numinputs=0) apr_array_header_t **props (apr_array_header_t *temp) {
+%typemap(in, numinputs=0) apr_array_header_t **props (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python,argout,fragment="t_output_helper") apr_array_header_t **props {
+
+/* svn_client_proplist_item_t is used exclusively for svn_client_proplist().
+   The python bindings convert it to a native python tuple. */
+#ifdef SWIGPYTHON
+    %ignore svn_client_proplist_item_t;
+#endif
+%typemap(python, argout, fragment="t_output_helper") apr_array_header_t **props
+{
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
@@ -96,11 +99,6 @@
     $result = t_output_helper($result, list);
 }
 
-%typemap(perl5,in,numinputs=0) apr_array_header_t **props (apr_array_header_t *temp)
-{
-    $1 = &temp;
-}
-
 %typemap(perl5,argout) apr_array_header_t **props {
     $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
                                               "svn_client_proplist_item_t *"));
@@ -113,7 +111,8 @@
 }
 
 /* -----------------------------------------------------------------------
-   handle svn_client_get_commit_log_t/baton pairs
+   Callback: svn_client_get_commit_log_t
+   svn_client_ctx_t
 */
 
 %typemap(python,in) (svn_client_get_commit_log_t log_msg_func, 
@@ -139,28 +138,8 @@
   }
 
 /* -----------------------------------------------------------------------
-   handle svn_client_prompt_t/baton pairs
-*/
-
-%typemap(java,memberin) (svn_client_prompt_t prompt_func, 
-                   void *prompt_baton) {
-  //$1 = svn_swig_java_client_prompt_func;
-  //$2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
-}
-
-%typemap(java,in) (svn_client_prompt_t prompt_func, 
-                   void *prompt_baton) {
-  $1 = svn_swig_java_client_prompt_func;
-  $2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
-}
-
-%typemap(java, jni) svn_client_prompt_t "jobject"
-%typemap(java, jtype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(java, jstype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(java, javain) svn_client_prompt_t "$javainput"
-
-/* -----------------------------------------------------------------------
-   handle svn_client_blame_receiver_t/baton pairs
+   Callback: svn_client_blame_receiver_t
+   svn_client_blame()
 */
 
 %typemap(python, in) (svn_client_blame_receiver_t receiver, 
@@ -169,25 +148,17 @@
     $2 = (void *)$input;
 }
 
-%typemap(perl5,in) (svn_client_blame_receiver_t receiver, void *receiver_baton) {
+%typemap(perl5, in) (svn_client_blame_receiver_t receiver,
+                     %void *receiver_baton) {
   $1 = svn_swig_pl_blame_func;
   $2 = $input; /* our function is the baton. */
-}
-
-/* -----------------------------------------------------------------------
-   handle the "statushash" OUTPUT param for svn_client_status()
-*/
-%typemap(python,in,numinputs=0) apr_hash_t **statushash = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **statushash {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
    adding a simple declaration here, SWIG will insert a name for it.
+   FIXME: This may be untrue. See svn_wc_status, etc.
 */
 %types(svn_wc_status_t *);
 
@@ -355,19 +326,6 @@
                $*1_descriptor, 0);
   argvi++;
 }  
-
-
-/* -----------------------------------------------------------------------
- * Handle output types for svn_client_url_from_path, svn_client_uuid_from_url
- * and svn_client_uuid_from_path */
-
-%apply const char **OUTPUT {
-    const char **url,
-    const char **uuid
-};
-
-
-
 
 /* ----------------------------------------------------------------------- */
 
