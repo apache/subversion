@@ -50,6 +50,7 @@
 
 
 #include <string.h>
+#include <assert.h>
 #include "apr_pools.h"
 #include "svn_xml.h"
 
@@ -183,16 +184,21 @@ svn_xml_get_attr_value (const char *name, const char **atts)
 
 /*** Printing XML ***/
 
-/* Print an XML tag named TAGNAME into FILE.  Varargs are used to
-   specify a NULL-terminated list of {const char *attribute, const
-   char *value}.  TAGTYPE must be one of 
+svn_error_t *
+svn_xml_write_header (apr_file_t *file, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  const char *header = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 
-              svn_xml__open_tag         ... <tagname>
-              svn_xml__close_tag        ... </tagname>
-              svn_xml__self_close_tag   ... <tagname/>
+  apr_err = apr_full_write (file, header, (sizeof (header) - 1), NULL);
+  if (apr_err)
+    return svn_error_create (apr_err, 0, NULL, pool,
+                             "svn_xml_write_header: file write error.");
+  
+  return SVN_NO_ERROR;
+}
 
-   FILE is assumed to be already open for writing.
-*/
+
 svn_error_t *
 svn_xml_write_tag (apr_file_t *file,
                    apr_pool_t *pool,
@@ -200,9 +206,26 @@ svn_xml_write_tag (apr_file_t *file,
                    const char *tagname,
                    ...)
 {
+  svn_error_t *err;
+  va_list ap;
+
+  va_start (ap, tagname);
+  err = svn_xml_write_tag_v (file, pool, tagtype, tagname, ap);
+  va_end (ap);
+
+  return err;
+}
+
+
+svn_error_t *
+svn_xml_write_tag_v (apr_file_t *file,
+                     apr_pool_t *pool,
+                     const int tagtype,
+                     const char *tagname,
+                     va_list ap)
+{
   apr_status_t status;
   apr_size_t bytes_written;
-  va_list argptr;
   char *attribute, *value;
   svn_string_t *xmlstring;
 
@@ -215,22 +238,17 @@ svn_xml_write_tag (apr_file_t *file,
 
   svn_string_appendcstr (xmlstring, tagname, subpool);
 
-  va_start (argptr, tagname);
-  attribute = (char *) argptr;
-
-  while (attribute)
+  while ((attribute = va_arg (ap, char *)) != NULL)
     {
-      value = va_arg (argptr, char *);
+      value = va_arg (ap, char *);
+      assert (value != NULL);
       
       svn_string_appendcstr (xmlstring, "\n   ", subpool);
       svn_string_appendcstr (xmlstring, attribute, subpool);
       svn_string_appendcstr (xmlstring, "=\"", subpool);
       svn_string_appendcstr (xmlstring, value, subpool);
       svn_string_appendcstr (xmlstring, "\"", subpool);
-      
-      attribute = va_arg (argptr, char *);
     }
-  va_end (argptr);
 
   if (tagtype == svn_xml__self_close_tag)
     svn_string_appendcstr (xmlstring, "/", subpool);
@@ -248,8 +266,6 @@ svn_xml_write_tag (apr_file_t *file,
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 

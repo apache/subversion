@@ -9,7 +9,7 @@ lib_LTLIBRARIES = libsvn_wc.la
 
 ## Sources needed to build each library (names canonicalized)
 libsvn_wc_la_SOURCES = get_editor.c                      \
-                       adm_files.c adm_ops.c adm_parse.c \
+                       adm_files.c adm_ops.c             \
                        lock.c util.c questions.c         \
                        log.c local_changes.c             \
                        versions.c                        \

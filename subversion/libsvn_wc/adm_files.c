@@ -959,10 +959,6 @@ init_adm (svn_string_t *path,
     "This is a Subversion working copy administrative directory.\n"
     "Visit http://subversion.tigris.org/ for more information.\n";
 
-  /* Always create at version 0. */
-  svn_string_t *versions_contents
-    = svn_wc__versions_init_contents (0, pool);
-
   /* First, make an empty administrative area. */
   err = make_empty_adm (path, pool);
 
@@ -1048,7 +1044,7 @@ init_adm (svn_string_t *path,
 
 
   /* SVN_WC__ADM_VERSIONS */
-  err = init_adm_file (path, SVN_WC__ADM_VERSIONS, versions_contents, pool);
+  err = svn_wc__versions_init (path, pool);
   if (err)
     return err;
 

@@ -277,11 +277,16 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 
 
 
-/*** Stuff that knows about the working copy XML formats. ***/
+/*** Handling the `versions' file. ***/
 
-/* Initial contents of `versions' for a new adm area. */
-svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
-                                              apr_pool_t *pool);
+#define SVN_WC__VERSIONS_START   "wc-versions"
+#define SVN_WC__VERSIONS_ENTRY   "entry"
+#define SVN_WC__VERSIONS_END     "wc-versions"
+
+
+
+/* Initialize contents of `versions' for a new adm area. */
+svn_error_t *svn_wc__versions_init (svn_string_t *path, apr_pool_t *pool);
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the

@@ -55,11 +55,13 @@
 #include "svn_error.h"
 
 
-/* Used as an argument to svn_xml_write_tag() */
+#define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
+
+/* Used as type argument to svn_xml_write_tag() */
 enum {
-  svn_xml__open_tag = 1,         /* write <tag>   */
-  svn_xml__close_tag,            /* write </tag>  */
-  svn_xml__self_close_tag        /* write <tag/>  */
+  svn_xml__open_tag,         /* write <tag ...>                    */
+  svn_xml__close_tag,        /* write </tag>                       */
+  svn_xml__self_close_tag    /* write <tag .../>                   */
 };
 
 
@@ -134,6 +136,16 @@ const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
 /*** Printing XML ***/
 
+/* Fully-formed XML files should start out with a header, something
+ * like 
+ *         <?xml version="1.0" encoding="utf-8"?>
+ * 
+ * If you're writing such a file, call this before you make any calls
+ * to svn_xml_write_tag().
+ */
+svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
+
+
 /* Print an XML tag named TAGNAME into FILE.  Varargs are used to
    specify a NULL-terminated list of {const char *attribute, const
    char *value}.  TAGTYPE must be one of 
@@ -144,18 +156,19 @@ const char *svn_xml_get_attr_value (const char *name, const char **atts);
 
    FILE is assumed to be already open for writing.
 */
-svn_error_t * svn_xml_write_tag (apr_file_t *file,
-                                 apr_pool_t *pool,
-                                 int tagtype,
-                                 const char *tagname,
-                                 ...);
+svn_error_t *svn_xml_write_tag (apr_file_t *file,
+                                apr_pool_t *pool,
+                                int tagtype,
+                                const char *tagname,
+                                ...);
 
 
-
-
-
-
-
+/* Like svn_xml_write_tag, but takes a va_list instead of being variadic. */
+svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
+                                  apr_pool_t *pool,
+                                  const int tagtype,
+                                  const char *tagname,
+                                  va_list ap);
 
 
 #endif /* SVN_XML_H */
