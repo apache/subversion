@@ -87,3 +87,11 @@ void * svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool);
 
 
 #endif /* SVN_HASH_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -56,19 +56,25 @@
 
 typedef struct svn_delta_digger_t
 {
-  ap_pool_t *pool;
+  apr_pool_t *pool;
   
   svn_delta_t *delta;
 
-  /* Looks at delta context, figures out if this is pdelta or vdelta data */
-  (*data_handler) (svn_delta_digger_t *digger, const char *data, int len);
+  /* Caller uses delta context to determine if prop data or text data. */
+  svn_error_t (*data_handler) (svn_delta_digger_t *digger,
+                               const char *data,
+                               int len);
 
-  /* When we find a <dir> tag... */
-  (*dir_handler) (svn_delta_digger_t *digger, svn_ancestor_t *ancestor);
+  /* Call handles dirs specially, because might want to create them. */
+  svn_error_t (*dir_handler) (svn_delta_digger_t *digger,
+                              svn_ancestor_t *ancestor);
 
-  /* What to do when we find an unrecognized tag */
-  (*default_handler) (svn_delta_digger_t *digger,
-                      const char *data,
-                      const char **atts);
+  /* Caller optionally decides what to do with unrecognized elements. */
+  svn_error_t (*unknown_elt_handler) (svn_delta_digger_t *digger,
+                                      const char *data,
+                                      const char **atts);
 
 } svn_delta_digger_t;
+
+
+
