@@ -302,6 +302,10 @@ def create_repos(path):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
   run_svnadmin("create", path, "--bdb-txn-nosync")
 
+  # Allow unauthenticated users to write to the repos, for ra_svn testing.
+  file_append(os.path.join(path, "svnserve.conf"),
+              "[general]\nanon-access = write\n");
+
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 

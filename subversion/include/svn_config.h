@@ -85,6 +85,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 
+/* For repository svnserve.conf files */
+#define SVN_CONFIG_SECTION_GENERAL              "general"
+#define SVN_CONFIG_OPTION_ANON_ACCESS               "anon-access"
+#define SVN_CONFIG_OPTION_AUTH_ACCESS               "auth-access"
 
 /*** Configuration Default Values ***/
 
