@@ -3940,10 +3940,12 @@ txn_body_history_prev (void *baton, trail_t *trail)
     }
 
   /* See if any copies took place between our path/revision and
-     the location of the node's last commit.  */
+     the location of the node's last commit. */
+  /* ### cmpilato todo: lazy branching means we can't know the
+         end_copy_id, so pass NULL here.  is this okay?  */
   SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
                                fs, commit_rev, svn_fs__id_copy_id (node_id),
-                               revision, end_cp_id, trail));
+                               revision, NULL, trail));
   if (src_path && SVN_IS_VALID_REVNUM (src_rev))
     {
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 

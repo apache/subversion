@@ -477,7 +477,7 @@ struct revisions_changed_results
 {
   const char *path;
   int num_revs;
-  svn_revnum_t revs_changed[10];
+  svn_revnum_t revs_changed[11];
 };
 
 
@@ -490,7 +490,7 @@ revisions_changed (const char **msg,
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
+  svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev = 0;
   
   *msg = "test svn_repos_revisions_changed";
@@ -564,6 +564,53 @@ revisions_changed (const char **msg,
   SVN_ERR (svn_fs_close_txn (txn));
   svn_pool_clear (spool);
 
+  /* Revision 6 - move A/D to A/Z */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/Z", spool));
+  SVN_ERR (svn_fs_delete_tree (txn_root, "A/D", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 7 - edit A/Z/G/pi */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/Z/G/pi", "7", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 8 - move A/Z back to A/D, edit iota */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/Z", txn_root, "A/D", spool));
+  SVN_ERR (svn_fs_delete_tree (txn_root, "A/Z", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "iota", "8", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 9 - copy A/D/G to A/D/Q */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/Q", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /* Revision 10 - edit A/D/Q/pi and A/D/Q/rho */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/Q/pi", "10", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/Q/rho", "10", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
   /* Now, it's time to verify our results. */
   {
     int j;
@@ -571,38 +618,46 @@ revisions_changed (const char **msg,
        that for now, bubble-up in directories causes the directory to
        appear changed though no entries were added or removed, and no
        property mods occured.  Also note that this matrix represents
-       only the final state of the paths existing in HEAD of th
-       repository. */
-    static const struct revisions_changed_results test_data[21] = {
+       only the final state of the paths existing in HEAD of the
+       repository.
+
+       Notice for each revision, you can glance down that revision's
+       column in this table and see all the paths modified directory or
+       via bubble-up. */
+    static const struct revisions_changed_results test_data[25] = {
       /* path,          num,    revisions changed... */
-      { "",               6,    { 5, 4, 3, 2, 1, 0 } },
-      { "iota",           3,    { 4, 3, 1 } },
-      { "A",              5,    { 5, 4, 3, 2, 1 } },
-      { "A/mu",           3,    { 5, 2, 1 } },
-      { "A/B",            5,    { 5, 4, 3, 2, 1 } },
-      { "A/B/lambda",     2,    { 3, 1 } },
-      { "A/B/E",          4,    { 5, 4, 2, 1 } },
-      { "A/B/E/alpha",    3,    { 5, 2, 1 } },
-      { "A/B/E/beta",     2,    { 4, 1 } },
-      { "A/B/F",          1,    { 1 } },
-      { "A/C",            1,    { 1 } },
-      { "A/D",            5,    { 5, 4, 3, 2, 1 } },
-      { "A/D/gamma",      2,    { 4, 1 } },
-      { "A/D/G",          3,    { 5, 4, 1 } },
-      { "A/D/G/pi",       2,    { 4, 1 } },
-      { "A/D/G/rho",      2,    { 4, 1 } },
-      { "A/D/G/tau",      2,    { 5, 1 } },
-      { "A/D/H",          4,    { 5, 3, 2, 1 } },
-      { "A/D/H/chi",      2,    { 5, 1 } },
-      { "A/D/H/psi",      2,    { 3, 1 } },
-      { "A/D/H/omega",    3,    { 3, 2, 1 } }
+      { "",              11,    { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 } },
+      { "iota",           4,    {        8,          4, 3,    1    } },
+      { "A",             10,    { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1    } },
+      { "A/mu",           3,    {                 5,       2, 1    } },
+      { "A/B",            5,    {                 5, 4, 3, 2, 1    } },
+      { "A/B/lambda",     2,    {                       3,    1    } },
+      { "A/B/E",          4,    {                 5, 4,    2, 1    } },
+      { "A/B/E/alpha",    3,    {                 5,       2, 1    } },
+      { "A/B/E/beta",     2,    {                    4,       1    } },
+      { "A/B/F",          1,    {                             1    } },
+      { "A/C",            1,    {                             1    } },
+      { "A/D",           10,    { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1    } },
+      { "A/D/gamma",      4,    {        8,    6,    4,       1    } },
+      { "A/D/G",          6,    {        8, 7, 6, 5, 4,       1    } },
+      { "A/D/G/pi",       5,    {        8, 7, 6,    4,       1    } },
+      { "A/D/G/rho",      4,    {        8,    6,    4,       1    } },
+      { "A/D/G/tau",      4,    {        8,    6, 5,          1    } },
+      { "A/D/Q",          8,    { 10, 9, 8, 7, 6, 5, 4,       1    } },
+      { "A/D/Q/pi",       7,    { 10, 9, 8, 7, 6,    4,       1    } },
+      { "A/D/Q/rho",      6,    { 10, 9, 8,    6,    4,       1    } },
+      { "A/D/Q/tau",      5,    {     9, 8,    6, 5,          1    } },
+      { "A/D/H",          6,    {        8,    6, 5,    3, 2, 1    } },
+      { "A/D/H/chi",      4,    {        8,    6, 5,          1    } },
+      { "A/D/H/psi",      4,    {        8,    6,       3,    1    } },
+      { "A/D/H/omega",    5,    {        8,    6,       3, 2, 1    } }
     };
     
     apr_array_header_t *revs;
 
     /* Now, for each path in the revision, get its changed-revisions
        array and compare the array to the static results above.  */
-    for (j = 0; j < 21; j++)
+    for (j = 0; j < 25; j++)
       {
         int i;
         const char *path = test_data[j].path;
