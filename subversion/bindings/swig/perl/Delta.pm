@@ -103,6 +103,8 @@ use SVN::Base qw(Delta svn_txdelta_window_t_);
 
 package SVN::Delta::Editor;
 use SVN::Base qw(Delta svn_delta_editor_);
+use Carp;
+
 *invoke_set_target_revision = *SVN::_Delta::svn_delta_editor_invoke_set_target_revision;
 
 sub convert_editor {
@@ -153,8 +155,10 @@ sub AUTOLOAD {
 
     my @ret = UNIVERSAL::isa ($self->{_editor}, __PACKAGE__) ?
 	$self->{_editor}->$func (@_) :
-        &{"invoke_$func"}($self->{_editor},
-			      $ebaton{$func} ? $self->{_baton} : (), @_);
+        eval { &{"invoke_$func"}($self->{_editor},
+				 $ebaton{$func} ? $self->{_baton} : (), @_) };
+
+    confess $@ if $@;
 
     return $#ret == 0 ? $ret[0] : [@ret];
 }
