@@ -63,7 +63,7 @@ svn_io_check_path (const char *path,
 
   /* Not using svn_io_stat() here because we want to check the
      apr_err return anyway. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   apr_err = apr_stat (&finfo, path_native, APR_FINFO_MIN, pool);
 
   if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
@@ -156,8 +156,8 @@ svn_io_open_unique_file (apr_file_t **f,
          while iterating, then convert it back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-      SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (unique_name_buf,
-                                                    &unique_name_native,
+      SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (&unique_name_native,
+                                                    unique_name_buf,
                                                     pool));
       
       apr_err = apr_file_open (f, unique_name_native, flag,
@@ -216,8 +216,8 @@ svn_io_copy_file (const char *src,
   apr_int32_t options = APR_OS_DEFAULT;
 #endif
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (src, &src_native, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (dst, &dst_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
 
   apr_err = apr_file_copy (src_native, dst_native, options, pool);
 
@@ -235,8 +235,8 @@ svn_io_append_file (const char *src, const char *dst, apr_pool_t *pool)
   apr_status_t apr_err;
   const char *src_native, *dst_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (src, &src_native, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (dst, &dst_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
 
   apr_err = apr_file_append (src_native, dst_native, APR_OS_DEFAULT, pool);
 
@@ -291,7 +291,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                               "svn_io_copy_dir: '%s' already exists.",
                               dst_path);
   
-  SVN_ERR (svn_utf_cstring_from_utf8 (dst_path, &dst_path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_path_native, dst_path, pool));
 
   /* Create the new directory. */
   /* ### TODO: copy permissions? */
@@ -355,7 +355,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   char *dir;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
 #if 0
   /* ### Use this implementation if/when apr_dir_make_recursive is
@@ -464,8 +464,8 @@ svn_io_filesizes_different_p (svn_boolean_t *different_p,
   /* Not using svn_io_stat() because don't want to generate
      svn_error_t objects for non-error conditions. */
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (file1, &file1_native, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (file2, &file2_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&file1_native, file1, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&file2_native, file2, pool));
 
   /* Stat both files */
   status = apr_stat (&finfo1, file1_native, APR_FINFO_MIN, pool);
@@ -563,7 +563,7 @@ svn_io_set_file_read_only (const char *path,
   apr_status_t status;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   status = apr_file_attrs_set (path_native,
                                APR_FILE_ATTR_READONLY,
@@ -589,7 +589,7 @@ svn_io_set_file_read_write (const char *path,
   apr_status_t status;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   status = apr_file_attrs_set (path_native,
                                0,
@@ -616,7 +616,7 @@ svn_io_set_file_executable (const char *path,
   apr_status_t status;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   if (executable)
     status = apr_file_attrs_set (path_native,
@@ -993,7 +993,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
     {
       const char *fname_utf8;
       
-      SVN_ERR (svn_utf_cstring_to_utf8 (fname, &fname_utf8, NULL, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (&fname_utf8, fname, NULL, pool));
       
       return svn_error_createf 
         (apr_err, 0, NULL, pool,
@@ -1020,7 +1020,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   /* Remove read-only flag on terminated file. */
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   apr_err = apr_file_remove (path_native, pool);
 
@@ -1054,7 +1054,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
      instead of just using svn_io_dir_open, because we're going to
      need path_native later anyway when we remove the dir itself. */
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, subpool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
 
   status = apr_dir_open (&this_dir, path_native, subpool);
   if (status)
@@ -1076,8 +1076,8 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
         {
           const char *fullpath, *entry_utf8;
 
-          SVN_ERR (svn_utf_cstring_to_utf8 (this_entry.name,
-                                            &entry_utf8, NULL, subpool));
+          SVN_ERR (svn_utf_cstring_to_utf8 (&entry_utf8, this_entry.name,
+                                            NULL, subpool));
           
           fullpath = svn_path_join (path, entry_utf8, pool);
           
@@ -1151,7 +1151,7 @@ svn_io_get_dirents (apr_hash_t **dirents,
         {
           const char *name;
 
-          SVN_ERR (svn_utf_cstring_to_utf8 (this_entry.name, &name,
+          SVN_ERR (svn_utf_cstring_to_utf8 (&name, this_entry.name,
                                             NULL, pool));
           
           if (this_entry.filetype == APR_REG)
@@ -1228,7 +1228,7 @@ svn_io_run_cmd (const char *path,
     {
       const char *path_native;
 
-      SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
       apr_err = apr_procattr_dir_set (cmdproc_attr, path_native);
 
@@ -1273,15 +1273,15 @@ svn_io_run_cmd (const char *path,
     }
 
   /* Convert cmd and args from UTF-8 */
-  SVN_ERR (svn_utf_cstring_from_utf8 (cmd, &cmd_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&cmd_native, cmd, pool));
   for (num_args = 0; args[num_args]; num_args++)
     ;
   args_native = apr_palloc (pool, (num_args + 1) * sizeof(char *));
   args_native[num_args] = NULL;
   while (num_args--)
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (args[num_args],
-                                          &args_native[num_args],
+      SVN_ERR (svn_utf_cstring_from_utf8 (&args_native[num_args],
+                                          args[num_args],
                                           pool));
     }
 
@@ -1383,7 +1383,7 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (SVN_CLIENT_DIFF, &diff_utf8, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&diff_utf8, SVN_CLIENT_DIFF, NULL, pool));
   
   SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
                            NULL, outfile, errfile, subpool));
@@ -1450,7 +1450,7 @@ svn_io_run_diff3 (const char *dir,
   args[12] = NULL;
 #endif
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (SVN_CLIENT_DIFF3, &diff3_utf8,
+  SVN_ERR (svn_utf_cstring_to_utf8 (&diff3_utf8, SVN_CLIENT_DIFF3,
                                     NULL, pool));
 
   /* Run diff3, output the merged text into the scratch file. */
@@ -1560,7 +1560,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
   const char *fname_native;
   apr_status_t status;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (fname, &fname_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&fname_native, fname, pool));
   status = apr_file_open (new_file, fname_native, flag, perm, pool);
 
   if (status)
@@ -1578,7 +1578,7 @@ svn_io_stat (apr_finfo_t *finfo, const char *fname,
   apr_status_t status;
   const char *fname_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (fname, &fname_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&fname_native, fname, pool));
 
   status = apr_stat (finfo, fname_native, wanted, pool);
 
@@ -1597,8 +1597,8 @@ svn_io_file_rename (const char *from_path, const char *to_path,
   apr_status_t status;
   const char *from_path_native, *to_path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (from_path, &from_path_native, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (to_path, &to_path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&from_path_native, from_path, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&to_path_native, to_path, pool));
 
   status = apr_file_rename (from_path_native, to_path_native, pool);
 
@@ -1617,7 +1617,7 @@ svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
   apr_status_t status;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   status = apr_dir_make (path_native, perm, pool);
 
@@ -1636,7 +1636,7 @@ svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
   apr_status_t status;
   const char *dirname_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (dirname, &dirname_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dirname_native, dirname, pool));
 
   status = apr_dir_open (new_dir, dirname_native, pool);
 
@@ -1655,7 +1655,7 @@ svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool)
   apr_status_t status;
   const char *dirname_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (dirname, &dirname_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&dirname_native, dirname, pool));
 
   status = apr_dir_remove (dirname_native, pool);
 
@@ -1684,11 +1684,11 @@ svn_io_dir_read (apr_finfo_t *finfo,
                              "svn_io_dir_read: error reading directory");
 
   if (finfo->fname)
-    SVN_ERR (svn_utf_cstring_to_utf8 (finfo->fname, &finfo->fname,
+    SVN_ERR (svn_utf_cstring_to_utf8 (&finfo->fname, finfo->fname,
                                       NULL, pool));
 
   if (finfo->name)
-    SVN_ERR (svn_utf_cstring_to_utf8 (finfo->name, &finfo->name,
+    SVN_ERR (svn_utf_cstring_to_utf8 (&finfo->name, finfo->name,
                                       NULL, pool));
 
   return SVN_NO_ERROR;
@@ -1706,7 +1706,7 @@ svn_io_file_printf (apr_file_t *fptr, const char *format, ...)
   buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
   va_end(ap);
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (buf, &buf_native,
+  SVN_ERR (svn_utf_cstring_from_utf8 (&buf_native, buf,
                                       apr_file_pool_get (fptr)));
 
   status = apr_file_puts (buf_native, fptr);
@@ -1830,7 +1830,7 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
   apr_status_t status;
   const char *path_native;
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   status = apr_dir_is_empty (path_native, pool);
 

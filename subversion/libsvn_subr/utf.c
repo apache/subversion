@@ -212,8 +212,8 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_utf_stringbuf_to_utf8 (const svn_stringbuf_t *src,
-                           svn_stringbuf_t **dest,
+svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
+                           const svn_stringbuf_t *src,
                            apr_pool_t *pool)
 {
 #ifdef SVN_UTF8
@@ -235,8 +235,8 @@ svn_utf_stringbuf_to_utf8 (const svn_stringbuf_t *src,
 
 
 svn_error_t *
-svn_utf_string_to_utf8 (const svn_string_t *src,
-                        const svn_string_t **dest,
+svn_utf_string_to_utf8 (const svn_string_t **dest,
+                        const svn_string_t *src,
                         apr_pool_t *pool)
 {
 #ifdef SVN_UTF8
@@ -261,8 +261,8 @@ svn_utf_string_to_utf8 (const svn_string_t *src,
 
 
 svn_error_t *
-svn_utf_cstring_to_utf8_stringbuf (const char *src,
-                                   svn_stringbuf_t **dest,
+svn_utf_cstring_to_utf8_stringbuf (svn_stringbuf_t **dest,
+                                   const char *src,
                                    apr_xlate_t *xlator,
                                    apr_pool_t *pool)
 {
@@ -288,8 +288,8 @@ svn_utf_cstring_to_utf8_stringbuf (const char *src,
 
 
 svn_error_t *
-svn_utf_cstring_to_utf8 (const char *src,
-                         const char **dest,
+svn_utf_cstring_to_utf8 (const char **dest,
+                         const char *src,
                          apr_xlate_t *xlator,
                          apr_pool_t *pool)
 {
@@ -312,8 +312,8 @@ svn_utf_cstring_to_utf8 (const char *src,
 
 
 svn_error_t *
-svn_utf_stringbuf_from_utf8 (const svn_stringbuf_t *src,
-			     svn_stringbuf_t **dest,
+svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
+			     const svn_stringbuf_t *src,
 			     apr_pool_t *pool)
 {
 #ifdef SVN_UTF8
@@ -335,8 +335,8 @@ svn_utf_stringbuf_from_utf8 (const svn_stringbuf_t *src,
 
 
 svn_error_t *
-svn_utf_string_from_utf8 (const svn_string_t *src,
-                          const svn_string_t **dest,
+svn_utf_string_from_utf8 (const svn_string_t **dest,
+                          const svn_string_t *src,
                           apr_pool_t *pool)
 {
 #ifdef SVN_UTF8
@@ -361,8 +361,8 @@ svn_utf_string_from_utf8 (const svn_string_t *src,
 
 
 svn_error_t *
-svn_utf_cstring_from_utf8 (const char *src,
-                           const char **dest,
+svn_utf_cstring_from_utf8 (const char **dest,
+                           const char *src,
                            apr_pool_t *pool)
 {
 #ifdef SVN_UTF8
@@ -388,8 +388,8 @@ svn_utf_cstring_from_utf8 (const char *src,
 
 
 svn_error_t *
-svn_utf_cstring_from_utf8_stringbuf (const svn_stringbuf_t *src,
-                                     const char **dest,
+svn_utf_cstring_from_utf8_stringbuf (const char **dest,
+                                     const svn_stringbuf_t *src,
                                      apr_pool_t *pool)
 {
 #ifdef SVN_UTF8
@@ -410,8 +410,8 @@ svn_utf_cstring_from_utf8_stringbuf (const svn_stringbuf_t *src,
 
 
 svn_error_t *
-svn_utf_cstring_from_utf8_string (const svn_string_t *src,
-                                  const char **dest,
+svn_utf_cstring_from_utf8_string (const char **dest,
+                                  const svn_string_t *src,
                                   apr_pool_t *pool)
 {
 #ifdef SVN_UTF8

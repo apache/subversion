@@ -110,7 +110,7 @@ print_tree (svn_fs_root_t *root,
       for (i = 0; i < indentation; i++)
         printf (" ");
 
-      SVN_ERR (svn_utf_cstring_from_utf8 (this_entry->name, &native_name,
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native_name, this_entry->name,
                                           pool));
       printf ("%s", native_name);
       
@@ -301,7 +301,7 @@ main (int argc, const char * const *argv)
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  INT_ERR (svn_utf_cstring_to_utf8 (argv[2], &path, NULL, pool));
+  INT_ERR (svn_utf_cstring_to_utf8 (&path, argv[2], NULL, pool));
 
   command = parse_command (argv[1]);
   switch (command)
@@ -354,9 +354,8 @@ main (int argc, const char * const *argv)
           }
 
         paths = apr_array_make (pool, 1, sizeof (const char *));
-        INT_ERR (svn_utf_cstring_to_utf8 (argv[3],
-                                          (const char **)apr_array_push(paths),
-                                          NULL, pool));
+        INT_ERR (svn_utf_cstring_to_utf8 ((const char **)apr_array_push(paths),
+                                          argv[3], NULL, pool));
 
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
@@ -387,7 +386,7 @@ main (int argc, const char * const *argv)
                 /* NOTREACHED */
               }
             show_extra = TRUE;
-            INT_ERR (svn_utf_cstring_to_utf8 (argv[3], &path, NULL, pool));
+            INT_ERR (svn_utf_cstring_to_utf8 (&path, argv[3], NULL, pool));
           }
 
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -430,14 +429,15 @@ main (int argc, const char * const *argv)
                 if (! log)
                   log = svn_string_create ("", this_pool);
                 
-                INT_ERR (svn_utf_cstring_from_utf8 (txn_name, &txn_name_native,
+                INT_ERR (svn_utf_cstring_from_utf8 (&txn_name_native, txn_name,
                                                     this_pool));
-                INT_ERR (svn_utf_cstring_from_utf8 (datestamp->data,
-                                                    &datestamp_native,
+                INT_ERR (svn_utf_cstring_from_utf8 (&datestamp_native,
+                                                    datestamp->data,
                                                     this_pool));
-                INT_ERR (svn_utf_cstring_from_utf8 (author->data,
-                                                    &author_native, this_pool));
-                INT_ERR (svn_utf_cstring_from_utf8 (log->data, &log_native,
+                INT_ERR (svn_utf_cstring_from_utf8 (&author_native,
+                                                    author->data,
+                                                    this_pool));
+                INT_ERR (svn_utf_cstring_from_utf8 (&log_native, log->data,
                                                     this_pool));
 
                 printf ("Txn %s:\n", txn_name_native);
@@ -512,12 +512,12 @@ main (int argc, const char * const *argv)
             if (! log)
               log = svn_string_create ("", this_pool);
             
-            INT_ERR (svn_utf_cstring_from_utf8 (datestamp->data,
-                                                &datestamp_native,
+            INT_ERR (svn_utf_cstring_from_utf8 (&datestamp_native,
+                                                datestamp->data,
                                                 this_pool));
-            INT_ERR (svn_utf_cstring_from_utf8 (author->data,
-                                                &author_native, this_pool));
-            INT_ERR (svn_utf_cstring_from_utf8 (log->data, &log_native,
+            INT_ERR (svn_utf_cstring_from_utf8 (&author_native,
+                                                author->data, this_pool));
+            INT_ERR (svn_utf_cstring_from_utf8 (&log_native, log->data,
                                                 this_pool));
 
             printf ("Revision %" SVN_REVNUM_T_FMT "\n", this);
@@ -612,7 +612,7 @@ main (int argc, const char * const *argv)
         for (i = 3; i < argc; i++)
           {
             const char *txn_name_utf8;
-            INT_ERR (svn_utf_cstring_to_utf8 (argv[i], &txn_name_utf8,
+            INT_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, argv[i],
                                               NULL, pool));
             INT_ERR (svn_fs_open_txn (&txn, fs, txn_name_utf8, pool));
             INT_ERR (svn_fs_abort_txn (txn));
@@ -652,10 +652,10 @@ main (int argc, const char * const *argv)
       
         /* get revision and file from argv[] */
         the_rev = SVN_STR_TO_REV (argv[3]);
-        INT_ERR (svn_utf_cstring_to_utf8 (argv[4], &filename_utf8,
+        INT_ERR (svn_utf_cstring_to_utf8 (&filename_utf8, argv[4],
                                           NULL, pool));
         INT_ERR (svn_string_from_file (&file_contents, filename_utf8, pool)); 
-        INT_ERR (svn_utf_stringbuf_to_utf8 (file_contents, &file_contents_utf8,
+        INT_ERR (svn_utf_stringbuf_to_utf8 (&file_contents_utf8, file_contents,
                                             pool));
         log_contents.data = file_contents_utf8->data;
         log_contents.len = file_contents_utf8->len;
@@ -687,7 +687,7 @@ main (int argc, const char * const *argv)
 
         /* get revision and path from argv[] */
         the_rev = SVN_STR_TO_REV (argv[3]);
-        INT_ERR (svn_utf_cstring_to_utf8 (argv[4], &node, NULL, pool));
+        INT_ERR (svn_utf_cstring_to_utf8 (&node, argv[4], NULL, pool));
 
         /* open the filesystem */
         INT_ERR (svn_repos_open (&repos, path, pool));      

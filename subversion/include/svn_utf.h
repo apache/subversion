@@ -31,23 +31,23 @@ extern "C" {
 
 /* Set *DEST to a utf8-encoded stringbuf from native stringbuf SRC;
    allocate *DEST in POOL. */
-svn_error_t *svn_utf_stringbuf_to_utf8 (const svn_stringbuf_t *src,
-                                        svn_stringbuf_t **dest,
+svn_error_t *svn_utf_stringbuf_to_utf8 (svn_stringbuf_t **dest,
+                                        const svn_stringbuf_t *src,
                                         apr_pool_t *pool);
 
 
 /* Set *DEST to a utf8-encoded string from native string SRC; allocate
    *DEST in POOL. */
-svn_error_t *svn_utf_string_to_utf8 (const svn_string_t *src,
-                                     const svn_string_t **dest,
+svn_error_t *svn_utf_string_to_utf8 (const svn_string_t **dest,
+                                     const svn_string_t *src,
                                      apr_pool_t *pool);
 
 
 /* Set *DEST to a utf8-encoded stringbuf from native C string SRC;
    allocate *DEST in POOL.   Use XLATOR to do the conversion;  if
    NULL, then use the environment's default locale. */
-svn_error_t *svn_utf_cstring_to_utf8_stringbuf (const char *src,
-                                                svn_stringbuf_t **dest,
+svn_error_t *svn_utf_cstring_to_utf8_stringbuf (svn_stringbuf_t **dest,
+                                                const char *src,
                                                 apr_xlate_t *xlator,
                                                 apr_pool_t *pool);
 
@@ -55,44 +55,44 @@ svn_error_t *svn_utf_cstring_to_utf8_stringbuf (const char *src,
 /* Set *DEST to a utf8-encoded C string from native C string SRC;
    allocate *DEST in POOL.  Use XLATOR to do the conversion; if NULL,
    then use the environment's default locale. */
-svn_error_t *svn_utf_cstring_to_utf8 (const char *src,
-                                      const char **dest,
+svn_error_t *svn_utf_cstring_to_utf8 (const char **dest,
+                                      const char *src,
                                       apr_xlate_t *xlator,
                                       apr_pool_t *pool);
 
 
 /* Set *DEST to a natively-encoded stringbuf from utf8 stringbuf SRC;
    allocate *DEST in POOL. */
-svn_error_t *svn_utf_stringbuf_from_utf8 (const svn_stringbuf_t *src,
-					  svn_stringbuf_t **dest,
+svn_error_t *svn_utf_stringbuf_from_utf8 (svn_stringbuf_t **dest,
+					  const svn_stringbuf_t *src,
 					  apr_pool_t *pool);
 
 
 /* Set *DEST to a natively-encoded string from utf8 string SRC;
    allocate *DEST in POOL. */
-svn_error_t *svn_utf_string_from_utf8 (const svn_string_t *src,
-                                       const svn_string_t **dest,
+svn_error_t *svn_utf_string_from_utf8 (const svn_string_t **dest,
+                                       const svn_string_t *src,
                                        apr_pool_t *pool);
 
 
 /* Set *DEST to a natively-encoded C string from utf8 C string SRC;
    allocate *DEST in POOL. */
-svn_error_t *svn_utf_cstring_from_utf8 (const char *src,
-                                        const char **dest,
+svn_error_t *svn_utf_cstring_from_utf8 (const char **dest,
+                                        const char *src,
                                         apr_pool_t *pool);
 
 
 /* Set *DEST to a natively-encoded C string from utf8 stringbuf SRC;
    allocate *DEST in POOL. */
-svn_error_t *svn_utf_cstring_from_utf8_stringbuf (const svn_stringbuf_t *src,
-                                                  const char **dest,
+svn_error_t *svn_utf_cstring_from_utf8_stringbuf (const char **dest,
+                                                  const svn_stringbuf_t *src,
                                                   apr_pool_t *pool);
 
 
 /* Set *DEST to a natively-encoded C string from utf8 string SRC;
    allocate *DEST in POOL. */
-svn_error_t *svn_utf_cstring_from_utf8_string (const svn_string_t *src,
-                                               const char **dest,
+svn_error_t *svn_utf_cstring_from_utf8_string (const char **dest,
+                                               const svn_string_t *src,
                                                apr_pool_t *pool);
 
 

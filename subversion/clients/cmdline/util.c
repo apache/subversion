@@ -151,8 +151,8 @@ parse_path (svn_client_revision_t *rev,
         {
           const char *native_rev;
 
-          SVN_ERR (svn_utf_cstring_from_utf8 (path + i + 1,
-                                              &native_rev, subpool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
+                                              subpool));
 
           if (svn_cl__parse_revision (os, native_rev, subpool))
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -195,7 +195,7 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
       const char *target;
 
       /* FIXME: need to handle errors here... */
-      svn_utf_cstring_to_utf8 (os->argv[os->ind], &target, NULL, pool);
+      svn_utf_cstring_to_utf8 (&target, os->argv[os->ind], NULL, pool);
 
       /* If this path looks like it would work as a URL in one of the
          currently available RA libraries, we add it unconditionally
@@ -320,7 +320,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
        "SVN_EDITOR, VISUAL or EDITOR is set.");
 
   /* Convert file contents from UTF-8 */
-  SVN_ERR (svn_utf_cstring_from_utf8 (contents, &contents_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
 
   /* Ask the working copy for a temporary file based on BASE_DIR */
   SVN_ERR (svn_io_open_unique_file 
@@ -347,7 +347,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  err = svn_utf_cstring_from_utf8 (tmpfile_name, &tmpfile_native, pool);
+  err = svn_utf_cstring_from_utf8 (&tmpfile_native, tmpfile_name, pool);
   if (err)
     goto cleanup;
 
@@ -391,8 +391,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       svn_stringbuf_t *edited_contents_s;
       err = svn_string_from_file (&edited_contents_s, tmpfile_name, pool);
       if (!err)
-        err = svn_utf_cstring_to_utf8 (edited_contents_s->data,
-                                       edited_contents, NULL, pool);
+        err = svn_utf_cstring_to_utf8 (edited_contents,
+                                       edited_contents_s->data, NULL, pool);
       if (err)
         goto cleanup; /* In case more code gets added before cleanup... */
     }
@@ -533,12 +533,12 @@ svn_cl__get_log_message (const char **log_msg,
             return svn_error_create (apr_err, 0, NULL, pool,
                                      "failed to create a converter to UTF-8");
 
-          return svn_utf_cstring_to_utf8 (lmb->message, log_msg, xlator, pool);
+          return svn_utf_cstring_to_utf8 (log_msg, lmb->message, xlator, pool);
         }
       /* otherwise, just convert the message to utf8 by assuming it's
          already in the 'default' locale of the environment. */
       else        
-        return svn_utf_cstring_to_utf8 (lmb->message, log_msg, NULL, pool);
+        return svn_utf_cstring_to_utf8 (log_msg, lmb->message, NULL, pool);
     }
 
   if (! (commit_items || commit_items->nelts))

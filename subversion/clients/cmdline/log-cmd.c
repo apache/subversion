@@ -130,9 +130,9 @@ log_message_receiver (void *baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (author, &author_native, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (date, &date_native, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (msg, &msg_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&author_native, author, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&date_native, date, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&msg_native, msg, pool));
 
   {
     /* Convert date to a format for humans. */
@@ -183,7 +183,7 @@ log_message_receiver (void *baton,
           const char *path_native, *path = item->key;
           char action = (char) ((int) apr_hash_get (changed_paths, 
                                                     item->key, item->klen));
-          SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
           printf ("   %c %s\n", action, path_native);
         }
     }

@@ -923,7 +923,7 @@ main (int argc, const char * const *argv)
         ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
         if (ret)
           {
-            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
+            err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
             if (err)
               svn_handle_error (err, stderr, FALSE);
             else
@@ -941,7 +941,7 @@ main (int argc, const char * const *argv)
         ret = parse_date (&opt_state, opt_arg, pool);
         if (ret)
           {
-            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
+            err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
             if (err)
               svn_handle_error (err, stderr, FALSE);
             else
@@ -971,7 +971,7 @@ main (int argc, const char * const *argv)
         opt_state.quiet = TRUE;
         break;
       case svn_cl__xml_file_opt:
-        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.xml_file,
+        err = svn_utf_cstring_to_utf8 (&opt_state.xml_file, opt_arg,
                                        NULL, pool);
         if (err)
           {
@@ -981,7 +981,7 @@ main (int argc, const char * const *argv)
           }
         break;
       case 'd':
-        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.target, NULL, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.target, opt_arg, NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -990,7 +990,7 @@ main (int argc, const char * const *argv)
           }
         break;
       case 'F':
-        err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
+        err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
         if (!err)
           err = svn_string_from_file (&(opt_state.filedata),
                                       utf8_opt_arg, pool);
@@ -1012,11 +1012,11 @@ main (int argc, const char * const *argv)
       case svn_cl__targets_opt:
 	{
  	  svn_stringbuf_t *buffer, *buffer_utf8;
-          err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, NULL, pool);
+          err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
           if (! err)
             err = svn_string_from_file (&buffer, utf8_opt_arg, pool);
           if (! err)
-            err = svn_utf_stringbuf_to_utf8 (buffer, &buffer_utf8, pool);
+            err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
   	  if (err)
   	    {
   	      svn_handle_error (err, stdout, FALSE);
@@ -1041,9 +1041,8 @@ main (int argc, const char * const *argv)
         opt_state.help = TRUE;
         break;
       case svn_cl__auth_username_opt:
-        err = svn_utf_cstring_to_utf8 (opt_arg,
-                                       &opt_state.auth_username,
-                                       NULL, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.auth_username,
+                                       opt_arg, NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -1052,9 +1051,8 @@ main (int argc, const char * const *argv)
           }
         break;
       case svn_cl__auth_password_opt:
-        err = svn_utf_cstring_to_utf8 (opt_arg,
-                                       &opt_state.auth_password,
-                                       NULL, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.auth_password,
+                                       opt_arg, NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -1072,7 +1070,7 @@ main (int argc, const char * const *argv)
         opt_state.strict = TRUE;
         break;
       case 'x':
-        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.extensions,
+        err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,
                                        NULL, pool);
         if (err) {
           svn_handle_error (err, stderr, FALSE);

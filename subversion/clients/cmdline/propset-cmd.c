@@ -50,7 +50,7 @@ svn_cl__propset (apr_getopt_t *os,
   SVN_ERR (svn_cl__parse_num_args (&args, os,
                                    opt_state->filedata ? 1 : 2, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (pname, &pname_utf8, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */
@@ -63,7 +63,7 @@ svn_cl__propset (apr_getopt_t *os,
      others should remain in binary format.  ### todo: make this
      happen. */
   if (svn_prop_is_svn_prop (pname_utf8))
-    SVN_ERR (svn_utf_string_to_utf8 (propval, &propval, pool));
+    SVN_ERR (svn_utf_string_to_utf8 (&propval, propval, pool));
       
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
@@ -81,7 +81,7 @@ svn_cl__propset (apr_getopt_t *os,
       if (! opt_state->quiet) 
         {
           const char *target_native;
-          SVN_ERR (svn_utf_cstring_from_utf8 (target, &target_native, pool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
           printf ("property `%s' set%s on '%s'\n",
                   pname, 
                   opt_state->recursive ? " (recursively)" : "",

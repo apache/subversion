@@ -51,7 +51,7 @@ print_entry (const char *target,
   const char *native;
 
   /* Get a non-UTF8 version of the target. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (target, &native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&native, target, pool));
   printf ("Path: %s\n", native);
 
   /* Note: we have to be paranoid about checking that these are
@@ -60,19 +60,19 @@ print_entry (const char *target,
 
   if (entry->name && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->name, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->name, pool));
       printf ("Name: %s\n", native);
     }
  
   if (entry->url) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->url, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->url, pool));
       printf ("Url: %s\n", native);
     }
            
   if (entry->repos) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->repos, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->repos, pool));
       printf ("Repository: %s\n", native);
     }
  
@@ -133,8 +133,8 @@ print_entry (const char *target,
     {
       if (entry->copyfrom_url) 
         {
-          SVN_ERR (svn_utf_cstring_from_utf8 (entry->copyfrom_url, 
-                                              &native, pool));
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->copyfrom_url,
+                                              pool));
           printf ("Copied From Url: %s\n", native);
         }
  
@@ -145,7 +145,7 @@ print_entry (const char *target,
  
   if (entry->cmt_author) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->cmt_author, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->cmt_author, pool));
       printf ("Last Changed Author: %s\n", native);
     }
  
@@ -159,35 +159,36 @@ print_entry (const char *target,
     svn_cl__info_print_time (entry->text_time, "Text Last Updated", pool);
 
   if (entry->prop_time)
-    svn_cl__info_print_time (entry->prop_time, "Properties Last Updated", pool);
+    svn_cl__info_print_time (entry->prop_time, "Properties Last Updated",
+                             pool);
  
   if (entry->checksum) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->checksum, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->checksum, pool));
       printf ("Checksum: %s\n", native);
     }
  
   if (text_conflict && entry->conflict_old) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->conflict_old, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->conflict_old, pool));
       printf ("Conflict Previous Base File: %s\n", native);
     }
  
   if (text_conflict && entry->conflict_wrk) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->conflict_wrk, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->conflict_wrk, pool));
       printf ("Conflict Previous Working File: %s\n", native);
     }
  
   if (text_conflict && entry->conflict_new) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->conflict_new, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->conflict_new, pool));
       printf ("Conflict Current Base File: %s\n", native);
     }
  
   if (props_conflict && entry->prejfile) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (entry->prejfile, &native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->prejfile, pool));
       printf ("Conflict Properties File: %s\n", native);
     }
  

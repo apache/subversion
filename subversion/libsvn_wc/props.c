@@ -313,8 +313,8 @@ append_prop_conflict (apr_file_t *fp,
   apr_status_t status;
   const svn_string_t *conflict_description_native;
 
-  SVN_ERR (svn_utf_string_from_utf8 (conflict_description,
-                                     &conflict_description_native,
+  SVN_ERR (svn_utf_string_from_utf8 (&conflict_description_native,
+                                     conflict_description,
                                      pool));
 
   status = apr_file_write_full (fp, conflict_description_native->data,

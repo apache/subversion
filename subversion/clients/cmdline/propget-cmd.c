@@ -48,7 +48,7 @@ svn_cl__propget (apr_getopt_t *os,
      thereof) */
   SVN_ERR (svn_cl__parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (pname, &pname_utf8, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
   is_svn_prop = svn_prop_is_svn_prop (pname_utf8);
   
   /* suck up all the remaining arguments into a targets array */
@@ -85,14 +85,13 @@ svn_cl__propget (apr_getopt_t *os,
           /* If this is a special Subversion property, it is stored as
              UTF8, so convert to the native format. */
           if (is_svn_prop)
-            SVN_ERR (svn_utf_string_from_utf8 (propval, &propval, pool));
+            SVN_ERR (svn_utf_string_from_utf8 (&propval, propval, pool));
 
           /* ### this won't handle binary property values */
           if (print_filenames) 
             {
-              SVN_ERR (svn_utf_cstring_from_utf8 (filename,
-                                                  &filename_native,
-                                                  pool));
+              SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native,
+                                                  filename, pool));
               printf ("%s - %s\n", filename_native, propval->data);
             } 
           else 
