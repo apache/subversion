@@ -208,43 +208,6 @@ delete_strings (apr_array_header_t *keys,
 }
 
 
-#if DELTIFYING
-/* Set *SIZE to the size (in bytes) consumed by the string(s)
-   associated with REP in FS as part of TRAIL.  */
-static svn_error_t *
-rep_storage_size (apr_size_t *size, 
-                  svn_fs_t *fs, 
-                  skel_t *rep, 
-                  trail_t *trail)
-{
-  const char *str_key;
-
-  *size = 0;
-  if (rep_is_fulltext (rep))
-    {
-      SVN_ERR (fulltext_string_key (&str_key, rep, trail->pool));
-      SVN_ERR (svn_fs__string_size (size, fs, str_key, trail));
-    }
-  else
-    {
-      apr_array_header_t *keys;
-      int i;
-      apr_size_t my_size;
-
-      SVN_ERR (delta_string_keys (&keys, rep, trail->pool));
-      for (i = 0; i < keys->nelts; i++)
-        {
-          str_key = ((const char **)(keys->elts))[i];
-          SVN_ERR (svn_fs__string_size (&my_size, fs, str_key, trail));
-          *size += my_size;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif /* DELTIFYING */
-
-
 
 /*** Reading the contents from a representation. ***/
 
@@ -703,75 +666,61 @@ svn_fs__get_mutable_rep (const char **new_rep,
           *new_rep = rep;
           return SVN_NO_ERROR;
         }
-      else  /* rep not mutable, so copy it */
+
+      /* If REP is not mutable, we have to make a mutable copy.  It is
+         a deep copy -- we copy the immutable rep's data.  Note that
+         we copy it as fulltext, no matter how the immutable rep
+         represents the data.  */
+      if (rep_is_fulltext (rep_skel))
         {
-          /* If REP is not mutable, we have to make a mutable copy.
-             It is a deep copy -- we copy the immutable rep's data.
-             Note that we copy it as fulltext, no matter how the
-             immutable rep represents the data.  */
+          /* The easy case -- copy the fulltext string directly. */
+          const char *old_str, *new_str;
 
-          if (rep_is_fulltext (rep_skel))
+          /* Step 1:  Copy the string to which the rep refers. */
+          SVN_ERR (fulltext_string_key (&old_str, rep_skel, trail->pool));
+          SVN_ERR (svn_fs__string_copy (fs, &new_str, old_str, trail));
+          
+          /* Step 2:  Make this rep mutable. */
+          rep_set_mutable_flag (rep_skel, trail->pool);
+          
+          /* Step 3:  Change the string key to which this rep points. */
+          rep_skel->children->next->data = new_str;
+          rep_skel->children->next->len = strlen (new_str);
+        }
+      else
+        {
+          /* This is a bit trickier.  The immutable rep is a delta,
+             but we're still making a fulltext copy of it.  So we do
+             an undeltifying read loop, writing the fulltext out to
+             the mutable rep.  The efficiency of this depends on the
+             efficiency of rep_read_range(); fortunately, this
+             circumstance is probably rare, and especially unlikely to
+             happen on large contents (i.e., it's more likely to
+             happen on directories than on files, because directories
+             don't have to be up-to-date to receive commits, whereas
+             files do.  */
+
+          char buf[10000];
+          apr_size_t offset;
+          apr_size_t size;
+          const char *new_str = NULL;
+          apr_size_t amount;
+          
+          SVN_ERR (svn_fs__rep_contents_size (&size, fs, rep, trail));
+          
+          for (offset = 0; offset < size; offset += amount)
             {
-              /* The easy case -- copy the fulltext string directly. */
-
-              const char *old_str, *new_str;
-
-              /* Step 1:  Copy the string to which the rep refers. */
-              SVN_ERR (fulltext_string_key (&old_str, rep_skel, trail->pool));
-              SVN_ERR (svn_fs__string_copy (fs, &new_str, old_str, trail));
-
-              /* Step 2:  Make this rep mutable. */
-              rep_set_mutable_flag (rep_skel, trail->pool);
-
-              /* Step 3:  Change the string key to which this rep points. */
-              rep_skel->children->next->data = new_str;
-              rep_skel->children->next->len = strlen (new_str);
-
-              /* Step 4: Write the mutable version of this rep to the
-                 database, returning the newly created key to the
-                 caller. */
-              SVN_ERR (svn_fs__write_new_rep (new_rep, fs, rep_skel, trail));
+              if ((size - offset) > (sizeof (buf)))
+                amount = sizeof (buf);
+              else
+                amount = size - offset;
+              
+              SVN_ERR (rep_read_range (fs, rep, buf, offset, &amount, trail));
+              SVN_ERR (svn_fs__string_append (fs, &new_str, amount, buf,
+                                              trail));
             }
-          else
-            {
-              /* This is a bit trickier.  The immutable rep is a
-                 delta, but we're still making a fulltext copy of it.
-                 So we do an undeltifying read loop, writing the
-                 fulltext out to the mutable rep.  The efficiency of
-                 this depends on the efficiency of rep_read_range();
-                 fortunately, this circumstance is probably rare, and
-                 especially unlikely to happen on large contents
-                 (i.e., it's more likely to happen on directories than
-                 on files, because directories don't have to be
-                 up-to-date to receive commits, whereas files do.  */
-
-              char buf[10000];
-              apr_size_t offset;
-              apr_size_t size;
-              const char *new_str = NULL;
-              apr_size_t amount;
-
-              SVN_ERR (svn_fs__rep_contents_size (&size, fs, rep, trail));
-
-              for (offset = 0; offset < size; offset += amount)
-                {
-                  if ((size - offset) > (sizeof (buf)))
-                    amount = sizeof (buf);
-                  else
-                    amount = size - offset;
-
-                  SVN_ERR (rep_read_range (fs, rep, buf, offset,
-                                           &amount, trail));
-
-                  SVN_ERR (svn_fs__string_append (fs,
-                                                  &new_str,
-                                                  amount,
-                                                  buf,
-                                                  trail));
-                }
-
-              rep_skel = make_fulltext_rep_skel (new_str, 1, trail->pool);
-            }
+          
+          rep_skel = make_fulltext_rep_skel (new_str, 1, trail->pool);
         }
     }
   else    /* no key, so make a new, empty, mutable, fulltext rep */
@@ -838,7 +787,7 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
       SVN_ERR (fulltext_string_key (&str_key, rep_skel, trail->pool));
       SVN_ERR (svn_fs__string_delete (fs, str_key, trail));
     }
-  else 
+  else /* delta */
     {
       apr_array_header_t *keys;
       SVN_ERR (delta_string_keys (&keys, rep_skel, trail->pool));
