@@ -2476,7 +2476,7 @@ make_reporter (void *session_baton,
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
-  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->root.path);
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->url);
   status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
   if (status)
     {
