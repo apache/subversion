@@ -69,7 +69,7 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 
   do {
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
-                                  svn_file_kind, pool);
+                                  svn_file_kind, 0, pool);
     if (err)
       {
         if (err->apr_err == APR_EEXIST)

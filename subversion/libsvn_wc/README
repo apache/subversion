@@ -83,24 +83,29 @@ analogous to CVS/ sudirs:
    SVN/README                   /* No, it's not this file.  Details below. */
        format                   /* Contains wc adm format version. */
        repository               /* Where this stuff came from. */
+       ancestor                 /* Path to this dir in the repository */
        versions                 /* Version numbers for this directory */
        properties               /* Properties for this directory */
        delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
        log                      /* Ops log (for rollback/crash-recovery) */
-       tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
-            foo.c
             qux/                    /* Subdirs are empty, though */
+            foo.c
             bar.c
             baz.c
        prop-base/               /* Pristine repos hashdumps of these files
-            foo.c
-            bar.c                   /* Stores bar.c's file properties */
+            foo.c                  /* Stores bar.c's file properties */
+            bar.c
             baz.c
        dprop-base/              /* Tentative dirent entry property storage */
-            foo.c
-            bar.c                   /* Would store bar.c's dirent props */
+            foo.c                  /* Would store foo.c's dirent props */
+            bar.c
+       tmp/                     /* Local tmp area */
+            ./                     /* Adm files are written directly here. */
+            text-base/             /* tmp area for base files */
+            prop-base/             /* tmp area for base props */
+            dprop-base/            /* tmp area for base dirent props */
 
 `README'
 
