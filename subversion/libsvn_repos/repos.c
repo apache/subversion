@@ -1108,9 +1108,6 @@ get_repos (svn_repos_t **repos_p,
   /* Initialize the filesystem object. */
   repos->fs = svn_fs_new (NULL, pool);
 
-  /* Open up the Berkeley filesystem. */
-  if (open_fs)
-    SVN_ERR (svn_fs_open_berkeley (repos->fs, repos->db_path));
 
   /* Locking. */
   {
@@ -1147,6 +1144,10 @@ get_repos (svn_repos_t **repos_p,
     apr_pool_cleanup_register (pool, lockfile_handle, clear_and_close,
                                apr_pool_cleanup_null);
   }
+
+  /* Open up the Berkeley filesystem only after obtaining the lock. */
+  if (open_fs)
+    SVN_ERR (svn_fs_open_berkeley (repos->fs, repos->db_path));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
