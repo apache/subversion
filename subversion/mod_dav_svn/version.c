@@ -20,7 +20,109 @@
 #include "dav_svn.h"
 
 
-const dav_hooks_vsn dav_svn_hooks_vsn = { 0 };
+static const char *dav_svn_get_vsn_header(void)
+{
+  return NULL;
+}
+
+static dav_error *dav_svn_vsn_control(dav_resource *resource,
+                                      const char *target)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "VERSION-CONTROL is not yet implemented.");
+}
+
+static dav_error *dav_svn_checkout(dav_resource *resource,
+                                   dav_resource **working_resource)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "CHECKOUT is not yet implemented.");
+}
+
+static dav_error *dav_svn_uncheckout(dav_resource *resource)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "UNCHECKOUT is not yet implemented.");
+}
+
+static dav_error *dav_svn_checkin(dav_resource *resource,
+                                  dav_resource **version_resource)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "CHECKIN is not yet implemented.");
+}
+
+static dav_error *dav_svn_set_target(const dav_resource *resource,
+                                     const char *target,
+                                     int is_label)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "SET-TARGET is not yet implemented.");
+}
+
+static int dav_svn_versionable(const dav_resource *resource)
+{
+  return 0;
+}
+
+static int dav_svn_auto_version_enabled(const dav_resource *resource)
+{
+  return 0;
+}
+
+static dav_error *dav_svn_avail_reports(const dav_resource *resource,
+                                        const dav_report_elem **reports)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "REPORT is not yet implemented.");
+}
+
+static int dav_svn_report_target_selector_allowed(const ap_xml_doc *doc)
+{
+  return 0;
+}
+
+static dav_error *dav_svn_get_report(request_rec *r,
+                                     const dav_resource *resource,
+                                     const ap_xml_doc *doc,
+                                     ap_text_header *report)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "REPORT is not yet implemented.");
+}
+
+static dav_error *dav_svn_add_label(const dav_resource *resource,
+                                    const char *label,
+                                    int replace)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "Adding labels is not yet implemented.");
+}
+
+static dav_error *dav_svn_remove_label(const dav_resource *resource,
+                                       const char *label)
+{
+  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
+                       "Removing labels is not yet implemented.");
+}
+
+const dav_hooks_vsn dav_svn_hooks_vsn = {
+  dav_svn_get_vsn_header,
+  dav_svn_vsn_control,
+  dav_svn_checkout,
+  dav_svn_uncheckout,
+  dav_svn_checkin,
+  dav_svn_set_target,
+  dav_svn_versionable,
+  dav_svn_auto_version_enabled,
+  dav_svn_avail_reports,
+  dav_svn_report_target_selector_allowed,
+  dav_svn_get_report,
+  dav_svn_add_label,
+  dav_svn_remove_label,
+  NULL,                 /* can_be_workspace */
+  NULL,                 /* make_workspace */
+};
 
 
 /* 
