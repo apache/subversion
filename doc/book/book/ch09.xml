@@ -1081,10 +1081,10 @@ Committed revision 7.
 
             </variablelist>
 
-          <warning>
+          <note>
             <para>You can only copy files within a single repository.
               Subversion does not support cross-repository copying.</para>
-          </warning>
+          </note>
 
         </refsect1>
 
@@ -2420,12 +2420,12 @@ Committed revision 26.
               delete</command>.</para>
           </tip>
 
-          <warning>
+          <note>
             <para>Subversion does not support moving between working
             copies and URLs.  In addition, you can only move files
             within a single repository&mdash;Subversion does not
             support cross-repository moving.</para>
-          </warning>
+          </note>
 
           <variablelist>
 
@@ -2924,7 +2924,7 @@ $ svn propset owner-pic -F sally.jpg moo.c
 property 'owner-pic' set on 'moo.c'
 </screen>
 
-          <warning>
+          <note>
             <para>By default, you cannot modify revision properties
               in a Subversion repository.  Your repository
               administrator must explicitly enable revision property
@@ -2932,7 +2932,7 @@ property 'owner-pic' set on 'moo.c'
               <literal>pre-revprop-change</literal>. See <xref
               linkend="svn-ch-5-sect-2.1"/> for more information on
               hook scripts.</para>
-          </warning>
+          </note>
 
         </refsect1>
       </refentry>
@@ -3108,13 +3108,13 @@ $ svn status
 ?      whoops
 </screen>
 
-          <warning>
+          <note>
             <para>If you provide no targets to <command>svn
               revert</command>, it will do nothing&mdash;to protect
               you from accidentally losing changes in your working
               copy, <command>svn revert</command> requires you to
               provide at least one target.</para>
-          </warning>
+          </note>
 
         </refsect1>
       </refentry>
@@ -3414,7 +3414,7 @@ A  +         965    wc/qax.c
 Status against revision:    981
 </screen>
 
-          <warning>
+          <note>
             <para><option>--show-updates</option>
             <emphasis>only</emphasis> places an asterisk next to items
             that are out of date (that is, items that will be updated
@@ -3422,7 +3422,7 @@ Status against revision:    981
             update</command>).  <option>--show-updates</option> does
             <emphasis>not</emphasis> cause the status listing to
             reflect the repository's version of the item.</para>
-          </warning>
+          </note>
 
           <para>And finally, the most information you can get out of
             the status subcommand:</para>
