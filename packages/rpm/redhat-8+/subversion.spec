@@ -451,7 +451,7 @@ rm -f book/version.xml
 %{__perl} -pi -e 's#href="xsl/(html/docbook.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/html-stylesheet.xsl
 %{__perl} -pi -e 's#href="xsl/(html/chunk.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/chunk-stylesheet.xsl
 # End patch by Ben Reser <ben@reser.org> to get documentation to build.
-make SVNVERSION=%{release} XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
+make SVNVERSION=%{version} XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
 cp -r doc/book/book/html-chunk book
 cp -r doc/book/book/images     book/images
 
