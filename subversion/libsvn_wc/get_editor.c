@@ -837,45 +837,45 @@ close_file (void *file_baton)
   if (fb->text_changed)
     {
       /* Merge text. */
-      svn_xml_append_tag (entry_accum,
-                          fb->pool,
-                          svn_xml_self_close_tag,
-                          SVN_WC__LOG_MERGE_TEXT,
-                          SVN_WC__LOG_ATTR_NAME,
-                          fb->name,
-                          SVN_WC__LOG_ATTR_SAVED_MODS,
-                          svn_string_create ("kff todo", fb->pool),
-                          NULL);
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MERGE_TEXT,
+                             SVN_WC__LOG_ATTR_NAME,
+                             fb->name,
+                             SVN_WC__LOG_ATTR_SAVED_MODS,
+                             svn_string_create ("kff todo", fb->pool),
+                             NULL);
       
       /* Replace text base. */
-      svn_xml_append_tag (entry_accum,
-                          fb->pool,
-                          svn_xml_self_close_tag,
-                          SVN_WC__LOG_REPLACE_TEXT_BASE,
-                          SVN_WC__LOG_ATTR_NAME,
-                          fb->name,
-                          NULL);
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_REPLACE_TEXT_BASE,
+                             SVN_WC__LOG_ATTR_NAME,
+                             fb->name,
+                             NULL);
     }
   
   if (fb->prop_changed)
     {
       /* Merge props. */
-      svn_xml_append_tag (entry_accum,
-                          fb->pool,
-                          svn_xml_self_close_tag,
-                          SVN_WC__LOG_MERGE_PROPS,
-                          SVN_WC__LOG_ATTR_NAME,
-                          fb->name,
-                          NULL);
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MERGE_PROPS,
+                             SVN_WC__LOG_ATTR_NAME,
+                             fb->name,
+                             NULL);
       
       /* Replace prop base. */
-      svn_xml_append_tag (entry_accum,
-                          fb->pool,
-                          svn_xml_self_close_tag,
-                          SVN_WC__LOG_REPLACE_PROP_BASE,
-                          SVN_WC__LOG_ATTR_NAME,
-                          fb->name,
-                          NULL);
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_REPLACE_PROP_BASE,
+                             SVN_WC__LOG_ATTR_NAME,
+                             fb->name,
+                             NULL);
     }
 
   /* Set version. */
@@ -883,15 +883,15 @@ close_file (void *file_baton)
                               "%d",
                               fb->dir_baton->edit_baton->target_version);
 
-  svn_xml_append_tag (entry_accum,
-                      fb->pool,
-                      svn_xml_self_close_tag,
-                      SVN_WC__LOG_SET_ENTRY,
-                      SVN_WC__LOG_ATTR_NAME,
-                      fb->name,
-                      SVN_WC__LOG_ATTR_VERSION,
-                      svn_string_create (version_str, fb->pool),
-                      NULL);
+  svn_xml_make_open_tag (&entry_accum,
+                         fb->pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_SET_ENTRY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         fb->name,
+                         SVN_WC__LOG_ATTR_VERSION,
+                         svn_string_create (version_str, fb->pool),
+                         NULL);
 
   apr_err = apr_full_write (log_fp, entry_accum->data, entry_accum->len, NULL);
   if (apr_err)

@@ -81,7 +81,7 @@ svn_wc__entries_init (svn_string_t *path,
   svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *f = NULL;
-  svn_string_t *accum;
+  svn_string_t *accum = NULL;
   char *initial_verstr = apr_psprintf (pool, "%ld", 0);
 
   /* Create the entries file, which must not exist prior to this. */
@@ -91,35 +91,33 @@ svn_wc__entries_init (svn_string_t *path,
     return err;
 
   /* Make a the XML standard header, to satisfy bureacracy. */
-  accum = svn_xml_make_header (pool);
+  svn_xml_make_header (&accum, pool);
 
   /* Open the file's top-level form. */
-  svn_xml_append_tag (accum,
-                      pool,
-                      svn_xml_open_tag,
-                      SVN_WC__ENTRIES_TOPLEVEL,
-                      "xmlns",
-                      svn_string_create (SVN_XML_NAMESPACE, pool),
-                      NULL);
+  svn_xml_make_open_tag (&accum,
+                         pool,
+                         svn_xml_normal,
+                         SVN_WC__ENTRIES_TOPLEVEL,
+                         "xmlns",
+                         svn_string_create (SVN_XML_NAMESPACE, pool),
+                         NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
      version and default ancestry are present as xml attributes. */
-  svn_xml_append_tag (accum,
-                      pool,
-                      svn_xml_self_close_tag,
-                      SVN_WC__ENTRIES_ENTRY,
-                      SVN_WC__ENTRIES_ATTR_VERSION,
-                      svn_string_create (initial_verstr, pool),
-                      SVN_WC__ENTRIES_ATTR_ANCESTOR,
-                      ancestor_path,
-                      NULL);
+  svn_xml_make_open_tag (&accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__ENTRIES_ENTRY,
+                         SVN_WC__ENTRIES_ATTR_VERSION,
+                         svn_string_create (initial_verstr, pool),
+                         SVN_WC__ENTRIES_ATTR_ANCESTOR,
+                         ancestor_path,
+                         NULL);
 
   /* Close the top-level form. */
-  svn_xml_append_tag (accum,
-                      pool,
-                      svn_xml_close_tag,
-                      SVN_WC__ENTRIES_TOPLEVEL,
-                      NULL);
+  svn_xml_make_close_tag (&accum,
+                          pool,
+                          SVN_WC__ENTRIES_TOPLEVEL);
 
   apr_err = apr_full_write (f, accum->data, accum->len, NULL);
   if (apr_err)
@@ -282,7 +280,7 @@ write_entry (apr_file_t *outfile,
              apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  svn_string_t *entry;
+  svn_string_t *entry = NULL;
   svn_string_t *verstr
     = svn_string_create (apr_psprintf (pool, "%ld", (long int) version), pool);
   svn_string_t *kindstr;
@@ -317,10 +315,11 @@ write_entry (apr_file_t *outfile,
                   strlen (SVN_WC__ENTRIES_ATTR_KIND),
                   kindstr);
   
-  entry = svn_xml_make_tag_hash (pool,
-                                 svn_xml_self_close_tag,
-                                 SVN_WC__ENTRIES_ENTRY,
-                                 attributes);
+  svn_xml_make_open_tag_hash (&entry,
+                              pool,
+                              svn_xml_self_closing,
+                              SVN_WC__ENTRIES_ENTRY,
+                              attributes);
 
   apr_err = apr_full_write (outfile, entry->data, entry->len, NULL);
   if (apr_err)
@@ -443,18 +442,19 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
     write_it_back_out:
       if (baton->outfile)
         {
-          enum svn_xml_tag_type tag_type = svn_xml_self_close_tag;
+          enum svn_xml_open_tag_style tag_style = svn_xml_self_closing;
           apr_status_t apr_err;
-          svn_string_t *dup;
+          svn_string_t *dup = NULL;
 
           if (strcmp (tagname, SVN_WC__ENTRIES_TOPLEVEL) == 0)
-            tag_type = svn_xml_open_tag;
+            tag_style = svn_xml_normal;
 
-          dup = svn_xml_make_tag_hash (baton->pool,
-                                       tag_type,
-                                       tagname,
-                                       svn_xml_make_att_hash
-                                       (atts, baton->pool));
+          svn_xml_make_open_tag_hash (&dup,
+                                      baton->pool,
+                                      tag_style,
+                                      tagname,
+                                      svn_xml_make_att_hash
+                                      (atts, baton->pool));
           
           apr_err = apr_full_write (baton->outfile, dup->data, dup->len, NULL);
           if (apr_err)
@@ -481,7 +481,7 @@ handle_end_tag (void *userData, const char *tagname)
       if (baton->outfile)
         {
           apr_status_t apr_err;
-          svn_string_t *close_tag;
+          svn_string_t *close_tag = NULL;
 
           /* If this entry didn't exist before, then add it now. */
           if (! baton->found_it)
@@ -500,10 +500,9 @@ handle_end_tag (void *userData, const char *tagname)
             }
 
           /* Now close off the file. */
-          close_tag = svn_xml_make_tag (baton->pool,
-                                        svn_xml_close_tag,
-                                        tagname,
-                                        NULL);
+          svn_xml_make_close_tag (&close_tag,
+                                  baton->pool,
+                                  tagname);
 
           apr_err = apr_full_write (baton->outfile,
                                     close_tag->data,
@@ -606,7 +605,7 @@ do_entry (svn_string_t *path,
   if (setting || removing)
     {
       apr_status_t apr_err;
-      svn_string_t *front;
+      svn_string_t *front = NULL;
 
       /* Open a new `tmp/entries' file for writing */
       err = svn_wc__open_adm_file (&outfile, path,
@@ -615,7 +614,7 @@ do_entry (svn_string_t *path,
       if (err)
         return err;
 
-      front = svn_xml_make_header (pool);
+      svn_xml_make_header (&front, pool);
       apr_err = apr_full_write (outfile, front->data, front->len, NULL);
       if (apr_err)
         {
