@@ -39,11 +39,17 @@ path_index = svntest.actions.path_index
 
 # How we currently test 'svnadmin' --
 #
-#   'svnadmin create':   This subcommand is implicitly tested
-#                        every time we run a python test script!
-#                        (An empty repository is always created and then
-#                        imported into;  if this subcommand stopped working,
-#                        every test would fail and we would know instantly.)
+#   'svnadmin create':   Create an empty repository, test that the
+#                        root node has a proper created-revision,
+#                        because there was once a bug where it
+#                        didn't.
+# 
+#                        Note also that "svnadmin create" is tested
+#                        implicitly every time we run a python test
+#                        script.  (An empty repository is always
+#                        created and then imported into;  if this
+#                        subcommand failed catastrophically, every
+#                        test would fail and we would know instantly.)
 #
 #   'svnadmin youngest': Just commit a couple of times and directly parse
 #                        the printed number.
@@ -94,6 +100,32 @@ def get_trees(repo_dir, revision_p = 0):
 
 
 #----------------------------------------------------------------------
+
+def test_create():
+  "test 'svnadmin create' subcommand"
+
+  # Bootstrap
+  sbox = sandbox(test_create)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  repo_dir = os.path.join (svntest.main.general_repo_dir, sbox)
+  url = svntest.main.test_area_url + '/' + repo_dir
+
+  if os.path.exists(repo_dir):
+    shutil.rmtree(repo_dir)
+
+  if os.path.exists(wc_dir):
+    shutil.rmtree(wc_dir)
+
+  svntest.main.run_svnadmin ("create", repo_dir)
+
+  stdout_lines, stderr_lines = \
+                svntest.main.run_svn (None, "checkout", url, "-d", wc_dir)
+
+  if len (stderr_lines) > 0:
+    return 1
+
+  return 0  # success
+
 
 def test_youngest():
   "test 'svnadmin youngest' subcommand"
@@ -285,6 +317,7 @@ def list_revs():
 
 # list all tests here, starting with None:
 test_list = [ None,
+              test_create,
               test_youngest,
               create_txn,
               remove_txn,
