@@ -372,7 +372,7 @@ main ()
 
 /* -----------------------------------------------------------------
  * local variables:
- * eval: (load-file "svn-dev.el")
+ * eval: (load-file "../svn-dev.el")
  * end:
  */
 
