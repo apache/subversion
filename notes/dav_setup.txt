@@ -77,6 +77,9 @@
              SVNPath /absolute/path/to/repository
           </Location>
 
+    Make sure that the user 'nobody' (or whatever UID the httpd
+    process runs as) is able to read the berkeley db files.
+
 9.  Now go ahead and fire up apache 2.0, using the 'apachectl' script,
     whereever it was installed:
 
