@@ -1696,7 +1696,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     }  /* end:  "textual" merging process */
 
   /* Possibly write log commands to tweak text/prop entry timestamps: */
-  if (new_text_path)
+  if ((new_text_path) || (magic_props_changed))
     {
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
