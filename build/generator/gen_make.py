@@ -127,6 +127,7 @@ class Generator(gen_base.GeneratorBase):
             if bt[-3:] == '.la':
               la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
+        la_tweaked.sort()
 
         # Construct a .libs directory within the Apache area and populate it
         # with the appropriate files. Also drop the .la file in the target dir.
