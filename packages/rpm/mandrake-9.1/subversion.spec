@@ -32,6 +32,9 @@
 %define namever      @NAMEVER@
 %define relver       @RELVER@
 
+@MAKE_DOC@
+@FOP_PATH@
+@NOT_JUST_DOCS@
 @BLESSED@
 @RELEASE_MODE@
 @SKIP_DEPS@
@@ -46,14 +49,19 @@
 @SILENT_FLAG@
 @USE_APACHE2@
 
+%define create_doc %{?docbook:1}%{!?docbook:0}
+
 %define name subversion
 %define version      @VERSION@
 %define release      @RELVER@mdk
 %define repos_rev    @REPOS_REV@
 %define usr /usr
-%define build_dir   $RPM_BUILD_DIR/%{name}-%{version}
+%define fullname    %{name}-%{version}
+%define fullsrc     %{name}-%{namever}
+%define fullver     %{version}-%{release}
+%define build_dir   $RPM_BUILD_DIR/%{fullname}
 %define lib_dir     %{build_dir}/%{name}
-%define tarball     %{name}-%{namever}.tar.bz2
+%define tarball     %{fullsrc}.tar.bz2
 %define mod_conf    46_mod_dav_svn.conf
 %define rc_file     subversion.rc-%{namever}
 %define svn_patch   svn-install.patch-%{namever}
@@ -105,19 +113,34 @@ servers.
 #####################################
 ###### Sub-Package Definitions ###### 
 #####################################
+%if %{not_just_docs}
 %package base
-Provides: %{name} = %{version}-%{release}
+Provides: %{name} = %{fullver}
 Group:    Development/Other
 Summary:  Common Files for Subversion
 Requires: libapr0 >= %{apache_ver}
 %description base
 This package contains all the common files required to run subversion
 components.
+%endif
 
+%if %{create_doc}
+%package doc
+Provides: %{name}-doc = %{fullver}
+Group:    Development/Other
+Summary:  Documentation for subversion
+BuildRequires: libxslt-proc >= 1.0.0
+BuildRequires: libxslt1     >= 1.0.0
+BuildRequires: docbook-style-xsl >= 1.6.0
+%description doc
+This package contains all the compiled documentation.
+%endif
+
+%if %{not_just_docs}
 %package client-common
 Summary:  Common Client Libs for Subversion
 Group:    Development/Other
-Requires: %{name}-base = %{version}-%{release}
+Requires: %{name}-base = %{fullver}
 %description client-common
 This package contains the common libraries required to run a subversion client.
 You'll want to install the subversion-client-dav or subversion-client-local to
@@ -127,7 +150,7 @@ called subversion-client-svn for remote svn client access. (NOT over WebDAV)
 %package repos
 Summary:  Local Repository Access for Subversion
 Group:    Development/Other
-Requires: %{name}-base = %{version}-%{release}
+Requires: %{name}-base = %{fullver}
 Requires: %{db4_rpm} >= %{db4_ver}
 %description repos
 This package contains the libraries required to allow subversion to access
@@ -141,7 +164,7 @@ This package also includes the `svnadmin' and `svnlook' programs.
 Summary:  Subversion Server Module for Apache
 Group:    Development/Other
 Requires: apache2-mod_dav >= %{apache-ver}
-Requires: %{name}-repos = %{version}-%{release}
+Requires: %{name}-repos = %{fullver}
 %description server
 The apache2 server extension SO for running a subversion server.
 
@@ -149,7 +172,7 @@ The apache2 server extension SO for running a subversion server.
 %package client-dav
 Summary:  Network Web-DAV Repository Access for the Subversion Client
 Group:    Development/Other
-Requires: %{name}-client-common = %{version}-%{release}
+Requires: %{name}-client-common = %{fullver}
 Requires: %{neon_rpm} >= %{neon_ver}
 %description client-dav
 This package contains the libraries required to allow the subversion client
@@ -158,7 +181,7 @@ This package contains the libraries required to allow the subversion client
 %package client-svn
 Summary:  Network Native Repository Access for the Subversion Client
 Group:    Development/Other
-Requires: %{name}-client-common = %{version}-%{release}
+Requires: %{name}-client-common = %{fullver}
 %description client-svn
 This package contains the libraries required to allow the subversion client
 (`svn') to access network subversion repositories natively.
@@ -166,8 +189,8 @@ This package contains the libraries required to allow the subversion client
 %package client-local
 Summary:  Local Repository Access for the Subversion Client
 Group:    Development/Other
-Requires: %{name}-client-common = %{version}-%{release}
-Requires: %{name}-repos = %{version}-%{release}
+Requires: %{name}-client-common = %{fullver}
+Requires: %{name}-repos = %{fullver}
 %description client-local
 This package contains the libraries required to allow the subversion client
 (`svn') to access local subversion repositories.
@@ -175,7 +198,7 @@ This package contains the libraries required to allow the subversion client
 %package devel
 Summary:  Subversion Headers/Libraries for Development
 Group:    Development/Other
-Requires: %{name}-base = %{version}-%{release}
+Requires: %{name}-base = %{fullver}
 %description devel
 This package contains the header files and linker scripts for subversion
 libraries.
@@ -183,7 +206,7 @@ libraries.
 %package tools
 Summary:  Subversion Misc. Tools
 Group:    Development/Other
-Requires: %{name}-base = %{version}-%{release}
+Requires: %{name}-base = %{fullver}
 Requires: db4-utils => %{db4_ver}
 Requires: %{swig_rpm} >= %{swig_ver}
 %description tools
@@ -191,13 +214,19 @@ This package contains a myriad tools for subversion. This package also contains
 'cvs2svn' - a program for migrating CVS repositories into Subversion repositories.
 The package also contains all of the python bindings for the subersion API, 
 required by several of the tools.
+%endif
 
 ###########################
 ########## Files ########## 
 ###########################
+%if %{not_just_docs}
 %files base
 %defattr(-,root,root)
+%if %{create_doc}
+%doc BUGS CHANGES COPYING HACKING IDEAS README
+%else
 %doc doc BUGS CHANGES COPYING HACKING IDEAS README
+%endif
 %{_libdir}/libsvn_delta-*so*
 %{_libdir}/libsvn_fs-*so*
 %{_libdir}/libsvn_subr-*so*
@@ -206,7 +235,15 @@ required by several of the tools.
 %{_mandir}/man1/svnadmin.*
 %{_bindir}/svnversion
 %{_bindir}/svnserve
+%endif
 
+%if %{create_doc}
+%files doc
+%defattr(-,root,root)
+%doc %{_docdir}/%{fullname} BUGS CHANGES COPYING HACKING IDEAS README
+%endif
+
+%if %{not_just_docs}
 %files repos
 %defattr(-,root,root)
 %{_libdir}/libsvn_repos-*so*
@@ -235,7 +272,7 @@ required by several of the tools.
 
 %files tools
 %defattr(-,root,root)
-%{_datadir}/%{name}-%{version}/tools
+%{_datadir}/%{fullname}/tools
 %{_libdir}/libsvn_swig_py*so*
 
 %files devel
@@ -251,6 +288,7 @@ required by several of the tools.
 %{apache_dir}/mod_authz_svn.so
 %{apache_dir}/mod_dav_svn.so
 %endif
+%endif
 
 ################################
 ######### Build Stages ######### 
@@ -259,6 +297,7 @@ required by several of the tools.
 %setup -q -n %{name}-%{namever}
 %patch0 -p1
 %patch1 -p1
+%if %{not_just_docs}
 ./autogen.sh %{?release_mode} \
 	     %{?skip_deps}
 LDFLAGS="-L%{lib_dir}/libsvn_client/.libs \
@@ -286,8 +325,14 @@ LDFLAGS="-L%{lib_dir}/libsvn_client/.libs \
 	%{?with_apu}%{?apu_config} \
 	--with-neon=%{usr} \
 	%{?with_apxs}%{?apxs}
+%endif
 %build
+%if %{not_just_docs}
 DESTDIR="$RPM_BUILD_ROOT" %make %{?silent_flag}
+%endif
+%if %{create_doc}
+PATH="%{?fop}$PATH" JAVA_HOME="$JAVA_HOME" XSL_DIR="%{docbook}" DESTDIR="$RPM_BUILD_ROOT" INSTALL_DIR="%{_docdir}/%{fullname}" %make -C doc/book %{?silent_flag}
+%endif
 
 ################################
 ######### Installation ######### 
@@ -296,6 +341,7 @@ DESTDIR="$RPM_BUILD_ROOT" %make %{?silent_flag}
 rm -rf "$RPM_BUILD_ROOT"
 
 # do the normal make install, and copy our apache2 configuration file
+%if %{not_just_docs}
 DESTDIR="$RPM_BUILD_ROOT" \
 	prefix=%{usr} \
 	mandir=%{usr}/share/man \
@@ -306,15 +352,22 @@ DESTDIR="$RPM_BUILD_ROOT" \
 	fs_bindir=%{usr}/bin \
 	swig_py_libdir=%{usr}/lib \
 	make %{?silent_flag} install 
+%endif
 	
+%if %{create_doc}
+cp -ar doc %{_docdir}/%{fullname}
+%endif
+
 %if %{use_apache2}
 mkdir -p $RPM_BUILD_ROOT/%{apache_conf}
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_conf}
 %endif
 
+%if %{not_just_docs}
 # copy everything in tools into a share directory
-mkdir -p $RPM_BUILD_ROOT/%{_datadir}/%{name}-%{version}
-cp -r tools $RPM_BUILD_ROOT/%{_datadir}/%{name}-%{version}
+mkdir -p $RPM_BUILD_ROOT/%{_datadir}/%{fullname}
+cp -r tools $RPM_BUILD_ROOT/%{_datadir}/%{fullname}
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT 
@@ -322,6 +375,7 @@ rm -rf $RPM_BUILD_ROOT
 ##################################
 ###### Post and Pre Scripts ###### 
 ##################################
+%if %{not_just_docs}
 %post base -p /sbin/ldconfig
 %postun base -p /sbin/ldconfig
 
@@ -378,10 +432,16 @@ else
   echo Unable to stop apache - need to be root
 fi
 
+%endif
 ############################
 ######## Change Log ######## 
 ############################
 %changelog
+* Sun Sep 21 2003 Shamim Islam <files@poetryunlimited.com>
+* 0.29.0-6983mdk+
+- Mandrake builds work out of the box now.
+- Cleaned up compile time messages
+
 * Mon Jun 30 2003 Michael Ballbach <ballbach@rten.net> 0.24.2-6372.2mdk
 - cleaned up the spec file of the old python swig bindings stuff, rolled
   it all into the tools.
