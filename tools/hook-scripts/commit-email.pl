@@ -23,7 +23,6 @@
 
 use strict;
 use Carp;
-use Storable qw(dclone);
 
 ######################################################################
 #  CONFIGURATION SECTION
@@ -35,22 +34,32 @@ my $sendmail = "/usr/sbin/sendmail";
 # svnlook path
 my $svnlook = "/usr/local/bin/svnlook";
 
+# Since the path to svnlook depends upon the local installation
+# preferences, check that the required programs exist to insure that
+# the administrator has set up the script properly.
+{
+  my $ok = 1;
+  foreach my $program ($sendmail, $svnlook) {
+    if (-e $program) {
+      unless (-x $program) {
+        warn "$0: required program `$program' is not executable, edit $0.\n";
+        $ok = 0;
+      }
+    } else {
+      warn "$0: required program `$svnlook' does not exist, edit $0.\n";
+      $ok = 0;
+    }
+  }
+  exit 1 unless $ok;
+}
+
 ######################################################################
 # Initial setup/command-line handling
-
-# This is the blank information for one project.  Copies of this are
-# made as needed for each new project using Storable::dclone.
-my $blank_settings = {email_addresses => [],
-                      hostname        => '',
-                      log_file        => '',
-                      match_regex     => '.',
-                      reply_to        => '',
-                      subject_prefix  => ''};
 
 # Each value in this array holds a hash reference which contains the
 # associated email information for one project.  Start with an
 # implicit rule that matches all paths.
-my @project_settings_list = (dclone($blank_settings));
+my @project_settings_list = (&new_project);
 
 # Process the command line arguments till there are none left.  The
 # first two arguments that are not used by a command line option are
@@ -78,7 +87,7 @@ while (@ARGV) {
       unless ($opt eq 'm') {
         die "$0: internal error: should only handle -m here.\n";
       }
-      $current_project = dclone($blank_settings);
+      $current_project                = &new_project;
       $current_project->{match_regex} = $value;
       push(@project_settings_list, $current_project);
     }
@@ -343,6 +352,17 @@ sub usage {
       "not want a project that matches the entire repository, then use a -m\n",
       "and a regular expression before any other command line options or\n",
       "email addresses.\n";
+}
+
+# Return a new hash data structure for a new empty project that
+# matches any modifications to the repository.
+sub new_project {
+  return {email_addresses => [],
+          hostname        => '',
+          log_file        => '',
+          match_regex     => '.',
+          reply_to        => '',
+          subject_prefix  => ''};
 }
 
 sub safe_read_from_pipe {
