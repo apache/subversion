@@ -60,3 +60,4 @@ Commit access for specific areas:
        gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
              kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
          patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
+             djh   D.J. Heap <dj@shadyvale.net>                (Win32 build)
