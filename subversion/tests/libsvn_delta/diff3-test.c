@@ -14,7 +14,7 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-	       
+
 
 #include <apr.h>
 #include <apr_general.h>
@@ -39,8 +39,10 @@ do_diff3(apr_file_t *output_file,
 
   SVN_ERR(svn_diff3_file_output(output_file, diff,
                                 original, modified, latest,
-                                NULL, NULL, NULL,
-				pool));
+                                NULL, NULL, NULL, NULL,
+                                FALSE,
+                                FALSE,
+                                pool));
 
   return NULL;
 }
