@@ -11,6 +11,9 @@
  * ====================================================================
  */
 
+#define APR_WANT_STRFUNC
+#include "apr_want.h"
+
 #include "validate.h"
 
 
@@ -76,26 +79,21 @@ svn_fs__is_valid_proplist (skel_t *skel)
 int 
 svn_fs__is_single_path_component (const char *name)
 {
-  const char *c = name;
-  const char *eos = name + strlen (name);
-
   /* Can't be empty */
-  if (c == eos) return 0;
+  if (*name == '\0')
+    return 0;
 
-  /* Can't be `.' */
-  if (! strcmp (".", name)) return 0;
+  /* Can't be `.' or `..' */
+  if (name[0] == '.'
+      && (name[1] == '\0'
+          || (name[1] == '.' && name[2] == '\0')))
+    return 0;
 
-  /* Can't be `..' */
-  if (! strcmp ("..", name)) return 0;
+  /* slashes are bad, m'kay... */
+  if (strchr(name, '/') != NULL)
+    return 0;
 
-  /* Run the string, looking for icky stuff. */
-  while (c < eos)
-    {
-      /* Can't have any forward slashes `/' */
-      if (*c == '/') return 0;
-
-      c++;
-    }
+  /* it is valid */
   return 1;
 }
 
