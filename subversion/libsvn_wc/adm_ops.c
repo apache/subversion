@@ -175,16 +175,6 @@ svn_wc__do_update_cleanup (const char *path,
 
 
 svn_error_t *
-svn_wc_set_wc_prop (const char *path,
-                    const char *name,
-                    const svn_string_t *value,
-                    apr_pool_t *pool)
-{
-  return svn_wc__wcprop_set (name, value, path, pool);
-}
-
-
-svn_error_t *
 svn_wc_process_committed (const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
