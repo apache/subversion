@@ -46,7 +46,6 @@
 #include "trail.h"
 #include "node-rev.h"
 #include "key-gen.h"
-#include "txn.h"
 #include "dag.h"
 #include "tree.h"
 #include "revs-txns.h"
