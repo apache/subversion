@@ -20,6 +20,13 @@
 #include <apr_hash.h>
 #include <apr_uuid.h>
 
+#define APR_WANT_STDIO
+#include <apr_want.h>
+
+#if APR_HAVE_STDLIB
+#include <stdlib.h>     /* for free() */
+#endif
+
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
@@ -78,6 +85,14 @@ typedef struct
   apr_hash_t *prop_changes;
 } resource_baton_t;
 
+typedef struct
+{
+  apr_pool_t *pool;
+  apr_file_t *tmpfile;
+  svn_string_t *fname;
+  resource_baton_t *file;
+} put_baton_t;
+
 /*
 ** singleton_delete_prop:
 **
@@ -107,6 +122,9 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
 
   /* run the request and get the resulting status code. */
   rv = http_request_dispatch(req);
+  *code = http_get_status(req)->code;
+  http_request_destroy(req);
+
   if (rv != HTTP_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
@@ -115,10 +133,6 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                "The server request failed (#%d) (%s %s)",
                                rv, method, url);
     }
-
-  *code = http_get_status(req)->code;
-
-  http_request_destroy(req);
 
   return NULL;
 }
@@ -139,12 +153,16 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
 
     /* get the URL where we should create activities */
     SVN_ERR( (*cc->get_func)(cc->close_baton, path, propname, &activity_url) );
+
+    /* ### urk. copy the thing to get a proper pool in there */
+    activity_url = svn_string_dup(activity_url, cc->ras->pool);
   }
 
   /* the URL for our activity will be ACTIVITY_URL/UUID */
   apr_uuid_get(&uuid);
   apr_uuid_format(uuid_buf, &uuid);
 
+  /* ### grumble. this doesn't watch out for trailing "/" */
   svn_path_add_component(activity_url, &uuid_str, svn_path_url_style);
 
   cc->activity_url = activity_url->data;
@@ -210,6 +228,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   int code;
   const char *body;
   const char *locn = NULL;
+  struct uri parse;
 
   printf("[checkout_resource] CHECKOUT: %s\n", res->url);
 
@@ -248,6 +267,9 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 
   /* run the request and get the resulting status code. */
   rv = http_request_dispatch(req);
+  code = http_get_status(req)->code;
+  http_request_destroy(req);
+
   if (rv != HTTP_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
@@ -256,10 +278,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
                                "The CHECKOUT request failed (#%d) (%s)",
                                rv, res->vsn_url);
     }
-
-  code = http_get_status(req)->code;
-
-  http_request_destroy(req);
 
   if (code != 201)
     {
@@ -270,7 +288,15 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
       /* ### error */
     }
 
-  res->wr_url = locn;
+  /* The location is an absolute URI. We want just the path portion. */
+  /* ### what to do with the rest? what if it points somewhere other
+     ### than the current session? */
+  uri_parse(locn, &parse, NULL);
+  res->wr_url = apr_pstrdup(cc->ras->pool, parse.path);
+  uri_free(&parse);
+  free((void *)locn);
+
+  printf("[checkout_resource]   ==> %s\n", res->wr_url);
 
   return NULL;
 }
@@ -300,6 +326,10 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   const resource_t *rsrc,
                                   apr_hash_t *changes)
 {
+  /* just punt if there are no changes to make. */
+  if (changes == NULL || apr_hash_count(changes) == 0)
+    return NULL;
+
   /* ### the hash contains the FINAL state, so the ordering of the items
      ### in the PROPPATCH is no big deal.
      ###
@@ -334,6 +364,7 @@ static svn_error_t * commit_replace_root(void *edit_baton,
                            cc->vsn_url_name,
                            &vsn_url_value) );
   rsrc->vsn_url = vsn_url_value->data;
+  printf("[replace_root] vsn_url='%s'\n", vsn_url_value->data);
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -543,9 +574,87 @@ static svn_error_t * commit_rep_file(svn_string_t *name,
   return NULL;
 }
 
-static svn_error_t * commit_send_txdelta(svn_txdelta_window_t *window,
-                                         void *baton)
+static svn_error_t * commit_stream_write(void *baton,
+                                         const char *data, apr_size_t *len)
 {
+  put_baton_t *pb = baton;
+  apr_status_t status;
+
+  /* drop the data into our temp file */
+  status = apr_file_write_full(pb->tmpfile, data, *len, NULL);
+  if (status)
+    return svn_error_create(status, 0, NULL, pb->pool,
+                            "Could not write svndiff to temp file.");
+
+  return NULL;
+}
+
+static svn_error_t * commit_stream_close(void *baton)
+{
+  put_baton_t *pb = baton;
+  commit_ctx_t *cc = pb->file->cc;
+  resource_t *rsrc = pb->file->rsrc;
+  http_req *req;
+  FILE *fp;
+  int rv;
+  int code;
+
+  /* close the temp file; we'll reopen as a FILE* for Neon */
+  (void) apr_file_close(pb->tmpfile);
+
+  printf("[commit_stream_close] PUT %s\n", rsrc->wr_url);
+  /* create/prep the request */
+  req = http_request_create(cc->ras->sess, "PUT", rsrc->wr_url);
+  if (req == NULL)
+    {
+      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
+                               pb->pool,
+                               "Could not create a PUT request (%s)",
+                               rsrc->wr_url);
+    }
+
+  /* ### use a symbolic name somewhere for this MIME type? */
+  http_add_request_header(req, "Content-Type", "application/vnd.svn-svndiff");
+
+  fp = fopen(pb->fname->data, "rb");
+  http_set_request_body_stream(req, fp);
+
+  /* run the request and get the resulting status code. */
+  rv = http_request_dispatch(req);
+
+  /* we're done with the file */
+  (void) fclose(fp);
+  (void) apr_file_remove(pb->fname->data, pb->subpool);
+
+  /* fetch the status, then clean up the request */
+  code = http_get_status(req)->code;
+  http_request_destroy(req);
+
+  /* toss the pool. all things pb are now history */
+  apr_pool_destroy(pb->pool);
+
+  if (rv != HTTP_OK)
+    {
+      /* ### need to be more sophisticated with reporting the failure */
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               cc->ras->pool,
+                               "The PUT request failed (neon: %d) (%s)",
+                               rv, rsrc->wr_url);
+    }
+
+  printf("[commit_stream_close] result=%d\n", code);
+  /* if it didn't returned 201 (Created) or 204 (No Content), then puke */
+  /* ### is that right? what else might we see? be more robust. */
+  if (code != 201 && code != 204)
+    {
+      /* ### need to be more sophisticated with reporting the failure */
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               cc->ras->pool,
+                               "The PUT request did not complete "
+                               "properly (status: %d) (%s)",
+                               code, rsrc->wr_url);
+    }
+
   return NULL;
 }
 
@@ -554,13 +663,33 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
                                           void **handler_baton)
 {
   resource_baton_t *file = file_baton;
+  apr_pool_t *subpool;
+  put_baton_t *baton;
+  svn_string_t *path;
+  svn_stream_t *stream;
 
-  /* ### begin a PUT here? */
+  /* construct a writable stream that gathers its contents into a buffer */
+  subpool = svn_pool_create(file->cc->ras->pool);
+
+  baton = apr_pcalloc(subpool, sizeof(*baton));
+  baton->pool = subpool;
+  baton->file = file;
+
+  /* ### oh, hell. Neon's request body support is either text (a C string),
+     ### or a FILE*. since we are getting binary data, we must use a FILE*
+     ### for now. isn't that special? */
+  /* ### fucking svn_string_t */
+  path = svn_string_create(".svn_commit", subpool);
+  SVN_ERR( svn_io_open_unique_file(&baton->tmpfile, &baton->fname, path,
+                                   ".ra_dav", subpool) );
+
+  stream = svn_stream_create(baton, subpool);
+  svn_stream_set_write(stream, commit_stream_write);
+  svn_stream_set_close(stream, commit_stream_close);
+
+  svn_txdelta_to_svndiff(stream, subpool, handler, handler_baton);
 
   printf("[apply_txdelta] PUT: %s\n", file->rsrc->url);
-
-  *handler = commit_send_txdelta;
-  *handler_baton = NULL;
 
   return NULL;
 }
