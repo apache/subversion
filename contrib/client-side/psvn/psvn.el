@@ -471,6 +471,7 @@ If ARG then pass the -u argument to `svn status'."
   (define-key svn-status-mode-map [?h] 'svn-status-use-history)
   (define-key svn-status-mode-map [?m] 'svn-status-set-user-mark)
   (define-key svn-status-mode-map [?u] 'svn-status-unset-user-mark)
+  (define-key svn-status-mode-map "\M-DEL" 'svn-status-unset-all-user-mark)
   (define-key svn-status-mode-map [(backspace)] 'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map [?.] 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map [??] 'svn-status-toggle-hide-unknown)
@@ -489,8 +490,8 @@ If ARG then pass the -u argument to `svn status'."
   (define-key svn-status-mode-map [?E] 'svn-status-ediff-with-revision)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map "*" svn-status-mode-mark-map)
-  (define-key svn-status-mode-mark-map "!" 'svn-status-unset-all-usermarks))
-
+  (define-key svn-status-mode-mark-map "!" 'svn-status-unset-all-usermarks)
+  (define-key svn-status-mode-mark-map "u" 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
   (define-key svn-status-mode-property-map [?l] 'svn-status-property-list)
@@ -1123,7 +1124,7 @@ The older revisions are stored in backup files named F.~REVISION~."
       (setq file-name (car file-names))
       (setq file-name-with-revision (concat file-name ".~" revision "~"))
       (add-to-list 'svn-status-get-specific-revision-file-info
-                   (cons file-name file-name-with-revision) t)
+                   (cons file-name file-name-with-revision))
       (save-excursion
         (find-file file-name-with-revision)
         (setq buffer-read-only nil)
@@ -1135,6 +1136,8 @@ The older revisions are stored in backup files named F.~REVISION~."
         (insert-buffer-substring "*svn-process*")
         (save-buffer))
       (setq file-names (cdr file-names)))
+    (setq svn-status-get-specific-revision-file-info
+	  (nreverse svn-status-get-specific-revision-file-info))
     (message "svn-status-get-specific-revision-file-info: %S"
              svn-status-get-specific-revision-file-info)))
 
@@ -1375,7 +1378,7 @@ When called with a prefix argument, it is possible to enter a new property."
         (when (y-or-n-p (format "Ignore %S for %s? " ext-list dir))
           (svn-status-property-edit
            (list (svn-status-find-info-for-file-name dir)) "svn:ignore" ext-list)
-          (svn-prop-edit-done)))
+          (svn-prop-edit-do-it nil)))	; synchronous
       (setq d-list (cdr d-list)))))
 
 (defun svn-status-property-ignore-file-extension ()
@@ -1400,7 +1403,7 @@ When called with a prefix argument, it is possible to enter a new property."
           (svn-status-property-edit
            (list (svn-status-find-info-for-file-name dir)) "svn:ignore"
            ext-list)
-          (svn-prop-edit-done)))
+          (svn-prop-edit-do-it nil)))
       (setq d-list (cdr d-list)))))
 
 (defun svn-status-property-edit-svn-ignore ()
@@ -1458,6 +1461,9 @@ Commands:
 
 (defun svn-prop-edit-done ()
   (interactive)
+  (svn-prop-edit-do-it t))
+
+(defun svn-prop-edit-do-it (async)
   (message "svn propset %s on %s"
            svn-status-propedit-property-name
            svn-status-propedit-file-list)
@@ -1465,12 +1471,13 @@ Commands:
     (set-buffer (get-buffer "*svn-property-edit*"))
     (set-buffer-file-coding-system 'undecided-unix nil)
     (write-region (point-min) (point-max)
-                  (concat svn-status-temp-dir "svn-prop-edit.txt")) nil 1)
+                  (concat svn-status-temp-dir "svn-prop-edit.txt") nil 1))
   (when svn-status-propedit-file-list ; there are files to change properties
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-propedit-file-list "")
     (setq svn-status-propedit-file-list nil)
-    (svn-run-svn t t 'propset "propset" svn-status-propedit-property-name
+    (svn-run-svn async t 'propset "propset"
+		 svn-status-propedit-property-name
                  "--targets" svn-status-temp-arg-file
                  "-F" (concat svn-status-temp-dir "svn-prop-edit.txt")))
   (set-window-configuration svn-status-pre-propedit-window-configuration))
