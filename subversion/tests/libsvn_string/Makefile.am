@@ -1,9 +1,15 @@
 ## Makefile.in is generated from this by automake.
 
 bin_PROGRAMS = stringtest
-
 stringtest_SOURCES = stringtest.c
 
+## Flags needed when compiling:
 CFLAGS = -pthread
 INCLUDES = -I../../include -I../../../apr/include
-LDADD = -L../../../apr -L.. -lsvn_string -lapr
+
+## Libraries this binary depends upon:
+stringtest_LDADD = ../libsvn_string.la ../../../apr/libapr.a
+
+
+
+

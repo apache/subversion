@@ -1,9 +1,12 @@
 ## Makefile.in is generated from this by automake.
 
-## kff todo: we're just going to get subversion/libsvn_string working first.
-## SUBDIRS = doc subversion
+
+## Recurse into these subdirectories:
 
 SUBDIRS = subversion doc
+
+
+## Use Karl's script to create a Changelog from CVS.
 
 ChangeLog: changelog
 

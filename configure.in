@@ -22,7 +22,7 @@ dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
 
 dnl Please run ./configure in the apr subdirectory.
 dnl (Add any other sub-projects, like expat-lite, to this list.)
-AC_CONFIG_SUBDIRS(apr)
+dnl   TEMPORARILY COMMENTED OUT:  AC_CONFIG_SUBDIRS(apr)
 
 dnl SET_MAKE -> `MAKE=make', unless MAKE is already defined.
 dnl (automake's docs said this macro is required if we set SUBDIRS
