@@ -34,12 +34,6 @@ Candidate changes:
     Votes: (9439, 9808):
       +1: breser
 
-  * r9667
-    Fix potential attack path in pre-commit-hook template.
-    Justification: Don't offer templates we don't want to use ourselves.
-    Votes:
-      +1: dionisos, kfogel, sussman
-
   * r9716
     Fix issue #1854 (user data loss on case-insensitive file systems).
     Justification: Never ever overwrite local modifications.

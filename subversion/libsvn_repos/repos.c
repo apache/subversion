@@ -430,9 +430,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "SVNLOOK=/usr/local/bin/svnlook"
       APR_EOL_STR
-      "LOG=`$SVNLOOK log -t \"$TXN\" \"$REPOS\"`"
+      "$SVNLOOK log -t \"$TXN\" \"$REPOS\" | \\"
       APR_EOL_STR
-      "echo \"$LOG\" | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1"
+      "   grep \"[a-zA-Z0-9]\" > /dev/null || exit 1"
       APR_EOL_STR
       APR_EOL_STR
       "# Check that the author of this commit has the rights to perform"
