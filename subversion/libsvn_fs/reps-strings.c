@@ -169,15 +169,40 @@ struct window_handler_baton_t
 };
 
 
-/* Function of type `svn_txdelta_window_handler_t'.
+/* Function of type `svn_txdelta_window_handler_t';
    BATON is a `struct window_handler_baton_t'.
 
-   Reconstruct part of BATON->buf if WINDOW is relevant to it,
-   otherwise ignore WINDOW.
+   If BATON->done is set, do nothing and return immediately.
+   Otherwise...
 
-   ### kff todo: fooo: finish documenting this.
+   If WINDOW is relevant, reconstruct some portion of BATON->buf, as
+   part of BATON->trail; any temporary allocation happens in
+   BATON->pool (which may be the same as BATON->trail->pool.  If
+   WINDOW is irrelevant, ignore it and return.
 
-   If BATON->done is set, just return having done nothing.  */
+   Q: When is WINDOW irrelevant?
+
+   A: If the range (BATON->req_offset + BATON->len_req) does not
+      overlap with the range (WINDOW->tview_len + BATON->cur_offset),
+      then the window is irrelevant, so: If the former range lies
+      before the latter, then increment BATON->cur_offset by
+      WINDOW->tview_len, else if the former range lies after the
+      latter, set BATON->done to 1, and then return in either case.
+
+      If the ranges do overlap, then the window is relevant -- that
+      is, it reconstructs some or all of the requested content range,
+      BATON->req_offset + BATON->len_req, so read on...
+
+   Q: Okay, so what exactly happens when WINDOW is relevant?
+
+   A: In that case, the data reconstructed by this window is stored at
+      BATON->buf + BATON->len_read, and BATON->len_read is incremented
+      by the number of bytes reconstructed, and BATON->cur_offset is
+      incremented by the same amount.
+
+      BATON->base_rep may be used to obtain source text against which
+      to reconstruct.  
+*/ 
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
@@ -234,7 +259,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     slen = window->sview_len;
     sbuf = apr_palloc (subpool, slen);
 
-    /* ### todo: this is what has to go :-) */
+    /* ### todo: this is the core of the naive algorithm, and is what
+       has to go when we have a true delta combiner. */
     SVN_ERR (rep_read_range (wb->fs,
                              wb->base_rep,
                              sbuf,
@@ -366,7 +392,9 @@ rep_read_range (svn_fs_t *fs,
 
       /* ### todo: hmmm, I just realized something: the way this
          interface works, there's no natural place to actually use the
-         checksum stored in the delta representation.  Urk.  -kff  */
+         checksum stored in the delta representation.  Urk.  -kff  
+
+         Oh wait, news flash: See issue #413.  */
     }
 
   return SVN_NO_ERROR;
@@ -1080,6 +1108,16 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   /* MD5 digest */
   const unsigned char *digest; 
 
+  /* Paranoia: never allow a rep to be deltified against itself,
+     because then there would be no fulltext reachable in the delta
+     chain, and badness would ensue.  */
+  if (strcmp (target, source) == 0)
+    return svn_error_createf
+      (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+       "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
+       target);
+
+  /* Set up a string to receive the svndiff data. */
   new_target_baton.fs = fs;
   new_target_baton.trail = trail;
   new_target_baton.key = NULL;
