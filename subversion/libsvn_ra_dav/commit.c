@@ -581,8 +581,11 @@ static svn_error_t * commit_delete_entry(svn_stringbuf_t *name,
   /* delete the child resource */
   SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code) );
 
-  /* ### be more flexible with the response? */
-  if (code != 204)
+  /* ## 404 is ignored, because mod_dav_svn is effectively merging
+     against the HEAD revision on-the-fly.  In such a universe, a
+     failed deletion (because it's already missing) is OK;  deletion
+     is an omnipotent merge operation. */
+  if ((code != 204) && (code != 404))
     {
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL, pool,
