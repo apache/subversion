@@ -16,10 +16,14 @@
 ######################################################################
 #
 
-import _fs
-import _util
+### hide these names?
 import tempfile
 import os
+import popen2
+
+import _fs
+import _util
+
 
 # copy the wrapper functions out of the extension module, dropping the
 # 'svn_fs_' prefix.
@@ -55,6 +59,20 @@ class FileDiff:
     # of it. so we'll create a subpool and clear it at "proper" times.
     self.pool = _util.svn_pool_create(pool)
 
+  def either_binary(self):
+    "Return true if either of the files are binary."
+    if self.path1 is not None:
+      prop = node_prop(self.root1, self.path1, _util.SVN_PROP_MIME_TYPE,
+                       self.pool)
+      if _util.svn_mime_type_is_binary(prop):
+        return 1
+    if self.path2 is not None:
+      prop = node_prop(self.root2, self.path2, _util.SVN_PROP_MIME_TYPE,
+                       self.pool)
+      if _util.svn_mime_type_is_binary(prop):
+        return 1
+    return 0
+
   def get_files(self):
     if self.tempfile1:
       # no need to do more. we ran this already.
@@ -83,11 +101,29 @@ class FileDiff:
 
   def get_pipe(self):
     self.get_files()
-    return os.popen("diff %s %s %s"
-                    % (self.diffoptions, self.tempfile1, self.tempfile2))
+
+    # use an array for the command to avoid the shell and potential
+    # security exposures
+    cmd = ["diff"] \
+          + string.split(self.diffoptions) \
+          + [self.tempfile1, self.tempfile2]
+
+    # open the pipe, forget the end for writing to the child (we won't),
+    # and then return the file object for reading from the child.
+    fromchild, tochild = popen2.popen2(cmd)
+    tochild.close()
+    return fromchild
 
   def __del__(self):
+    # it seems that sometimes the files are deleted, so just ignore any
+    # failures trying to remove them
     if self.tempfile1 is not None:
-      os.remove(self.tempfile1)
+      try:
+        os.remove(self.tempfile1)
+      except OSError:
+        pass
     if self.tempfile2 is not None:
-      os.remove(self.tempfile2)
+      try:
+        os.remove(self.tempfile2)
+      except OSError:
+        pass
