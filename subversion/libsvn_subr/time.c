@@ -216,7 +216,7 @@ svn_time_from_cstring (apr_time_t *when, const char *data, apr_pool_t *pool)
     }
   /* Timestamp is something we do not recognize. */
   else
-    return svn_error_createf(SVN_ERR_BAD_DATE, NULL, NULL);
+    return svn_error_create(SVN_ERR_BAD_DATE, NULL, NULL);
 }
 
 
