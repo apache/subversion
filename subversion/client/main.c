@@ -57,11 +57,14 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_delta.h"
 #include "svn_error.h"
+#include "cl.h"
 
 
 
-/*** Code. ***/
+/*** kff todo: this trace editor will get moved to its own file ***/
+
 
 enum command 
 { checkout_command = 1,
@@ -73,43 +76,8 @@ enum command
 };
 
 
-/* Simple helper for `status' command */
-static void
-print_status (svn_wc__status_t *status, svn_string_t *name)
-{
-  char statuschar;
-
-  switch (status->flag)
-    {
-    case svn_wc_status_none:
-      statuschar = '-';
-      break;
-    case svn_wc_status_added:
-      statuschar = 'A';
-      break;
-    case svn_wc_status_deleted:
-      statuschar = 'D';
-      break;
-    case svn_wc_status_modified:
-      statuschar = 'M';
-      break;
-    default:
-      statuschar = '?';
-      break;
-    }
-
-  if (status->local_ver == SVN_INVALID_VERNUM)
-    printf ("none    (r%6.0ld)  %c  %s\n",
-            status->repos_ver, statuschar, name->data);
-  else if (status->repos_ver == SVN_INVALID_VERNUM)
-    printf ("%-6.0ld  (r  none)  %c  %s\n",
-            status->local_ver,  statuschar, name->data);
-  else
-    printf ("%-6.0ld  (r%6.0ld)  %c  %s\n",
-            status->local_ver, status->repos_ver, statuschar, name->data);
-}
-
-
+
+/*** Code. ***/
 
 static void
 parse_command_options (int argc,
@@ -189,7 +157,7 @@ parse_options (int argc,
                svn_vernum_t *version,  /* ancestral or new */
                svn_string_t **ancestor_path,
                svn_boolean_t *force,
- apr_pool_t *pool)
+               apr_pool_t *pool)
 {
   char *s = argv[0];  /* svn progname */
   int i;
@@ -285,6 +253,8 @@ main (int argc, char **argv)
   svn_string_t *ancestor_path = NULL;
   svn_boolean_t force = 0;
   enum command command = 0;
+  const svn_delta_edit_fns_t *trace_editor;
+  void *trace_edit_baton;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
@@ -295,12 +265,30 @@ main (int argc, char **argv)
   
   switch (command)
     {
+      /* kff todo: can combine checkout and update cases w/ flag */
     case checkout_command:
-      err = svn_client_checkout (target, xml_file,
+      {
+        err = svn_cl__get_trace_editor (&trace_editor,
+                                        &trace_edit_baton,
+                                        pool);
+        if (err)
+          goto handle_error;
+      }
+      err = svn_client_checkout (trace_editor,
+                                 trace_edit_baton,
+                                 target, xml_file,
                                  ancestor_path, version, pool);
       break;
     case update_command:
-      err = svn_client_update (target, xml_file, version, pool);
+      {
+        err = svn_cl__get_trace_editor (&trace_editor,
+                                        &trace_edit_baton,
+                                        pool);
+        if (err)
+          goto handle_error;
+      }
+      err = svn_client_update (trace_editor, trace_edit_baton,
+                               target, xml_file, version, pool);
       break;
     case add_command:
       err = svn_client_add (target, pool);
@@ -316,7 +304,7 @@ main (int argc, char **argv)
         svn_wc__status_t *status;
         err = svn_client_status (&status, target, pool);
         if (! err) 
-          print_status (status, target);
+          svn_cl__print_status (status, target);
         break;
       }
     default:
@@ -324,6 +312,7 @@ main (int argc, char **argv)
       exit (1);
     }
 
+ handle_error:
   if (err)
     svn_handle_error (err, stdout, 0);
 

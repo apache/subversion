@@ -549,6 +549,28 @@ typedef struct svn_delta_edit_fns_t
 } svn_delta_edit_fns_t;
 
 
+/* Compose EDITOR_1 and its baton with EDITOR_2 and its baton. 
+ *
+ * Returns a new editor in E which each function FUN calls
+ * EDITOR_1->FUN and then EDITOR_2->FUN, with the corresponding batons.
+ * 
+ * If EDITOR_1->FUN returns error, that error is returned from E->FUN
+ * and EDITOR_2->FUN is never called; otherwise E->FUN's return value
+ * is the same as EDITOR_2->FUN's.
+ *
+ * If an editor function is null, it is simply never called, and this
+ * is not an error.
+ */
+svn_error_t *
+svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
+                           void **new_edit_baton,
+                           const svn_delta_edit_fns_t *editor_1,
+                           void *edit_baton_1,
+                           const svn_delta_edit_fns_t *editor_2,
+                           void *edit_baton_2,
+                           apr_pool_t *pool);
+
+
 
 /* An editor which outputs XML delta streams.  OUTPUT and OUTPUT_BATON
    will be used to write the output.  On return, *EDITOR and

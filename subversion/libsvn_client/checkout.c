@@ -67,13 +67,17 @@
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_checkout (svn_string_t *path,
+svn_client_checkout (const svn_delta_edit_fns_t *passenger_editor,
+                     void *passenger_edit_baton,
+                     svn_string_t *path,
                      svn_string_t *xml_src,
                      svn_string_t *ancestor_path,
                      svn_vernum_t ancestor_version,
                      apr_pool_t *pool)
 {
-  return svn_client__checkout_internal (path,
+  return svn_client__checkout_internal (passenger_editor,
+                                        passenger_edit_baton,
+                                        path,
                                         xml_src,
                                         ancestor_path,
                                         ancestor_version,
