@@ -1,3 +1,13 @@
+Version 0.22.2 (released 13 May 2003, revision 5902, branches/release-0.22.2)
+
+ User-visible changes:
+ * fix Win32 build
+ * properly handle on-disk template errors
+
+ Developer-visible changes:
+ * none
+
+
 Version 0.22.1 (released 9 May 2003, revision 5874, branches/release-0.22.1)
 
  User-visible changes:
