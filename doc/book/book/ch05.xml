@@ -436,10 +436,7 @@ pre-commit.tmpl           start-commit.tmpl
     <title>Repository Maintenance</title>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.1">
-      <title>Examining a Repository</title>
-            
-      <sect3 id="svn-ch-5-sect-2.1.1">
+      <sect2 id="svn-ch-5-sect-2.1">
         <title>Understanding Transactions and Revisions</title>
         
         <para>A Subversion repository is essentially a sequence of
@@ -500,9 +497,13 @@ pre-commit.tmpl           start-commit.tmpl
           It's part of monitoring the health of, and tracking changes
           to, your repository.</para>
             
-      </sect3>
+      </sect2>
 
-      <sect3 id="svn-ch-5-sect-2.1.2">
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-2.2">
+      <title>An Administrator's Toolkit</title>
+
+      <sect3 id="svn-ch-5-sect-2.2.1">
         <title>svnlook</title>
             
         <para><command>svnlook</command> is a tool provided by
@@ -733,7 +734,7 @@ $ svnlook tree path/to/repos --show-ids
 
       </sect3>
 
-      <sect3 id="svn-ch-5-sect-2.1.3">
+      <sect3 id="svn-ch-5-sect-2.2.2">
         <title>svnadmin</title>
 
         <para>The <command>svnadmin</command> program is the
@@ -854,7 +855,7 @@ Available subcommands:
 
       </sect3>
 
-      <sect3 id="svn-ch-5-sect-2.1.4">
+      <sect3 id="svn-ch-5-sect-2.2.3">
         <title>svnshell.py</title>
 
         <para>The Subversion source tree also comes with a shell-like
@@ -968,11 +969,12 @@ $
           instead).</para>
 
       </sect3>
-    </sect2>
 
-    <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.2">
-      <title>Berkeley DB Management</title>
+      <sect3 id="svn-ch-5-sect-2.2.4">
+        <title>Berkeley DB Utilities</title>
+
+        <!-- ### todo: talk only about Berkeley's tools here.  Move
+             the svnadmin stuff out to another section.  -->
             
       <para>Currently, the Subversion repository has only one database
         back-end: Berkeley DB.  All of your filesystem's structure and
@@ -1101,7 +1103,8 @@ log.0000000029
         be sure to read <systemitem
         class="url">http://www.sleepycat.com/docs/ref/lock/max.html</systemitem>
         first.</para>
-            
+
+      </sect3>       
     </sect2>
 
     <!-- ***************************************************************** -->
