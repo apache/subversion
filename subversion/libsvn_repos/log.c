@@ -340,7 +340,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
        ((start >= end) ? this_rev-- : this_rev++))
     {
       svn_string_t *author, *date, *message;
-      apr_hash_t *changed_paths = NULL;
+      apr_hash_t *r_props, *changed_paths = NULL;
 
       svn_pool_clear (subpool);
 
@@ -359,12 +359,13 @@ svn_repos_get_logs3 (svn_repos_t *repos,
             continue;
         }
 
-      SVN_ERR (svn_fs_revision_prop
-               (&author, fs, this_rev, SVN_PROP_REVISION_AUTHOR, subpool));
-      SVN_ERR (svn_fs_revision_prop
-               (&date, fs, this_rev, SVN_PROP_REVISION_DATE, subpool));
-      SVN_ERR (svn_fs_revision_prop
-               (&message, fs, this_rev, SVN_PROP_REVISION_LOG, subpool));
+      SVN_ERR (svn_fs_revision_proplist (&r_props, fs, this_rev, pool));
+      author = apr_hash_get (r_props, SVN_PROP_REVISION_AUTHOR,
+                             APR_HASH_KEY_STRING);
+      date = apr_hash_get (r_props, SVN_PROP_REVISION_DATE,
+                           APR_HASH_KEY_STRING);
+      message = apr_hash_get (r_props, SVN_PROP_REVISION_LOG,
+                              APR_HASH_KEY_STRING);
 
       /* ### Below, we discover changed paths if the user requested
          them (i.e., "svn log -v" means `discover_changed_paths' will

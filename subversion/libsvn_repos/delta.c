@@ -484,6 +484,7 @@ delta_proplists (struct context *c,
       if (SVN_IS_VALID_REVNUM (committed_rev))
         {
           svn_fs_t *fs = svn_fs_root_fs (c->target_root);
+          apr_hash_t *r_props;
           const char *uuid;
 
           /* Transmit the committed-rev. */
@@ -492,9 +493,12 @@ delta_proplists (struct context *c,
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_REV, 
                               cr_str, subpool));
 
+          SVN_ERR (svn_fs_revision_proplist (&r_props, fs, committed_rev,
+                                             pool));
+
           /* Transmit the committed-date. */
-          SVN_ERR (svn_fs_revision_prop (&committed_date, fs, committed_rev,
-                                         SVN_PROP_REVISION_DATE, subpool));
+          committed_date = apr_hash_get (r_props, SVN_PROP_REVISION_DATE,
+                                         APR_HASH_KEY_STRING);
           if (committed_date || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
@@ -502,8 +506,8 @@ delta_proplists (struct context *c,
             }
 
           /* Transmit the last-author. */
-          SVN_ERR (svn_fs_revision_prop (&last_author, fs, committed_rev,
-                                         SVN_PROP_REVISION_AUTHOR, subpool));
+          last_author = apr_hash_get (r_props, SVN_PROP_REVISION_AUTHOR,
+                                      APR_HASH_KEY_STRING);
           if (last_author || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,

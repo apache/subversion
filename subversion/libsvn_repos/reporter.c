@@ -345,7 +345,7 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                  void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
-  apr_hash_t *s_props, *t_props;
+  apr_hash_t *s_props, *t_props, *r_props;
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
@@ -363,16 +363,18 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (change_fn (b, object,
                           SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
 
+      SVN_ERR (svn_fs_revision_proplist (&r_props, b->repos->fs, crev, pool));
+
       /* Transmit the committed-date. */
-      SVN_ERR (svn_fs_revision_prop (&cdate, b->repos->fs, crev,
-                                     SVN_PROP_REVISION_DATE, pool));
+      cdate = apr_hash_get (r_props, SVN_PROP_REVISION_DATE,
+                            APR_HASH_KEY_STRING);
       if (cdate || s_path)
         SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
                             cdate, pool));
 
       /* Transmit the last-author. */
-      SVN_ERR (svn_fs_revision_prop (&last_author, b->repos->fs, crev,
-                                     SVN_PROP_REVISION_AUTHOR, pool));
+      last_author = apr_hash_get (r_props, SVN_PROP_REVISION_AUTHOR,
+                                  APR_HASH_KEY_STRING);
       if (last_author || s_path)
         SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_LAST_AUTHOR,
                             last_author, pool));
