@@ -26,7 +26,7 @@ Candidate changes:
     Justification:
       Perl bindings only; completeness.
     Votes:
-      +1: clkao
+      +1: clkao, breser
 
   * r10800 (Issue #2031)
     Add -lstdc++ to javahl binding DSO at link-time.
@@ -34,14 +34,14 @@ Candidate changes:
       The javahl shared library does not link correctly on certain platforms.
       (This is really a libtool bug.)
     Votes:
-     +1: jerenkrantz
+     +1: jerenkrantz, breser
 
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
       Simple fix for a nasty problem that has bitten at least one user.
     Votes:
-       +1: bliss, maxb
+       +1: bliss, maxb, breser
        +1 (r10819 only, so far): ghudson
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
@@ -51,26 +51,34 @@ Candidate changes:
     Justification:
       Trivial fix to a new svn 1.1 feature.
     Votes:
-      +1: sussman, jpieper
+      +1: sussman, jpieper, breser
 
   * r10676
     Fix segfault when committing renamed-file with changed svn:eol-style prop.
     Justification:
         Segfaults are bad.  One-line fix to prevent deref'ing NULL.
     Votes:
-      +1: sussman, jpieper
+      +1: sussman, jpieper, breser
       +0: (philip?  sussman is guessing here)
 
   * r10889 (Issue #1914)
     Make external diff3 work again.
     Justification:
-        Regression from 1.0.
+      Regression from 1.0.
     Votes:
-      +1: bliss
+      +1: bliss, breser
 
   * r10890
     Run external diff3 with full environment.
     Justification:
-        X11 diff3 utilities won't work without it.  One-liner.
+      X11 diff3 utilities won't work without it.  One-liner.
     Votes:
-      +1: bliss
+      +1: bliss, breser
+
+  * r10868, r10884
+    Improve handling of path to SWIG in configure.
+    Justification:
+      Handles passing the path to the executable and gives an error if
+      they explicitly asked for SWIG but we are unable to find it. 
+    Votes:
+      +1: breser
