@@ -83,7 +83,7 @@
 static char *svn_delta__tagmap[] =
 {
   "tree-delta",
-  "new",
+  "add",
   "delete",
   "replace",
   "file",
@@ -298,8 +298,8 @@ do_stack_append (svn_delta__digger_t *digger,
           && (youngest_frame->tag != svn_delta__XML_dir))
         return XML_validation_error (pool, tagname, FALSE);
       
-      /* <new>, <replace> must follow <tree-delta> */
-      else if ( ((new_frame->tag == svn_delta__XML_new)
+      /* <add>, <replace> must follow <tree-delta> */
+      else if ( ((new_frame->tag == svn_delta__XML_add)
                  || (new_frame->tag == svn_delta__XML_replace))
                 && (youngest_frame->tag != svn_delta__XML_treedelta) )
         return XML_validation_error (pool, tagname, FALSE);
@@ -310,20 +310,20 @@ do_stack_append (svn_delta__digger_t *digger,
                 && (youngest_frame->tag != svn_delta__XML_propdelta) )
         return XML_validation_error (pool, tagname, FALSE);
       
-      /* <file>, <dir> must follow either <new> or <replace> */
+      /* <file>, <dir> must follow either <add> or <replace> */
       else if ((new_frame->tag == svn_delta__XML_file)
                || (new_frame->tag == svn_delta__XML_dir))
         {
-          if ((youngest_frame->tag != svn_delta__XML_new)
+          if ((youngest_frame->tag != svn_delta__XML_add)
               && (youngest_frame->tag != svn_delta__XML_replace))
             return XML_validation_error (digger->pool, tagname, FALSE);
         }
       
-      /* <prop-delta> must follow one of <new>, <replace> (if talking
+      /* <prop-delta> must follow one of <add>, <replace> (if talking
          about a directory entry's properties) or must follow one of
          <file>, <dir> */
       else if ((new_frame->tag == svn_delta__XML_propdelta)
-               && (youngest_frame->tag != svn_delta__XML_new)
+               && (youngest_frame->tag != svn_delta__XML_add)
                && (youngest_frame->tag != svn_delta__XML_replace)
                && (youngest_frame->tag != svn_delta__XML_file)
                && (youngest_frame->tag != svn_delta__XML_dir))
@@ -706,7 +706,7 @@ do_begin_propdelta (svn_delta__digger_t *digger)
                             digger->pool);
         break;
       }
-    case svn_delta__XML_new:
+    case svn_delta__XML_add:
       {
         digger->current_propdelta->kind = svn_propdelta_dirent;
         /* Get the name of the dirent, too. */
@@ -915,7 +915,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we adding a new directory?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_delta__XML_new) 
+    if ((new_frame->previous->tag == svn_delta__XML_add) 
         && (new_frame->tag == svn_delta__XML_dir))
       {
         err = do_directory_callback (my_digger, new_frame, atts, FALSE);
@@ -948,7 +948,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we adding a new file?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_delta__XML_new) 
+    if ((new_frame->previous->tag == svn_delta__XML_add) 
         && (new_frame->tag == svn_delta__XML_file))
       {
         err = do_file_callback (my_digger, new_frame, atts, FALSE);

@@ -1,106 +1,106 @@
 <tree-delta>
-  <new name="iota">
+  <add name="iota">
     <file ancestor="/iota">
       <text-delta>This is the file 'iota'.</text-delta>
     </file>
-  </new>
-  <new name="A">
+  </add>
+  <add name="A">
     <dir ancestor="/A" ver="1">
       <tree-delta>
-        <new name="mu">
+        <add name="mu">
           <file ancestor="/A/mu">
             <text-delta>This is the file 'mu'.</text-delta>
           </file>
-        </new>
-        <new name="B">
+        </add>
+        <add name="B">
           <dir ancestor="/A/B">
             <tree-delta>
-              <new name="lambda">
+              <add name="lambda">
                 <file ancestor="/A/B/lambda">
                   <text-delta>This is the file 'lambda'.</text-delta>
                 </file>
-              </new>
-              <new name="E">
+              </add>
+              <add name="E">
                 <dir ancestor="/A/B/E">
                   <tree-delta>
-                    <new name="alpha">
+                    <add name="alpha">
                       <file ancestor="/A/B/E/alpha">
                         <text-delta>This is the file 'alpha'.</text-delta>
                       </file>
-                    </new>
-                    <new name="beta">
+                    </add>
+                    <add name="beta">
                       <file ancestor="/A/B/E/beta">
                         <text-delta>This is the file 'beta'.</text-delta>
                       </file>
-                    </new>
+                    </add>
                   </tree-delta>
                 </dir>
-              </new>
-              <new name="F">
+              </add>
+              <add name="F">
                 <dir ancestor="/A/B/F">
                 </dir>
-              </new>
+              </add>
             </tree-delta>
           </dir>
-        </new>
-        <new name="C">
+        </add>
+        <add name="C">
           <dir ancestor="/A/C">
           </dir>
-        </new>
-        <new name="D">
+        </add>
+        <add name="D">
           <dir ancestor="/A/D">
             <tree-delta>
-              <new name="gamma">
+              <add name="gamma">
                 <file ancestor="/A/D/gamma">
                   <text-delta>This is the file 'gamma'.</text-delta>
                 </file>
-              </new>
-              <new name="G">
+              </add>
+              <add name="G">
                 <dir ancestor="/A/D/G">
                   <tree-delta>
-                    <new name="pi">
+                    <add name="pi">
                       <file ancestor="/A/D/G/pi">
                         <text-delta>This is the file 'pi'.</text-delta>
                       </file>
-                    </new>
-                    <new name="rho">
+                    </add>
+                    <add name="rho">
                       <file ancestor="/A/D/G/rho">
                         <text-delta>This is the file 'rho'.</text-delta>
                       </file>
-                    </new>
-                    <new name="tau">
+                    </add>
+                    <add name="tau">
                       <file ancestor="/A/D/G/tau">
                         <text-delta>This is the file 'tau'.</text-delta>
                       </file>
-                    </new>
+                    </add>
                   </tree-delta>
                 </dir>
-              </new>
-              <new name="H">
+              </add>
+              <add name="H">
                 <dir ancestor="/A/D/H">
                   <tree-delta>
-                    <new name="chi">
+                    <add name="chi">
                       <file ancestor="/A/D/H/chi">
                         <text-delta>This is the file 'chi'.</text-delta>
                       </file>
-                    </new>
-                    <new name="psi">
+                    </add>
+                    <add name="psi">
                       <file ancestor="/A/D/H/psi">
                         <text-delta>This is the file 'psi'.</text-delta>
                       </file>
-                    </new>
-                    <new name="omega">
+                    </add>
+                    <add name="omega">
                       <file ancestor="/A/D/H/omega">
                         <text-delta>This is the file 'omega'.</text-delta>
                       </file>
-                    </new>
+                    </add>
                   </tree-delta>
                 </dir>
-              </new>
+              </add>
             </tree-delta>
           </dir>
-        </new>
+        </add>
       </tree-delta>
     </dir>
-  </new>
+  </add>
 </tree-delta>
