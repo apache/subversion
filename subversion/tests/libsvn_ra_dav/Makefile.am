@@ -28,18 +28,21 @@ SVN_TESTS =
 ## inflexible;  we want better control over automated-test output. 
 check:
 	@echo > tests.log
-	@for prog in $(SVN_TESTS); do \
-	  echo; \
-	  echo -n "Running all sub-tests in $$prog..."; \
-	  ./$$prog >> tests.log; \
-	  if [ $$? -eq 0 ]; \
-	  then \
-	     echo "SUCCESS"; \
-	  else \
-	     echo; \
-	     echo "at least one sub-test FAILED, check tests.log:"; echo; \
-	     cat tests.log | grep FAIL; \
-	  fi; \
-	done
+	@if test -n "$(SVN_TESTS)"; then \
+	  for prog in "$(SVN_TESTS)"; do \
+	    echo; \
+	    echo -n "Running all sub-tests in $$prog..."; \
+	    ./$$prog >> tests.log; \
+	    if [ $$? -eq 0 ]; \
+	    then \
+	       echo "SUCCESS"; \
+	    else \
+	       echo; \
+	       echo "at least one sub-test FAILED, check tests.log:"; echo; \
+	       cat tests.log | grep FAIL; \
+	    fi; \
+	  done \
+	fi
+
 
 
