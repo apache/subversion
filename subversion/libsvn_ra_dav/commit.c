@@ -93,8 +93,6 @@ struct copy_baton
   apr_pool_t *pool;
 };
 
-
-
 typedef struct
 {
   svn_ra_dav__session_t *ras;
@@ -118,6 +116,12 @@ typedef struct
   svn_commit_callback_t callback;
   void *callback_baton;
 
+  /* The hash of lock-tokens owned by the working copy. */
+  apr_hash_t *tokens;
+
+  /* Whether or not to keep the locks after commit is done. */
+  svn_boolean_t keep_locks;
+
   /* A context for neon COPY request callbacks. */
   struct copy_baton *cb;
 
@@ -139,6 +143,7 @@ typedef struct
   svn_boolean_t created; /* set if this is an add rather than an update */
   apr_pool_t *pool; /* the pool from open_foo() / add_foo() */
   put_baton_t *put_baton;  /* baton for this file's PUT request */
+  const char *token;       /* file's lock token, if available */
 } resource_baton_t;
 
 /* this property will be fetched from the server when we don't find it
@@ -435,6 +440,7 @@ static svn_error_t * add_child(resource_t **child,
 static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  const char *vsn_url,
                                  svn_boolean_t allow_404,
+                                 const char *token,
                                  int *code,
                                  char **locn,
                                  apr_pool_t *pool)
@@ -472,6 +478,13 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   ne_add_response_header_handler(req, "location",
                                  ne_duplicate_header, (void *)locn);
 
+  if (token)
+    {
+      const char *token_header_val;
+      token_header_val = apr_psprintf(pool, "(<%s>)", token);
+      ne_add_request_header(req, "If", token_header_val);
+    }
+
   /* run the request and get the resulting status code (and svn_error_t) */
   return svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
                                       "CHECKOUT", vsn_url,
@@ -483,7 +496,8 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
 static svn_error_t * checkout_resource(commit_ctx_t *cc,
                                        resource_t *rsrc,
-                                       svn_boolean_t allow_404, 
+                                       svn_boolean_t allow_404,
+                                       const char *token,
                                        apr_pool_t *pool)
 {
   int code;
@@ -498,7 +512,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
     }
 
   /* check out the Version Resource */
-  err = do_checkout(cc, rsrc->vsn_url, allow_404, &code, &locn, pool);
+  err = do_checkout(cc, rsrc->vsn_url, allow_404, token, &code, &locn, pool);
 
   /* possibly run the request again, with a re-fetched Version Resource */
   if (err == NULL && allow_404 && code == 404)
@@ -511,7 +525,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       SVN_ERR( get_version_url(cc, rsrc, TRUE, pool) );
 
       /* do it again, but don't allow a 404 this time */
-      err = do_checkout(cc, rsrc->vsn_url, FALSE, &code, &locn, pool);
+      err = do_checkout(cc, rsrc->vsn_url, FALSE, token, &code, &locn, pool);
     }
 
   /* special-case when conflicts occur */
@@ -618,8 +632,20 @@ static svn_error_t * do_proppatch(svn_ra_dav__session_t *ras,
                                   apr_pool_t *pool)
 {
   const char *url = rsrc->wr_url;
+  apr_hash_t *extra_headers = NULL;
+  
+  if (rb->token)
+    {
+      const char *token_header_val;
+      token_header_val = apr_psprintf(pool, "(<%s>)", rb->token);
+      
+      extra_headers = apr_hash_make(pool);
+      apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
+                   token_header_val);
+    }
+
   return svn_ra_dav__do_proppatch(ras, url, rb->prop_changes, 
-                                  rb->prop_deletes, pool);
+                                  rb->prop_deletes, extra_headers, pool);
 }
 
 
@@ -688,10 +714,26 @@ static svn_error_t * commit_delete_entry(const char *path,
     }
 
   /* get the URL to the working collection */
-  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE, pool) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE, NULL, pool) );
 
   /* create the URL for the child resource */
   child = svn_path_url_add_component(parent->rsrc->wr_url, name, pool);
+
+  /* possibly send a lock-token in the DELETE request. */
+  if (parent->cc->tokens)
+    {
+      const char *token = 
+           apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+      if (token)
+        {
+          const char *token_header_val;
+          token_header_val = apr_psprintf(pool, "(<%s>)", token);
+
+          extra_headers = apr_hash_make(pool);
+          apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
+                       token_header_val);
+        }
+    }
 
   /* ### 404 is ignored, because mod_dav_svn is effectively merging
      against the HEAD revision on-the-fly.  In such a universe, a
@@ -763,7 +805,7 @@ static svn_error_t * commit_add_dir(const char *path,
 
   /* check out the parent resource so that we can create the new collection
      as one of its children. */
-  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE, dir_pool) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE, NULL, dir_pool) );
 
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(dir_pool, sizeof(*child));
@@ -892,7 +934,7 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
   record_prop_change(dir->pool, dir, name, value);
 
   /* do the CHECKOUT sooner rather than later */
-  SVN_ERR( checkout_resource(dir->cc, dir->rsrc, TRUE, pool) );
+  SVN_ERR( checkout_resource(dir->cc, dir->rsrc, TRUE, NULL, pool) );
 
   /* Add this path to the valid targets hash. */
   add_valid_target (dir->cc, dir->rsrc->local_path, svn_nonrecursive);
@@ -935,7 +977,7 @@ static svn_error_t * commit_add_file(const char *path,
   */
 
   /* Do the parent CHECKOUT first */
-  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE, workpool) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE, NULL, workpool) );
 
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(file_pool, sizeof(*file));
@@ -945,7 +987,9 @@ static svn_error_t * commit_add_file(const char *path,
   SVN_ERR( add_child(&rsrc, parent->cc, parent->rsrc,
                      name, 1, SVN_INVALID_REVNUM, workpool) );
   file->rsrc = dup_resource(rsrc, file_pool);
-
+  if (parent->cc->tokens)
+    file->token = apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+  
   /* If the parent directory existed before this commit then there may be a
      file with this URL already. We need to ensure such a file does not
      exist, which we do by attempting a PROPFIND.  Of course, a
@@ -1078,9 +1122,12 @@ static svn_error_t * commit_open_file(const char *path,
   SVN_ERR( add_child(&rsrc, parent->cc, parent->rsrc,
                      name, 0, base_revision, workpool) );
   file->rsrc = dup_resource(rsrc, file_pool);
+  if (parent->cc->tokens)
+    file->token = apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
-  SVN_ERR( checkout_resource(parent->cc, file->rsrc, TRUE, workpool) );
+  SVN_ERR( checkout_resource(parent->cc, file->rsrc, TRUE,
+                             file->token, workpool) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
      ### "long time" from now. certainly after many other operations, so
@@ -1164,8 +1211,11 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
   /* ### we should put this into the file_baton's pool */
   record_prop_change(file->pool, file, name, value);
 
+  if (file->cc->tokens)
+    file->token = apr_hash_get(file->cc->tokens, name, APR_HASH_KEY_STRING);
+
   /* do the CHECKOUT sooner rather than later */
-  SVN_ERR( checkout_resource(file->cc, file->rsrc, TRUE, pool) );
+  SVN_ERR( checkout_resource(file->cc, file->rsrc, TRUE, file->token, pool) );
 
   /* Add this path to the valid targets hash. */
   add_valid_target (file->cc, file->rsrc->local_path, svn_nonrecursive);
@@ -1200,6 +1250,13 @@ static svn_error_t * commit_close_file(void *file_baton,
       
       ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
       
+      if (file->token)
+        {
+          const char *token_header_val;
+          token_header_val = apr_psprintf(pool, "(<%s>)", file->token);
+          ne_add_request_header(req, "If", token_header_val);
+        }
+
       if (pb->base_checksum)
         ne_add_request_header
           (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
@@ -1253,6 +1310,8 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->ras->root.path,
                                       cc->activity_url,
                                       cc->valid_targets,
+                                      cc->tokens,
+                                      cc->keep_locks,
                                       cc->disable_merge_response,
                                       pool) );
   SVN_ERR( delete_activity(edit_baton, pool) );
@@ -1310,7 +1369,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
     
     /* To set the log message, we must checkout the latest baseline
        and get back a mutable "working" baseline.  */
-    err = checkout_resource(cc, &baseline_rsrc, FALSE, pool);
+    err = checkout_resource(cc, &baseline_rsrc, FALSE, NULL, pool);
 
     /* There's a small chance of a race condition here, if apache is
        experiencing heavy commit concurrency or if the network has
@@ -1350,14 +1409,14 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 }
 
 svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
-                                            const svn_delta_editor_t **editor,
-                                            void **edit_baton,
-                                            const char *log_msg,
-                                            svn_commit_callback_t callback,
-                                            void *callback_baton,
+                                             const svn_delta_editor_t **editor,
+                                             void **edit_baton,
+                                             const char *log_msg,
+                                             svn_commit_callback_t callback,
+                                             void *callback_baton,
                                              apr_hash_t *lock_tokens,
                                              svn_boolean_t keep_locks,
-                                            apr_pool_t *pool)
+                                             apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;
@@ -1378,6 +1437,8 @@ svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
   cc->log_msg = log_msg;
   cc->callback = callback;
   cc->callback_baton = callback_baton;
+  cc->tokens = lock_tokens;
+  cc->keep_locks = keep_locks;
   cc->cb = cb;
 
   /* If the caller didn't give us any way of storing wcprops, then

@@ -1300,7 +1300,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
     }
 
   err = svn_ra_dav__do_proppatch(ras, baseline->url, prop_changes,
-                                 prop_deletes, pool);
+                                 prop_deletes, NULL, pool);
   if (err)
     return 
       svn_error_create

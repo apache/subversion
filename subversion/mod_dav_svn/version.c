@@ -1123,6 +1123,341 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
   return NULL;
 }
 
+
+/* ----------------------------------------------------------------------- */
+/* ### TEMPORARY HACK:   REMOVE THESE FUNCTIONS  when we stop pulling
+   the hash from the If: header and start parsing the request body!
+   It's only here because mod_dav doesn't export it, and
+   build_lock_hash() needs to parse the If: header.   */
+
+
+static dav_if_header *dav_svn_add_if_resource(apr_pool_t *p,
+                                              dav_if_header *next_ih,
+                                              const char *uri,
+                                              apr_size_t uri_len)
+{
+  dav_if_header *ih;
+  
+  if ((ih = apr_pcalloc(p, sizeof(*ih))) == NULL)
+    return NULL;
+  
+  ih->uri = uri;
+  ih->uri_len = uri_len;
+  ih->next = next_ih;
+  
+  return ih;
+}
+
+
+static dav_error * dav_svn_add_if_state(apr_pool_t *p, dav_if_header *ih,
+                                        const char *state_token,
+                                        dav_if_state_type t, int condition,
+                                        const dav_hooks_locks *locks_hooks)
+{
+  dav_if_state_list *new_sl;
+  
+  new_sl = apr_pcalloc(p, sizeof(*new_sl));
+  
+  new_sl->condition = condition;
+  new_sl->type      = t;
+  
+  if (t == dav_if_opaquelock) {
+    dav_error *err;
+    
+    if ((err = (*locks_hooks->parse_locktoken)(p, state_token,
+                                               &new_sl->locktoken)) != NULL) {
+      /* In cases where the state token is invalid, we'll just skip
+       * it rather than return 400.
+       */
+      if (err->error_id == DAV_ERR_LOCK_UNK_STATE_TOKEN) {
+        return NULL;
+      }
+      else {
+        /* ### maybe add a higher-level description */
+        return err;
+      }
+    }
+  }
+  else
+    new_sl->etag = state_token;
+  
+  new_sl->next = ih->state;
+  ih->state = new_sl;
+  
+  return NULL;
+}
+
+
+static char *dav_svn_fetch_next_token(char **str, char term)
+{
+    char *sp;
+    char *token;
+        
+    token = *str + 1;
+
+    while (*token && (*token == ' ' || *token == '\t'))
+        token++;
+
+    if ((sp = strchr(token, term)) == NULL)
+        return NULL;
+
+    *sp = '\0';
+    *str = sp;
+    return token;
+}
+
+
+static dav_error * dav_svn_process_if_header(request_rec *r,
+                                             dav_if_header **p_ih)
+{
+  dav_error *err;
+  char *str;
+  char *list;
+  const char *state_token;
+  const char *uri = NULL;        /* scope of current production; NULL=no-tag */
+  apr_size_t uri_len = 0;
+  dav_if_header *ih = NULL;
+  apr_uri_t parsed_uri;
+  const dav_hooks_locks *locks_hooks = DAV_GET_HOOKS_LOCKS(r);
+  enum {no_tagged, tagged, unknown} list_type = unknown;
+  int condition;
+  
+  *p_ih = NULL;
+  
+  if ((str = apr_pstrdup(r->pool, apr_table_get(r->headers_in, "If"))) == NULL)
+    return NULL;
+  
+  while (*str) {
+    switch(*str) {
+    case '<':
+      /* Tagged-list production - following states apply to this uri */
+      if (list_type == no_tagged
+          || ((uri = dav_svn_fetch_next_token(&str, '>')) == NULL)) {
+        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                             DAV_ERR_IF_TAGGED,
+                             "Invalid If-header: unclosed \"<\" or "
+                             "unexpected tagged-list production.");
+      }
+      
+      /* 2518 specifies this must be an absolute URI; just take the
+       * relative part for later comparison against r->uri */
+      if (apr_uri_parse(r->pool, uri, &parsed_uri) != APR_SUCCESS) {
+        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                             DAV_ERR_IF_TAGGED,
+                             "Invalid URI in tagged If-header.");
+      }
+      /* note that parsed_uri.path is allocated; we can trash it */
+      
+      /* clean up the URI a bit */
+      ap_getparents(parsed_uri.path);
+      uri_len = strlen(parsed_uri.path);
+      if (uri_len > 1 && parsed_uri.path[uri_len - 1] == '/')
+        parsed_uri.path[--uri_len] = '\0';
+      
+      uri = parsed_uri.path;
+      list_type = tagged;
+      break;
+      
+    case '(':
+      /* List production */
+      
+      /* If a uri has not been encountered, this is a No-Tagged-List */
+      if (list_type == unknown)
+        list_type = no_tagged;
+      
+      if ((list = dav_svn_fetch_next_token(&str, ')')) == NULL) {
+        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                             DAV_ERR_IF_UNCLOSED_PAREN,
+                             "Invalid If-header: unclosed \"(\".");
+      }
+      
+      if ((ih = dav_svn_add_if_resource(r->pool, ih, uri, uri_len)) == NULL) {
+        /* ### dav_add_if_resource() should return an error for us! */
+        return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                             DAV_ERR_IF_PARSE,
+                             "Internal server error parsing \"If:\" "
+                             "header.");
+      }
+      
+      condition = DAV_IF_COND_NORMAL;
+      
+      while (*list) {
+        /* List is the entire production (in a uri scope) */
+        
+        switch (*list) {
+        case '<':
+          if ((state_token = dav_svn_fetch_next_token(&list, '>')) == NULL) {
+            /* ### add a description to this error */
+            return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                                 DAV_ERR_IF_PARSE, NULL);
+          }
+          
+          if ((err = dav_svn_add_if_state(r->pool, ih,
+                                          state_token, dav_if_opaquelock,
+                                          condition, locks_hooks)) != NULL) {
+            /* ### maybe add a higher level description */
+            return err;
+          }
+          condition = DAV_IF_COND_NORMAL;
+          break;
+          
+        case '[':
+          if ((state_token = dav_svn_fetch_next_token(&list, ']')) == NULL) {
+            /* ### add a description to this error */
+            return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                                 DAV_ERR_IF_PARSE, NULL);
+          }
+          
+          if ((err = dav_svn_add_if_state(r->pool, ih, state_token,
+                                          dav_if_etag,
+                                          condition, locks_hooks)) != NULL) {
+            /* ### maybe add a higher level description */
+            return err;
+          }
+          condition = DAV_IF_COND_NORMAL;
+          break;
+          
+        case 'N':
+          if (list[1] == 'o' && list[2] == 't') {
+            if (condition != DAV_IF_COND_NORMAL) {
+              return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                                   DAV_ERR_IF_MULTIPLE_NOT,
+                                   "Invalid \"If:\" header: "
+                                   "Multiple \"not\" entries "
+                                   "for the same state.");
+            }
+            condition = DAV_IF_COND_NOT;
+          }
+          list += 2;
+          break;
+          
+        case ' ':
+        case '\t':
+          break;
+          
+        default:
+          return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                               DAV_ERR_IF_UNK_CHAR,
+                               apr_psprintf(r->pool,
+                                            "Invalid \"If:\" "
+                                            "header: Unexpected "
+                                            "character encountered "
+                                            "(0x%02x, '%c').",
+                                            *list, *list));
+        }
+        
+        list++;
+      }
+      break;
+      
+    case ' ':
+    case '\t':
+      break;
+      
+    default:
+      return dav_new_error(r->pool, HTTP_BAD_REQUEST,
+                           DAV_ERR_IF_UNK_CHAR,
+                           apr_psprintf(r->pool,
+                                        "Invalid \"If:\" header: "
+                                        "Unexpected character "
+                                        "encountered (0x%02x, '%c').",
+                                        *str, *str));
+    }
+    
+    str++;
+  }
+  
+  *p_ih = ih;
+  return NULL;
+}
+
+/* -------------------------------------------------------------------- */
+
+/* Helper for dav_svn_merge().  Return a hash that maps (const char *)
+   absolute fs paths to (const char *) locktokens.  Allocate the hash
+   and all keys/vals in POOL.  BASE_URI is the uri sent in the MERGE
+   request.
+
+   ### This will change later to scan an XML body document.  For now,
+       it reads the data out of the request's If: header. 
+*/
+static dav_error *build_lock_hash(apr_hash_t **locks,
+                                  request_rec *r,
+                                  const char *base_uri,
+                                  apr_pool_t *pool)
+{
+  dav_error *err;
+  dav_if_header *ih;
+  apr_hash_t *hash = apr_hash_make(pool);
+
+  err = dav_svn_process_if_header(r, &ih);
+  if (err)
+    return err;
+
+  if (ih != NULL)
+    {
+      dav_if_header *this_if = ih;
+      
+      do
+        {
+          if (this_if->uri 
+              && this_if->state
+              && (this_if->state->type == dav_if_opaquelock))
+            {
+              const char *fs_path;
+
+              fs_path = svn_path_is_child(base_uri, this_if->uri, pool);
+              if (! fs_path)
+                {
+                  this_if = this_if->next;
+                  continue;
+                }
+
+              apr_hash_set(hash, fs_path, APR_HASH_KEY_STRING,
+                           apr_pstrdup(pool,
+                                       this_if->state->locktoken->uuid_str));
+            }
+
+          this_if = this_if->next;
+
+        } while (this_if != NULL);
+      
+    }
+
+  *locks = hash;
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for dav_svn_merge().  Free every lock in LOCKS.  The locks
+   live in REPOS.  Use POOL for temporary work.*/
+static svn_error_t *release_locks(apr_hash_t *locks,
+                                  svn_repos_t *repos,
+                                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+    {
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, NULL, &val);
+
+      /* The lock may be stolen or broken sometime between
+         svn_fs_commit_txn() and this post-commit cleanup.  So ignore
+         any errors from this command; just free as many locks as we can. */
+      svn_repos_fs_unlock(repos, key, val, FALSE, subpool);
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                 int no_auto_merge, int no_checkout,
                                 apr_xml_elem *prop_elem,
@@ -1202,10 +1537,28 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
   /* Check the dav_resource->info area for information about the
      special X-SVN-Options: header that may have come in the http
-     request.  If the header contains "no-merge-response", then pass
-     the correct boolean value to the routine below. */
+     request. */
   if (source->info->svn_client_options != NULL)
     {
+      if (NULL != (ap_strstr_c(source->info->svn_client_options,
+                               SVN_DAV_OPTION_RELEASE_LOCKS)))
+        {
+          /* Release any locks used in the commit. */
+          apr_hash_t *locks;
+
+          err = build_lock_hash(&locks, source->info->r,
+                                source->info->repos->root_path,
+                                pool);
+          if (err != NULL)
+            return err;
+ 
+          serr = release_locks(locks, source->info->repos->repos, pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error releasing locks", pool);
+        }
+
+      /* We may want to disable the merge response altogether. */
       if (NULL != (ap_strstr_c(source->info->svn_client_options,
                                SVN_DAV_OPTION_NO_MERGE_RESPONSE)))
         disable_merge_response = TRUE;

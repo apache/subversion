@@ -548,6 +548,8 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
+    apr_hash_t *lock_tokens,
+    svn_boolean_t keep_locks,
     svn_boolean_t disable_merge_response,
     apr_pool_t *pool)
 {
@@ -571,11 +573,62 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.committed_date = MAKE_BUFFER(pool);
   mc.last_author = MAKE_BUFFER(pool);
 
-  if (disable_merge_response)
+  if (disable_merge_response 
+      || (! keep_locks))
     {
-      extra_headers = apr_hash_make(pool);
+      const char *value;
+
+      value = apr_psprintf(pool, "%s %s",
+                           disable_merge_response ?
+                              SVN_DAV_OPTION_NO_MERGE_RESPONSE : "",
+                           keep_locks ?
+                              "" : SVN_DAV_OPTION_RELEASE_LOCKS);
+      
+      if (! extra_headers)
+        extra_headers = apr_hash_make(pool);
       apr_hash_set (extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
-                    SVN_DAV_OPTION_NO_MERGE_RESPONSE);
+                    value);
+    }
+
+  if (lock_tokens != NULL)
+    {
+      /* Send *all* of the client's tokens in a single If: header.
+         Notice that unlike our other write requests, this header not
+         only contains tokens, but paths as well.  That's because the
+         entire hash is needed by the server (both keys and values) to
+         free all the locks. */
+
+      /* ### FIXME: we should be marshalling the lock hash in the XML
+         body, which requires a change to mod_dav itself.  Apache will
+         reject a header longer than 8K, which means a limit of about
+         70 locks in one commit.  We could send multiple If: headers,
+         but then we still hit a 5000 lock boundaray. */
+
+      apr_hash_index_t *hi;
+      const char *tokenlist = "";
+
+      for (hi = apr_hash_first(pool, lock_tokens);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          const char *abs_uri;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          abs_uri = apr_pstrcat(pool,
+                                ras->url, "/", (const char *)key, NULL);
+
+          tokenlist = apr_pstrcat(pool,
+                                  tokenlist,
+                                  apr_psprintf(pool, "<%s> (<%s>) ",
+                                               abs_uri,
+                                               (const char *)val),
+                                  NULL);
+        }
+
+      if (! extra_headers)
+        extra_headers = apr_hash_make(pool);
+      apr_hash_set (extra_headers, "If", APR_HASH_KEY_STRING, tokenlist);
     }
 
   body = apr_psprintf(pool,

@@ -457,11 +457,13 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
    property names) and PROP_DELETES (an array of property names to
-   delete).  Use POOL for all allocations.  */
+   delete).  Send any extra request headers in EXTRA_HEADERS. Use POOL
+   for all allocations.  */
 svn_error_t *svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
                                        apr_array_header_t *prop_deletes,
+                                       apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
 extern const ne_propname svn_ra_dav__vcc_prop;
@@ -652,6 +654,8 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
+    apr_hash_t *lock_tokens,
+    svn_boolean_t keep_locks,
     svn_boolean_t disable_merge_response,
     apr_pool_t *pool);
 

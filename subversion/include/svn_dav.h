@@ -53,6 +53,7 @@ extern "C" {
 #define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
 #define SVN_DAV_OPTION_LOCK_BREAK        "lock-break"
 #define SVN_DAV_OPTION_LOCK_STEAL        "lock-steal"
+#define SVN_DAV_OPTION_RELEASE_LOCKS     "release-locks"
 
 
 /** This header is used when an svn client wants to tell mod_dav_svn

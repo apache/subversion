@@ -373,7 +373,7 @@ svn_fs_base__unlock (svn_fs_t *fs,
 
   SVN_ERR (svn_fs_base__check_fs (fs));
 
-  args.path = path;
+  args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.token = token;
   args.force = force;
   return svn_fs_base__retry_txn (fs, txn_body_unlock, &args, pool);
