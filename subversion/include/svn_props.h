@@ -97,25 +97,47 @@ svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
 svn_boolean_t svn_prop_needs_translation (const char *propname);
 
 
-/** Given an @a proplist array of @c svn_prop_t structures, allocate three
- * new arrays in @a pool.  Categorize each property and then create new
- * @c svn_prop_t structures in the proper lists.  Each new @c svn_prop_t
- * structure's fields will point to the same data within @a proplist's
- * structures.
+/** Given an @a proplist array of @c svn_prop_t structures, allocate
+ * three new arrays in @a pool.  Categorize each property and then
+ * create new @c svn_prop_t structures in the proper lists.  Each new
+ * @c svn_prop_t structure's fields will point to the same data within
+ * @a proplist's structures.
  *
- * If no props exist in a certain category, then the array will come
- * back with <tt>->nelts == 0</tt>.
+ * Callers may pass NULL for each of the property lists in which they
+ * are uninterested.  If no props exist in a certain category, and the
+ * property list argment for that category is non-NULL, then that
+ * array will come back with <tt>->nelts == 0</tt>.
  *
  * ### Hmmm, maybe a better future interface is to return an array of
  *     arrays, where the index into the array represents the index
  *     into @c svn_prop_kind_t.  That way we can add more prop kinds
- *     in the future without changing this interface...
+ *     in the future without changing this interface... 
  */
 svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
                                    apr_array_header_t **entry_props,
                                    apr_array_header_t **wc_props,
                                    apr_array_header_t **regular_props,
                                    apr_pool_t *pool);
+
+
+/** Given two property hashes (<tt>const char *name</tt> -> <tt>const 
+ * svn_string_t *value</tt>), deduce the differences between them (from 
+ * @a source_props -> @c target_props).  Return these changes as a series of 
+ * @c svn_prop_t structures stored in @a propdiffs, allocated from @a pool.
+ *
+ * For note, here's a quick little table describing the logic of this
+ * routine:
+ *
+ *<pre> basehash        localhash         event
+ * --------        ---------         -----
+ * value = foo     value = NULL      Deletion occurred.
+ * value = foo     value = bar       Set occurred (modification)
+ * value = NULL    value = baz       Set occurred (creation)</pre>
+ */
+svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
+                             apr_hash_t *target_props,
+                             apr_hash_t *source_props,
+                             apr_pool_t *pool);
 
 
 

@@ -1699,30 +1699,6 @@ svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
                                     apr_pool_t *pool);
 
 
-
-/** Given two property hashes (<tt>const char *name</tt> -> <tt>const 
- * svn_string_t *value</tt>), deduce the differences between them (from 
- * @a baseprops -> @c localprops).  Return these changes as a series of 
- * @c svn_prop_t structures stored in @a local_propchanges, allocated from 
- * @a pool.
- *
- * For note, here's a quick little table describing the logic of this
- * routine:
- *
- *<pre> basehash        localhash         event
- * --------        ---------         -----
- * value = foo     value = NULL      Deletion occurred.
- * value = foo     value = bar       Set occurred (modification)
- * value = NULL    value = baz       Set occurred (creation)</pre>
- */
-svn_error_t *
-svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
-                              apr_hash_t *localprops,
-                              apr_hash_t *baseprops,
-                              apr_pool_t *pool);
-
-
-
 /** The outcome of a merge carried out (or tried as a dry-run) by 
  * @c svn_wc_merge
  */
