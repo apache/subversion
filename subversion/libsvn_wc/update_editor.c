@@ -2608,11 +2608,13 @@ svn_wc_get_update_editor (svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
-
+  svn_wc__compat_notify_baton_t *nb = apr_palloc (pool, sizeof (*nb));
+  nb->func = notify_func;
+  nb->baton = notify_baton;
+  
   return svn_wc_get_update_editor2 (target_revision, anchor, target,
                                     use_commit_times, recurse,
-                                    svn_wc__compat_call_notify_func, &nb,
+                                    svn_wc__compat_call_notify_func, nb,
                                     cancel_func, cancel_baton, diff3_cmd,
                                     editor, edit_baton, traversal_info, pool);
 }
@@ -2659,11 +2661,13 @@ svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t *nb = apr_palloc (pool, sizeof (*nb));
+  nb->func = notify_func;
+  nb->baton = notify_baton;
 
   return svn_wc_get_switch_editor2 (target_revision, anchor, target,
                                     switch_url, use_commit_times, recurse,
-                                    svn_wc__compat_call_notify_func, &nb,
+                                    svn_wc__compat_call_notify_func, nb,
                                     cancel_func, cancel_baton, diff3_cmd,
                                     editor, edit_baton, traversal_info, pool);
 }
