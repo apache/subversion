@@ -112,7 +112,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
   }
 
 
-  /* Schedule the new file for addition WITH HISTORY. */
+  /* Schedule the new file for addition in its parent, WITH HISTORY. */
   SVN_ERR (svn_wc_add_file (dst_path, src_path, pool));
 
 
@@ -128,6 +128,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
 
    ASSUMPTIONS:
 
+     - src_path points to a dir under version control
      - dst_parent points to a dir under version control, in the same
                   working copy.
      - dst_basename will be the 'new' name of the copied dir in dst_parent
@@ -138,45 +139,21 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
                            svn_stringbuf_t *dst_basename,
                            apr_pool_t *pool)
 {
-  enum svn_node_kind dst_kind;
-  apr_status_t status;
-
   /* The 'dst_path' is simply dst_parent/dst_basename */
   svn_stringbuf_t *dst_path = svn_stringbuf_dup (dst_parent, pool);
   svn_path_add_component (dst_path, dst_basename, svn_path_local_style);
 
-  return SVN_NO_ERROR;  /* ### NOT YET READY */
+  /* Recursively copy the whole directory over. 
+     
+      (This gets us all text-base, props, base-props, as well as entries,
+      local mods, schedulings, existences, etc.) */
+  SVN_ERR (svn_io_copy_dir_recursively (src_path, dst_parent, dst_basename,
+                                        pool));
 
-  /* Sanity check:  if dst file exists already, don't allow overwrite. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
-  if (dst_kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-                              "'%s' already exists and is in the way.",
-                              dst_path->data);
-
-  /* Now, create the new directory. */
-  status = apr_dir_make (dst_path->data, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, pool,
-                              "Unable to create directory '%s'",
-                              dst_path->data);
-    
-
-  /* ### Schedule the empty directory for addition; this should give it an
-     administrative area and mark "this_dir" for addition. */
-
-  /* ### Copy dir-props and dir-prop-base over */
-
-
-
-  /* ----- ### todo:  The Recursive Tree Walk --- */
-
-  /* Loop over each entry in src_path:
-         if (entry is a file)
-           copy_file_administratively()
-         if (entry is a file)
-           copy_dir_administrativel()     
-   */
+  /* Schedule the directory for addition in both its parent and itself
+     (this_dir) -- WITH HISTORY.  This function should leave the
+     existing administrative dir untouched.  */
+  SVN_ERR (svn_wc_add_directory (dst_path, src_path, pool));
  
   return SVN_NO_ERROR;
 }
@@ -206,6 +183,7 @@ svn_wc_copy (svn_stringbuf_t *src_path,
 
     SVN_ERR (copy_dir_administratively (src_path, dst_parent,
                                         dst_basename, pool));
+
 
   return SVN_NO_ERROR;
 }
