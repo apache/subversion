@@ -25,6 +25,7 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_portable.h>
 
 #include "svn_string.h"
 #include "svn_opt.h"
@@ -637,7 +638,6 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 
   if (fd >= 0) 
     {  
-      apr_status_t status;
       status = apr_os_file_put (&apr_file, &fd, O_CREAT | O_WRONLY, pool);
     }
 
@@ -656,7 +656,7 @@ svn_opt_revision_t *svn_swig_py_make_opt_revision (PyObject *py_rev,
   rev->kind = svn_opt_revision_unspecified;
 
   /* FIXME: This is very hacky.  Silently failing sucks */
-  if (PyArg_Parse(py_rev, "(ii)", &arg1, &arg2))
+  if (PyArg_Parse(py_rev, (char *)"(ii)", &arg1, &arg2))
     {
       rev->kind = (enum svn_opt_revision_kind) arg1;
       if (rev->kind == svn_opt_revision_number)
