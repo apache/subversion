@@ -31,17 +31,6 @@ set_target_revision (void *edit_baton,
 {
   return SVN_NO_ERROR;
 }
-
-
-static svn_error_t *
-push_lock_token (void *edit_baton,
-                 const char *token,
-                 apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 add_item (const char *path,
           void *parent_baton,
@@ -143,7 +132,6 @@ close_file (void *file_baton,
 static const svn_delta_editor_t default_editor =
 {
   set_target_revision,  
-  push_lock_token,
   open_root,
   delete_entry,
   add_item,

@@ -595,18 +595,6 @@ typedef struct svn_delta_editor_t
                                        svn_revnum_t target_revision,
                                        apr_pool_t *pool);
 
-
-  /** Give lock-token @a token to the editor.  It is assumed that the
-   * editor will store the token and pass it to the repository
-   * filesystem when appropriate.  It is the editor-driver's
-   * responsibility to make sure that a lock token has been pushed
-   * before the editor needs to use it.
-   */
-  svn_error_t *(*push_lock_token) (void *edit_baton,
-                                   const char *token,
-                                   apr_pool_t *pool);
-
-
   /** Set @a *root_baton to a baton for the top directory of the change.
    * (This is the top of the subtree being changed, not necessarily
    * the root of the filesystem.)  Like any other directory baton, the

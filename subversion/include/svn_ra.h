@@ -370,42 +370,10 @@ typedef struct svn_ra_plugin_t
                             svn_string_t **value,
                             apr_pool_t *pool);
                                    
-  /** Set @a *editor and @a *edit_baton to an editor for committing changes
-   * to the repository, using @a log_msg as the log message.  The
-   * revisions being committed against are passed to the editor
-   * functions, starting with the rev argument to @c open_root.  The path
-   * root of the commit is in the @a session_baton's url.
+  /** @deprecated Provided for backwards compability with the 1.1 API.
    *
-   * These three functions all share @c close_baton:
-   *
-   *   * @c get_func is used by the RA layer to fetch any WC properties
-   *     during the commit.
-   *
-   *   * @c set_func is used by the RA layer to set any WC properties,
-   *     after the commit completes. 
-   *
-   *   * @c close_func is used by the RA layer to bump the revisions of
-   *     each committed item, after the commit completes.  It may be
-   *     called multiple times.
-   *
-   * Any of these functions may be @c NULL.
-   *
-   * Before @c close_edit returns, but after the commit has succeeded,
-   * it will invoke @a callback with the new revision number, the
-   * commit date (as a <tt>const char *</tt>), commit author (as a
-   * <tt>const char *</tt>), and @a callback_baton as arguments.  If
-   * @a callback returns an error, that error will be returned from @c
-   * close_edit, otherwise @c close_edit will return successfully
-   * (unless it encountered an error before invoking @a callback).
-   *
-   * The callback will not be called if the commit was a no-op
-   * (i.e. nothing was committed);
-   *
-   * The caller may not perform any RA operations using
-   * @a session_baton before finishing the edit.
-   * 
-   * Use @a pool for memory allocation.
-   */
+   * Similar to @c get_commit_editor2, but with @a lock_tokens set to null and
+   * @a keep_locks set to @c TRUE. */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_editor_t **editor,
                                      void **edit_baton,
@@ -909,6 +877,61 @@ typedef struct svn_ra_plugin_t
                              const char *path,
                              apr_pool_t *pool);
   
+  /** @since New in 1.2.
+   * Set @a *editor and @a *edit_baton to an editor for committing changes
+   * to the repository, using @a log_msg as the log message.  The
+   * revisions being committed against are passed to the editor
+   * functions, starting with the rev argument to @c open_root.  The path
+   * root of the commit is in the @a session_baton's url.
+   *
+   * These three functions all share @c close_baton:
+   *
+   *   * @c get_func is used by the RA layer to fetch any WC properties
+   *     during the commit.
+   *
+   *   * @c set_func is used by the RA layer to set any WC properties,
+   *     after the commit completes. 
+   *
+   *   * @c close_func is used by the RA layer to bump the revisions of
+   *     each committed item, after the commit completes.  It may be
+   *     called multiple times.
+   *
+   * Any of these functions may be @c NULL.
+   *
+   * Before @c close_edit returns, but after the commit has succeeded,
+   * it will invoke @a callback with the new revision number, the
+   * commit date (as a <tt>const char *</tt>), commit author (as a
+   * <tt>const char *</tt>), and @a callback_baton as arguments.  If
+   * @a callback returns an error, that error will be returned from @c
+   * close_edit, otherwise @c close_edit will return successfully
+   * (unless it encountered an error before invoking @a callback).
+   *
+   * The callback will not be called if the commit was a no-op
+   * (i.e. nothing was committed).
+   *
+   * @a lock_tokens, if non-null, is a hash mapping paths (relative to
+   * the URL fo @a session_baton) of type @c const char* and lock tokens, also
+   * @c const char*.  The server will check that the correct lock token was
+   * provided for any path that is locked in the repository.
+   *
+   * If @a keep_locks is @c FALSE, the locks on the paths in @a
+   * lock_tokens are released using the provided tokens.  Else, all
+   * locks are kept.
+   *
+   * The caller may not perform any RA operations using
+   * @a session_baton before finishing the edit.
+   * 
+   * Use @a pool for memory allocation.
+   */
+  svn_error_t *(*get_commit_editor2) (void *session_baton,
+                                      const svn_delta_editor_t **editor,
+                                      void **edit_baton,
+                                      const char *log_msg,
+                                      svn_commit_callback_t callback,
+                                      void *callback_baton,
+                                      apr_hash_t *lock_tokens,
+                                      svn_boolean_t keep_locks,
+                                     apr_pool_t *pool);
 } svn_ra_plugin_t;
 
 
