@@ -344,7 +344,7 @@ msgstr "指定密码 ARG"
 #: clients/cmdline/main.c:100
 #, fuzzy
 msgid "pass ARG as bundled options to diff (default: '-u')"
-msgstr "传递 ARG 为GNU diff的绑定选项"
+msgstr "传递 ARG 为GNU diff的绑定选项(默认使用参数 '-u')"
 
 #: clients/cmdline/main.c:102
 msgid "pass contents of file ARG as additional args"
@@ -1180,7 +1180,7 @@ msgstr ""
 "     也是将工作拷贝移至同一档案库中的某一分支或标记。\n"
 "\n"
 "  2、改写工作拷贝的地址(URL)描述数据，以反映单纯的语法改变。当档案库的根\n"
-"     地址(URL)变动 (像是纲要或是主机名称变动)，但是工作拷贝仍旧对映到同一\n"
+"     地址(URL)变动 (像是规则或是主机名称变动)，但是工作拷贝仍旧对映到同一\n"
 "     档案库的同一目录时用之。\n"
 
 #: clients/cmdline/main.c:655
@@ -2733,17 +2733,17 @@ msgstr "名字：%s%s"
 #: libsvn_client/diff.c:189
 #, c-format
 msgid "URLs have no schema ('%s' and '%s')"
-msgstr "地址(URL)中没有纲要 (“%s”与“%s”)"
+msgstr "地址(URL)中没有规则(一般需要svn://，http://，file://等开头指明使用的规则) (“%s”与“%s”)"
 
 #: libsvn_client/diff.c:195 libsvn_client/diff.c:201
 #, c-format
 msgid "URL has no schema: '%s'"
-msgstr "地址(URL)中没有纲要：“%s”"
+msgstr "地址(URL)中没有规则(一般需要svn://，http://，file://等开头指明使用的规则)：“%s”"
 
 #: libsvn_client/diff.c:208
 #, c-format
 msgid "Access schema mixtures not yet supported ('%s' and '%s')"
-msgstr "尚不支持混合的存取纲要 (“%s”与“%s”)"
+msgstr "尚不支持混合的存取规则 (“%s”与“%s”)"
 
 # as-is
 #: libsvn_client/diff.c:267
@@ -2868,7 +2868,7 @@ msgstr "档案库中没有任何提交"
 
 #: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
-msgstr "该地址(URL)纲要中并不支持 get_dir()"
+msgstr "该地址(URL)规则中并不支持 get_dir()"
 
 #: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
@@ -3247,13 +3247,13 @@ msgstr "“%s”的 RA 外挂版本不符合：遇到 %d.%d.%d%s，预期 %d.%d.
 #: libsvn_ra/ra_loader.c:225
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
-msgstr "无法辨识的地址(URL)纲要“%s”"
+msgstr "无法辨识的地址(URL)规则(一般需要svn://，http://，file://等开头指明使用的规则)“%s”"
 
 # as-is
 #: libsvn_ra/ra_loader.c:291
 #, c-format
 msgid "  - handles '%s' schema\n"
-msgstr "  - 处理“%s”纲要\n"
+msgstr "  - 处理“%s”规则\n"
 
 #: libsvn_ra_dav/commit.c:166
 #, c-format
@@ -3624,12 +3624,12 @@ msgstr "无法协商出认识机制"
 #: libsvn_ra_svn/client.c:451
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "无法辨识的隧道纲要“%s”"
+msgstr "无法辨识的隧道规则“%s”"
 
 #: libsvn_ra_svn/client.c:468
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
-msgstr "隧道纲要 %s 需要设定环境变数 %s"
+msgstr "隧道规则 %s 需要设定环境变数 %s"
 
 # as-is
 #: libsvn_ra_svn/client.c:479
@@ -3715,7 +3715,7 @@ msgstr "get-file-revs 命令没有返回任何修订版"
 # as-is
 #: libsvn_ra_svn/client.c:1296
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "使用svn网路协议访问档案库的模块。"
+msgstr "使用svn网络协议访问档案库的模块。"
 
 # as-is
 #: libsvn_ra_svn/client.c:1333
