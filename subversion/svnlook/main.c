@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-#include "../clients/init_cmdline.h"
-
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -1135,7 +1133,7 @@ main (int argc, const char * const *argv)
   int i, num_opts = 0;
 
   /* Initialize the app. */
-  if (init_cmdline ("svnlook", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svnlook", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */

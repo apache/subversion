@@ -18,8 +18,6 @@
 
 
 
-#include "../clients/init_cmdline.h"
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -72,7 +70,7 @@ int main(int argc, const char *const *argv)
 #endif
 
   /* Initialize the app. */
-  if (init_cmdline ("svn", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */

@@ -22,8 +22,6 @@
 
 /*** Includes. ***/
 
-#include "../init_cmdline.h"
-
 #include <string.h>
 #include <assert.h>
 
@@ -525,7 +523,7 @@ main (int argc, const char * const *argv)
   svn_auth_baton_t *ab;
 
   /* Initialize the app. */
-  if (init_cmdline ("svn", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */

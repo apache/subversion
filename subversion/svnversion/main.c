@@ -14,8 +14,6 @@
  * ====================================================================
  */
 
-#include "../clients/init_cmdline.h"
-
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_utf.h"
@@ -71,7 +69,7 @@ main(int argc, char *argv[])
     }
 
   /* Initialize the app. */
-  if (init_cmdline ("svnversion", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svnversion", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */

@@ -73,6 +73,26 @@ void svn_pool_clear_debug (apr_pool_t *p,
  */
 #define svn_pool_destroy apr_pool_destroy
 
+
+
+/* ### todo: This function doesn't really belong in this header, but
+   it didn't seem worthwhile to create a new header just for one
+   function, especially since this should probably move to APR as
+   apr_cmdline_init() or whatever anyway.  There's nothing
+   svn-specific in its code, other than SVN_WIN32, which obviously APR
+   has its own way of dealing with.  Thoughts?  (Brane?) */
+
+#define APR_WANT_STDIO
+#include <apr_want.h>
+
+/** Set up the locale for character conversion, and initialize APR.
+ * If @a error_stream is non-null, print error messages to the stream,
+ * using @a progname as the program name. Return EXIT_SUCCESS if
+ * successful, otherwise EXIT_FAILURE.
+ */
+int svn_cmdline_init (const char *progname, FILE *error_stream);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
