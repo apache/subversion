@@ -157,26 +157,16 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
                             apr_pool_t *pool)
 {
   apr_time_t wfile_time, entrytime = 0;
-  const char *entryname;
-  apr_hash_t *entries = NULL;
   const svn_wc_entry_t *entry;
-  svn_node_kind_t kind;
-
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind == svn_node_dir)
-    entryname = SVN_WC_ENTRY_THIS_DIR;
-  else
-    svn_path_split (path, NULL, &entryname, pool);
 
   /* Get the timestamp from the entries file */
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-  entry = apr_hash_get (entries, entryname, APR_HASH_KEY_STRING);
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
 
   /* Can't compare timestamps for an unversioned file. */
   if (entry == NULL)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "'%s' is not under version control", entryname);
+       "'%s' is not under version control", path);
 
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)

@@ -1181,22 +1181,28 @@ empty_props_p (svn_boolean_t *empty_p,
                const char *path_to_prop_file,
                apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
+  svn_error_t *err;
+  apr_finfo_t finfo;
 
-  SVN_ERR (svn_io_check_path (path_to_prop_file, &kind, pool));
-
-  if (kind == svn_node_none)
-    *empty_p = TRUE;
-
-  else 
+  err = svn_io_stat (&finfo, path_to_prop_file, APR_FINFO_MIN | APR_FINFO_TYPE,
+                     pool);
+  if (err)
     {
-      apr_finfo_t finfo;
+      if (! APR_STATUS_IS_ENOENT (err->apr_err)
+          && ! APR_STATUS_IS_ENOTDIR (err->apr_err))
+        return err;
 
-      SVN_ERR (svn_io_stat (&finfo, path_to_prop_file, APR_FINFO_MIN, pool));
+      /* nonexistent */
+      svn_error_clear (err);
+      *empty_p = TRUE;
+    }
+  else
+    {
+
 
       /* If we remove props from a propfile, eventually the file will
          contain nothing but "END\n" */
-      if (finfo.size == 4)  
+      if (finfo.filetype == APR_REG && finfo.size == 4)  
         *empty_p = TRUE;
 
       else
@@ -1299,7 +1305,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   
   /* There are at least three tests we can try in succession. */
   
-  /* Easy-answer attempt #1:  */
+  /* Easy-answer attempt #1:  (### this stat's the files again) */
   
   /* Check if the local and prop-base file have *definitely* different
      filesizes. */
@@ -1313,7 +1319,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
   
-  /* Easy-answer attempt #2:  */
+  /* Easy-answer attempt #2:  (### this stat's the files again) */
       
   /* See if the local file's prop timestamp is the same as the one
      recorded in the administrative directory.  */
@@ -1344,6 +1350,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
     apr_hash_t *localprops = apr_hash_make (subpool);
     apr_hash_t *baseprops = apr_hash_make (subpool);
 
+    /* ### Amazingly, this stats the files again! */
     SVN_ERR (svn_wc__load_prop_file (prop_path, localprops, subpool));
     SVN_ERR (svn_wc__load_prop_file (prop_base_path,
                                      baseprops,
