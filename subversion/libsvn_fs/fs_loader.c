@@ -23,7 +23,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"
 
-#include "fs.h"
+#include "fs_loader.h"
 
 #define DEFAULT_FSAP_NAME "baseline"
 #define FSAP_NAME_FILENAME "fsap-name"
@@ -37,8 +37,8 @@
 
 /* --- Utility functions for the loader --- */
 
-extern fs_library_vtable_t *svn_fs_bl__vtable;
-extern fs_library_vtable_t *svn_fs_fs__vtable;
+extern fs_library_vtable_t svn_fs_bl__vtable;
+extern fs_library_vtable_t svn_fs_fs__vtable;
 
 /* Fetch a library vtable by name. */
 static svn_error_t *
@@ -50,9 +50,9 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
      support DSO-loading of back-end libraries and should return an
      error rather than aborting if fsap_name is unrecognized. */
   if (strcmp(fsap_name, "baseline") == 0)
-    *vtable = svn_fs_bl__vtable;
+    *vtable = &svn_fs_bl__vtable;
   else if (strcmp(fsap_name, "fsfs") == 0)
-    *vtable = svn_fs_fs__vtable;
+    *vtable = &svn_fs_fs__vtable;
   else
     abort();
 #endif
@@ -113,6 +113,16 @@ write_fsap_name (const char *path, const char *fsap_name, apr_pool_t *pool)
 
 /* --- Functions for operating on filesystems by pathname --- */
 
+/* A default warning handling function.  */
+static void
+default_warning_func (void *baton, svn_error_t *err)
+{
+  /* The one unforgiveable sin is to fail silently.  Dumping to stderr
+     or /dev/tty is not acceptable default behavior for server
+     processes, since those may both be equivalent to /dev/null.  */
+  abort ();
+}
+
 svn_fs_t *
 svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
 {
@@ -122,7 +132,7 @@ svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
   fs = apr_palloc (subpool, sizeof (*fs));
   fs->pool = subpool;
   fs->path = NULL;
-  fs->warning = NULL;
+  fs->warning = default_warning_func;
   fs->warning_baton = NULL;
   fs->config = fs_config;
   fs->vtable = NULL;
@@ -802,4 +812,65 @@ svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
         return FALSE;
     }
   return TRUE;
+}
+
+
+/* --- Miscellaneous utility functions --- */
+
+const char *
+svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
+{
+  char *newpath;
+  int path_len;
+  int path_i = 0, newpath_i = 0;
+  svn_boolean_t eating_slashes = FALSE;
+
+  /* No PATH?  No problem. */
+  if (! path)
+    return NULL;
+  
+  /* Empty PATH?  That's just "/". */
+  if (! *path)
+    return apr_pstrdup (pool, "/");
+
+  /* Now, the fun begins.  Alloc enough room to hold PATH with an
+     added leading '/'. */
+  path_len = strlen (path);
+  newpath = apr_pcalloc (pool, path_len + 2);
+
+  /* No leading slash?  Fix that. */
+  if (*path != '/')
+    {
+      newpath[newpath_i++] = '/';
+    }
+  
+  for (path_i = 0; path_i < path_len; path_i++)
+    {
+      if (path[path_i] == '/')
+        {
+          /* The current character is a '/'.  If we are eating up
+             extra '/' characters, skip this character.  Else, note
+             that we are now eating slashes. */
+          if (eating_slashes)
+            continue;
+          eating_slashes = TRUE;
+        }
+      else
+        {
+          /* The current character is NOT a '/'.  If we were eating
+             slashes, we need not do that any more. */
+          if (eating_slashes)
+            eating_slashes = FALSE;
+        }
+
+      /* Copy the current character into our new buffer. */
+      newpath[newpath_i++] = path[path_i];
+    }
+  
+  /* Did we leave a '/' attached to the end of NEWPATH (other than in
+     the root directory case)? */
+  if ((newpath[newpath_i - 1] == '/') && (newpath_i > 1))
+    newpath[newpath_i - 1] = '\0';
+
+  return newpath;
 }

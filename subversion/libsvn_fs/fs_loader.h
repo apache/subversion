@@ -322,7 +322,7 @@ struct svn_fs_id_t
 
 
 
-/*** Accessor functions. ***/
+/*** Node-ID accessor functions. ***/
 
 /* Create an ID based on NODE_ID, COPY_ID, and TXN_ID, and allocated in
    POOL.  */
@@ -348,6 +348,20 @@ int svn_fs__id_eq (const svn_fs_id_t *a,
 svn_fs_id_t *svn_fs__id_copy (const svn_fs_id_t *id, 
                               apr_pool_t *pool);
 
+
+
+/* --- Miscellaneous utility functions --- */
+
+/* Return a canonicalized version of a filesystem PATH, allocated in
+   POOL.  While the filesystem API is pretty flexible about the
+   incoming paths (they must be UTF-8 with '/' as separators, but they
+   don't have to begin with '/', and multiple contiguous '/'s are
+   ignored) we want any paths that are physically stored in the
+   underlying database to look consistent.  Specifically, absolute
+   filesystem paths should begin with '/', and all redundant and trailing '/'
+   characters be removed.  */
+const char *
+svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
