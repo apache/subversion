@@ -147,8 +147,8 @@ check_lib_versions (void)
       { NULL, NULL }
     };
 
-   SVN_VERSION_DEFINE (my_version);
-   return svn_ver_check_list (&my_version, checklist);
+  SVN_VERSION_DEFINE (my_version);
+  return svn_ver_check_list (&my_version, checklist);
 }
 
 
