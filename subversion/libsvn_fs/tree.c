@@ -357,8 +357,8 @@ txn_body_txn_root (void *baton,
   struct txn_root_args *args = baton;
   svn_fs_root_t **root_p = args->root_p;
   svn_fs_txn_t *txn = args->txn;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-  const char *svn_txn_id = svn_fs__txn_id (txn);
+  svn_fs_t *fs = txn->fs;
+  const char *svn_txn_id = txn->id;
   const svn_fs_id_t *root_id, *base_root_id;
   svn_fs_root_t *root;
 
@@ -382,9 +382,8 @@ svn_fs_txn_root (svn_fs_root_t **root_p,
   struct txn_root_args args;
 
   args.root_p = &root;
-  args.txn    = txn;
-  SVN_ERR (svn_fs__retry_txn (svn_fs_txn_fs (txn), txn_body_txn_root,
-                              &args, pool));
+  args.txn = txn;
+  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_txn_root, &args, pool));
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -2466,8 +2465,8 @@ txn_body_merge (void *baton, trail_t *trail)
   struct merge_args *args = baton;
   dag_node_t *source_node, *txn_root_node, *ancestor_node;
   const svn_fs_id_t *source_id;
-  svn_fs_t *fs = svn_fs__txn_fs (args->txn);
-  const char *txn_id = svn_fs__txn_id (args->txn);
+  svn_fs_t *fs = args->txn->fs;
+  const char *txn_id = args->txn->id;
 
   source_node = args->source_node;
   ancestor_node = args->ancestor_node;
@@ -2543,8 +2542,8 @@ txn_body_commit (void *baton, trail_t *trail)
   struct commit_args *args = baton;
 
   svn_fs_txn_t *txn = args->txn;
-  svn_fs_t *fs = svn_fs__txn_fs (txn);
-  const char *txn_name = svn_fs__txn_id (txn);
+  svn_fs_t *fs = txn->fs;
+  const char *txn_name = txn->id;
 
   svn_revnum_t youngest_rev;
   const svn_fs_id_t *y_rev_root_id;
@@ -2584,7 +2583,8 @@ txn_body_commit (void *baton, trail_t *trail)
 svn_error_t *
 svn_fs_commit_txn (const char **conflict_p,
                    svn_revnum_t *new_rev, 
-                   svn_fs_txn_t *txn)
+                   svn_fs_txn_t *txn,
+                   apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
    *
@@ -2627,17 +2627,13 @@ svn_fs_commit_txn (const char **conflict_p,
    */
 
   svn_error_t *err;
-  svn_fs_t *fs = svn_fs__txn_fs (txn);
-  apr_pool_t *pool = svn_fs__txn_pool (txn);
-  const char *txn_id;
+  svn_fs_t *fs = txn->fs;
+  const char *txn_id = txn->id;
 
   /* Initialize output params. */
   *new_rev = SVN_INVALID_REVNUM;
   if (conflict_p)
     *conflict_p = NULL;
-
-  /* Get the transaction's name.  We'll need it later. */
-  SVN_ERR (svn_fs_txn_name (&txn_id, txn, pool));
 
   while (1729)
     {

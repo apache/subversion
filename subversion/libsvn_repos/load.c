@@ -929,11 +929,11 @@ close_revision (void *baton)
   if (rb->rev <= 0)
     return SVN_NO_ERROR;
 
-  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn);
+  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn, rb->pool);
 
   if (err)
     {
-      svn_error_clear (svn_fs_abort_txn (rb->txn));
+      svn_error_clear (svn_fs_abort_txn (rb->txn, rb->pool));
       if (conflict_msg)
         return svn_error_quick_wrap (err, conflict_msg);
       else

@@ -230,7 +230,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
       SVN_ERR (editor->set_target_revision 
                (edit_baton, svn_fs_txn_base_revision (txn), pool));
-      SVN_ERR (svn_fs_close_txn (txn));
     }
 
   /* Setup our pseudo-global structure here.  We need these variables

@@ -574,7 +574,8 @@ static dav_error *dav_svn_uncheckout(dav_resource *resource)
 
   /* Try to abort the txn if it exists;  but don't try too hard.  :-)  */
   if (resource->info->root.txn)
-    svn_error_clear(svn_fs_abort_txn(resource->info->root.txn));
+    svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
+                                     resource->pool));
 
   resource->info->root.txn_name = NULL;
   resource->info->root.txn = NULL;
@@ -630,11 +631,14 @@ dav_error *dav_svn_checkin(dav_resource *resource,
 
           serr = svn_repos_fs_commit_txn(&conflict_msg,
                                          resource->info->repos->repos,
-                                         &new_rev, resource->info->root.txn);
+                                         &new_rev, 
+                                         resource->info->root.txn,
+                                         resource->pool);
           if (serr != NULL)
             {
               const char *msg;
-              svn_error_clear(svn_fs_abort_txn(resource->info->root.txn));
+              svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
+                                               resource->pool));
               
               if (serr->apr_err == SVN_ERR_FS_CONFLICT)
                 {
@@ -876,11 +880,11 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
   /* all righty... commit the bugger. */
   serr = svn_repos_fs_commit_txn(&conflict, source->info->repos->repos,
-                                 &new_rev, txn);
+                                 &new_rev, txn, pool);
   if (serr != NULL)
     {
       const char *msg;
-      svn_error_clear(svn_fs_abort_txn(txn));
+      svn_error_clear(svn_fs_abort_txn(txn, pool));
 
       if (serr->apr_err == SVN_ERR_FS_CONFLICT)
         {

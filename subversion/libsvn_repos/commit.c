@@ -527,7 +527,8 @@ close_edit (void *edit_baton,
   const char *conflict;
 
   /* Commit. */
-  err = svn_repos_fs_commit_txn (&conflict, eb->repos, &new_revision, eb->txn);
+  err = svn_repos_fs_commit_txn (&conflict, eb->repos, 
+                                 &new_revision, eb->txn, pool);
 
   /* We want to abort the transaction *unless* the error code tells us
      the commit succeeded and something just went wrong in post-commit. */
@@ -550,7 +551,7 @@ close_edit (void *edit_baton,
 
          We ignore the possible error result from svn_fs_abort_txn();
          it's more important to return the original error. */
-      svn_error_clear (svn_fs_abort_txn (eb->txn));
+      svn_error_clear (svn_fs_abort_txn (eb->txn, pool));
       return err;
     }
 
@@ -593,7 +594,7 @@ abort_edit (void *edit_baton,
             apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  return (eb->txn ? svn_fs_abort_txn (eb->txn) : SVN_NO_ERROR);
+  return (eb->txn ? svn_fs_abort_txn (eb->txn, pool) : SVN_NO_ERROR);
 }
 
 

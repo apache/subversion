@@ -32,37 +32,26 @@ svn_error_t *
 svn_repos_fs_commit_txn (const char **conflict_p,
                          svn_repos_t *repos,
                          svn_revnum_t *new_rev,
-                         svn_fs_txn_t *txn)
+                         svn_fs_txn_t *txn,
+                         apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_fs_t *fs = repos->fs;
-  apr_pool_t *pool = svn_fs_txn_pool (txn);
-
-  if (fs != svn_fs_txn_fs (txn))
-    return svn_error_createf 
-      (SVN_ERR_FS_GENERAL, NULL,
-       "Transaction does not belong to given repository's filesystem");
+  const char *txn_name;
 
   /* Run pre-commit hooks. */
-  {
-    const char *txn_name;
-
-    SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
-    SVN_ERR (svn_repos__hooks_pre_commit (repos, txn_name, pool));
-  }
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
+  SVN_ERR (svn_repos__hooks_pre_commit (repos, txn_name, pool));
 
   /* Commit. */
-  SVN_ERR (svn_fs_commit_txn (conflict_p, new_rev, txn));
+  SVN_ERR (svn_fs_commit_txn (conflict_p, new_rev, txn, pool));
 
   /* Run post-commit hooks.   Notice that we're wrapping the error
      with a -specific- errorcode, so that our caller knows not to try
      and abort the transaction. */
-  err = svn_repos__hooks_post_commit (repos, *new_rev, pool);
-  if (err)
-    return svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED,
-                            err,
-                            "Commit succeeded, but post-commit hook failed.");
-
+  if ((err = svn_repos__hooks_post_commit (repos, *new_rev, pool)))
+    return svn_error_create
+      (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
+       "Commit succeeded, but post-commit hook failed.");
 
   return SVN_NO_ERROR;
 }
@@ -88,36 +77,32 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
   /* We pass the author and log message to the filesystem by adding
      them as properties on the txn.  Later, when we commit the txn,
      these properties will be copied into the newly created revision. */
-  {
-    /* User (author). */
-    if (author)
-      {
-        svn_string_t val;
-        val.data = author;
-        val.len = strlen (author);
-        
-        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                         &val, pool));
-      }
-    
-    /* Log message. */
-    if (log_msg)
-      {
-        /* Heh heh -- this is unexpected fallout from changing most
-           code to use plain strings instead of svn_stringbuf_t and
-           svn_string_t.  The log_msg is passed in as const char *
-           data, but svn_fs_change_txn_prop() is a generic propset
-           function that must accept arbitrary data as values.  So we
-           create an svn_string_t as wrapper here. */
 
+  /* User (author). */
+  if (author)
+    {
+      svn_string_t val;
+      val.data = author;
+      val.len = strlen (author);
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                       &val, pool));
+    }
+    
+  /* Log message. */
+  if (log_msg)
+    {
+      /* Heh heh -- this is unexpected fallout from changing most code
+         to use plain strings instead of svn_stringbuf_t and
+         svn_string_t.  The log_msg is passed in as const char * data,
+         but svn_fs_change_txn_prop() is a generic propset function
+         that must accept arbitrary data as values.  So we create an
+         svn_string_t as wrapper here. */
         svn_string_t l;
         l.data = log_msg;
         l.len = strlen (log_msg);
-
         SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_LOG,
                                          &l, pool));
-      }
-  }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -137,18 +122,16 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
   /* We pass the author to the filesystem by adding it as a property
      on the txn. */
-  {
-    /* User (author). */
-    if (author)
-      {
-        svn_string_t val;
-        val.data = author;
-        val.len = strlen (author);
-        
-        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                         &val, pool));
-      }
-  }
+
+  /* User (author). */
+  if (author)
+    {
+      svn_string_t val;
+      val.data = author;
+      val.len = strlen (author);
+      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                       &val, pool));
+    }
 
   return SVN_NO_ERROR;
 }

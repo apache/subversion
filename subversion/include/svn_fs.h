@@ -429,7 +429,8 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  */
 svn_error_t *svn_fs_commit_txn (const char **conflict_p,
                                 svn_revnum_t *new_rev,
-                                svn_fs_txn_t *txn);
+                                svn_fs_txn_t *txn,
+                                apr_pool_t *pool);
 
 
 /** Abort the transaction @a txn.  Any changes made in @a txn are discarded,
@@ -439,8 +440,11 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * it holds.  Any root objects referring to @a txn's root directory
  * become invalid; performing any operation on them other than closing
  * them will produce an @c SVN_ERR_FS_DEAD_TRANSACTION error.
+ *
+ * Use @a pool for any necessary allocations.
  */
-svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
+svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
+                               apr_pool_t *pool);
 
 
 /** Set @a *name_p to the name of the transaction @a txn, as a
@@ -449,14 +453,6 @@ svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
 svn_error_t *svn_fs_txn_name (const char **name_p,
                               svn_fs_txn_t *txn,
                               apr_pool_t *pool);
-
-
-/** Return the filesystem to which @a txn belongs.  */
-svn_fs_t *svn_fs_txn_fs (svn_fs_txn_t *txn);
-
-
-/** Return @a txn's pool.  */
-apr_pool_t *svn_fs_txn_pool (svn_fs_txn_t *txn);
 
 
 /** Return @a txn's base revision.  If @a txn's base root id is an mutable
@@ -481,13 +477,6 @@ svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
                               svn_fs_t *fs,
                               const char *name,
                               apr_pool_t *pool);
-
-
-/** Close the transaction @a txn.  This is neither an abort nor a commit;
- * the state of the transaction so far is stored in the filesystem, to
- * be opened again later.
- */
-svn_error_t *svn_fs_close_txn (svn_fs_txn_t *txn);
 
 
 /** Set @a *names_p to an array of <tt>const char *</tt> @a ids which are the 

@@ -507,9 +507,9 @@ svn_repos_abort_report (void *report_baton)
      ### second transacation even if aborting the first returns an
      ### error? */
   if (rbaton->txn)
-    SVN_ERR (svn_fs_abort_txn (rbaton->txn));
+    SVN_ERR (svn_fs_abort_txn (rbaton->txn, rbaton->pool));
   if (rbaton->txn2)
-    SVN_ERR (svn_fs_abort_txn (rbaton->txn2));
+    SVN_ERR (svn_fs_abort_txn (rbaton->txn2, rbaton->pool));
 
   return SVN_NO_ERROR;
 }
