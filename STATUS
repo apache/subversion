@@ -4,15 +4,16 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.0.1:
+Status of 1.0.2:
 ================
 
-1.0.1 is currently scheduled for Friday, 12 March 2004.  A thought: it
-would be nice if all changes could be *committed* by the beginning of
-Wednesday, March 10th (er, UTC), so we have a period in which there's
-something stable to test.
-
 Candidate changes:
+
+  * r9013
+    Add --version to svndumpfilter, svnserve, and svnversion
+    Justification: Furthers compliance with our license and is nice to have.
+    Votes:
+      +1: breser
 
   * r8708
     Use warnings pragma on perl hook-scripts.
@@ -42,14 +43,3 @@ Candidate changes:
                    not sure an optimization like this belongs in a
                    patch release.)
 
-Status of 1.0.2:
-================
-
-And we march on....
-
-Candidate changes:
-  * r9013
-  Add --version to svndumpfilter, svnserve, and svnversion
-  Justification: Furthers compliance with our license and is nice to have.
-  Votes:
-    +1: breser
