@@ -232,34 +232,36 @@
         cosas.</quote></para>
 
       <sidebar>
-        <title>The Transaction Distraction</title>
+        <title>La distracción de la transacción</title>
 
-        <para>The notion of a Subversion transaction, especially given
-          its close proximity to the database code in libsvn_fs, can
-          become easily confused with the transaction support provided
-          by the underlying database itself.  Both types of
-          transaction exist to provide atomicity and isolation.  In
-          other words, transactions give you the ability to perform a
-          set of actions in an <quote>all or nothing</quote>
-          fashion&mdash;either all the actions in the set complete
-          with success, or they all get treated as if
-          <emphasis>none</emphasis> of them ever happened&mdash;and in
-          a way that does not interfere with other processes acting on
-          the data.</para>
+        <para>La noción de una transacción de Subversion puede
+          ser confundida fácilmente con el soporte de transacción
+          proporcionado por la base de datos subyacente,
+          especialmente dada su proximidad al código de base de
+          datos en libsvn_fs. Ambos tipos de transacción existen
+          para proporcionar atomicidad y aislamiento.  En otras
+          palabras, las transacciones le permiten realizar
+          un conjunto de acciones de una forma <quote>todo
+          o nada</quote>&mdash;o bien todas las acciones del
+          conjunto son completadas con éxito, o todas son tratadas
+          como si <emphasis>ninguna</emphasis> de ellas hubiese
+          ocurrido&mdash;y de un modo que no intefieran con otros
+          procesos que actúan sobre los datos.</para>
 
-        <para>Database transactions generally encompass small
-          operations related specifically to the modification of data
-          in the database itself (such as changing the contents of a
-          table row).  Subversion transactions are larger in scope,
-          encompassing higher-level operations like making
-          modifications to a set of files and directories which are
-          intended to be stored as the next revision of the filesystem
-          tree.  If that isn't confusing enough, consider this:
-          Subversion uses a database transaction during the creation
-          of a Subversion transaction (so that if the creation of
-          Subversion transaction fails, the database will look as if
-          we had never attempted that creation in the first
-          place)!</para>
+        <para>Las transacciones de base de datos generalmente
+          engloban pequeñas operaciones relacionadas con
+          la modificación específica de datos (como cambiar el
+          contenido de una fila en una tabla). Las transacciones de
+          Subversion son mayores en ámbito, englobando operaciones de
+          alto nivel como realizar modificaciones a un conjunto de
+          ficheros y directorios que pretenden ser almacenados como
+          la siguiente revisión del árbol del sistema de ficheros. Si
+          eso no es suficientemente confuso, considere lo siguiente:
+          ¡Subversion usa una transacción de base de datos durante
+          la creación de una transacción de Subversion (por lo que
+          si la creación de una transacción de Subversion falla,
+          la base de datos tendrá el mismo aspecto que antes, como
+          si nunca hubiésemos intentado crear nada)!</para>
 
         <para>Fortunately for users of the filesystem API, the
           transaction support provided by the database system itself
