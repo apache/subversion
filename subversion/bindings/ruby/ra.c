@@ -677,6 +677,29 @@ ra_get_log (int argc, VALUE *argv, VALUE self)
 			      ra->plugin, ra->session_baton, ra->pool);
 }
 
+static VALUE
+ra_check_path (VALUE self, VALUE aPath, VALUE aRevision)
+{
+  svn_ruby_ra_t *ra;
+  svn_node_kind_t kind;
+  svn_revnum_t revision;
+  svn_error_t *err;
+
+  Data_Get_Struct (self, svn_ruby_ra_t, ra);
+
+  if (ra->closed)
+    rb_raise (rb_eRuntimeError, "not opened");
+
+  revision = NUM2LONG (aRevision);
+
+  err = ra->plugin->check_path (&kind, ra->session_baton,
+				StringValuePtr (aPath), revision);
+  if (err)
+    svn_ruby_raise (err);
+
+  return INT2FIX (kind);
+}
+
 
 void
 svn_ruby_init_ra (void)
@@ -704,4 +727,5 @@ svn_ruby_init_ra (void)
   rb_define_method (cSvnRa, "doCheckout", ra_do_checkout, 2);
   rb_define_method (cSvnRa, "doUpdate", ra_do_update, -1);
   rb_define_method (cSvnRa, "getLog", ra_get_log, -1);
+  rb_define_method (cSvnRa, "checkPath", ra_check_path, 2);
 }
