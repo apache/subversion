@@ -742,7 +742,7 @@ void svn_swig_py_notify_func(void *baton,
                                           path, action, kind,
                                           mime_type,
                                           content_state, prop_state, 
-                                          revision)) == NULL)
+                                          revision)) != NULL)
         {
           Py_XDECREF(result);
         }
