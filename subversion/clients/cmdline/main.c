@@ -111,9 +111,13 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Import a file or tree into the repository.\n"
     "usage: import REPOS_URL [PATH] [NEW_ENTRY_IN_REPOS] \n" },
 
-  { "log",     FALSE, svn_cl__log,
+  { "log",        FALSE, svn_cl__log,
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: log [-r REV1([:)REV2]] [PATH1 [PATH2] ...] \n" },
+
+  { "mkdir",      FALSE, svn_cl__mkdir,
+    "Create a new directory under revision control.\n"
+    "usage: mkdir [NEW_DIR | REPOS_URL].\n" },
 
   { "move",       FALSE, svn_cl__move,
     "Move or rename something working copy.\n"

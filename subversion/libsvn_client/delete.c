@@ -42,7 +42,6 @@ svn_client_delete (svn_stringbuf_t *path,
                    svn_stringbuf_t *log_msg,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_status_t apr_err;
   svn_string_t str;
 
@@ -71,7 +70,7 @@ svn_client_delete (svn_stringbuf_t *path,
                                              TRUE, pool));
       SVN_ERR (ra_lib->open (&session, anchor, ra_callbacks, cb_baton, pool));
 
-      /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
+      /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
@@ -87,9 +86,7 @@ svn_client_delete (svn_stringbuf_t *path,
     }
   
   /* Mark the entry for deletion. */
-  err = svn_wc_delete (path, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc_delete (path, pool));
 
   if (force)
     {

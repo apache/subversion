@@ -1,5 +1,5 @@
 /*
- * add.c:  wrappers around wc add functionality.
+ * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -145,6 +145,65 @@ svn_client_add (svn_stringbuf_t *path,
           return err;
     }
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_mkdir (svn_stringbuf_t *path,
+                  svn_client_auth_baton_t *auth_baton,
+                  svn_stringbuf_t *log_msg,
+                  apr_pool_t *pool)
+{
+  svn_string_t path_str = { path->data, path->len };
+  apr_status_t apr_err;
+
+  /* If this is a URL, we want to drive a commit editor to create this
+     directory. */
+  if (svn_path_is_url (&path_str))
+    {
+      /* This is a remote directory creation.  */
+      void *ra_baton, *session, *cb_baton;
+      svn_ra_plugin_t *ra_lib;
+      svn_ra_callbacks_t *ra_callbacks;
+      svn_stringbuf_t *anchor, *target;
+      const svn_delta_edit_fns_t *editor;
+      void *edit_baton;
+      void *root_baton, *dir_baton;
+
+      svn_path_split (path, &anchor, &target, svn_path_url_style, pool);
+
+      /* Get the RA vtable that matches URL. */
+      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
+
+      /* Get the client callbacks for auth stuffs. */
+      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
+                                             auth_baton, anchor, TRUE,
+                                             TRUE, pool));
+      SVN_ERR (ra_lib->open (&session, anchor, ra_callbacks, cb_baton, pool));
+
+      /* Fetch RA commit editor */
+      SVN_ERR (ra_lib->get_commit_editor
+               (session,
+                &editor, &edit_baton,
+                log_msg ? log_msg : svn_stringbuf_create ("", pool),
+                NULL, NULL, NULL, NULL));
+
+      SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM,
+                                  &root_baton));
+      SVN_ERR (editor->add_directory (target, root_baton, NULL, 
+                                      SVN_INVALID_REVNUM, &dir_baton));
+      SVN_ERR (editor->close_directory (dir_baton));
+      SVN_ERR (editor->close_edit (edit_baton));
+
+      return SVN_NO_ERROR;
+    }
+
+  /* This is a regular "mkdir" + "svn add" */
+  apr_err = apr_dir_make (path->data, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_create (apr_err, 0, NULL, pool, path->data);
+  
+  return svn_wc_add_directory (path, NULL, pool);
 }
 
 
