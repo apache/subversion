@@ -18,17 +18,19 @@ import gen_base
 import ezt
 
 
-class WinGeneratorBase(gen_base.GeneratorBase):
-  "Base class for all Windows project files generators"
-
+class GeneratorBase(gen_base.GeneratorBase):
+  """This intermediate base class exists to be instantiated by win-tests.py,
+  in order to obtain information from build.conf without actually doing
+  any generation."""
   _extension_map = {
     ('exe', 'target'): '.exe',
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
-    ('script', 'target'): '',
-    ('script', 'object'): '',
     }
+
+class WinGeneratorBase(GeneratorBase):
+  "Base class for all Windows project files generators"
 
   def parse_options(self, options):
     self.apr_path = 'apr'
@@ -167,7 +169,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                              'build_locale.ezt', data)
 
     #Initialize parent
-    gen_base.GeneratorBase.__init__(self, fname, verfname)
+    GeneratorBase.__init__(self, fname, verfname)
 
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
@@ -201,8 +203,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     # Get list of targets to generate project files for
     install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL) \
-                      + self.graph.get_sources(gen_base.DT_LIST,
-                                               gen_base.LT_PROJECT)
+                      + self.projects
 
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
@@ -292,7 +293,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       swig_options = ["-" + target.lang]
       swig_deps = []
 
-      if self.swig_vernum >= 103020:
+      if self.swig_vernum >= 103024:
+        pass
+      elif self.swig_vernum >= 103020:
         if target.include_runtime:
           swig_options.append("-runtime")
         else:
@@ -301,12 +304,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if not target.include_runtime:
           swig_options.append("-c")
 
-      if target.lang == "java":
-        swig_options.append("-package org.tigris.subversion.swig")
-        swig_options.append("-outdir " + self.path("subversion/bindings/swig"
-                                                   "/java/org/tigris"
-                                                   "/subversion/swig"))
-      elif target.lang == "perl":
+      if target.lang == "perl":
         if self.swig_vernum >= 103020:
           swig_options.append("-noproxy")
         swig_options.append("-nopm")
@@ -577,16 +575,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
       fakedefines.append(self.swig_defines)
-      if target.lang == 'java':
-        fakedefines.append('SWIGJAVA')
 
     if isinstance(target, gen_base.TargetSWIGLib):
       fakedefines.append(self.swig_defines)
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
-    elif cfg == 'Release':
-      fakedefines.append("NDEBUG")
 
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
@@ -670,9 +664,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     nondeplibs = target.msvc_libs[:]
     if self.enable_nls:
       if self.libintl_path:
-        nondeplibs.append(self.apath(self.libintl_path, 'lib', 'intl.lib'))
+        nondeplibs.append(self.apath(self.libintl_path,
+                                     'lib', 'intl3_svn.lib'))
       else:
-        nondeplibs.append('intl.lib')
+        nondeplibs.append('intl3_svn.lib')
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
@@ -769,7 +764,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkley DB library and version"
-    for lib in ("libdb42", "libdb41", "libdb40"):
+    for lib in ("libdb43", "libdb42", "libdb41", "libdb40"):
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
         sys.stderr.write("Found %s.lib in %s\n" % (lib, path))
@@ -868,12 +863,30 @@ class ProjectItem:
   def __init__(self, **kw):
     vars(self).update(kw)
 
+# ============================================================================
+# This is a cut-down and modified version of code from:
+#   subversion/subversion/bindings/swig/python/svn/core.py
+#
 if sys.platform == "win32":
-  def escape_shell_arg(str):
-    return '"' + string.replace(str, '"', '"^""') + '"'
+  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
+
+  def escape_shell_arg(arg):
+    # The (very strange) parsing rules used by the C runtime library are
+    # described at:
+    # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
+
+    # double up slashes, but only if they are followed by a quote character
+    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
+
+    # surround by quotes and escape quotes inside
+    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    return arg
+
 else:
   def escape_shell_arg(str):
     return "'" + string.replace(str, "'", "'\\''") + "'"
+
+# ============================================================================
 
 FILTER_LIBS = 1
 FILTER_PROJECTS = 2

@@ -21,8 +21,6 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
-#include "svn_string.h"
-#include "svn_ra.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
@@ -46,8 +44,8 @@ svn_client_url_from_path (const char **url,
     }
   else
     {
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path_or_url,
-                                       FALSE, 0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path_or_url,
+                                       FALSE, 0, NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&entry, path_or_url, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
       

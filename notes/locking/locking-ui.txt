@@ -102,19 +102,20 @@ II. New Client Behaviors
 
    B. The "svn:needs-lock" property
 
-      Create a new "svn:needs-lock" property to indicate that a path
+      Create a new "svn:needs-lock" property to indicate that a file
       must be locked before committing.  Just like "svn:executable",
       the value of the property is irrelevant and the property can be
       created (or deleted) by any user or administrator.
 
       1. Property as enforcement system
 
-         The presence of the "svn:needs-lock" property on a path means that
-         concurrency is disabled for the path and a user *must* obtain
-         a lock on that path before committing changes to it.  The
-         server rejects any commit which modifies this path unless the
-         user has a lock on the path.  Note: A user can delete a path
-         with this property, providing that the path is not locked.
+         The presence of the "svn:needs-lock" property on a file means
+         that concurrency is disabled for the file and a user *must*
+         obtain a lock on that file before committing changes to it.
+         The server rejects any commit which modifies this file unless
+         the user has a lock on the file.  Note: a user can delete a
+         file with this property, providing that the file is not
+         locked.
 
       2. Property as communication system
 
@@ -127,8 +128,6 @@ II. New Client Behaviors
          When the user releases the lock, or if the lock is found to
          be defunct (see next section), the Subversion client makes
          the path read-only again.
-
-
 
    C. Lock manipulation via client
 
@@ -143,14 +142,14 @@ II. New Client Behaviors
          a certain working copy.  Why is it important or useful for
          lock tokens to be attached to only one working copy?
 
-         An example: you might lock an unmergeable file using a
+         [An example: you might lock an unmergeable file using a
          computer at your office, perhaps as part of a changeset in
          progress.  It should not be possible for a working copy on
          your home computer to accidentally commit a change to that
          same file, just because you've authenticated as the user
          which owns the lock.  If you really want to change the file
          from home, you'd have to "steal" the lock from your other
-         working copy, which is discussed later in this document.
+         working copy, which is discussed later in this document.]
 
          Because locks can be broken or stolen, it is possible for a
          lock token to become "defunct".  A defunct lock cannot be
@@ -188,14 +187,6 @@ II. New Client Behaviors
             will launch $EDITOR, or accept -m or -F switches to
             accept a lock comment.
 
-            The 'svn lock' command automatically implies running 'svn
-            update' on a path.  In other words, it's not possible to
-            lock a non-HEAD version of a path.  If a file has the
-            'svn:needs-lock' property and has been hijacked, both 'svn lock'
-            will interactively ask the user whether to use the
-            repository or local version of the file, just as 'svn
-            update' does.
-
          b. Using a lock
 
             A lock can be used to make an exclusive commit to a path.
@@ -219,12 +210,17 @@ II. New Client Behaviors
                default.  The Subversion client provides an option to
                retain the lock after commit:
 
-               $ svn commit foo.c --keep-lock
+               $ svn commit foo.c --no-unlock
+
+               If --no-unlock is not specified, even unmodified files
+               will be considered part of the commit and shown to the
+               user in the list of files to commit.  Such files will
+               also be unlocked after the commit.
 
             2. Releasing a lock
  
                $ svn unlock foo.c
-               Lock on 'foo.c' has been released by user 'harry'.
+               Lock on 'foo.c' has been released.
 
                After successful release, the working copy's lock token
                is gone.
@@ -248,7 +244,11 @@ II. New Client Behaviors
              $ svn unlock foo.c --force
              username:  sally
              password:  XXXX
-             Lock on 'foo.c' has been broken by user 'sally'.
+             Lock on 'foo.c' has been broken.
+
+             The --force option also accepts a URL, so that the lock
+             can be
+             released without a working copy.
 
          d. Stealing a lock
 
@@ -275,7 +275,7 @@ II. New Client Behaviors
               password:  XXXX
               'foo.c' has been locked by user 'sally'.
 
-              Remember than 'svn lock' requires a lock comment, so -m,
+              Remember that 'svn lock' requires a lock comment, so -m,
               -F, or launching of $EDITOR is required.  And remember
               that the 'svn lock' command still requires that the
               target be up-to-date to succeed.
@@ -289,12 +289,12 @@ II. New Client Behaviors
                displays it using some new symbol, in a new column:
 
                    $ svn status
-                   M        foo.c
-                   M      # bar.c
-                   A        baz.c 
+                   M      foo.c
+                   M    K bar.c
+                   A      baz.c 
 
-               The new symbol is up for discussion, '#' is used as an
-               example here.
+               Note that K (locKed) is used instead of the more
+               intuitive L, since L is already in use for another purpose.
 
             2. seeing locks in a repository.
 
@@ -302,14 +302,27 @@ II. New Client Behaviors
                server;  in a similar manner, this command shows any
                locks that exist on the server:
 
-                  $ svn status
-                  M        foo.c
-                  M      # bar.c
-                  A     *  baz.c 
-                        *  file1
-                         # file2
+                  $ svn status -u
+                  M                   foo.c
+                  M    K              bar.c
+                  A      *            baz.c
+                         *            file1
+                       O              file2
+                  M    B             file3
+                   M   T             file42
 
-
+               As with "svn status", the sixth column indicates lock
+               state.  The letters have the following meanings:
+               ' ': No lock in either WC or repository.
+               'K': Locked in the WC and lock token valid in
+                    repository.
+               'O': No lock in WC, lock in repository. (Locked in
+                    Other WC.)
+               'B': Lock in WC, but no lock in repository. (Lock
+                    Broken.)
+               'T': Locked in WC, but locked with another token in
+                    repository.  (Lock was sTolen.)
+            
             3.  'svn info', describes the attributes of a lock-token,
                 if attached to a working object.  If invoked on a URL,
                 it displays information about any remote lock
@@ -320,18 +333,21 @@ II. New Client Behaviors
                    Name: foo.c
                    URL: http://..../
                    [...]
-                   You have a lock on this object:
-                       - by user 'harry'
-                       - at time 2004-07-20 21:11:11 -0400
-                       - lock comment:  "mine mine mine."
+                   Lock Token: 465610b1-33eb-0310-8a02-cae41507c13a
+                   Lock Owner: lundblad
+                   Lock Comment: Refactoring.
+                   Lock Creation Date: 2004-12-14 14:49:36 +0100 (Tue, 14 Dec 2004)
                  
 
                    $ svn info http://host/repos/file2
-                   file2 is locked:
-                       - by user 'sally'
-                       - at time 2004-07-21 22:53:27 -0400
-                       - lock comment:  "working on report."
-
+                   Path: /file2
+                   Name: file2
+                   URL: http://..../
+                   [...]
+                   Lock Token: 465610b1-33eb-0310-8a02-cae41507c13b
+                   Lock Owner: fitz
+                   Lock Comment: Don't touch my file!
+                   Lock Creation Date: 2004-12-25 14:49:36 +0100 (Tue, 14 Dec 2004)
 
             4. 'svn update' changes
 
@@ -340,6 +356,18 @@ II. New Client Behaviors
                 "defunct", the client is instructed to destroy the lock
                 token.
 
+                A new column will be added to the update output to indicate
+                removed lock tokens:
+
+                svn up
+                U     path1
+                 U    path2
+                  B   path3
+                C B   path4
+
+                In the above example, lock tokens for path3 and path4
+                were removed.  Note that 'B' is used even if there is
+                a new lock in the repository.
 
 III. New Server Behaviors
 
@@ -429,11 +457,11 @@ III. New Server Behaviors
 
       2. Unconditional release of locks
 
-         A new 'svnadmin release' subcommand to unconditionally
+         A new 'svnadmin unlock' subcommand to unconditionally
          release a lock.  Note that this command circumvents hook
          scripts, much like other svnadmin actions:
 
-           $ svnadmin release /usr/local/svn/repos /trunk/doc/foo.doc
+           $ svnadmin unlock /usr/local/svn/repos /trunk/doc/foo.doc
            Lock on '/trunk/doc/foo.doc' has been released.
 
 

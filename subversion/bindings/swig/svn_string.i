@@ -29,6 +29,10 @@ typedef struct svn_string_t svn_string_t;
    generic OUT param typemap for svn_string(buf)_t. we can share these
    because we only refer to the ->data and ->len values.
 */
+%typemap(in, numinputs=0) RET_STRING ($*1_ltype temp) {
+    $1 = &temp;
+}
+
 %typemap(python,argout,fragment="t_output_helper") RET_STRING {
     PyObject *s;
     if (*$1 == NULL) {
@@ -42,13 +46,6 @@ typedef struct svn_string_t svn_string_t;
     }
     $result = t_output_helper($result, s);
 }
-%typemap(java,out) RET_STRING {
-    /* FIXME: This is just a stub -- implement JNI code for returning a string! */
-    $output = NULL;
-}
-
-%typemap(jni) char *                                         "jstring"
-
 %typemap(perl5,argout) RET_STRING {
     if (*$1) {
 	$result = sv_newmortal();
@@ -58,6 +55,20 @@ typedef struct svn_string_t svn_string_t;
 	$result = &PL_sv_undef;
     argvi++;
 }
+%typemap(ruby,argout,fragment="output_helper") RET_STRING
+{
+  if (*$1) {
+    $result = output_helper($result, rb_str_new((*$1)->data, (*$1)->len));
+  } else {
+    $result = output_helper($result, Qnil);
+  }
+}
+
+%apply RET_STRING {
+  svn_string_t **,
+  svn_stringbuf_t **
+};
+
 /* -----------------------------------------------------------------------
    TYPE: svn_stringbuf_t
 */
@@ -101,16 +112,6 @@ typedef struct svn_string_t svn_string_t;
     argvi++;
 }
 
-/* svn_stringbuf_t ** is always an output parameter */
-%typemap(python,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
-    $1 = &temp;
-}
-%typemap(perl5,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
-    $1 = &temp;
-}
-%apply RET_STRING { svn_stringbuf_t ** };
-
-
 /* -----------------------------------------------------------------------
    TYPE: svn_string_t
 */
@@ -138,6 +139,16 @@ typedef struct svn_string_t svn_string_t;
         $1 = NULL;
     }
 }
+%typemap(ruby,in) const svn_string_t * (svn_string_t value)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    value.data = StringValuePtr($input);
+    value.len = RSTRING($input)->len;
+    $1 = &value;
+  }
+}
 
 /* when storing an svn_string_t* into a structure, we must allocate the
    svn_string_t structure on the heap. */
@@ -145,6 +156,9 @@ typedef struct svn_string_t svn_string_t;
     $1 = svn_string_dup($input, _global_pool);
 }
 %typemap(perl5,memberin) const svn_string_t * {
+    $1 = svn_string_dup($input, _global_pool);
+}
+%typemap(ruby,memberin) const svn_string_t * {
     $1 = svn_string_dup($input, _global_pool);
 }
 
@@ -155,14 +169,13 @@ typedef struct svn_string_t svn_string_t;
     $result = sv_2mortal(newSVpv($1->data, $1->len));
     ++argvi;
 }
-
-/* svn_string_t ** is always an output parameter */
-%typemap(in,numinputs=0) svn_string_t ** (svn_string_t *temp) {
-    $1 = &temp;
+%typemap(ruby,out) svn_string_t * {
+  if ($1) {
+    $result = rb_str_new($1->data, $1->len);
+  } else {
+    $result = Qnil;
+  }
 }
-%apply RET_STRING { svn_string_t ** };
-
-
 
 /* -----------------------------------------------------------------------
    define a way to return a 'const char *'
@@ -194,6 +207,15 @@ typedef struct svn_string_t svn_string_t;
     ++argvi;
 }
 
+%typemap(ruby,argout,fragment="output_helper") const char **OUTPUT
+{
+  if (*$1) {
+    $result = output_helper($result, rb_str_new2(*$1));
+  } else {
+    $result = output_helper($result, Qnil);
+  }
+}
+
 /* -----------------------------------------------------------------------
    define a general INPUT param of an array of const char * items.
  */
@@ -209,18 +231,8 @@ typedef struct svn_string_t svn_string_t;
                                                              _global_pool);
 }
 
-%typemap(jni) const apr_array_header_t *STRINGLIST "jobjectArray"
-%typemap(jtype) const apr_array_header_t *STRINGLIST "java.lang.String[]"
-%typemap(jstype) const apr_array_header_t *STRINGLIST "java.lang.String[]"
-%typemap(javain) const apr_array_header_t *STRINGLIST "$javainput"
-
-%typemap(java,in) const apr_array_header_t *STRINGLIST (apr_array_header_t *temp) {
-	temp = (apr_array_header_t *)svn_swig_java_strings_to_array(jenv, $input, _global_pool);
-	$1 = temp;
-}
-
-%typemap(java,freearg) const apr_array_header_t *STRINGLIST {
-	/* FIXME: Perhaps free up "temp"? */
+%typemap(ruby,in) const apr_array_header_t *STRINGLIST {
+  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
 }
 
 /* path lists */

@@ -25,14 +25,11 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 #include <apr_md5.h>
-#include <apr_portable.h>
 #include <apr_xml.h>
 
 #include <ne_socket.h>
 #include <ne_basic.h>
 #include <ne_utils.h>
-#include <ne_basic.h>
-#include <ne_207.h>
 #include <ne_props.h>
 #include <ne_xml.h>
 #include <ne_request.h>
@@ -45,10 +42,12 @@
 #include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_ra.h"
+#include "../libsvn_ra/ra_loader.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
 #include "svn_time.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
@@ -133,9 +132,16 @@ typedef struct {
 } dir_item_t;
 
 typedef struct {
-  svn_ra_session_t *ras;
+  svn_ra_dav__session_t *ras;
 
   apr_file_t *tmpfile;
+
+  /* Pool initialized when the report_baton is created, and meant for
+     quick scratchwork.  This is like a loop pool, but since the loop
+     that drives ra_dav callbacks is in the wrong scope for us to use
+     the normal loop pool idiom, we must resort to this.  Always clear
+     this pool right after using it; only YOU can prevent forest fires. */ 
+  apr_pool_t *scratch_pool;
 
   svn_boolean_t fetch_content;
   svn_boolean_t fetch_props;
@@ -187,6 +193,9 @@ typedef struct {
      it's not really updating the top level directory. */
   const char *target;
 
+  /* Use an intermediate tmpfile for the REPORT response. */
+  svn_boolean_t spool_response;
+
   /* A modern server will understand our "send-all" attribute on the
      update report request, and will put a "send-all" attribute on
      its response.  If we see that attribute, we set this to true,
@@ -196,11 +205,6 @@ typedef struct {
   svn_error_t *err;
 
 } report_baton_t;
-
-static const char report_head[]
-   = "<S:update-report send-all=\"true\" xmlns:S=\""
-      SVN_XML_NAMESPACE "\">" DEBUG_CR;
-static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 
 static const svn_ra_dav__xml_elm_t report_elements[] =
 {
@@ -243,6 +247,22 @@ static const svn_ra_dav__xml_elm_t drev_report_elements[] =
 {
   { SVN_XML_NAMESPACE, "dated-rev-report", ELEM_dated_rev_report, 0 },
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+  { NULL }
+};
+
+/* Elements used in a get-locks-report response */
+static const svn_ra_dav__xml_elm_t getlocks_report_elements[] =
+{
+  { SVN_XML_NAMESPACE, "get-locks-report", ELEM_get_locks_report, 0 },
+  { SVN_XML_NAMESPACE, "lock", ELEM_lock, 0},
+  { SVN_XML_NAMESPACE, "path", ELEM_lock_path, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "token", ELEM_lock_token, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "owner", ELEM_lock_owner, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "comment", ELEM_lock_comment, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "creationdate",
+    ELEM_lock_creationdate, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "expirationdate",
+    ELEM_lock_expirationdate, SVN_RA_DAV__XML_CDATA },
   { NULL }
 };
 
@@ -307,10 +327,10 @@ static svn_error_t *set_special_wc_prop (const char *key,
 }
 
 
-static void add_props(apr_hash_t *props,
-                      prop_setter_t setter,
-                      void *baton,
-                      apr_pool_t *pool)
+static svn_error_t *add_props(apr_hash_t *props,
+                              prop_setter_t setter,
+                              void *baton,
+                              apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -331,7 +351,7 @@ static void add_props(apr_hash_t *props,
           /* for props in the 'custom' namespace, we strip the
              namespace and just use whatever name the user gave the
              property. */
-          (*setter)(baton, key + NSLEN, val, pool);
+          SVN_ERR( (*setter)(baton, key + NSLEN, val, pool) );
           continue;
         }
 #undef NSLEN
@@ -342,9 +362,9 @@ static void add_props(apr_hash_t *props,
           /* This property is an 'svn:' prop, recognized by client, or
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc. */
-          (*setter)(baton, 
-                    apr_pstrcat(pool, SVN_PROP_PREFIX, key + NSLEN, NULL), 
-                    val, pool);
+          SVN_ERR( (*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX,
+                                                key + NSLEN, NULL), 
+                             val, pool) );
         }
 #undef NSLEN
 
@@ -356,9 +376,10 @@ static void add_props(apr_hash_t *props,
              The following routine converts a handful of DAV: props
              into 'svn:wc:' or 'svn:entry:' props that libsvn_wc
              wants. */
-          set_special_wc_prop (key, val, setter, baton, pool);
+          SVN_ERR( set_special_wc_prop (key, val, setter, baton, pool) );
         }
     }
+  return SVN_NO_ERROR;
 }
                       
 
@@ -379,7 +400,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
   svn_error_t *err;
   int code;
   int decompress_rv;
-  svn_ra_session_t *ras = ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+  svn_ra_dav__session_t *ras = ne_get_session_private(sess,
+                                                     SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -728,7 +750,7 @@ filter_props (apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_dav__get_file(void *session_baton,
+svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
                                   const char *path,
                                   svn_revnum_t revision,
                                   svn_stream_t *stream,
@@ -738,7 +760,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 {
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -814,7 +836,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       if (fwc.do_checksum)
         {
           apr_md5_final(digest, &(fwc.md5_context));
-          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
 
           if (strcmp (hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
@@ -839,7 +861,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 }
 
 
-svn_error_t *svn_ra_dav__get_dir(void *session_baton,
+svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                  const char *path,
                                  svn_revnum_t revision,
                                  apr_hash_t **dirents,
@@ -852,7 +874,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
   apr_hash_t *resources;
   const char *final_url;
   apr_size_t final_url_n_components;
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
@@ -993,11 +1015,11 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
 
 /* ------------------------------------------------------------------------- */
 
-svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
+svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
                                            svn_revnum_t *latest_revnum,
                                            apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
 
   /* ### should we perform an OPTIONS to validate the server we're about
      ### to talk to? */
@@ -1053,12 +1075,12 @@ static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
   return SVN_RA_DAV__XML_VALID;
 }
 
-svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
+svn_error_t *svn_ra_dav__get_dated_revision (svn_ra_session_t *session,
                                              svn_revnum_t *revision,
                                              apr_time_t timestamp,
                                              apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *body;
   const char *vcc_url;
   svn_error_t *err;
@@ -1082,7 +1104,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                           drev_report_elements,
                                           drev_validate_element,
                                           drev_start_element, drev_end_element,
-                                          revision, NULL, NULL, pool);
+                                          revision, NULL, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, _("Server does not support date-based "
                                        "operations"));
@@ -1097,7 +1119,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 }
 
 typedef struct {
-  svn_ra_session_t *ras;
+  svn_ra_dav__session_t *ras;
   apr_hash_t *hash;
   apr_pool_t *pool;
 } get_locations_baton_t;
@@ -1157,14 +1179,14 @@ static int gloc_start_element(void *userdata, int parent_state, const char *ns,
 }
 
 svn_error_t *
-svn_ra_dav__get_locations(void *session_baton,
+svn_ra_dav__get_locations(svn_ra_session_t *session,
                           apr_hash_t **locations,
                           const char *relative_path,
                           svn_revnum_t peg_revision,
                           apr_array_header_t *location_revisions,
                           apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body;
   svn_error_t *err;
   get_locations_baton_t request_baton;
@@ -1216,32 +1238,375 @@ svn_ra_dav__get_locations(void *session_baton,
      START and END revisions. */
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras->sess, ras->url, peg_revision,
-                                         ras->pool) );
+                                         session->pool) );
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            ras->pool);
+                                            session->pool);
 
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
                                    request_body->data, NULL, NULL,
                                    gloc_start_element, NULL, NULL,
                                    &request_baton, NULL, &status_code,
-                                   pool);
+                                   FALSE, pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (status_code == 501)
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("get-locations REPORT not implemented"));
+                             _("'get-locations' REPORT not implemented"));
 
   return err;
 }
 
-svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
+
+/* -------------------------------------------------------------------------
+**
+** GET-LOCKS REPORT HANDLING
+**
+** DeltaV provides a mechanism for fetching a list of locks below a
+** path, but it's often unscalable.  It requires doing a PROPFIND of
+** depth infinity, looking for the 'DAV:lockdiscovery' prop on every
+** resource.  But depth-infinity propfinds can sometimes behave like a
+** DoS attack, and mod_dav even disables them by default!
+**
+** So we send a custom 'get-locks' REPORT on a public URI... which is
+** fine, since all lock queries are always against HEAD anyway.  The
+** response is a just a list of svn_lock_t's.  (Generic DAV clients,
+** of course, are free to do infinite PROPFINDs as they wish, assuming
+** the server allows it.)
+*/
+
+ 
+/*
+ * The get-locks-report xml request body is super-simple.
+ * The server doesn't need anything but the URI in the REPORT request line.
+ *
+ *    <S:get-locks-report xmlns...>
+ *    </S:get-locks-report>
+ *
+ * The get-locks-report xml response is just a list of svn_lock_t's
+ * that exist at or "below" the request URI.  (The server runs
+ * svn_repos_fs_get_locks()).
+ *
+ *    <S:get-locks-report xmlns...>
+ *        <S:lock>
+ *           <S:path>/foo/bar/baz</S:path>
+ *           <S:token>opaquelocktoken:706689a6-8cef-0310-9809-fb7545cbd44e
+ *                </S:token>
+ *           <S:owner>fred</S:owner>
+ *           <S:comment encoding="base64">ET39IGCB93LL4M</S:comment>
+ *           <S:creationdate>2005-02-07T14:17:08Z</S:creationdate>
+ *           <S:expirationdate>2005-02-08T14:17:08Z</S:expirationdate>
+ *        </S:lock>
+ *        ...
+ *    </S:get-locks-report>
+ *
+ *
+ * The <path> and <token> and date-element cdata is xml-escaped by mod_dav_svn.
+ *
+ * The <owner> and <comment> cdata is always xml-escaped, but
+ * possibly also base64-encoded if necessary, as indicated by the
+ * encoding attribute.
+ *
+ * The absence of <expirationdate> means that there's no expiration.
+ *
+ * If there are no locks to return, then the response will look just
+ * like the request.
+ */
+
+
+/* Context for parsing server's response. */
+typedef struct {
+  svn_lock_t *current_lock;        /* the lock being constructed */
+  svn_stringbuf_t *cdata_accum;    /* a place to accumulate cdata */
+  const char *encoding;            /* normally NULL, else the value of
+                                      'encoding' attribute on cdata's tag.*/
+  apr_hash_t *lock_hash;           /* the final hash returned */
+
+  svn_error_t *err;                /* if the parse needs to return an err */
+
+  apr_pool_t *scratchpool;         /* temporary stuff goes in here */
+  apr_pool_t *pool;                /* permanent stuff goes in here */
+
+} get_locks_baton_t;
+
+
+
+/* This implements the `ne_xml_startelem_cb' prototype. */
+static int getlocks_start_element(void *userdata, int parent_state,
+                                  const char *ns, const char *ln,
+                                  const char **atts)
+{
+  get_locks_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elm;
+
+  elm = svn_ra_dav__lookup_xml_elem(getlocks_report_elements, ns, ln);
+
+  /* Just skip unknown elements. */
+  if (!elm)
+    return NE_XML_DECLINE;
+
+  if (elm->id == ELEM_lock)
+    {
+      if (parent_state != ELEM_get_locks_report)
+        return NE_XML_ABORT;
+      else
+        /* allocate a new svn_lock_t in the permanent pool */
+        baton->current_lock = svn_lock_create(baton->pool);
+    }
+
+  else if (elm->id == ELEM_lock_path
+           || elm->id == ELEM_lock_token
+           || elm->id == ELEM_lock_owner
+           || elm->id == ELEM_lock_comment
+           || elm->id == ELEM_lock_creationdate
+           || elm->id == ELEM_lock_expirationdate)
+    {
+      const char *encoding;
+
+      if (parent_state != ELEM_lock)
+        return NE_XML_ABORT;
+
+      /* look for any incoming encodings on these elements. */
+      encoding = svn_xml_get_attr_value("encoding", atts);
+      if (encoding)
+        baton->encoding = apr_pstrdup(baton->scratchpool, encoding);
+    }
+
+  return elm->id;
+}
+
+
+/* This implements the `ne_xml_cdata_cb' prototype. */
+static int getlocks_cdata_handler(void *userdata, int state,
+                                  const char *cdata, size_t len)
+{
+  get_locks_baton_t *baton = userdata;
+
+  switch(state)
+    {
+    case ELEM_lock_path:
+    case ELEM_lock_token:
+    case ELEM_lock_owner:
+    case ELEM_lock_comment:
+    case ELEM_lock_creationdate:
+    case ELEM_lock_expirationdate:
+      /* accumulate cdata in the scratchpool. */
+      svn_stringbuf_appendbytes(baton->cdata_accum, cdata, len);
+      break;
+    }
+
+  return 0; /* no error */
+}
+
+
+
+/* This implements the `ne_xml_endelm_cb' prototype. */
+static int getlocks_end_element(void *userdata, int state,
+                                const char *ns, const char *ln)
+{
+  get_locks_baton_t *baton = userdata;
+  const svn_ra_dav__xml_elm_t *elm;
+  svn_error_t *err;
+
+  elm = svn_ra_dav__lookup_xml_elem(getlocks_report_elements, ns, ln);
+
+  /* Just skip unknown elements. */
+  if (elm == NULL)
+    return NE_XML_DECLINE;
+
+  switch (elm->id)
+    {
+    case ELEM_lock:
+      /* is the final svn_lock_t valid?  all fields must be present
+         except for 'comment' and 'expiration_date'. */
+      if ((! baton->current_lock->path)
+          || (! baton->current_lock->token)
+          || (! baton->current_lock->owner)
+          || (! baton->current_lock->creation_date))
+        {
+          baton->err = svn_error_create (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                         _("Incomplete lock data returned"));
+          return NE_XML_ABORT;
+        }
+
+      apr_hash_set(baton->lock_hash, baton->current_lock->path,
+                   APR_HASH_KEY_STRING, baton->current_lock);
+      break;
+      
+    case ELEM_lock_path:
+      /* neon has already xml-unescaped the cdata for us. */
+      baton->current_lock->path = apr_pstrmemdup(baton->pool,
+                                                 baton->cdata_accum->data,
+                                                 baton->cdata_accum->len);
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_token:
+      /* neon has already xml-unescaped the cdata for us. */
+      baton->current_lock->token = apr_pstrmemdup(baton->pool,
+                                                  baton->cdata_accum->data,
+                                                  baton->cdata_accum->len);
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_creationdate:
+      err = svn_time_from_cstring(&(baton->current_lock->creation_date),
+                                  baton->cdata_accum->data,
+                                  baton->scratchpool);
+      if (err)
+        {
+          baton->err = err;
+          return NE_XML_ABORT;
+        }
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_expirationdate:
+      err = svn_time_from_cstring(&(baton->current_lock->expiration_date),
+                                  baton->cdata_accum->data,
+                                  baton->scratchpool);
+      if (err)
+        {
+          baton->err = err;
+          return NE_XML_ABORT;
+        }
+      /* clean up the accumulator. */
+      svn_stringbuf_setempty(baton->cdata_accum);
+      svn_pool_clear(baton->scratchpool);
+      break;
+
+    case ELEM_lock_owner:
+    case ELEM_lock_comment:
+      {
+        const char *final_val;
+
+        if (baton->encoding)
+          {
+            /* Possibly recognize other encodings someday. */
+            if (strcmp(baton->encoding, "base64") == 0)
+              {
+                svn_string_t *encoded_val;
+                const svn_string_t *decoded_val;
+
+                encoded_val = svn_string_create_from_buf(baton->cdata_accum,
+                                                         baton->scratchpool);
+                decoded_val = svn_base64_decode_string(encoded_val,
+                                                       baton->scratchpool);
+                final_val = decoded_val->data;
+              }
+            else
+              /* unrecognized encoding! */
+              return NE_XML_ABORT;
+
+            baton->encoding = NULL;
+          }
+        else
+          {
+            /* neon has already xml-unescaped the cdata for us. */            
+            final_val = baton->cdata_accum->data;
+          }
+
+        if (elm->id == ELEM_lock_owner)
+          baton->current_lock->owner = apr_pstrdup(baton->pool, final_val);
+        if (elm->id == ELEM_lock_comment)
+          baton->current_lock->comment = apr_pstrdup(baton->pool, final_val);
+
+        /* clean up the accumulator. */
+        svn_stringbuf_setempty(baton->cdata_accum);
+        svn_pool_clear(baton->scratchpool);
+        break;
+      }      
+
+
+    default:
+      break;
+    }
+
+  return 0;
+}
+  
+
+
+svn_error_t *
+svn_ra_dav__get_locks(svn_ra_session_t *session,
+                      apr_hash_t **locks,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  svn_ra_dav__session_t *ras = session->priv;
+  const char *body, *url;
+  svn_error_t *err;
+  int status_code = 0;
+  get_locks_baton_t baton;
+
+  baton.lock_hash = apr_hash_make (pool);
+  baton.pool = pool;
+  baton.scratchpool = svn_pool_create(pool);
+  baton.err = NULL;
+  baton.current_lock = NULL;
+  baton.encoding = NULL;
+  baton.cdata_accum = svn_stringbuf_create("", pool);
+
+  body = apr_psprintf(pool,
+                      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                      "<S:get-locks-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                      "xmlns:D=\"DAV:\">"
+                      "</S:get-locks-report>");
+
+
+  /* We always run the report on the 'public' URL, which represents
+     HEAD anyway.  If the path doesn't exist in HEAD, then
+     svn_ra_get_locks() *should* fail.  Lock queries are always on HEAD. */
+  url = svn_path_url_add_component (ras->url, path, pool);
+
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
+                                   body, NULL, NULL,
+                                   getlocks_start_element,
+                                   getlocks_cdata_handler,
+                                   getlocks_end_element,
+                                   &baton,
+                                   NULL, /* extra headers */
+                                   &status_code,
+                                   FALSE,
+                                   pool);
+  if (baton.err)
+    return baton.err;
+
+  /* Map status 501: Method Not Implemented to our not implemented error.
+     1.0.x servers and older don't support this report. */
+  if (status_code == 501)
+    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("Server does not support locking features"));
+
+  if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+    return svn_error_quick_wrap(err,
+                                _("Server does not support locking features"));
+
+  else if (err)
+    return err;
+
+  svn_pool_destroy(baton.scratchpool);
+
+  *locks = baton.lock_hash;
+  return err;
+}
+
+/* ------------------------------------------------------------------------- */
+
+
+svn_error_t *svn_ra_dav__change_rev_prop (svn_ra_session_t *session,
                                           svn_revnum_t rev,
                                           const char *name,
                                           const svn_string_t *value,
                                           apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_ra_dav_resource_t *baseline;
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
@@ -1293,7 +1658,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
     }
 
   err = svn_ra_dav__do_proppatch(ras, baseline->url, prop_changes,
-                                 prop_deletes, pool);
+                                 prop_deletes, NULL, pool);
   if (err)
     return 
       svn_error_create
@@ -1305,12 +1670,12 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
 }
 
 
-svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
+svn_error_t *svn_ra_dav__rev_proplist (svn_ra_session_t *session,
                                        svn_revnum_t rev,
                                        apr_hash_t **props,
                                        apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_ra_dav_resource_t *baseline;
 
   *props = apr_hash_make (pool);
@@ -1333,7 +1698,7 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
 }
 
 
-svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
+svn_error_t *svn_ra_dav__rev_prop (svn_ra_session_t *session,
                                    svn_revnum_t rev,
                                    const char *name,
                                    svn_string_t **value,
@@ -1346,7 +1711,7 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
    * if it has a colon in its name.  While more costly this allows DAV
    * clients to still gain access to all the allowed property names.
    * See Issue #1807 for more details. */
-  SVN_ERR (svn_ra_dav__rev_proplist (session_baton, rev, &props, pool));
+  SVN_ERR (svn_ra_dav__rev_proplist (session, rev, &props, pool));
 
   *value = apr_hash_get (props, name, APR_HASH_KEY_STRING);
 
@@ -1580,7 +1945,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
     case ELEM_resource:
       att = svn_xml_get_attr_value("path", atts);
       /* ### verify we got it. punt on error. */
-      rb->current_wcprop_path = svn_path_join(rb->target, att, rb->ras->pool);
+      rb->current_wcprop_path = apr_pstrdup(rb->ras->pool, att);
       break;
 
     case ELEM_open_directory:
@@ -1784,6 +2149,14 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_txdelta:
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore <txdelta> tags
+         altogether. */
+      if (! rb->receiving_all)
+        break;
+
       CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
                                              NULL, /* ### base_checksum */
                                              rb->file_pool,
@@ -1819,11 +2192,12 @@ start_element(void *userdata, int parent_state, const char *nspace,
 
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
-        rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                    NULL, TOP_DIR(rb).pool);
+        CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                            rb->namestr->data, 
+                                            NULL, TOP_DIR(rb).pool) );
       else
-        rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                     NULL, rb->file_pool);
+        CHKERR( rb->editor->change_file_prop(rb->file_baton, rb->namestr->data,
+                                             NULL, rb->file_pool) );
       break;
       
     case ELEM_fetch_props:
@@ -1836,11 +2210,13 @@ start_element(void *userdata, int parent_state, const char *nspace,
           svn_stringbuf_set(rb->namestr, SVN_PROP_PREFIX "BOGOSITY");
 
           if (rb->file_baton == NULL)
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        NULL, TOP_DIR(rb).pool);
+            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->namestr->data, 
+                                                NULL, TOP_DIR(rb).pool) );
           else
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         NULL, rb->file_pool);
+            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->namestr->data, 
+                                                 NULL, rb->file_pool) );
         }
       else
         {
@@ -1950,10 +2326,10 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
           props = rsrc->propset;
         }
 
-      add_props(props, 
-                rb->editor->change_file_prop, 
-                rb->file_baton,
-                pool);
+      SVN_ERR(add_props(props, 
+                        rb->editor->change_file_prop, 
+                        rb->file_baton,
+                        pool));
     }
   else
     {
@@ -1977,10 +2353,10 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
           props = rsrc->propset;
         }
 
-      add_props(props, 
-                rb->editor->change_dir_prop, 
-                TOP_DIR(rb).baton, 
-                pool);
+      SVN_ERR(add_props(props, 
+                        rb->editor->change_dir_prop, 
+                        TOP_DIR(rb).baton, 
+                        pool));
     }
     
   return SVN_NO_ERROR;
@@ -2007,6 +2383,14 @@ static int cdata_handler(void *userdata, int state,
       {
         apr_size_t nlen = len;
 
+        /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+           <fetch-file>s and such) when *not* in "send-all" mode.  As a
+           client, we're smart enough to know that's wrong, so when not
+           in "receiving-all" mode, we'll ignore <txdelta> tags
+           altogether. */
+        if (! rb->receiving_all)
+          break;
+
         CHKERR( svn_stream_write(rb->base64_decoder, cdata, &nlen) );
         if (nlen != len)
           {
@@ -2014,7 +2398,7 @@ static int cdata_handler(void *userdata, int state,
             CHKERR( svn_error_createf
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                      _("Error writing to '%s': unexpected EOF"),
-                     rb->namestr->data) );
+                     svn_path_local_style(rb->namestr->data, rb->ras->pool)) );
           }
       }
       break;
@@ -2100,6 +2484,14 @@ static int end_element(void *userdata, int state,
       break;
 
     case ELEM_txdelta:
+      /* Pre 1.2, mod_dav_svn was using <txdelta> tags (in addition to
+         <fetch-file>s and such) when *not* in "send-all" mode.  As a
+         client, we're smart enough to know that's wrong, so when not
+         in "receiving-all" mode, we'll ignore <txdelta> tags
+         altogether. */
+      if (! rb->receiving_all)
+        break;
+
       CHKERR( svn_stream_close(rb->base64_decoder) );
       rb->whandler = NULL;
       rb->whandler_baton = NULL;
@@ -2158,13 +2550,15 @@ static int end_element(void *userdata, int state,
         /* Set the prop. */
         if (rb->file_baton)
           {
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
-                                         decoded_value_p, pool);
+            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+                                                 rb->namestr->data, 
+                                                 decoded_value_p, pool) );
           }
         else
           {
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
-                                        decoded_value_p, pool);
+            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                                rb->namestr->data, 
+                                                decoded_value_p, pool) );
           }
       }
 
@@ -2194,7 +2588,8 @@ static int end_element(void *userdata, int state,
                                                     rb->current_wcprop_path,
                                                     SVN_RA_DAV__LP_VSN_URL,
                                                     &href_val,
-                                                    rb->ras->pool) );
+                                                    rb->scratch_pool) );
+          svn_pool_clear(rb->scratch_pool);
         }
       /* else we're setting a wcprop in the context of an editor drive. */
       else if (rb->file_baton == NULL)
@@ -2266,23 +2661,28 @@ static svn_error_t * reporter_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
                                        svn_boolean_t start_empty,
+                                       const char *lock_token,
                                        apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
+  const char *tokenstring = "";
+
+  if (lock_token)
+    tokenstring = apr_psprintf (pool, "lock-token=\"%s\"", lock_token);
 
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\""
+                         "<S:entry rev=\"%ld\" %s"
                          " start-empty=\"true\">%s</S:entry>" DEBUG_CR,
-                         revision, qpath->data);
+                         revision, tokenstring, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\">"
+                         "<S:entry rev=\"%ld\" %s>"
                          "%s</S:entry>" DEBUG_CR,
-                         revision, qpath->data);
+                         revision, tokenstring, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }
@@ -2293,12 +2693,17 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                         const char *url,
                                         svn_revnum_t revision,
                                         svn_boolean_t start_empty,
+                                        const char *lock_token,
                                         apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
   svn_string_t bc_relative;
+  const char *tokenstring = "";
+
+  if (lock_token)
+    tokenstring = apr_psprintf (pool, "lock-token=\"%s\"", lock_token);
 
   /* Convert the copyfrom_* url/rev "public" pair into a Baseline
      Collection (BC) URL that represents the revision -- and a
@@ -2313,15 +2718,15 @@ static svn_error_t * reporter_link_path(void *report_baton,
   svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\""
+                         "<S:entry rev=\"%ld\" %s"
                          " linkpath=\"/%s\" start-empty=\"true\""
                          ">%s</S:entry>" DEBUG_CR,
-                         revision, qlinkpath->data, qpath->data);
+                         revision, tokenstring, qlinkpath->data, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\""
+                         "<S:entry rev=\"%ld\" %s"
                          " linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
-                         revision, qlinkpath->data, qpath->data);
+                         revision, tokenstring,  qlinkpath->data, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }
@@ -2363,10 +2768,13 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   const char *vcc;
   int http_status;
 
+#define SVN_RA_DAV__REPORT_TAIL  "</S:update-report>" DEBUG_CR
   /* write the final closing gunk to our request body. */
   SVN_ERR( svn_io_file_write_full(rb->tmpfile,
-                                  report_tail, sizeof(report_tail) - 1,
+                                  SVN_RA_DAV__REPORT_TAIL, 
+                                  sizeof(SVN_RA_DAV__REPORT_TAIL) - 1,
                                   NULL, rb->ras->pool) );
+#undef SVN_RA_DAV__REPORT_TAIL
 
   /* get the editor process prepped */
   rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
@@ -2391,7 +2799,8 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                    cdata_handler,
                                    end_element,
                                    rb,
-                                   NULL, &http_status, rb->ras->pool);
+                                   NULL, &http_status, 
+                                   rb->spool_response, rb->ras->pool);
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
@@ -2417,7 +2826,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   return SVN_NO_ERROR;
 }
 
-static const svn_ra_reporter_t ra_dav_reporter = {
+static const svn_ra_reporter2_t ra_dav_reporter = {
   reporter_set_path,
   reporter_delete_path,
   reporter_link_path,
@@ -2426,11 +2835,43 @@ static const svn_ra_reporter_t ra_dav_reporter = {
 };
 
 
-/* Make a generic reporter/baton for reporting the state of the
-   working copy during updates or status checks. */
+/* Make a generic REPORTER / REPORT_BATON for reporting the state of
+   the working copy against REVISION during updates or status checks.
+   The server will drive EDITOR / EDIT_BATON to indicate how to
+   transform the working copy into the requested target.
+
+   SESSION is the RA session in use.  TARGET is an optional single
+   path component will restrict the scope of the operation to an entry
+   in the directory represented by the SESSION's URL, or empty if the
+   entire directory is meant to be the target.
+
+   If RECURSE is set, the operation will be recursive (intead of
+   "depth 1").
+
+   If IGNORE_ANCESTRY is set, the server will transmit real diffs
+   between the working copy and the target even if those objects are
+   not historically related.  Otherwise, the response will generally
+   look like a giant delete followed by a giant add.
+
+   RESOURCE_WALK controls whether to ask the DAV server to supply an
+   entire tree's worth of version-resource-URL working copy cache
+   updates.
+
+   FETCH_CONTENT is used by the REPORT response parser to determine
+   whether it should bother getting the contents of files represented
+   in the delta response (of if a directory delta is all that is of
+   interest).
+
+   If SEND_ALL is set, the server will be asked to embed contents into
+   the main response.
+
+   If SPOOL_RESPONSE is set, the REPORT response will be cached to
+   disk in a tmpfile (in full), then read back and parsed.
+ 
+   Oh, and do all this junk in POOL.  */
 static svn_error_t *
-make_reporter (void *session_baton,
-               const svn_ra_reporter_t **reporter,
+make_reporter (svn_ra_session_t *session,
+               const svn_ra_reporter2_t **reporter,
                void **report_baton,
                svn_revnum_t revision,
                const char *target,
@@ -2441,9 +2882,11 @@ make_reporter (void *session_baton,
                const svn_delta_editor_t *editor,
                void *edit_baton,
                svn_boolean_t fetch_content,
+               svn_boolean_t send_all,
+               svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   report_baton_t *rb;
   const char *s;
 
@@ -2451,12 +2894,14 @@ make_reporter (void *session_baton,
 
   rb = apr_pcalloc(pool, sizeof(*rb));
   rb->ras = ras;
+  rb->scratch_pool = svn_pool_create(pool);
   rb->editor = editor;
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
   rb->is_switch = dst_path ? TRUE : FALSE;
   rb->target = target;
   rb->receiving_all = FALSE;
+  rb->spool_response = spool_response;
   rb->whandler = NULL;
   rb->whandler_baton = NULL;
   rb->svndiff_decoder = NULL;
@@ -2483,14 +2928,16 @@ make_reporter (void *session_baton,
      ### with an error. */
 
   /* prep the file */
-  SVN_ERR( svn_io_file_write_full(rb->tmpfile, report_head,
-                                  sizeof(report_head) - 1, NULL, pool) );
+  s = apr_psprintf(pool, "<S:update-report send-all=\"%s\" xmlns:S=\""
+                   SVN_XML_NAMESPACE "\">" DEBUG_CR, 
+                   send_all ? "true" : "false");
+  SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* always write the original source path.  this is part of the "new
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
-  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->url);
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, ras->url);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* an invalid revnum means "latest". we can just omit the target-revision
@@ -2498,8 +2945,8 @@ make_reporter (void *session_baton,
   if (SVN_IS_VALID_REVNUM(revision))
     {
       s = apr_psprintf(pool, 
-                       "<S:target-revision>%ld"
-                       "</S:target-revision>", revision);
+                       "<S:target-revision>%ld</S:target-revision>" DEBUG_CR, 
+                       revision);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
@@ -2510,7 +2957,7 @@ make_reporter (void *session_baton,
       svn_xml_escape_cdata_cstring(&escaped_target, target, pool);
 
       s = apr_psprintf(pool,
-                       "<S:update-target>%s</S:update-target>",
+                       "<S:update-target>%s</S:update-target>" DEBUG_CR,
                        escaped_target->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
@@ -2525,7 +2972,7 @@ make_reporter (void *session_baton,
       svn_stringbuf_t *dst_path_str = NULL;
       svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, pool);
 
-      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>",
+      s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>" DEBUG_CR,
                        dst_path_str->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
@@ -2533,7 +2980,7 @@ make_reporter (void *session_baton,
   /* mod_dav_svn will assume recursive, unless it finds this element. */
   if (!recurse)
     {
-      const char * data = "<S:recursive>no</S:recursive>";
+      const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
@@ -2541,14 +2988,30 @@ make_reporter (void *session_baton,
   /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
   if (ignore_ancestry)
     {
-      const char * data = "<S:ignore-ancestry>yes</S:ignore-ancestry>";
+      const char *data = "<S:ignore-ancestry>yes</S:ignore-ancestry>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
+
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
-      const char * data = "<S:resource-walk>yes</S:resource-walk>";
+      const char *data = "<S:resource-walk>yes</S:resource-walk>" DEBUG_CR;
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                      NULL, pool) );
+    }
+
+  /* When in 'send-all' mode, mod_dav_svn will assume that it should
+     calculate and transmit real text-deltas (instead of empty windows
+     that merely indicate "text is changed") unless it finds this
+     element.  When not in 'send-all' mode, mod_dav_svn will never
+     send text-deltas at all.
+  
+     NOTE: Do NOT count on servers actually obeying this, as some exist
+     which obey send-all, but do not check for this directive at all! */
+  if (send_all && (! fetch_content))
+    {
+      const char *data = "<S:text-deltas>no</S:text-deltas>" DEBUG_CR;
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
                                       NULL, pool) );
     }
@@ -2560,8 +3023,8 @@ make_reporter (void *session_baton,
 }                      
 
 
-svn_error_t * svn_ra_dav__do_update(void *session_baton,
-                                    const svn_ra_reporter_t **reporter,
+svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
+                                    const svn_ra_reporter2_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
@@ -2570,7 +3033,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     void *wc_update_baton,
                                     apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision_to_update_to,
@@ -2582,12 +3045,14 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
+                        TRUE, /* send_all */
+                        FALSE, /* spool_response */
                         pool);
 }
 
 
-svn_error_t * svn_ra_dav__do_status(void *session_baton,
-                                    const svn_ra_reporter_t **reporter,
+svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
+                                    const svn_ra_reporter2_t **reporter,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_revnum_t revision,
@@ -2596,7 +3061,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     void *wc_status_baton,
                                     apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision,
@@ -2608,12 +3073,14 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         wc_status,
                         wc_status_baton,
                         FALSE, /* fetch_content */
+                        TRUE, /* send_all */
+                        FALSE, /* spool_response */
                         pool);
 }
 
 
-svn_error_t * svn_ra_dav__do_switch(void *session_baton,
-                                    const svn_ra_reporter_t **reporter,
+svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
+                                    const svn_ra_reporter2_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
@@ -2623,7 +3090,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     void *wc_update_baton,
                                     apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision_to_update_to,
@@ -2631,16 +3098,19 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         switch_url,
                         recurse,
                         TRUE,
-                        TRUE,
+                        FALSE, /* ### Disabled, pre-1.2 servers sometimes
+                                  return incorrect resource-walk data */
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
+                        TRUE, /* send_all */
+                        FALSE, /* spool_response */
                         pool);
 }
 
 
-svn_error_t * svn_ra_dav__do_diff(void *session_baton,
-                                  const svn_ra_reporter_t **reporter,
+svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
+                                  const svn_ra_reporter2_t **reporter,
                                   void **report_baton,
                                   svn_revnum_t revision,
                                   const char *diff_target,
@@ -2651,7 +3121,7 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   void *wc_diff_baton,
                                   apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
+  return make_reporter (session,
                         reporter,
                         report_baton,
                         revision,
@@ -2663,5 +3133,7 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         wc_diff,
                         wc_diff_baton,
                         TRUE, /* fetch_content */
+                        FALSE, /* send_all */
+                        TRUE, /* spool_response */
                         pool);
 }

@@ -20,14 +20,13 @@
 
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_sorts.h"
+#include "svn_props.h"
 
 #include "svn_private_config.h"
 
@@ -101,8 +100,8 @@ cleanup_tempfile (void *f)
 
 
 
-/* Create a blame chunk associated with REV for a change starting
-   at token START. */
+/* Return a blame chunk associated with REV for a change starting
+   at token START, and allocated in BATON->mainpool. */
 static struct blame *
 blame_create (struct file_rev_baton *baton, struct rev *rev, apr_off_t start)
 {
@@ -196,7 +195,7 @@ blame_delete_range (struct file_rev_baton *db, apr_off_t start,
   return SVN_NO_ERROR;
 }
 
-/* Insert a chunk of blame associated with DB->REV starting
+/* Insert a chunk of blame associated with DB->rev starting
    at token START and continuing for LENGTH tokens */
 static svn_error_t *
 blame_insert_range (struct file_rev_baton *db, apr_off_t start,
@@ -213,7 +212,7 @@ blame_insert_range (struct file_rev_baton *db, apr_off_t start,
       insert->next = point->next;
       point->next = insert;
     }
-  else if (!point->next || point->next->start > start + length)
+  else
     {
       struct blame *middle;
       middle = blame_create (db, db->rev, start);
@@ -221,12 +220,6 @@ blame_insert_range (struct file_rev_baton *db, apr_off_t start,
       middle->next = insert;
       insert->next = point->next;
       point->next = middle;
-    }
-  else
-    {
-      insert = blame_create (db, db->rev, start);
-      insert->next = point->next;
-      point->next = insert;
     }
   blame_adjust (insert->next, length);
 
@@ -387,7 +380,7 @@ check_mimetype (apr_array_header_t *prop_diffs, const char *target,
         return svn_error_createf 
           (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
            _("Cannot calculate blame information for binary file '%s'"),
-           target);
+           svn_path_local_style (target, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -412,15 +405,17 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
   /* If this file has a non-textual mime-type, bail out. */
   SVN_ERR (check_mimetype (prop_diffs, frb->target, frb->currpool));
 
-  if (frb->ctx->notify_func)
-    frb->ctx->notify_func (frb->ctx->notify_baton,
-                           path,
-                           svn_wc_notify_blame_revision,
-                           svn_node_none,
-                           NULL,
-                           svn_wc_notify_state_inapplicable,
-                           svn_wc_notify_state_inapplicable,
-                           revnum);
+  if (frb->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(path, svn_wc_notify_blame_revision, pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = revnum;
+      frb->ctx->notify_func2 (frb->ctx->notify_baton2, notify, pool);
+    }
 
   if (frb->ctx->cancel_func)
     SVN_ERR (frb->ctx->cancel_func (frb->ctx->cancel_baton));
@@ -506,22 +501,21 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
 
 static svn_error_t *
 old_blame (const char *target, const char *url,
-           svn_ra_plugin_t *ra_lib,
-           void *session,
+           svn_ra_session_t *ra_session,
            struct file_rev_baton *frb);
 
 svn_error_t *
-svn_client_blame (const char *target,
-                  const svn_opt_revision_t *start,
-                  const svn_opt_revision_t *end,
-                  svn_client_blame_receiver_t receiver,
-                  void *receiver_baton,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+svn_client_blame2 (const char *target,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *start,
+                   const svn_opt_revision_t *end,
+                   svn_client_blame_receiver_t receiver,
+                   void *receiver_baton,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   struct file_rev_baton frb;
-  svn_ra_plugin_t *ra_lib; 
-  void *session;
+  svn_ra_session_t *ra_session;
   const char *url;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk;
@@ -536,11 +530,11 @@ svn_client_blame (const char *target,
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &end_revnum,
-                                         &url, target, end,
-                                         ctx, pool));
+  SVN_ERR (svn_client__ra_session_from_path (&ra_session, &end_revnum,
+                                             &url, target, peg_revision, end,
+                                             ctx, pool));
 
-  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, session,
+  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_session,
                                             start, target, pool));
 
   if (end_revnum < start_revnum)
@@ -566,17 +560,17 @@ svn_client_blame (const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  err = ra_lib->get_file_revs (session, "",
-                               start_revnum - (start_revnum > 0 ? 1 : 0),
-                               end_revnum,
-                               file_rev_handler, &frb, pool);
-
+  err = svn_ra_get_file_revs (ra_session, "",
+                              start_revnum - (start_revnum > 0 ? 1 : 0),
+                              end_revnum,
+                              file_rev_handler, &frb, pool);
+  
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       svn_error_clear (err);
-      err = old_blame (target, url, ra_lib, session, &frb);
+      err = old_blame (target, url, ra_session, &frb);
     }
 
   SVN_ERR (err);
@@ -629,11 +623,24 @@ svn_client_blame (const char *target,
 }
 
 
+svn_error_t *
+svn_client_blame (const char *target,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  svn_client_blame_receiver_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_blame2 (target, end, start, end,
+                            receiver, receiver_baton, ctx, pool);
+}
+
+
 /* This is used when there is no get_file_revs available. */
 static svn_error_t *
 old_blame (const char *target, const char *url,
-           svn_ra_plugin_t *ra_lib,
-           void *session,
+           svn_ra_session_t *ra_session,
            struct file_rev_baton *frb)
 {
   const char *reposURL;
@@ -645,7 +652,7 @@ old_blame (const char *target, const char *url,
   svn_node_kind_t kind;
   apr_pool_t *pool = frb->mainpool;
 
-  SVN_ERR (ra_lib->check_path (session, "", frb->end_rev, &kind, pool));
+  SVN_ERR (svn_ra_check_path (ra_session, "", frb->end_rev, &kind, pool));
 
   if (kind == svn_node_dir)
     return svn_error_createf (SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
@@ -654,7 +661,7 @@ old_blame (const char *target, const char *url,
   condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
   (*((const char **)apr_array_push (condensed_targets))) = "";
 
-  SVN_ERR (ra_lib->get_repos_root (session, &reposURL, pool));
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &reposURL, pool));
 
   /* URI decode the path before placing it in the baton, since changed_paths
      passed into log_message_receiver will not be URI encoded. */
@@ -668,17 +675,18 @@ old_blame (const char *target, const char *url,
   /* Accumulate revision metadata by walking the revisions
      backwards; this allows us to follow moves/copies
      correctly. */
-  SVN_ERR (ra_lib->get_log (session,
-                            condensed_targets,
-                            frb->end_rev,
-                            frb->start_rev,
-                            TRUE,
-                            FALSE,
-                            log_message_receiver,
-                            &lmb,
-                            pool));
+  SVN_ERR (svn_ra_get_log (ra_session,
+                           condensed_targets,
+                           frb->end_rev,
+                           frb->start_rev,
+                           0, /* no limit */
+                           TRUE,
+                           FALSE,
+                           log_message_receiver,
+                           &lmb,
+                           pool));
 
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, reposURL, NULL,
                                         NULL, NULL, FALSE, FALSE,
                                         frb->ctx, pool));
 
@@ -725,7 +733,7 @@ old_blame (const char *target, const char *url,
                                 "revision %ld of '%s' "
                                 "lacks a prior revision"),
                               lmb.action, lmb.eldest->revision,
-                              lmb.eldest->path);
+                              svn_path_local_style (lmb.eldest->path, pool));
 
   /* Walk the revision list in chronological order, downloading
      each fulltext, diffing it with its predecessor, and accumulating
@@ -750,8 +758,8 @@ old_blame (const char *target, const char *url,
                                  apr_pool_cleanup_null);
 
       stream = svn_stream_from_aprfile (file, frb->currpool);
-      SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
-                                 stream, NULL, &props, frb->currpool));
+      SVN_ERR (svn_ra_get_file (ra_session, rev->path + 1, rev->revision,
+                                stream, NULL, &props, frb->currpool));
       SVN_ERR (svn_stream_close (stream));
       SVN_ERR (svn_io_file_close (file, frb->currpool));
 
@@ -764,18 +772,21 @@ old_blame (const char *target, const char *url,
             return svn_error_createf 
               (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
                _("Cannot calculate blame information for binary file '%s'"),
-               target);
+               svn_path_local_style (target, frb->currpool));
         }
 
-      if (frb->ctx->notify_func)
-        frb->ctx->notify_func (frb->ctx->notify_baton,
-                               rev->path,
-                               svn_wc_notify_blame_revision,
-                               svn_node_none,
-                               NULL,
-                               svn_wc_notify_state_inapplicable,
-                               svn_wc_notify_state_inapplicable,
-                               rev->revision);
+      if (frb->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify (rev->path, svn_wc_notify_blame_revision,
+                                    pool);
+          notify->kind = svn_node_none;
+          notify->content_state = notify->prop_state
+            = svn_wc_notify_state_inapplicable;
+          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+          notify->revision = rev->revision;
+          frb->ctx->notify_func2 (frb->ctx->notify_baton2, notify, pool);
+        }                               
 
       if (frb->ctx->cancel_func)
         SVN_ERR (frb->ctx->cancel_func (frb->ctx->cancel_baton));

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-20004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,7 +25,7 @@ import java.util.Date;
 
 /**
  * A general subversion directory entry. Used for SVNClientInterface.list
- * @author Cédric Chabanois 
+ * @author C&eacute;dric Chabanois 
  *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
  *
  */
@@ -106,10 +106,7 @@ public class DirEntry
 	 */
 	public Revision.Number getLastChangedRevision()
 	{
-        if(lastChangedRevision < 0)
-            return null;
-        else
-		    return new Revision.Number(lastChangedRevision);
+        return Revision.createNumber(lastChangedRevision);
 	}
 
     /**

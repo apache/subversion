@@ -30,13 +30,12 @@
 #include <mod_dav.h>
 
 #include "mod_dav_svn.h"
-#include "svn_error.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_string.h"
 
 
-module AP_MODULE_DECLARE_DATA authz_svn_module;
+extern module AP_MODULE_DECLARE_DATA authz_svn_module;
 
 enum {
     AUTHZ_SVN_NONE = 0,
@@ -106,8 +105,9 @@ static const command_rec authz_svn_cmds[] =
  * Access checking
  */
 
-static int group_contains_user(svn_config_t *cfg,
-    const char *group, const char *user, apr_pool_t *pool)
+static int group_contains_user_internal(svn_config_t *cfg,
+    const char *group, const char *user, apr_hash_t *checked_groups,
+    apr_pool_t *pool)
 {
     const char *value;
     apr_array_header_t *list;
@@ -118,11 +118,36 @@ static int group_contains_user(svn_config_t *cfg,
 
     for (i = 0; i < list->nelts; i++) {
        const char *group_user = APR_ARRAY_IDX(list, i, char *);
-       if (!strcmp(user, group_user))
+
+       if (*group_user == '@') {
+           /* Guard against circular dependencies by checking group
+            * name against hash.
+            */
+           if (apr_hash_get(checked_groups, &group_user[1],
+                            APR_HASH_KEY_STRING))
+               continue;
+	   
+           /* Add group to hash of checked groups. */
+           apr_hash_set(checked_groups, &group_user[1],
+                        APR_HASH_KEY_STRING, "");
+
+           if (group_contains_user_internal(cfg, &group_user[1], user,
+                                            checked_groups, pool))
+               return 1;
+
+       } else if (!strcmp(user, group_user)) {
            return 1;
+       }
     }
 
     return 0;
+}
+
+static int group_contains_user(svn_config_t *cfg,
+    const char *group, const char *user, apr_pool_t *pool)
+{
+    return group_contains_user_internal(cfg, group, user,
+                                        apr_hash_make(pool), pool);
 }
 
 static svn_boolean_t parse_authz_line(const char *name, const char *value,
@@ -171,7 +196,7 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
 static int parse_authz_lines(svn_config_t *cfg,
                              const char *repos_name, const char *repos_path,
                              const char *user,
-                             int required_access, int *access,
+                             int required_access, int *granted_access,
                              apr_pool_t *pool)
 {
     const char *qualified_repos_path;
@@ -186,8 +211,8 @@ static int parse_authz_lines(svn_config_t *cfg,
                                        NULL);
     svn_config_enumerate(cfg, qualified_repos_path,
                          parse_authz_line, &baton);
-    *access = !(baton.deny & required_access)
-              || (baton.allow & required_access);
+    *granted_access = !(baton.deny & required_access)
+                      || (baton.allow & required_access);
 
     if ((baton.deny & required_access)
         || (baton.allow & required_access))
@@ -195,8 +220,8 @@ static int parse_authz_lines(svn_config_t *cfg,
 
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
-    *access = !(baton.deny & required_access)
-              || (baton.allow & required_access);
+    *granted_access = !(baton.deny & required_access)
+                      || (baton.allow & required_access);
 
     return (baton.deny & required_access)
            || (baton.allow & required_access);
@@ -259,7 +284,7 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
 {
     const char *base_name;
     const char *original_repos_path = repos_path;
-    int access;
+    int granted_access;
 
     if (!repos_path) {
         /* XXX: Check if the user has 'required_access' _anywhere_ in the
@@ -271,7 +296,7 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
 
     base_name = repos_path;
     while (!parse_authz_lines(cfg, repos_name, repos_path,
-                              user, required_access, &access,
+                              user, required_access, &granted_access,
                               pool)) {
         if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
@@ -281,15 +306,15 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
         svn_path_split(repos_path, &repos_path, &base_name, pool);
     }
 
-    if (access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
+    if (granted_access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
         /* Check access on entries below the current repos path */
-        access = parse_authz_sections(cfg,
-                                      repos_name, original_repos_path,
-                                      user, required_access,
-                                      pool);
+        granted_access = parse_authz_sections(cfg,
+                                              repos_name, original_repos_path,
+                                              user, required_access,
+                                              pool);
     }
 
-    return access;
+    return granted_access;
 }
 
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
@@ -345,6 +370,8 @@ static int req_check_access(request_rec *r,
     case M_CHECKOUT:
     case M_MERGE:
     case M_MKACTIVITY:
+    case M_LOCK:
+    case M_UNLOCK:
         authz_svn_type |= AUTHZ_SVN_WRITE;
         break;
 
@@ -396,8 +423,8 @@ static int req_check_access(request_rec *r,
 
         apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
 
+        ap_unescape_url(parsed_dest_uri.path);
         dest_uri = parsed_dest_uri.path;
-        ap_unescape_url((char *)dest_uri);
         if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
             /* If it is not the same location, then we don't allow it.
              * XXX: Instead we could compare repository uuids, but that
@@ -436,11 +463,20 @@ static int req_check_access(request_rec *r,
     apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
     access_conf = user_data;
     if (access_conf == NULL) {
-        svn_err = svn_config_read(&access_conf, conf->access_file, FALSE,
+        svn_err = svn_config_read(&access_conf, conf->access_file, TRUE,
                                   r->connection->pool);
         if (svn_err) {
-            ap_log_rerror(APLOG_MARK, APLOG_ERR, svn_err->apr_err, r,
-                          "%s", svn_err->message);
+            ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                          /* If it is an error code that APR can make sense
+                             of, then show it, otherwise, pass zero to avoid
+                             putting "APR does not understand this error code"
+                             in the error log. */
+                          ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                            svn_err->apr_err < APR_OS_START_CANONERR) ?
+                           0 : svn_err->apr_err),
+                          r, "Failed to load the AuthzSVNAccessFile: %s",
+                          svn_err->message);
+            svn_error_clear(svn_err);
 
             return DECLINED;
         }

@@ -42,7 +42,7 @@ root_path="$PWD"
 ROOT_PARENT_PATH="`$DIRNAME $root_path`"
 branch_name="`echo $root_path | $SED -e "s@$ROOT_PARENT_PATH/@@"`"
 
-wc_version=`$SVNVERSION . | $SED -e 's/M//'`
+wc_version=`$SVNVERSION subversion/po | $SED -e 's/[MS]//g'`
 cd subversion/po
 
 echo "
@@ -59,22 +59,27 @@ for i in *.po ; do
   obsolete=`$MSGATTRIB --only-obsolete $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
 
   echo
-  echo "Message counts per status flag for '$i'"
-  echo ""
-  if ! $MSGFMT --check-format -o /dev/null $i ; then
-      echo "FAILS GNU msgfmt --check-format"
+  if test -z "`$SVN status $i | $GREP -E '^\?'`" ; then
+      echo "Status for '$i': in repository"
   else
-      echo "Passes GNU msgfmt --check-format"
+      echo "Status for '$i': NOT in repository"
+      echo " (See the issue tracker 'translations' subcomponent)"
   fi
-  echo
-  echo "$translated translated"
-  echo "$untranslated untranslated"
-  echo "$fuzzy fuzzy"
-  echo "$obsolete obsolete"
-  echo
 
+  echo
+  if ! $MSGFMT --check-format -o /dev/null $i ; then
+      echo "   FAILS GNU msgfmt --check-format"
+  else
+      echo "   Passes GNU msgfmt --check-format"
+      echo
+      echo "   Statistics:"
+      echo "    $obsolete obsolete"
+      echo "    $untranslated untranslated"
+      echo "    $translated translated, of which"
+      echo "       $fuzzy fuzzy"
+  fi
+  echo "
+----------------------------------------------------------------------------"
 done
-echo "
-============================================================================"
 
 

@@ -27,7 +27,6 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "client.h"
@@ -40,6 +39,7 @@
 struct status_baton
 {
   svn_error_t *err; /* the error generated for an undeletable path. */
+  apr_pool_t *pool; /* for temporary allocations */
 };
 
 
@@ -48,7 +48,7 @@ struct status_baton
 static void
 find_undeletables (void *baton,
                    const char *path,
-                   svn_wc_status_t *status)
+                   svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
 
@@ -60,10 +60,12 @@ find_undeletables (void *baton,
   if (status->text_status == svn_wc_status_obstructed)
     sb->err = svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  _("'%s' is in the way of the resource "
-                                   "actually under version control"), path);
+                                   "actually under version control"),
+                                 svn_path_local_style (path, sb->pool));
   else if (! status->entry)
     sb->err = svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"), path);
+                                 _("'%s' is not under version control"),
+                                 svn_path_local_style (path, sb->pool));
   
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
@@ -72,7 +74,8 @@ find_undeletables (void *baton,
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
     sb->err = svn_error_createf (SVN_ERR_CLIENT_MODIFIED, NULL,
-                             _("'%s' has local modifications"), path);
+                             _("'%s' has local modifications"),
+                                 svn_path_local_style (path, sb->pool));
 }
 
 
@@ -85,8 +88,9 @@ svn_client__can_delete (const char *path,
   svn_opt_revision_t revision;
   revision.kind = svn_opt_revision_unspecified;
   sb.err = SVN_NO_ERROR;
-  SVN_ERR (svn_client_status (NULL, path, &revision, find_undeletables, &sb,
-                              TRUE, FALSE, FALSE, FALSE, ctx, pool));
+  sb.pool = pool;
+  SVN_ERR (svn_client_status2 (NULL, path, &revision, find_undeletables, &sb,
+                               TRUE, FALSE, FALSE, FALSE, FALSE, ctx, pool));
   return sb.err;
 }
 
@@ -110,8 +114,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *commit_baton;
@@ -121,6 +124,7 @@ delete_urls (svn_client_commit_info_t **commit_info,
   svn_error_t *err;
   const char *common;
   int i;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Condense our list of deletion targets. */
   SVN_ERR (svn_path_condense_targets (&common, &targets, paths, TRUE, pool));
@@ -155,13 +159,9 @@ delete_urls (svn_client_commit_info_t **commit_info,
   else
     log_msg = "";
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, common, pool));
-
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, common, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, common, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
@@ -171,20 +171,25 @@ delete_urls (svn_client_commit_info_t **commit_info,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX (targets, i, const char *);
+      svn_pool_clear (subpool);
       path = svn_path_uri_decode (path, pool);
       APR_ARRAY_IDX (targets, i, const char *) = path;
-      SVN_ERR (ra_lib->check_path (session, path, SVN_INVALID_REVNUM,
-                                   &kind, pool));
+      SVN_ERR (svn_ra_check_path (ra_session, path, SVN_INVALID_REVNUM,
+                                  &kind, subpool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                                  "URL '%s' does not exist", path);
+                                  "URL '%s' does not exist",
+                                  svn_path_local_style (path, pool));
     }
+  svn_pool_destroy (subpool);
 
   /* Fetch RA commit editor */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                      log_msg, svn_client__commit_callback,
-                                      commit_baton, pool));
+  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
+                                     log_msg, svn_client__commit_callback,
+                                     commit_baton,
+                                     NULL, TRUE, /* No lock tokens */
+                                     pool));
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
@@ -208,6 +213,8 @@ svn_client__wc_delete (const char *path,
                        svn_wc_adm_access_t *adm_access,
                        svn_boolean_t force, 
                        svn_boolean_t dry_run, 
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
@@ -218,9 +225,9 @@ svn_client__wc_delete (const char *path,
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    SVN_ERR (svn_wc_delete (path, adm_access,
-                            ctx->cancel_func, ctx->cancel_baton,
-                            ctx->notify_func, ctx->notify_baton, pool));
+    SVN_ERR (svn_wc_delete2 (path, adm_access,
+                             ctx->cancel_func, ctx->cancel_baton,
+                             notify_func, notify_baton, pool));
   return SVN_NO_ERROR;
 }
 
@@ -258,10 +265,14 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
           /* Let the working copy library handle the PATH. */
-          SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path, 
-                                     TRUE, 0, subpool));
+          SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, parent_path, 
+                                     TRUE, 0, ctx->cancel_func,
+                                     ctx->cancel_baton, subpool));
           SVN_ERR (svn_client__wc_delete (path, adm_access, force, 
-                                          FALSE, ctx, subpool));
+                                          FALSE,
+                                          ctx->notify_func2,
+                                          ctx->notify_baton2,
+                                          ctx, subpool));
           SVN_ERR (svn_wc_adm_close (adm_access));
         }
       svn_pool_destroy (subpool);

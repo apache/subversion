@@ -78,11 +78,15 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
 /** Values used in keyword expansion. */
 typedef struct svn_subst_keywords_t
 {
+  /** @{ */
+  /** String expansion of the like-named keyword, or NULL if the keyword
+   * was not selected in the svn:keywords property. */
   const svn_string_t *revision;
   const svn_string_t *date;
   const svn_string_t *author;
   const svn_string_t *url;
   const svn_string_t *id;
+  /** @} */
 } svn_subst_keywords_t;
 
 
@@ -164,7 +168,7 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_subst_copy_and_translate2 except that @a special is
  * always set to @c FALSE.

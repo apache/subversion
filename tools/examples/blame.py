@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # USAGE: blame.py [-r REV] repos-path file
 #
@@ -17,8 +17,8 @@ def getfile(pool, path, filename, rev=None):
   if path[-1] == "/":
      path = path[:-1]
 
-  repos_ptr = repos.svn_repos_open(path, pool)
-  fsob = repos.svn_repos_fs(repos_ptr)
+  repos_ptr = repos.open(path, pool)
+  fsob = repos.fs(repos_ptr)
  
   if rev is None:
     rev = fs.youngest_rev(fsob, pool)

@@ -24,7 +24,6 @@
 
 #include "svn_pools.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
 #include "cl.h"
 
@@ -44,11 +43,8 @@ svn_cl__cat (apr_getopt_t *os,
   svn_stream_t *out;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
+                                          opt_state->targets, pool));
 
   /* Cat cannot operate on an implicit '.' so a filename is required */
   if (! targets->nelts)
@@ -59,11 +55,19 @@ svn_cl__cat (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
+      const char *truepath;
+      svn_opt_revision_t peg_revision;
 
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      SVN_ERR (svn_client_cat (out, target, &(opt_state->start_revision),
-                               ctx, subpool));
+
+      /* Get peg revisions. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                   subpool));
+      
+      SVN_ERR (svn_client_cat2 (out, truepath, &peg_revision,
+                                &(opt_state->start_revision),
+                                ctx, subpool));
     }
   svn_pool_destroy (subpool);
 

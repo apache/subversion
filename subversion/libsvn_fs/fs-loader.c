@@ -24,9 +24,11 @@
 
 #include "svn_types.h"
 #include "svn_version.h"
-#include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
+#include "svn_xml.h"
+#include "svn_pools.h"
+#include "svn_string.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -34,7 +36,7 @@
 /* This is defined by configure on platforms which use configure, but
    we need to define a fallback for Windows. */
 #ifndef DEFAULT_FS_TYPE
-#define DEFAULT_FS_TYPE "bdb"
+#define DEFAULT_FS_TYPE "fsfs"
 #endif
 
 #define FS_TYPE_FILENAME "fs-type"
@@ -107,48 +109,55 @@ load_module (fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Fetch a library vtable by a pointer into the library definitions array. */
+static svn_error_t *
+get_library_vtable_direct (fs_library_vtable_t **vtable,
+                           const struct fs_type_defn *fst,
+                           apr_pool_t *pool)
+{
+  fs_init_func_t initfunc = NULL;
+  const svn_version_t *my_version = svn_fs_version();
+  const svn_version_t *fs_version;
+
+  initfunc = fst->initfunc;
+  if (! initfunc)
+    SVN_ERR (load_module (&initfunc, fst->fsap_name, pool));
+
+  if (! initfunc)
+    return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                              _("Failed to load module for FS type '%s'"),
+                              fst->fs_type);
+
+  SVN_ERR (initfunc (my_version, vtable));
+  fs_version = (*vtable)->get_version();
+  if (!svn_ver_equal (my_version, fs_version))
+    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                              _("Mismatched FS module version for '%s':"
+                                " found %d.%d.%d%s,"
+                                " expected %d.%d.%d%s"),
+                              fst->fs_type,
+                              my_version->major, my_version->minor,
+                              my_version->patch, my_version->tag,
+                              fs_version->major, fs_version->minor,
+                              fs_version->patch, fs_version->tag);
+  return SVN_NO_ERROR;
+}
+
 /* Fetch a library vtable by FS type. */
 static svn_error_t *
 get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
                     apr_pool_t *pool)
 {
   const struct fs_type_defn *fst;
-  const char *fsap_name;
-  fs_init_func_t initfunc = NULL;
-  const svn_version_t *my_version = svn_fs_version();
-  const svn_version_t *fs_version;
 
   for (fst = fs_modules; fst->fs_type; fst++)
     {
       if (strcmp (fs_type, fst->fs_type) == 0)
-        break;
+        return get_library_vtable_direct (vtable, fst, pool);
     }
-
-  if (fst->fs_type)
-    {
-      fsap_name = fst->fsap_name;
-      initfunc = fst->initfunc;
-      if (! initfunc)
-        SVN_ERR (load_module (&initfunc, fsap_name, pool));
-    }
-
-  if (! initfunc)
-    return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
-                              _("Unknown FS type '%s'"), fs_type);
-
-  SVN_ERR (initfunc (my_version, vtable));
-  fs_version = (*vtable)->get_version();
-  if (!svn_ver_compatible (my_version, fs_version))
-    return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
-                              _("Mismatched FS module version for '%s':"
-                                " found %d.%d.%d%s,"
-                                " expected %d.%d.%d%s"),
-                              fs_type,
-                              my_version->major, my_version->minor,
-                              my_version->patch, my_version->tag,
-                              fs_version->major, fs_version->minor,
-                              fs_version->patch, fs_version->tag);
-  return SVN_NO_ERROR;
+  
+  return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
+                            _("Unknown FS type '%s'"), fs_type);
 }
 
 /* Fetch the library vtable for an existing FS. */
@@ -397,10 +406,18 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 /* --- Transaction functions --- */
 
 svn_error_t *
+svn_fs_begin_txn2 (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
+                   apr_uint32_t flags, apr_pool_t *pool)
+{
+  return fs->vtable->begin_txn (txn_p, fs, rev, flags, pool);
+}
+
+
+svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
                   apr_pool_t *pool)
 {
-  return fs->vtable->begin_txn (txn_p, fs, rev, pool);
+  return fs->vtable->begin_txn (txn_p, fs, rev, 0, pool);
 }
 
 svn_error_t *
@@ -644,6 +661,7 @@ svn_fs_dir_entries (apr_hash_t **entries_p, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_make_dir (svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
+  SVN_ERR (svn_path_check_valid (path, pool));
   return root->vtable->make_dir (root, path, pool);
 }
 
@@ -657,6 +675,7 @@ svn_error_t *
 svn_fs_copy (svn_fs_root_t *from_root, const char *from_path,
              svn_fs_root_t *to_root, const char *to_path, apr_pool_t *pool)
 {
+  SVN_ERR (svn_path_check_valid (to_path, pool));
   return to_root->vtable->copy (from_root, from_path, to_root, to_path, pool);
 }
 
@@ -691,6 +710,7 @@ svn_fs_file_contents (svn_stream_t **contents, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_make_file (svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
+  SVN_ERR (svn_path_check_valid (path, pool));
   return root->vtable->make_file (root, path, pool);
 }
 
@@ -780,6 +800,56 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
   return fs->vtable->set_uuid (fs, uuid, pool);
 }
 
+svn_error_t *
+svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path, 
+             const char *token, const char *comment, int timeout,
+             svn_revnum_t current_rev, svn_boolean_t steal_lock, 
+             apr_pool_t *pool)
+{
+  /* Enforce that the comment be xml-escapable. */
+  if (comment)
+    {
+      if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+        return svn_error_create
+          (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+           _("Lock comment has illegal characters"));      
+    }
+
+  return fs->vtable->lock (lock, fs, path, token, comment, timeout,
+                           current_rev, steal_lock, pool);  
+}
+
+svn_error_t *
+svn_fs_generate_lock_token (const char **token, svn_fs_t *fs, apr_pool_t *pool)
+{
+  return fs->vtable->generate_lock_token (token, fs, pool);  
+}
+
+svn_error_t *
+svn_fs_unlock (svn_fs_t *fs, const char *path, const char *token,
+               svn_boolean_t break_lock, apr_pool_t *pool)
+{
+  return fs->vtable->unlock (fs, path, token, break_lock, pool);
+}
+
+svn_error_t *
+svn_fs_get_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
+                 apr_pool_t *pool)
+{
+  return fs->vtable->get_lock (lock, fs, path, pool);
+}
+
+svn_error_t *
+svn_fs_get_locks (svn_fs_t *fs, const char *path,
+                  svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton,
+                  apr_pool_t *pool)
+{
+  return fs->vtable->get_locks (fs, path, get_locks_func, 
+                                get_locks_baton, pool);
+}
+
+
 
 /* --- History functions --- */
 
@@ -833,6 +903,45 @@ svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
   return a->vtable->compare (a, b);
 }
+
+svn_error_t *
+svn_fs_print_modules (svn_stringbuf_t *output,
+                      apr_pool_t *pool)
+{
+  const struct fs_type_defn *defn;
+  fs_library_vtable_t *vtable;
+  apr_pool_t *iterpool = svn_pool_create (pool);
+
+  for (defn = fs_modules; defn->fs_type != NULL; ++defn)
+    {
+      char *line;
+      svn_error_t *err;
+
+      svn_pool_clear (iterpool);
+
+      err = get_library_vtable_direct (&vtable, defn, iterpool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_FS_UNKNOWN_FS_TYPE)
+            {
+              svn_error_clear (err);
+              continue;
+            }
+          else
+            return err;
+        }
+
+      line = apr_psprintf (iterpool, "* fs_%s : %s\n",
+                           defn->fsap_name,
+                           vtable->get_description());
+      svn_stringbuf_appendcstr (output, line);
+    }
+
+  svn_pool_destroy (iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Return the library version number. */
 const svn_version_t *

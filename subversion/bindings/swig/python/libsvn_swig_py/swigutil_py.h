@@ -34,18 +34,13 @@
 #include "svn_client.h"
 #include "svn_repos.h"
 
-#if SVN_SWIG_VERSION >= 103020
-#include "python/precommon.swg"
-#ifndef SWIG_NewPointerObj
-#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
-#endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
+
+#if SVN_SWIG_VERSION < 103024
 /* If this file is being included outside of a wrapper file, then need to
    create stubs for some of the SWIG types. */
 
@@ -57,11 +52,25 @@ extern "C" {
 
 #ifdef SVN_NEED_SWIG_TYPES
 
+#if SVN_SWIG_VERSION >= 103020
+#include "python/precommon.swg"
+#ifndef SWIG_ConvertPtr
+#define SWIG_ConvertPtr SWIG_Python_ConvertPtr
+#endif
+#ifndef SWIG_NewPointerObj
+#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
+#endif
+#endif
+
 typedef struct _unnamed swig_type_info;
+
 PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
 swig_type_info *SWIG_TypeQuery(const char *name);
+int SWIG_ConvertPtr(PyObject *, void **, swig_type_info *, int flags);
 
 #endif /* SVN_NEED_SWIG_TYPES */
+#endif /* SVN_SWIG_VERSION < 103024 */
+
 
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);
@@ -102,7 +111,21 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
 /* helper function to convert an array of 'svn_revnum_t' to a Python list
    of int objects */
+/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
+*/
+
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an apr_hash_t mapping const char *'s to const char *'s,
+   allocated in POOL. */
+apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
+                                             apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an apr_hash_t mapping const char *'s to svn_string_t's,
+   allocated in POOL. */
+apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
+                                           apr_pool_t *pool);
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
@@ -125,6 +148,9 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 apr_file_t *svn_swig_py_make_file(PyObject *py_file,
                                   apr_pool_t *pool);
 
+svn_stream_t *svn_swig_py_make_stream(PyObject *py_io,
+                                      apr_pool_t *pool);
+
 /* a notify function that executes a Python function that is passed in
    via the baton argument */
 void svn_swig_py_notify_func(void *baton,
@@ -146,6 +172,11 @@ void svn_swig_py_status_func(void *baton,
    cancel_baton argument. */
 svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
 
+/* thunked fs get_locks function */
+svn_error_t *svn_swig_py_fs_get_locks_func (void *baton, 
+                                            svn_lock_t *lock, 
+                                            apr_pool_t *pool);
+
 /* thunked commit log fetcher */
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
@@ -166,7 +197,7 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
                                             svn_revnum_t revision,
                                             apr_pool_t *pool);
 
-/* thunked log receiver function.  */
+/* thunked log receiver function */
 svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       apr_hash_t *changed_paths,
                                       svn_revnum_t rev,
@@ -174,6 +205,54 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       const char *date,
                                       const char *msg,
                                       apr_pool_t *pool);
+
+/* thunked blame receiver function */
+svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
+                                                    apr_int64_t line_no,
+                                                    svn_revnum_t revision,
+                                                    const char *author,
+                                                    const char *date,
+                                                    const char *line,
+                                                    apr_pool_t *pool);
+
+/* auth provider callbacks */
+svn_error_t *svn_swig_py_auth_simple_prompt_func(
+    svn_auth_cred_simple_t **cred,
+    void *baton,
+    const char *realm,
+    const char *username,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_username_prompt_func(
+    svn_auth_cred_username_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_server_trust_prompt_func(
+    svn_auth_cred_ssl_server_trust_t **cred,
+    void *baton,
+    const char *realm,
+    apr_uint32_t failures,
+    const svn_auth_ssl_server_cert_info_t *cert_info,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_client_cert_prompt_func(
+    svn_auth_cred_ssl_client_cert_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
+    svn_auth_cred_ssl_client_cert_pw_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

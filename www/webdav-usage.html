@@ -1,3 +1,5 @@
+<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
+"http://style.tigris.org/tigris_transitional.dtd">
 <html>
 <head>
 <title>Use of WebDAV in Subversion</title>
@@ -238,7 +240,7 @@
       baseline collection.
     </p>
     <p class="comment">
-      <i>(moved here from below; need to rewrite)</i><br>
+      <i>(moved here from below; need to rewrite)</i><br/>
       When the initial checkout was performed, Subversion fetched
       the <span class="prop">DAV:activity-collection-set</span> value
       and stored it as a property on each directory in the working copy.
@@ -279,14 +281,14 @@ property for each
       <dd>
 	Request: <span class="method">OPTIONS</span> for
 	<span class="prop">DAV:activity-collection-set</span>
-	<br>
+	<br/>
 	Response: <span class="url">http://www.example.com/repos/foo/$svn/act/</span>
       </dd>
       <dt>At commit time:</dt>
       <dd>
 	Request: <span class="method">MKACTIVITY</span>
 	<span class="url">http://www.example.com/repos/foo/$svn/act/01234567-89ab-cdef-0123-456789abcdef</span>
-	<br>
+	<br/>
 	Response: 201 (Created)
       </dd>
     </dl>
@@ -518,12 +520,12 @@ property for each
 	specifies that we are overwriting <code>/dir1/dir2</code> with 
 	<code>/dir1/dir3</code>.
 	<p>
-	  <code>CHECKOUT&nbsp;/dir1/dir2/</code><br>
+	  <code>CHECKOUT&nbsp;/dir1/dir2/</code><br/>
 	  <i>(returns a working resource URL for the directory)</i>
 	</p>
 	<p>
-	  <code>COPY&nbsp;/dir1/dir3/</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../</code><br>
+	  <code>COPY&nbsp;/dir1/dir3/</code><br/>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../</code><br/>
 	  <code>Overwrite:&nbsp;T</code>
 	</p>
       </li>
@@ -534,12 +536,12 @@ property for each
 	<code>COPY</code> the file into the target directory's working 
 	resource:
 	<p>
-	  <code>COPY&nbsp;/dir1/dir2/file3</code><br>
+	  <code>COPY&nbsp;/dir1/dir2/file3</code><br/>
 	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../file3</code>
 	</p>
       </li>
       <li>
-	<code>CHECKOUT&nbsp;/dir1/dir3/</code><br>
+	<code>CHECKOUT&nbsp;/dir1/dir3/</code><br/>
 	<i>(returns a working resource URL for the directory)</i>
 	<p>
 	  <code>DELETE&nbsp;/$svn/wrk/.../</code>
@@ -550,7 +552,7 @@ property for each
 	<code>/dir1</code> directory. Since we don't have
 	<code>/dir1</code> checked out yet, we do so:
 	<p>
-	  <code>CHECKOUT&nbsp;/dir1/</code><br>
+	  <code>CHECKOUT&nbsp;/dir1/</code><br/>
 	  <i>(returns a working resource URL for the directory)</i>
 	</p>
 	<p>
@@ -558,7 +560,7 @@ property for each
 	  resource:
 	</p>
 	<p>
-	  <code>COPY&nbsp;/dir1/dir2/</code><br>
+	  <code>COPY&nbsp;/dir1/dir2/</code><br/>
 	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../dir4/</code>
 	</p>
       </li>
@@ -1010,7 +1012,7 @@ property for each
       <li><span class="prop">DAV:checked-out</span></li>
       <li>
 	<span class="prop">DAV:predecessor-set</span>
-	<br>
+	<br/>
 	<i>
 	  Note: the Subversion design document is not clear on the
 	  mechanics of how multiple predecessors are merged to create
@@ -1090,7 +1092,7 @@ property for each
 	<span class="prop">DAV:activity-version-set</span> -
 	activities are only used for working resources, so versions
 	cannot be part of an activity.
-	<br>
+	<br/>
 	<i>maybe this should be defined as the empty set?</i>
       </li>
       <li>
@@ -1102,7 +1104,7 @@ property for each
 	<span class="prop">DAV:activity-set</span> -
 	activities are only used for working resources, so versions
 	cannot be part of an activity.
-	<br>
+	<br/>
 	<i>maybe this should be defined as the empty set?</i>
       </li>
       <li>
@@ -1131,7 +1133,7 @@ property for each
 
     <h3>Reports</h3>
     <p>
-      The <span class="prop">DAV:supported-report-set</code> property
+      The <span class="prop">DAV:supported-report-set</span> property
       will signal support for the following reports:
     </p>
     <ul>
@@ -1148,9 +1150,9 @@ property for each
     <p>
       Discuss timeouts and auto-purge of activities (and the related
       working resources).
-      <br>
+      <br/>
       Discuss the activity database maintained by mod_dav_svn.
-      <br>
+      <br/>
       Discuss other implementation details of ra_dav and mod_dav_svn.
     </p>
 
@@ -1270,7 +1272,7 @@ property for each
       some MS/SCC library to interface to the tool.
     </blockquote>
 
-    <hr>
+    <hr/>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->

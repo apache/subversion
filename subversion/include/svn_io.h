@@ -84,8 +84,6 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  * then the @c APR_DELONCLOSE flag will be used when opening the file. The
  * @c APR_BUFFERED flag will always be used.
  *
- * @a suffix may not be null.
- *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
  * followed by an iteration number ("2", then "3", and so on),
@@ -146,7 +144,7 @@ svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
 /**
  * @since New in 1.1.
  *
- * Set @a dest to the path that the symlink at @a path references.
+ * Set @a *dest to the path that the symlink at @a path references.
  * Allocate the string from @a pool.
  */
 svn_error_t *svn_io_read_link (svn_string_t **dest,
@@ -154,7 +152,7 @@ svn_error_t *svn_io_read_link (svn_string_t **dest,
                                apr_pool_t *pool);
 
 
-/** Set @a dir to a directory path (allocated in @a pool) deemed
+/** Set @a *dir to a directory path (allocated in @a pool) deemed
  * usable for the creation of temporary files and subdirectories.
  */
 svn_error_t *svn_io_temp_dir (const char **dir,
@@ -251,6 +249,31 @@ svn_error_t *svn_io_set_file_read_write (const char *path,
                                          svn_boolean_t ignore_enoent,
                                          apr_pool_t *pool);
 
+
+/** Minimally change the read-write permissions of a file.
+ * @since New in 1.1.
+ *
+ * When making @a path read-write on operating systems with unix style
+ * permissions, set the permissions on @a path to the permissions that
+ * are set when a new file is created (effectively honoring the user's
+ * umask).
+ *
+ * When making the file read-only on operating systems with unix style
+ * permissions, remove all write permissions.
+ *
+ * On other operating systems, toggle the file's "writability" as much as
+ * the operating system allows.
+ *
+ * @a path is the utf8-encoded path to the file.  If @a enable_write
+ * is @c TRUE, then make the file read-write.  If @c FALSE, make it
+ * write-only.  If @a ignore_enoent is @c TRUE, don't fail if the target
+ * file doesn't exist.
+ */
+svn_error_t *svn_io_set_file_read_write_carefully (const char *path,
+                                                   svn_boolean_t enable_write,
+                                                   svn_boolean_t ignore_enoent,
+                                                   apr_pool_t *pool);
+    
 /** Toggle a file's "executability".
  *
  * When making the file executable on operating systems with unix style
@@ -345,7 +368,7 @@ svn_error_t *svn_io_file_checksum (unsigned char digest[],
                                    apr_pool_t *pool);
 
 
-/* Set @a *same to non-zero if @a file1 and @a file2 have the same
+/** Set @a *same to non-zero if @a file1 and @a file2 have the same
  * contents, else set it to zero.  Use @a pool for temporary allocations.
  */
 svn_error_t *svn_io_files_contents_same_p (svn_boolean_t *same,
@@ -362,9 +385,9 @@ svn_error_t *svn_io_file_create (const char *file,
                                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Lock file at @a lock_file. If @exclusive is TRUE,
+ * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
  * Lock will be automaticaly released when @a pool is cleared or destroyed.
  * Use @a pool for memory allocations.
@@ -376,7 +399,7 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
 /**
  * @since New in 1.1.
  *
- * Lock file at @a lock_file. If @exclusive is TRUE,
+ * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
  *
  * If @a nonblocking is TRUE, do not wait for the lock if it
@@ -453,19 +476,6 @@ typedef svn_error_t *(*svn_write_fn_t) (void *baton,
 /** Close handler function for a generic stream.  */
 typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 
-/** 
- * @since New in 1.2.
- *
- * Timeout handler function for a generic stream. */
-typedef void (*svn_timeout_fn_t) (void *baton, 
-                                  apr_interval_time_t interval);
-
-/**
- * @since New in 1.2.
- *
- * Data pending handler function for a generic stream.  */
-typedef svn_boolean_t (*svn_data_pending_fn_t) (void *baton);
-
 
 /** Creating a generic stream.  */
 svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
@@ -482,18 +492,6 @@ void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);
 /** Set @a stream's close function to @a close_fn */
 void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
 
-/** 
- * @since New in 1.2.
- *
- * Set @a stream's timeout function to @a timeout_fn */
-void svn_stream_set_timeout (svn_stream_t *stream, svn_timeout_fn_t timeout_fn);
-
-/**
- * @since New in 1.2.
- *
- * Set @a stream's data pending function to @a data_pending_fn */
-void svn_stream_set_data_pending (svn_stream_t *stream, 
-                                  svn_data_pending_fn_t data_pending_fn);
 
 /** Convenience function to create a generic stream which is empty.  */
 svn_stream_t *svn_stream_empty (apr_pool_t *pool);
@@ -540,19 +538,6 @@ svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
 
 /** Close a generic stream. */
 svn_error_t *svn_stream_close (svn_stream_t *stream);
-
-/** 
- * @since New in 1.2.
- *
- * Sets the timeout of a generic stream. */
-void svn_stream_timeout (svn_stream_t *stream,
-                         apr_interval_time_t interval);
-
-/**
- * @since New in 1.2.
- *
- * Checks if data is pending in a generic stream. */
-svn_boolean_t svn_stream_data_pending (svn_stream_t *stream);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
@@ -624,7 +609,7 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
- * path.  Return a @a dirents hash mapping dirent names (<tt>char *</tt>) to
+ * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
  * enumerated dirent filetypes (@c svn_node_kind_t *).
  *
  * Note:  the `.' and `..' directories normally returned by
@@ -763,7 +748,7 @@ svn_error_t *svn_io_run_diff3 (const char *dir,
 
 /** Examine utf8-encoded @a file to determine if it can be described by a
  * known (as in, known by this function) Multipurpose Internet Mail
- * Extension (MIME) type.  If so, set @a mimetype to a character string
+ * Extension (MIME) type.  If so, set @a *mimetype to a character string
  * describing the MIME type, else set it to @c NULL.  Use @a pool for any
  * necessary allocations.
  */

@@ -37,6 +37,7 @@
 #include "svn_dav.h"
 #include "svn_sorts.h"
 #include "svn_version.h"
+#include "svn_props.h"
 
 #include "dav_svn.h"
 #include "mod_dav_svn.h"
@@ -79,6 +80,46 @@ typedef struct {
   svn_stringbuf_t *repos_path;     /* the repos_path within res */
 
 } dav_svn_walker_context;
+
+
+
+/* Helper-wrapper around svn_fs_check_path(), which takes the same
+   arguments.  But: if we attempt to stat a path like "file1/file2",
+   then still return 'svn_node_none' to signal nonexistence, rather
+   than a full-blown filesystem error.  This allows mod_dav to throw
+   404 instead of 500. */
+static dav_error *
+dav_svn__fs_check_path(svn_node_kind_t *kind,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       apr_pool_t *pool)
+{
+  svn_error_t *serr;
+  svn_node_kind_t my_kind;
+
+  serr = svn_fs_check_path(&my_kind, root, path, pool);
+
+  /* Possibly trap other fs-errors here someday -- errors which may
+     simply indicate the path's nonexistence, rather than a critical
+     problem. */
+  if (serr && serr->apr_err == SVN_ERR_FS_NOT_DIRECTORY)
+    {
+      svn_error_clear(serr);
+      *kind = svn_node_none;
+      return NULL;
+    }
+  else if (serr)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 apr_psprintf(pool, "Error checking kind of "
+                                              "path '%s' in repository",
+                                              path),
+                                 pool);
+    }
+
+  *kind = my_kind;
+  return NULL;
+}
 
 
 static int dav_svn_parse_version_uri(dav_resource_combined *comb,
@@ -519,6 +560,7 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   apr_pool_t *pool = comb->res.pool;
   dav_svn_repos *repos = comb->priv.repos;
   svn_error_t *serr;
+  dav_error *derr;
   svn_node_kind_t kind;
 
   /* A REGULAR resource might have a specific revision already (e.g. if it
@@ -548,19 +590,21 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
                                  pool);
     }
 
-  serr = svn_fs_check_path(&kind, comb->priv.root.root,
-                           comb->priv.repos_path, pool);
-  if (serr != NULL)
-    {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 apr_psprintf (pool, "Error checking kind of "
-                                               "path '%s' in repository",
-                                               comb->priv.repos_path),
-                                 pool);
-    }
+  derr = dav_svn__fs_check_path(&kind, comb->priv.root.root,
+                                comb->priv.repos_path, pool);
+  if (derr != NULL)
+    return derr;
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
+
+  /* HACK:  dav_get_resource_state() is making shortcut assumptions
+     about how to distinguish a null resource from a lock-null
+     resource.  This is the only way to get around that problem.
+     Without it, it won't ever detect lock-nulls, and thus 'svn unlock
+     nonexistentURL' will always return 404's. */
+  if (! comb->res.exists)
+    comb->priv.r->path_info = (char *) "";
 
   return NULL;
 }
@@ -636,6 +680,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                          comb->priv.root.activity_id);
   apr_pool_t *pool = comb->res.pool;
   svn_error_t *serr;
+  dav_error *derr;
   svn_node_kind_t kind;
 
   if (txn_name == NULL)
@@ -730,16 +775,10 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                  pool);
     }
 
-  serr = svn_fs_check_path (&kind, comb->priv.root.root,
-                            comb->priv.repos_path, pool);
-  if (serr != NULL)
-    {
-      return dav_svn_convert_err
-        (serr, HTTP_INTERNAL_SERVER_ERROR,
-         apr_psprintf (pool, "Error checking kind of path '%s' in repository",
-                       comb->priv.repos_path),
-         pool);
-    }
+  derr = dav_svn__fs_check_path(&kind, comb->priv.root.root,
+                                comb->priv.repos_path, pool);
+  if (derr != NULL)
+    return derr;
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
@@ -863,14 +902,14 @@ static void log_warning(void *baton, svn_error_t *err)
 
 
 AP_MODULE_DECLARE(dav_error *)
-dav_svn_split_uri (request_rec *r,
-                   const char *uri_to_split,
-                   const char *root_path,
-                   const char **cleaned_uri,
-                   int *trailing_slash,
-                   const char **repos_name,
-                   const char **relative_path,
-                   const char **repos_path)
+dav_svn_split_uri(request_rec *r,
+                  const char *uri_to_split,
+                  const char *root_path,
+                  const char **cleaned_uri,
+                  int *trailing_slash,
+                  const char **repos_name,
+                  const char **relative_path,
+                  const char **repos_path)
 {
   apr_size_t len1;
   int had_slash;
@@ -1117,6 +1156,34 @@ dav_svn_split_uri (request_rec *r,
 }
 
 
+
+/* Context for cleanup handler. */
+struct cleanup_fs_access_baton
+{
+  svn_fs_t *fs;
+  apr_pool_t *pool;
+};
+
+/* Pool cleanup handler.  Make sure fs's access ctx points to NULL
+   when request pool is destroyed. */
+static apr_status_t cleanup_fs_access(void *data)
+{
+  svn_error_t *serr;
+  struct cleanup_fs_access_baton *baton = data;
+  
+  serr = svn_fs_set_access (baton->fs, NULL);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
+                    "cleanup_fs_access: error clearing fs access context.");
+      svn_error_clear(serr);
+    }
+
+  return APR_SUCCESS;
+}
+
+
+
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_path,
                                         const char *label,
@@ -1138,14 +1205,16 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   svn_error_t *serr;
   dav_error *err;
   int had_slash;
+  dav_locktoken_list *ltl;
+  struct cleanup_fs_access_baton *cleanup_baton;
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
 
   /* This does all the work of interpreting/splitting the request uri. */
-  err = dav_svn_split_uri (r, r->uri, root_path,
-                           &cleaned_uri, &had_slash, 
-                           &repos_name, &relative, &repos_path);
+  err = dav_svn_split_uri(r, r->uri, root_path,
+                          &cleaned_uri, &had_slash, 
+                          &repos_name, &relative, &repos_path);
   if (err)
     return err;
 
@@ -1199,9 +1268,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* Remember checksums, if any. */
   comb->priv.base_checksum =
-    apr_table_get (r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
+    apr_table_get(r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
   comb->priv.result_checksum =
-    apr_table_get (r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
+    apr_table_get(r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
@@ -1242,6 +1311,13 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Remember who is making this request */
   repos->username = r->user;
 
+  /* Remember if the requesting client is a Subversion client */
+  {
+    const char *ua = apr_table_get(r->headers_in, "User-Agent");
+    if (ua && (ap_strstr_c(ua, "SVN/") == ua))
+      repos->is_svn_client = TRUE;
+  }
+  
   /* Retrieve/cache open repository */
   repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
   apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);
@@ -1264,10 +1340,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
           /* Return a slightly less informative error to dav. */
           svn_error_clear(serr);
-          return dav_svn_convert_err (sanitized_error,
-                                      HTTP_INTERNAL_SERVER_ERROR,
-                                      apr_psprintf(r->pool, new_msg),
-                                      r->pool);
+          return dav_svn_convert_err(sanitized_error,
+                                     HTTP_INTERNAL_SERVER_ERROR,
+                                     apr_psprintf(r->pool, new_msg),
+                                     r->pool);
         }
 
       /* Cache the open repos for the next request on this connection */
@@ -1276,10 +1352,105 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     }
 
   /* cache the filesystem object */
-  repos->fs = svn_repos_fs (repos->repos);
+  repos->fs = svn_repos_fs(repos->repos);
 
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning, r);
+
+  /* if an authenticated username is present, attach it to the FS */
+  if (r->user)
+    {
+      svn_fs_access_t *access_ctx;
+
+      /* The fs is cached in connection->pool, but the fs access
+         context lives in r->pool.  Because the username or token
+         could change on each request, we need to make sure that the
+         fs points to a NULL access context after the request is gone. */
+      cleanup_baton = apr_pcalloc(r->pool, sizeof(*cleanup_baton));
+      cleanup_baton->pool = r->pool;
+      cleanup_baton->fs = repos->fs;      
+      apr_pool_cleanup_register(r->pool, cleanup_baton, cleanup_fs_access,
+                                apr_pool_cleanup_null);      
+      
+      /* Create an access context based on the authenticated username. */
+      serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
+      if (serr)
+        {
+          const char *new_msg = "Could not create fs access context";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+
+      /* Attach the access context to the fs. */
+      serr = svn_fs_set_access (repos->fs, access_ctx);
+      if (serr)
+        {
+          const char *new_msg = "Could not attach access context to fs";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+    }
+
+  /* Look for locktokens in the "If:" request header. */
+  err = dav_get_locktoken_list(r, &ltl);
+  
+  /* dav_get_locktoken_list claims to return a NULL list when no
+     locktokens are present.  But it actually throws this error
+     instead!  So we're deliberately trapping/ignoring it. 
+
+     This is a workaround for a bug in mod_dav.  Remove this when the
+     bug is fixed in mod_dav.  See Subversion Issue #2248 */
+  if (err && (err->error_id != DAV_ERR_IF_ABSENT))
+    return err;
+
+  /* If one or more locktokens are present in the header, push them
+     into the filesystem access context. */
+  if (ltl)
+    {
+      svn_fs_access_t *access_ctx;
+      dav_locktoken_list *list = ltl;
+
+      serr = svn_fs_get_access (&access_ctx, repos->fs);
+      if (serr)
+        {
+          const char *new_msg = "Lock token is in request, but no username.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_BAD_REQUEST,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+
+      do {
+        serr = svn_fs_access_add_lock_token (access_ctx,
+                                             list->locktoken->uuid_str);
+        if (serr)
+          return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error pushing token into filesystem.",
+                                      r->pool);
+        list = list->next;
+
+      } while (list);
+    }
+
 
   /* Figure out the type of the resource. Note that we have a PARSE step
      which is separate from a PREP step. This is because the PARSE can
@@ -1338,9 +1509,36 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                        "software.");
 }
 
+
+/* Helper func:  return the parent of PATH, allocated in POOL. */
+static const char *get_parent_path(const char *path,
+                                   apr_pool_t *pool)
+{
+  apr_size_t len;
+  const char *parentpath, *base_name;
+  char *tmp = apr_pstrdup(pool, path);
+
+  len = strlen(tmp);
+
+  if (len > 0)
+    {
+      /* Remove any trailing slash; else svn_path_split() asserts. */
+      if (tmp[len-1] == '/')
+        tmp[len-1] = '\0';      
+      svn_path_split(tmp, &parentpath, &base_name, pool);
+
+      return parentpath;
+    }  
+
+  return path;
+}
+
+
 static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
                                                dav_resource **parent_resource)
 {
+  dav_resource *parent;
+  dav_resource_private *parentinfo;
   svn_stringbuf_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
@@ -1352,8 +1550,35 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
 
   switch (resource->type)
     {
-    case DAV_RESOURCE_TYPE_WORKING:
     case DAV_RESOURCE_TYPE_REGULAR:
+
+      parent = apr_pcalloc(resource->pool, sizeof(*parent));
+      parentinfo  = apr_pcalloc(resource->pool, sizeof(*parentinfo));
+
+      parent->type = DAV_RESOURCE_TYPE_REGULAR;
+      parent->exists = 1;
+      parent->collection = 1;
+      parent->versioned = 1;
+      parent->hooks = resource->hooks;
+      parent->pool = resource->pool;
+      parent->uri = get_parent_path(resource->uri, resource->pool);
+      parent->info = parentinfo;
+
+      parentinfo->pool = resource->info->pool;
+      parentinfo->uri_path = 
+        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
+                                             resource->pool), resource->pool);
+      parentinfo->repos = resource->info->repos;
+      parentinfo->root = resource->info->root;
+      parentinfo->r = resource->info->r;
+      parentinfo->svn_client_options = resource->info->svn_client_options;
+      parentinfo->repos_path = get_parent_path(resource->info->repos_path,
+                                               resource->pool);
+
+      *parent_resource = parent;
+      break;
+
+    case DAV_RESOURCE_TYPE_WORKING:
       /* The "/" occurring within the URL of working resources is part of
          its identifier; it does not establish parent resource relationships.
          All working resources have the same parent, which is:
@@ -1411,23 +1636,23 @@ static int is_our_resource(const dav_resource *res1,
       if (res2->info->root.txn_name)
         {
           /* reopen the txn by name */
-          svn_error_clear (svn_fs_open_txn(&(res2->info->root.txn),
-                                           res2->info->repos->fs,
-                                           res2->info->root.txn_name,
-                                           res2->info->repos->pool));
+          svn_error_clear(svn_fs_open_txn(&(res2->info->root.txn),
+                                          res2->info->repos->fs,
+                                          res2->info->root.txn_name,
+                                          res2->info->repos->pool));
 
           /* regenerate the txn "root" object */
-          svn_error_clear (svn_fs_txn_root(&(res2->info->root.root),
-                                           res2->info->root.txn,
-                                           res2->info->repos->pool));
+          svn_error_clear(svn_fs_txn_root(&(res2->info->root.root),
+                                          res2->info->root.txn,
+                                          res2->info->repos->pool));
         }
       else if (res2->info->root.rev)
         {
           /* default:  regenerate the revision "root" object */
-          svn_error_clear (svn_fs_revision_root(&(res2->info->root.root),
-                                                res2->info->repos->fs,
-                                                res2->info->root.rev,
-                                                res2->info->repos->pool));
+          svn_error_clear(svn_fs_revision_root(&(res2->info->root.root),
+                                               res2->info->repos->fs,
+                                               res2->info->root.rev,
+                                               res2->info->repos->pool));
         }
     }
 
@@ -1469,10 +1694,10 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
 }
 
 
-dav_error * dav_svn_resource_kind (request_rec *r,
-                                   const char *uri,
-                                   const char *root_path,
-                                   svn_node_kind_t *kind)
+dav_error * dav_svn_resource_kind(request_rec *r,
+                                  const char *uri,
+                                  const char *root_path,
+                                  svn_node_kind_t *kind)
 {
   dav_error *derr;
   svn_error_t *serr;
@@ -1524,16 +1749,10 @@ dav_error * dav_svn_resource_kind (request_rec *r,
 
       else /* ver */
         {
-          serr = svn_fs_check_path (kind, resource->info->root.root,
-                                    resource->info->repos_path, r->pool);
-
-          if (serr)
-            return dav_svn_convert_err
-              (serr, HTTP_INTERNAL_SERVER_ERROR,
-               apr_psprintf(r->pool, 
-                            "Error checking kind of path '%s' in repository", 
-                            resource->info->repos_path),
-               r->pool);
+          derr = dav_svn__fs_check_path(kind, resource->info->root.root,
+                                        resource->info->repos_path, r->pool);
+          if (derr != NULL)
+            return derr;
         }
     }
   
@@ -1546,10 +1765,10 @@ dav_error * dav_svn_resource_kind (request_rec *r,
         {
           /* don't call fs_check_path on the txn, but on the original
              revision that the txn is based on. */
-          base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
-          serr = svn_fs_revision_root (&base_rev_root,
-                                       resource->info->repos->fs,
-                                       base_rev, r->pool);
+          base_rev = svn_fs_txn_base_revision(resource->info->root.txn);
+          serr = svn_fs_revision_root(&base_rev_root,
+                                      resource->info->repos->fs,
+                                      base_rev, r->pool);
           if (serr)
             return dav_svn_convert_err
               (serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1557,16 +1776,11 @@ dav_error * dav_svn_resource_kind (request_rec *r,
                             "Could not open root of revision %ld",
                             base_rev),
                r->pool);
-      
-          serr = svn_fs_check_path (kind, base_rev_root,
-                                    resource->info->repos_path, r->pool);
-          if (serr)
-            return dav_svn_convert_err
-              (serr, HTTP_INTERNAL_SERVER_ERROR,
-               apr_psprintf(r->pool,
-                            "Error checking kind of path '%s' in repository",
-                            resource->info->repos_path),
-               r->pool);
+
+          derr = dav_svn__fs_check_path(kind, base_rev_root,
+                                        resource->info->repos_path, r->pool);
+          if (derr != NULL)
+            return derr;      
         }
     }
 
@@ -1875,7 +2089,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
       mimetype = value ? value->data : "text/plain";
 
-      serr = svn_mime_type_validate (mimetype, resource->pool);
+      serr = svn_mime_type_validate(mimetype, resource->pool);
       if (serr)
         {
           /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
@@ -2087,6 +2301,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         const char *href = name;
         svn_boolean_t is_dir = (entry->kind == svn_node_dir);
 
+        svn_pool_clear(entry_pool);
+
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
@@ -2120,7 +2336,6 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                        "    <%s name=\"%s\" href=\"%s\"></%s>\n",
                        tag, name, href, tag);
           }
-        svn_pool_clear(entry_pool);
       }
 
     svn_pool_destroy(entry_pool);
@@ -2353,6 +2568,7 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
 {
   svn_error_t *serr;
   dav_error *err;
+  const char *src_repos_path, *dst_repos_path;
 
   /* ### source must be from a collection under baseline control. the
      ### baseline will (implicitly) indicate the source revision, and the
@@ -2394,12 +2610,30 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
       if (err)
         return err;
     }
-  
-  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
-                      src->info->repos_path, /* the relative path of src */
-                      dst->info->root.root,  /* the root object of dst txn*/ 
-                      dst->info->repos_path, /* the relative path of dst */
-                      src->pool);
+
+  serr = svn_path_get_absolute(&src_repos_path,
+                               svn_repos_path(src->info->repos->repos, 
+                                              src->pool),
+                               src->pool);
+  if (!serr)
+    serr = svn_path_get_absolute(&dst_repos_path,
+                                 svn_repos_path(dst->info->repos->repos, 
+                                                dst->pool),
+                                 dst->pool);
+
+  if (!serr)
+    {
+      if (strcmp(src_repos_path, dst_repos_path) != 0)
+        return dav_new_error_tag
+          (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+           "Copy source and destination are in different repositories.",
+           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+      serr = svn_fs_copy(src->info->root.root,  /* root object of src rev*/
+                         src->info->repos_path, /* relative path of src */
+                         dst->info->root.root,  /* root object of dst txn*/ 
+                         dst->info->repos_path, /* relative path of dst */
+                         src->pool);
+    }
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Unable to make a filesystem copy.",
@@ -2423,6 +2657,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
 {
   svn_error_t *serr;
   dav_error *err;
+  apr_hash_t *locks;
 
   /* Only activities, and working or regular resources can be deleted... */
   if (resource->type != DAV_RESOURCE_TYPE_WORKING
@@ -2474,10 +2709,10 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
   if (SVN_IS_VALID_REVNUM(resource->info->version_name))
     {
       svn_revnum_t created_rev;
-      serr = svn_fs_node_created_rev (&created_rev,
-                                      resource->info->root.root,
-                                      resource->info->repos_path,
-                                      resource->pool);
+      serr = svn_fs_node_created_rev(&created_rev,
+                                     resource->info->root.root,
+                                     resource->info->repos_path,
+                                     resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not get created rev of resource",
@@ -2485,13 +2720,32 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
 
       if (resource->info->version_name < created_rev)
         {
-          serr = svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
-                                    "Item '%s' is out of date", 
-                                    resource->info->repos_path);
+          serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                   "Item '%s' is out of date", 
+                                   resource->info->repos_path);
           return dav_svn_convert_err(serr, HTTP_CONFLICT,
                                      "Can't DELETE out-of-date resource",
                                      resource->pool);
         }
+    }
+
+  /* Before attempting the filesystem delete, we need to push any
+     incoming lock-tokens into the filesystem's access_t.  Normally
+     they come in via 'If:' header, and dav_svn_get_resource()
+     automatically notices them and does this work for us.  In the
+     case of a directory deletion, however, svn clients are sending
+     'child' lock-tokens in the DELETE request body. */
+
+  err = dav_svn__build_lock_hash(&locks, resource->info->r,
+                                 resource->info->repos_path, resource->pool);
+  if (err != NULL)
+    return err;
+
+  if (apr_hash_count(locks))
+    {
+      err = dav_svn__push_locks(resource, locks, resource->pool);
+      if (err != NULL)
+        return err;
     }
 
   if ((serr = svn_fs_delete(resource->info->root.root,
@@ -2551,11 +2805,11 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
     return err;
 
   /* Copy the src to the dst. */
-  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
-                      src->info->repos_path, /* the relative path of src */
-                      dst->info->root.root,  /* the root object of dst txn*/ 
-                      dst->info->repos_path, /* the relative path of dst */
-                      src->pool);
+  serr = svn_fs_copy(src->info->root.root,  /* the root object of src rev*/
+                     src->info->repos_path, /* the relative path of src */
+                     dst->info->root.root,  /* the root object of dst txn*/ 
+                     dst->info->repos_path, /* the relative path of dst */
+                     src->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Unable to make a filesystem copy.",
@@ -2589,7 +2843,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
-  apr_pool_t *params_subpool;
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -2643,8 +2896,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   repos_len = ctx->repos_path->len;
 
   /* fetch this collection's children */
-  params_subpool = svn_pool_create(params->pool);
-
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
                             ctx->info.repos_path, params->pool);
   if (serr != NULL)
@@ -2700,25 +2951,27 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
             return err;
 
           /* restore the data */
-          ctx->res.collection = 0;
+          ctx->res.collection = FALSE;
         }
 
       /* chop the child off the paths and uri. NOTE: no null-term. */
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
-
-      svn_pool_clear(params_subpool);
     }
-
-  svn_pool_destroy(params_subpool);
-
   return NULL;
 }
 
 static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
                                 dav_response **response)
 {
+  /* Thinking about adding support for LOCKNULL resources in this
+     walker?  Check out the (working) code that was removed here:
+          Author: cmpilato
+          Date: Fri Mar 18 14:54:02 2005
+          New Revision: 13475
+     */
+
   dav_svn_walker_context ctx = { 0 };
   dav_error *err;
 

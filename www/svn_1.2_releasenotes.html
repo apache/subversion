@@ -1,0 +1,314 @@
+<html>
+<head>
+<title>Subversion 1.2 Release Notes</title>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/tigris.css"/>
+<link rel="stylesheet" type="text/css" 
+      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<link rel="stylesheet" type="text/css" media="print"
+      href="http://subversion.tigris.org/branding/css/print.css"/>
+<script type="text/javascript"
+        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+</head>
+
+<body>
+<div class="app">
+
+<center>
+<h1>Subversion 1.2 Release Notes</h1>
+</center>
+
+<p>These new features will ultimately be documented in a 1.2 version
+of the free Subversion book; check the <a
+href="http://svnbook.red-bean.com">svnbook.red-bean.com</a> site.
+
+
+<h3>Overview</h3>
+
+<p>Subversion 1.2 can best be summarized as: (1) a new locking
+feature, (2) full WebDAV autoversioning, (3) faster binary
+decompression, and (4) a large number of improved APIs.  Details are
+given below.</p>
+
+<p>Subversion 1.2 is a superset of all previous Subversion releases.
+The 1.0.x and 1.1.x releases contain nothing but important bugfixes
+backported from the 1.2 development line.  Subversion 1.2, however,
+introduces new features and fixes many additional bugs.</p>
+
+<p>Note that the 1.0.x line is no longer supported.  This doesn't mean
+that your 1.0 installation is doomed; if it works well and is all you
+need, that's fine.  By "no longer supported", we simply mean that bug
+reports are no longer accepted on 1.0.x versions, nor will there be
+any more 1.0.x bugfix releases (except perhaps for a critical security
+or data-loss bug.)</p>
+
+
+<h3>Compatibility Concerns</h3>
+
+<p>To upgrade to the latest release, there's nothing special one has
+to do.  Just install the newest libraries and binaries "on top of" an
+older release.  Older clients or servers will continue to interoperate
+with 1.2 clients and servers.</p>
+
+<p>Subversion's compatibility and version-numbering policy is
+documented in the project's <a
+href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> file.
+Here's a quick summary:</p>
+
+<ul>
+
+<li><p><em>Database schema</em>: if upgrading to Subversion 1.2, there
+        is <strong>no need</strong> to dump and load your repository.
+        There will be no changes requiring dump/load before Subversion
+        2.0.</p></li>
+
+<li><p><em>Client/server compatibility</em>: a 1.X client and 1.Y
+        server are always interoperable.  However, the latest features
+        or bugfixes may not be available unless both client and server
+        are the latest version.</p></li>
+
+<li><p><em>API/ABI compatibility</em>: the 1.2 release only adds new
+        functions; thus a 1.0 or 1.1 program can both compile against
+        and use 1.2 libraries at run-time, but a 1.2 program cannot
+        use 1.0 or 1.1 libraries.</p></li>
+
+</ul>
+
+
+<h3>New Features</h3>
+
+<h4>File Locking (<em>requires new client and server</em>)</h4>
+
+<p>"Locking" is a long-requested feature, often known in other systems
+as "reserved checkouts".  While Subversion is still primarily a <a
+href="http://svnbook.red-bean.com/en/1.1/ch02s02.html#svn-ch-2-sect-2.3">copy-modify-merge</a>
+system focused on parallel development, there is widespread
+acknowledgement that not all files are contextually mergeable &mdash;
+binary files in particular, such as artwork, compressed files,
+proprietary binary formats, or any other non-line-based data.</p>
+
+<p>The goal of the new locking feature is twofold.  First, provide a
+means to force serialized write-access to a file.  Second, provide a
+communication mechanism to prevent users from wasting time on
+unmergable changes.</p>
+
+<p>The first goal is accomplished by two new commands: <tt>svn
+lock</tt> and <tt>svn unlock</tt>.  When a user locks a file, no other
+user may commit a change to the file or delete it from the repository.
+The lock exists as a piece of metadata both managed and enforced by
+the repository.  The working copy caches a lock-token which represents
+the repository lock.  The lock-token is an authorization credential
+which (along with normal user authentication) gives the user an
+exclusive right to commit changes to the file.  By default, the
+<tt>svn commit</tt> command releases any locks it discovers in the
+working copy, although this behavior can be customized.</p>
+
+<p>Locks are discoverable and examinable.  <tt>svn status</tt> shows
+any lock-tokens cached in the working copy, and <tt>svn status -u</tt>
+shows information about other locks in the repository.  The <tt>svn
+info</tt> command now works on both working-copy paths and URLs, and
+shows the detailed fields of a lock: who made the lock, when it was
+made, and any associated comment.  On the server, scripts can examine
+a lock directly via <tt>svnlook lock</tt>.</p>
+
+<p>Locks can be stolen or broken by using the <tt>--force</tt> option
+with <tt>svn lock</tt> or <tt>svn unlock</tt>.  Using the new
+<tt>pre-lock</tt> and <tt>pre-unlock</tt> repository hooks,
+administrators are free to enforce custom policies regarding breaking
+and stealing locks.  (In fact, the entire locking feature can be
+completely disabled by making <tt>pre-lock</tt> always return
+failure.)  There are also new <tt>post-lock</tt> and
+<tt>post-unlock</tt> hooks which can be used to send announcement
+emails about locks.  Administrators can forcibly find and destroy
+locks with the new <tt>svnadmin lslocks</tt> and <tt>svnadmin
+rmlocks</tt> commands.  If a lock no longer exists in the repository,
+<tt>svn update</tt> will remove a corresponding "defunct" lock-token
+from the working copy.</p>
+
+<p>The second goal &mdash; preventing a user from wasting time on an
+unmergable change &mdash; is accomplished via a new property,
+<tt>svn:needs-lock</tt>.  Users (or administrators) are encouraged to
+set this property on any file that is unmergeable.  When present, this
+property causes the file to be read-only <em>unless</em> the working
+copy holds a lock-token for the file, in which case the file is
+read-write.  The theory is that the default read-only state will
+remind users to lock the file before attempting edits.  Note that
+while this system is effective, it can never be perfect; there's
+nothing Subversion can do to prevent a rogue application from forcibly
+"hijacking" the file and changing the permissions to read-write.</p>
+
+<p>Until the Subversion book documents this feature more carefully,
+you can see more details in the original <a
+href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-functional-spec.txt">functional
+specification</a> and <a
+href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-ui.txt">UI
+specification</a> documents.</p>
+
+<p><strong>Warning</strong>: if locks are in use in a repository, note
+than a pre-1.2 libsvn_fs library won't see or enforce them.  This is
+really only relevant to teams of users all accessing the repository
+via <tt>file://</tt>.  For example, an svn 1.2 client might lock a
+file, but a statically linked svn 1.1 or 1.0 client (accessing via
+<tt>file://</tt>) will unknowingly ignore the lock.  The workaround,
+of course, is to set up a real server process &mdash; thereby
+guaranteeing that only libsvn_fs 1.2 ever accesses the
+repository.</p>
+
+<p/>
+
+<h4>Full DAV autoversioning (<em>mod_dav_svn feature</em>)</h4>
+
+<p>Autoversioning is a feature whereby generic WebDAV clients can
+write to a DeltaV server (like mod_dav_svn), and the server performs
+commits silently in the background.  This means that if you use Apache
+httpd as your Subversion server, then most modern operating systems
+can mount the repository as a network share, and non-technical users
+get "transparent" versioning for free.  (Of course, technical users
+can still use Subversion clients to examine repository history.)</p>
+
+<p>Prior to Subversion 1.2, mod_dav_svn had only partial
+interoperability with generic DAV clients.  <a
+href="http://svnbook.red-bean.com/en/1.1/apc.html">Appendix C</a> in
+the Subversion 1.1 book documented the trials and tribulations of this
+exercise.  At most, one could use a DAV client to drag files into a
+mounted repository, but the files couldn't edited directly from the
+network share.  Some clients even refused to mount the Subversion
+repository.</p>
+
+<p>Now that the repository supports locking, generic DAV clients can
+happily issue http LOCK and UNLOCK requests, and files can be
+opened/edited directly from the share.  As far as we can tell,
+mod_dav_svn is now fully implementing the 'autoversioning' feature
+according to the <a
+href="http://greenbytes.de/tech/webdav/#draft-ietf-webdav-rfc2518bis">RFC2518bis</a>
+specification.</p>
+
+<p>In informal tests, we've had success reading and writing to
+Subversion repositories via Windows Webfolders, OS X Finder, Gnome
+Nautilus, KDE Konqueror, and other DAV clients.</p>
+
+<p>To activate autoversioning, simply set <tt>SVNAutoversioning
+on</tt> in your httpd.conf's Subversion <tt>Location</tt> block.  Be
+warned, however, that making your repository writable by generic DAV
+clients may result in lots of small commits.  A DAV client may seem to
+be saving a file, but is in fact performing several write operations
+under the hood, each resulting in a separate commit.  Experiences may
+vary.</p>
+
+
+<p/>
+
+
+<h3>Other Improvements</h3>
+
+<dl>
+
+<dt><h4>Faster xdelta binary (de)compression (<em>new server
+feature</em>)</h4></dt>
+
+<dd>
+
+<p>The repository is now using the xdelta binary-differencing
+algorithm (instead of vdelta) to store compressed binary difference
+data.  When you upgrade to Subversion 1.2, existing repositories will
+continue to work fine; the history will simply be a mixture of
+differences generated by vdelta and xdelta.</p>
+
+<p>The xdelta algorithm is much faster at reconstructing older files,
+and thus there's motivation to dump and reload your existing
+repository.  If you choose to do this, then you're forcibly
+re-compressing all repository history using the xdelta algorithm.  As
+a result, there is a noticeable speedup in any operation that asks the
+server to reconstruct older data:  <tt>svn blame</tt>, <tt>svn
+checkout</tt>, <tt>svn update</tt>, <tt>svn diff</tt>, <tt>svn
+merge</tt>, and so on.  Even dumping the repository will be
+faster.</p>
+
+<p><strong>Note:</strong> There's a small tradeoff between speed and
+disk space.  If you choose to re-deltify your whole repository using
+xdelta, its size will grow by roughly 10 to 15 percent.</p>
+
+<p/>
+
+<dt><h4>FSFS repositories are now the default (<em>new server
+feature</em>)</h4></dt>
+
+<dd>
+
+<p>After the tremendous success of FSFS repositories since the 1.1
+release, we've changed the <tt>svnadmin create</tt> command now to
+create FSFS repositories by default.  Everyone agrees that this will
+provide a much friendlier "out of box" experience for new users.</p>
+
+<p><strong>Please note</strong>: BerkeleyDB repositories are
+<strong>not</strong> being phased out or deprecated in any way.  The
+reliability problems we've seen lie not in BerkeleyDB itself, but in
+the unique way Subversion uses BerkeleyDB.  Cooperative work is
+currently underway (with Sleepycat engineers) to address these issues.
+BerkeleyDB repositories are still older and better-tested than FSFS
+repositories in terms of scalability; the project still recommends you
+<a
+href="http://svnbook.red-bean.com/en/1.1/ch05.html#svn-ch-5-sect-1.3">read
+about the two back-ends in the book</a> and make an informed
+choice.</p>
+
+</dd>
+
+<p/>
+
+
+<dt><h4>Bugfixes:</h4></dt>
+<dd>More than N bugs fixed.  See the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+      for details.</dd>
+
+<p>
+
+<dt><h4>New subcommand switches:</h4></dt>
+<dd>
+   <dl>
+      <dt><tt>svn log --limit N</tt></dt>
+      <dd>display only N revisions, then stop.  (<em>Note: a 1.2
+      server isn't required for this, but strongly recommended.  A
+      non-1.2 server will still attempt to deliver all revisions over
+      the network, even though the 1.2 client isn't displaying them.</em>)</dd>
+
+   </dl>
+</dl>
+
+
+
+<h3>Developer Changes</h3>
+
+<p>The svn_ra.h API has now been "flattened", essentially imitating
+the same way the svn_fs.h API hides multiple implementations.  Instead
+of making calls into an RA vtable (<tt>ra->do_foo()</tt>), all RA
+functions are now usable directly in the form
+<tt>svn_ra_do_foo()</tt>. This also has the nice side-effect of
+making svn_ra.h available via SWIG. </p>
+
+<p>As with svn 1.1, a number of new 1.2 functions have been introduced
+with the "2" suffix, and the older versions are now marked deprecated
+(and will be removed in Subversion 2.0).  See the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for details.</p>
+
+<p>There has been extensive work on the python, perl, and java
+bindings.  We also now have a preliminary set of ruby bindings.  -->
+Yada yada, give details.</p>
+
+<h3>Testimonials and Roadmap</h3>
+
+<p>See our <a href="roadmap.html">roadmap</a> for what the future
+looks like.</p>
+
+<p>If you're looking for testimonials on Subversion, see our new <a
+href="http://subversion.tigris.org/testimonials.html">testimonials
+page</a>.</p> And as usual, you can find links to other
+Subversion-related sites, projects, and essays on our <a
+href="http://subversion.tigris.org/project_links.html">links
+page</a>.</p>
+
+</div>
+</body>
+</html>

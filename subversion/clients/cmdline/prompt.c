@@ -26,10 +26,8 @@
 #include <apr_poll.h>
 
 #include "svn_cmdline.h"
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_delta.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "cl.h"
@@ -114,7 +112,7 @@ prompt (const char **result,
             return svn_error_wrap_apr (status, _("Can't read stdin"));
              
           status = apr_file_getc (&c, fp);
-          if (status && ! APR_STATUS_IS_EOF(status))
+          if (status)
             return svn_error_wrap_apr (status, _("Can't read stdin"));
 
           if (saw_first_half_of_eol)

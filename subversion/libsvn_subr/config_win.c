@@ -35,6 +35,7 @@
 
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_utf.h"
 
 svn_error_t *
@@ -259,7 +260,8 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
   else
     {
       return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                "Unrecognised registry path '%s'", file);
+                                "Unrecognised registry path '%s'",
+                                svn_path_local_style (file, cfg->pool));
     }
 
   err = RegOpenKeyEx (base_hkey, file, 0,
@@ -270,10 +272,12 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
       const int is_enoent = APR_STATUS_IS_ENOENT(APR_FROM_OS_ERROR(err));
       if (!is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open registry key '%s'", file);
+                                  "Can't open registry key '%s'",
+                                  svn_path_local_style (file, cfg->pool));
       else if (must_exist && is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find registry key '%s'", file);
+                                  "Can't find registry key '%s'",
+                                  svn_path_local_style (file, cfg->pool));
       else
         return SVN_NO_ERROR;
     }

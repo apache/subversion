@@ -433,7 +433,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
     {
         return;
     }
-
+    transactions.setDoesNotContainsPath();
     cl->rmtxns(path, transactions);
 }
 
@@ -519,4 +519,57 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_verify
     }
 
     cl->verify(path, messageOut, revisionStart, revisionEnd);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNAdmin
+ * Method:    lslocks
+ * Signature: (Ljava/lang/String;)[Lorg/tigris/subversion/javahl/Lock;
+ */
+JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_lslocks
+  (JNIEnv *env, jobject jthis, jstring jpath)
+{
+    JNIEntry(SVNAdmin, lstxns);
+    SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return NULL;
+    }
+
+    JNIStringHolder path(jpath);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    return cl->lslocks(path);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNAdmin
+ * Method:    rmlocks
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_rmlocks
+  (JNIEnv *env, jobject jthis, jstring jpath, jobjectArray jlocks)
+{
+    JNIEntry(SVNAdmin, rmlocks);
+    SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+
+    JNIStringHolder path(jpath);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+
+    Targets locks(jlocks);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    locks.setDoesNotContainsPath();
+    cl->rmlocks(path, locks);
 }

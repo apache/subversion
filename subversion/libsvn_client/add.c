@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_config.h"
+#include "svn_props.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -209,9 +210,9 @@ add_file (const char *path,
   svn_boolean_t is_special;
 
   /* add the file */
-  SVN_ERR (svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       NULL, NULL, pool));
+  SVN_ERR (svn_wc_add2 (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        NULL, NULL, pool));
 
   /* Check to see if this is a special file. */
   SVN_ERR (svn_io_check_special_path (path, &kind, &is_special, pool));
@@ -219,9 +220,10 @@ add_file (const char *path,
   if (is_special)
     {
       /* This must be a special file. */
-      SVN_ERR (svn_wc_prop_set (SVN_PROP_SPECIAL,
-                                svn_string_create (SVN_PROP_SPECIAL_VALUE, pool),
-                                path, adm_access, pool));
+      SVN_ERR (svn_wc_prop_set2
+               (SVN_PROP_SPECIAL,
+                svn_string_create (SVN_PROP_SPECIAL_VALUE, pool),
+                path, adm_access, FALSE, pool));
       mimetype = NULL;
     }
   else
@@ -239,19 +241,25 @@ add_file (const char *path,
               void *pval;
           
               apr_hash_this (hi, &pname, NULL, &pval);
-              SVN_ERR (svn_wc_prop_set (pname, pval, path, adm_access, pool));
+              /* It's probably best to pass 0 for force, so that if
+                 the autoprops say to set some weird combination,
+                 we just error and let the user sort it out. */
+              SVN_ERR (svn_wc_prop_set2 (pname, pval, path,
+                                         adm_access, FALSE, pool));
             }
         }
     }
 
   /* Report the addition to the caller. */
-  if (ctx->notify_func != NULL)
-    (*ctx->notify_func) (ctx->notify_baton, path, svn_wc_notify_add,
-                         svn_node_file,
-                         mimetype,
-                         svn_wc_notify_state_unknown,
-                         svn_wc_notify_state_unknown,
-                         SVN_INVALID_REVNUM);
+  if (ctx->notify_func2 != NULL)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (path, svn_wc_notify_add,
+                                                      pool);
+      notify->kind = svn_node_file;
+      notify->mime_type = mimetype;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -275,10 +283,10 @@ add_dir_recursive (const char *dirname,
     SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
   /* Add this directory to revision control. */
-  err = svn_wc_add (dirname, adm_access,
-                    NULL, SVN_INVALID_REVNUM,
-                    ctx->cancel_func, ctx->cancel_baton,
-                    ctx->notify_func, ctx->notify_baton, pool);
+  err = svn_wc_add2 (dirname, adm_access,
+                     NULL, SVN_INVALID_REVNUM,
+                     ctx->cancel_func, ctx->cancel_baton,
+                     ctx->notify_func2, ctx->notify_baton2, pool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear (err);
   else if (err)
@@ -345,7 +353,8 @@ add_dir_recursive (const char *dirname,
     {
       return svn_error_createf
         (err->apr_err, err,
-         _("Error during recursive add of '%s'"), dirname);
+         _("Error during recursive add of '%s'"),
+         svn_path_local_style (dirname, subpool));
     }
   else  /* Yes, it exited cleanly, so close the dir. */
     {
@@ -355,7 +364,8 @@ add_dir_recursive (const char *dirname,
       apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_wrap_apr
-          (apr_err, _("Can't close directory '%s'"), dirname);
+          (apr_err, _("Can't close directory '%s'"),
+           svn_path_local_style (dirname, subpool));
     }
 
   /* Opened by svn_wc_add */
@@ -388,9 +398,9 @@ add (const char *path,
   else if (kind == svn_node_file)
     err = add_file (path, ctx, adm_access, pool);
   else
-    err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      ctx->notify_func, ctx->notify_baton, pool);
+    err = svn_wc_add2 (path, adm_access, NULL, SVN_INVALID_REVNUM,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       ctx->notify_func2, ctx->notify_baton2, pool);
 
   /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
@@ -413,8 +423,9 @@ svn_client_add (const char *path,
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_dirname (path, pool);
 
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path,
-                             TRUE, 0, pool));
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, parent_path,
+                             TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                             pool));
 
   err = add (path, recursive, FALSE, adm_access, ctx, pool);
   
@@ -442,8 +453,9 @@ svn_client_add2 (const char *path,
   svn_wc_adm_access_t *adm_access;
   const char *parent_path = svn_path_dirname (path, pool);
 
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path,
-                             TRUE, 0, pool));
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, parent_path,
+                             TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                             pool));
 
   err = add (path, recursive, force, adm_access, ctx, pool);
   
@@ -468,6 +480,7 @@ path_driver_cb_func (void **dir_baton,
                      apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor = callback_baton;
+  SVN_ERR (svn_path_check_valid (path, pool));
   return editor->add_directory (path, parent_baton, NULL,
                                 SVN_INVALID_REVNUM, pool, dir_baton);
 }
@@ -479,8 +492,7 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *commit_baton;
@@ -551,13 +563,9 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
   else
     log_msg = "";
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, common, pool));
-
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, common, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, common, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
@@ -571,10 +579,12 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                      log_msg, svn_client__commit_callback,
-                                      commit_baton, pool));
-
+  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
+                                     log_msg, svn_client__commit_callback,
+                                     commit_baton, 
+                                       NULL, TRUE, /* No lock tokens */
+                                     pool));
+  
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
                                targets, path_driver_cb_func, 
@@ -617,25 +627,25 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
         {
           const char *path = APR_ARRAY_IDX (paths, i, const char *);
 
+          svn_pool_clear (subpool);
+
           /* See if the user wants us to stop. */
           if (ctx->cancel_func)
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-          SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
-          err = svn_client_add (path, FALSE, ctx, pool);
+          SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, subpool));
+          err = svn_client_add (path, FALSE, ctx, subpool);
 
-          /* Trying to add a directory with the same name as a file that is
-             scheduled for deletion is not supported.  Leaving an unversioned
-             directory makes the working copy hard to use.  */
-          if (err && err->apr_err == SVN_ERR_WC_NODE_KIND_CHANGE)
+          /* We just created a new directory, but couldn't add it to
+             version control. Don't leave unversioned directoies behind. */
+          if (err)
             {
-              svn_error_t *err2 = svn_io_remove_dir (path, pool);
-              if (err2)
-                svn_error_clear (err2);
+              /* ### If this returns an error, should we link it onto
+                 err instead, so that the user is warned that we just
+                 created an unversioned directory? */
+              svn_error_clear (svn_io_remove_dir (path, subpool));
+              return err;
             }
-          SVN_ERR (err);
-
-          svn_pool_clear (subpool);
         }
       svn_pool_destroy (subpool);
     }

@@ -104,6 +104,13 @@ def verify_expected_output(diff_output, expected):
   else:
     raise svntest.Failure
 
+def verify_excluded_output(diff_output, excluded):
+  "verify given line does not exist in diff output as diff line"
+  for line in diff_output:
+    if re.match("^(\\+|-)%s" % re.escape(excluded), line):
+      print 'Sought: %s' % excluded
+      print 'Found:  %s' % line
+      raise svntest.Failure
 
 def extract_diff_path(line):
   l2 = line[(line.find("(")+1):]
@@ -685,7 +692,7 @@ def dont_diff_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit the new binary file, creating revision 2.
@@ -704,7 +711,7 @@ def dont_diff_binary_file(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -750,7 +757,7 @@ def dont_diff_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -919,7 +926,7 @@ def diff_base_to_repos(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_output.add({
-    'A/D/newfile' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/D/newfile' : Item(status='A ', wc_rev=0),
     })
   expected_output.tweak('A/mu', status='D ')
   expected_output.tweak('iota', status='M ')
@@ -967,7 +974,7 @@ def diff_base_to_repos(sbox):
   expected_status.tweak('iota', wc_rev=3)
   expected_status.remove('A/mu')
   expected_status.add({
-    'A/D/newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/newfile' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -983,7 +990,7 @@ def diff_base_to_repos(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.remove('A/mu')
   expected_status.add({
-    'A/D/newfile' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/D/newfile' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -1571,6 +1578,200 @@ def diff_within_renamed_dir(sbox):
 
   os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+def diff_prop_on_named_dir(sbox):
+  "diff a prop change on a dir named explicitly"
+
+  # Diff of a property change or addition should contain a "+" line.
+  # Diff of a property change or deletion should contain a "-" line.
+  # On a diff between repository revisions (not WC) of a dir named
+  # explicitly, the "-" line was missing.  (For a file, and for a dir
+  # recursed into, the result was correct.)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'p', 'v', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', '')
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propdel', 'p', 'A')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', '')
+
+    diff_output, err_output = svntest.main.run_svn(None,
+                                                   'diff', '-r2:3', 'A')
+    # Check that the result contains a "-" line.
+    verify_expected_output(diff_output, "   - v")
+
+  finally:
+    os.chdir(current_dir)
+
+#----------------------------------------------------------------------
+def diff_keywords(sbox):
+  "ensure that diff won't show keywords"
+
+  sbox.build()
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps',
+                                     'svn:keywords',
+                                     'Id Rev Date',
+                                     iota_path)
+
+  fp = open(iota_path, 'w')
+  fp.write("$Date$\n")
+  fp.write("$Id$\n")
+  fp.write("$Rev$\n")
+  fp.write("$Date::%s$\n" % (' ' * 80))
+  fp.write("$Id::%s$\n"   % (' ' * 80))
+  fp.write("$Rev::%s$\n"  % (' ' * 80))
+  fp.close()
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'keywords', sbox.wc_dir)
+
+  svntest.main.file_append(iota_path, "bar\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'added bar', sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', sbox.wc_dir)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff',
+                                                        '-r', 'prev:head',
+                                                        sbox.wc_dir)
+  verify_expected_output(diff_output, "+bar")
+  verify_excluded_output(diff_output, "$Date:")
+  verify_excluded_output(diff_output, "$Rev:")
+  verify_excluded_output(diff_output, "$Id:")
+  
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff',
+                                                        '-r', 'head:prev',
+                                                        sbox.wc_dir)
+  verify_expected_output(diff_output, "-bar")
+  verify_excluded_output(diff_output, "$Date:")
+  verify_excluded_output(diff_output, "$Rev:")
+  verify_excluded_output(diff_output, "$Id:")
+
+  # Check fixed length keywords will show up
+  # when the length of keyword has changed
+  fp = open(iota_path, 'w')
+  fp.write("$Date$\n")
+  fp.write("$Id$\n")
+  fp.write("$Rev$\n")
+  fp.write("$Date::%s$\n" % (' ' * 79))
+  fp.write("$Id::%s$\n"   % (' ' * 79))
+  fp.write("$Rev::%s$\n"  % (' ' * 79))
+  fp.close()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'keywords 2', sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', sbox.wc_dir)
+
+  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                        'diff',
+                                                        '-r', 'prev:head',
+                                                        sbox.wc_dir)
+  # these should show up
+  verify_expected_output(diff_output, "+$Id:: ")
+  verify_expected_output(diff_output, "-$Id:: ")
+  verify_expected_output(diff_output, "-$Rev:: ")
+  verify_expected_output(diff_output, "+$Rev:: ")
+  verify_expected_output(diff_output, "-$Date:: ")
+  verify_expected_output(diff_output, "+$Date:: ")
+  # ... and these won't
+  verify_excluded_output(diff_output, "$Date: ")
+  verify_excluded_output(diff_output, "$Rev: ")
+  verify_excluded_output(diff_output, "$Id: ")
+
+
+def diff_force(sbox):
+  "show diffs for binary files with --force"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  iota_path = os.path.join(wc_dir, 'iota')
+  
+  # Append a line to iota and make it binary.
+  svntest.main.file_append(iota_path, "new line")
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', iota_path)  
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'iota' : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit iota, creating revision 2.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Add another line, while keeping he file as binary.
+  svntest.main.file_append(iota_path, "another line")
+
+  # Commit creating rev 3.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'iota' : Item(status='  ', wc_rev=3),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Check that we get diff when the first, the second and both files are
+  # marked as binary.
+
+  re_nodisplay = re.compile('^Cannot display:')
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r1:2', iota_path,
+                                        '--force')
+
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      raise svntest.Failure
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r2:1', iota_path,
+                                        '--force')
+
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      raise svntest.Failure
+
+  stdout, stderr = svntest.main.run_svn(None, 'diff', '-r2:3', iota_path,
+                                        '--force')
+
+  for line in stdout:
+    if (re_nodisplay.match(line)):
+      raise svntest.Failure
+
+
+
 ########################################################################
 #Run the tests
 
@@ -1600,6 +1801,9 @@ test_list = [ None,
               check_for_omitted_prefix_in_path_component,
               diff_renamed_file,
               diff_within_renamed_dir,
+              diff_prop_on_named_dir,
+              diff_keywords,
+              diff_force
               ]
 
 if __name__ == '__main__':

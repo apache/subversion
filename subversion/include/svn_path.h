@@ -27,8 +27,6 @@
  * All paths passed to the @c svn_path_xxx functions, with the exceptions of
  * the @c svn_path_canonicalize and @c svn_path_internal_style functions, must
  * be in canonical form.
- *
- * todo: this library really needs a test suite!
  */
 
 #ifndef SVN_PATH_H
@@ -176,8 +174,8 @@ int svn_path_is_empty (const char *path);
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
  *
- * This involves collapsing redundant "/./" and "/../" elements,
- * removing multiple adjacent separator characters, removing trailing
+ * This involves collapsing redundant "/./" elements, removing
+ * multiple adjacent separator characters, removing trailing
  * separator characters, and possibly other semantically inoperative
  * transformations.
  *
@@ -356,6 +354,24 @@ const char *svn_path_is_child (const char *path1,
                                const char *path2,
                                apr_pool_t *pool);
 
+/** 
+ * @since New in 1.2.
+ *
+ * Check whether @a path is a valid Subversion path.
+ *
+ * A valid Subversion pathname is a UTF-8 string without control
+ * characters.  "Valid" means Subversion can store the pathname in
+ * a repository.  There may be other, OS-specific, limitations on
+ * what paths can be represented in a working copy.
+ *
+ * ASSUMPTION: @a path is a valid UTF-8 string.  This function does
+ * not check UTF-8 validity.
+ *
+ * Return @c SVN_NO_ERROR if valid and @c SVN_ERR_FS_PATH_SYNTAX if
+ * invalid.
+ */
+svn_error_t *svn_path_check_valid (const char *path, apr_pool_t *pool);
+
 
 /** URI/URL stuff
  *
@@ -386,14 +402,18 @@ const char *svn_path_url_add_component (const char *url,
                                         const char *component,
                                         apr_pool_t *pool);
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * Convert @a iri (Internationalized URI) to an URI.
  * The return value may be the same as @a iri if it was already
  * a URI.  Else, allocate the return value in @a pool. */
 const char *svn_path_uri_from_iri (const char *iri,
                                    apr_pool_t *pool);
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * URI-encode certain characters in @a uri that are not valid in an URI, but
  * doesn't have any special meaning in @a uri at their positions.  If no
  * characters need escaping, just return @a uri.

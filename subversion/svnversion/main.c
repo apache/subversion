@@ -20,7 +20,6 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
-#include <apr_tables.h>
 
 #include "svn_private_config.h"
 
@@ -45,7 +44,7 @@ struct status_baton
 static void
 analyze_status (void *baton,
                 const char *path,
-                svn_wc_status_t *status)
+                svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
   
@@ -106,7 +105,7 @@ cancel (void *baton)
 {
   struct status_baton *sb = baton;
   if (sb->done)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Finished");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, _("Finished"));
   else
     return SVN_NO_ERROR;
 }
@@ -118,11 +117,20 @@ static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 }
 
 static void
-usage(const apr_getopt_option_t *options, apr_pool_t *pool)
+usage(apr_pool_t *pool)
+{
+  svn_error_clear (svn_cmdline_fprintf
+                    (stderr, pool, _("Type 'svnversion --help' for usage.\n")));
+  exit(1);
+}
+
+
+static void
+help(const apr_getopt_option_t *options, apr_pool_t *pool)
 {
   svn_error_clear
     (svn_cmdline_fprintf
-     (stderr, pool,
+     (stdout, pool,
       _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
         "  Produce a compact 'version number' for the working copy path\n"
         "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
@@ -151,9 +159,11 @@ usage(const apr_getopt_option_t *options, apr_pool_t *pool)
     {
       const char *optstr;
       svn_opt_format_option(&optstr, options, TRUE, pool);
-      svn_error_clear (svn_cmdline_fprintf(stderr, pool, "  %s\n", optstr));
+      svn_error_clear (svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
       ++options;
     }
+  svn_error_clear (svn_cmdline_fprintf(stdout, pool, "\n"));
+  exit(0);
 }
 
 
@@ -198,6 +208,7 @@ main(int argc, const char *argv[])
     {
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
       {"committed",  'c', 0, N_("last changed rather than current revisions")},
+      {"help", 'h', 0, N_("display this help")},
       {"version", SVNVERSION_OPT_VERSION, 0, N_("show version information")},
       {0,             0,  0,  0}
     };
@@ -221,7 +232,7 @@ main(int argc, const char *argv[])
   err = check_lib_versions ();
   if (err)
     {
-      svn_handle_error (err, stderr, FALSE);
+      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
@@ -248,7 +259,7 @@ main(int argc, const char *argv[])
         break;
       if (status != APR_SUCCESS)
         {
-          usage(options, pool);
+          usage(pool);
           return EXIT_FAILURE;
         }
       switch (opt)
@@ -259,19 +270,22 @@ main(int argc, const char *argv[])
         case 'c':
           sb.committed = TRUE;
           break;
+	case 'h':
+	  help(options, pool);
+	  break;
         case SVNVERSION_OPT_VERSION:
           SVN_INT_ERR(version(os, pool));
           exit(0);
           break;
         default:
-          usage(options, pool);
+          usage(pool);
           return EXIT_FAILURE;
         }
     }
 
   if (os->ind >= argc || os->ind < argc - 2)
     {
-      usage(options, pool);
+      usage(pool);
       return EXIT_FAILURE;
     }
 
@@ -311,8 +325,8 @@ main(int argc, const char *argv[])
   ctx.cancel_func = cancel;
   ctx.cancel_baton = &sb;
 
-  err = svn_client_status (NULL, wc_path, &rev, analyze_status, 
-                           &sb, TRUE, TRUE, FALSE, FALSE, &ctx, pool);
+  err = svn_client_status2 (NULL, wc_path, &rev, analyze_status, 
+                            &sb, TRUE, TRUE, FALSE, FALSE, FALSE, &ctx, pool);
   if (err && (err->apr_err == SVN_ERR_CANCELLED))
     svn_error_clear (err);
   else

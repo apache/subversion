@@ -42,8 +42,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_delta version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_delta version information.
  */
 const svn_version_t *svn_delta_version (void);
 
@@ -341,7 +342,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * Read and parse one delta window in svndiff format from the
  * readable stream @a stream and place it in @a *window, allocating
  * the result in @a pool.  The caller must take responsibility for
- * stripping off the four-byte 'SVN<ver>' header at the beginning of
+ * stripping off the four-byte 'SVN@<ver@>' header at the beginning of
  * the svndiff document before reading the first window, and must
  * provide the version number (the value of the fourth byte) to each
  * invocation of this routine with the @a svndiff_version argument. */
@@ -356,7 +357,7 @@ svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
  * Skip one delta window in svndiff format in the file @a file.  and
  * place it in @a *window, allocating the result in @a pool.  The
  * caller must take responsibility for stripping off the four-byte
- * 'SVN<ver>' header at the beginning of the svndiff document before
+ * 'SVN@<ver@>' header at the beginning of the svndiff document before
  * reading or skipping the first window, and must provide the version
  * number (the value of the fourth byte) to each invocation of this
  * routine with the @a svndiff_version argument. */
@@ -509,8 +510,13 @@ svn_error_t *svn_txdelta_skip_svndiff_window (apr_file_t *file,
  * may use the batons:
  *
  * 1. The producer may call @c open_directory, @c add_directory,
- *    @c open_file, @c add_file, or @c delete_entry at most once on
- *    any given directory entry.
+ *    @c open_file, @c add_file at most once on any given directory
+ *    entry.  @c delete_entry may be called at most once on any given
+ *    directory entry and may later be followed by @c add_directory or
+ *    @c add_file on the same directory entry.  @c delete_entry may
+ *    not be called on any directory entry after @c open_directory,
+ *    @c add_directory, @c open_file or @c add_file has been called on
+ *    that directory entry.
  *
  * 2. The producer may not close a directory baton until it has
  *    closed all batons for its subdirectories.

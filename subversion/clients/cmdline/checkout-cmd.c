@@ -22,11 +22,8 @@
 
 /*** Includes. ***/
 
-#include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "cl.h"
@@ -73,11 +70,8 @@ svn_cl__checkout (apr_getopt_t *os,
   const char *repos_url;
   int i;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than silently exiting.  */
@@ -108,13 +102,17 @@ svn_cl__checkout (apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, TRUE, FALSE,
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, TRUE, FALSE,
                           FALSE, pool);
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts - 1; ++i)
     {
       const char *target_dir;
+      const char *true_url;
+      svn_opt_revision_t peg_revision;
+
+      svn_pool_clear (subpool);
 
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
@@ -125,7 +123,11 @@ svn_cl__checkout (apr_getopt_t *os,
           (SVN_ERR_BAD_URL, NULL, 
            _("'%s' does not appear to be a URL"), repos_url);
 
-      repos_url = svn_path_canonicalize (repos_url, subpool);
+      /* Get a possible peg revision. */
+      SVN_ERR (svn_opt_parse_path (&peg_revision, &true_url, repos_url,
+                                   subpool));
+
+      true_url = svn_path_canonicalize (true_url, subpool);
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)
@@ -134,7 +136,7 @@ svn_cl__checkout (apr_getopt_t *os,
         }
       else
         {
-          target_dir = svn_path_basename (repos_url, subpool);
+          target_dir = svn_path_basename (true_url, subpool);
           target_dir = svn_path_uri_decode (target_dir, subpool);
           target_dir = svn_path_join (local_dir, target_dir, subpool);
         }
@@ -144,11 +146,12 @@ svn_cl__checkout (apr_getopt_t *os,
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
         opt_state->start_revision.kind = svn_opt_revision_head;
 
-      SVN_ERR (svn_client_checkout (NULL, repos_url, target_dir,
-                                    &(opt_state->start_revision),
-                                    opt_state->nonrecursive ? FALSE : TRUE,
-                                    ctx, subpool));
-      svn_pool_clear (subpool);
+      SVN_ERR (svn_client_checkout2 (NULL, true_url, target_dir,
+                                     &peg_revision,
+                                     &(opt_state->start_revision),
+                                     opt_state->nonrecursive ? FALSE : TRUE,
+                                     opt_state->ignore_externals,
+                                     ctx, subpool));
     }
   svn_pool_destroy (subpool);
   

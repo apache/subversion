@@ -25,7 +25,6 @@
 
 #include "svn_delta.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_pools.h"
 #include "delta.h"
 
@@ -62,7 +61,7 @@ struct tpush_baton {
 
   /* Private data */
   char *buf;
-  apr_size_t source_offset;
+  svn_filesize_t source_offset;
   apr_size_t source_len;
   svn_boolean_t source_done;
   apr_size_t target_len;
@@ -125,20 +124,24 @@ svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
 }
 
 
-/* Compute and return a delta window using the vdelta algorithm on
+/* Compute and return a delta window using the vdelta or xdelta algorithm on
    DATA, which contains SOURCE_LEN bytes of source data and TARGET_LEN
    bytes of target data.  SOURCE_OFFSET gives the offset of the source
    data, and is simply copied into the window's sview_offset field. */
 static svn_txdelta_window_t *
 compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
-                apr_size_t source_offset, apr_pool_t *pool)
+                svn_filesize_t source_offset, apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *window;
 
   /* Compute the delta operations. */
   build_baton.new_data = svn_stringbuf_create ("", pool);
-  svn_txdelta__vdelta (&build_baton, data, source_len, target_len, pool);
+
+  if (source_len == 0)
+    svn_txdelta__vdelta (&build_baton, data, source_len, target_len, pool);
+  else
+    svn_txdelta__xdelta (&build_baton, data, source_len, target_len, pool);
   
   /* Create and return the delta window. */
   window = svn_txdelta__make_window (&build_baton, pool);
@@ -487,7 +490,6 @@ svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
                                   ? op->length : *tlen - tpos);
 
       /* Check some invariants common to all instructions.  */
-      assert (op->offset >= 0 && op->length >= 0);
       assert (tpos + op->length <= window->tview_len);
 
       switch (op->action_code)
@@ -730,14 +732,14 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
 
   do
     {
+      /* free the window (if any) */
+      svn_pool_clear (wpool);
+
       /* read in a single delta window */
       SVN_ERR( svn_txdelta_next_window (&window, txstream, wpool));
 
       /* shove it at the handler */
       SVN_ERR( (*handler)(window, handler_baton));
-
-      /* free the window (if any) */
-      svn_pool_clear (wpool);
     }
   while (window != NULL);
 

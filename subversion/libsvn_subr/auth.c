@@ -19,11 +19,11 @@
 
 #include <apr_pools.h>
 #include <apr_tables.h>
+#include <apr_strings.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_auth.h"
-#include "svn_sorts.h"
 
 /* The good way to think of this machinery is as a set of tables.
 

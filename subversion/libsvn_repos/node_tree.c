@@ -35,6 +35,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "repos.h"
+#include "svn_private_config.h"
 
 /*** NOTE: This editor is unique in that it currently is hard-coded to
      be anchored at the root directory of the filesystem.  This
@@ -234,7 +235,7 @@ delete_entry (const char *path,
   SVN_ERR (svn_fs_check_path (&kind, base_root, base_path, pool));
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                              "'%s' not found in filesystem", path);
+                              _("'%s' not found in filesystem"), path);
   node->kind = kind;
 
   return SVN_NO_ERROR;

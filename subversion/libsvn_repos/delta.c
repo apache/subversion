@@ -28,6 +28,8 @@
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
+#include "svn_props.h"
+#include "svn_private_config.h"
 
 
 
@@ -174,7 +176,7 @@ authz_root_check (svn_fs_root_t *root,
 
       if (! allowed)
         return svn_error_create (SVN_ERR_AUTHZ_ROOT_UNREADABLE, 0,
-                                 "Unable to open root of edit");
+                                 _("Unable to open root of edit"));
     }
 
   return SVN_NO_ERROR;
@@ -225,7 +227,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   /* TGT_FULLPATH must be valid. */
   if (! tgt_fullpath)
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0,
-                             "Invalid target path");
+                             _("Invalid target path"));
 
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
@@ -251,8 +253,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                          || tgt_kind != svn_node_dir))
     return svn_error_create 
       (SVN_ERR_FS_PATH_SYNTAX, 0,
-       "Invalid editor anchoring; at least one of the "
-       "input paths is not a directory and there was no source entry");
+       _("Invalid editor anchoring; at least one of the "
+         "input paths is not a directory and there was no source entry"));
   
   /* Set the global target revision if one can be determined. */
   if (svn_fs_is_revision_root (tgt_root))
@@ -482,6 +484,7 @@ delta_proplists (struct context *c,
       if (SVN_IS_VALID_REVNUM (committed_rev))
         {
           svn_fs_t *fs = svn_fs_root_fs (c->target_root);
+          apr_hash_t *r_props;
           const char *uuid;
 
           /* Transmit the committed-rev. */
@@ -490,9 +493,12 @@ delta_proplists (struct context *c,
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_REV, 
                               cr_str, subpool));
 
+          SVN_ERR (svn_fs_revision_proplist (&r_props, fs, committed_rev,
+                                             pool));
+
           /* Transmit the committed-date. */
-          SVN_ERR (svn_fs_revision_prop (&committed_date, fs, committed_rev,
-                                         SVN_PROP_REVISION_DATE, subpool));
+          committed_date = apr_hash_get (r_props, SVN_PROP_REVISION_DATE,
+                                         APR_HASH_KEY_STRING);
           if (committed_date || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
@@ -500,8 +506,8 @@ delta_proplists (struct context *c,
             }
 
           /* Transmit the last-author. */
-          SVN_ERR (svn_fs_revision_prop (&last_author, fs, committed_rev,
-                                         SVN_PROP_REVISION_AUTHOR, subpool));
+          last_author = apr_hash_get (r_props, SVN_PROP_REVISION_AUTHOR,
+                                      APR_HASH_KEY_STRING);
           if (last_author || source_path)
             {
               SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
@@ -957,6 +963,9 @@ delta_dirs (struct context *c,
       const char *s_fullpath;
       svn_node_kind_t tgt_kind;
 
+      /* Clear out our subpool for the next iteration... */
+      svn_pool_clear (subpool);
+
       /* KEY is the entry name in target, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
       t_entry = val;
@@ -1015,9 +1024,6 @@ delta_dirs (struct context *c,
                                         e_fullpath, tgt_kind, subpool));
             }
         }
-
-      /* Clear out our subpool for the next iteration... */
-      svn_pool_clear (subpool);
     }
 
   /* All that is left in the source entries hash are things that need
@@ -1033,6 +1039,9 @@ delta_dirs (struct context *c,
           const char *e_fullpath;
           svn_node_kind_t src_kind;
           
+          /* Clear out our subpool for the next iteration... */
+          svn_pool_clear (subpool);
+
           /* KEY is the entry name in source, VAL the dirent */
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
@@ -1042,9 +1051,6 @@ delta_dirs (struct context *c,
           /* Do we actually want to delete the dir if we're non-recursive? */
           if (c->recurse || (src_kind != svn_node_dir))
             SVN_ERR (delete (c, dir_baton, e_fullpath, subpool));
-
-          /* Clear out our subpool for the next iteration... */
-          svn_pool_clear (subpool);
         }
     }
 

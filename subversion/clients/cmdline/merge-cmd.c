@@ -22,11 +22,8 @@
 
 /*** Includes. ***/
 
-#include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_types.h"
 #include "cl.h"
@@ -66,12 +63,8 @@ svn_cl__merge (apr_getopt_t *os,
       using_alternate_syntax = TRUE;
     }
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         ! using_alternate_syntax,
-                                         pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than spewing an error.  */
@@ -103,7 +96,7 @@ svn_cl__merge (apr_getopt_t *os,
       else
         targetpath = "";
     }
-  else /* using @rev syntax, revs already extracted. */
+  else /* using @rev syntax */
     {
       if ((targets->nelts < 2) || (targets->nelts > 3))
         {
@@ -114,8 +107,12 @@ svn_cl__merge (apr_getopt_t *os,
         }
 
       /* the first two paths become the 'sources' */
-      sourcepath1 = ((const char **) (targets->elts))[0];
-      sourcepath2 = ((const char **) (targets->elts))[1];
+      SVN_ERR (svn_opt_parse_path (&opt_state->start_revision, &sourcepath1,
+                                   ((const char **) (targets->elts))[0],
+                                   pool));
+      SVN_ERR (svn_opt_parse_path (&opt_state->end_revision, &sourcepath2,
+                                   ((const char **) (targets->elts))[1],
+                                   pool));
       
       /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
          revisions--since it ignores local modifications it may not do what
@@ -148,10 +145,11 @@ svn_cl__merge (apr_getopt_t *os,
       if (! strcmp (sp1_basename, sp2_basename))
         {
           svn_node_kind_t kind;
-          SVN_ERR (svn_io_check_path (sp1_basename, &kind, pool));
+          const char *decoded_path = svn_path_uri_decode (sp1_basename, pool);
+          SVN_ERR (svn_io_check_path (decoded_path, &kind, pool));
           if (kind == svn_node_file) 
             {
-              targetpath = sp1_basename;
+              targetpath = decoded_path;
             }
         }
     }
@@ -162,8 +160,8 @@ svn_cl__merge (apr_getopt_t *os,
     opt_state->end_revision.kind = svn_opt_revision_head;
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
 
   if (using_alternate_syntax)
     {

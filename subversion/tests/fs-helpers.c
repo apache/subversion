@@ -26,13 +26,6 @@
 #include "svn_test.h"
 #include "fs-helpers.h"
 
-#include "../libsvn_fs_base/fs.h"
-#include "../libsvn_fs_base/dag.h"
-#include "../libsvn_fs_base/trail.h"
-
-#include "../libsvn_fs_base/bdb/rev-table.h"
-#include "../libsvn_fs_base/bdb/nodes-table.h"
-
 
 /*-------------------------------------------------------------------*/
 
@@ -52,6 +45,7 @@ fs_warning_handler (void *baton, svn_error_t *err)
   svn_handle_warning(stderr, err);
 }
 
+/* This is used only by bdb fs tests. */
 svn_error_t *
 svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
 {
@@ -71,13 +65,28 @@ svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
 }
 
 
+static apr_hash_t *
+make_fs_config (const char *fs_type,
+                apr_pool_t *pool)
+{
+  apr_hash_t *fs_config = apr_hash_make (pool);
+  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                APR_HASH_KEY_STRING, "1");
+  apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                APR_HASH_KEY_STRING,
+                fs_type);
+  return fs_config;
+}
+
 
 svn_error_t *
 svn_test__create_fs (svn_fs_t **fs_p,
                      const char *name, 
+                     const char *fs_type,
                      apr_pool_t *pool)
 {
   apr_finfo_t finfo;
+  apr_hash_t *fs_config = make_fs_config (fs_type, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -93,11 +102,17 @@ svn_test__create_fs (svn_fs_t **fs_p,
                                   "there is already a file named '%s'", name);
     }
 
-  SVN_ERR (svn_test__fs_new (fs_p, pool));
-  SVN_ERR (svn_fs_create_berkeley (*fs_p, name));
+  SVN_ERR (svn_fs_create (fs_p, name, fs_config, pool));
+  if (! *fs_p)
+    return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
+                             "Couldn't alloc a new fs object.");
+
+  /* Provide a warning function that just dumps the message to stderr.  */
+  svn_fs_set_warning_func (*fs_p, fs_warning_handler, NULL);
   
   /* Provide a handler for Berkeley DB error messages.  */
-  SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
+  if (strcmp (SVN_FS_TYPE_BDB, fs_type) == 0)
+    SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
 
   /* Register this fs for cleanup. */
   svn_test_add_dir_cleanup (name);
@@ -109,10 +124,11 @@ svn_test__create_fs (svn_fs_t **fs_p,
 svn_error_t *
 svn_test__create_repos (svn_repos_t **repos_p,
                         const char *name, 
+                        const char *fs_type,
                         apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_hash_t *fs_config;
+  apr_hash_t *fs_config = make_fs_config (fs_type, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -128,17 +144,11 @@ svn_test__create_repos (svn_repos_t **repos_p,
                                   "there is already a file named '%s'", name);
     }
 
-  fs_config = apr_hash_make (pool);
-  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                APR_HASH_KEY_STRING, "1");
-  if (getenv ("FS_TYPE"))
-    apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE, APR_HASH_KEY_STRING,
-                  getenv ("FS_TYPE"));
   SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, NULL,
                              fs_config, pool));
 
   /* Provide a handler for Berkeley DB error messages if we're using bdb.  */
-  if (getenv ("FS_TYPE") == NULL || strcmp (getenv ("FS_TYPE"), "bdb") == 0)
+  if (strcmp (SVN_FS_TYPE_BDB, fs_type) == 0)
     SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
                                           berkeley_error_handler));
 
@@ -362,7 +372,8 @@ svn_test__validate_tree (svn_fs_root_t *root,
 
               /* Append this entry name to the list of corrupt entries. */
               svn_stringbuf_appendcstr (corrupt_entries, "   "); 
-              svn_stringbuf_appendbytes (corrupt_entries, (char *)key, keylen);
+              svn_stringbuf_appendbytes (corrupt_entries, (const char *)key,
+                                         keylen);
               svn_stringbuf_appendcstr (corrupt_entries, "\n"); 
             }
 
@@ -376,7 +387,8 @@ svn_test__validate_tree (svn_fs_root_t *root,
 
           /* Append this entry name to the list of missing entries. */
           svn_stringbuf_appendcstr (missing_entries, "   "); 
-          svn_stringbuf_appendbytes (missing_entries, (char *)key, keylen);
+          svn_stringbuf_appendbytes (missing_entries, (const char *)key,
+                                     keylen);
           svn_stringbuf_appendcstr (missing_entries, "\n"); 
         } 
     }
@@ -399,7 +411,7 @@ svn_test__validate_tree (svn_fs_root_t *root,
       
       /* Append this entry name to the list of missing entries. */
       svn_stringbuf_appendcstr (extra_entries, "   "); 
-      svn_stringbuf_appendbytes (extra_entries, (char *)key, keylen);
+      svn_stringbuf_appendbytes (extra_entries, (const char *)key, keylen);
       svn_stringbuf_appendcstr (extra_entries, "\n"); 
     }
 

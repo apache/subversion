@@ -22,13 +22,11 @@
 
 /*** Includes. ***/
 
-#include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
-#include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "cl.h"
+
+#include "svn_private_config.h"
 
 
 
@@ -47,11 +45,8 @@ svn_cl__move (apr_getopt_t *os,
   svn_client_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   if (targets->nelts != 2)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
@@ -60,17 +55,22 @@ svn_cl__move (apr_getopt_t *os,
   dst_path = ((const char **) (targets->elts))[1];
   
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
 
   SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
                                        NULL, ctx->config, pool));
-  err = svn_client_move 
-           (&commit_info, 
-            src_path, &(opt_state->start_revision), dst_path,
-            opt_state->force,
-            ctx,
-            pool);
+
+  if (opt_state->start_revision.kind != svn_opt_revision_unspecified
+      && opt_state->start_revision.kind != svn_opt_revision_head)
+    {
+      return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         _("Cannot specify revisions (except HEAD) with move operations"));
+    }
+
+  err = svn_client_move2 (&commit_info, src_path, dst_path,
+                          opt_state->force, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force (err);

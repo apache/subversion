@@ -23,22 +23,15 @@
 #include <assert.h>
 #include <apr_general.h>  /* for strcasecmp() */
 #include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
-#include <apr_lib.h>
 #include "svn_types.h"
-#include "svn_delta.h"
 #include "svn_string.h"
-#include "svn_time.h"
 #include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_io.h"
-#include "svn_hash.h"
+#include "svn_props.h"
 #include "svn_wc.h"
 
 #include "wc.h"
@@ -129,7 +122,7 @@ svn_wc_translated_file (const char **xlated_p,
           return svn_error_createf
             (SVN_ERR_IO_UNKNOWN_EOL, NULL,
              _("'%s' has unknown value for svn:eol-style property"),
-             vfile);
+             svn_path_local_style (vfile, pool));
         }
 
       *xlated_p = tmp_vfile;
@@ -255,6 +248,30 @@ svn_wc__maybe_set_executable (svn_boolean_t *did_set,
   if (propval != NULL)
     {
       SVN_ERR (svn_io_set_file_executable (path, TRUE, FALSE, pool));
+      if (did_set)
+        *did_set = TRUE;
+    }
+  else if (did_set)
+    *did_set = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__maybe_set_read_only (svn_boolean_t *did_set,
+                             const char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *pool)
+{
+  const svn_string_t *needs_lock;
+  SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, path, 
+                            adm_access, pool));
+
+  if (needs_lock != NULL)
+    {
+      SVN_ERR (svn_io_set_file_read_write_carefully (path, FALSE, 
+                                                     FALSE, pool));
       if (did_set)
         *did_set = TRUE;
     }

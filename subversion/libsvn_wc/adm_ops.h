@@ -26,8 +26,6 @@
 
 #include <apr_pools.h>
 #include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +57,7 @@ svn_error_t *svn_wc__do_update_cleanup (const char *path,
                                         svn_boolean_t recursive,
                                         const char *base_url,
                                         svn_revnum_t new_revision,
-                                        svn_wc_notify_func_t notify_func,
+                                        svn_wc_notify_func2_t notify_func,
                                         void *notify_baton,
                                         svn_boolean_t remove_missing_dirs,
                                         apr_pool_t *pool);

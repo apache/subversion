@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Fs"
+#elif defined(SWIGRUBY)
+%module "svn::ext::fs"
 #else
 %module fs
 #endif
@@ -38,7 +40,7 @@
 %nodefault;
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_fs_root_t **,
@@ -46,71 +48,40 @@
     void **,
     svn_fs_history_t **,
     svn_fs_id_t **,
+    svn_fs_access_t **,
+    svn_lock_t **,
     svn_fs_t **
 };
 
-/* and this is always an OUT param */
 %apply const char **OUTPUT { const char ** };
+
+/* svn_fs_*_proplist() */
+%apply apr_hash_t **PROPHASH { apr_hash_t **table_p };
 
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
    ### incompatible. */
 
-/* -----------------------------------------------------------------------
-   These parameters may be NULL.
-*/
 %apply const char *MAY_BE_NULL {
     const char *base_checksum,
-    const char *result_checksum
+    const char *result_checksum,
+    const char *token
 };
 
-/* -----------------------------------------------------------------------
-   for the FS, 'int *' will always be an OUTPUT parameter
-*/
-%apply int *OUTPUT { int * };
-
-/* -----------------------------------------------------------------------
-   define the data/len pair of svn_fs_parse_id to be a single argument
-*/
+/* svn_fs_parse_id() */
 %apply (const char *PTR, apr_size_t LEN) {
     (const char *data, apr_size_t len)
 }
 
-/* -----------------------------------------------------------------------
-   list_transaction's "apr_array_header_t **" is returning a list of strings.
-*/
-
-%typemap(in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
-    $1 = &temp;
-}
-%typemap(python, argout, fragment="t_output_helper") 
-apr_array_header_t **names_p {
-    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
+/* svn_fs_berkeley_logfiles(), svn_fs_list_transactions() */
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    apr_array_header_t **logfiles,
+    apr_array_header_t **names_p
 }
 
-%typemap(perl5, argout) apr_array_header_t **names_p {
-    $result = svn_swig_pl_array_to_list(*$1);
-    ++argvi;
-}
-/* -----------------------------------------------------------------------
-   revisions_changed's "apr_array_header_t **" is returning a list of
-   revs.  also, its input array is a list of strings.
-*/
-
-%typemap(python, argout, fragment="t_output_helper") 
-apr_array_header_t **revs {
-    $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
-}
-%typemap(perl5, argout) apr_array_header_t **revs {
-    $result = svn_swig_pl_ints_to_list(*$1);
-    ++argvi;
-}
-
-/* -----------------------------------------------------------------------
-   all uses of "apr_hash_t **" are returning property hashes
-*/
-
-%apply apr_hash_t **PROPHASH { apr_hash_t ** };
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
 /* -----------------------------------------------------------------------
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
@@ -125,6 +96,10 @@ apr_array_header_t **revs {
 %typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **entries_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t);
+}
+%typemap(ruby,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(ruby,argout) apr_hash_t **entries_p {
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_fs_dirent_t *");
 }
 
 /* -----------------------------------------------------------------------
@@ -145,6 +120,14 @@ apr_array_header_t **revs {
 }
 
 /* -----------------------------------------------------------------------
+   handle get_locks_func/get_locks_baton pairs.
+*/
+%typemap(python, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
+  $1 = svn_swig_py_fs_get_locks_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is
    NULL, then t_output_helper() is passed Py_None, but that goofs up
    because that is *also* the marker for "I haven't started assembling a
@@ -162,7 +145,6 @@ apr_array_header_t **revs {
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_fs.h
 %{
 #include "svn_md5.h"
 #include "svn_fs.h"
@@ -171,11 +153,13 @@ apr_array_header_t **revs {
 #include "swigutil_py.h"
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_fs.h

@@ -23,12 +23,11 @@
 #include <apr_xml.h>
 #include <mod_dav.h>
 
-#include "svn_pools.h"
 #include "svn_repos.h"
-#include "svn_fs.h"
 #include "svn_types.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -99,7 +98,8 @@ static svn_error_t * log_receiver(void *baton,
   if (msg)
     SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
                                "<D:comment>%s</D:comment>" DEBUG_CR,
-                               apr_xml_quote_string(pool, msg, 0)) );
+                               apr_xml_quote_string
+                               (pool, svn_xml_fuzzy_escape (msg, pool), 0)) );
 
 
   if (changed_paths)
@@ -208,7 +208,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
-  unsigned int limit = 0;
+  int limit = 0;
   int ns;
 
   /* These get determined from the request document. */
@@ -223,10 +223,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain the 'svn:' "
-                           "namespace, so it is not going to have certain "
-                           "required elements.");
+      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have certain "
+                               "required elements.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
   
   /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
@@ -268,8 +270,13 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
              directory to get the log of, and we need a path to call
              svn_fs_revisions_changed on. */
           if (child->first_cdata.first)
-            target = svn_path_join(target, child->first_cdata.first->text,
-                                   resource->pool);
+            {
+              if ((derr = dav_svn__test_canonical
+                   (child->first_cdata.first->text, resource->pool)))
+                return derr;
+              target = svn_path_join(target, child->first_cdata.first->text,
+                                     resource->pool);
+            }
 
           (*((const char **)(apr_array_push (paths)))) = target;
         }

@@ -42,8 +42,6 @@ struct svn_stream_t {
   svn_read_fn_t read_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
-  svn_timeout_fn_t timeout_fn;
-  svn_data_pending_fn_t data_pending_fn;
 };
 
 
@@ -60,8 +58,6 @@ svn_stream_create (void *baton, apr_pool_t *pool)
   stream->read_fn = NULL;
   stream->write_fn = NULL;
   stream->close_fn = NULL;
-  stream->timeout_fn = NULL;
-  stream->data_pending_fn = NULL;
   return stream;
 }
 
@@ -94,21 +90,6 @@ svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn)
 }
 
 
-void
-svn_stream_set_timeout (svn_stream_t *stream, svn_timeout_fn_t timeout_fn)
-{
-  stream->timeout_fn = timeout_fn;
-}
-
-
-void
-svn_stream_set_data_pending (svn_stream_t *stream,
-                             svn_data_pending_fn_t data_pending_fn)
-{
-  stream->data_pending_fn = data_pending_fn;
-}
-
-
 svn_error_t *
 svn_stream_read (svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
@@ -131,23 +112,6 @@ svn_stream_close (svn_stream_t *stream)
   if (stream->close_fn == NULL)
     return SVN_NO_ERROR;
   return stream->close_fn (stream->baton);
-}
-
-
-void
-svn_stream_timeout (svn_stream_t *stream,
-                    apr_interval_time_t interval)
-{
-  assert(stream->timeout_fn != NULL);
-  stream->timeout_fn (stream->baton, interval);
-}
-
-
-svn_boolean_t
-svn_stream_data_pending (svn_stream_t *stream)
-{
-  assert(stream->data_pending_fn != NULL);
-  return stream->data_pending_fn (stream->baton);
 }
 
 
@@ -465,7 +429,7 @@ read_handler_gz (void *baton, char *buffer, apr_size_t *len)
       SVN_ERR (zerr_to_svn_error (zerr, "inflateInit", btn->in));
     }
   
-  btn->in->next_out = buffer;
+  btn->in->next_out = (Bytef *) buffer;
   btn->in->avail_out = *len;
   
   while (btn->in->avail_out > 0) 
@@ -516,7 +480,7 @@ write_handler_gz (void *baton, const char *buffer, apr_size_t *len)
   subpool = svn_pool_create (btn->pool);
   write_buf = apr_palloc (subpool, buf_size);
   
-  btn->out->next_in = (char *) buffer;
+  btn->out->next_in = (Bytef *) buffer;  /* Casting away const! */
   btn->out->avail_in = *len;
   
   while (btn->out->avail_in > 0)

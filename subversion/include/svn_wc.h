@@ -51,8 +51,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_wc version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_wc version information.
  */
 const svn_version_t *svn_wc_version (void);
 
@@ -72,7 +73,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
@@ -99,6 +100,9 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * an error.  The error @c SVN_ERR_WC_LOCKED will be returned if a
  * subdirectory of @a path is already write locked.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
  * @a pool will be used to allocate memory for the baton and any subsequently
  * cached items.  If @a adm_access has not been closed when the pool is
  * cleared, it will be closed automatically at that point, and removed from
@@ -109,6 +113,21 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * the longest lifetime of all the batons in the set.  This implies it must be
  * the root of the hierarchy.
  */
+svn_error_t *svn_wc_adm_open3 (svn_wc_adm_access_t **adm_access,
+                               svn_wc_adm_access_t *associated,
+                               const char *path,
+                               svn_boolean_t write_lock,
+                               int depth,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_adm_open3().  @a depth is set to -1 if tree_lock
+ * is @c TRUE, else 0.
+ */
 svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
                                svn_wc_adm_access_t *associated,
                                const char *path,
@@ -117,9 +136,9 @@ svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
                                apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_open2().  @a depth is set to -1 if @a tree_lock
+ * Similar to svn_wc_adm_open3().  @a depth is set to -1 if @a tree_lock
  * is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
@@ -130,17 +149,32 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Checks the working copy to determine the node type of @a path.  If 
  * @a path is a versioned directory then the behaviour is like that of
- * @c svn_wc_adm_open2, otherwise, if @a path is a file or does not
- * exist, then the behaviour is like that of @c svn_wc_adm_open2 with
+ * @c svn_wc_adm_open3, otherwise, if @a path is a file or does not
+ * exist, then the behaviour is like that of @c svn_wc_adm_open3 with
  * @a path replaced by the parent directory of @a path.  If @a path is
  * an unversioned directory, the behaviour is also like that of
- * @c svn_wc_adm_open2 on the parent, except that if the open fails,
+ * @c svn_wc_adm_open3 on the parent, except that if the open fails,
  * then the returned SVN_ERR_WC_NOT_DIRECTORY error refers to @a path,
  * not to @a path's parent.
+ */
+svn_error_t *svn_wc_adm_probe_open3 (svn_wc_adm_access_t **adm_access,
+                                     svn_wc_adm_access_t *associated,
+                                     const char *path,
+                                     svn_boolean_t write_lock,
+                                     int depth,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
+                                     apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_adm_probe_open3() without the cancel
+ * functionality.
  */
 svn_error_t *svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
                                      svn_wc_adm_access_t *associated,
@@ -150,9 +184,9 @@ svn_error_t *svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
                                      apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_probe_open2().  @a depth is set to -1 if
+ * Similar to svn_wc_adm_probe_open3().  @a depth is set to -1 if
  * @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
@@ -161,6 +195,36 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     svn_boolean_t write_lock,
                                     svn_boolean_t tree_lock,
                                     apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *
+ * Open access batons for @a path and return in @a *anchor_access and
+ * @a *target the anchor and target required to drive an editor.  Return
+ * in @a *target_access the access baton for the target, which may be the
+ * same as @a *anchor_access.  All the access batons will be in the
+ * @a *anchor_access set.
+ *
+ * @a depth determines the depth used when opening @a path if @a path is a
+ * versioned directory, @a depth is ignored otherwise.  If @a write_lock is
+ * @a TRUE the access batons will hold write locks.
+ *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
+ * This function is essentially a combination of svn_wc_adm_open3 and
+ * svn_wc_get_actual_target, with the emphasis on reducing physical IO.
+ */
+svn_error_t *
+svn_wc_adm_open_anchor (svn_wc_adm_access_t **anchor_access,
+                        svn_wc_adm_access_t **target_access,
+                        const char **target,
+                        const char *path,
+                        svn_boolean_t write_lock,
+                        int depth,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *pool);
 
 /** Return, in @a *adm_access, a pointer to an existing access baton associated
  * with @a path.  @a path must be a directory that is locked as part of the 
@@ -189,13 +253,13 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
                                         apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Try various ways to obtain an access baton for @a path.
  *
  * First, try to obtain @a *adm_access via @c svn_wc_adm_probe_retrieve(),
  * but if this fails because @a associated can't give a baton for
- * @a path or @a path's parent, then try @c svn_wc_adm_probe_open2(),
+ * @a path or @a path's parent, then try @c svn_wc_adm_probe_open3(),
  * this time passing @a write_lock and @a depth.  If there is
  * still no access because @a path is not a versioned directory, then
  * just set @a *adm_access to null and return success.  But if it is
@@ -204,10 +268,28 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
  * fails for any other reason, return the corresponding error, and the
  * effect on @a *adm_access is also undefined.)
  *
- * If @c svn_wc_adm_probe_open() succeeds, then add @a *adm_access to
+ * If @c svn_wc_adm_probe_open3() succeeds, then add @a *adm_access to
  * @a associated.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
  * Use @a pool only for local processing, not to allocate @a *adm_access.
+ */
+svn_error_t *svn_wc_adm_probe_try3 (svn_wc_adm_access_t **adm_access,
+                                    svn_wc_adm_access_t *associated,
+                                    const char *path,
+                                    svn_boolean_t write_lock,
+                                    int depth,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_adm_probe_try3() without the cancel
+ * functionality.
  */
 svn_error_t *svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
@@ -217,9 +299,9 @@ svn_error_t *svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
                                     apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_probe_try2().  @a depth is set to -1 if
+ * Similar to svn_wc_adm_probe_try3().  @a depth is set to -1 if
  * @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
@@ -346,7 +428,7 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_parse_externals_description2, but returns the
  * parsed externals in a hash instead of an array.  This function
@@ -449,7 +531,19 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_postfix_txdelta,
 
   /** Processed a single revision's blame. */
-  svn_wc_notify_blame_revision
+  svn_wc_notify_blame_revision,
+
+  /** @since New in 1.2.  Locking a path. */
+  svn_wc_notify_locked,
+
+  /** @since New in 1.2.  Unlocking a path. */
+  svn_wc_notify_unlocked,
+
+  /** @since New in 1.2.  Failed to lock a path. */
+  svn_wc_notify_failed_lock,
+
+  /** @since New in 1.2.  Failed to unlock a path. */
+  svn_wc_notify_failed_unlock
 } svn_wc_notify_action_t;
 
 
@@ -481,47 +575,125 @@ typedef enum svn_wc_notify_state_t
 
 } svn_wc_notify_state_t;
 
+/** @since New in 1.2.
+ *
+ * What happened to a lock during an operation.
+ *
+ */
+typedef enum svn_wc_notify_lock_state_t {
+  svn_wc_notify_lock_state_inapplicable = 0,
+  svn_wc_notify_lock_state_unknown,
+  /** The lock wasn't changed. */
+  svn_wc_notify_lock_state_unchanged,
+  /** The item was locked. */
+  svn_wc_notify_lock_state_locked,
+  /** The item was unlocked. */
+  svn_wc_notify_lock_state_unlocked
+} svn_wc_notify_lock_state_t;
 
-/** Notify the world that @a action has happened to @a path.  @a path is 
- * either absolute or relative to cwd (i.e., not relative to an anchor).
+/** @since New in 1.2.
  *
- * @a kind, @a content_state and @a prop_state are from after @a action, 
- * not before.
+ * Structure used in the @c svn_wc_notify_func2_t function.
  *
- * If @a mime_type is non-null, it indicates the mime-type of @a path.  It
- * is always @c NULL for directories.
+ * @c path is either absolute or relative to the current working directory
+ * (i.e., not relative to an anchor).  @c action describes what happened
+ * to @c path.
  *
- * @a revision is @c SVN_INVALID_REVNUM, except when @a action is
- * @c svn_wc_notify_update_completed, in which case @a revision is 
- * the target revision of the update if available, else it is still
- * @c SVN_INVALID_REVNUM.
+ * @c kind, @c content_state @c prop_state and @c lock_state are from
+ * after @c action, not before.  @c lock_state reflects the addition
+ * or removal of a lock token in the working copy.
  *
- * Note that if @a action is @c svn_wc_notify_update, then @a path has 
+ * If @c mime_type is non-null, it indicates the mime-type of @c path.
+ * It is always @c NULL for directories.
+ *
+ * If @c action is @c svn_wc_notify_update_completed, @c revision is the
+ * target revision of the update, or @c SVN_INVALID_REVNUM if not
+ * available.  If @c action is @c svn_wc_notify_blame_revision, @c
+ * revision is the processed revision.  In all other cases, @c
+ * revision is @c SVN_INVALID_REVNUM.
+ *
+ * For an @c action of svn_wc_notify_locked, @c lock is the lock
+ * structure received from the repository.  For other actions, it is
+ * @c NULL.
+ *
+ * @c err is @c NULL, except when @c action is @c
+ * svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock, in
+ * which case it points to an error describing the reason for the failure.
+ *
+ * Note that if @c action is @c svn_wc_notify_update, then @c path has 
  * already been installed, so it is legitimate for an implementation of
- * @c svn_wc_notify_func_t to examine @a path in the working copy.
+ * @c svn_wc_notify_func2_t to examine @c path in the working copy.
  *
- * ### Design Notes:
+ * @note The purpose of the @c kind, @c mime_type, @c content_state, and
+ * @c prop_state fields is to provide "for free" information that an
+ * implementation is likely to want, and which it would otherwise be
+ * forced to deduce via expensive operations such as reading entries
+ * and properties.  However, if the caller does not have this
+ * information, it will simply pass the corresponding `*_unknown'
+ * values, and it is up to the implementation how to handle that
+ * (i.e., whether or not to attempt deduction, or just to punt and
+ * give a less informative notification).
  *
- * The purpose of the @a kind, @a mime_type, @a content_state, and 
- * @a prop_state fields is to provide "for free" information that this 
- * function is likely to want, and which it would otherwise be forced 
- * to deduce via expensive operations such as reading entries and 
- * properties.  However, if the caller does not have this information, 
- * it will simply pass the corresponding `*_unknown' values, and it is 
- * up to the implementation how to handle that (i.e., whether or not to
- * attempt deduction, or just to punt and give a less informative
- * notification).
+ * @note Callers of notification functions should use @c svn_wc_create_notify
+ * to create structures of this type to allow for extensibility. */
+typedef struct svn_wc_notify_t {
+  const char *path;
+  svn_wc_notify_action_t action;
+  svn_node_kind_t kind;
+  const char *mime_type;
+  const svn_lock_t *lock;
+  svn_error_t *err;
+  svn_wc_notify_state_t content_state;
+  svn_wc_notify_state_t prop_state;
+  svn_wc_notify_lock_state_t lock_state;
+  svn_revnum_t revision;
+  /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update svn_wc_create_notify
+     and svn_wc_dup_notify. */
+} svn_wc_notify_t;
+
+/** @since New in 1.2.
  *
- * Recommendation: callers of @c svn_wc_notify_func_t should avoid
- * invoking it multiple times on the same @a path within a given
+ * Allocate an @c svn_wc_notify_t structure in @a pool, initialize and return
+ * it.
+ *
+ * Set the @c path field of the created struct to @a path, and @c action to
+ * @a action.  Set all other fields to their @c _unknown, @c NULL or
+ * invalid value, respectively.
+ */
+svn_wc_notify_t *
+svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
+                      apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
+ * Return a deep copy of @a notify, allocated in @a pool.
+ */
+svn_wc_notify_t *
+svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
+ * Notify the world that @a notify->action has happened to @a notify->path.
+ *
+ * Recommendation: callers of @c svn_wc_notify_func2_t should avoid
+ * invoking it multiple times on the same path within a given
  * operation, and implementations should not bother checking for such
  * duplicate calls.  For example, in an update, the caller should not
  * invoke the notify func on receiving a prop change and then again
  * on receiving a text change.  Instead, wait until all changes have
  * been received, and then invoke the notify func once (from within
  * an @c svn_delta_editor_t's @c close_file(), for example), passing 
- * the appropriate @a content_state and @a prop_state flags.
+ * the appropriate @a notify->content_state and @a notify->prop_state flags.
  */
+typedef void (*svn_wc_notify_func2_t) (void *baton,
+                                       const svn_wc_notify_t *notify,
+                                       apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_notify_func2_t, but takes the information as arguments
+ * instead of struct fields. */
 typedef void (*svn_wc_notify_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_notify_action_t action,
@@ -535,13 +707,17 @@ typedef void (*svn_wc_notify_func_t) (void *baton,
 
 
 
-/** A callback vtable invoked by our diff-editors, as they receive
+/**
+ * @since New in 1.2.
+ *
+ * A callback vtable invoked by our diff-editors, as they receive
  * diffs from the server.  'svn diff' and 'svn merge' both implement
  * their own versions of this table.
  */
-typedef struct svn_wc_diff_callbacks_t
+typedef struct svn_wc_diff_callbacks2_t
 {
-  /** A file @a path has changed.  The changes can be seen by comparing
+  /** A file @a path has changed.  If tmpfile2 is non-null, the
+   * contents have changed and those changes can be seen by comparing
    * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2 of 
    * the file, respectively.
    *
@@ -550,18 +726,25 @@ typedef struct svn_wc_diff_callbacks_t
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
    *
+   * @a propchanges is an array of (@c svn_prop_t) structures. If it has
+   * any elements, the original list of properties is provided in
+   * @a originalprops, which is a hash of @c svn_string_t values, keyed on the
+   * property name.
+   * 
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
    *
-   * If @a state is non-null, set @a *state to the state of the file
-   * contents after the operation has been performed.  (In practice,
-   * this is only useful with merge, not diff; diff callbacks will
-   * probably set @a *state to @c svn_wc_notify_state_unknown, since 
-   * they do not change the state and therefore do not bother to know 
-   * the state after the operation.)
+   * If @a contentstate is non-null, set @a *contentstate to the state of
+   * the file contents after the operation has been performed.  The same
+   * applies for @a propstate regarding the property changes.  (In
+   * practice, this is only useful with merge, not diff; diff callbacks
+   * will probably set @a *contentstate and @a *propstate to
+   * @c svn_wc_notify_state_unknown, since they do not change the state and
+   * therefore do not bother to know the state after the operation.)
    */
   svn_error_t *(*file_changed) (svn_wc_adm_access_t *adm_access,
-                                svn_wc_notify_state_t *state,
+                                svn_wc_notify_state_t *contentstate,
+                                svn_wc_notify_state_t *propstate,
                                 const char *path,
                                 const char *tmpfile1,
                                 const char *tmpfile2,
@@ -569,6 +752,8 @@ typedef struct svn_wc_diff_callbacks_t
                                 svn_revnum_t rev2,
                                 const char *mimetype1,
                                 const char *mimetype2,
+                                const apr_array_header_t *propchanges,
+                                apr_hash_t *originalprops,
                                 void *diff_baton);
 
   /** A file @a path was added.  The contents can be seen by comparing
@@ -581,19 +766,26 @@ typedef struct svn_wc_diff_callbacks_t
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
    *
+   * @a propchanges is an array of (@c svn_prop_t) structures.  If it contains
+   * any elements, the original list of properties is provided in
+   * @a originalprops, which is a hash of @c svn_string_t values, keyed on the
+   * property name.
+   * 
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
    *
-   * If @a state is non-null, set @a *state to the state of the file
-   * contents after the operation has been performed.  (In practice,
+   * If @a contentstate is non-null, set @a *contentstate to the state of the
+   * file contents after the operation has been performed.  The same
+   * applies for @a propstate regarding the property changes.  (In practice,
    * this is only useful with merge, not diff; diff callbacks will
-   * probably set @a *state to @c svn_wc_notify_state_unknown, since 
-   * they do not change the state and therefore do not bother to know 
-   * the state after the operation.)
+   * probably set @a *contentstate and *propstate to
+   * @c svn_wc_notify_state_unknown, since they do not change the state
+   * and therefore do not bother to know the state after the operation.)
    *
    */
   svn_error_t *(*file_added) (svn_wc_adm_access_t *adm_access,
-                              svn_wc_notify_state_t *state,
+                              svn_wc_notify_state_t *contentstate,
+                              svn_wc_notify_state_t *propstate,
                               const char *path,
                               const char *tmpfile1,
                               const char *tmpfile2,
@@ -601,10 +793,13 @@ typedef struct svn_wc_diff_callbacks_t
                               svn_revnum_t rev2,
                               const char *mimetype1,
                               const char *mimetype2,
+                              const apr_array_header_t *propchanges,
+                              apr_hash_t *originalprops,
                               void *diff_baton);
   
   /** A file @a path was deleted.  The [loss of] contents can be seen by
-   * comparing @a tmpfile1 and @a tmpfile2.
+   * comparing @a tmpfile1 and @a tmpfile2.  @a originalprops provides
+   * the properties of the file.
    *
    * If known, the @c svn:mime-type value of each file is passed into
    * @a mimetype1 and @a mimetype2;  either or both of the values can
@@ -628,6 +823,7 @@ typedef struct svn_wc_diff_callbacks_t
                                 const char *tmpfile2,
                                 const char *mimetype1,
                                 const char *mimetype2,
+                                apr_hash_t *originalprops,
                                 void *diff_baton);
   
   /** A directory @a path was added.  @a rev is the revision that the
@@ -659,7 +855,8 @@ typedef struct svn_wc_diff_callbacks_t
                                const char *path,
                                void *diff_baton);
   
-  /** A list of property changes (@a propchanges) was applied to @a path.
+  /** A list of property changes (@a propchanges) was applied to the
+   * directory @a path.
    *
    * The array is a list of (@c svn_prop_t) structures. 
    *
@@ -676,6 +873,76 @@ typedef struct svn_wc_diff_callbacks_t
    * to @c svn_wc_notify_state_unknown, since they do not change the state 
    * and therefore do not bother to know the state after the operation.)
    */
+  svn_error_t *(*dir_props_changed) (svn_wc_adm_access_t *adm_access,
+                                     svn_wc_notify_state_t *state,
+                                     const char *path,
+                                     const apr_array_header_t *propchanges,
+                                     apr_hash_t *original_props,
+                                     void *diff_baton);
+
+} svn_wc_diff_callbacks2_t;
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_callbakcs2_t, but with file additions/content
+ * changes and property changes split into different functions.
+ */
+typedef struct svn_wc_diff_callbacks_t
+{
+  /** Similar to @c file_changed in @c svn_wc_diff_callbacks2_t, but without
+   * property change information.  @a tmpfile2 is never NULL. @a state applies
+   * to the file contents. */
+  svn_error_t *(*file_changed) (svn_wc_adm_access_t *adm_access,
+                                svn_wc_notify_state_t *state,
+                                const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                svn_revnum_t rev1,
+                                svn_revnum_t rev2,
+                                const char *mimetype1,
+                                const char *mimetype2,
+                                void *diff_baton);
+
+  /** Similar to @c file_added in @c svn_wc_diff_callbacks2_t, but without
+   * property change information.  @a *state applies to the file contents. */
+  svn_error_t *(*file_added) (svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *state,
+                              const char *path,
+                              const char *tmpfile1,
+                              const char *tmpfile2,
+                              svn_revnum_t rev1,
+                              svn_revnum_t rev2,
+                              const char *mimetype1,
+                              const char *mimetype2,
+                              void *diff_baton);
+  
+  /** Similar to @c file_deleted in @c svn_wc_diff_callbacks2_t, but without
+   * the properties. */
+  svn_error_t *(*file_deleted) (svn_wc_adm_access_t *adm_access,
+                                svn_wc_notify_state_t *state,
+                                const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                const char *mimetype1,
+                                const char *mimetype2,
+                                void *diff_baton);
+  
+  /** The same as @c dir_added in @c svn_wc_diff_callbacks2_t. */
+  svn_error_t *(*dir_added) (svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *state,
+                             const char *path,
+                             svn_revnum_t rev,
+                             void *diff_baton);
+  
+  /** The same as @c dir_deleted in @c svn_diff_callbacks2_t. */
+  svn_error_t *(*dir_deleted) (svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *state,
+                               const char *path,
+                               void *diff_baton);
+  
+  /** Similar to @c dir_props_changed in @c svn_diff_callbacks2_t, but this
+   * function is called for files as well as directories. */
   svn_error_t *(*props_changed) (svn_wc_adm_access_t *adm_access,
                                  svn_wc_notify_state_t *state,
                                  const char *path,
@@ -699,7 +966,7 @@ svn_error_t *svn_wc_check_wc (const char *path,
 
 /** Set @a *has_binary_prop to @c TRUE iff @a path has been marked 
  * with a property indicating that it is non-text (in other words, binary).
- * @a adm_access is an access baton set that contains @path.
+ * @a adm_access is an access baton set that contains @a path.
  */
 svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                                      const char *path,
@@ -862,6 +1129,19 @@ typedef struct svn_wc_entry_t
   /** last commit author of this item */
   const char *cmt_author;
 
+  /** @since New in 1.2
+   *  lock token or NULL if path not locked in this WC */
+  const char *lock_token;
+  /** @since New in 1.2
+   *  lock owner, or NULL if not locked in this WC */
+  const char *lock_owner;
+  /** @since New in 1.2
+   *  lock comment or NULL if not locked in this WC or no comment */
+  const char *lock_comment;
+  /** @since New in 1.2
+   *  Lock creation date or 0 if not locked in this WC */
+  apr_time_t lock_creation_date;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
      if you need to extend that as well. */
 } svn_wc_entry_t;
@@ -980,13 +1260,19 @@ typedef struct svn_wc_entry_callbacks_t
 } svn_wc_entry_callbacks_t;
 
 
-/** A generic entry-walker.
+/**
+ * @since New in 1.2.
+ *
+ * A generic entry-walker.
  *
  * Do a recursive depth-first entry-walk beginning on @a path, which can
  * be a file or dir.  Call callbacks in @a walk_callbacks, passing
  * @a walk_baton to each.  Use @a pool for looping, recursion, and to
  * allocate all entries returned.  @a adm_access must be an access baton
  * for @a path.
+ *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
  *
  * Like our other entries interfaces, entries that are in a 'deleted'
  * or 'absent' state (and not scheduled for re-addition) are not
@@ -1000,6 +1286,21 @@ typedef struct svn_wc_entry_callbacks_t
  * subsequently as the '.' entry within itself.  The two calls can be
  * distinguished by looking for @c SVN_WC_ENTRY_THIS_DIR in the 'name'
  * field of the entry.
+ */
+svn_error_t *svn_wc_walk_entries2 (const char *path,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const svn_wc_entry_callbacks_t 
+                                                      *walk_callbacks,
+                                   void *walk_baton,
+                                   svn_boolean_t show_hidden,
+                                   svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_wc_walk_entries2(), but without cancellation support.
  */
 svn_error_t *svn_wc_walk_entries (const char *path,
                                   svn_wc_adm_access_t *adm_access,
@@ -1022,10 +1323,10 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
 
 /** Ensure that an administrative area exists for @a path, so that @a
  * path is a working copy subdir based on @a url at @a revision, and
- * with repository UUID @a uuid.
+ * with repository UUID @a uuid.  @a uuid may be @c NULL.
  *
- * If the administrative area does not exist then it will be created and
- * initialized to an unlocked state.
+ * If the administrative area does not exist, then create it and
+ * initialize it to an unlocked state.
  *
  * If the administrative area already exists then the given @a url
  * must match the URL in the administrative area or an error will be
@@ -1033,8 +1334,6 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  * special case of adding a directory that has a name matching one
  * scheduled for deletion, in which case @a revision must be zero.
  *
- * @a uuid may be @c NULL.
-
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
  */
@@ -1122,11 +1421,58 @@ enum svn_wc_status_kind
     svn_wc_status_incomplete
 };
 
-/** Structure for holding the "status" of a working copy item. 
+/** @since New in 1.2. 
+ *
+ * Structure for holding the "status" of a working copy item. 
  *
  * The item's entry data is in @a entry, augmented and possibly shadowed
  * by the other fields.  @a entry is @c NULL if this item is not under
  * version control.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ */
+typedef struct svn_wc_status2_t
+{
+  /** Can be @c NULL if not under version control. */
+  svn_wc_entry_t *entry;
+  
+  /** The status of the entries text. */
+  enum svn_wc_status_kind text_status;
+
+  /** The status of the entries properties. */
+  enum svn_wc_status_kind prop_status;
+
+  /** a directory can be 'locked' if a working copy update was interrupted. */
+  svn_boolean_t locked;
+
+  /** a file or directory can be 'copied' if it's scheduled for 
+   * addition-with-history (or part of a subtree that is scheduled as such.).
+   */
+  svn_boolean_t copied;
+
+  /** a file or directory can be 'switched' if the switch command has been 
+   * used.
+   */
+  svn_boolean_t switched;
+
+  /** The entry's text status in the repository. */
+  enum svn_wc_status_kind repos_text_status;
+
+  /** The entry's property status in the repository. */
+  enum svn_wc_status_kind repos_prop_status;
+
+  /* The entry's lock in the repository, if any. */
+  svn_lock_t *repos_lock;
+
+} svn_wc_status2_t;
+
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ *  Same as svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
  */
 typedef struct svn_wc_status_t
 {
@@ -1161,14 +1507,27 @@ typedef struct svn_wc_status_t
 } svn_wc_status_t;
 
 
-/** Return a deep copy of the @a orig_stat status structure, allocated
+
+/** @since New in 1.2. 
+ *
+ * Return a deep copy of the @a orig_stat status structure, allocated
  * in @a pool.
+ */
+svn_wc_status2_t *svn_wc_dup_status2 (svn_wc_status2_t *orig_stat,
+                                      apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Same as svn_wc_dup_status2(), but for older svn_wc_status_t structures.
  */
 svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
                                     apr_pool_t *pool);
 
 
-/** Fill @a *status for @a path, allocating in @a pool, with the exception 
+/** @since New in 1.2.
+ *
+ * Fill @a *status for @a path, allocating in @a pool, with the exception 
  * of the @c repos_rev field, which is normally filled in by the caller.
  * @a adm_access must be an access baton for @a path.
  *
@@ -1193,6 +1552,16 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
  * straightforward in their meanings.  See the comments on the
  * @c svn_wc_status_kind structure above for some hints.
  */
+svn_error_t *svn_wc_status2 (svn_wc_status2_t **status, 
+                             const char *path, 
+                             svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ *  Same as svn_wc_status2(), but for older svn_wc_status_t structures.
+ */
 svn_error_t *svn_wc_status (svn_wc_status_t **status, 
                             const char *path, 
                             svn_wc_adm_access_t *adm_access,
@@ -1201,21 +1570,39 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
 
 
 
-/** A callback for reporting an @c svn_wc_status_t * item @a status
-    for @a path.  @a baton is provided to the */
+/** @since New in 1.2. 
+ * 
+ * A callback for reporting a @a status about @a path. 
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.
+ */
+typedef void (*svn_wc_status_func2_t) (void *baton,
+                                       const char *path,
+                                       svn_wc_status2_t *status);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ *  Same as svn_wc_status_func2_t(), but for older svn_wc_status_t structures.
+ */
 typedef void (*svn_wc_status_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_status_t *status);
 
 
-/** Set @a *editor and @a *edit_baton to an editor that generates @c
- * svn_wc_status_t structures and sends them through @a status_func /
+/** @since New in 1.2.
+ *
+ * Set @a *editor and @a *edit_baton to an editor that generates @c
+ * svn_wc_status2_t structures and sends them through @a status_func /
  * @a status_baton.  @a anchor is an access baton, with a tree lock,
  * for the local path to the working copy which will be used as the
  * root of our editor.  If @a target is not empty, it represents an
  * entry in the @a anchor path which is the subject of the editor
  * drive (otherwise, the @a anchor is the subject).
  * 
+ * If @a set_locks_baton is non-@c NULL, it will be set to a baton that can
+ * be used in a call to the @c svn_wc_status_set_repos_locks function.
+ *
  * Callers drive this editor to describe working copy out-of-dateness
  * with respect to the repository.  If this information is not
  * available or not desired, callers should simply call the
@@ -1235,7 +1622,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  *   - If @a get_all is false, then only locally-modified entries will be
  *     returned.  If true, then all entries will be returned.
  *
- *   - If @a descend is false, status structures will be returned only
+ *   - If @a recurse is false, status structures will be returned only
  *     for the target and its immediate children.  Otherwise, this
  *     operation is fully recursive.
  *
@@ -1252,13 +1639,35 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  */
+svn_error_t *svn_wc_get_status_editor2 (const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        void **set_locks_baton,
+                                        svn_revnum_t *edit_revision,
+                                        svn_wc_adm_access_t *anchor,
+                                        const char *target,
+                                        apr_hash_t *config,
+                                        svn_boolean_t recurse,
+                                        svn_boolean_t get_all,
+                                        svn_boolean_t no_ignore,
+                                        svn_wc_status_func2_t status_func,
+                                        void *status_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        svn_wc_traversal_info_t *traversal_info,
+                                        apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Same as svn_wc_get_status_editor2, but with @a set_locks_baton set
+ * to @c NULL, and taking a deprecated svn_wc_status_func_t argument. */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_revnum_t *edit_revision,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        apr_hash_t *config,
-                                       svn_boolean_t descend,
+                                       svn_boolean_t recurse,
                                        svn_boolean_t get_all,
                                        svn_boolean_t no_ignore,
                                        svn_wc_status_func_t status_func,
@@ -1268,10 +1677,31 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
 
+
+/** @since New in 1.2.
+ *
+ * Associate @a locks, a hash table mapping <tt>const char*</tt>
+ * absolute repository paths to <tt>svn_lock_t</tt> objects with an
+ * @a set_locks_baton returned by an earlier call to
+ * @c svn_wc_get_status_editor2.  @a repos_root is the repository root URL.
+ * Perform all allocations in @a pool.
+ *
+ * @note @a locks will not be copied, so it must be valid throughout the
+ * edit.  @a pool must also not be destroyed or cleared before the edit is
+ * finished.
+ */
+svn_error_t *
+svn_wc_status_set_repos_locks (void *set_locks_baton,
+                               apr_hash_t *locks,
+                               const char *repos_root,
+                               apr_pool_t *pool);
+
 /** @} */
 
 
-/** Copy @a src to @a dst_basename in @a dst_parent, and schedule 
+/** @since New in 1.2.
+ *
+ * Copy @a src to @a dst_basename in @a dst_parent, and schedule 
  * @a dst_basename for addition to the repository, remembering the copy 
  * history.
  *
@@ -1292,6 +1722,19 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  * to the repository until a commit occurs.  This scheduling can be
  * removed with @c svn_client_revert.
  */
+svn_error_t *svn_wc_copy2 (const char *src,
+                           svn_wc_adm_access_t *dst_parent,
+                           const char *dst_basename,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_copy2, but takes an @c svn_wc_notify_func_t instead.
+ */
 svn_error_t *svn_wc_copy (const char *src,
                           svn_wc_adm_access_t *dst_parent,
                           const char *dst_basename,
@@ -1301,8 +1744,9 @@ svn_error_t *svn_wc_copy (const char *src,
                           void *notify_baton,
                           apr_pool_t *pool);
 
-
-/** Schedule @a path for deletion, it will be deleted from the repository on
+/** @since New in 1.2.
+ *
+ * Schedule @a path for deletion, it will be deleted from the repository on
  * the next commit.  If @a path refers to a directory, then a recursive
  * deletion will occur.  @a adm_access must hold a write lock for the parent 
  * of @a path.
@@ -1321,6 +1765,18 @@ svn_error_t *svn_wc_copy (const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  */
+svn_error_t *svn_wc_delete2 (const char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             svn_wc_notify_func2_t notify_func,
+                             void *notify_baton,
+                             apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_delete2, but takes an @c svn_wc_notify_func_t instead.
+ */
 svn_error_t *svn_wc_delete (const char *path,
                             svn_wc_adm_access_t *adm_access,
                             svn_cancel_func_t cancel_func,
@@ -1330,7 +1786,9 @@ svn_error_t *svn_wc_delete (const char *path,
                             apr_pool_t *pool);
 
 
-/** Put @a path under version control by adding an entry in its parent,
+/** @since New in 1.2.
+ *
+ * Put @a path under version control by adding an entry in its parent,
  * and, if @a path is a directory, adding an administrative area.  The
  * new entry and anything under it is scheduled for addition to the
  * repository.  @a parent_access should hold a write lock for the parent
@@ -1382,6 +1840,20 @@ svn_error_t *svn_wc_delete (const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
  * string about this.
  */
+svn_error_t *svn_wc_add2 (const char *path,
+                          svn_wc_adm_access_t *parent_access,
+                          const char *copyfrom_url,
+                          svn_revnum_t copyfrom_rev,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_add2, but takes an @c svn_wc_notify_func_t instead.
+ */
 svn_error_t *svn_wc_add (const char *path,
                          svn_wc_adm_access_t *parent_access,
                          const char *copyfrom_url,
@@ -1391,7 +1863,6 @@ svn_error_t *svn_wc_add (const char *path,
                          svn_wc_notify_func_t notify_func,
                          void *notify_baton,
                          apr_pool_t *pool);
-
 
 /** Add a file to a working copy at @a dst_path, obtaining the file's
  * contents from @a new_text_path and its properties from @a new_props,
@@ -1470,10 +1941,13 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 
 
-/** Assuming @a path is under version control and in a state of conflict, 
+/**
+ * @since New in 1.2.
+ *
+ * Assuming @a path is under version control and in a state of conflict, 
  * then take @a path *out* of this state.  If @a resolve_text is true then 
  * any text conflict is resolved, if @a resolve_props is true then any 
- * property conflicts are resolved.  If @a recursive is true, then search
+ * property conflicts are resolved.  If @a recurse is true, then search
  * recursively for conflicts to resolve.
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
@@ -1497,11 +1971,28 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
  * property conflict resolution was requested, and it was successful, then 
  * success gets reported.
  */
+svn_error_t *svn_wc_resolved_conflict2 (const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_boolean_t resolve_text,
+                                        svn_boolean_t resolve_props,
+                                        svn_boolean_t recurse,
+                                        svn_wc_notify_func2_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_wc_resolved_conflict2(), but takes an
+ * svn_wc_notify_func_t and doesn't have cancellation support.
+ */
 svn_error_t *svn_wc_resolved_conflict (const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
-                                       svn_boolean_t recursive,
+                                       svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
                                        apr_pool_t *pool);
@@ -1509,7 +2000,8 @@ svn_error_t *svn_wc_resolved_conflict (const char *path,
 
 /* Commits. */
 
-/** Bump a successfully committed absolute @a path to @a new_revnum after a
+/** @since New in 1.2.
+ * Bump a successfully committed absolute @a path to @a new_revnum after a
  * commit succeeds.  @a rev_date and @a rev_author are the (server-side)
  * date and author of the new revision; one or both may be @c NULL.
  * @a adm_access must hold a write lock appropriate for @a path.
@@ -1518,10 +2010,28 @@ svn_error_t *svn_wc_resolved_conflict (const char *path,
  * wc properties; if an @c svn_prop_t->value is null, then that property is
  * deleted.
  *
+ * If @a remove_lock is @c TRUE, any entryprops related to a repository
+ * lock will be removed.
+ *
  * If @a recurse is true and @a path is a directory, then bump every
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  */
+svn_error_t *svn_wc_process_committed2 (const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_boolean_t recurse,
+                                        svn_revnum_t new_revnum,
+                                        const char *rev_date,
+                                        const char *rev_author,
+                                        apr_array_header_t *wcprop_changes,
+                                        svn_boolean_t remove_lock,
+                                        apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compability with the 1.1 API.
+ *
+ * Similar to @c svn_wc_process_committed2, but with @a remove_lock set to
+ * @a FALSE. */
 svn_error_t *svn_wc_process_committed (const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t recurse,
@@ -1535,7 +2045,9 @@ svn_error_t *svn_wc_process_committed (const char *path,
 
 
 
-/** Do a depth-first crawl in a working copy, beginning at @a path.
+/** @since New in 1.2.
+ *
+ * Do a depth-first crawl in a working copy, beginning at @a path.
  *
  * Communicate the `state' of the working copy's revisions to
  * @a reporter/@a report_baton.  Obviously, if @a path is a file instead 
@@ -1561,6 +2073,24 @@ svn_error_t *svn_wc_process_committed (const char *path,
  * If @a traversal_info is non-null, then record pre-update traversal
  * state in it.  (Caller should obtain @a traversal_info from
  * @c svn_wc_init_traversal_info.)
+ */
+svn_error_t *
+svn_wc_crawl_revisions2 (const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         const svn_ra_reporter2_t *reporter,
+                         void *report_baton,
+                         svn_boolean_t restore_files,
+                         svn_boolean_t recurse,
+                         svn_boolean_t use_commit_times,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Simliar to @c svn_wc_crawl_revisions2, but takes an svn_wc_notify_func_t
+ * and a @c svn_reporter_t instead.
  */
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
@@ -1612,7 +2142,9 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
 
 /* Update and update-like functionality. */
 
-/** Set @a *editor and @a *edit_baton to an editor and baton for updating a
+/** @since New in 1.2.
+ *
+ * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
  *
  * If @a ti is non-null, record traversal info in @a ti, for use by
@@ -1645,6 +2177,26 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * FALSE, the working files will be touched with the 'now' time.
  *
  */
+svn_error_t *svn_wc_get_update_editor2 (svn_revnum_t *target_revision,
+                                        svn_wc_adm_access_t *anchor,
+                                        const char *target,
+                                        svn_boolean_t use_commit_times,
+                                        svn_boolean_t recurse,
+                                        svn_wc_notify_func2_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        const char *diff3_cmd,
+                                        const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        svn_wc_traversal_info_t *ti,
+                                        apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_get_update_editor, but takes an svn_wc_notify_func_t
+ * instead.
+ */
 svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
@@ -1660,8 +2212,9 @@ svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
                                        svn_wc_traversal_info_t *ti,
                                        apr_pool_t *pool);
 
-
-/** A variant of @c svn_wc_get_update_editor().
+/** @since New in 1.2.
+ *
+ * A variant of @c svn_wc_get_update_editor().
  *
  * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
  * a working copy to a new @a switch_url.  (Right now, this URL must be
@@ -1697,6 +2250,27 @@ svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
+ */
+svn_error_t *svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
+                                        svn_wc_adm_access_t *anchor,
+                                        const char *target,
+                                        const char *switch_url,
+                                        svn_boolean_t use_commit_times,
+                                        svn_boolean_t recurse,
+                                        svn_wc_notify_func2_t notify_func,
+                                        void *notify_baton,
+                                        svn_cancel_func_t cancel_func,
+                                        void *cancel_baton,
+                                        const char *diff3_cmd,
+                                        const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        svn_wc_traversal_info_t *ti,
+                                        apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.2 API.
+ *
+ * Similar to @c svn_wc_get_switch_editor, but takes an @c svn_wc_notify_func_t
+ * instead.
  */
 svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -1757,14 +2331,38 @@ svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
-/** Set property @a name to @a value for @a path.  Do any temporary
- * allocation in @a pool.  If @a name is not a valid property for @a path,
- * return @c SVN_ERR_ILLEGAL_TARGET.  If @a value is null, remove property
- * @a name.  @a adm_access must be an access baton with a write lock for 
- * @a path. 
+/** 
+ * @since New in 1.2.
+ * 
+ * Set property @a name to @a value for @a path, or if @a value is
+ * null, remove property @a name from @a path.  @a adm_access is an
+ * access baton with a write lock for @a path.
+ *
+ * If @a skip_checks is true, do no validity checking.  But if @a
+ * skip_checks is false, and @a name is not a valid property for @a
+ * path, return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the
+ * property is not appropriate for @a path), or @c
+ * SVN_ERR_BAD_MIME_TYPE (if @a name is "svn:mime-type", but @a value
+ * is not a valid mime-type).
  *
  * @a name may be a wc property or a regular property; but if it is an
- * entry property, return the error @c SVN_ERR_BAD_PROP_KIND.
+ * entry property, return the error @c SVN_ERR_BAD_PROP_KIND, even if
+ * @a skip_checks is true.
+ *
+ * Use @a pool for temporary allocation.  
+ */
+svn_error_t *svn_wc_prop_set2 (const char *name,
+                               const svn_string_t *value,
+                               const char *path,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_boolean_t skip_checks,
+                               apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Like svn_wc_prop_set2(), but with @a force always false.
  */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
@@ -1803,7 +2401,7 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
 
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Return an @a editor/@a edit_baton for diffing a working copy against the
  * repository.
@@ -1831,6 +2429,26 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
  */
+svn_error_t *svn_wc_get_diff_editor3 (svn_wc_adm_access_t *anchor,
+                                      const char *target,
+                                      const svn_wc_diff_callbacks2_t *callbacks,
+                                      void *callback_baton,
+                                      svn_boolean_t recurse,
+                                      svn_boolean_t ignore_ancestry,
+                                      svn_boolean_t use_text_base,
+                                      svn_boolean_t reverse_order,
+                                      svn_cancel_func_t cancel_func,
+                                      void *cancel_baton,
+                                      const svn_delta_editor_t **editor,
+                                      void **edit_baton,
+                                      apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_get_diff_editor3(), but with an
+ * @c svn_wc_diff_callbacks_t instead of @c svn_wc_diff_callbacks2_t. */
 svn_error_t *svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
                                       const char *target,
                                       const svn_wc_diff_callbacks_t *callbacks,
@@ -1847,9 +2465,9 @@ svn_error_t *svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_get_diff_editor2(), but with @ignore_ancestry
+ * Similar to svn_wc_get_diff_editor2(), but with @a ignore_ancestry
  * always set to @c FALSE.
  */
 svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
@@ -1867,7 +2485,7 @@ svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
 
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Compare working copy against the text-base.
  *
@@ -1885,6 +2503,19 @@ svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  */
+svn_error_t *svn_wc_diff3 (svn_wc_adm_access_t *anchor,
+                           const char *target,
+                           const svn_wc_diff_callbacks2_t *callbacks,
+                           void *callback_baton,
+                           svn_boolean_t recurse,
+                           svn_boolean_t ignore_ancestry,
+                           apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_diff3, but with a @c svn_wc_diff_callbacks_t argument
+ * instead of @c svn_wc_diff_callbacks2_t. */
 svn_error_t *svn_wc_diff2 (svn_wc_adm_access_t *anchor,
                            const char *target,
                            const svn_wc_diff_callbacks_t *callbacks,
@@ -1893,9 +2524,8 @@ svn_error_t *svn_wc_diff2 (svn_wc_adm_access_t *anchor,
                            svn_boolean_t ignore_ancestry,
                            apr_pool_t *pool);
 
-
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Similar to svn_wc_diff2(), but with @a ignore_ancestry always set
  * to @c FALSE.
@@ -2038,6 +2668,9 @@ svn_error_t *svn_wc_merge (const char *left,
  * .prej file), and the entry is marked "conflicted".  Base properties
  * are changed unconditionally, if @a base_merge is @c TRUE, they never result
  * in a conflict.
+ *
+ * If @a path is not under version control, return the error
+ * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
@@ -2060,7 +2693,10 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
                                             apr_pool_t *pool);
 
 
-/** Recurse from @a path, cleaning up unfinished log business.  Perform
+/**
+ * @since New in 1.2.
+ *
+ * Recurse from @a path, cleaning up unfinished log business.  Perform
  * necessary allocations in @a pool.  Any working copy locks under @a path 
  * will be taken over and then cleared by this function.  If @a diff3_cmd
  * is non-null, then use it as the diff3 command for any merging; otherwise,
@@ -2072,6 +2708,19 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
  * If @a cancel_func is non-null, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ */
+svn_error_t *
+svn_wc_cleanup2 (const char *path,
+                 const char *diff3_cmd,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_wc_cleanup2(). @a optional_adm_access is an historic
+ * relic and not used, it may be NULL.
  */
 svn_error_t *
 svn_wc_cleanup (const char *path,
@@ -2086,6 +2735,9 @@ svn_wc_cleanup (const char *path,
  *
  * Called for each relocated file/directory.  @a uuid contains the
  * expected repository UUID, @a url contains the tentative URL.
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
                                                        const char *uuid,
@@ -2098,7 +2750,7 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
  * @a validator_baton), will be called for each newly generated URL.
  *
  * @a adm_access is an access baton for the directory containing
- * @a path, and must not be NULL.  
+ * @a path.
  */
 svn_error_t *
 svn_wc_relocate (const char *path,
@@ -2111,14 +2763,16 @@ svn_wc_relocate (const char *path,
                  apr_pool_t *pool);
 
 
-/** Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
+/** @since New in 1.2.
+ *
+ * Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
  * necessary allocations in @a pool.
  *
  * @a parent_access is an access baton for the directory containing @a path,
  * unless @a path is a wc root, in which case @a parent_access refers to 
  * @a path itself.
  *
- * If @cancel_func is non-null, call it with @a cancel_baton at
+ * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
  * error (typically @c SVN_ERR_CANCELLED), return that error
  * immediately.
@@ -2130,6 +2784,24 @@ svn_wc_relocate (const char *path,
  * For each item reverted, @a notify_func will be called with @a notify_baton
  * and the path of the reverted item. @a notify_func may be @c NULL if this
  * notification is not needed.
+ *
+ * If @a path is not under version control, return the error
+ * SVN_ERR_UNVERSIONED_RESOURCE.
+ */
+svn_error_t *
+svn_wc_revert2 (const char *path, 
+                svn_wc_adm_access_t *parent_access,
+                svn_boolean_t recursive, 
+                svn_boolean_t use_commit_times,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_wc_revert2, but takes an @c svn_wc_notify_func_t instead.
  */
 svn_error_t *
 svn_wc_revert (const char *path, 
@@ -2141,7 +2813,6 @@ svn_wc_revert (const char *path,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool);
-
 
 
 /* Tmp files */
@@ -2260,6 +2931,22 @@ svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
                                          apr_hash_t *config,
                                          apr_pool_t *pool);
 
+
+/** Add @a lock to the working copy for @a path.  @a adm_access must contain
+ * a write lock for @a path.  If @a path is read-only, due to locking
+ * properties, make it writable.  Perform temporary allocations in @a
+ * pool. */
+svn_error_t *svn_wc_add_lock (const char *path, const svn_lock_t *lock,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool);
+
+/** Remove any lock from @a path.  @a adm_access must contain a
+ * write-lock for @a path.  If @a path has a lock and the locking
+ * so specifies, make the file read-only.  Don't return an error if @a
+ * path didn't have a lock.  Perform temporary allocations in @a pool. */
+svn_error_t *svn_wc_remove_lock (const char *path,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -5,16 +5,11 @@
 
 # Run tests to ensure that our build requirements are met
 RELEASE_MODE=""
-NEON_CHECK_CONTROL=""
 SKIP_DEPS=""
 while test $# != 0; do
   case "$1" in
     --release)
       RELEASE_MODE="$1"
-      shift
-      ;;
-    --disable-neon-version-check)
-      NEON_CHECK_CONTROL="$1"
       shift
       ;;
     -s)
@@ -34,7 +29,7 @@ done
 # ### we don't want to copy the fancy option parsing loop there. For the
 # ### same reason, all parameters should be quoted, so that buildcheck.sh
 # ### sees an empty arg rather than missing one.
-./build/buildcheck.sh "$RELEASE_MODE" "$NEON_CHECK_CONTROL" || exit 1
+./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
 ### temporary cleanup during transition to libtool 1.4
 (cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
@@ -65,10 +60,6 @@ fi
 
 echo "Copying libtool helper: $ltfile"
 cp $ltfile ac-helpers/libtool.m4
-
-# This is just temporary until people's workspaces are cleared -- remove
-# any old aclocal.m4 left over from prior build so it doesn't cause errors.
-rm -f aclocal.m4
 
 # Create the file detailing all of the build outputs for SVN.
 #
@@ -110,9 +101,6 @@ if test -n "$gen_failed"; then
 fi
 
 # Produce config.h.in
-# Do this before the automake (automake barfs if the header isn't available).
-# Do it after the aclocal command -- automake sets up the header to depend
-# on aclocal.m4
 echo "Creating svn_private_config.h.in..."
 ${AUTOHEADER:-autoheader}
 

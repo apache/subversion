@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Client"
+#elif defined(SWIGRUBY)
+%module "svn::ext::client"
 #else
 %module client
 #endif
@@ -28,45 +30,53 @@
 %import svn_types.i
 %import svn_string.i
 %import svn_delta.i
+%import svn_wc.i
 
 /* -----------------------------------------------------------------------
-   don't wrap the following items
+   %apply-ing of typemaps defined elsewhere
 */
-#ifndef SWIGPERL
-    %ignore svn_client_proplist_item_t;
-#endif
 
-/* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
-*/
 %apply SWIGTYPE **OUTPARAM {
   svn_client_commit_info_t **,
   svn_auth_provider_object_t **,
   svn_client_ctx_t **
 };
 
-/* -----------------------------------------------------------------------
-   all "targets" and "diff_options" arrays are constant inputs of
-   svn_stringbuf_t *
- */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *targets,
     const apr_array_header_t *diff_options
 };
 
-/* -----------------------------------------------------------------------
-   fix up the return hash for svn_client_propget()
-*/
+/* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
+/* svn_client_url_from_path(), svn_client_uuid_from_url()
+ * svn_client_uuid_from_path */
+%apply const char **OUTPUT {
+    const char **url,
+    const char **uuid
+};
+
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
+
 /* -----------------------------------------------------------------------
-   handle the return value for svn_client_proplist()
+   svn_client_proplist()
+   returns apr_array_header_t * <svn_client_proplist_item_t *>
 */
 
-%typemap(python,in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
+%typemap(in, numinputs=0) apr_array_header_t **props (apr_array_header_t *temp) {
     $1 = &temp;
 }
-%typemap(python,argout,fragment="t_output_helper") apr_array_header_t ** {
+
+/* svn_client_proplist_item_t is used exclusively for svn_client_proplist().
+   The python bindings convert it to a native python tuple. */
+#ifdef SWIGPYTHON
+    %ignore svn_client_proplist_item_t;
+#endif
+%typemap(python, argout, fragment="t_output_helper") apr_array_header_t **props
+{
     svn_client_proplist_item_t **ppitem;
     int i;
     int nelts = (*$1)->nelts;
@@ -95,12 +105,7 @@
     $result = t_output_helper($result, list);
 }
 
-%typemap(perl5,in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp)
-{
-    $1 = &temp;
-}
-
-%typemap(perl5,argout) apr_array_header_t ** {
+%typemap(perl5,argout) apr_array_header_t **props {
     $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
                                               "svn_client_proplist_item_t *"));
     argvi++;
@@ -112,45 +117,8 @@
 }
 
 /* -----------------------------------------------------------------------
-   handle svn_wc_notify_func_t/baton pairs
-*/
-
-%typemap(python,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-
-  $1 = svn_swig_py_notify_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-%typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-
-  $1 = svn_swig_java_notify_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_wc_notify_func_t "jobject"
-%typemap(jtype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
-%typemap(jstype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
-%typemap(javain) svn_wc_notify_func_t "$javainput"
-%typemap(javaout) svn_wc_notify_func_t {
-    return $jnicall;
-  }
-
-/* -----------------------------------------------------------------------
-   handle svn_wc_notify_func_t/baton pairs
-*/
-
-%typemap(python,in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_py_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-%typemap(perl5,in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_pl_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-/* -----------------------------------------------------------------------
-   handle svn_client_get_commit_log_t/baton pairs
+   Callback: svn_client_get_commit_log_t
+   svn_client_ctx_t
 */
 
 %typemap(python,in) (svn_client_get_commit_log_t log_msg_func, 
@@ -160,96 +128,46 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(java,in) (svn_client_get_commit_log_t log_msg_func, 
-                   void *log_msg_baton) {
-
-  $1 = svn_swig_java_get_commit_log_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_client_get_commit_log_t "jobject"
-%typemap(jtype) svn_client_get_commit_log_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(jstype) svn_client_get_commit_log_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(javain) svn_client_get_commit_log_t "$javainput"
-%typemap(javaout) svn_client_get_commit_log_t {
-    return $jnicall;
+%typemap(ruby,in) (svn_client_get_commit_log_t log_msg_func) 
+{
+  /* Assume that arg1 is svn_client_ctx_t. */
+  if (arg1) {
+    $1 = svn_swig_rb_get_commit_log_func;
+    arg1->log_msg_baton = (void *)$input;
+    rb_ivar_set(self, rb_intern("log_msg_baton"), $input);
   }
-
-/* -----------------------------------------------------------------------
-   handle svn_client_prompt_t/baton pairs
-*/
-
-%typemap(java,memberin) (svn_client_prompt_t prompt_func, 
-                   void *prompt_baton) {
-  //$1 = svn_swig_java_client_prompt_func;
-  //$2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
 }
 
-%typemap(java,in) (svn_client_prompt_t prompt_func, 
-                   void *prompt_baton) {
-  $1 = svn_swig_java_client_prompt_func;
-  $2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
-}
-
-%typemap(java, jni) svn_client_prompt_t "jobject"
-%typemap(java, jtype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(java, jstype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
-%typemap(java, javain) svn_client_prompt_t "$javainput"
-
 /* -----------------------------------------------------------------------
-   handle svn_log_message_receiver_t/baton pairs
+   Callback: svn_client_blame_receiver_t
+   svn_client_blame()
 */
 
-%typemap(java,in) (svn_log_message_receiver_t receiver,
-                void *receiver_baton) {
-
-  $1 = svn_swig_java_log_message_receiver;
-  $2 = (void*)$input; /* our function is the baton. */
+%typemap(python, in) (svn_client_blame_receiver_t receiver, 
+                      void *receiver_baton) {
+    $1 = svn_swig_py_client_blame_receiver_func;
+    $2 = (void *)$input;
 }
 
-%typemap(jni) svn_log_message_receiver_t "jobject"
-%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(javain) svn_log_message_receiver_t "$javainput"
-%typemap(javaout) svn_log_message_receiver_t {
-    return $jnicall;
-  }
-
-/* -----------------------------------------------------------------------
-   handle svn_client_blame_receiver_t/baton pairs
-*/
-
-%typemap(perl5,in) (svn_client_blame_receiver_t receiver, void *receiver_baton) {
+%typemap(perl5, in) (svn_client_blame_receiver_t receiver,
+                     void *receiver_baton) {
   $1 = svn_swig_pl_blame_func;
   $2 = $input; /* our function is the baton. */
 }
 
-/* -----------------------------------------------------------------------
-   handle the "statushash" OUTPUT param for svn_client_status()
-*/
-%typemap(python,in,numinputs=0) apr_hash_t **statushash = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **statushash {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
+/*
+%typemap(ruby, in) (svn_client_blame_receiver_t receiver,
+                    void *receiver_baton) {
+  $1 = svn_swig_rb_client_blame_receiver_func;
+  $2 = (void *)$input;
 }
-
-/* -----------------------------------------------------------------------
-   handle the prompt_baton
 */
-
-%typemap(jni) svn_log_message_receiver_t "jobject"
-%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(javain) svn_log_message_receiver_t "$javainput"
-%typemap(javaout) svn_log_message_receiver_t {
-    return $jnicall;
-  }
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
    adding a simple declaration here, SWIG will insert a name for it.
+   FIXME: This may be untrue. See svn_wc_status, etc.
 */
 %types(svn_wc_status_t *);
 
@@ -258,15 +176,25 @@
 %types(svn_dirent_t *);
 
 /* -----------------------------------------------------------------------
-  thunk the various authentication prompt functions and store
-  the inputed SV in _global_callback for use in the later argout
-  typemap
+  thunk the various authentication prompt functions.
+  PERL NOTE: store the inputed SV in _global_callback for use in the
+             later argout typemap
 */
 %typemap(perl5, in) (svn_auth_simple_prompt_func_t prompt_func,
                      void *prompt_baton) {
     $1 = svn_swig_pl_thunk_simple_prompt;
     _global_callback = $input;
     $2 = (void *) _global_callback;
+}
+%typemap(python, in) (svn_auth_simple_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_simple_prompt_func;
+    $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_simple_prompt_func_t prompt_func,
+                    void *prompt_baton) {
+    $1 = svn_swig_rb_auth_simple_prompt_func;
+    $2 = (void *) $input;
 }
 
 %typemap(perl5, in) (svn_auth_username_prompt_func_t prompt_func,
@@ -275,12 +203,32 @@
     _global_callback = $input;
     $2 = (void *) _global_callback;
 }
+%typemap(python, in) (svn_auth_username_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_username_prompt_func;
+    $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_username_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_rb_auth_username_prompt_func;
+    $2 = (void *) $input;
+}
 
 %typemap(perl5, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
                      void *prompt_baton) {
     $1 = svn_swig_pl_thunk_ssl_server_trust_prompt;
     _global_callback = $input;
     $2 = (void *) _global_callback;
+}
+%typemap(python, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_py_auth_ssl_server_trust_prompt_func;
+    $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
+    $2 = (void *) $input;
 }
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
@@ -289,12 +237,32 @@
     _global_callback = $input;
     $2 = (void *) _global_callback;
 }
+%typemap(python, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_ssl_client_cert_prompt_func;
+    $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
+    $2 = (void *) $input;
+}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
                       void *prompt_baton) {
     $1 = svn_swig_pl_thunk_ssl_client_cert_pw_prompt;
     _global_callback = $input;
     $2 = (void *) _global_callback;
+}
+%typemap(python, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_ssl_client_cert_pw_prompt_func;
+    $2 = $input;
+}
+%typemap(ruby, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
+    $2 = (void *) $input;
 }
 
 /* -----------------------------------------------------------------------
@@ -340,6 +308,47 @@
 %typemap(perl5, out) apr_hash_t *config {
   $result = svn_swig_pl_convert_hash($1, SWIG_TypeQuery("svn_config_t *"));
   argvi++;
+}
+
+#ifdef SWIGRUBY
+%runtime %{
+  #include <apr.h>
+  #include <apr_pools.h>
+
+  static apr_pool_t *
+  _svn_client_pool(void) 
+  {
+    static apr_pool_t *__svn_client_pool = NULL;
+    if (!__svn_client_pool) {
+      apr_pool_create(&__svn_client_pool, NULL);
+    }
+    return __svn_client_pool;
+  }
+
+  static apr_pool_t *
+  _svn_client_config_pool(void) 
+  {
+    static apr_pool_t *__svn_client_config_pool = NULL;
+    if (!__svn_client_config_pool) {
+      apr_pool_create(&__svn_client_config_pool, _svn_client_pool());
+    }
+    return __svn_client_config_pool;
+  }
+%}
+#endif
+
+%typemap(ruby, argout) apr_hash_t *config {
+  if ($1)
+    apr_pool_clear(_svn_client_config_pool());
+}
+
+%typemap(ruby, in) apr_hash_t *config {
+  $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *",
+                                              _svn_client_config_pool());
+}
+
+%typemap(ruby, out) apr_hash_t *config {
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_config_t *");
 }
 
 /* -----------------------------------------------------------------------
@@ -393,34 +402,17 @@
   argvi++;
 }  
 
+/* svn_client_update2 */
+%typemap(ruby, in, numinputs=0) apr_array_header_t **result_revs (apr_array_header_t *temp) {
+  $1 = &temp;
+}
 
-/* -----------------------------------------------------------------------
- * Handle output types for svn_client_url_from_path, svn_client_uuid_from_url
- * and svn_client_uuid_from_path */
-
-%apply const char **OUTPUT {
-    const char **url,
-    const char **uuid
-};
-
-
-
+%typemap(ruby, argout, fragment="output_helper") apr_array_header_t **result_revs
+{
+  $result = output_helper($result, svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+}
 
 /* ----------------------------------------------------------------------- */
-
-%typemap(java, in) svn_stream_t *out %{
-    $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);
-%}
-%typemap(java, jni) svn_stream_t * "jobject";
-%typemap(java, jtype) svn_stream_t * "java.io.OutputStream";
-%typemap(java, jstype) svn_stream_t * "java.io.OutputStream";
-%typemap(java, javain) svn_stream_t * "$javainput";
-
-/* ----------------------------------------------------------------------- */
-
-/* Include the headers before we swig-include the svn_client.h header file.
-   SWIG will split the nested svn_client_revision_t structure, and we need
-   the types declared *before* the split structure is encountered.  */
 
 %{
 #include "svn_client.h"
@@ -430,13 +422,19 @@
 #include "swigutil_py.h"
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
+#endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
 #endif
 %}
 
 %include svn_client.h
+
+#ifdef SWIGRUBY
+REMOVE_DESTRUCTOR(svn_client_commit_info_t)
+REMOVE_DESTRUCTOR(svn_client_commit_item_t)
+REMOVE_DESTRUCTOR(svn_client_proplist_item_t)
+#endif

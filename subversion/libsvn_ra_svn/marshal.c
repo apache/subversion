@@ -34,7 +34,6 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
-#include "svn_io.h"
 #include "svn_private_config.h"
 
 #include "ra_svn.h"
@@ -51,6 +50,9 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
 
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
+  conn->sock = sock;
+  conn->in_file = in_file;
+  conn->out_file = out_file;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -58,13 +60,6 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
   conn->pool = pool;
-
-  
-  if (sock != NULL)
-    svn_ra_svn__sock_streams(sock, &conn->in_stream, &conn->out_stream, pool);
-  else
-    svn_ra_svn__file_streams(in_file, out_file, &conn->in_stream,
-                             &conn->out_stream, pool);
   return conn;
 }
 
@@ -102,13 +97,31 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 
   conn->block_handler = handler;
   conn->block_baton = baton;
-  svn_stream_timeout(conn->out_stream, interval);
+  if (conn->sock)
+    apr_socket_timeout_set(conn->sock, interval);
+  else
+    apr_file_pipe_timeout_set(conn->out_file, interval);
 }
 
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool)
 {
-  return svn_stream_data_pending(conn->in_stream);
+  apr_pollfd_t pfd;
+  int n;
+
+  if (conn->sock)
+    {
+      pfd.desc_type = APR_POLL_SOCKET;
+      pfd.desc.s = conn->sock;
+    }
+  else
+    {
+      pfd.desc_type = APR_POLL_FILE;
+      pfd.desc.f = conn->in_file;
+    }
+  pfd.p = pool;
+  pfd.reqevents = APR_POLLIN;
+  return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -132,13 +145,19 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *data, apr_size_t len)
 {
   const char *end = data + len;
+  apr_status_t status;
   apr_size_t count;
   apr_pool_t *subpool = NULL;
 
   while (data < end)
     {
       count = end - data;
-      SVN_ERR(svn_stream_write(conn->out_stream, data, &count));
+      if (conn->sock)
+        status = apr_socket_send(conn->sock, data, &count);
+      else
+        status = apr_file_write(conn->out_file, data, &count);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't write to connection"));
       if (count == 0)
         {
           if (!subpool)
@@ -212,11 +231,23 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
   return data + copylen;
 }
 
-/* Read data from from input stream. */
+/* Read data from socket or input file as appropriate. */
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
                                   apr_size_t *len)
 {
-  SVN_ERR(svn_stream_read(conn->in_stream, data, len));
+  apr_status_t status;
+
+  /* Always block for reading. */
+  if (conn->sock && conn->block_handler)
+    apr_socket_timeout_set(conn->sock, -1);
+  if (conn->sock)
+    status = apr_socket_recv(conn->sock, data, len);
+  else
+    status = apr_file_read(conn->in_file, data, len);
+  if (conn->sock && conn->block_handler)
+    apr_socket_timeout_set(conn->sock, 0);
+  if (status && !APR_STATUS_IS_EOF(status))
+    return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             _("Connection closed unexpectedly"));
@@ -229,7 +260,7 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   apr_size_t len;
 
   assert(conn->read_ptr == conn->read_end);
-  writebuf_flush(conn, pool);
+  SVN_ERR(writebuf_flush(conn, pool));
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len));
   conn->read_ptr = conn->read_buf;
@@ -268,7 +299,7 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Read large chunks directly into buffer. */
   while (end - data > (apr_ssize_t)sizeof(conn->read_buf))
     {
-      writebuf_flush(conn, pool);
+      SVN_ERR(writebuf_flush(conn, pool));
       count = end - data;
       SVN_ERR(readbuf_input(conn, data, &count));
       data += count;
@@ -486,15 +517,23 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Given the first non-whitespace character FIRST_CHAR, read an item
- * into the already allocated structure ITEM. */
+ * into the already allocated structure ITEM.  LEVEL should be set
+ * to 0 for the first call and is used to enforce a recurssion limit
+ * on the parser. */
 static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                              svn_ra_svn_item_t *item, char first_char)
+                              svn_ra_svn_item_t *item, char first_char,
+                              int level)
 {
   char c = first_char;
   apr_uint64_t val, prev_val=0;
   svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
+  if (++level >= 64)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Too many nested items"));
+  
+  
   /* Determine the item type and read it in.  Make sure that c is the
    * first character at the end of the item so we can test to make
    * sure it's whitespace. */
@@ -551,7 +590,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           if (c == ')')
             break;
           listitem = apr_array_push(item->u.list);
-          SVN_ERR(read_item(conn, pool, listitem, c));
+          SVN_ERR(read_item(conn, pool, listitem, c, level));
         }
       SVN_ERR(readbuf_getchar(conn, pool, &c));
     }
@@ -571,7 +610,7 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * the work.  This makes sense because of the way lists are read. */
   *item = apr_palloc(pool, sizeof(**item));
   SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
-  return read_item(conn, pool, *item, c);
+  return read_item(conn, pool, *item, c, 0);
 }
 
 svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,

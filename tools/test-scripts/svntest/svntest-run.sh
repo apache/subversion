@@ -73,23 +73,7 @@ test -x $TEST_ROOT/$OBJ/subversion/svnversion/svnversion || FAIL; PASS
 # and if it is not, do initial fire up for it
 if test "xyes" = "x$RAMDISK";
 then
-    test -x $TEST_ROOT/$OBJ/subversion/tests/clients || {
-        START "re-initializing ramdisk" "Re-initializing ramdisk"
-        mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" \
-            >> "$LOG_FILE" 2>&1 || FAIL
-        cd "$TEST_ROOT/$OBJ"
-        $MAKE  mkdir-init > "$LOG_FILE.ramdisk" 2>&1
-        test $? = 0 || {
-            FAIL_LOG "$LOG_FILE.ramdisk"
-            FAIL
-        }
-        $MAKE $MAKE_OPTS > "$LOG_FILE.ramdisk" 2>&1
-        test $? = 0 || {
-            FAIL_LOG "$LOG_FILE.ramdisk"
-            FAIL
-        }
-        PASS
-    }
+    reinitialize_ramdisk
 fi
 
 # Prepare the server
@@ -154,7 +138,7 @@ kill_svnserve() {
 ts_start=`$DATE +"%s"`
 
 START "make $CHECK_TARGET" "Testing $RA_TYPE on $FS_TYPE..."
-CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}_${FS_TYPE}"
+CHECK_LOG_FILE="$LOG_FILE_DIR/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}_${FS_TYPE}"
 cd $TEST_ROOT/$OBJ
 if test "$CHECK_TARGET" = "davcheck";
 then
@@ -172,7 +156,7 @@ test $? = 0 || {
 
     # Prepare the log file for the mailer
     $GZIP_C < "tests.log" \
-            > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
+            > "$LOG_FILE_DIR/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
     FAIL kill_svnserve
 }
 PASS

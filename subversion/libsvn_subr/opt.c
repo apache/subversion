@@ -31,7 +31,6 @@
 #include "svn_wc.h"
 #include "svn_opt.h"
 #include "svn_error.h"
-#include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_time.h"
@@ -235,7 +234,7 @@ svn_opt_format_option (const char **string,
     opts = apr_psprintf (pool, "--%s", opt->name);
 
   if (opt->has_arg)
-    opts = apr_pstrcat (pool, opts, " arg", NULL);
+    opts = apr_pstrcat (pool, opts, _(" arg"), NULL);
 
   if (doc)
     opts = apr_psprintf (pool, "%-24s : %s", opts,
@@ -487,57 +486,51 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
                     apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_opt_revision_t start_revision, end_revision;
 
   /* scanning from right to left, just to be friendly to any
      screwed-up filenames that might *actually* contain @-signs.  :-) */
   for (i = (strlen (path) - 1); i >= 0; i--)
     {
       /* If we hit a path separator, stop looking. */
+      /* This is OK only because our revision specifiers can't contain '/'. */
       if (path[i] == '/')
         break;
 
       if (path[i] == '@')
         {
-          const char *native_rev;
+          svn_opt_revision_t start_revision, end_revision;
 
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
-                                              subpool));
-
+          end_revision.kind = svn_opt_revision_unspecified;
           if (svn_opt_parse_revision (&start_revision,
                                       &end_revision,
-                                      native_rev, subpool))
+                                      path + i + 1, pool)
+              || end_revision.kind != svn_opt_revision_unspecified)
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Syntax error parsing revision '%s'"),
                                       path + i + 1);
 
-          *truepath = apr_pstrndup (pool, path, i);
+          *truepath = svn_path_canonicalize (apr_pstrndup (pool, path, i),
+                                             pool);
           rev->kind = start_revision.kind;
           rev->value = start_revision.value;
 
-          svn_pool_destroy (subpool);
           return SVN_NO_ERROR;
         }
     }
 
   /* Didn't find an @-sign. */
-  *truepath = path;
+  *truepath = svn_path_canonicalize (path, pool);
   rev->kind = svn_opt_revision_unspecified;
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_opt_args_to_target_array (apr_array_header_t **targets_p, 
-                              apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
-                              svn_opt_revision_t *start_revision,
-                              svn_opt_revision_t *end_revision,
-                              svn_boolean_t extract_revisions,
-                              apr_pool_t *pool)
+svn_opt_args_to_target_array2 (apr_array_header_t **targets_p, 
+                               apr_getopt_t *os,
+                               apr_array_header_t *known_targets,
+                               apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *input_targets =
@@ -626,7 +619,8 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           else
             return svn_error_createf (apr_err, NULL,
                                       _("Error resolving case of '%s'"),
-                                      utf8_target);
+                                      svn_path_local_style (utf8_target,
+                                                            pool));
 
           /* convert back to UTF-8. */
           SVN_ERR (svn_path_cstring_to_utf8 (&target, apr_target, pool));
@@ -647,6 +641,25 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
+  
+  *targets_p = output_targets;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_opt_args_to_target_array (apr_array_header_t **targets_p, 
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              svn_opt_revision_t *start_revision,
+                              svn_opt_revision_t *end_revision,
+                              svn_boolean_t extract_revisions,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *output_targets;
+
+  SVN_ERR (svn_opt_args_to_target_array2 (&output_targets, os,
+                                          known_targets, pool));
 
   if (extract_revisions)
     {
@@ -659,8 +672,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           SVN_ERR (svn_opt_parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[0] = 
-                svn_path_canonicalize (path, pool);
+              ((const char **) (output_targets->elts))[0] = path;
               start_revision->kind = temprev.kind;
               start_revision->value = temprev.value;
             }
@@ -671,8 +683,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           SVN_ERR (svn_opt_parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[1] = 
-                svn_path_canonicalize (path, pool);
+              ((const char **) (output_targets->elts))[1] = path;
               end_revision->kind = temprev.kind;
               end_revision->value = temprev.value;
             }
@@ -706,7 +717,7 @@ print_version_info (const char *pgm_name,
   SVN_ERR (svn_cmdline_printf (pool, _("%s, version %s\n"
                                        "   compiled %s, %s\n\n"), pgm_name,
                                SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR (svn_cmdline_fputs (_("Copyright (C) 2000-2004 CollabNet.\n"
+  SVN_ERR (svn_cmdline_fputs (_("Copyright (C) 2000-2005 CollabNet.\n"
                                 "Subversion is open source software, see"
                                 " http://subversion.tigris.org/\n"
                                 "This product includes software developed by "

@@ -21,13 +21,18 @@ Some Known Issues:
     Apache with mod_dav_svn.so and mod_authz_svn.so. Here are some possible
     solutions (you may need to try one or more of them):
 
+    - Apache 2 outputs startup errors in the Event Viewer's Application log,
+      so check the details of the error there. The following error:
+          The Apache service named reported the following error:
+          >>> Cannot load <install path>/Apache2/modules/mod_dav_svn.so
+          into server: The specified module could not be found."
+      means you need to copy the libdb42.dll and the intl.dll from the
+      Subversion folder to your Apache\bin or Apache\modules folder.
     - Make sure that the Subversion Path is included in the systems %PATH%
       environment.
     - Make sure that your entries in httpd.conf are correct and remember that
       mod_dav_svn.so and mod_authz_svn.so should be loaded after the other
       mod_dav*.so modules.
-    - Copy the libdb42.dll in the Subversion folder to your Apache\bin or
-      Apache\modules folder.
     - Uninstall the Apache service manually by typing:
         apache -k uninstall
       Then check your httpd.conf and reinstall the service by typing:

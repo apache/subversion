@@ -55,8 +55,8 @@ class HistoryChecker:
 
 def check_history(fs_ptr, path, revision, pool):
   history = HistoryChecker(fs_ptr)
-  repos.svn_repos_history(fs_ptr, path, history.add_history,
-                          1, revision, 1, pool)
+  repos.history(fs_ptr, path, history.add_history,
+		1, revision, 1, pool)
 
 
 def main():
@@ -67,7 +67,7 @@ def main():
 
   core.apr_initialize()
   pool = core.svn_pool_create(None)
-  fs_ptr = repos.svn_repos_fs(repos.svn_repos_open(sys.argv[1], pool))
+  fs_ptr = repos.fs(repos.open(sys.argv[1], pool))
   if argc == 3:
     revision = fs.youngest_rev(fs_ptr, pool)
   else:

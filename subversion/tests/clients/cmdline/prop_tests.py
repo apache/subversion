@@ -112,7 +112,6 @@ def commit_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -153,7 +152,6 @@ def update_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -211,7 +209,6 @@ def downdate_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -230,7 +227,6 @@ def downdate_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=2, status='  ')
   expected_status.tweak('A/mu', wc_rev=3, status='  ')
 
@@ -251,7 +247,6 @@ def downdate_props(sbox):
   
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
 
   # Do the update and check the results in three ways... INCLUDING PROPS
   svntest.actions.run_and_verify_update(wc_dir,
@@ -287,7 +282,6 @@ def remove_props(sbox):
 
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=3, status='  ')
 
   # Commit the one file.
@@ -411,7 +405,6 @@ def commit_replacement_props(sbox):
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', wc_rev=2, status='R ')
   expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
 
@@ -430,7 +423,6 @@ def commit_replacement_props(sbox):
 
   # Expected status tree:  lambda has one prop, iota doesn't.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('iota', wc_rev=3)
   expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
@@ -469,7 +461,6 @@ def revert_replacement_props(sbox):
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', wc_rev=2, status='R ')
   expected_status.tweak('A/B/lambda', wc_rev=2, status='R ')
 
@@ -621,6 +612,34 @@ def inappropriate_props(sbox):
                                      'propset', 'svn:eol-style',
                                      'CR', path)
     
+# Issue #2065. Do allow setting of svn:eol-style on binary files or files 
+# with inconsistent eol types if --force is passed.
+  
+  path = os.path.join(wc_dir, 'binary')
+  svntest.main.file_append(path, "binary")
+  svntest.actions.run_and_verify_svn(None, None, None,
+                                     'propset', '--force',
+                                     'svn:eol-style', 'CRLF',
+                                     path)
+   
+  path = os.path.join(wc_dir, 'multi-eol')
+  svntest.actions.run_and_verify_svn(None, None, None,
+                                     'propset', '--force',
+                                     'svn:eol-style', 'LF',
+                                     path)
+    
+  path = os.path.join(wc_dir, 'backwards-eol')
+  svntest.actions.run_and_verify_svn(None, None, None,
+                                     'propset', '--force',
+                                     'svn:eol-style', 'native',
+                                     path)
+    
+  path = os.path.join(wc_dir, 'incomplete-eol')
+  svntest.actions.run_and_verify_svn(None, None, None,
+                                     'propset', '--force',
+                                     'svn:eol-style', 'CR',
+                                     path)
+   
 
 
 #----------------------------------------------------------------------
@@ -697,13 +716,19 @@ def copy_inherits_special_props(sbox):
 
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
-  
+
   sbox.build()
 
-  hook = os.path.join(svntest.main.current_repo_dir,
-                      'hooks', 'pre-revprop-change')
-  svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
-  os.chmod(hook, 0755)
+  # Create the revprop-change hook for this test
+  if os.name == 'posix':
+    hook = os.path.join(svntest.main.current_repo_dir,
+                        'hooks', 'pre-revprop-change')
+    svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+    os.chmod(hook, 0755)
+  elif sys.platform == 'win32':
+    hook = os.path.join(svntest.main.current_repo_dir,
+                        'hooks', 'pre-revprop-change.bat')
+    svntest.main.file_append(hook, "@exit 0\n")
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',
@@ -823,8 +848,8 @@ def prop_value_conversions(sbox):
              ['foo http://foo.com/repos'+os.linesep])
 
   # Check svn:keywords
-  check_prop('svn:keywords', iota_path, ['Rev Date'])
-  check_prop('svn:keywords', mu_path, ['Rev  Date'])
+  check_prop('svn:keywords', iota_path, ['Revision Date'])
+  check_prop('svn:keywords', mu_path, ['Revision Date'])
 
   # Check svn:executable
   check_prop('svn:executable', iota_path, ['*'])
@@ -897,7 +922,6 @@ def binary_props(sbox):
     'A/mu' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A', 'A/B', 'iota', 'A/B/lambda', 'A/mu',
                         wc_rev=2, status='  ')
   
@@ -1001,11 +1025,10 @@ def recursive_base_wc_ops(sbox):
 
   # Test recursive propset (issue 1794)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu', status='D ', wc_rev=2)
   expected_status.tweak('iota', status=' M', wc_rev=2)
   expected_status.add({
-    'A/added'     : Item(status='A ', repos_rev=2, wc_rev=0),
+    'A/added'     : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1108,7 +1131,8 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, (os.name != 'posix')),
+              Skip(revprop_change, (os.name != 'posix'
+                                    and sys.platform != 'win32')),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

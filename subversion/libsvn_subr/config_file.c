@@ -20,15 +20,16 @@
 
 #include <apr_lib.h>
 #include <apr_md5.h>
+#include <apr_env.h>
 #include "config_impl.h"
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_path.h"
 #include "svn_auth.h"
-#include "svn_md5.h"
-#include "svn_hash.h"
 #include "svn_utf.h"
+#include "svn_pools.h"
 
+#include "svn_private_config.h"
 
 
 /* File parsing context */
@@ -89,7 +90,6 @@ skip_to_eoln (FILE *fd)
 static svn_error_t *
 parse_value (int *pch, parse_context_t *ctx)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t end_of_val = FALSE;
   int ch;
 
@@ -170,7 +170,7 @@ parse_value (int *pch, parse_context_t *ctx)
     }
 
   *pch = ch;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -195,7 +195,9 @@ parse_option (int *pch, parse_context_t *ctx)
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Option must end with ':' or '='",
-                               ctx->file, ctx->line);
+                               svn_path_local_style (ctx->file,
+                                                     ctx->cfg->pool),
+                               ctx->line);
     }
   else
     {
@@ -237,7 +239,9 @@ parse_section_name (int *pch, parse_context_t *ctx)
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                "%s:%d: Section header must end with ']'",
-                               ctx->file, ctx->line);
+                               svn_path_local_style (ctx->file,
+                                                     ctx->cfg->pool),
+                               ctx->line);
     }
   else
     {
@@ -311,13 +315,13 @@ svn_config__user_config_path (const char *config_dir,
 
 #else  /* ! WIN32 */
   {
+    apr_status_t apr_err;
     char *homedir;
     const char *homedir_utf8;
 
-    homedir = getenv ("HOME");
-    if (! homedir)
+    apr_err = apr_env_get (&homedir, "HOME", pool);
+    if ( apr_err || ! homedir )
       {
-        apr_status_t apr_err;
         apr_uid_t uid;
         apr_gid_t gid;
         char *username;
@@ -386,10 +390,12 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
     {
       if (errno != ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open config file '%s'", file);
+                                  _("Can't open config file '%s'"),
+                                  svn_path_local_style (file, pool));
       else if (must_exist && errno == ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find config file '%s'", file);
+                                  _("Can't find config file '%s'"),
+                                  svn_path_local_style (file, pool));
       else
         return SVN_NO_ERROR;
     }
@@ -417,7 +423,8 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Section header"
                                        " must start in the first column",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           break;
 
@@ -433,7 +440,8 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Comment"
                                        " must start in the first column",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           break;
 
@@ -450,14 +458,16 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
               ch = EOF;
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Section header expected",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           else if (count != 0)
             {
               ch = EOF;
               err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
                                        "%s:%d: Option expected",
-                                       file, ctx.line);
+                                       svn_path_local_style (file, pool),
+                                       ctx.line);
             }
           else
             err = parse_option (&ch, &ctx);
@@ -470,7 +480,8 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
     {
       err = svn_error_createf (-1, /* FIXME: Wrong error code. */
                                NULL,
-                               "%s:%d: Read error", file, ctx.line);
+                               "%s:%d: Read error",
+                               svn_path_local_style (file, pool), ctx.line);
     }
 
   svn_pool_destroy (ctx.pool);
@@ -903,7 +914,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### corresponding name."
         APR_EOL_STR
         APR_EOL_STR
-        "# [groups]"
+        "[groups]"
         APR_EOL_STR
         "# group1 = *.collab.net"
         APR_EOL_STR
@@ -974,7 +985,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### due to SSL."
         APR_EOL_STR
-        "# [global]"
+        "[global]"
         APR_EOL_STR
         "# http-proxy-exceptions = *.exception.com, www.internal-site.org"
         APR_EOL_STR
@@ -1036,7 +1047,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for authentication and authorization customizations."
         APR_EOL_STR
-        "# [auth]"
+        "[auth]"
         APR_EOL_STR
         "### Set store-passwords to 'no' to avoid storing passwords in the"
         APR_EOL_STR
@@ -1065,6 +1076,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for configuring external helper applications."
         APR_EOL_STR
+        "[helpers]"
+        APR_EOL_STR
         "### Set editor to the command used to invoke your text editor."
         APR_EOL_STR
         "###   This will override the environment variables that Subversion"
@@ -1073,11 +1086,15 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   et al)."
         APR_EOL_STR
+        "# editor-cmd = editor (vi, emacs, notepad, etc.)"
+        APR_EOL_STR
         "### Set diff-cmd to the absolute path of your 'diff' program."
         APR_EOL_STR
         "###   This will override the compile-time default, which is to use"
         APR_EOL_STR
         "###   Subversion's internal diff implementation."
+        APR_EOL_STR
+        "# diff-cmd = diff_program (diff, gdiff, etc.)"
         APR_EOL_STR
         "### Set diff3-cmd to the absolute path of your 'diff3' program."
         APR_EOL_STR
@@ -1085,24 +1102,18 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   Subversion's internal diff3 implementation."
         APR_EOL_STR
+        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"
+        APR_EOL_STR
         "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"
         APR_EOL_STR
         "###   program accepts the '--diff-program' option."
-        APR_EOL_STR
-        "# [helpers]"
-        APR_EOL_STR
-        "# editor-cmd = editor (vi, emacs, notepad, etc.)"
-        APR_EOL_STR
-        "# diff-cmd = diff_program (diff, gdiff, etc.)"
-        APR_EOL_STR
-        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"
         APR_EOL_STR
         "# diff3-has-program-arg = [true | false]"
         APR_EOL_STR
         APR_EOL_STR
         "### Section for configuring tunnel agents."
         APR_EOL_STR
-        "# [tunnels]"
+        "[tunnels]"
         APR_EOL_STR
         "### Configure svn protocol tunnel schemes here.  By default, only"
         APR_EOL_STR
@@ -1153,7 +1164,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for configuring miscelleneous Subversion options."
         APR_EOL_STR
-        "# [miscellany]"
+        "[miscellany]"
         APR_EOL_STR
         "### Set global-ignores to a set of whitespace-delimited globs"
         APR_EOL_STR
@@ -1171,6 +1182,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# use-commit-times = yes"
         APR_EOL_STR
+        "### Set no-unlock to prevent 'svn commit' from automatically"
+        APR_EOL_STR
+        "### releasing locks on files."
+        APR_EOL_STR
+        "# no-unlock = yes"
+        APR_EOL_STR
         "### Set enable-auto-props to 'yes' to enable automatic properties"
         APR_EOL_STR
         "### for 'svn add' and 'svn import', it defaults to 'no'."
@@ -1181,6 +1198,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         APR_EOL_STR
         "### Section for configuring automatic properties."
+        APR_EOL_STR
+        "[auto-props]"
         APR_EOL_STR
         "### The format of the entries is:"
         APR_EOL_STR
@@ -1193,8 +1212,6 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### Note that auto-props functionality must be enabled, which"
         APR_EOL_STR
         "### is typically done by setting the 'enable-auto-props' option."
-        APR_EOL_STR
-        "# [auto-props]"
         APR_EOL_STR
         "# *.c = svn:eol-style=native"
         APR_EOL_STR

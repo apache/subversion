@@ -29,6 +29,7 @@
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
 #include "svn_io.h"                     /* for svn_io_stat() */
+#include "svn_ctype.h"
 
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
@@ -642,7 +643,6 @@ svn_path_decompose (const char *path,
       if ((path[i] == '/') || (path[i] == '\0'))
         {
           if (SVN_PATH_IS_PLATFORM_EMPTY (path + oldi, i - oldi))
-            /* ### Should canonicalization strip "//" and "/./" substrings? */
             *((const char **) apr_array_push (components)) = SVN_EMPTY_PATH;
           else
             *((const char **) apr_array_push (components))
@@ -708,7 +708,7 @@ svn_path_is_backpath_present (const char *path)
    NULL if PATH doesn't appear to be a valid URI.  The returned value
    is not alloced -- it shares memory with PATH. */
 static const char *
-skip_uri_schema (const char *path)
+skip_uri_scheme (const char *path)
 {
   apr_size_t j;
   apr_size_t len = strlen (path);
@@ -760,7 +760,7 @@ svn_path_is_url (const char *path)
 
      Someday it might be nice to have an actual URI parser here.
   */
-  return skip_uri_schema (path) ? TRUE : FALSE;
+  return skip_uri_scheme (path) ? TRUE : FALSE;
 }
 
 
@@ -808,14 +808,14 @@ svn_path_is_uri_safe (const char *path)
 {
   apr_size_t i;
 
-  /* Skip the schema. */
-  path = skip_uri_schema (path);
+  /* Skip the URI scheme. */
+  path = skip_uri_scheme (path);
 
-  /* No schema?  Get outta here. */
+  /* No scheme?  Get outta here. */
   if (! path)
     return FALSE;
 
-  /* Skip to the first slash that's after the schema. */
+  /* Skip to the first slash that's after the URI scheme. */
   path = strchr (path, '/');
 
   /* If there's no first slash, then there's only a host portion;
@@ -1062,8 +1062,8 @@ svn_path_get_absolute(const char **pabsolute,
 
       if (apr_err)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 "Couldn't determine absolute path of '%s'", 
-                                 relative);
+                                 _("Couldn't determine absolute path of '%s'"), 
+                                 svn_path_local_style (relative, pool));
     }
 
   SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
@@ -1101,8 +1101,8 @@ svn_path_split_if_file(const char *path,
   else 
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               "'%s' is neither a file nor a directory name",
-                               path);
+                               _("'%s' is neither a file nor a directory name"),
+                               svn_path_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1120,8 +1120,8 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 
   dst = canon = apr_pcalloc (pool, strlen (path) + 1);
 
-  /* Copy over the URI shema if present. */
-  src = skip_uri_schema (path);
+  /* Copy over the URI scheme if present. */
+  src = skip_uri_scheme (path);
   if (src)
     {
       uri = TRUE;
@@ -1140,12 +1140,13 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
     {
       *(dst++) = *(src++);
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__CYGWIN__)
       /* On Windows permit two leading separator characters which means an
-       * UNC path. */
-      if (*src == '/')
+       * UNC path.  However, a double slash in a URI after the scheme is never
+       * valid. */
+      if (!uri && *src == '/')
         *(dst++) = *(src++);
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
       
     }
 
@@ -1184,6 +1185,13 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   
   *dst = '\0';
 
+#if defined(WIN32) || defined(__CYGWIN__)
+  /* Skip leading double slashes when there are less than 2
+   * canon segments. UNC paths *MUST* have two segments. */
+  if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
+    return canon + 1;
+#endif /* WIN32 or Cygwin */
+
   return canon;
 }
 
@@ -1199,7 +1207,7 @@ get_path_encoding (svn_boolean_t *path_is_utf8, apr_pool_t *pool)
   apr_err = apr_filepath_encoding (&encoding_style, pool);
   if (apr_err)
     return svn_error_wrap_apr (apr_err,
-                               "Can't determine the native path encoding");
+                               _("Can't determine the native path encoding"));
 
   /* ### What to do about APR_FILEPATH_ENCODING_UNKNOWN?
      Well, for now we'll just punt to the svn_utf_ functions;
@@ -1240,4 +1248,24 @@ svn_path_cstring_to_utf8 (const char **path_utf8,
     }
   else
     return svn_utf_cstring_to_utf8 (path_utf8, path_apr, pool);
+}
+
+svn_error_t *
+svn_path_check_valid (const char *path, apr_pool_t *pool)
+{
+  const char *c;
+
+  for (c = path; *c; c++)
+    {
+      if (svn_ctype_iscntrl(*c))
+        {
+          return svn_error_createf (
+            SVN_ERR_FS_PATH_SYNTAX, NULL,
+            _("Invalid control character '0x%02x' in path '%s'"),
+            *c,
+            svn_path_local_style (path, pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
 }

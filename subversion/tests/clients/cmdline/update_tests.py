@@ -64,7 +64,7 @@ def detect_extra_files(node, extra_files):
         extra_files.pop(extra_files.index(pair)) # delete pattern from list
         return
 
-  print "Found unexpected disk object:", node.name
+  print "Found unexpected object:", node.name
   raise svntest.main.SVNTreeUnequal
 
 
@@ -96,7 +96,7 @@ def update_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit the new binary file, creating revision 2.
@@ -122,7 +122,7 @@ def update_binary_file(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
     })
 
   # Commit original working copy again, creating revision 3.
@@ -152,7 +152,7 @@ def update_binary_file(sbox):
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
   expected_status.add({
-    'A/theta' : Item(status='C ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='C ', wc_rev=3),
     })
 
   # Extra 'singleton' files we expect to exist after the update.
@@ -227,8 +227,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/theta' : Item(status='  ', wc_rev=2),
+    'A/zeta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit the new binary filea, creating revision 2.
@@ -252,8 +252,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
-    'A/zeta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=3),
+    'A/zeta' : Item(status='  ', wc_rev=3),
     })
 
   # Commit original working copy again, creating revision 3.
@@ -281,8 +281,8 @@ def update_binary_file_2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=3),
-    'A/zeta' : Item(status='  ', wc_rev=2, repos_rev=3),
+    'A/theta' : Item(status='  ', wc_rev=2),
+    'A/zeta' : Item(status='  ', wc_rev=2),
     })
 
   # Do an update from revision 2 and make sure that our binary file
@@ -392,7 +392,7 @@ def update_ignores_added(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/gamma', wc_rev=1, status='R ')
   expected_status.add({
-    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/B/zeta' : Item(status='A ', wc_rev=0),
     })
   
   # Do the update and check the results in three ways.
@@ -473,7 +473,7 @@ def receive_overlapping_same_change(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('iota', wc_rev=2, repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   # Commit the change, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -514,7 +514,7 @@ def detect_conflict_files(node, extra_files):
       extra_files.pop(extra_files.index(pattern)) # delete pattern from list
       break
   else:
-    print "Found unexpected disk object:", node.name
+    print "Found unexpected object:", node.name
     raise svntest.main.SVNTreeUnequal
 
 def update_to_resolve_text_conflicts(sbox):
@@ -628,18 +628,6 @@ Original appended text for rho>>>>>>> .r2
 
 #----------------------------------------------------------------------
 
-def expect_extra_files(node, extra_files):
-  """singleton handler for expected singletons"""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern))
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    raise svntest.main.SVNTreeUnequal
-
 def update_delete_modified_files(sbox):
   "update that deletes modified files"
 
@@ -674,7 +662,6 @@ def update_delete_modified_files(sbox):
   svntest.main.file_append(pi_path, 'appended pi text')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/B/E/alpha', 'A/D/G/pi', status='M ')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -743,8 +730,8 @@ def update_after_add_rm_deleted(sbox):
 
   # New alpha and F should be in add state A
   expected_status.add({
-    'A/B/E/alpha' : Item(status='A ', wc_rev=0, repos_rev=2),
-    'A/B/F'       : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/B/E/alpha' : Item(status='A ', wc_rev=0),
+    'A/B/F'       : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
@@ -763,8 +750,8 @@ def update_after_add_rm_deleted(sbox):
   # alpha and F to be restored in the WC when updated to rev 1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
   expected_status.add({
-    'A/B/E/alpha' : Item(status='  ', wc_rev=1, repos_rev=2),
-    'A/B/F'       : Item(status='  ', wc_rev=1, repos_rev=2),
+    'A/B/E/alpha' : Item(status='  ', wc_rev=1),
+    'A/B/F'       : Item(status='  ', wc_rev=1),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -823,7 +810,6 @@ def update_replace_dir(sbox):
   #  'A/B/F'       : Item(verb='Deleting'),
   #  })
   #expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  #expected_status.tweak(repos_rev=3)
   #svntest.actions.run_and_verify_update(wc_dir,
   #                                      expected_output,
   #                                      expected_disk,
@@ -834,7 +820,6 @@ def update_replace_dir(sbox):
   # Update to revision 1 replaces the directory
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -874,7 +859,6 @@ def update_single_file(sbox):
     os.chdir(was_cwd)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -902,7 +886,7 @@ def prop_update_on_scheduled_delete(sbox):
   # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak('iota', wc_rev=2, repos_rev=2)
+  expected_status.tweak('iota', wc_rev=2)
 
   # Commit the change, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -1005,7 +989,7 @@ def update_deleted_missing_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
-  expected_status.tweak(wc_rev=1, repos_rev=2)
+  expected_status.tweak(wc_rev=1)
 
   # Do the update, specifying the deleted paths explicitly. 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1023,7 +1007,7 @@ def update_deleted_missing_dir(sbox):
   svntest.main.safe_rmtree(H_path)
 
   # This time we're updating the whole working copy
-  expected_status.tweak(wc_rev=2, repos_rev=2)
+  expected_status.tweak(wc_rev=2)
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1036,8 +1020,7 @@ def update_deleted_missing_dir(sbox):
 #----------------------------------------------------------------------
 
 # Issue 919.  This test was written as a regression test for "item
-# should remain 'deleted' when an update deletes a sibling", but it
-# fails due to issue 919.
+# should remain 'deleted' when an update deletes a sibling".
 def another_hudson_problem(sbox):
   "another \"hudson\" problem: updates that delete"
 
@@ -1075,7 +1058,7 @@ def another_hudson_problem(sbox):
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['D  '+G_path+'\n',
+                                     ['D    '+G_path+'\n',
                                       'Updated to revision 3.\n'], None,
                                      'up', G_path)
 
@@ -1091,6 +1074,54 @@ def another_hudson_problem(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status)  
+
+#----------------------------------------------------------------------
+def update_deleted_targets(sbox):
+  "explicit update of deleted=true targets"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete/commit thus creating 'deleted=true' entries
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  svntest.main.run_svn(None, 'rm', gamma_path, F_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(verb='Deleting'),
+    'A/B/F'     : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/D/gamma', 'A/B/F')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Explicit update must not remove the 'deleted=true' entries
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], None,
+                                     'update', gamma_path)
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], None,
+                                     'update', F_path)
+
+  # Update to r1 to restore items, since the parent directory is already
+  # at r1 this fails if the 'deleted=true' entries are missing (issue 2250)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(status='A '),
+    'A/B/F'     : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.tweak(wc_rev=1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,  
+                                        None, None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+  
+
 
 #----------------------------------------------------------------------
 
@@ -1113,7 +1144,7 @@ def new_dir_with_spaces(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/spacey dir'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/spacey dir'       : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -1309,10 +1340,10 @@ def update_schedule_add_dir(sbox):
 
   # status should now show the dir scheduled for addition-with-history
   expected_status.add({
-    'A/D/G'     : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/G/pi'  : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/G/rho' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
-    'A/D/G/tau' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/G'     : Item(status='A ', copied='+', wc_rev='-'),
+    'A/D/G/pi'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/G/rho' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/G/tau' : Item(status='  ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
@@ -1401,7 +1432,87 @@ def update_to_future_add(sbox):
                                         None, None, None, None, 0,
                                         A_path);
 
+#----------------------------------------------------------------------
 
+def nested_in_read_only(sbox):
+  "update a nested wc in a read-only wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete/commit a file
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Delete/commit a directory that used to contain the deleted file
+  B_path = os.path.join(wc_dir, 'A', 'B')      
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', B_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B' : Item(verb='Deleting'),
+    })
+  expected_status.remove('A/B', 'A/B/lambda', 'A/B/E', 'A/B/E/beta', 'A/B/F')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  expected_status.tweak(wc_rev=3)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Replace the deleted directory with a new checkout of an old
+  # version of the directory, this gives it a "plausible" URL that
+  # could be part of the containing wc
+  B_url = svntest.main.current_repo_url + '/A/B'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout', '-r', '1', B_url + "@1",
+                                     B_path)
+  expected_status = svntest.wc.State(B_path, {
+    ''           : Item(),
+    'lambda'     : Item(),
+    'E'          : Item(),
+    'E/alpha'    : Item(),
+    'E/beta'     : Item(),
+    'F'          : Item(),
+    })
+  expected_status.tweak(wc_rev=1, status='  ')
+  svntest.actions.run_and_verify_status(B_path, expected_status)
+
+  # Make enclosing wc read only
+  os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0555)
+  
+  try:
+    # Update of nested wc should still work
+    expected_output = svntest.wc.State(B_path, {
+      'E/alpha' : Item(status='D '),
+      })
+    expected_disk = wc.State('', {
+      'lambda'  : wc.StateItem("This is the file 'lambda'."),
+      'E'       : wc.StateItem(),
+      'E/beta'  : wc.StateItem("This is the file 'beta'."),
+      'F'       : wc.StateItem(),
+      })
+    expected_status.remove('E/alpha')
+    expected_status.tweak(wc_rev=2)
+    svntest.actions.run_and_verify_update(B_path,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None, 0,
+                                          '-r', '2', B_path)
+  finally:
+    os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0777)
 
 ########################################################################
 # Run the tests
@@ -1424,6 +1535,7 @@ test_list = [ None,
               update_receive_illegal_name,
               update_deleted_missing_dir,
               another_hudson_problem,
+              update_deleted_targets,
               new_dir_with_spaces,
               non_recursive_update,
               checkout_empty_dir,
@@ -1431,6 +1543,7 @@ test_list = [ None,
               update_deletion_inside_out,
               update_schedule_add_dir,
               update_to_future_add,
+              nested_in_read_only,
              ]
 
 if __name__ == '__main__':

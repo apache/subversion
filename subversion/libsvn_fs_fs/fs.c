@@ -24,10 +24,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
-#include "svn_pools.h"
 #include "svn_fs.h"
-#include "svn_path.h"
-#include "svn_utf.h"
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "fs.h"
@@ -36,6 +33,7 @@
 #include "fs_fs.h"
 #include "revs-txns.h"
 #include "tree.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "../libsvn_fs/fs-loader.h"
@@ -49,23 +47,13 @@ check_already_open (svn_fs_t *fs)
 {
   if (fs->fsap_data)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             "Filesystem object already open");
+                             _("Filesystem object already open"));
   else
     return SVN_NO_ERROR;
 }
 
 
 
-
-/* This function is provided for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems. */
-static svn_error_t *
-fs_set_errcall (svn_fs_t *fs,
-                void (*db_errcall_fcn) (const char *errpfx, char *msg))
-{
-
-  return SVN_NO_ERROR;
-}
 
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
@@ -80,15 +68,20 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,
-  svn_fs_fs__deltify
+  svn_fs_fs__deltify,
+  svn_fs_fs__lock,
+  svn_fs_fs__generate_lock_token,
+  svn_fs_fs__unlock,
+  svn_fs_fs__get_lock,
+  svn_fs_fs__get_locks
 };
 
 
 /* Creating a new filesystem. */
 
-/* Create a new fsfs backed Subversion filesystem at path PATH and
-   link it to the filesystem FS.  Perform temporary allocations in
-   POOL. */
+/* This implements the fs_library_vtable_t.create() API.  Create a new
+   fsfs-backed Subversion filesystem at path PATH and link it into
+   *FS.  Perform temporary allocations in POOL. */
 static svn_error_t *
 fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -109,29 +102,30 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
 /* Gaining access to an existing filesystem.  */
 
-/* Implements the svn_fs_open API.  Opens a Subversion filesystem
-   located at PATH and sets FS to point to the correct vtable for the
-   fsfs filesystem.  All allocations are from POOL. */
+/* This implements the fs_library_vtable_t.open() API.  Open an FSFS
+   Subversion filesystem located at PATH, set *FS to point to the
+   correct vtable for the filesystem.  Use POOL for any temporary
+   allocations. */
 static svn_error_t *
 fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR (svn_fs_fs__open (fs, path, fs->pool));
-
   ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
+
+  SVN_ERR (svn_fs_fs__open (fs, path, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 
-/* Copy a possibly live Subversion filesystem from SRC_PATH to
-   DEST_PATH.  The CLEAN_LOGS argument is ignored and included for
-   Subversion 1.0.x compatibility.  Perform all temporary allocations
-   in POOL. */
+/* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
+   possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
+   The CLEAN_LOGS argument is ignored and included for Subversion
+   1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
 fs_hotcopy (const char *src_path, 
             const char *dest_path, 
@@ -145,8 +139,22 @@ fs_hotcopy (const char *src_path,
 
 
 
+/* This function is provided for Subversion 1.0.x compatibility.  It
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_set_errcall() API. */
+static svn_error_t *
+fs_set_errcall (svn_fs_t *fs,
+                void (*db_errcall_fcn) (const char *errpfx, char *msg))
+{
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* This function is included for Subversion 1.0.x compability.  It has
-   no effect for fsfs backed Subversion filesystems. */
+   no effect for fsfs backed Subversion filesystems.  It conforms to
+   the fs_library_vtable_t.bdb_recover() API. */
 static svn_error_t *
 fs_recover (const char *path,
             apr_pool_t *pool)
@@ -160,7 +168,8 @@ fs_recover (const char *path,
 
 
 /* This function is included for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems. */
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_logfiles() API. */
 static svn_error_t *
 fs_logfiles (apr_array_header_t **logfiles,
              const char *path,
@@ -257,6 +266,12 @@ fs_version (void)
   SVN_VERSION_BODY;
 }
 
+static const char *
+fs_get_description (void)
+{
+  return _("Module for working with a plain file (FSFS) repository.");
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -267,6 +282,7 @@ static fs_library_vtable_t library_vtable = {
   fs_open,
   fs_delete_fs,
   fs_hotcopy,
+  fs_get_description,
   fs_set_errcall,
   fs_recover,
   fs_logfiles

@@ -12,7 +12,7 @@ AC_DEFUN(SVN_CHECK_SWIG,
                                [Build swig bindings for LIST targets only. 
                                 LIST is a comma separated list of targets
                                 or 'all' for all available targets; currently
-                                (java,) perl and python are supported
+                                perl and python are supported
                                 (default=all)]),
   [
     case "$enableval" in
@@ -58,7 +58,7 @@ AC_DEFUN(SWIG_BINDINGS_ENABLE,
   bindings=$1
 
   if test "$bindings" = "all"; then
-    bindings="perl,python,java"
+    bindings="perl,python,ruby"
   fi
 
   for binding in `echo "$bindings" | sed -e "s/,/ /g"`; do
@@ -108,26 +108,43 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/mandrake-9.0/subversion.spec
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/redhat-8.x/subversion.spec
-    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103019"; then
-        SWIG_SUITABLE=yes
-        AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
-                        ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
-                       ])
-        SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103019" -a \
+                                       "$SWIG_VERSION" -lt "103022" -o \
+                                       "$SWIG_VERSION" -ge "103024"; then
+      SWIG_SUITABLE=yes
 
       dnl Newer versions of SWIG have deprecated the -c "do not
       dnl include SWIG runtime functions (used for creating multi-module
       dnl packages)" in favor of the -noruntime flag.
-      if test "$SWIG_VERSION" -ge "103020"; then
-          SWIG_NORUNTIME_FLAG='-noruntime'
+      if test "$SWIG_VERSION" -ge "103024"; then
+        SWIG_NORUNTIME_FLAG=''
+        LSWIGPL=''
+        LSWIGPY=''
       else
+        if test "$SWIG_VERSION" -ge "103020"; then
+          SWIG_NORUNTIME_FLAG='-noruntime'
+        else
           SWIG_NORUNTIME_FLAG='-c'
+        fi
+        LSWIGPL='-lswigpl'
+        LSWIGPY='-lswigpy'
       fi
+
     else
-        SWIG_SUITABLE=no
-        AC_MSG_WARN([swig bindings version 1.3.19 or newer needed for swig support.])
+      SWIG_SUITABLE=no
+      AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
+      AC_MSG_WARN([This is not compatible with Subversion])
+      AC_MSG_WARN([Subversion can use SWIG versions 1.3.19, 1.3.20, 1.3.21])
+      AC_MSG_WARN([or 1.3.24 or later])
     fi
 
+    if test "$SWIG_SUITABLE" = "yes"; then
+      AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
+                      ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
+                     ])
+      SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+    fi
+    
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
       AC_MSG_NOTICE([Configuring python swig binding])
       AC_CACHE_CHECK([if swig needs -L for its libraries],
@@ -163,16 +180,41 @@ AC_DEFUN(SVN_FIND_SWIG,
         ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
       ])
       SWIG_PY_LIBS="$ac_cv_python_libs"
-    fi
 
-    if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_java" = "yes"; then
-      dnl For now, use the compile and link from python as a base.
-      SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
-      dnl To relink our generated native binding libraries against
-      dnl libsvn_swig_java, we must include the latter's library path.
-      dnl ### Eventually reference somewhere under $(DESTDIR)?
-      SWIG_JAVA_LINK="$SWIG_PY_LINK -L\$(SWIG_BUILD_DIR)/.libs"
-      SWIG_JAVA_INCLUDES="$JNI_INCLUDES"
+      dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
+      dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
+      dnl thus the egrep patterns have a + in them.
+      SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
+      AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
+                     [svn_cv_pycfmt_apr_int64_t], [
+        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+          AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
+                       [#include <apr.h>
+                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                       [svn_cv_pycfmt_apr_int64_t="L"])
+        fi
+        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+          AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
+                       [#include <apr.h>
+                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                       [svn_cv_pycfmt_apr_int64_t="l"])
+        fi
+        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+          AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
+                       [#include <apr.h>
+                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                       [svn_cv_pycfmt_apr_int64_t="i"])
+        fi
+      ])
+      CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
+      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+        AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
+      fi
+      AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
+                         ["$svn_cv_pycfmt_apr_int64_t"],
+                         [Define to the Python/C API format character suitable]
+                         [ for apr_int64_t])
     fi
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
@@ -189,6 +231,54 @@ AC_DEFUN(SVN_FIND_SWIG,
       fi
     fi
 
+    if test "$RUBY" != "none" -a \
+        "$SWIG_SUITABLE" = "yes" -a \
+        "$SWIG_VERSION" -ge "103024" -a \
+        "$svn_swig_bindings_enable_ruby" = "yes"; then
+
+      AC_MSG_NOTICE([Configuring Ruby SWIG binding])
+      SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-rb" 
+
+      AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
+        svn_cv_ruby_includes="-I. -I`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(archdir))'`"
+      ])
+      SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
+
+      AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
+        svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
+      ])
+      SWIG_RB_COMPILE="$svn_cv_ruby_compile"
+
+      AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
+        svn_cv_ruby_link="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(LDSHARED)).sub(/^\w+/, Config::CONFIG.fetch(%q(CC)) + %q( -shrext .) + Config::CONFIG.fetch(%q(DLEXT)))'`"
+      ])
+      SWIG_RB_LINK="$svn_cv_ruby_link"
+
+      AC_CACHE_VAL([svn_cv_ruby_sitedir],[
+        svn_cv_ruby_sitedir="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitedir))'`"
+      ])
+      AC_ARG_WITH([ruby-sitedir],
+		  AC_HELP_STRING([--with-ruby-sitedir=SITEDIR],
+                                 [install Ruby bindings in SITEDIR
+                                  (default is same as ruby's one)]),
+		  [svn_ruby_installdir="$withval"],
+		  [svn_ruby_installdir="$svn_cv_ruby_sitedir"])
+
+      AC_MSG_CHECKING([where to install Ruby scripts])
+      AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
+        svn_cv_ruby_sitedir_libsuffix="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitelibdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
+      ])
+      SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
+      AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
+
+      AC_MSG_CHECKING([where to install Ruby extensions])
+      AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
+        svn_cv_ruby_sitedir_archsuffix="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitearchdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
+      ])
+      SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
+      AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
+    fi
+
   fi
   AC_SUBST(SWIG_CLEAN_RULES)
   AC_SUBST(SWIG_NORUNTIME_FLAG)
@@ -196,10 +286,14 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_LIBS)
-  AC_SUBST(SWIG_JAVA_INCLUDES)
-  AC_SUBST(SWIG_JAVA_COMPILE)
-  AC_SUBST(SWIG_JAVA_LINK)
   AC_SUBST(SWIG_PL_INCLUDES)
+  AC_SUBST(SWIG_RB_LINK)
+  AC_SUBST(SWIG_RB_INCLUDES)
+  AC_SUBST(SWIG_RB_COMPILE)
+  AC_SUBST(SWIG_RB_SITE_LIB_DIR)
+  AC_SUBST(SWIG_RB_SITE_ARCH_DIR)
   AC_SUBST(SWIG_LIBSWIG_DIR)
+  AC_SUBST(LSWIGPL)
+  AC_SUBST(LSWIGPY)
   AC_SUBST(SWIG_LDFLAGS)
 ])

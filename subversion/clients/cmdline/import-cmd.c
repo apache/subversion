@@ -22,11 +22,8 @@
 
 /*** Includes. ***/
 
-#include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "cl.h"
 
@@ -76,11 +73,8 @@ svn_cl__import (apr_getopt_t *os,
    * ### kff todo: review above behaviors.
    */
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   if (targets->nelts < 1)
     return svn_error_create
@@ -107,7 +101,7 @@ svn_cl__import (apr_getopt_t *os,
        _("Invalid URL '%s'"), url);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2,
                           FALSE, FALSE, FALSE, pool);
 
   SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 

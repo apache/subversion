@@ -9,6 +9,9 @@ EXEC_PATH="`dirname $0`"
     exit
 }
 
+# ensure that we have a place where to put logs
+$MKDIR_P "$LOG_FILE_DIR"
+
 # Remove log files from previous runs
 $RM_F "$LOG_FILE_PREFIX.update"
 $RM_F "$LOG_FILE_PREFIX.shared"
@@ -66,6 +69,9 @@ $CP_F "$LOG_FILE_PREFIX.update" "$LOG_FILE_PREFIX.static"
 $NICE $EXEC_PATH/svntest-rebuild.sh "shared"
 test $? = 0 && shared="PASS" || shared="FAIL"
 test $shared = "PASS" && {
+
+    $NICE $EXEC_PATH/svntest-bindings.sh "shared"
+
     test "$TEST_BDB" = "yes" && {
         $NICE $EXEC_PATH/svntest-run.sh "shared" "ra_local" "bdb"
         test $? = 0 && shared_ra_local_bdb="PASS" \

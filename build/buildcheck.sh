@@ -5,7 +5,6 @@
 
 # Initialize parameters
 VERSION_CHECK="$1"
-NEON_CHECK_CONTROL="$2"
 
 if test "$VERSION_CHECK" != "--release"; then
   echo "buildcheck: checking installation..."
@@ -120,30 +119,6 @@ if test $lt_status != "good"; then
 fi
 
 echo "buildcheck: libtool version $lt_pversion (ok)"
-
-#--------------------------------------------------------------------------
-# check for the correct version of Neon
-#
-NEON_WANTED_REGEX=0.24.7
-NEON_LATEST_WORKING_VER=0.24.7
-NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
-NEON_TEST_REGEX="$NEON_WANTED_REGEX"
-if test "$NEON_CHECK_CONTROL" = "--disable-neon-version-check"; then
-  NEON_TEST_REGEX=*
-fi
-if test -d ./neon; then
-  NEON_VERSION="`./build/get-neon-ver.sh neon`"
-  case "$NEON_VERSION" in
-    $NEON_TEST_REGEX)
-      ;;
-    *)
-      echo "buildcheck: neon version $NEON_VERSION found in ./neon/."
-      echo "            You need neon $NEON_LATEST_WORKING_VER."
-      exit 1
-      ;;
-  esac
-  echo "buildcheck: neon version $NEON_VERSION (ok)"
-fi
 
 #--------------------------------------------------------------------------
 # check that our local copies of files match up with those in APR(UTIL)

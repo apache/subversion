@@ -24,7 +24,6 @@
 
 #include <string.h>
 #include "svn_wc.h"
-#include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -114,7 +113,6 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
 }
 
 
-
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
    function as a 'copy'.
@@ -131,7 +129,7 @@ copy_file_administratively (const char *src_path,
                             svn_wc_adm_access_t *src_access,
                             svn_wc_adm_access_t *dst_parent,
                             const char *dst_basename,
-                            svn_wc_notify_func_t notify_copied,
+                            svn_wc_notify_func2_t notify_copied,
                             void *notify_baton,
                             apr_pool_t *pool)
 {
@@ -148,7 +146,7 @@ copy_file_administratively (const char *src_path,
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                               _("'%s' already exists and is in the way"),
-                              dst_path);
+                              svn_path_local_style (dst_path, pool));
 
   /* Even if DST_PATH doesn't exist it may still be a versioned file; it
      may be scheduled for deletion, or the user may simply have removed the
@@ -161,11 +159,11 @@ copy_file_administratively (const char *src_path,
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("'%s' is scheduled for deletion; it must"
                                     " be committed before being overwritten"),
-                                  dst_path);
+                                  svn_path_local_style (dst_path, pool));
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("There is already a versioned item '%s'"),
-                                  dst_path);
+                                  svn_path_local_style (dst_path, pool));
     }
 
   /* Sanity check:  you cannot make a copy of something that's not
@@ -176,7 +174,7 @@ copy_file_administratively (const char *src_path,
     return svn_error_createf 
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
        _("Cannot copy or move '%s': it's not under version control"),
-       src_path);
+       svn_path_local_style (src_path, pool));
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)
       || (src_entry->copied))
@@ -184,7 +182,7 @@ copy_file_administratively (const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it's not in the repository yet; "
          "try committing first"),
-       src_path);
+       svn_path_local_style (src_path, pool));
 
   /* Now, make an actual copy of the working file.  If this is a
      special file, we can't copy it directly, but should instead
@@ -256,53 +254,94 @@ copy_file_administratively (const char *src_path,
     
     /* Pass NULL, NULL for cancellation func and baton, as this is
        only one file, not N files. */
-    SVN_ERR (svn_wc_add (dst_path, dst_parent,
-                         copyfrom_url, copyfrom_rev,
-                         NULL, NULL,
-                         notify_copied, notify_baton, pool));
+    SVN_ERR (svn_wc_add2 (dst_path, dst_parent,
+                          copyfrom_url, copyfrom_rev,
+                          NULL, NULL,
+                          notify_copied, notify_baton, pool));
   }
 
   return SVN_NO_ERROR;
 }
 
-/* For all entries in and under ADM_ACCESS convert deleted=true into
-   schedule=delete.  The result of this is that when the copy is committed
-   the items in question get deleted and the result is a directory in the
-   repository that matches the original source directory for copy.  If this
-   were not done the deleted=true items would simply vanish from the
-   entries file as the copy is added to the working copy.  The new
-   schedule=delete files do not have a text-base and so their scheduled
-   deletion cannot be reverted.  For directories a placeholder with an
-   svn_node_kind_t of svn_node_file and schedule=delete is used to avoid
-   the problems associated with creating a directory.  Issue 2101. */
+
+/* Recursively crawl over a directory PATH and do a number of things:
+     - Remove lock tokens
+     - Remove WC props
+     - Convert deleted items to schedule-delete items
+     - Set .svn directories to be hidden
+*/
 static svn_error_t *
-convert_deleted_to_schedule_delete (svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool)
+post_copy_cleanup (svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  svn_wc_entry_t *entry;
+  const char *path = svn_wc_adm_access_path (adm_access);
+  
+  /* Remove wcprops. */
+  SVN_ERR (svn_wc__remove_wcprops (adm_access, FALSE, pool));
 
+  /* Read this directory's entries file. */
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+
+  /* Because svn_io_copy_dir_recursively() doesn't copy directory
+     permissions, we'll patch up our tree's .svn subdirs to be
+     hidden. */
+#ifdef APR_FILE_ATTR_HIDDEN
+  {
+    const char *adm_dir = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
+    const char *path_apr;
+    apr_status_t status;
+    SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, adm_dir, pool));
+    status = apr_file_attrs_set (path_apr,
+                                 APR_FILE_ATTR_HIDDEN,
+                                 APR_FILE_ATTR_HIDDEN,
+                                 pool);
+    if (status)
+      return svn_error_wrap_apr (status, _("Can't hide directory '%s'"),
+                                 svn_path_local_style (adm_dir, pool));
+  }
+#endif
+
+  /* Loop over all children, removing lock tokens and recursing into
+     directories. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
-
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
+      const void *key;
       void *val;
-      const svn_wc_entry_t *entry; 
+      svn_node_kind_t kind;
+      svn_boolean_t deleted = FALSE;
+      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
 
       svn_pool_clear (subpool);
-      apr_hash_this (hi, NULL, NULL, &val);
-      entry = val;
 
+      apr_hash_this (hi, &key, NULL, &val);
+      entry = val;
+      kind = entry->kind;
+      deleted = entry->deleted;
+
+      /* Convert deleted="true" into schedule="delete" for all
+         children (and grandchildren, if RECURSE is set) of the path
+         represented by ADM_ACCESS.  The result of this is that when
+         the copy is committed the items in question get deleted and
+         the result is a directory in the repository that matches the
+         original source directory for copy.  If this were not done
+         the deleted="true" items would simply vanish from the entries
+         file as the copy is added to the working copy.  The new
+         schedule="delete" files do not have a text-base and so their
+         scheduled deletion cannot be reverted.  For directories a
+         placeholder with an svn_node_kind_t of svn_node_file and
+         schedule="delete" is used to avoid the problems associated
+         with creating a directory.  See Issue #2101 for details. */
       if (entry->deleted)
         {
-          svn_wc_entry_t tmp_entry;
-          apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
-
-          tmp_entry.schedule = svn_wc_schedule_delete;
+          entry->schedule = svn_wc_schedule_delete;
           flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
-
-          tmp_entry.deleted = FALSE;
+          
+          entry->deleted = FALSE;
           flags |= SVN_WC__ENTRY_MODIFY_DELETED;
 
           if (entry->kind == svn_node_dir)
@@ -324,29 +363,51 @@ convert_deleted_to_schedule_delete (svn_wc_adm_access_t *adm_access,
               effectively means that the schedule deletes have to remain
               schedule delete until the copy is committed, when they become
               state deleted and everything works! */
-              tmp_entry.kind = svn_node_file;
+              entry->kind = svn_node_file;
               flags |= SVN_WC__ENTRY_MODIFY_KIND;
             }
-
-          SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &tmp_entry,
-                                         flags, TRUE, subpool));
         }
-      else if (entry->kind == svn_node_dir
-               && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
+
+      /* Remove lock stuffs. */
+      if (entry->lock_token)
         {
-          svn_wc_adm_access_t *dir_access;
-          SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                        svn_path_join
-                                        (svn_wc_adm_access_path (adm_access),
-                                         entry->name, subpool),
-                                        subpool));
-          SVN_ERR (convert_deleted_to_schedule_delete (dir_access, subpool));
+          entry->lock_token = NULL;
+          entry->lock_owner = NULL;
+          entry->lock_comment = NULL;
+          entry->lock_creation_date = 0;
+          flags |= (SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                    | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                    | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                    | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE);
+        }
+      
+      /* If we meaningfully modified the flags, we must be wanting to
+         change the entry. */
+      if (flags != SVN_WC__ENTRY_MODIFY_FORCE)
+        SVN_ERR (svn_wc__entry_modify (adm_access, key, entry,
+                                       flags, TRUE, subpool));
+      
+      /* If a dir, not deleted, and not "this dir", recurse. */
+      if ((! deleted)
+          && (kind == svn_node_dir)
+          && (strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0))
+        {
+          svn_wc_adm_access_t *child_access;
+          const char *child_path;
+          child_path = svn_path_join 
+            (svn_wc_adm_access_path (adm_access), key, subpool);
+          SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access, 
+                                        child_path, subpool));
+          SVN_ERR (post_copy_cleanup (child_access, subpool));
         }
     }
 
+  /* Cleanup */
   svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
+
 
 /* This function effectively creates and schedules a dir for
    addition, but does extra administrative things to allow it to
@@ -366,7 +427,7 @@ copy_dir_administratively (const char *src_path,
                            const char *dst_basename,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
-                           svn_wc_notify_func_t notify_copied,
+                           svn_wc_notify_func2_t notify_copied,
                            void *notify_baton,
                            apr_pool_t *pool)
 {
@@ -384,7 +445,8 @@ copy_dir_administratively (const char *src_path,
   if (! src_entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-       _("'%s' is not under version control"), src_path);
+       _("'%s' is not under version control"),
+       svn_path_local_style (src_path, pool));
   if ((src_entry->schedule == svn_wc_schedule_add)
       || (! src_entry->url)
       || (src_entry->copied))
@@ -392,7 +454,7 @@ copy_dir_administratively (const char *src_path,
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
-       src_path);
+       svn_path_local_style (src_path, pool));
 
   /* Recursively copy the whole directory over.  This gets us all
      text-base, props, base-props, as well as entries, local mods,
@@ -410,17 +472,12 @@ copy_dir_administratively (const char *src_path,
      because the source directory was locked.  Running cleanup will remove
      the locks, even though this directory has not yet been added to the
      parent. */
-  SVN_ERR (svn_wc_cleanup (dst_path, NULL, NULL, cancel_func, cancel_baton,
-                           pool));
+  SVN_ERR (svn_wc_cleanup2 (dst_path, NULL, cancel_func, cancel_baton, pool));
 
-  /* Remove all wcprops in the directory, because they're all bogus now.
-     After the commit, ra_dav should regenerate them and re-store them as
-     an optimization.  Note we use the normal locking mechanism here, even
-     though this directory has not yet been added to the parent. */
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, dst_path, TRUE, -1,
-                             pool));
-  SVN_ERR (svn_wc__remove_wcprops (adm_access, TRUE, pool));
-  SVN_ERR (convert_deleted_to_schedule_delete (adm_access, pool));
+  /* We've got some post-copy cleanup to do now. */
+  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, dst_path, TRUE, -1,
+                             cancel_func, cancel_baton, pool));
+  SVN_ERR (post_copy_cleanup (adm_access, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Schedule the directory for addition in both its parent and itself
@@ -433,10 +490,10 @@ copy_dir_administratively (const char *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, src_access, pool));
     
-    SVN_ERR (svn_wc_add (dst_path, dst_parent,
-                         copyfrom_url, copyfrom_rev,
-                         cancel_func, cancel_baton,
-                         notify_copied, notify_baton, pool));
+    SVN_ERR (svn_wc_add2 (dst_path, dst_parent,
+                          copyfrom_url, copyfrom_rev,
+                          cancel_func, cancel_baton,
+                          notify_copied, notify_baton, pool));
   }
  
   return SVN_NO_ERROR;
@@ -447,14 +504,14 @@ copy_dir_administratively (const char *src_path,
 /* Public Interface */
 
 svn_error_t *
-svn_wc_copy (const char *src_path,
-             svn_wc_adm_access_t *dst_parent,
-             const char *dst_basename,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
-             svn_wc_notify_func_t notify_func,
-             void *notify_baton,
-             apr_pool_t *pool)
+svn_wc_copy2 (const char *src_path,
+              svn_wc_adm_access_t *dst_parent,
+              const char *dst_basename,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
+              apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
@@ -466,10 +523,10 @@ svn_wc_copy (const char *src_path,
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
-       svn_wc_adm_access_path (dst_parent));
+       svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, src_path, FALSE, -1,
-                                   pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
+                                   cancel_func, cancel_baton, pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   
@@ -490,6 +547,23 @@ svn_wc_copy (const char *src_path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc_copy (const char *src_path,
+             svn_wc_adm_access_t *dst_parent,
+             const char *dst_basename,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+
+  return svn_wc_copy2 (src_path, dst_parent, dst_basename, cancel_func,
+                       cancel_baton, svn_wc__compat_call_notify_func,
+                       &nb, pool);
+}
 
 
 /*

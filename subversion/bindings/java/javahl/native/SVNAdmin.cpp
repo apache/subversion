@@ -20,11 +20,13 @@
  */
 
 #include "SVNAdmin.h"
+#include "SVNClient.h"
 #include "JNIUtil.h"
 #include "svn_repos.h"
 #include "svn_config.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "svn_private_config.h"
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -655,4 +657,165 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
         JNIUtil::handleSVNError(err);
         return;
     }
+}
+
+jobjectArray SVNAdmin::lslocks(const char *path)
+{
+    Pool requestPool;
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return NULL;
+    }
+    path = svn_path_internal_style(path, requestPool.pool());
+    svn_repos_t *repos;
+    svn_fs_t *fs;
+    apr_hash_t *locks;
+    apr_hash_index_t *hi;
+
+    svn_error_t *err = svn_repos_open (&repos, path, requestPool.pool());
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+    fs = svn_repos_fs (repos);
+    /* Fetch all locks on or below the root directory. */
+    err = svn_repos_fs_get_locks (&locks, repos, "/", NULL, NULL, 
+        requestPool.pool());
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+
+    int count = apr_hash_count (locks);
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(clazz);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    
+    int i = 0;
+    for (hi = apr_hash_first (requestPool.pool(), locks); hi; 
+            hi = apr_hash_next (hi),i++)
+    {
+        const void *key;
+        void *val;
+        apr_hash_this (hi, &key, NULL, &val);
+        svn_lock_t *lock = (svn_lock_t *)val;
+        jobject jLock = SVNClient::createJavaLock(lock);
+        env->SetObjectArrayElement(ret, i, jLock);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        env->DeleteLocalRef(jLock);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+  
+    return ret;
+}
+void SVNAdmin::rmlocks(const char *path, Targets &locks)
+{
+    Pool requestPool;
+    apr_pool_t *pool = requestPool.pool();
+    if(path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    path = svn_path_internal_style(path, requestPool.pool());
+    svn_repos_t *repos;
+    svn_fs_t *fs;
+    svn_fs_access_t *access;
+
+    svn_error_t *err = svn_repos_open (&repos, path, requestPool.pool());
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+    fs = svn_repos_fs (repos);
+    const char *username;
+  
+    /* svn_fs_unlock() demands that some username be associated with the
+       filesystem, so just use the UID of the person running 'svnadmin'.*/
+    {
+        apr_uid_t uid;
+        apr_gid_t gid;
+        char *un;
+        if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
+            apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
+        {
+            err = svn_utf_cstring_to_utf8 (&username, un, pool);
+            svn_error_clear (err);
+            if (err)
+                username = "administrator";
+        }
+    }
+
+    /* Create an access context describing the current user. */
+    err = svn_fs_create_access (&access, username, pool);
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+
+    /* Attach the access context to the filesystem. */
+    err = svn_fs_set_access (fs, access);
+    if(err != SVN_NO_ERROR)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+
+    apr_pool_t *subpool = svn_pool_create (pool);
+    const apr_array_header_t *args = locks.array(requestPool);
+    for (int i = 0; i < args->nelts; i++)
+    {
+        const char *lock_path = APR_ARRAY_IDX (args, i, const char *);
+        svn_lock_t *lock;
+      
+        /* Fetch the path's svn_lock_t. */
+        err = svn_fs_get_lock (&lock, fs, lock_path, subpool);
+        if (err)
+            goto move_on;
+        if (! lock)
+        {
+            continue;
+        }
+      
+        /* Now forcibly destroy the lock. */
+        err = svn_fs_unlock (fs, lock_path,
+                             lock->token, 1 /* force */, subpool);
+        if (err)
+            goto move_on;
+      
+    move_on:      
+        if (err)
+        {
+            svn_error_clear (err);
+        }
+            
+        svn_pool_clear (subpool);
+    }
+
+    return;
 }

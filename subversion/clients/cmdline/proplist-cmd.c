@@ -22,13 +22,9 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
-#include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
-#include "svn_string.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "cl.h"
@@ -50,11 +46,8 @@ svn_cl__proplist (apr_getopt_t *os,
   int i;
 
   /* Suck up all remaining args in the target array. */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -108,12 +101,19 @@ svn_cl__proplist (apr_getopt_t *os,
           int j;
           svn_error_t *err;
           svn_boolean_t is_url = svn_path_is_url (target);
+          const char *truepath;
+          svn_opt_revision_t peg_revision;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          err = svn_client_proplist (&props, target,
-                                     &(opt_state->start_revision),
-                                     opt_state->recursive, ctx, subpool);
+
+          /* Check for a peg revision. */
+          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                       subpool));
+          
+          err = svn_client_proplist2 (&props, truepath, &peg_revision,
+                                      &(opt_state->start_revision),
+                                      opt_state->recursive, ctx, subpool);
           if (err)
             {
               if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)

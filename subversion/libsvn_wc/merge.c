@@ -20,7 +20,6 @@
 
 #include "svn_wc.h"
 #include "svn_diff.h"
-#include "svn_config.h"
 #include "svn_path.h"
 
 #include "wc.h"
@@ -374,8 +373,13 @@ svn_wc_merge (const char *left,
   /* Merging is complete.  Regardless of text or binariness, we might
      need to tweak the executable bit on the new working file.  */
   if (! dry_run)
-    SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, adm_access,
-                                           pool));
+    {
+      SVN_ERR (svn_wc__maybe_set_executable (NULL, merge_target, adm_access,
+                                             pool));
 
+      SVN_ERR (svn_wc__maybe_set_read_only (NULL, merge_target,
+                                            adm_access, pool));
+
+    }
   return SVN_NO_ERROR;
 }

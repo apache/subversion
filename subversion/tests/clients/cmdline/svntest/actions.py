@@ -157,10 +157,11 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
   
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
-  """Invokes main.run_svn with *VARARGS.  If EXPECTED_STDOUT or
-  EXPECTED_STDERR is not 'None', invokes compare_and_display_lines
-  with MESSAGE and the expected output.  If the comparison fails,
-  compare_and_display_lines will raise."""
+  """Invokes main.run_svn with *VARARGS, return stdout and stderr as
+  lists of lines.  If EXPECTED_STDOUT or EXPECTED_STDERR is not
+  'None', invokes compare_and_display_lines with MESSAGE and the
+  expected output.  If the comparison fails, compare_and_display_lines
+  will raise."""
   ### TODO catch and throw particular exceptions from above
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
@@ -629,7 +630,10 @@ def run_and_verify_status(wc_dir_name, output_tree,
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
 
-  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', wc_dir_name)
+  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', 
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
+                                 wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 
@@ -772,7 +776,7 @@ def get_virginal_state(wc_dir, rev):
   state = main.greek_state.copy()
   state.wc_dir = wc_dir
   state.desc[''] = wc.StateItem()
-  state.tweak(contents=None, status='  ', wc_rev=rev, repos_rev=rev)
+  state.tweak(contents=None, status='  ', wc_rev=rev)
 
   return state
 

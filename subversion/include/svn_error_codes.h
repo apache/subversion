@@ -189,6 +189,10 @@ SVN_ERROR_START
               SVN_ERR_XML_CATEGORY_START + 3,
               "XML data was not well-formed")
 
+  SVN_ERRDEF (SVN_ERR_XML_UNESCAPABLE_DATA,
+              SVN_ERR_XML_CATEGORY_START + 4,
+              "Data cannot be safely XML-escaped")
+
   /* io errors */
 
   SVN_ERRDEF (SVN_ERR_IO_INCONSISTENT_EOL,
@@ -199,6 +203,7 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 1,
               "Unrecognized line ending style")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_CORRUPT_EOL,
               SVN_ERR_IO_CATEGORY_START + 2,
               "Line endings other than expected")
@@ -207,10 +212,12 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 3,
               "Ran out of unique names")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_PIPE_FRAME_ERROR,
               SVN_ERR_IO_CATEGORY_START + 4,
               "Framing error in pipe protocol")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_PIPE_READ_ERROR,
               SVN_ERR_IO_CATEGORY_START + 5,
               "Read error in pipe")
@@ -273,14 +280,17 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 0,
               "Obstructed update")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_MISMATCH,
               SVN_ERR_WC_CATEGORY_START + 1,
               "Mismatch popping the WC unwind stack")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_EMPTY,
               SVN_ERR_WC_CATEGORY_START + 2,
               "Attempt to pop empty WC unwind stack")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_NOT_EMPTY,
               SVN_ERR_WC_CATEGORY_START + 3,
               "Attempt to unlock with non-empty unwind stack")
@@ -291,8 +301,9 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_WC_NOT_LOCKED,
               SVN_ERR_WC_CATEGORY_START + 5,
-              "Working copy not locked")
+              "Working copy not locked; this is probably a bug, please report")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_INVALID_LOCK,
               SVN_ERR_WC_CATEGORY_START + 6,
               "Invalid lock")
@@ -505,6 +516,63 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
 
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_FS_NO_USER,
+              SVN_ERR_FS_CATEGORY_START + 34,
+              "No user associated with filesystem")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_PATH_LOCKED,
+              SVN_ERR_FS_CATEGORY_START + 35,
+              "Path is locked")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
+              SVN_ERR_FS_CATEGORY_START + 36,
+              "Path is not locked")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN,
+              SVN_ERR_FS_CATEGORY_START + 37,
+              "Lock token is incorrect")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_LOCK_TOKEN,
+              SVN_ERR_FS_CATEGORY_START + 38,
+              "No lock token provided")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
+              SVN_ERR_FS_CATEGORY_START + 39,
+              "Username does not match lock owner")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
+              SVN_ERR_FS_CATEGORY_START + 40,
+              "Filesystem has no such lock")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_EXPIRED,
+              SVN_ERR_FS_CATEGORY_START + 41,
+              "Lock has expired")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
+              SVN_ERR_FS_CATEGORY_START + 42,
+              "Item is out of date")
+
+  /* @since New in 1.2.
+   *
+   * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
+   * confusion with "versions" (i.e., releases) of Subversion, we've
+   * started calling this the "format" number instead.  The old
+   * SVN_ERR_REPOS_UNSUPPORTED_VERSION error predates this and so
+   * retains its name.
+   */
+  SVN_ERRDEF (SVN_ERR_FS_UNSUPPORTED_FORMAT,
+              SVN_ERR_FS_CATEGORY_START + 43,
+              "Unsupported FS format")
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,
@@ -527,6 +595,11 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 4,
               "Bogus revision report")
  
+  /* This is analogous to SVN_ERR_FS_UNSUPPORTED_FORMAT.  To avoid
+   * confusion with "versions" (i.e., releases) of Subversion, we
+   * started using the word "format" instead of "version".  However,
+   * this error code's name predates that decision.
+   */
   SVN_ERRDEF (SVN_ERR_REPOS_UNSUPPORTED_VERSION,
               SVN_ERR_REPOS_CATEGORY_START + 5,
               "Unsupported repository version")
@@ -538,6 +611,17 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 7,
               "Error running post-commit hook")
+
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 8,
+              "Error running post-lock hook")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 9,
+              "Error running post-unlock hook")
+
 
   /* generic RA errors */
 
@@ -568,6 +652,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION,
               SVN_ERR_RA_CATEGORY_START + 6,
               "Unsupported RA plugin ABI version")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_RA_NOT_LOCKED,
+              SVN_ERR_RA_CATEGORY_START + 7,
+              "Path is not locked")
+
 
   /* ra_dav errors */
 
@@ -606,6 +696,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_DAV_PROPPATCH_FAILED,
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
               "Failed to excute WebDAV PROPPATCH")
+
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
+              SVN_ERR_RA_DAV_CATEGORY_START + 9,
+              "Malformed network data")
 
 
   /* ra_local errors */
@@ -647,17 +742,6 @@ SVN_ERROR_START
               SVN_ERR_RA_SVN_CATEGORY_START + 6,
               "Client/server version mismatch")
 
-  /* @since New in 1.2. */
-  SVN_ERRDEF (SVN_ERR_RA_SVN_SSL_INIT,
-              SVN_ERR_RA_SVN_CATEGORY_START + 7,
-              "RA layer failed to init SSL")
-
-  /* @since New in 1.2. */
-  SVN_ERRDEF (SVN_ERR_RA_SVN_SSL_ERROR,
-              SVN_ERR_RA_SVN_CATEGORY_START + 8,
-              "SSL network error")
-
-
   /* libsvn_auth errors */
 
        /* this error can be used when an auth provider doesn't have
@@ -687,12 +771,12 @@ SVN_ERROR_START
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_UNREADABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 1,
-              "Item is not readable.")
+              "Item is not readable")
 
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_PARTIALLY_READABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 2,
-              "Item is partially readable.")
+              "Item is partially readable")
 
 
   /* svndiff errors */
@@ -796,6 +880,10 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated")
 
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
+              SVN_ERR_CLIENT_CATEGORY_START + 13,
+              "Path has no lock token")
 
   /* misc errors */
 

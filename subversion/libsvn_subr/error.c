@@ -20,16 +20,12 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include <apr_lib.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
-#include <apr_hash.h>
 
 #include "svn_cmdline.h"
-#include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_io.h"
 
 #ifdef SVN_DEBUG
 /* file_line for the non-debug case. */
@@ -92,7 +88,7 @@ make_error_internal (apr_status_t apr_err,
     }
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_pcalloc (pool, sizeof (*new_error));
+  new_error = apr_pcalloc (pool, sizeof (*new_error));
 
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
@@ -124,7 +120,7 @@ svn_error_create (apr_status_t apr_err,
   err = make_error_internal (apr_err, child);
 
   if (message)
-    err->message = (const char *) apr_pstrdup (err->pool, message);
+    err->message = apr_pstrdup (err->pool, message);
 
   return err;
 }
@@ -212,7 +208,8 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
       chain->child = apr_palloc (pool, sizeof (*chain->child));
       chain = chain->child;
       *chain = *new_err;
-      chain->message = apr_pstrdup (pool, new_err->message);
+      if (chain->message)
+        chain->message = apr_pstrdup (pool, new_err->message);
       chain->pool = pool;
 #if defined(SVN_DEBUG_ERROR)
       if (! new_err->child)
@@ -229,6 +226,39 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
   apr_pool_destroy (oldpool);
 }
 
+svn_error_t *
+svn_error_dup (svn_error_t *err)
+{
+  apr_pool_t *pool;
+  svn_error_t *new_err = NULL, *tmp_err = NULL;
+
+  if (apr_pool_create (&pool, NULL))
+    abort ();
+
+  for (; err; err = err->child)
+    {
+      if (! new_err)
+        {
+          new_err = apr_palloc (pool, sizeof (*new_err));
+          tmp_err = new_err;
+        }
+      else
+        {
+          tmp_err->child = apr_palloc (pool, sizeof (*tmp_err->child));
+          tmp_err = tmp_err->child;
+        }
+      *tmp_err = *err;
+      tmp_err->pool = pool;
+      if (tmp_err->message)
+        tmp_err->message = apr_pstrdup (pool, tmp_err->message);
+    }
+
+#if defined(SVN_DEBUG_ERROR)
+  apr_pool_cleanup_register (pool, tmp_err, err_abort, NULL);
+#endif
+
+  return new_err;
+}
 
 void
 svn_error_clear (svn_error_t *err)
@@ -245,7 +275,7 @@ svn_error_clear (svn_error_t *err)
 }
 
 static void
-print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
+print_error (svn_error_t *err, FILE *stream, const char *prefix)
 {
   char errbuf[256];
   const char *err_string;
@@ -277,9 +307,11 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
   
   /* Only print the same APR error string once. */
   if (err->message)
-    svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: %s\n",
-                                          err->message));
-  else if (print_strerror)
+    {
+      svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "%s%s\n",
+                                            prefix, err->message));
+    }
+  else
     {
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
@@ -295,21 +327,71 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
         }
       
       svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
-                                            "svn: %s\n", err_string));
+                                            "%s%s\n", prefix, err_string));
     }
 }
 
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
-  apr_status_t parent_apr_err = APR_SUCCESS;
+  svn_handle_error2 (err, stream, fatal, "svn: ");
+}
+
+void
+svn_handle_error2 (svn_error_t *err,
+                   FILE *stream,
+                   svn_boolean_t fatal,
+                   const char *prefix)
+{
+  /* In a long error chain, there may be multiple errors with the same
+     error code and no custom message.  We only want to print the
+     default message for that code once; printing it multiple times
+     would add no useful information.  The 'empties' array below
+     remembers the codes of empty errors already seen in the chain.
+
+     We could allocate it in err->pool, but there's no telling how
+     long err will live or how many times it will get handled.  So we
+     use a subpool. */
+  apr_pool_t *subpool;
+  apr_array_header_t *empties;
+
+  /* ### The rest of this file carefully avoids using svn_pool_*(),
+     preferring apr_pool_*() instead.  I can't remember why -- it may
+     be an artifact of r3719, or it may be for some deeper reason --
+     but I'm playing it safe and using apr_pool_*() here too. */
+  apr_pool_create (&subpool, err->pool);
+  empties = apr_array_make (subpool, 0, sizeof (apr_status_t));
 
   while (err)
     {
-      print_error (err, stream, (err->apr_err != parent_apr_err));
-      parent_apr_err = err->apr_err;
+      int i;
+      svn_boolean_t printed_already = FALSE;
+
+      if (! err->message)
+        {
+          for (i = 0; i < empties->nelts; i++)
+            {
+              if (err->apr_err == ((apr_status_t *)empties->elts)[i])
+                {
+                  printed_already = TRUE;
+                  break;
+                }
+            }
+        }
+      
+      if (! printed_already)
+        {
+          print_error (err, stream, prefix);
+          if (! err->message)
+            {
+              (*((apr_status_t *) apr_array_push (empties))) = err->apr_err;
+            }
+        }
+
       err = err->child;
     }
+
+  apr_pool_destroy (subpool);
 
   fflush (stream);
   if (fatal)
@@ -322,8 +404,15 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 void
 svn_handle_warning (FILE *stream, svn_error_t *err)
 {
-  svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: warning: %s\n",
-                                       err->message));
+  svn_handle_warning2(stream, err, "svn: ");
+}
+
+void
+svn_handle_warning2 (FILE *stream, svn_error_t *err, const char *prefix)
+{
+  svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
+                                        _("%swarning: %s\n"),
+                                        prefix, err->message));
   fflush (stream);
 }
 

@@ -22,9 +22,7 @@
 
 /*** Includes. ***/
 
-#include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "cl.h"
@@ -45,12 +43,11 @@ svn_cl__export (apr_getopt_t *os,
   const char *from, *to;
   apr_array_header_t *targets;
   svn_error_t *err;
+  svn_opt_revision_t peg_revision;
+  const char *truefrom;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* We want exactly 1 or 2 targets for this subcommand. */
   if ((targets->nelts < 1) || (targets->nelts > 2))
@@ -59,20 +56,26 @@ svn_cl__export (apr_getopt_t *os,
   /* The first target is the `from' path. */
   from = ((const char **) (targets->elts))[0];
 
+  /* Get the peg revision if present. */
+  SVN_ERR (svn_opt_parse_path (&peg_revision, &truefrom, from, pool));
+
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1) 
-    to = svn_path_uri_decode (svn_path_basename (from, pool), pool);
+    to = svn_path_uri_decode (svn_path_basename (truefrom, pool), pool);
   else
     to = ((const char **) (targets->elts))[1];
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, TRUE,
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE, TRUE,
                           FALSE, pool);
 
   /* Do the export. */
-  err = svn_client_export2 (NULL, from, to, &(opt_state->start_revision),
-                            opt_state->force, opt_state->native_eol, ctx,
+  err = svn_client_export3 (NULL, truefrom, to, &peg_revision,
+                            &(opt_state->start_revision),
+                            opt_state->force, opt_state->ignore_externals,
+                            opt_state->nonrecursive ? FALSE : TRUE, 
+                            opt_state->native_eol, ctx,
                             pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
     SVN_ERR_W (err,

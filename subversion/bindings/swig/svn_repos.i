@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Repos"
+#elif defined(SWIGRUBY)
+%module "svn::ext::repos"
 #else
 %module repos
 #endif
@@ -30,36 +32,35 @@
 %import svn_delta.i
 %import svn_fs.i
 
-#ifdef SWIGJAVA
-/* Redefine this function pointer type because its swig string representation
-   approaches the maximum path length on windows, causing swig to crash when
-   it outputs a java wrapper class for it. */
-typedef void * svn_repos_file_rev_handler_t;
-%ignore svn_repos_file_rev_handler_t;
-#endif
-
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
-    svn_repos_t **
+    svn_repos_t **,
+    const svn_delta_editor_t **editor,
+    void **edit_baton
 };
 
-/* -----------------------------------------------------------------------
-   Some of the various parameters need to be NULL sometimes
-*/
 %apply const char *MAY_BE_NULL {
     const char *src_entry,
-    const char *on_disk_template,
-    const char *in_repos_template
+    const char *unused_1,
+    const char *unused_2,
+    const char *token
 };
 
-/* -----------------------------------------------------------------------
-   handle the 'paths' parameter appropriately
-*/
+/* svn_repos_db_logfiles() */
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+    apr_array_header_t **logfiles
+}
+
+/* svn_repos_get_logs() */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
 };
+
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
 /* -----------------------------------------------------------------------
    handle the 'location_revisions' parameter appropriately
@@ -81,14 +82,6 @@ typedef void * svn_repos_file_rev_handler_t;
 }
 
 /* -----------------------------------------------------------------------
-   commit editor support	
-*/
-%apply SWIGTYPE **OUTPARAM {
-    const svn_delta_editor_t **editor,
-    void **edit_baton
-};
-
-/* -----------------------------------------------------------------------
    handle svn_repos_history_func_t/baton pairs
 */
 %typemap(python,in) (svn_repos_history_func_t history_func, void *history_baton) {
@@ -101,6 +94,16 @@ typedef void * svn_repos_file_rev_handler_t;
 
   $1 = svn_swig_pl_thunk_history_func;
   $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_fs_get_locks
+*/
+%typemap(python,in,numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **locks {
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_lock_t));
 }
 
 
@@ -124,10 +127,21 @@ typedef void * svn_repos_file_rev_handler_t;
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
+  $1 = svn_swig_rb_repos_authz_func;
+  $2 = (void *)$input;
+}
+
 /* -----------------------------------------------------------------------
    handle config and fs_config in svn_repos_create
 */
 
+/* ### TODO: %typemap(python, in) apr_hash_t *config {} */
+
+%typemap(python, in) apr_hash_t *fs_config {
+    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
+}
+    
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
@@ -147,7 +161,6 @@ typedef void * svn_repos_file_rev_handler_t;
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_repos.h
 %{
 #include "svn_repos.h"
 
@@ -155,11 +168,13 @@ typedef void * svn_repos_file_rev_handler_t;
 #include "swigutil_py.h"
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_repos.h

@@ -22,18 +22,15 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
-#include "svn_subst.h"
-#include "svn_private_config.h"
+#include "svn_props.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -60,11 +57,8 @@ svn_cl__propedit (apr_getopt_t *os,
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -182,27 +176,29 @@ svn_cl__propedit (apr_getopt_t *os,
           const char *target_local;
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
+          svn_opt_revision_t peg_revision;
           
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           if (svn_path_is_url (target))
             {
-              /* ### If/when svn_client_propset() supports setting
-                 properties remotely, this guard can go away.  Also,
-                 when we do that, we'll have to pass a real auth baton
-                 instead of NULL to svn_client_propget() below. */
+              /* ### If/when svn_client_propset2() supports setting
+                 properties remotely, this guard can go away. */
               return svn_error_createf
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                  _("Editing property on non-local target '%s' "
                  "not yet supported"), target);
             }
 
+          /* Propedits can only happen on HEAD or the working copy, so
+             the peg revision can be as unspecified. */
+          peg_revision.kind = svn_opt_revision_unspecified;
+          
           /* Fetch the current property. */
-          SVN_ERR (svn_client_propget (&props, pname_utf8, target,
-                                       &(opt_state->start_revision),
-                                       FALSE,
-                                       NULL,  /* ### pass ctx here */
-                                       subpool));
+          SVN_ERR (svn_client_propget2 (&props, pname_utf8, target,
+                                        &peg_revision,
+                                        &(opt_state->start_revision),
+                                        FALSE, ctx, subpool));
           
           /* Get the property value. */
           propval = apr_hash_get (props, target, APR_HASH_KEY_STRING);
@@ -210,8 +206,9 @@ svn_cl__propedit (apr_getopt_t *os,
             propval = svn_string_create ("", subpool);
           
           /* Split the path if it is a file path. */
-          SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                           FALSE, 0, subpool));
+          SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                           FALSE, 0, ctx->cancel_func,
+                                           ctx->cancel_baton, subpool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
           if (! entry)
             return svn_error_createf
@@ -243,8 +240,9 @@ svn_cl__propedit (apr_getopt_t *os,
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
               
-              SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
-                                           FALSE, subpool));
+              SVN_ERR (svn_client_propset2 (pname_utf8, propval, target, 
+                                            FALSE, opt_state->force,
+                                            ctx, subpool));
               SVN_ERR
                 (svn_cmdline_printf
                  (subpool, _("Set new value for property '%s' on '%s'\n"),

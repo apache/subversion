@@ -71,10 +71,10 @@ Path::init (const char * pi_path)
     }
     else
     {
-        const char * int_path = svn_path_internal_style (pi_path, 
+        m_error_occured = JNIUtil::preprocessPath(pi_path, 
             JNIUtil::getRequestPool()->pool() );
 
-        m_path = int_path;
+        m_path = pi_path;
     }
 }
 
@@ -104,4 +104,9 @@ Path::operator=(const Path & pi_path)
 {
     init (pi_path.c_str ());
     return *this;
+}
+
+svn_error_t *Path::error_occured() const
+{
+    return m_error_occured;
 }

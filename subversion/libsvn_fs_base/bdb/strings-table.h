@@ -68,7 +68,8 @@ svn_error_t *svn_fs_bdb__string_read (svn_fs_t *fs,
                                       char *buf,
                                       svn_filesize_t offset,
                                       apr_size_t *len,
-                                      trail_t *trail);
+                                      trail_t *trail,
+                                      apr_pool_t *pool);
 
 
 /* Set *SIZE to the size in bytes of string KEY in FS, as part of
@@ -79,13 +80,14 @@ svn_error_t *svn_fs_bdb__string_read (svn_fs_t *fs,
 svn_error_t *svn_fs_bdb__string_size (svn_filesize_t *size,
                                       svn_fs_t *fs,
                                       const char *key,
-                                      trail_t *trail);
+                                      trail_t *trail,
+                                      apr_pool_t *pool);
 
 
 /* Append LEN bytes from BUF to string *KEY in FS, as part of TRAIL.
  *
  * If *KEY is null, then create a new string and store the new key in
- * *KEY (allocating it in TRAIL->pool), and write LEN bytes from BUF
+ * *KEY (allocating it in POOL), and write LEN bytes from BUF
  * as the initial contents of the string.
  *
  * If *KEY is not null but there is no string named *KEY, return
@@ -97,7 +99,8 @@ svn_error_t *svn_fs_bdb__string_append (svn_fs_t *fs,
                                         const char **key,
                                         apr_size_t len,
                                         const char *buf,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Make string KEY in FS zero length, as part of TRAIL.
@@ -105,7 +108,8 @@ svn_error_t *svn_fs_bdb__string_append (svn_fs_t *fs,
  */
 svn_error_t *svn_fs_bdb__string_clear (svn_fs_t *fs,
                                        const char *key,
-                                       trail_t *trail);
+                                       trail_t *trail,
+                                       apr_pool_t *pool);
 
 
 /* Delete string KEY from FS, as part of TRAIL.
@@ -117,16 +121,18 @@ svn_error_t *svn_fs_bdb__string_clear (svn_fs_t *fs,
  */
 svn_error_t *svn_fs_bdb__string_delete (svn_fs_t *fs,
                                         const char *key,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Copy the contents of the string referred to by KEY in FS into a new
  * record, returning the new record's key in *NEW_KEY.  All
- * allocations (including *NEW_KEY) occur in TRAIL->pool.  */
+ * allocations (including *NEW_KEY) occur in POOL.  */
 svn_error_t *svn_fs_bdb__string_copy (svn_fs_t *fs,
                                       const char **new_key,
                                       const char *key,
-                                      trail_t *trail);
+                                      trail_t *trail,
+                                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus

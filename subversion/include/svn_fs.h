@@ -38,8 +38,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_fs version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_fs version information.
  */
 const svn_version_t *svn_fs_version (void);
 
@@ -51,16 +52,18 @@ const svn_version_t *svn_fs_version (void);
 typedef struct svn_fs_t svn_fs_t;
 
 
-/** Filesystem configuration options. */
+/** @defgroup fs_config_opts Filesystem configuration options
+ * @{ */
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_FS_TYPE_BDB                         "bdb"
-/* @since New in 1.1. */
+/** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
+/** @} */
 
 
 /** The type of a warning callback function.  @a baton is the value specified
@@ -85,7 +88,6 @@ typedef void (*svn_fs_warning_callback_t) (void *baton, svn_error_t *err);
 void svn_fs_set_warning_func (svn_fs_t *fs,
                               svn_fs_warning_callback_t warning,
                               void *warning_baton);
-
 
 
 
@@ -224,10 +226,11 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 /** Set @a *logfiles to array of <tt>const char *</tt> log file names
  * of Berkeley DB-based Subversion filesystem.
  *
- * If @a only_unused is used is @c TRUE, @a *logfiles will contain
- * only the names of Berkeley DB log files still in use by the
- * filesystem.  Otherwise, all log files (used and unused) are returned.
- *
+ * If @a only_unused is @c TRUE, set @a *logfiles to an array which
+ * contains only the names of Berkeley DB log files no longer in use
+ * by the filesystem.  Otherwise, all log files (used and unused) are
+ * returned.
+ 
  * This function wraps the Berkeley DB 'log_archive' function
  * called by the db_archive binary.  Repository administrators may
  * want to run this function periodically and delete the unused log
@@ -247,22 +250,22 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
  * @{
  */
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
 svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
 svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
 const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
 svn_error_t *svn_fs_delete_berkeley (const char *path, apr_pool_t *pool);
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
+/** @deprecated Provided for backward compatibility with the 1.0 API. */
 svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path, 
                                       const char *dest_path, 
                                       svn_boolean_t clean_logs,
@@ -270,6 +273,69 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
 /** @} */
 
 /** @} */
+
+
+/** Filesystem Access Contexts.   (@since New in 1.2.)
+ * 
+ */
+
+/** At certain times, filesystem functions need access to temporary
+ * user data.  For example, which user is changing a file?  If the
+ * file is locked, has an appropriate lock-token been supplied?
+ *
+ * This temporary user data is stored in an "access context" object,
+ * and the access context is then connected to the filesystem object.
+ * Whenever a filesystem function requires information, it can pull
+ * things out of the context as needed.
+*/
+
+/** An opaque object representing temporary user data. */
+typedef struct svn_fs_access_t svn_fs_access_t;
+
+
+/** Set @a *access_ctx to a new @c svn_fs_access_t object representing
+ *  @a username, allocated in @a pool.  @a username is presumed to
+ *  have been authenticated by the caller.
+ */
+svn_error_t *svn_fs_create_access (svn_fs_access_t **access_ctx,
+                                   const char *username,
+                                   apr_pool_t *pool);
+
+
+/** Associate @a access_ctx with an open @a fs.
+ *
+ * This function can be run multiple times on the same open
+ * filesystem, in order to change the filesystem access context for
+ * different filesystem operations.  Pass a NULL value for @a
+ * access_ctx to disassociate the current access context from the
+ * filesystem.
+ */
+svn_error_t *svn_fs_set_access (svn_fs_t *fs,
+                                svn_fs_access_t *access_ctx);
+
+
+/** Set @a *access_ctx to the current @a fs access context, or NULL if
+ * there is no current fs access context.
+ */
+svn_error_t *svn_fs_get_access (svn_fs_access_t **access_ctx,
+                                svn_fs_t *fs);
+
+
+/** Accessors for the access context: */
+
+/** Set @a *username to the name represented by @a access_ctx. */
+svn_error_t *svn_fs_access_get_username (const char **username,
+                                         svn_fs_access_t *access_ctx);
+
+
+/** Push a lock-token @a token into the context @a access_ctx.  The
+ * context remembers all tokens it receives, and makes them available
+ * to fs functions.  The token is not duplicated into @a access_ctx's
+ * pool;  make sure the token's lifetime is at least as long as @a
+ * access_ctx. */
+svn_error_t *svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
+                                           const char *token);
+
 
 
 /** Filesystem Nodes.
@@ -319,7 +385,8 @@ svn_boolean_t svn_fs_check_related (const svn_fs_id_t *id1,
                                     const svn_fs_id_t *id2);
 
 
-/** @deprecated Provided for backward compatibility with the 1.0.0 API.
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * NOTE: This function is not guaranteed to work with all filesystem
  * types.  There is currently no un-deprecated equivalent; contact the
@@ -419,22 +486,58 @@ svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id,
 typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
-/** Begin a new transaction on the filesystem @a fs, based on existing
+/** @defgroup svn_fs_begin_txn2_flags Bitmask flags for svn_fs_begin_txn2()
+ * @since New in 1.2
+ * @{ */
+
+/** Do on-the-fly out-of-dateness checks.  That is, an fs routine may
+ * throw error if a caller tries to edit an out-of-date item in the
+ * transaction.  
+ * 
+ * @warning ### Not yet implemented. 
+ */
+#define SVN_FS_TXN_CHECK_OOD                     0x00001
+
+/** Do on-the-fly lock checks.  That is, an fs routine may throw error
+ * if a caller tries to edit a locked item without having rights to the lock.
+ */
+#define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+/** @} */
+
+/** @since New in 1.2
+ *
+ * Begin a new transaction on the filesystem @a fs, based on existing
  * revision @a rev.  Set @a *txn_p to a pointer to the new transaction.
  * When committed, this transaction will create a new revision.
  *
  * Allocate the new transaction in @a pool; when @a pool is freed, the new
  * transaction will be closed (neither committed nor aborted).
  *
+ * @a flags determines transaction enforcement behaviors.  See the
+ * comments above SVN_FS_TXN_* constants above.
+ *
  *<pre>   >> Note: if you're building a txn for committing, you probably <<
  *   >> don't want to call this directly.  Instead, call            <<
  *   >> @c svn_repos_fs_begin_txn_for_commit(), which honors the       <<
  *   >> repository's hook configurations.                           <<</pre>
  */
+svn_error_t *svn_fs_begin_txn2 (svn_fs_txn_t **txn_p,
+                                svn_fs_t *fs,
+                                svn_revnum_t rev,
+                                apr_uint32_t flags,
+                                apr_pool_t *pool);
+
+
+/** @deprecated Provided for backward compatibility with svn 1.1 API. 
+ *
+ * Same as svn_fs_begin_txn2(), but with @a flags set to 0.
+ *
+ */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                                svn_fs_t *fs,
                                svn_revnum_t rev,
                                apr_pool_t *pool);
+
 
 
 /** Commit @a txn.
@@ -476,14 +579,11 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * discarded, and the filesystem is left unchanged.  Use @a pool for
  * any necessary allocations.
  *
- * Use @a pool for any necessary allocations.
- *
- * NOTE: This function first sets the state of the transaction to
- * "dead", and then attempts to the purge the txn and any related data
- * from the filesystem.  If some part of the cleanup process fails,
- * the transaction and some portion of its data may remain in the
- * database after this function returns.  Use @c svn_fs_purge_txn() to
- * retry the transaction cleanup.
+ * NOTE: This function first sets the state of @a txn to "dead", and
+ * then attempts to purge it and any related data from the filesystem.
+ * If some part of the cleanup process fails, @a txn and some portion
+ * of its data may remain in the database after this function returns.
+ * Use @c svn_fs_purge_txn() to retry the transaction cleanup.
  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
                                apr_pool_t *pool);
@@ -507,10 +607,7 @@ svn_error_t *svn_fs_txn_name (const char **name_p,
                               svn_fs_txn_t *txn,
                               apr_pool_t *pool);
 
-
-/** Return @a txn's base revision.  If @a txn's base root id is an mutable
- * node, return 0.
- */
+/** Return @a txn's base revision. */
 svn_revnum_t svn_fs_txn_base_revision (svn_fs_txn_t *txn);
 
 
@@ -753,7 +850,7 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
  * NOTE: If this is the first call to svn_fs_history_prev() for the @a
  * history object, it could return a history object whose location is
  * the same as the original.  This will happen if the original
- * location was an interested one (where the node was modified, or
+ * location was an interesting one (where the node was modified, or
  * took place in a copy event).  This behavior allows looping callers
  * to avoid the calling svn_fs_history_location() on the object
  * returned by svn_fs_node_history(), and instead go ahead and begin
@@ -1059,7 +1156,8 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * difference (modulo node revision ID's) between copying @a from and
  * simply adding a reference to it.  So the operation takes place in
  * constant time.  However, there's no reason not to extend this to
- * mutable nodes --- it's just more code.)
+ * mutable nodes --- it's just more code.)  Further, @a to_root and @a
+ * from_root must represent the same filesystem.
  *
  * Note: to do a copy without preserving copy history, use
  * @c svn_fs_revision_link().
@@ -1361,6 +1459,163 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 /* Non-historical properties.  */
 
 /* [[Yes, do tell.]] */
+
+
+
+/** @defgroup svn_fs_locks filesystem locks
+ * @{ 
+ * @since New in 1.2. */
+
+/** A lock represents one user's exclusive right to modify a path in a
+ * filesystem.  In order to create or destroy a lock, a username must
+ * be associated with the filesystem's access context (see @c
+ * svn_fs_access_t).
+ *
+ * When a lock is created, a 'lock-token' is returned.  The lock-token
+ * is a unique URI that represents the lock (treated as an opaque
+ * string by the client), and is required to make further use of the
+ * lock (including removal of the lock.)  A lock-token can also be
+ * queried to return a svn_lock_t structure that describes the details
+ * of the lock.
+ *
+ * Locks are not secret; anyone can view existing locks in a
+ * filesystem.  Locks are not omnipotent: they can broken and stolen
+ * by people who don't "own" the lock.  (Though admins can tailor a
+ * custom break/steal policy via libsvn_repos pre-lock hook script.)
+ *
+ * Locks can be created with an optional 'timeout', meaning that they
+ * expire after a certain amount of time.  If a lock has an expiration
+ * date, then the act of fetching/reading it might cause it to
+ * automatically expire, returning either nothing or an expiration
+ * error (depending on the API).
+ */
+
+
+/** Lock @a path in @a fs, and set @a *lock to a lock
+ * representing the new lock, allocated in @a pool.
+ *
+ * @warning You may prefer to use @a svn_repos_fs_lock instead,
+ * which see.
+ *
+ * @a fs must have a username associated with it (see @c
+ * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
+ * 'owner' field in the new lock to the fs username.
+ *
+ * @a comment is optional: it's either an xml-escapable UTF8 string
+ * which describes the lock, or it is @c NULL.
+ *
+ * If path is already locked, then return @c SVN_ERR_FS_PATH_LOCKED,
+ * unless @a steal_lock is true, in which case "steal" the existing
+ * lock, even if the FS access-context's username does not match the
+ * current lock's owner: delete the existing lock on @a path, and
+ * create a new one.
+ *
+ * @a token is a lock token such as can be generated using @c
+ * svn_fs_generate_lock_token (indicating that the caller wants to
+ * dictate the lock token used), or it is @c NULL (indicating that the
+ * caller wishes to have a new token generated by this function).  If
+ * @a token is not @c NULL, and represents an existing lock, then @a
+ * path must match the path associated with that existing lock.
+ *
+ * If @a timeout is zero, then create a non-expiring lock.  Else, the
+ * lock will expire in @a timeout seconds after creation.
+ *
+ * If @a current_rev is a valid revnum, then do an out-of-dateness
+ * check.  If the revnum is less than the last-changed-revision of @a
+ * path (or if @a path doesn't exist in HEAD), return @c
+ * SVN_ERR_FS_OUT_OF_DATE.
+ *
+ * Note:  at this time, only files can be locked.
+ */
+svn_error_t *svn_fs_lock (svn_lock_t **lock,
+                          svn_fs_t *fs,
+                          const char *path,
+                          const char *token,
+                          const char *comment,
+                          int timeout,
+                          svn_revnum_t current_rev,
+                          svn_boolean_t steal_lock,
+                          apr_pool_t *pool);
+
+
+/** Generate a unique lock-token using @a fs. Return in @a *token,
+ * allocated in @a pool.
+ *
+ * This can be used in to populate lock->token before calling @c
+ * svn_fs_attach_lock().
+ */
+svn_error_t *svn_fs_generate_lock_token (const char **token,
+                                         svn_fs_t *fs,
+                                         apr_pool_t *pool);
+
+
+/** Remove the lock on @a path represented by @a token in @a fs.
+ *
+ * If @a token doesn't point to a lock, return @c SVN_ERR_FS_BAD_LOCK_TOKEN.
+ * If @a token points to an expired lock, return @c SVN_ERR_FS_LOCK_EXPIRED.
+ * If @a fs has no username associated with it, return @c SVN_ERR_FS_NO_USER
+ * unless @a break_lock is specified.
+ *
+ * If @a token points to a lock, but the username of @a fs's access
+ * context doesn't match the lock's owner, return @c
+ * SVN_ERR_FS_LOCK_OWNER_MISMATCH.  If @a break_lock is true, however, don't
+ * return error;  allow the lock to be "broken" in any case.  In the latter
+ * case, @a token shall be @c NULL.
+ *
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *svn_fs_unlock (svn_fs_t *fs,
+                            const char *path,
+                            const char *token,
+                            svn_boolean_t break_lock,
+                            apr_pool_t *pool);
+
+
+/** If @a path is locked in @a fs, set @a *lock to an svn_lock_t which
+ *  represents the lock, allocated in @a pool.
+ *  
+ * If @a path is not locked, set @a *lock to NULL.
+ */
+svn_error_t *svn_fs_get_lock (svn_lock_t **lock,
+                              svn_fs_t *fs,
+                              const char *path,
+                              apr_pool_t *pool);
+
+
+/** The type of a lock discovery callback function.  @a baton is the
+ * value specified in the call to @c svn_fs_get_locks; the filesystem
+ * passes it through to the callback.  @a lock is a lock structure.
+ * @a pool is a temporary subpool for use by the callback
+ * implementation -- it is cleared after invocation of the callback.
+ */
+typedef svn_error_t *(*svn_fs_get_locks_callback_t) (void *baton, 
+                                                     svn_lock_t *lock, 
+                                                     apr_pool_t *pool);
+
+
+/** Report locks on or below @a path in @a fs using the @a
+ * get_locks_func / @a get_locks_baton.  Use @a pool for necessary
+ * allocations.
+ *
+ * If the @a get_locks_func callback implementation returns an error,
+ * lock iteration will terminate and that error will be returned by
+ * this function.
+ */
+svn_error_t *svn_fs_get_locks (svn_fs_t *fs,
+                               const char *path,
+                               svn_fs_get_locks_callback_t get_locks_func,
+                               void *get_locks_baton,
+                               apr_pool_t *pool);
+
+/** @} */
+
+/** @since New in 1.2.
+ *
+ * Append a textual list of all available FS modules to the stringbuf
+ * @a output.
+ */
+svn_error_t *svn_fs_print_modules (svn_stringbuf_t *output,
+                                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -22,8 +22,6 @@
 
 #include <apr_pools.h>
 #include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,6 +62,10 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CMT_AUTHOR    "last-author"
 #define SVN_WC__ENTRY_ATTR_UUID          "uuid"
 #define SVN_WC__ENTRY_ATTR_INCOMPLETE    "incomplete"
+#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN    "lock-token"
+#define SVN_WC__ENTRY_ATTR_LOCK_OWNER    "lock-owner"
+#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT  "lock-comment"
+#define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -130,6 +132,10 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_UUID          0x00040000
 #define SVN_WC__ENTRY_MODIFY_INCOMPLETE    0x00080000
 #define SVN_WC__ENTRY_MODIFY_ABSENT        0x00100000
+#define SVN_WC__ENTRY_MODIFY_LOCK_TOKEN    0x00200000
+#define SVN_WC__ENTRY_MODIFY_LOCK_OWNER    0x00400000
+#define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT  0x00800000
+#define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE 0x01000000
 
 
 /* ...or perhaps this to mean all of those above... */
@@ -177,6 +183,9 @@ void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
  * entry's working revision.  (This is purely an in-memory operation.)
+ * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
+ * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
+ * happen.
  *
  * *WRITE_REQUIRED will be set to TRUE if the tweaks make changes that
  * require the entries to be written to disk, otherwise *WRITE_REQUIRED
@@ -189,6 +198,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
                      svn_revnum_t new_rev,
+                     svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,
                      apr_pool_t *pool);
 

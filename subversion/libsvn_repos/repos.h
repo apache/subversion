@@ -28,8 +28,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** Repository version number. */
-#define SVN_REPOS__VERSION     3
+/*** Repository format number. */
+#define SVN_REPOS__FORMAT_NUMBER     3
 
 
 /*** Repository layout. ***/
@@ -57,6 +57,10 @@ extern "C" {
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
 #define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
 #define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
+#define SVN_REPOS__HOOK_PRE_LOCK        "pre-lock"
+#define SVN_REPOS__HOOK_POST_LOCK       "post-lock"
+#define SVN_REPOS__HOOK_PRE_UNLOCK      "pre-unlock"
+#define SVN_REPOS__HOOK_POST_UNLOCK     "post-unlock"
 
 
 /* The extension added to the names of example hook scripts. */
@@ -65,7 +69,7 @@ extern "C" {
 
 /* In the repository conf directory, look for these files. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
-
+#define SVN_REPOS__CONF_PASSWD "passwd"
 
 /* The Repository object, created by svn_repos_open() and
    svn_repos_create(), allocated in POOL. */
@@ -91,6 +95,9 @@ struct svn_repos_t
 
   /* The path to the Berkeley DB filesystem environment. */
   char *db_path;
+
+  /* The format number of this repository. */
+  int format;
 };
 
 
@@ -130,7 +137,9 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
    REV is the revision whose property is being changed.
    AUTHOR is the authenticated name of the user changing the prop.
    NAME is the name of the property being changed.  
-   VALUE is the new value of the property.
+   NEW_VALUE is the new value of the property.
+   ACTION is indicates if the property is being 'A'dded, 'M'odified,
+   or 'D'eleted.
 
    The pre-revprop-change hook will have the new property value
    written to its stdin.  If the property is being deleted, no data
@@ -141,6 +150,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      const char *author,
                                      const char *name,
                                      const svn_string_t *new_value,
+                                     char action,
                                      apr_pool_t *pool);
 
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
@@ -151,7 +161,8 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
    AUTHOR is the authenticated name of the user who changed the prop.
    NAME is the name of the property that was changed, and OLD_VALUE is
    that property's value immediately before the change, or null if
-   none.
+   none.  ACTION indicates if the property was 'A'dded, 'M'odified,
+   or 'D'eleted.
 
    The old value will be passed to the post-revprop hook on stdin.  If
    the property is being created, no data will be written. */
@@ -161,8 +172,50 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       const char *author,
                                       const char *name,
                                       svn_string_t *old_value,
+                                      char action,
                                       apr_pool_t *pool);
 
+/* Run the pre-lock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   PATH is the path being locked, USERNAME is the person doing it.  */
+svn_error_t *
+svn_repos__hooks_pre_lock (svn_repos_t *repos,
+                           const char *path,
+                           const char *username,
+                           apr_pool_t *pool);
+
+/* Run the post-lock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   PATHS is an array of paths being locked, USERNAME is the person
+   who did it.  */
+svn_error_t *
+svn_repos__hooks_post_lock (svn_repos_t *repos,
+                            apr_array_header_t *paths,
+                            const char *username,
+                            apr_pool_t *pool);
+
+/* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+   
+   PATH is the path being unlocked, USERNAME is the person doing it.  */
+svn_error_t *
+svn_repos__hooks_pre_unlock (svn_repos_t *repos,
+                             const char *path,
+                             const char *username,
+                             apr_pool_t *pool);
+
+/* Run the post-unlock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+   
+   PATHS is an array of paths being unlocked, USERNAME is the person
+   who did it.  */
+svn_error_t *
+svn_repos__hooks_post_unlock (svn_repos_t *repos,
+                              apr_array_header_t *paths,
+                              const char *username,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -24,7 +24,7 @@ import java.util.Date;
  * the working copy. Will be returned by SVNClient.status or
  * SVNClient.singleStatus
  * @author Patrick Mayweg
- * @author Cédric Chabanois
+ * @author C&eacute;dric Chabanois
  *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
  */
 public class Status
@@ -109,6 +109,31 @@ public class Status
      * if copied, the revision number of the copy source
      */
     private long revisionCopiedFrom;
+    /**
+     * @since 1.2
+     * token specified for the lock (null if not locked)
+     */
+    private String lockToken;
+    /**
+     * @since 1.2
+     * owner of the lock (null if not locked)
+     */
+    private String lockOwner;
+    /**
+     * @since 1.2
+     * comment specified for the lock (null if not locked)
+     */
+    private String lockComment;
+    /**
+     * @since 1.2
+     * date of the creation of the lock (null if not locked)
+     */
+    private long lockCreationDate;
+    /**
+     * @since 1.2
+     * the lock in the repository
+     */
+    private Lock reposLock;
 
     /**
      * this constructor should only called from JNI code
@@ -136,7 +161,14 @@ public class Status
      * @param urlCopiedFrom         if copied, the url of the copy source
      * @param revisionCopiedFrom    if copied, the revision number of the copy
      *                              source
-     * @param switched
+     * @param switched              flag if the node has been switched in the 
+     *                              path
+     * @param lockToken             the token for the current lock if any
+     * @param lockOwner             the owner of the current lock is any
+     * @param lockComment           the comment of the current lock if any
+     * @param lockCreationDate      the date, the lock was created if any
+     * @param reposLock             the lock as stored in the repository if
+     *                              any
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -145,7 +177,8 @@ public class Status
                   boolean locked, boolean copied, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched)
+                  boolean switched, String lockToken, String lockOwner, 
+                  String lockComment, long lockCreationDate, Lock reposLock)
     {
         this.path = path;
         this.url = url;
@@ -166,6 +199,11 @@ public class Status
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
+        this.lockToken = lockToken;
+        this.lockOwner = lockOwner;
+        this.lockComment = lockComment;
+        this.lockCreationDate = lockCreationDate;
+        this.reposLock = reposLock;
     }
 
     /**
@@ -183,10 +221,7 @@ public class Status
      */
     public Revision.Number getRevision()
     {
-        if(revision < 0)
-            return null;
-        else
-            return new Revision.Number(revision);
+        return Revision.createNumber(revision);
     }
 
     /**
@@ -339,9 +374,7 @@ public class Status
      */
     public Revision.Number getLastChangedRevision()
     {
-        if(lastChangedRevision < 0)
-            return null;
-        return new Revision.Number(lastChangedRevision);
+        return Revision.createNumber(lastChangedRevision);
     }
 
     /**
@@ -377,10 +410,7 @@ public class Status
      */
     public Revision.Number getRevisionCopiedFrom()
     {
-        if(revisionCopiedFrom < 0)
-            return null;
-        else
-            return new Revision.Number(revisionCopiedFrom);
+        return Revision.createNumber(revisionCopiedFrom);
     }
 
     /**
@@ -474,6 +504,58 @@ public class Status
         return textStatus == Status.Kind.modified;
     }
 
+    /**
+     * Returns the lock token
+     * @return the lock token
+     * @since 1.2
+     */
+    public String getLockToken()
+    {
+        return lockToken;
+    }
+
+    /**
+     * Returns the lock  owner
+     * @return the lock owner
+     * @since 1.2
+     */
+    public String getLockOwner()
+    {
+        return lockOwner;
+    }
+
+    /**
+     * Returns the lock comment
+     * @return the lock comment
+     * @since 1.2
+     */
+    public String getLockComment()
+    {
+        return lockComment;
+    }
+
+    /**
+     * Returns the lock creation date
+     * @return the lock creation date
+     * @since 1.2
+     */
+    public Date getLockCreationDate()
+    {
+        if (lockCreationDate == 0)
+            return null;
+        else
+            return new Date(lastChangedDate / 1000);
+    }
+
+    /**
+     * Returns the lock as in the repository
+     * @return the lock as in the repository
+     * @since 1.2
+     */
+    public Lock getReposLock()
+    {
+        return reposLock;
+    }
     /**
      * class for kind status of the item or its properties
      * the constants are defined in the interface StatusKind for building

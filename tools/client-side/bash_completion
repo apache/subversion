@@ -16,13 +16,13 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	# Possible expansions, without unambiguous abbreviations such as "up".
+	# Possible expansions, without pure-prefix abbreviations such as "up".
 	cmds='add blame annotate praise cat checkout co cleanup commit ci \
               copy cp delete remove rm diff export help ? import info \
-              list ls log merge mkdir move mv rename \
+              list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
-              status switch update version --version'
+              status switch unlock update version --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -68,13 +68,14 @@ _svn()
 		cmdOpts="$rOpts $pOpts"
 		;;
 	checkout|co)
-		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
+		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals"
 		;;
 	cleanup)
 		cmdOpts="--diff3-cmd"
 		;;
 	commit|ci)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
+		         --no-unlock"
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
@@ -84,10 +85,11 @@ _svn()
 		;;
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
-		         $nOpts $pOpts --old --new --notice-ancestry"
+		         $nOpts $pOpts --force --old --new --notice-ancestry"
 		;;
 	export)
-		cmdOpts="$rOpts $qOpts $pOpts --force --native-eol"
+		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
+                         --ignore-externals"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds $qOpts"
@@ -97,10 +99,14 @@ _svn()
 		         --editor-cmd $pOpts"
 		;; 
 	info)
-		cmdOpts="--targets -R --recursive"
+		cmdOpts="$rOpts --targets -R --recursive"
 		;;
 	list|ls)
-		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts"
+		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
+                         --incremental --xml"
+		;;
+	lock)
+		cmdOpts="$mOpts --targets --editor-cmd --force $pOpts"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
@@ -142,13 +148,17 @@ _svn()
 		;;
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
-		         --no-ignore"
+		         --no-ignore --ignore-externals"
 		;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
 		;;
+	unlock)
+		cmdOpts="--targets --force $pOpts"
+		;;
 	update|up)
-		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd"
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
+                         --ignore-externals"
 		;;
 	version)
 		cmdOpts="$qOpts"
@@ -217,8 +227,10 @@ _svnadmin ()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='create deltify dump help h ? hotcopy load list-dblogs \
-	      list-unused-dblogs lstxns recover rmtxns setlog verify'
+	# Possible expansions, without pure-prefix abbreviations such as "h".
+	cmds='create deltify dump help ? hotcopy list-dblogs \
+	      list-unused-dblogs load lslocks lstxns recover rmlocks \
+	      rmtxns setlog verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -250,20 +262,20 @@ _svnadmin ()
 		cmdOpts="-r --revision --incremental -q --quiet --deltas"
 		;;
 	help|h|\?)
-		cmdOpts="$cmds $qOpts"
+		cmdOpts="$cmds -q --quiet"
 		;;
 	hotcopy)
 		cmdOpts="--clean-logs"
 		;;
 	load)
-		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet"
+		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
+		         --use-pre-commit-hook --use-post-commit-hook"
 		;;
-	list-dblogs)
-		;;
-	list-unused-dblogs)
+	rmtxns)
+		cmdOpts="-q --quiet"
 		;;
 	setlog)
-		cmdOpts="-r --revision"
+		cmdOpts="-r --revision --bypass-hooks"
 		;;
 	*)
 		;;

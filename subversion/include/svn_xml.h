@@ -62,7 +62,7 @@ enum svn_xml_open_tag_style {
  * simply running a string of bytes through the Subversion XML escape
  * routines will produce legitimate XML.  It should only be necessary
  * for data which might contain bytes that cannot be safely encoded
- * into XML (upper ASCII and control characters, for example). 
+ * into XML (certain control characters, for example).
  */
 svn_boolean_t svn_xml_is_xml_safe (const char *data, 
                                    apr_size_t len);
@@ -115,6 +115,28 @@ void svn_xml_escape_attr_string (svn_stringbuf_t **outstr,
  */
 void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
                                   const char *string,
+                                  apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *
+ * Return UTF-8 string @a string if it contains no characters that are
+ * unrepresentable in XML.  Else, return a copy of @a string,
+ * allocated in @a pool, with each unrepresentable character replaced
+ * by "?\uuu", where "uuu" is the three-digit unsigned decimal value
+ * of that character.
+ *
+ * Neither the input nor the output need be valid XML; however, the
+ * output can always be safely XML-escaped.
+ *
+ * @note The current implementation treats all Unicode characters as
+ * representable, except for most ASCII control characters (the
+ * exceptions being CR, LF, and TAB, which are valid in XML).  There
+ * may be other UTF-8 characters that are invalid in XML; see
+ * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=90591
+ * and its thread for details.
+ */
+const char *svn_xml_fuzzy_escape (const char *string,
                                   apr_pool_t *pool);
 
 
@@ -274,7 +296,7 @@ void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
                               va_list ap);
 
 
-/** Like @c svn_xml_make_tag, but takes a hash table of attributes 
+/** Like @c svn_xml_make_open_tag, but takes a hash table of attributes 
  * (<tt>char *</tt> keys mapping to <tt>char *</tt> values).
  *
  * You might ask, why not just provide @c svn_xml_make_tag_atts()?

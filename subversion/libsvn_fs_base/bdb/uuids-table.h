@@ -42,20 +42,20 @@ int svn_fs_bdb__open_uuids_table (DB **uuids_p,
 /* Get the UUID at index @a idx in the uuids table within @a fs,
  * storing the result in @a *uuid.
  */
-
 svn_error_t *svn_fs_bdb__get_uuid (svn_fs_t *fs,
                                    int idx,
                                    const char **uuid,
-                                   trail_t *trail);
+                                   trail_t *trail,
+                                   apr_pool_t *pool);
 
 /* Set the UUID at index @a idx in the uuids table within @a fs
  * to @a uuid.
  */
-
 svn_error_t *svn_fs_bdb__set_uuid (svn_fs_t *fs,
                                    int idx,
                                    const char *uuid,
-                                   trail_t *trail);
+                                   trail_t *trail,
+                                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

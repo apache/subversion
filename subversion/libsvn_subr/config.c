@@ -24,9 +24,11 @@
 
 #include <apr_general.h>
 #include <apr_lib.h>
-#include <apr_user.h>
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "config_impl.h"
+
+#include "svn_private_config.h"
 
 
 
@@ -627,7 +629,7 @@ svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
     *valuep = FALSE;
   else
     return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                              "Config error: invalid boolean value '%s'",
+                              _("Config error: invalid boolean value '%s'"),
                               tmp_value);
 
   return SVN_NO_ERROR;
@@ -646,6 +648,15 @@ svn_config_set_bool (svn_config_t *cfg,
 
 
 
+int
+svn_config__enumerate_sections (svn_config_t *cfg,
+                               svn_config__section_enumerator_t callback,
+                                void *baton)
+{
+  return svn_config_enumerate_sections (cfg,
+           (svn_config_section_enumerator_t) callback, baton);
+}
+
 int
 svn_config_enumerate_sections (svn_config_t *cfg,
                                svn_config_section_enumerator_t callback,
@@ -791,9 +802,10 @@ svn_config_get_server_setting_int (svn_config_t *cfg,
 
       if (*end_pos != 0)
         {
-          return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                    "Config error: invalid integer value '%s'",
-                                    tmp_value);
+          return svn_error_createf
+            (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+             _("Config error: invalid integer value '%s'"),
+             tmp_value);
         }
     }
 

@@ -117,18 +117,24 @@ def am_txns(ctx):
   cur = ctx.txns_db.cursor()
   try:
     print "next-key: %s" % ctx.txns_db['next-key']
-    rec = cur.first()
-    while rec:
-      if rec[0] != 'next-key':
-        txn = skel.Txn(rec[1])
-        if txn.kind == "committed":
-          label = "r%s" % txn.rev
-          ok(ctx.txn2rev[rec[0]] == int(txn.rev), 'Txn->rev not <-txn')
-        else:
-          label = "%s based-on %s" % (txn.kind, txn.basenode)
-        print "txn %s: %s root-node %s props %d copies %s" % (rec[0],
-            label, txn.rootnode, len(txn.proplist) / 2, ",".join(txn.copies))
-      rec = cur.next()
+    length = 1
+    found_some = True
+    while found_some:
+      found_some = False
+      rec = cur.first()
+      while rec:
+        if rec[0] != 'next-key' and len(rec[0]) == length:
+          found_some = True
+          txn = skel.Txn(rec[1])
+          if txn.kind == "committed":
+            label = "r%s" % txn.rev
+            ok(ctx.txn2rev[rec[0]] == int(txn.rev), 'Txn->rev not <-txn')
+          else:
+            label = "%s based-on %s" % (txn.kind, txn.basenode)
+          print "txn %s: %s root-node %s props %d copies %s" % (rec[0],
+              label, txn.rootnode, len(txn.proplist) / 2, ",".join(txn.copies))
+        rec = cur.next()
+      length += 1
   finally:
     cur.close()
 

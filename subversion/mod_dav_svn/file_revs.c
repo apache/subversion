@@ -24,6 +24,8 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
+#include "svn_props.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -219,10 +221,12 @@ dav_svn__file_revs_report(const dav_resource *resource,
      in this namespace, so is this necessary at all? */
   if (ns == -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain the 'svn:' "
-                           "namespace, so it is not going to have certain "
-                           "required elements.");
+      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have certain "
+                               "required elements.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
 
   /* Get request information. */
@@ -243,8 +247,14 @@ dav_svn__file_revs_report(const dav_resource *resource,
           path = apr_pstrdup(resource->pool, resource->info->repos_path);
 
           if (child->first_cdata.first)
-            path = svn_path_join(path, child->first_cdata.first->text,
+            {
+              if ((derr = dav_svn__test_canonical 
+                   (child->first_cdata.first->text, resource->pool)))
+                return derr;
+              path = svn_path_join(path, 
+                                   child->first_cdata.first->text,
                                    resource->pool);
+            }
         }
       /* else unknown element; skip it */
     }
@@ -263,9 +273,14 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   if (serr)
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, serr->message,
-                                 resource->pool);
-      goto cleanup;
+      /* We don't 'goto cleanup' because ap_fflush() tells httpd
+         to write the HTTP headers out, and that includes whatever
+         r->status is at that particular time.  When we call
+         dav_svn_convert_err(), we don't immediately set r->status
+         right then, so r->status remains 0, hence HTTP status 200
+         would be misleadingly returned. */
+      return (dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  serr->message, resource->pool));
     }
   
   if ((serr = maybe_send_header(&frb)))

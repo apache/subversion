@@ -182,7 +182,7 @@ main (int argc, char *argv[])
   error = check_lib_versions ();
   if (error)
     {
-      svn_handle_error (error, stderr, 0);
+      svn_handle_error2 (error, stderr, FALSE, "svn-push");
       return EXIT_FAILURE;
     }
 
@@ -215,7 +215,7 @@ main (int argc, char *argv[])
 
   if (error)
     {
-      svn_handle_error (error, stderr, 0);
+      svn_handle_error2 (error, stderr, FALSE, "svn-push: ");
       return EXIT_FAILURE;
     }
 

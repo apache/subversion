@@ -18,13 +18,11 @@
 #include <assert.h>
 #include <string.h>
 
-#include <apr_strings.h>
-#include <apr_tables.h>
 #include <apr_pools.h>
 
-#include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 
 #include "fs.h"
 #include "dag.h"
@@ -35,6 +33,8 @@
 #include "fs_fs.h"
 
 #include "../libsvn_fs/fs-loader.h"
+
+#include "svn_private_config.h"
 
 
 /*** Helpers ***/
@@ -55,10 +55,10 @@ get_txn (transaction_t **txn_p,
   SVN_ERR (svn_fs_fs__get_txn (&txn, fs, txn_id, pool));
   if (expect_dead && (txn->kind != transaction_kind_dead))
     return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
-                              "Transaction is not dead: '%s'", txn_id);
+                              _("Transaction is not dead: '%s'"), txn_id);
   if ((! expect_dead) && (txn->kind == transaction_kind_dead))
     return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
-                              "Transaction is dead: '%s'", txn_id);
+                              _("Transaction is dead: '%s'"), txn_id);
   *txn_p = txn;
   return SVN_NO_ERROR;
 }
@@ -168,6 +168,7 @@ svn_error_t *
 svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
+                      apr_uint32_t flags,
                       apr_pool_t *pool)
 {
   svn_string_t date;
@@ -186,7 +187,18 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
   SVN_ERR (svn_fs_fs__change_txn_prop (*txn_p, SVN_PROP_REVISION_DATE, 
                                        &date, pool));
   
-
+  /* Set temporary txn props that represent the requested 'flags'
+     behaviors. */
+  if (flags & SVN_FS_TXN_CHECK_OOD)
+    SVN_ERR (svn_fs_fs__change_txn_prop 
+             (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
+              svn_string_create ("true", pool), pool));
+  
+  if (flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__change_txn_prop 
+             (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
+              svn_string_create ("true", pool), pool));
+             
   return SVN_NO_ERROR;
 }
 
@@ -199,7 +211,7 @@ svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
 
   /* Now, purge it. */
   SVN_ERR_W (svn_fs_fs__purge_txn (txn->fs, txn->id, pool),
-             "Transaction cleanup failed");
+             _("Transaction cleanup failed"));
 
   return SVN_NO_ERROR;
 }

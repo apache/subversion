@@ -29,6 +29,8 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_md5.h"
+#include "svn_props.h"
+#include "svn_private_config.h"
 
 
 
@@ -64,16 +66,20 @@ struct edit_baton
   /* Location in fs where the edit will begin. */
   const char *base_path;
 
-  /** Created during the edit: **/
+  /* Does this set of interfaces 'own' the commit transaction? */
+  svn_boolean_t txn_owner;
 
-  /* svn transaction associated with this edit (created in open_root). */
+  /* svn transaction associated with this edit (created in
+     open_root, or supplied by the public API caller). */
   svn_fs_txn_t *txn;
 
-  /* The object representing the root directory of the svn txn. */
-  svn_fs_root_t *txn_root;
+  /** Filled in during open_root: **/
 
   /* The name of the transaction. */
   const char *txn_name;
+
+  /* The object representing the root directory of the svn txn. */
+  svn_fs_root_t *txn_root;
 
   /** Filled in when the edit is closed: **/
 
@@ -112,7 +118,7 @@ static svn_error_t *
 out_of_date (const char *path, const char *txn_name)
 {
   return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                            "Out of date: '%s' in transaction '%s'",
+                            _("Out of date: '%s' in transaction '%s'"),
                             path, txn_name);
 }
 
@@ -129,24 +135,44 @@ open_root (void *edit_baton,
   struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
   svn_revnum_t youngest;
-  svn_fs_txn_t *txn;
 
   /* Ignore BASE_REVISION.  We always build our transaction against
      HEAD.  However, we will keep it in our dir baton for out of
      dateness checks.  */
   SVN_ERR (svn_fs_youngest_rev (&youngest, eb->fs, eb->pool));
 
-  /* Begin a subversion transaction, cache its name, and get its
-     root object. */
-  SVN_ERR (svn_repos_fs_begin_txn_for_commit (&txn,
-                                              eb->repos, 
-                                              youngest,
-                                              eb->user, 
-                                              eb->log_msg,
-                                              eb->pool));
-  eb->txn = txn;
-  SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
+  /* Unless we've been instructed to use a specific transaction, we'll
+     make our own. */
+  if (eb->txn_owner)
+    {
+      SVN_ERR (svn_repos_fs_begin_txn_for_commit (&(eb->txn),
+                                                  eb->repos, 
+                                                  youngest,
+                                                  eb->user, 
+                                                  eb->log_msg,
+                                                  eb->pool));
+    }
+  else /* Even if we aren't the owner of the transaction, we might
+          have been instructed to set some properties. */
+    {
+      svn_string_t propval;
+      if (eb->user)
+        {
+          propval.data = eb->user;
+          propval.len = strlen (eb->user);
+          SVN_ERR (svn_fs_change_txn_prop (eb->txn, SVN_PROP_REVISION_AUTHOR,
+                                           &propval, pool));
+        }
+      if (eb->log_msg)
+        {
+          propval.data = eb->log_msg;
+          propval.len = strlen (eb->log_msg);
+          SVN_ERR (svn_fs_change_txn_prop (eb->txn, SVN_PROP_REVISION_LOG,
+                                           &propval, pool));
+        }
+    }
   SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
+  SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
   
   /* Create a root dir baton.  The `base_path' field is an -absolute-
      path in the filesystem, upon which all further editor paths are
@@ -219,7 +245,7 @@ add_directory (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "Got source path but no source revision for '%s'", full_path);
+       _("Got source path but no source revision for '%s'"), full_path);
 
   if (copy_path)
     {
@@ -243,7 +269,7 @@ add_directory (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, NULL,
-           "Source url '%s' is from different repository", full_path);
+           _("Source url '%s' is from different repository"), copy_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -294,11 +320,13 @@ open_directory (const char *path,
   svn_node_kind_t kind;
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
-  /* Check PATH in our transaction.  Make sure it does not exist,
-     else return an out-of-dateness error. */
+  /* Check PATH in our transaction.  If it does not exist,
+     return a 'Path not present' error. */
   SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
   if (kind == svn_node_none)
-    return out_of_date (full_path, eb->txn_name);
+    return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                              _("Path '%s' not present"),
+                              path);
 
   /* Build a new dir baton for this directory */
   new_dirb = apr_pcalloc (pool, sizeof (*new_dirb));
@@ -351,7 +379,7 @@ add_file (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "Got source path but no source revision for '%s'", full_path);
+       _("Got source path but no source revision for '%s'"), full_path);
 
   if (copy_path)
     {      
@@ -375,7 +403,7 @@ add_file (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, NULL,
-               "Source url '%s' is from different repository", full_path);
+               _("Source url '%s' is from different repository"), copy_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -476,15 +504,15 @@ close_file (void *file_baton,
       SVN_ERR (svn_fs_file_md5_checksum
                (digest, fb->edit_baton->txn_root, fb->path, pool));
       hex_digest = svn_md5_digest_to_cstring (digest, pool);
-      
-      if (strcmp (text_checksum, hex_digest) != 0)
+
+      if (hex_digest && strcmp (text_checksum, hex_digest) != 0)
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             "Checksum mismatch for resulting fulltext\n"
-             "(%s):\n"
-             "   expected checksum:  %s\n"
-             "   actual checksum:    %s\n",
+             _("Checksum mismatch for resulting fulltext\n"
+               "(%s):\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n"),
              fb->path, text_checksum, hex_digest);
         }
     }
@@ -517,6 +545,7 @@ change_dir_prop (void *dir_baton,
   return svn_repos_fs_change_node_prop (eb->txn_root, db->path, 
                                         name, value, pool);
 }
+
 
 
 static svn_error_t *
@@ -556,7 +585,18 @@ close_edit (void *edit_baton,
       svn_error_clear (svn_fs_abort_txn (eb->txn, pool));
       return err;
     }
-
+  else if (err)
+    {
+      /* ### TODO: ra_local is the only RA layer that currently
+         understands SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  And as of
+         at least r12960, svn_repos_fs_commit_txn() would never return
+         that anyway.  If someone who knows ra_svn better can add
+         handling for this special case, this whole "else if" block
+         can go away (again).  */ 
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  
   /* Pass new revision information to the caller's callback. */
   {
     svn_string_t *date, *author;
@@ -596,25 +636,28 @@ abort_edit (void *edit_baton,
             apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  return (eb->txn ? svn_fs_abort_txn (eb->txn, pool) : SVN_NO_ERROR);
+  if ((! eb->txn) || (! eb->txn_owner))
+    return SVN_NO_ERROR;
+  return svn_fs_abort_txn (eb->txn, pool);
 }
 
 
 
 
-/*** Public interface. ***/
+/*** Public interfaces. ***/
 
 svn_error_t *
-svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             svn_repos_t *repos,
-                             const char *repos_url,
-                             const char *base_path,
-                             const char *user,
-                             const char *log_msg,
-                             svn_commit_callback_t callback,
-                             void *callback_baton,
-                             apr_pool_t *pool)
+svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback_t callback,
+                              void *callback_baton,
+                              apr_pool_t *pool)
 {
   svn_delta_editor_t *e = svn_delta_default_editor (pool);
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -644,10 +687,29 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
   eb->repos = repos;
   eb->repos_url = repos_url;
   eb->fs = svn_repos_fs (repos);
-  eb->txn = NULL;
+  eb->txn = txn;
+  eb->txn_owner = txn ? FALSE : TRUE;
 
   *edit_baton = eb;
   *editor = e;
   
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_repos_t *repos,
+                             const char *repos_url,
+                             const char *base_path,
+                             const char *user,
+                             const char *log_msg,
+                             svn_commit_callback_t callback,
+                             void *callback_baton,
+                             apr_pool_t *pool)
+{
+  return svn_repos_get_commit_editor2 (editor, edit_baton, repos, NULL,
+                                       repos_url, base_path, user, log_msg, 
+                                       callback, callback_baton, pool);
 }

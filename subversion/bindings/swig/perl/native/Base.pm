@@ -66,12 +66,12 @@ bootstrap SVN::_$pkg;
 
     my $caller = caller(0);
 
-    SYMBOL: for (keys %{"SVN::_${pkg}::"}) {
+    my $prefix_re = qr/(?i:$prefix)/;
+    my $ignore_re = join('|', @ignore);
+    for (keys %{"SVN::_${pkg}::"}) {
 	my $name = $_;
-	next unless s/^$prefix//i;
-    foreach my $ignored_symbol (@ignore) {
-        next SYMBOL if ($name =~ /^(?i:$prefix)$ignored_symbol$/);
-    }
+	next unless s/^$prefix_re//;
+	next if $ignore_re && m/$ignore_re/;
 
 	# insert the accessor
 	if (m/(.*)_get$/) {

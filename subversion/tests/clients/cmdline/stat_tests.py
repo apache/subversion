@@ -88,8 +88,8 @@ def status_update_with_nested_adds(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'newdir' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'newdir/newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'newdir' : Item(status='  ', wc_rev=2),
+    'newdir/newfile' : Item(status='  ', wc_rev=2),
     })
 
   # Commit.
@@ -158,6 +158,17 @@ def status_missing_file(sbox):
     for line in output:
       if not re.match("! +iota", line):
         raise svntest.Failure
+
+    # This invocation is for issue #2127.
+    output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status', '-u', 'iota')
+    found_it = 0
+    for line in output:
+      if re.match("! +1 +iota", line):
+        found_it = 1
+    if not found_it:
+      raise svntest.Failure
+
   finally:
     os.chdir(was_cwd)
 
@@ -495,7 +506,7 @@ def status_on_forward_deletion(sbox):
   saved_cwd = os.getcwd()
   os.chdir(wc_dir)
   try:
-    svntest.main.run_svn(None, 'co', '-r1', top_url, 'wc')
+    svntest.main.run_svn(None, 'co', '-r1', top_url + "@1", 'wc')
     # If the bug is present, this will error with
     #
     #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
@@ -515,13 +526,22 @@ def status_on_forward_deletion(sbox):
     # (Dang!  Hope a user never has to see that :-) ).
     #
     svntest.main.safe_rmtree('wc')
-    svntest.main.run_svn(None, 'co', '-r1', A_url, 'wc')
+    svntest.main.run_svn(None, 'co', '-r1', A_url + "@1", 'wc')
     svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
     
   finally:
     os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
+
+def get_last_changed_date(path):
+  "get the Last Changed Date for path using svn info"
+  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', path)
+  for line in out:
+    if re.match("^Last Changed Date", line):
+      return line
+  print "Didn't find Last Changed Date for " + path
+  raise svntest.Failure
 
 # Helper for timestamp_behaviour test
 def get_prop_timestamp(path):
@@ -544,7 +564,7 @@ def get_text_timestamp(path):
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
-def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status):
+def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   "prop-time behaviour"
 
   # Pristine prop-time
@@ -568,11 +588,51 @@ def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status):
   if prop_time != pre_prop_time:
     raise svntest.Failure
 
-  # svn revert changes the prop-time even though the properties don't change
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', wc_path)
+  # revert/cleanup change the prop-time even though the properties don't change
+  if cmd == 'cleanup':
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   prop_time = get_prop_timestamp(wc_path)
   if prop_time == pre_prop_time:
+    raise svntest.Failure
+
+# Helper for timestamp_behaviour test
+def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
+  "text-time behaviour"
+
+  # Pristine text and text-time
+  fp = open(wc_path, 'r')
+  pre_text = fp.readlines()
+  pre_text_time = get_text_timestamp(wc_path)
+
+  # Modifying the text does not affect text-time
+  svntest.main.file_append (wc_path, "some mod")
+  expected_status.tweak(status_path, status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time != pre_text_time:
+    raise svntest.Failure
+
+  # Manually reverting the text does not affect the text-time
+  fp = open(wc_path, 'w')
+  fp.writelines(pre_text)
+  fp.close()
+  expected_status.tweak(status_path, status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time != pre_text_time:
+    raise svntest.Failure
+
+  # revert/cleanup change the text-time even though the text doesn't change
+  if cmd == 'cleanup':
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  text_time = get_text_timestamp(wc_path)
+  if text_time == pre_text_time:
     raise svntest.Failure
 
 
@@ -604,41 +664,52 @@ def timestamp_behaviour(sbox):
   # Sleep to ensure timestamps change
   time.sleep(2)
 
-  # Check behaviour of prop-time
-  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status)
-  prop_time_behaviour(wc_dir, A_path, 'A', expected_status)
+  # Check behaviour of revert on prop-time
+  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
+  prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'revert')
+  # Check behaviour of revert on text-time
+  text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
 
-  # Check behaviour of text-time
+  # Sleep to ensure timestamps change
+  time.sleep(2)
 
-  # Pristine text and text-time
-  fp = open(iota_path, 'r')
-  pre_text = fp.readlines()
-  pre_text_time = get_text_timestamp(iota_path)
+  # Check behaviour of cleanup on prop-time
+  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
+  prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'cleanup')
+  # Check behaviour of cleanup on text-time
+  text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
 
-  # Modifying the text does not affect text-time
-  svntest.main.file_append (iota_path, "some mod")
-  expected_status.tweak('iota', status='M ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(iota_path)
-  if text_time != pre_text_time:
+  # Create a config to enable use-commit-times
+  config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
+                            'use_commit_config')
+  if not os.path.isdir(config_dir):
+    os.makedirs(config_dir)
+  fd = open(os.path.join(config_dir, 'config'), 'w')
+  fd.write('[miscellany]\n')
+  fd.write('use-commit-times = yes\n')
+  fd.close()
+  fd = open(os.path.join(config_dir, 'server'), 'w')
+  fd.write('\n')
+  fd.close()
+  svntest.main.set_config_dir(config_dir)
+
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.run_and_verify_svn("checkout failed", None, [],
+                                     'co', svntest.main.current_repo_url,
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
+                                     other_wc)
+
+  other_iota_path = os.path.join(other_wc, 'iota')
+  iota_text_timestamp = get_text_timestamp(other_iota_path)
+  iota_last_changed = get_last_changed_date(other_iota_path)
+  if (iota_text_timestamp[17] != ':' or
+      iota_text_timestamp[17:] != iota_last_changed[17:]):
     raise svntest.Failure
 
-  # Manually reverting the text does not affect the text-time
-  fp = open(iota_path, 'w')
-  fp.writelines(pre_text)
-  fp.close()
-  expected_status.tweak('iota', status='  ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(iota_path)
-  if text_time != pre_text_time:
-    raise svntest.Failure
-
-  # svn revert changes the text-time even though the text doesn't change
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', iota_path)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  text_time = get_text_timestamp(iota_path)
-  if text_time == pre_text_time:
-    raise svntest.Failure
+  ### FIXME: check the working file's timestamp as well
 
 #----------------------------------------------------------------------
 
@@ -657,17 +728,97 @@ def status_on_unversioned_dotdot(sbox):
   os.chdir(new_subdir)
   try:
     out, err = svntest.main.run_svn(1, 'st', '..')
-    matched = 0
     for line in err:
-      if re.match(".*which is unsupported for this operation", line):
-        matched = 1
+      if line.find('svn: \'..\' is not a working copy') != -1:
         break
-    if not matched:
+    else:
       raise svntest.Failure
   finally:
     os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
+
+def status_on_partially_nonrecursive_wc(sbox):
+  "status -u in partially non-recursive wc"
+  # Based on issue #2122.
+  #
+  #    $ svn co -N -r 213 svn://svn.debian.org/pkg-kde .
+  #    A  README
+  #    Checked out revision 213.
+  #    
+  #    $ svn up -r 213 scripts www
+  #    [ List of scripts/* files.]
+  #    Updated to revision 213.
+  #    [ List of www/* files.]
+  #    Updated to revision 213.
+  #    
+  #    $ svn st -u
+  #       *      213   www/IGNORE-ME
+  #       *      213   www
+  #    svn: subversion/libsvn_wc/status.c:910: tweak_statushash:         \
+  #         Assertion `repos_text_status == svn_wc_status_added' failed. \
+  #         Aborted (core dumped)
+  #
+  # You might think that the intermediate "svn up -r 213 scripts www"
+  # step is unnecessary, but when I tried eliminating it, I got
+  #
+  #    $ svn st -u
+  #    subversion/libsvn_wc/lock.c:642: (apr_err=155005)
+  #    svn: Working copy 'www' not locked
+  #    $ 
+  #
+  # instead of the assertion error.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  top_url = svntest.main.current_repo_url
+  A_url = top_url + '/A'
+  D_url = top_url + '/A/D'
+  G_url = top_url + '/A/D/G'
+  H_url = top_url + '/A/D/H'
+  rho = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+
+  # Commit a change to A/D/G/rho.  This will be our equivalent of
+  # whatever change it was that happened between r213 and HEAD in the
+  # reproduction recipe.  For us, it's r2.
+  svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n')
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho)
+
+  # Make the working copy weird in the right way, then try status -u.
+  D_wc = sbox.add_wc_path('D')
+  svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, D_wc)
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(D_wc)
+    svntest.main.run_svn(None, 'up', '-r1', 'H')
+    svntest.main.run_svn(None, 'st', '-u')
+  finally:
+    os.chdir(saved_cwd)
+
+
+def missing_dir_in_anchor(sbox):
+  "a missing dir in the anchor"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  foo_path = os.path.join(wc_dir, 'foo')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'foo' : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # At one point this caused a "foo not locked" error
+  svntest.main.safe_rmtree(foo_path)
+  expected_status.tweak('foo', status='! ', wc_rev='?')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------  
+
 
 ########################################################################
 # Run the tests
@@ -689,6 +840,8 @@ test_list = [ None,
               status_on_forward_deletion,
               timestamp_behaviour,
               status_on_unversioned_dotdot,
+              status_on_partially_nonrecursive_wc,
+              missing_dir_in_anchor,
              ]
 
 if __name__ == '__main__':

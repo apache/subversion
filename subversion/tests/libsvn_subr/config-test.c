@@ -95,11 +95,11 @@ static const char *config_values[] = { "bar", "Aa", "100", "bar",
 static svn_error_t *
 test1 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
-  char *key, *py_val, *c_val;
   const char *cfg_file;
 
   *msg = "test svn_config";
@@ -115,12 +115,13 @@ test1 (const char **msg,
 
   /* Test values retrieved from our ConfigParser instance against
      values retrieved using svn_config. */
-  for (i = 0; (char *) config_keys[i] != NULL; i++)
+  for (i = 0; config_keys[i] != NULL; i++)
     {
-      key = (char *) config_keys[i];
-      py_val = (char *) config_values[i];
-      svn_config_get(cfg, (const char **) &c_val, "section1", key,
-                     "default value");
+      const char *key, *py_val, *c_val;
+      
+      key = config_keys[i];
+      py_val = config_values[i];
+      svn_config_get(cfg, &c_val, "section1", key, "default value");
 #if 0
       printf("Testing expected value '%s' against '%s' for "
              "option '%s'\n", py_val, c_val, key);
@@ -144,6 +145,7 @@ static const char *false_keys[] = {"false1", "false2", "false3", "false4",
 static svn_error_t *
 test2 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   svn_config_t *cfg;

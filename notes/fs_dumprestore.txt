@@ -120,6 +120,12 @@ Notes:
     dumpfile, we include it for compatibility with generic RFC822
     parsers.
 
+(4) There are actually 2 types of version 1 dump streams. The regular ones
+    are generated since r2634 (svn 0.14.0). Older ones also claim to be
+    version 1, but miss the Props-content-length and Text-content-length
+    fields in the block header. In those days there *always* was a
+    properties block.
+
 -----------------------------------------------------------------
 EXAMPLE
 

@@ -35,6 +35,7 @@
 
 #include "../libsvn_delta/delta.h"
 
+#include "svn_private_config.h"
 
 
 /*** Helper Functions ***/
@@ -99,7 +100,7 @@ delta_string_keys (apr_array_header_t **keys,
   if (rep->kind != rep_kind_delta)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Representation is not of type 'delta'");
+       _("Representation is not of type 'delta'"));
 
   /* Set up a convenience variable. */
   chunks = rep->contents.delta.chunks;
@@ -127,16 +128,20 @@ delta_string_keys (apr_array_header_t **keys,
 static svn_error_t *
 delete_strings (apr_array_header_t *keys,
                 svn_fs_t *fs,
-                trail_t *trail)
+                trail_t *trail,
+                apr_pool_t *pool)
 {
   int i;
   const char *str_key;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   for (i = 0; i < keys->nelts; i++)
     {
+      svn_pool_clear (subpool);
       str_key = ((const char **) keys->elts)[i];
-      SVN_ERR (svn_fs_bdb__string_delete (fs, str_key, trail));
+      SVN_ERR (svn_fs_bdb__string_delete (fs, str_key, trail, subpool));
     }
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -149,6 +154,11 @@ struct compose_handler_baton
   /* The combined window, and the pool it's allocated from. */
   svn_txdelta_window_t *window;
   apr_pool_t *window_pool;
+
+  /* If the incoming window was self-compressed, and the combined WINDOW
+     exists from previous iterations, SOURCE_BUF will point to the
+     expanded self-compressed window. */
+  char *source_buf;
 
   /* The trail for this operation. WINDOW_POOL will be a child of
      TRAIL->pool. No allocations will be made from TRAIL->pool itself. */
@@ -166,7 +176,9 @@ struct compose_handler_baton
 
 
 /* Handle one window. If BATON is emtpy, copy the WINDOW into it;
-   otherwise, combine WINDOW with the one in BATON. */
+   otherwise, combine WINDOW with the one in BATON, unless WINDOW
+   is self-compressed (i.e., does not copy from the source view),
+   in which case expand. */
 
 static svn_error_t *
 compose_handler (svn_txdelta_window_t *window, void *baton)
@@ -178,25 +190,45 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
   if (!cb->init && !window)
     return SVN_NO_ERROR;
 
+  /* We should never get here if we've already expanded a
+     self-compressed window. */
+  assert (!cb->source_buf);
+
   if (cb->window)
     {
-      /* Combine the incoming window with whatever's in the baton. */
-      apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
-      svn_txdelta_window_t *composite;
+      if (window && (window->sview_len == 0 || window->src_ops == 0))
+        {
+          /* This is a self-compressed window. Don't combine it with
+             the others, because the combiner may go quadratic. Instead,
+             expand it here and signal that the combination has
+             ended. */
+          apr_size_t source_len = window->tview_len;
+          assert (cb->window->sview_len == source_len);
+          cb->source_buf = apr_palloc (cb->window_pool, source_len);
+          svn_txdelta__apply_instructions (window, NULL,
+                                           cb->source_buf, &source_len);
+          cb->done = TRUE;
+        }
+      else
+        {
+          /* Combine the incoming window with whatever's in the baton. */
+          apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
+          svn_txdelta_window_t *composite;
 
-      composite = svn_txdelta__compose_windows (window, cb->window,
-                                                composite_pool);
-      svn_pool_destroy (cb->window_pool);
-      cb->window = composite;
-      cb->window_pool = composite_pool;
-      cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
+          composite = svn_txdelta__compose_windows (window, cb->window,
+                                                    composite_pool);
+          svn_pool_destroy (cb->window_pool);
+          cb->window = composite;
+          cb->window_pool = composite_pool;
+          cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
+        }
     }
   else if (window)
     {
       /* Copy the (first) window into the baton. */
       apr_pool_t *window_pool = svn_pool_create (cb->trail->pool);
       assert (cb->window_pool == NULL);
-      cb->window = svn_txdelta__copy_window(window, window_pool);
+      cb->window = svn_txdelta__copy_window (window, window_pool);
       cb->window_pool = window_pool;
       cb->done = (window->sview_len == 0 || window->src_ops == 0);
     }
@@ -262,7 +294,8 @@ get_one_window (struct compose_handler_baton *cb,
     {
       amt = sizeof (diffdata);
       SVN_ERR (svn_fs_bdb__string_read (fs, str_key, diffdata,
-                                        off, &amt, cb->trail));
+                                        off, &amt, cb->trail, 
+                                        cb->trail->pool));
       off += amt;
       SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
     }
@@ -290,7 +323,8 @@ rep_undeltify_range (svn_fs_t *fs,
                      char *buf,
                      apr_size_t offset,
                      apr_size_t *len,
-                     trail_t *trail)
+                     trail_t *trail,
+                     apr_pool_t *pool)
 {
   apr_size_t len_read = 0;
 
@@ -320,19 +354,25 @@ rep_undeltify_range (svn_fs_t *fs,
 
       /* cb.window is the combined delta window. Read the source text
          into a buffer. */
-      if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
+      if (cb.source_buf)
+        {
+          /* The combiner already created the source text from a
+             self-compressed window. */
+          source_buf = cb.source_buf;
+        }
+      else if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
         {
           apr_size_t source_len = cb.window->sview_len;
           source_buf = apr_palloc (cb.window_pool, source_len);
           SVN_ERR (svn_fs_bdb__string_read
                    (fs, fulltext->contents.fulltext.string_key,
-                    source_buf, cb.window->sview_offset, &source_len, trail));
+                    source_buf, cb.window->sview_offset, &source_len, 
+                    trail, pool));
           assert (source_len == cb.window->sview_len);
         }
       else
         {
-          static char empty_buf[] = "";
-          source_buf = empty_buf; /* Won't read anything from here. */
+          source_buf = NULL;    /* Won't read anything from here. */
         }
 
       if (offset > 0)
@@ -414,17 +454,18 @@ rep_read_range (svn_fs_t *fs,
                 svn_filesize_t offset,
                 char *buf,
                 apr_size_t *len,
-                trail_t *trail)
+                trail_t *trail,
+                apr_pool_t *pool)
 {
   representation_t *rep;
   apr_size_t chunk_offset;
 
   /* Read in our REP. */
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
   if (rep->kind == rep_kind_fulltext)
     {
       SVN_ERR (svn_fs_bdb__string_read (fs, rep->contents.fulltext.string_key,
-                                        buf, offset, len, trail));
+                                        buf, offset, len, trail, pool));
     }
   else if (rep->kind == rep_kind_delta)
     {
@@ -437,7 +478,7 @@ rep_read_range (svn_fs_t *fs,
              We'll have to read them within this trail anyway, so we might
              as well do it once and up front. */
           apr_array_header_t *reps =  /* ### what constant here? */
-            apr_array_make (trail->pool, 666, sizeof (rep));
+            apr_array_make (pool, 666, sizeof (rep));
           do
             {
               const rep_delta_chunk_t *const first_chunk
@@ -451,25 +492,26 @@ rep_read_range (svn_fs_t *fs,
               if (first_chunk->version != chunk->version)
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "Diff version inconsistencies in representation '%s'",
+                   _("Diff version inconsistencies in representation '%s'"),
                    rep_key);
 
               rep_key = chunk->rep_key;
               *(representation_t**) apr_array_push (reps) = rep;
-              SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+              SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, 
+                                             trail, pool));
             }
           while (rep->kind == rep_kind_delta
                  && rep->contents.delta.chunks->nelts > cur_chunk);
 
-          /* Right. We've either just read the fulltext rep, a rep that's
+          /* Right. We've either just read the fulltext rep, or a rep that's
              too short, in which case we'll undeltify without source data.*/
           if (rep->kind != rep_kind_delta && rep->kind != rep_kind_fulltext)
             abort(); /* unknown kind */
 
           if (rep->kind == rep_kind_delta)
             rep = NULL;         /* Don't use source data */
-          SVN_ERR (rep_undeltify_range (fs, reps, rep, cur_chunk,
-                                        buf, chunk_offset, len, trail));
+          SVN_ERR (rep_undeltify_range (fs, reps, rep, cur_chunk, buf, 
+                                        chunk_offset, len, trail, pool));
         }
     }
   else /* unknown kind */
@@ -484,7 +526,8 @@ svn_fs_base__get_mutable_rep (const char **new_rep_key,
                               const char *rep_key,
                               svn_fs_t *fs,
                               const char *txn_id,
-                              trail_t *trail)
+                              trail_t *trail,
+                              apr_pool_t *pool)
 {
   representation_t *rep = NULL;
   const char *new_str = NULL;
@@ -494,7 +537,7 @@ svn_fs_base__get_mutable_rep (const char **new_rep_key,
      key.  */
   if (rep_key && (rep_key[0] != '\0'))
     {
-      SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+      SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
       if (rep_is_mutable (rep, txn_id))
         {
           *new_rep_key = rep_key;
@@ -505,10 +548,10 @@ svn_fs_base__get_mutable_rep (const char **new_rep_key,
   /* Either we weren't provided a base key to examine, or the base key
      we were provided was not mutable.  So, let's make a new
      representation and return its key to the caller. */
-  SVN_ERR (svn_fs_bdb__string_append (fs, &new_str, 0, NULL, trail));
-  rep = make_fulltext_rep (new_str, txn_id, svn_md5_empty_string_digest (),
-                           trail->pool);
-  SVN_ERR (svn_fs_bdb__write_new_rep (new_rep_key, fs, rep, trail));
+  SVN_ERR (svn_fs_bdb__string_append (fs, &new_str, 0, NULL, trail, pool));
+  rep = make_fulltext_rep (new_str, txn_id, 
+                           svn_md5_empty_string_digest (), pool);
+  SVN_ERR (svn_fs_bdb__write_new_rep (new_rep_key, fs, rep, trail, pool));
 
   return SVN_NO_ERROR;
 }
@@ -518,30 +561,31 @@ svn_error_t *
 svn_fs_base__delete_rep_if_mutable (svn_fs_t *fs,
                                     const char *rep_key,
                                     const char *txn_id,
-                                    trail_t *trail)
+                                    trail_t *trail,
+                                    apr_pool_t *pool)
 {
   representation_t *rep;
 
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
   if (! rep_is_mutable (rep, txn_id))
     return SVN_NO_ERROR;
 
   if (rep->kind == rep_kind_fulltext)
     {
-      SVN_ERR (svn_fs_bdb__string_delete (fs,
+      SVN_ERR (svn_fs_bdb__string_delete (fs, 
                                           rep->contents.fulltext.string_key,
-                                          trail));
+                                          trail, pool));
     }
   else if (rep->kind == rep_kind_delta)
     {
       apr_array_header_t *keys;
-      SVN_ERR (delta_string_keys (&keys, rep, trail->pool));
-      SVN_ERR (delete_strings (keys, fs, trail));
+      SVN_ERR (delta_string_keys (&keys, rep, pool));
+      SVN_ERR (delete_strings (keys, fs, trail, pool));
     }
   else /* unknown kind */
     abort ();
 
-  SVN_ERR (svn_fs_bdb__delete_rep (fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__delete_rep (fs, rep_key, trail, pool));
   return SVN_NO_ERROR;
 }
 
@@ -616,7 +660,8 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   apr_md5_init (&(b->md5_context));
 
   if (rep_key)
-    SVN_ERR (svn_fs_base__rep_contents_size (&(b->size), fs, rep_key, trail));
+    SVN_ERR (svn_fs_base__rep_contents_size (&(b->size), fs, rep_key, 
+                                             trail, pool));
   else
     b->size = 0;
 
@@ -640,18 +685,19 @@ svn_error_t *
 svn_fs_base__rep_contents_size (svn_filesize_t *size_p,
                                 svn_fs_t *fs,
                                 const char *rep_key,
-                                trail_t *trail)
+                                trail_t *trail,
+                                apr_pool_t *pool)
 {
   representation_t *rep;
 
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
 
   if (rep->kind == rep_kind_fulltext)
     {
       /* Get the size by asking Berkeley for the string's length. */
       SVN_ERR (svn_fs_bdb__string_size (size_p, fs,
                                         rep->contents.fulltext.string_key,
-                                        trail));
+                                        trail, pool));
     }
   else if (rep->kind == rep_kind_delta)
     {
@@ -679,11 +725,12 @@ svn_error_t *
 svn_fs_base__rep_contents_checksum (unsigned char digest[],
                                     svn_fs_t *fs,
                                     const char *rep_key,
-                                    trail_t *trail)
+                                    trail_t *trail,
+                                    apr_pool_t *pool)
 {
   representation_t *rep;
 
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
   memcpy (digest, rep->checksum, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
@@ -694,35 +741,37 @@ svn_error_t *
 svn_fs_base__rep_contents (svn_string_t *str,
                            svn_fs_t *fs,
                            const char *rep_key,
-                           trail_t *trail)
+                           trail_t *trail,
+                           apr_pool_t *pool)
 {
   svn_filesize_t contents_size;
   apr_size_t len;
   char *data;
 
   SVN_ERR (svn_fs_base__rep_contents_size (&contents_size, fs, rep_key,
-                                           trail));
+                                           trail, pool));
 
   /* What if the contents are larger than we can handle? */
   if (contents_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "Rep contents are too large "
-       "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
-       contents_size, SVN_MAX_OBJECT_SIZE);
+       _("Rep contents are too large: "
+         "got %s, limit is %s"),
+       apr_psprintf (pool, "%" SVN_FILESIZE_T_FMT, contents_size),
+       apr_psprintf (pool, "%" APR_SIZE_T_FMT, SVN_MAX_OBJECT_SIZE));
   else
     str->len = (apr_size_t) contents_size;
 
-  data = apr_palloc (trail->pool, str->len);
+  data = apr_palloc (pool, str->len);
   str->data = data;
   len = str->len;
-  SVN_ERR (rep_read_range (fs, rep_key, 0, data, &len, trail));
+  SVN_ERR (rep_read_range (fs, rep_key, 0, data, &len, trail, pool));
 
   /* Paranoia. */
   if (len != str->len)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       "Failure reading rep '%s'", rep_key);
+       _("Failure reading rep '%s'"), rep_key);
 
   /* Just the standard paranoia. */
   {
@@ -734,15 +783,15 @@ svn_fs_base__rep_contents (svn_string_t *str,
     apr_md5_update (&md5_context, str->data, str->len);
     apr_md5_final (checksum, &md5_context);
 
-    SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+    SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
     if (! svn_md5_digests_match (checksum, rep->checksum))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Checksum mismatch on rep '%s':\n"
-         "   expected:  %s\n"
-         "     actual:  %s\n", rep_key,
-         svn_md5_digest_to_cstring (rep->checksum, trail->pool),
-         svn_md5_digest_to_cstring (checksum, trail->pool));
+         _("Checksum mismatch on rep '%s':\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n"), rep_key,
+         svn_md5_digest_to_cstring_display (rep->checksum, pool),
+         svn_md5_digest_to_cstring_display (checksum, pool));
   }
 
   return SVN_NO_ERROR;
@@ -783,7 +832,8 @@ txn_body_read_rep (void *baton, trail_t *trail)
                                args->rb->offset,
                                args->buf,
                                args->len,
-                               trail));
+                               trail, 
+                               trail->pool));
 
       args->rb->offset += *(args->len);
 
@@ -818,15 +868,17 @@ txn_body_read_rep (void *baton, trail_t *trail)
               args->rb->checksum_finalized = TRUE;
 
               SVN_ERR (svn_fs_bdb__read_rep (&rep, args->rb->fs,
-                                             args->rb->rep_key, trail));
+                                             args->rb->rep_key, 
+                                             trail, trail->pool));
               if (! svn_md5_digests_match (checksum, rep->checksum))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
-                   "Checksum mismatch on rep '%s':\n"
-                   "   expected:  %s\n"
-                   "     actual:  %s\n", args->rb->rep_key,
-                   svn_md5_digest_to_cstring (rep->checksum, trail->pool),
-                   svn_md5_digest_to_cstring (checksum, trail->pool));
+                   _("Checksum mismatch on rep '%s':\n"
+                     "   expected:  %s\n"
+                     "     actual:  %s\n"), args->rb->rep_key,
+                   svn_md5_digest_to_cstring_display (rep->checksum,
+                                                      trail->pool),
+                   svn_md5_digest_to_cstring_display (checksum, trail->pool));
             }
         }
     }
@@ -835,7 +887,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
       return
         svn_error_create
         (SVN_ERR_FS_REP_CHANGED, NULL,
-         "Null rep, but offset past zero already");
+         _("Null rep, but offset past zero already"));
     }
   else
     *(args->len) = 0;
@@ -938,21 +990,23 @@ rep_write (svn_fs_t *fs,
            const char *buf,
            apr_size_t len,
            const char *txn_id,
-           trail_t *trail)
+           trail_t *trail,
+           apr_pool_t *pool)
 {
   representation_t *rep;
 
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
 
   if (! rep_is_mutable (rep, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
-       "Rep '%s' is not mutable", rep_key);
+       _("Rep '%s' is not mutable"), rep_key);
 
   if (rep->kind == rep_kind_fulltext)
     {
       SVN_ERR (svn_fs_bdb__string_append
-               (fs, &(rep->contents.fulltext.string_key), len, buf, trail));
+               (fs, &(rep->contents.fulltext.string_key), len, buf, 
+                trail, pool));
     }
   else if (rep->kind == rep_kind_delta)
     {
@@ -961,7 +1015,7 @@ rep_write (svn_fs_t *fs,
          in this file, and it creates them fulltext. */
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Rep '%s' both mutable and non-fulltext", rep_key);
+         _("Rep '%s' both mutable and non-fulltext"), rep_key);
     }
   else /* unknown kind */
     abort ();
@@ -994,7 +1048,8 @@ txn_body_write_rep (void *baton, trail_t *trail)
                       args->buf,
                       args->len,
                       args->wb->txn_id,
-                      trail));
+                      trail, 
+                      trail->pool));
 
   apr_md5_update (&(args->wb->md5_context), args->buf, args->len);
 
@@ -1049,9 +1104,11 @@ txn_body_write_close_rep (void *baton, trail_t *trail)
   struct rep_write_baton *wb = baton;
   representation_t *rep;
 
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, wb->fs, wb->rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, wb->fs, wb->rep_key, 
+                                 trail, trail->pool));
   memcpy (rep->checksum, wb->md5_digest, APR_MD5_DIGESTSIZE);
-  SVN_ERR (svn_fs_bdb__write_rep (wb->fs, wb->rep_key, rep, trail));
+  SVN_ERR (svn_fs_bdb__write_rep (wb->fs, wb->rep_key, rep, 
+                                  trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1127,18 +1184,19 @@ static svn_error_t *
 rep_contents_clear (svn_fs_t *fs,
                     const char *rep_key,
                     const char *txn_id,
-                    trail_t *trail)
+                    trail_t *trail,
+                    apr_pool_t *pool)
 {
   representation_t *rep;
   const char *str_key;
 
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, fs, rep_key, trail, pool));
 
   /* Make sure it's mutable. */
   if (! rep_is_mutable (rep, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
-       "Rep '%s' is not mutable", rep_key);
+       _("Rep '%s' is not mutable"), rep_key);
 
   assert (rep->kind == rep_kind_fulltext);
 
@@ -1147,10 +1205,10 @@ rep_contents_clear (svn_fs_t *fs,
   str_key = rep->contents.fulltext.string_key;
   if (str_key && *str_key)
     {
-      SVN_ERR (svn_fs_bdb__string_clear (fs, str_key, trail));
+      SVN_ERR (svn_fs_bdb__string_clear (fs, str_key, trail, pool));
       memcpy (rep->checksum, svn_md5_empty_string_digest (),
               APR_MD5_DIGESTSIZE);
-      SVN_ERR (svn_fs_bdb__write_rep (fs, rep_key, rep, trail));
+      SVN_ERR (svn_fs_bdb__write_rep (fs, rep_key, rep, trail, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1168,7 +1226,7 @@ svn_fs_base__rep_contents_write_stream (svn_stream_t **ws_p,
   struct rep_write_baton *wb;
 
   /* Clear the current rep contents (free mutability check!). */
-  SVN_ERR (rep_contents_clear (fs, rep_key, txn_id, trail));
+  SVN_ERR (rep_contents_clear (fs, rep_key, txn_id, trail, pool));
 
   /* Now, generate the write baton and stream. */
   wb = rep_write_get_baton (fs, rep_key, txn_id,
@@ -1252,12 +1310,12 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
   /* Append to the current string we're writing (or create a new one
      if WB->key is NULL). */
   SVN_ERR (svn_fs_bdb__string_append (wb->fs, &(wb->key), *len,
-                                      buf, wb->trail));
+                                      buf, wb->trail, wb->trail->pool));
 
   /* Make sure we (still) have a key. */
   if (wb->key == NULL)
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
-                             "Failed to get new string key");
+                             _("Failed to get new string key"));
 
   /* Restore *LEN to the value it *would* have been were it not for
      header stripping. */
@@ -1284,9 +1342,9 @@ svn_error_t *
 svn_fs_base__rep_deltify (svn_fs_t *fs,
                           const char *target,
                           const char *source,
-                          trail_t *trail)
+                          trail_t *trail,
+                          apr_pool_t *pool)
 {
-  apr_pool_t *pool = trail->pool; /* convenience */
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to read the target */
   svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
@@ -1332,7 +1390,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
   if (strcmp (target, source) == 0)
     return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
-       "Attempt to deltify '%s' against itself",
+       _("Attempt to deltify '%s' against itself"),
        target);
 
   /* Set up a handler for the svndiff data, which will write each
@@ -1365,6 +1423,9 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
       new_target_baton.size = 0;
       new_target_baton.key = NULL;
 
+      /* Free the window. */
+      svn_pool_clear (wpool);
+
       /* Fetch the next window of txdelta data. */
       SVN_ERR (svn_txdelta_next_window (&window, txdelta_stream, wpool));
 
@@ -1383,9 +1444,6 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
           /* Update our recordkeeping variables. */
           tview_off += window->tview_len;
           diffsize += ww->svndiff_len;
-
-          /* Free the window. */
-          svn_pool_clear (wpool);
         }
 
     } while (window);
@@ -1398,7 +1456,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
   if (! digest)
     return svn_error_createf
       (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, NULL,
-       "Failed to calculate MD5 digest for '%s'",
+       _("Failed to calculate MD5 digest for '%s'"),
        source);
 
   /* Construct a list of the strings used by the old representation so
@@ -1411,13 +1469,14 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
     representation_t *old_rep;
     const char *str_key;
 
-    SVN_ERR (svn_fs_bdb__read_rep (&old_rep, fs, target, trail));
+    SVN_ERR (svn_fs_bdb__read_rep (&old_rep, fs, target, trail, pool));
     if (old_rep->kind == rep_kind_fulltext)
       {
         svn_filesize_t old_size = 0;
 
         str_key = old_rep->contents.fulltext.string_key;
-        SVN_ERR (svn_fs_bdb__string_size (&old_size, fs, str_key, trail));
+        SVN_ERR (svn_fs_bdb__string_size (&old_size, fs, str_key, 
+                                          trail, pool));
         orig_str_keys = apr_array_make (pool, 1, sizeof (str_key));
         (*((const char **)(apr_array_push (orig_str_keys)))) = str_key;
 
@@ -1429,7 +1488,7 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
             for (i = 0; i < windows->nelts; i++)
               {
                 ww = ((window_write_t **) windows->elts)[i];
-                SVN_ERR (svn_fs_bdb__string_delete (fs, ww->key, trail));
+                SVN_ERR (svn_fs_bdb__string_delete (fs, ww->key, trail, pool));
               }
             return SVN_NO_ERROR;
           }
@@ -1483,12 +1542,11 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
     new_rep.contents.delta.chunks = chunks;
 
     /* Write out the new representation. */
-    SVN_ERR (svn_fs_bdb__write_rep (fs, target, &new_rep, trail));
+    SVN_ERR (svn_fs_bdb__write_rep (fs, target, &new_rep, trail, pool));
 
     /* Delete the original pre-deltified strings. */
-    SVN_ERR (delete_strings (orig_str_keys, fs, trail));
+    SVN_ERR (delete_strings (orig_str_keys, fs, trail, pool));
   }
 
   return SVN_NO_ERROR;
 }
-

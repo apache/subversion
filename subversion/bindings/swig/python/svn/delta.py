@@ -1,6 +1,9 @@
 #
-# delta.py : various utilities for interacting with the _delta module
+# delta.py: public Python interface for delta components
 #
+# Subversion is a tool for revision control. 
+# See http://subversion.tigris.org for more information.
+#    
 ######################################################################
 #
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -12,9 +15,13 @@
 # newer version instead, at your option.
 #
 ######################################################################
-#
 
 from libsvn.delta import *
+from core import _unprefix_names
+_unprefix_names(locals(), 'svn_delta_')
+_unprefix_names(locals(), 'svn_txdelta_', 'tx_')
+del _unprefix_names
+
 
 class Editor:
 
@@ -53,7 +60,7 @@ class Editor:
   def change_file_prop(self, file_baton, name, value, pool):
     pass
 
-  def close_file(self, text_checksum, file_baton):
+  def close_file(self, file_baton, text_checksum):
     pass
 
   def close_edit(self):

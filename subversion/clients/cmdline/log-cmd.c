@@ -26,79 +26,20 @@
 #define APR_WANT_STDIO
 #include <apr_want.h>
 
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
-#include "svn_pools.h"
 #include "svn_sorts.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_cmdline.h"
-#include "svn_subst.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 
 
 /*** Code. ***/
-
-/* Helper for log_message_receiver(). 
- *
- * Return the number of lines in MSG, allowing any kind of newline
- * termination (CR, CRLF, or LFCR), even inconsistent.  The minimum
- * number of lines in MSG is 1 -- even the empty string is considered
- * to have one line, due to the way we print log messages.
- */
-static int
-num_lines (const char *msg)
-{
-  int count = 1;
-  const char *p;
-
-  for (p = msg; *p; p++)
-    {
-      if (*p == '\n')
-        {
-          count++;
-          if (*(p + 1) == '\r')
-            p++;
-        }
-      else if (*p == '\r')
-        {
-          count++;
-          if (*(p + 1) == '\n')
-            p++;
-        }
-    }
-
-  return count;
-}
-
-static svn_error_t *
-error_checked_fputs(const char *string, FILE* stream)
-{
-  /* This function is equal to svn_cmdline_fputs() minus
-     the utf8->local encoding translation */
-
-  /* On POSIX systems, errno will be set on an error in fputs, but this might
-     not be the case on other platforms.  We reset errno and only
-     use it if it was set by the below fputs call.  Else, we just return
-     a generic error. */
-  errno = 0;
-
-  if (fputs (string, stream) == EOF)
-    {
-      if (errno)
-        return svn_error_wrap_apr (errno, _("Write error"));
-      else
-        return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* Baton for log_message_receiver() and log_message_receiver_xml(). */
 struct log_receiver_baton
@@ -211,8 +152,8 @@ log_message_receiver (void *baton,
   if (lb->cancel_func)
     SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
-  if (rev == 0)
-    return svn_cmdline_printf (pool, _("No commit for revision 0.\n"));
+  if (rev == 0 && msg == NULL)
+    return SVN_NO_ERROR;
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
@@ -240,11 +181,11 @@ log_message_receiver (void *baton,
 
   if (! lb->omit_log_message)
     {
-      lines = num_lines (msg);
-      /*### FIXME: how do we translate this without ngettext?! */
+      lines = svn_cstring_count_newlines (msg) + 1;
       SVN_ERR (svn_cmdline_printf (pool,
-                                   " | %d line%s", lines,
-                                   (lines > 1) ? "s" : ""));
+                                   (lines != 1)
+                                   ? " | %d lines"
+                                   : " | %d line", lines));
     }
 
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
@@ -306,14 +247,14 @@ log_message_receiver (void *baton,
  * <logentry
  *    revision="1648">
  * <author>david</author>
- * <date>Sat 6 Apr 2002 16:34:51.428043 (day 096, dst 0, gmt_off -21600)</date>
+ * <date>2002-04-06T16:34:51.428043Z</date>
  * <msg> * packages/rpm/subversion.spec : Now requires apache 2.0.36.
  * </msg>
  * </logentry>
  * <logentry
  *    revision="1649">
  * <author>cmpilato</author>
- * <date>Sat 6 Apr 2002 17:01:28.185136 (day 096, dst 0, gmt_off -21600)</date>
+ * <date>2002-04-06T17:01:28.185136Z</date>
  * <msg>Fix error handling when the $EDITOR is needed but unavailable.  Ah
  * ... now that&apos;s *much* nicer.
  * 
@@ -347,7 +288,7 @@ log_message_receiver_xml (void *baton,
   if (lb->cancel_func)
     SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
-  if (rev == 0)
+  if (rev == 0 && msg == NULL)
     return SVN_NO_ERROR;
 
   revstr = apr_psprintf (pool, "%ld", rev);
@@ -439,7 +380,7 @@ log_message_receiver_xml (void *baton,
   /* </logentry> */
   svn_xml_make_close_tag (&sb, pool, "logentry");
 
-  SVN_ERR (error_checked_fputs (sb->data, stdout));
+  SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
 
   return SVN_NO_ERROR;
 }
@@ -455,15 +396,17 @@ svn_cl__log (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   struct log_receiver_baton lb;
+  const char *target;
+  int i;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  /* Retrieve the first target in the list. */
+  target = APR_ARRAY_IDX (targets, 0, const char *);
 
   if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
       && (opt_state->end_revision.kind == svn_opt_revision_unspecified))
@@ -481,10 +424,8 @@ svn_cl__log (apr_getopt_t *os,
     }
   else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
-      const char *target = APR_ARRAY_IDX (targets, 0, const char *);
-
-      /* If the first target is a URL, then we default to HEAD:1.
-         Otherwise, the default is BASE:1 since WC@HEAD may not exist. */
+      /* If the first target is a URL, then we default to HEAD:0.
+         Otherwise, the default is BASE:0 since WC@HEAD may not exist. */
       if (svn_path_is_url (target))
         opt_state->start_revision.kind = svn_opt_revision_head;
       else
@@ -493,18 +434,40 @@ svn_cl__log (apr_getopt_t *os,
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         {
           opt_state->end_revision.kind = svn_opt_revision_number;
-          opt_state->end_revision.value.number = 1;  /* oldest commit */
+          opt_state->end_revision.value.number = 0;
         }
     }
 
+  /* Verify that we pass at most one working copy path. */
+  if (! svn_path_is_url (target) )
+    {
+      if (targets->nelts > 1)
+        return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("When specifying working copy paths, only "
+                                   "one target may be given"));
+    }
+  else
+    {
+      /* Check to make sure there are no other URLs. */
+      for (i = 1; i < targets->nelts; i++)
+        {
+          target = APR_ARRAY_IDX (targets, i, const char *);
+          
+          if (svn_path_is_url (target))
+            return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                     _("Only relative paths can be specified "
+                                       "after a URL"));
+        }
+    }
+  
   lb.cancel_func = ctx->cancel_func;
   lb.cancel_baton = ctx->cancel_baton;
   lb.omit_log_message = opt_state->quiet;
-
+  
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
-
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
+  
   if (opt_state->xml)
     {
       /* If output is not incremental, output the XML header and wrap
@@ -520,7 +483,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "<log>" */
           svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
 
-          SVN_ERR (error_checked_fputs (sb->data, stdout));
+          SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }
       
       SVN_ERR (svn_client_log2 (targets,
@@ -541,7 +504,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "</log>" */
           svn_xml_make_close_tag (&sb, pool, "log");
 
-          SVN_ERR (error_checked_fputs (sb->data, stdout));
+          SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }
     }
   else  /* default output format */

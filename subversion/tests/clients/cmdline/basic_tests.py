@@ -38,7 +38,7 @@ def expect_extra_files(node, extra_files):
     if mo:
       extra_files.pop(extra_files.index(pattern))
       return
-  print "Found unexpected disk object:", node.name
+  print "Found unexpected object:", node.name
   raise svntest.main.SVNTreeUnequal
 
 ######################################################################
@@ -113,6 +113,14 @@ def basic_status(sbox):
   output = svntest.actions.get_virginal_state(wc_dir, 1)
 
   svntest.actions.run_and_verify_status(wc_dir, output)
+
+  current_dir = os.getcwd()
+  try:
+    os.chdir(os.path.join(wc_dir, 'A'))
+    output = svntest.actions.get_virginal_state("..", 1)
+    svntest.actions.run_and_verify_status("..", output)
+  finally:
+    os.chdir(current_dir)
   
 #----------------------------------------------------------------------
 
@@ -208,6 +216,16 @@ def basic_update(sbox):
                                         expected_disk,
                                         expected_status)
 
+  # Unversioned paths, those that are not immediate children of a versioned
+  # path, are skipped and do not raise an error
+  xx_path = os.path.join(wc_dir, 'xx', 'xx')
+  out, err = svntest.actions.run_and_verify_svn("update xx/xx",
+                                                ["Skipped '"+xx_path+"'\n"], [],
+                                                'update', xx_path)
+  out, err = svntest.actions.run_and_verify_svn("update xx/xx",
+                                                [], [],
+                                                'update', '--quiet', xx_path)
+
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
   "basic mkdir URL"
@@ -232,8 +250,8 @@ def basic_mkdir_url(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
   expected_status.add({
-    'Y'   : Item(status='  ', wc_rev=2, repos_rev=2),
-    'Y/Z' : Item(status='  ', wc_rev=2, repos_rev=2)
+    'Y'   : Item(status='  ', wc_rev=2),
+    'Y/Z' : Item(status='  ', wc_rev=2)
     })
 
   svntest.actions.run_and_verify_update(sbox.wc_dir,
@@ -642,7 +660,7 @@ def basic_revert(sbox):
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/B/E/beta', 'iota', 'A/D/G/rho', status='M ')
   expected_output.add({
-    'A/D/H/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/H/zeta' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
@@ -701,7 +719,7 @@ def basic_revert(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'X' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'X' : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
   svntest.main.safe_rmtree(X_path)
@@ -716,28 +734,56 @@ def basic_revert(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
+  ### Most of the rest of this test is ineffective, due to the
+  ### problems described in issue #1611.
   svntest.actions.run_and_verify_svn("", None, [], 'rm', E_path)
-
   svntest.main.safe_rmtree(E_path)
   expected_status.tweak('A/B/E', status='D ')
-  extra_files = ['E']
-  svntest.actions.run_and_verify_status (wc_dir, expected_status,
-                                         None, None,
-                                         expect_extra_files, extra_files)
-  if len(extra_files) != 0:
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
-
+  expected_status.tweak('A/B/E', wc_rev='?')
+  ### FIXME: A weakness in the test framework, described in detail
+  ### in issue #1611, prevents us from checking via status.  Grr.
+  #
+  # svntest.actions.run_and_verify_status (wc_dir, expected_status,
+  #                                        None, None, None, None)
+  #
+  #
+  ### If you were to uncomment the above, you'd get an error like so:
+  #
+  # =============================================================
+  # Expected E and actual E are different!
+  # =============================================================
+  # EXPECTED NODE TO BE:
+  # =============================================================
+  #  * Node name:   E
+  #     Path:       working_copies/basic_tests-10/A/B/E
+  #     Contents:   None
+  #     Properties: {}
+  #     Attributes: {'status': 'D ', 'wc_rev': '?'}
+  #     Children:   2
+  # =============================================================
+  # ACTUAL NODE FOUND:
+  # =============================================================
+  #  * Node name:   E
+  #     Path:       working_copies/basic_tests-10/A/B/E
+  #     Contents:   None
+  #     Properties: {}
+  #     Attributes: {'status': 'D ', 'wc_rev': '?'}
+  #     Children: is a file.
+  # Unequal Types: one Node is a file, the other is a directory
+  
+  # This will actually print
+  #
+  #    "Failed to revert 'working_copies/basic_tests-10/A/B/E' -- \
+  #    try updating instead."
+  #
+  # ...but due to test suite lossage, it'll still look like success.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', E_path)
 
-  expected_status.tweak('A/B/E', status='  ')
-  extra_files = ['E']
-  svntest.actions.run_and_verify_status (wc_dir, expected_status,
-                                         None, None,
-                                         expect_extra_files, extra_files)
-  if len(extra_files) != 0:
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
+  ### FIXME: Again, the problem described in issue #1611 bites us here.
+  #
+  # expected_status.tweak('A/B/E', status='  ')
+  # svntest.actions.run_and_verify_status (wc_dir, expected_status,
+  #                                        None, None, None, None)
     
 
 #----------------------------------------------------------------------
@@ -814,9 +860,9 @@ def basic_switch(sbox):
                          'A/D/H/omega',
                          'A/D/H/psi')
   expected_status.add({
-    'A/D/H/pi'  : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/D/H/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/D/H/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/D/H/pi'  : Item(status='  ', wc_rev=1),
+    'A/D/H/rho' : Item(status='  ', wc_rev=1),
+    'A/D/H/tau' : Item(status='  ', wc_rev=1),
     })
   expected_status.tweak('iota', 'A/D/H', switched='S')
 
@@ -895,9 +941,9 @@ def basic_delete(sbox):
   expected_output.tweak('A/D/G/rho', 'A/B/F', status=' M')
 #  expected_output.tweak('A/C/sigma', status='? ')
   expected_output.add({
-    'A/B/X' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/B/X/xi' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/B/X' : Item(status='A ', wc_rev=0),
+    'A/B/X/xi' : Item(status='A ', wc_rev=0),
+    'A/D/Y' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
@@ -987,7 +1033,7 @@ def basic_delete(sbox):
                         'iota',
                         'A/D/gamma', status='D ')
   expected_status.add({
-    'A/D/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/Y' : Item(status='A ', wc_rev=0),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1081,7 +1127,7 @@ def basic_checkout_deleted(sbox):
                                      svntest.main.wc_author,
                                      '--password',
                                      svntest.main.wc_passwd,
-                                     url, wc2)
+                                     url + "@1", wc2)
   
 #----------------------------------------------------------------------
 
@@ -1139,7 +1185,7 @@ def basic_node_kind_change(sbox):
 
   expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/D/gamma' : Item(status='A ', wc_rev=0, repos_rev=2),
+    'A/D/gamma' : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1184,9 +1230,9 @@ def basic_import(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'dirA'                : Item(status='  ', wc_rev=2, repos_rev=2),
-    'dirA/dirB'           : Item(status='  ', wc_rev=2, repos_rev=2),
-    'dirA/dirB/new_file'  : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dirA'                : Item(status='  ', wc_rev=2),
+    'dirA/dirB'           : Item(status='  ', wc_rev=2),
+    'dirA/dirB/new_file'  : Item(status='  ', wc_rev=2),
     })
 
   # Create expected output tree for the update.
@@ -1264,11 +1310,11 @@ def basic_import_executable(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'all_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'none_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'user_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'group_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'other_exe' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'all_exe' : Item(status='  ', wc_rev=2),
+    'none_exe' : Item(status='  ', wc_rev=2),
+    'user_exe' : Item(status='  ', wc_rev=2),
+    'group_exe' : Item(status='  ', wc_rev=2),
+    'other_exe' : Item(status='  ', wc_rev=2),
     })
 
   # Create expected output tree for the update.
@@ -1532,8 +1578,8 @@ def basic_import_ignores(sbox):
   # Newly imported file should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'dir' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'dir/foo.c' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dir' : Item(status='  ', wc_rev=2),
+    'dir/foo.c' : Item(status='  ', wc_rev=2),
     })
 
   # Create expected output tree for the update.
@@ -1560,8 +1606,8 @@ def uri_syntax(sbox):
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
   svntest.main.safe_rmtree(wc_dir)
   url = svntest.main.current_repo_url
-  schema = url[:string.find(url, ":")]
-  url = schema + "://some_nonexistent_host_with_no_trailing_slash"
+  scheme = url[:string.find(url, ":")]
+  url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
                                      None, SVNAnyOutput,
                                      'co', url, wc_dir)
@@ -1585,106 +1631,6 @@ def basic_checkout_file(sbox):
       break
   else:
     raise svntest.Failure
-
-#----------------------------------------------------------------------
-def basic_history(sbox):
-  "verify that 'svn cat' traces renames"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  rho_path   = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  pi_path    = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  bloo_path  = os.path.join(wc_dir, 'A', 'D', 'G', 'bloo')
-
-  # rename rho to bloo. commit r2.
-  svntest.main.run_svn(None, 'mv', rho_path, bloo_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho' : Item(verb='Deleting'),
-    'A/D/G/bloo' : Item(verb='Adding')
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.remove('A/D/G/rho');
-  expected_status.add({ 'A/D/G/bloo' :
-                        Item(wc_rev=2, repos_rev=2, status='  ') })
-
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
-  
-  # rename pi to rho.  commit r3.
-  svntest.main.run_svn(None, 'mv', pi_path, rho_path)
-
-  # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'."], None,
-                                      'cat',  '-r', '1', rho_path)
-  
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/pi' : Item(verb='Deleting'),
-    'A/D/G/rho' : Item(verb='Adding')
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
-  expected_status.remove('A/D/G/pi');
-  expected_status.tweak('A/D/G/rho', wc_rev=3)
-  expected_status.add({ 'A/D/G/bloo' :
-                        Item(wc_rev=2, repos_rev=3, status='  ') })
-
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
-
-  # update whole wc to HEAD
-  expected_output = svntest.wc.State(wc_dir, { }) # no output
-  expected_status.tweak(wc_rev=3)
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/G/pi', 'A/D/G/rho')
-  expected_disk.add({
-    'A/D/G/rho' : Item("This is the file 'pi'."),
-    })
-  expected_disk.add({
-    'A/D/G/bloo' : Item("This is the file 'rho'."),
-    })
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)  
-
-  # 'svn cat bloo' --> should show rho's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'."], None,
-                                      'cat',  bloo_path)
-  
-  # svn cat -r1 bloo --> should still show rho's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'."], None,
-                                      'cat',  '-r', '1', bloo_path)
-
-  # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'."], None,
-                                      'cat',  '-r', '1', rho_path)
-  
-  # svn up -r1
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # svn cat -rHEAD rho --> should see 'unrelated object' error.
-  svntest.actions.run_and_verify_svn ("unrelated object",
-                                      None, SVNAnyOutput,
-                                      'cat',  '-r', 'HEAD', rho_path)
 
 
 ########################################################################
@@ -1717,7 +1663,6 @@ test_list = [ None,
               basic_import_ignores,
               uri_syntax,
               basic_checkout_file,
-              basic_history,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

@@ -35,20 +35,21 @@ extern "C" {
 /*** Revisions ***/
 
 /* Set *ROOT_ID_P to the ID of the root directory of revision REV in FS,
-   as part of TRAIL.  Allocate the ID in TRAIL->pool.  */
+   as part of TRAIL.  Allocate the ID in POOL.  */
 svn_error_t *svn_fs_base__rev_get_root (const svn_fs_id_t **root_id_p,
                                         svn_fs_t *fs,
                                         svn_revnum_t rev,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Set *TXN_ID_P to the ID of the transaction that was committed to
-   create REV in FS, as part of TRAIL.  Allocate the ID in
-   TRAIL->pool.  */
+   create REV in FS, as part of TRAIL.  Allocate the ID in POOL.  */
 svn_error_t *svn_fs_base__rev_get_txn_id (const char **txn_id_p,
                                           svn_fs_t *fs,
                                           svn_revnum_t rev,
-                                          trail_t *trail);
+                                          trail_t *trail,
+                                          apr_pool_t *pool);
 
 
 /* Set property NAME to VALUE on REV in FS, as part of TRAIL.  */
@@ -56,7 +57,8 @@ svn_error_t *svn_fs_base__set_rev_prop (svn_fs_t *fs,
                                         svn_revnum_t rev,
                                         const char *name,
                                         const svn_string_t *value,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 
@@ -70,7 +72,8 @@ svn_error_t *svn_fs_base__set_rev_prop (svn_fs_t *fs,
 svn_error_t *svn_fs_base__txn_make_committed (svn_fs_t *fs,
                                               const char *txn_name,
                                               svn_revnum_t revision,
-                                              trail_t *trail);
+                                              trail_t *trail,
+                                              apr_pool_t *pool);
 
 
 /* Set *REVISION to the revision which was created when FS transaction
@@ -79,7 +82,8 @@ svn_error_t *svn_fs_base__txn_make_committed (svn_fs_t *fs,
 svn_error_t *svn_fs_base__txn_get_revision (svn_revnum_t *revision,
                                             svn_fs_t *fs,
                                             const char *txn_name,
-                                            trail_t *trail);
+                                            trail_t *trail,
+                                            apr_pool_t *pool);
 
 
 /* Retrieve information about the Subversion transaction SVN_TXN from
@@ -94,24 +98,26 @@ svn_error_t *svn_fs_base__txn_get_revision (svn_revnum_t *revision,
    Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.
 
-   Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in TRAIL->pool.  */
+   Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in POOL.  */
 svn_error_t *svn_fs_base__get_txn_ids (const svn_fs_id_t **root_id_p,
                                        const svn_fs_id_t **base_root_id_p,
                                        svn_fs_t *fs,
                                        const char *txn_name,
-                                       trail_t *trail);
+                                       trail_t *trail,
+                                       apr_pool_t *pool);
 
 
 /* Set the root directory of the Subversion transaction TXN_NAME in FS
    to ROOT_ID, as part of TRAIL.  Do any necessary temporary
-   allocation in TRAIL->pool.
+   allocation in POOL.
 
    Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
 svn_error_t *svn_fs_base__set_txn_root (svn_fs_t *fs,
                                         const char *txn_name,
                                         const svn_fs_id_t *root_id,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Add COPY_ID to the list of copies made under the Subversion
@@ -122,22 +128,24 @@ svn_error_t *svn_fs_base__set_txn_root (svn_fs_t *fs,
 svn_error_t *svn_fs_base__add_txn_copy (svn_fs_t *fs,
                                         const char *txn_name,
                                         const char *copy_id,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Set the base root directory of TXN_NAME in FS to NEW_ID, as part of
-   TRAIL.  Do any necessary temporary allocation in TRAIL->pool.
+   TRAIL.  Do any necessary temporary allocation in POOL.
 
    Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
 svn_error_t *svn_fs_base__set_txn_base (svn_fs_t *fs,
                                         const char *txn_name,
                                         const svn_fs_id_t *new_id,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
-   of TRAIL.  Use TRAIL->pool for any necessary allocations.
+   of TRAIL.  Use POOL for any necessary allocations.
 
    Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
@@ -145,7 +153,8 @@ svn_error_t *svn_fs_base__set_txn_prop (svn_fs_t *fs,
                                         const char *txn_name,
                                         const char *name,
                                         const svn_string_t *value,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 
 /* These functions implement some of the calls in the FS loader
@@ -170,7 +179,8 @@ svn_error_t *svn_fs_base__change_rev_prop (svn_fs_t *fs, svn_revnum_t rev,
                                            apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                                     svn_revnum_t rev, apr_pool_t *pool);
+                                     svn_revnum_t rev, apr_uint32_t flags,
+                                     apr_pool_t *pool);
 
 svn_error_t *svn_fs_base__open_txn (svn_fs_txn_t **txn, svn_fs_t *fs,
                                     const char *name, apr_pool_t *pool);
@@ -189,6 +199,11 @@ svn_error_t *svn_fs_base__txn_prop (svn_string_t **value_p, svn_fs_txn_t *txn,
 svn_error_t *svn_fs_base__txn_proplist (apr_hash_t **table_p,
                                         svn_fs_txn_t *txn,
                                         apr_pool_t *pool);
+
+/* Helper func:  variant of __txn_proplist that uses an existing trail. */
+svn_error_t *svn_fs_base__txn_proplist_in_trail (apr_hash_t **table_p,
+                                                 const char *txn_id,
+                                                 trail_t *trail);
 
 svn_error_t *svn_fs_base__change_txn_prop (svn_fs_txn_t *txn, const char *name,
                                            const svn_string_t *value,

@@ -18,9 +18,6 @@ class Generator(gen_win.WinGeneratorBase):
     gen_win.WinGeneratorBase.__init__(self, fname, verfname, options,
                                       'vcnet-vcproj')
 
-  def default_output(self, oname):
-    return 'subversion_vcnet.sln'
-
   def quote(self, str):
     return '&quot;%s&quot;' % str
 
@@ -96,7 +93,7 @@ class Generator(gen_win.WinGeneratorBase):
                                               myhash[20:32]))
     return guid
 
-  def write(self, oname):
+  def write(self):
     "Write a Solution (.sln)"
 
     # apr doesn't supply vcproj files, so move our pre-defined ones
@@ -184,7 +181,7 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    self.write_with_template(oname, 'vcnet_sln.ezt', data)
+    self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)
 
 
 # compatibility with older Pythons:

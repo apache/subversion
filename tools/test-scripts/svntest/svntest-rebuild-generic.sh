@@ -50,9 +50,9 @@ $CAT "$TEST_ROOT/$CONFIG_PREFIX.$PROJ_NAME" >> $LOG_FILE
 
 cd $TEST_ROOT/"obj-$PROJ_NAME"
 $TEST_ROOT/$CONFIG_PREFIX.$PROJ_NAME \
-    > "$TEST_ROOT/LOG_${PROJ_NAME}_configure" 2>&1
+    > "$LOG_FILE_DIR/LOG_${PROJ_NAME}_configure" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_${PROJ_NAME}_configure"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_${PROJ_NAME}_configure"
     FAIL
 }
 PASS
@@ -60,9 +60,9 @@ PASS
 # Build
 START "$PROJ_NAME::build" "Building $PROJ_NAME..."
 cd "$TEST_ROOT/obj-$PROJ_NAME"
-$MAKE $LOCAL_MAKE_OPTS > "$TEST_ROOT/LOG_${PROJ_NAME}_build" 2>&1
+$MAKE $LOCAL_MAKE_OPTS > "$LOG_FILE_DIR/LOG_${PROJ_NAME}_build" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_${PROJ_NAME}_build"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_${PROJ_NAME}_build"
     FAIL
 }
 PASS
@@ -73,9 +73,9 @@ cd "$TEST_ROOT/obj-$PROJ_NAME"
 
 $RM_RF "$INST_DIR/$PROJ_NAME" >> $LOG_FILE 2>&1 || FAIL
 
-$MAKE install > "$TEST_ROOT/LOG_${PROJ_NAME}_install" 2>&1
+$MAKE install > "$LOG_FILE_DIR/LOG_${PROJ_NAME}_install" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_${PROJ_NAME}_install"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_${PROJ_NAME}_install"
     FAIL
 }
 PASS

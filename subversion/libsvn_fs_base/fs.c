@@ -40,6 +40,7 @@
 #include "uuid.h"
 #include "tree.h"
 #include "id.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -52,6 +53,8 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 #include "bdb/uuids-table.h"
+#include "bdb/locks-table.h"
+#include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -73,8 +76,8 @@ check_bdb_version (void)
       || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
           && patch < SVN_FS_WANT_DB_PATCH))
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "Bad database version: got %d.%d.%d,"
-                              " should be at least %d.%d.%d",
+                              _("Bad database version: got %d.%d.%d,"
+                                " should be at least %d.%d.%d"),
                               major, minor, patch,
                               SVN_FS_WANT_DB_MAJOR,
                               SVN_FS_WANT_DB_MINOR,
@@ -84,9 +87,9 @@ check_bdb_version (void)
      the one we compiled with. */
   if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
     return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "Bad database version:"
-                              " compiled with %d.%d.%d,"
-                              " running against %d.%d.%d",
+                              _("Bad database version:"
+                                " compiled with %d.%d.%d,"
+                                " running against %d.%d.%d"),
                               DB_VERSION_MAJOR,
                               DB_VERSION_MINOR,
                               DB_VERSION_PATCH,
@@ -102,7 +105,7 @@ check_already_open (svn_fs_t *fs)
 {
   if (fs->fsap_data)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
-                             "Filesystem object already open");
+                             _("Filesystem object already open"));
   else
     return SVN_NO_ERROR;
 }
@@ -161,6 +164,8 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &bfd->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->uuids, "uuids"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->locks, "locks"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->lock_tokens, "lock-tokens"));
 
   /* Finally, close the environment.  */
   bfd->env = 0;
@@ -297,22 +302,25 @@ base_bdb_set_errcall (svn_fs_t *fs,
 
 /* Allocating an appropriate Berkeley DB environment object.  */
 
-/* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info. */
+/* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info.
+   Note: bdb_error_gatherer is a macro with BDB < 4.3, so be careful how
+   you use it! */
 static void
-bdb_error_gatherer (const char *char_baton, char *msg)
+bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
 {
-  bdb_errcall_baton_t *ec_baton = (bdb_errcall_baton_t *) char_baton;
+  bdb_errcall_baton_t *ec_baton = (bdb_errcall_baton_t *) baton;
+  svn_error_t *new_err;
 
-  svn_error_t *new_err = svn_error_createf (SVN_NO_ERROR, NULL, "bdb: %s",
-                                            msg);
+  SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
 
+  new_err = svn_error_createf (SVN_NO_ERROR, NULL, "bdb: %s", msg);
   if (ec_baton->pending_errors)
     svn_error_compose (ec_baton->pending_errors, new_err);
   else
     ec_baton->pending_errors = new_err;
 
   if (ec_baton->user_callback)
-    ec_baton->user_callback (NULL, msg);
+    ec_baton->user_callback (NULL, (char *)msg); /* ### I hate this cast... */
 }
 
 
@@ -332,7 +340,8 @@ create_env (DB_ENV **envp, bdb_errcall_baton_t **ec_batonp, apr_pool_t *pool)
   if (!db_err)
     {
       (*envp)->set_errpfx (*envp, (char *) (*ec_batonp));
-      (*envp)->set_errcall (*envp, bdb_error_gatherer);
+      /* bdb_error_gatherer is in parens to stop macro expansion. */
+      (*envp)->set_errcall (*envp, (bdb_error_gatherer));
 
       /* Needed on Windows in case Subversion and Berkeley DB are using
          different C runtime libraries  */
@@ -409,7 +418,19 @@ bdb_write_config  (svn_fs_t *fs)
     "#\n"
     "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
     "set_lg_bsize     262144\n"
-    "set_lg_max      1048576\n";
+    "set_lg_max      1048576\n"
+    "#\n"
+    "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
+    "# See http://www.sleepycat.com/docs/ref/log/config.html and\n"
+    "# http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
+    "set_lg_regionmax 131072\n"
+    "#\n"
+    /* ### Configure this with "svnadmin create --bdb-cache-size" */
+    "# The default cache size in BDB is only 256k. As explained in\n"
+    "# http://svn.haxx.se/dev/archive-2004-12/0369.shtml, this is too\n"
+    "# small for most applications. Bump this number if \"db_stat -m\"\n"
+    "# shows too many cache misses.\n"
+    "set_cachesize    0 1048576 1\n";
 
   /* Run-time configurable options.
      Each option set consists of a minimum required BDB version, a
@@ -519,14 +540,21 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
-  svn_fs_base__deltify
+  svn_fs_base__deltify,
+  svn_fs_base__lock,
+  svn_fs_base__generate_lock_token,
+  svn_fs_base__unlock,
+  svn_fs_base__get_lock,
+  svn_fs_base__get_locks
 };
+
+/* Where the format number is stored. */
+#define FORMAT_FILE   "format"
 
 static svn_error_t *
 base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
-  const char *path_apr;
   const char *path_native;
   base_fs_data_t *bfd;
 
@@ -541,7 +569,6 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
-  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, fs->path, fs->pool));
 
   SVN_ERR (bdb_write_config (fs));
 
@@ -549,7 +576,7 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, pool));
   svn_err = BDB_WRAP (fs, "creating environment",
                       bfd->env->open (bfd->env, path_native,
                                       (DB_CREATE
@@ -593,9 +620,23 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, TRUE));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, TRUE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                          bfd->env, TRUE));
+  if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
   svn_err = svn_fs_base__dag_init_fs (fs);
+  if (svn_err) goto error;
+
+  /* This filesystem is ready.  Stamp it with a format number. */
+  svn_err = svn_io_write_version_file
+    (svn_path_join (fs->path, FORMAT_FILE, pool),
+     SVN_FS_BASE__FORMAT_NUMBER, pool);
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -609,12 +650,32 @@ error:
 /* Gaining access to an existing Berkeley DB-based filesystem.  */
 
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as the format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format (svn_fs_t *fs)
+{
+  int format = ((base_fs_data_t *) fs->fsap_data)->format;
+
+  if (format != SVN_FS_BASE__FORMAT_NUMBER)
+    {
+      return svn_error_createf 
+        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+         _("Expected FS format '%d'; found format '%d'"), 
+         SVN_FS_BASE__FORMAT_NUMBER, format);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
   const char *path_native;
   base_fs_data_t *bfd;
+  int format;
 
   SVN_ERR (check_already_open (fs));
 
@@ -676,6 +737,34 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, FALSE));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, FALSE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                         bfd->env, FALSE));
+  if (svn_err) goto error;
+
+  /* Read the FS format number. */
+  svn_err = svn_io_read_version_file
+    (&format, svn_path_join (fs->path, FORMAT_FILE, pool), pool);
+  if (svn_err && APR_STATUS_IS_ENOENT (svn_err->apr_err))
+    {
+      /* Pre-1.2 filesystems did not have a format file (you could say
+         they were format "0"), so they get upgraded on the fly. */
+      svn_error_clear (svn_err);
+      format = SVN_FS_BASE__FORMAT_NUMBER;
+      svn_err = svn_io_write_version_file
+        (svn_path_join (fs->path, FORMAT_FILE, pool), format, pool);
+      if (svn_err) goto error;
+    }
+  else if (svn_err)
+    goto error;
+  
+  /* Now we've got a format number no matter what. */
+  ((base_fs_data_t *) fs->fsap_data)->format = format;
+  SVN_ERR (check_format (fs));
 
   return SVN_NO_ERROR;
 
@@ -962,7 +1051,7 @@ copy_db_file_safely (const char *src_dir,
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "Can't open file '%s' for reading.",
+                              _("Can't open file '%s' for reading"),
                               file_src_path);
 
   /* Open destination file. */
@@ -971,7 +1060,7 @@ copy_db_file_safely (const char *src_dir,
                           APR_OS_DEFAULT, pool);
   if (status)
     return svn_error_createf (status, NULL,
-                              "Can't open file '%s' for writing.",
+                              _("Can't open file '%s' for writing"),
                               file_dst_path);
 
   /* Allocate our read/write buffer. */
@@ -991,7 +1080,7 @@ copy_db_file_safely (const char *src_dir,
           apr_file_close(s);  /* toss any error */
           apr_file_close(d);  /* toss any error */
           return svn_error_createf (status, NULL,
-                                    "Error reading file '%s'.",
+                                    _("Error reading file '%s'"),
                                     file_src_path);
         }
     
@@ -1002,7 +1091,7 @@ copy_db_file_safely (const char *src_dir,
           apr_file_close(s);  /* toss any error */
           apr_file_close(d);  /* toss any error */
           return svn_error_createf (status, NULL,
-                                    "Error writing file '%s'.",
+                                    _("Error writing file '%s'"),
                                     file_dst_path);
         }
     
@@ -1010,11 +1099,11 @@ copy_db_file_safely (const char *src_dir,
         {
           status = apr_file_close(s);
           if (status)
-            return svn_error_createf (status, NULL, "Can't close file '%s'.",
+            return svn_error_createf (status, NULL, _("Can't close file '%s'"),
                                       file_src_path);
           status = apr_file_close(d);
           if (status)
-            return svn_error_createf (status, NULL, "Can't close file '%s'.",
+            return svn_error_createf (status, NULL, _("Can't close file '%s'"),
                                       file_dst_path);
 
           break;  /* got EOF on read, all files closed, all done. */
@@ -1084,6 +1173,10 @@ base_hotcopy (const char *src_path,
                                 "strings", pagesize, pool));
   SVN_ERR (copy_db_file_safely (src_path, dest_path,
                                 "uuids", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "locks", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "lock-tokens", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;
@@ -1113,7 +1206,7 @@ base_hotcopy (const char *src_path,
                  _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
                    "may be interfering with the hotcopy algorithm.  If \n"
                    "the problem persists, try deactivating this feature \n"
-                   "in DB_CONFIG."));
+                   "in DB_CONFIG"));
             else
               return err;
           }
@@ -1132,7 +1225,7 @@ base_hotcopy (const char *src_path,
            _("Error running catastrophic recovery on hotcopy;  the \n"
              "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
              "hotcopy algorithm.  If the problem persists, try deactivating \n"
-             "this feature in DB_CONFIG."));
+             "this feature in DB_CONFIG"));
       else
         return err;
     }
@@ -1236,6 +1329,12 @@ base_version (void)
   SVN_VERSION_BODY;
 }
 
+static const char *
+base_get_description (void)
+{
+  return _("Module for working with a Berkeley DB repository.");
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -1245,6 +1344,7 @@ static fs_library_vtable_t library_vtable = {
   base_open,
   base_delete_fs,
   base_hotcopy,
+  base_get_description,
   base_bdb_set_errcall,
   base_bdb_recover,
   base_bdb_logfiles,

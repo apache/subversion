@@ -135,6 +135,10 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
  */
 void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
+/** @since New in 1.2.
+ *
+ * Create a new error that is a deep copy of err and return it. */
+svn_error_t *svn_error_dup (svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
  * descendants of @a error. 
@@ -148,17 +152,33 @@ void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 void svn_error_clear (svn_error_t *error);
 
 
-/** Very basic default error handler: print out error stack, and quit
- * iff the @a fatal flag is set.
+/** @since New in 1.2
+ *
+ * Very basic default error handler: print out error stack @a error to the
+ * stdio stream @a stream, with each error prefixed by @a prefix, and quit
+ * iff the @a fatal flag is set.  Allocations are performed in the error's
+ * pool.
+ */
+void svn_handle_error2 (svn_error_t *error,
+                        FILE *stream,
+                        svn_boolean_t fatal,
+                        const char *prefix);
+
+/** Like @c svn_handle_error2 but with @c prefix set to "svn: "
  */
 void svn_handle_error (svn_error_t *error,
                        FILE *stream,
                        svn_boolean_t fatal);
 
-/** Basic, default warning handler.
+/** @since New in 1.2
  *
- * Just prints @a error to the stdio stream given in @a stream. Allocations
- * are performed in the error's pool.
+ * Very basic default warning handler: print out the error @a error to the
+ * stdio stream @a stream, prefixed by @a prefix.  Allocations are
+ * performed in the error's pool.
+ */
+void svn_handle_warning2 (FILE *stream, svn_error_t *error, const char *prefix);
+
+/** Like @c svn_handle_warning2 but with @c prefix set to "svn: "
  */
 void svn_handle_warning (FILE *stream, svn_error_t *error);
 
@@ -217,6 +237,33 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
   } while (0)
 
 /** @} */
+
+/**
+ * @since New in 1.2.  
+ *
+ * Return TRUE if @a err is an error specifically related to locking a
+ * path in the repository, FALSE otherwise. 
+ *
+ * SVN_ERR_FS_OUT_OF_DATE is in here because it's a non-fatal error
+ * that can be thrown when attempting to lock an item.
+ */
+#define SVN_ERR_IS_LOCK_ERROR(err)                          \
+  (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||                \
+   err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
+
+/**
+ * @since New in 1.2.  
+ *
+ * Return TRUE if @a err is an error specifically related to unlocking
+ * a path in the repository, FALSE otherwise. */
+#define SVN_ERR_IS_UNLOCK_ERROR(err)                        \
+  (err->apr_err == SVN_ERR_FS_PATH_NOT_LOCKED ||            \
+   err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||             \
+   err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||        \
+   err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||               \
+   err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
+   err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+
 
 #ifdef __cplusplus
 }

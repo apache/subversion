@@ -23,8 +23,6 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
-#include "svn_string.h"
-#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "cl.h"
@@ -45,11 +43,8 @@ svn_cl__cleanup (apr_getopt_t *os,
   apr_pool_t *subpool;
   int i;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -64,9 +59,9 @@ svn_cl__cleanup (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
+      svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       SVN_ERR (svn_client_cleanup (target, ctx, subpool));
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

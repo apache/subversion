@@ -56,13 +56,13 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/C/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
-                    exdir_H  -r 1 <schema>:///<other_repos>/A/D/H
+     /A/C/     ==>  exdir_G       <scheme>:///<other_repos>/A/D/G
+                    exdir_H  -r 1 <scheme>:///<other_repos>/A/D/H
 
-     /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
-                    exdir_A/G        <schema>:///<other_repos>/A/D/G
-                    exdir_A/H  -r 3  <schema>:///<other_repos>/A/D/H
-                    x/y/z/blah       <schema>:///<other_repos>/A/B
+     /A/D/     ==>  exdir_A          <scheme>:///<other_repos>/A
+                    exdir_A/G        <scheme>:///<other_repos>/A/D/G
+                    exdir_A/H  -r 3  <scheme>:///<other_repos>/A/D/H
+                    x/y/z/blah       <scheme>:///<other_repos>/A/B
 
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
   remove a previous incarnation of the other repository.
@@ -164,7 +164,6 @@ def externals_test_setup(sbox):
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('A/C', 'A/D', wc_rev=6, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_init_dir,
@@ -538,7 +537,6 @@ def update_receive_change_under_external(sbox):
     'A/D/gamma' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('A/D/gamma', wc_rev=6)
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
@@ -574,7 +572,6 @@ def update_receive_change_under_external(sbox):
     'A/D/G/rho' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
-  expected_status.tweak(repos_rev=7)
   expected_status.tweak('A/D/gamma', wc_rev=6)
   expected_status.tweak('A/D/G/rho', wc_rev=7)
   svntest.actions.run_and_verify_commit(other_wc_dir,

@@ -29,6 +29,7 @@
 static svn_error_t *
 test_path_is_child (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   int i, j;
@@ -91,6 +92,7 @@ test_path_is_child (const char **msg,
 static svn_error_t *
 test_path_split (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   apr_size_t i;
@@ -143,6 +145,7 @@ test_path_split (const char **msg,
 static svn_error_t *
 test_is_url (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   int i;
@@ -188,6 +191,7 @@ test_is_url (const char **msg,
 static svn_error_t *
 test_is_uri_safe (const char **msg,
                   svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   apr_size_t i;
@@ -241,6 +245,7 @@ test_is_uri_safe (const char **msg,
 static svn_error_t *
 test_uri_encode (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   int i;
@@ -294,6 +299,7 @@ test_uri_encode (const char **msg,
 static svn_error_t *
 test_uri_decode (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   int i;
@@ -333,6 +339,7 @@ test_uri_decode (const char **msg,
 static svn_error_t *
 test_uri_autoescape (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   static const char *paths[3][2] = {
@@ -369,6 +376,7 @@ test_uri_autoescape (const char **msg,
 static svn_error_t *
 test_uri_from_iri (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   /* We have to code the IRIs like this because the compiler might translate
@@ -390,7 +398,7 @@ test_uri_from_iri (const char **msg,
   };
   int i;
 
-  *msg = "testing svn_uri_from_iri";
+  *msg = "test svn_path_uri_from_iri";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -401,7 +409,7 @@ test_uri_from_iri (const char **msg,
       if (strcmp (paths[i][1], uri) != 0)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
-           "svn_uri_from_iri on '%s' returned '%s' instead of '%s'",
+           "svn_path_uri_from_iri on '%s' returned '%s' instead of '%s'",
            paths[i][0], uri, paths[i][1]);
       if (strcmp (paths[i][0], uri) == 0
           && paths[i][0] != uri)
@@ -417,6 +425,7 @@ test_uri_from_iri (const char **msg,
 static svn_error_t *
 test_join (const char **msg,
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   int i;
@@ -515,6 +524,7 @@ test_join (const char **msg,
 static svn_error_t *
 test_basename (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   int i;
@@ -560,6 +570,7 @@ test_basename (const char **msg,
 static svn_error_t *
 test_decompose (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   static const char * const paths[] = {
@@ -616,6 +627,7 @@ test_decompose (const char **msg,
 static svn_error_t *
 test_canonicalize (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   const char *paths[][2] = {
@@ -652,11 +664,19 @@ test_canonicalize (const char **msg,
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
+#if defined(WIN32) || defined(__CYGWIN__)
+    /* We permit UNC paths on Windows.  By definition UNC
+     * paths must have two components so we should remove the
+     * double slash if there is only one component. */
+    { "//hst/foo",            "//hst/foo" },
+    { "//hst",                "/hst" },
+    { "//hst/./",             "/hst" },
+#endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
   int i;
 
-  *msg = "test svn_path_decompose";
+  *msg = "test svn_path_canonicalize";
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -679,6 +699,7 @@ test_canonicalize (const char **msg,
 static svn_error_t *
 test_remove_component (const char **msg,
                        svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   const char *paths[][2] = {

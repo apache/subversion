@@ -54,6 +54,54 @@ my__realloc (char *data, apr_size_t oldsize, apr_size_t request,
   return new_area;
 }
 
+static APR_INLINE svn_boolean_t
+string_compare (const char *str1,
+                const char *str2,
+                apr_size_t len1,
+                apr_size_t len2)
+{
+  /* easy way out :)  */
+  if (len1 != len2)
+    return FALSE;
+
+  /* now the strings must have identical lenghths */
+
+  if ((memcmp (str1, str2, len1)) == 0)
+    return TRUE;
+  else
+    return FALSE;
+}
+
+static APR_INLINE apr_size_t
+string_first_non_whitespace (const char *str, apr_size_t len)
+{
+  apr_size_t i;
+
+  for (i = 0; i < len; i++)
+    {
+      if (! apr_isspace (str[i]))
+        return i;
+    }
+
+  /* if we get here, then the string must be entirely whitespace */
+  return len;
+}
+
+static APR_INLINE apr_size_t
+find_char_backward (const char *str, apr_size_t len, char ch)
+{
+  apr_size_t i = len;
+
+  while (i != 0)
+    {
+      if (str[--i] == ch)
+        return i;
+    }
+
+  /* char was not found, return len */
+  return len;
+}
+
 
 /* svn_string functions */
 
@@ -63,7 +111,7 @@ create_string (const char *data, apr_size_t size,
 {
   svn_string_t *new_string;
 
-  new_string = (svn_string_t *) apr_palloc (pool, sizeof (*new_string)); 
+  new_string = apr_palloc (pool, sizeof (*new_string)); 
 
   new_string->data = data;
   new_string->len = size;
@@ -146,16 +194,8 @@ svn_string_dup (const svn_string_t *original_string, apr_pool_t *pool)
 svn_boolean_t
 svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 {
-  /* easy way out :)  */
-  if (str1->len != str2->len)
-    return FALSE;
-
-  /* now that we know they have identical lengths... */
-  
-  if (memcmp (str1->data, str2->data, str1->len))
-    return FALSE;
-  else
-    return TRUE;
+  return
+    string_compare (str1->data, str2->data, str1->len, str2->len);
 }
 
 
@@ -163,33 +203,15 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 apr_size_t
 svn_string_first_non_whitespace (const svn_string_t *str)
 {
-  apr_size_t i;
-
-  for (i = 0; i < str->len; i++)
-    {
-      if (! apr_isspace (str->data[i]))
-        {
-          return i;
-        }
-    }
-
-  /* if we get here, then the string must be entirely whitespace */
-  return str->len;
+  return
+    string_first_non_whitespace (str->data, str->len);
 }
 
 
 apr_size_t
 svn_string_find_char_backward (const svn_string_t *str, char ch)
 {
-  int i;        /* signed! */
-
-  for (i = (str->len - 1); i >= 0; i--)
-    {
-      if (str->data[i] == ch)
-        return i;
-    }
-
-  return str->len;
+  return find_char_backward (str->data, str->len, ch);
 }
 
 
@@ -201,7 +223,7 @@ create_stringbuf (char *data, apr_size_t size, apr_pool_t *pool)
 {
   svn_stringbuf_t *new_string;
 
-  new_string = (svn_stringbuf_t *) apr_palloc (pool, sizeof (*new_string)); 
+  new_string = apr_palloc (pool, sizeof (*new_string)); 
 
   new_string->data = data;
   new_string->len = size;
@@ -326,6 +348,7 @@ svn_stringbuf_ensure (svn_stringbuf_t *str, apr_size_t minimum_size)
           {
             apr_size_t prev_size = str->blocksize;
             str->blocksize *= 2;
+            /* check for apr_size_t overflow */
             if (prev_size > str->blocksize)
               {
                 str->blocksize = minimum_size;
@@ -395,16 +418,7 @@ svn_boolean_t
 svn_stringbuf_compare (const svn_stringbuf_t *str1, 
                        const svn_stringbuf_t *str2)
 {
-  /* easy way out :)  */
-  if (str1->len != str2->len)
-    return FALSE;
-
-  /* now that we know they have identical lengths... */
-  
-  if (memcmp (str1->data, str2->data, str1->len))
-    return FALSE;
-  else
-    return TRUE;
+  return string_compare (str1->data, str2->data, str1->len, str2->len);
 }
 
 
@@ -412,18 +426,7 @@ svn_stringbuf_compare (const svn_stringbuf_t *str1,
 apr_size_t
 svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str)
 {
-  apr_size_t i;
-
-  for (i = 0; i < str->len; i++)
-    {
-      if (! apr_isspace (str->data[i]))
-        {
-          return i;
-        }
-    }
-
-  /* if we get here, then the string must be entirely whitespace */
-  return str->len;
+  return string_first_non_whitespace (str->data, str->len);
 }
 
 
@@ -448,15 +451,7 @@ svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
 apr_size_t
 svn_stringbuf_find_char_backward (const svn_stringbuf_t *str, char ch)
 {
-  int i;        /* signed! */
-
-  for (i = (str->len - 1); i >= 0; i--)
-    {
-      if (str->data[i] == ch)
-        return i;
-    }
-
-  return str->len;
+  return find_char_backward (str->data, str->len, ch);
 }
 
 
@@ -464,16 +459,7 @@ svn_boolean_t
 svn_string_compare_stringbuf (const svn_string_t *str1,
                               const svn_stringbuf_t *str2)
 {
-  /* easy way out :)  */
-  if (str1->len != str2->len)
-    return FALSE;
-
-  /* now that we know they have identical lengths... */
-
-  if (memcmp (str1->data, str2->data, str1->len))
-    return FALSE;
-  else
-    return TRUE;
+  return string_compare (str1->data, str2->data, str1->len, str2->len);
 }
 
 
@@ -545,4 +531,46 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
     }
 
   return FALSE;
+}
+
+int svn_cstring_count_newlines (const char *msg)
+{
+  int count = 0;
+  const char *p;
+
+  for (p = msg; *p; p++)
+    {
+      if (*p == '\n')
+        {
+          count++;
+          if (*(p + 1) == '\r')
+            p++;
+        }
+      else if (*p == '\r')
+        {
+          count++;
+          if (*(p + 1) == '\n')
+            p++;
+        }
+    }
+
+  return count;
+}
+
+char *
+svn_cstring_join (apr_array_header_t *strings,
+                  const char *separator,
+                  apr_pool_t *pool)
+{
+  svn_stringbuf_t *new_str = svn_stringbuf_create ("", pool);
+  int sep_len = strlen(separator);
+  int i;
+  
+  for (i = 0; i < strings->nelts; i++)
+    {
+      const char *string = ((const char **) (strings->elts))[i];
+      svn_stringbuf_appendbytes (new_str, string, strlen(string));
+      svn_stringbuf_appendbytes (new_str, separator, sep_len);
+    }
+  return new_str->data;
 }

@@ -23,23 +23,18 @@
 #include <assert.h>
 #include <apr_general.h>  /* for strcasecmp() */
 #include <apr_pools.h>
-#include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
-#include <apr_lib.h>
 
 #include "svn_cmdline.h"
 #include "svn_types.h"
-#include "svn_delta.h"
 #include "svn_string.h"
 #include "svn_time.h"
 #include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_io.h"
-#include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_pools.h"
 
@@ -195,8 +190,7 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
 /*** Helpers for svn_subst_translate_stream ***/
 
 
-/* Write out LEN bytes of BUF into STREAM, using POOL to allocate any
-   svn_error_t errors that might occur along the way. */
+/* Write out LEN bytes of BUF into STREAM. */
 static svn_error_t *
 translate_write (svn_stream_t *stream,
                  const void *buf,
@@ -239,10 +233,54 @@ translate_keyword_subst (char *buf,
 
   buf_ptr = buf + 1 + keyword_len;
 
+  /* Check for fixed-length expansion. 
+   * The format of fixed length keyword and its data is
+   * Unexpanded keyword:         "$keyword::       $"
+   * Expanded keyword:           "$keyword:: value $"
+   * Expanded kw with filling:   "$keyword:: value   $"
+   * Truncated keyword:          "$keyword:: longval#$"
+   */
+  if ((buf_ptr[0] == ':') /* first char after keyword is ':' */
+      && (buf_ptr[1] == ':') /* second char after keyword is ':' */
+      && (buf_ptr[2] == ' ') /* third char after keyword is ' ' */
+      && ((buf[*len - 2] == ' ')  /* has ' ' for next to last character */
+          || (buf[*len - 2] == '#')) /* .. or has '#' for next to last character */
+      && ((6 + keyword_len) < *len))  /* holds "$kw:: x $" at least */
+    {
+      /* This is fixed length keyword, so *len remains unchanged */
+      apr_size_t max_value_len = *len - (6 + keyword_len);
+
+      if (! value)
+        {
+            /* no value, so unexpand */
+            buf_ptr += 2;
+            while (*buf_ptr != '$')
+                *(buf_ptr++) = ' ';
+        }
+      else 
+        {
+          if (value->len <= max_value_len) 
+            { /* replacement not as long as template, pad with spaces */
+              strncpy (buf_ptr + 3, value->data, value->len);
+              buf_ptr += 3 + value->len;
+              while (*buf_ptr != '$')
+                *(buf_ptr++) = ' ';
+            }
+          else
+            {
+              /* replacement needs truncating */
+              strncpy (buf_ptr + 3, value->data, max_value_len);
+              buf[*len - 2] = '#';
+              buf[*len - 1] = '$';
+            }
+        }
+      return TRUE;
+    }
+
   /* Check for unexpanded keyword. */
-  if ((buf_ptr[0] == '$')          /* "$keyword$" */
-      || ((buf_ptr[0] == ':') 
-          && (buf_ptr[1] == '$'))) /* "$keyword:$" */
+  else if ((buf_ptr[0] == '$')          /* "$keyword$" */
+           || ((buf_ptr[0] == ':') 
+               && (buf_ptr[1] == '$'))) /* "$keyword:$" */
     {
       /* unexpanded... */
       if (value)
@@ -444,9 +482,7 @@ translate_keyword (char *buf,
    REPAIR is TRUE, ignore the inconsistency, else return an
    SVN_ERR_IO_INCONSISTENT_EOL error.  If we are examining the first
    newline in the file, copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
-   use for later consistency checks.  
-
-   Use POOL to allocate errors that may occur. */
+   use for later consistency checks. */
 static svn_error_t *
 translate_newline (const char *eol_str,
                    apr_size_t eol_str_len,
@@ -943,7 +979,8 @@ svn_subst_copy_and_translate2 (const char *src,
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
         err = svn_error_createf 
           (SVN_ERR_IO_INCONSISTENT_EOL, err,
-           _("File '%s' has inconsistent newlines"), src);
+           _("File '%s' has inconsistent newlines"),
+           svn_path_local_style (src, pool));
       goto error;
     }
 

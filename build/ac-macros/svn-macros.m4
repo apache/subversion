@@ -8,7 +8,8 @@ dnl of the arguments. this is different from config.status which simply
 dnl regenerates the output files. config.nice is useful after you rebuild
 dnl ./configure (via autoconf or autogen.sh)
 AC_DEFUN(SVN_CONFIG_NICE,[
-  echo creating $1
+  AC_REQUIRE([AC_CANONICAL_HOST])
+  AC_MSG_NOTICE([creating $1])
   rm -f $1
   cat >$1<<EOF
 #! /bin/sh
@@ -17,8 +18,25 @@ AC_DEFUN(SVN_CONFIG_NICE,[
 
 EOF
 
-  for arg in [$]0 "[$]@"; do
-    echo "\"[$]arg\" \\" >> $1
+  case $host in
+    *-*-cygwin*)
+      # exec closes config.nice before configure attempts to rewrite it
+      EXEC_HACK="exec "
+      ;;
+    *)
+      EXEC_HACK=
+      ;;
+  esac
+
+  echo "$EXEC_HACK\"[$]0\" \\" >> $1
+  for arg in "[$]@"; do
+    case $arg in
+      --no-create) ;;
+      --no-recursion) ;;
+      *)
+        echo "\"$arg\" \\" >> $1
+      ;;
+    esac
   done
   echo '"[$]@"' >> $1
   chmod +x $1
@@ -41,10 +59,8 @@ AC_DEFUN(SVN_SUBDIR_CONFIG, [
     test -d $1 || $MKDIR $1
     cd $1
 
-    changequote(, )dnl
     # A "../" for each directory in /$config_subdirs.
-    ac_dots=`echo $apr_config_subdirs|sed -e 's%^\./%%' -e 's%[^/]$%&/%' -e 's%[^/]*/%../%g'`
-    changequote([, ])dnl
+    ac_dots=[`echo $apr_config_subdirs|sed -e 's%^\./%%' -e 's%[^/]$%&/%' -e 's%[^/]*/%../%g'`]
 
     # Make the cache file name correct relative to the subdirectory.
     case "$cache_file" in

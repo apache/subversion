@@ -59,8 +59,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_diff version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_diff version information.
  */
 const svn_version_t *svn_diff_version (void);
 

@@ -55,9 +55,9 @@ def get_routine_status_state(wc_dir):
   state = svntest.actions.get_virginal_state(wc_dir, 1)
   state.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   state.add({
-    'A/B/pi' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/B/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/B/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/B/pi' : Item(status='  ', wc_rev=1),
+    'A/B/tau' : Item(status='  ', wc_rev=1),
+    'A/B/rho' : Item(status='  ', wc_rev=1),
     })
 
   return state
@@ -199,12 +199,11 @@ def commit_routine_switching(wc_dir, verify):
 
   # Created expected status tree.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
   expected_status.tweak('iota', 'A/B/pi', wc_rev=2, status='  ')
   expected_status.add({
-    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit should succeed
@@ -303,12 +302,12 @@ def full_update(sbox):
 
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2, wc_rev=2)
+  expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
+    'A/B/Z' : Item(status='  ', wc_rev=2),
+    'A/B/Z/zeta' : Item(status='  ', wc_rev=2),
     })
   expected_status.tweak('iota', 'A/B', switched='S')
 
@@ -357,7 +356,6 @@ def full_rev_update(sbox):
     
   # Create expected status
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -410,13 +408,12 @@ def update_switched_things(sbox):
 
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
   expected_status.tweak('A/B', 'A/B/pi', 'A/B/rho', 'A/B/tau', 'iota',
                         wc_rev=2)
   expected_status.add({
-    'A/B/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/Z' : Item(status='  ', wc_rev=2),
+    'A/B/Z/zeta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -468,13 +465,13 @@ def rev_update_switched_things(sbox):
     
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2, wc_rev=2)
+  expected_status.tweak(wc_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
   expected_status.tweak('A/B', 'A/B/pi', 'A/B/rho', 'A/B/tau', 'iota',
                         wc_rev=1)
   expected_status.add({
-    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -545,12 +542,12 @@ def relocate_deleted_missing_copied(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      H_path, H2_path)
   expected_status.add({
-    'A/D/H2'       : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    'A/D/H2/chi'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
-    'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
-    'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    'A/D/H2'       : Item(status='A ', wc_rev='-', copied='+'),
+    'A/D/H2/chi'   : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
-  expected_status.remove('A/B/F')
+  expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
                                          
   # Relocate
@@ -576,7 +573,7 @@ def relocate_deleted_missing_copied(sbox):
     'A/D/H2/psi'   : Item("This is the file 'psi'."),
     })
   expected_status.add({
-    'A/B/F'       : Item(status='  ', wc_rev='2', repos_rev=2),
+    'A/B/F'       : Item(status='  ', wc_rev='2'),
     })
   expected_status.tweak(wc_rev=2)
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
@@ -595,7 +592,6 @@ def relocate_deleted_missing_copied(sbox):
     })
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
                         status='  ', wc_rev='3', copied=None)
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
                                          None, None, None, None, None,
@@ -767,12 +763,11 @@ def failed_anchor_is_target(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
-  expected_status.tweak('A/D/H/chi', 'A/D/H/omega', switched='S')
-  expected_status.remove('A/D/H/psi')
+  expected_status.remove('A/D/H/psi', 'A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
-    'A/D/H/pi'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/tau'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/rho'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/pi'      : Item(status='  ', wc_rev=2),
+    'A/D/H/tau'     : Item(status='  ', wc_rev=2),
+    'A/D/H/rho'     : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -793,12 +788,95 @@ def failed_anchor_is_target(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      G_url, H_path)
 
-  expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.tweak('A/D/H', status='  ') # remains switched
   expected_status.add({ 'A/D/H/psi' : Item(status='  ',
                                            switched=None,
-                                           repos_rev=2,
                                            wc_rev=2) })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+# Issue #1826 - svn switch temporarily drops invalid URLs into the entries
+#               files (which become not-temporary if the switch fails).
+def bad_intermediate_urls(sbox):
+  "bad intermediate urls in use"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # We'll be switching our working copy to (a modified) A/C in the Greek tree.
+  
+  # First, make an extra subdirectory in C to match one in the root, plus
+  # another one inside of that.
+  C_url = svntest.main.current_repo_url + '/A/C'
+  C_A_url = svntest.main.current_repo_url + '/A/C/A'
+  C_A_Z_url = svntest.main.current_repo_url + '/A/C/A/Z'
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'mkdir', '-m', 'log msg',
+                                     C_A_url, C_A_Z_url)
+
+  # Now, we'll drop a conflicting path under the root.
+  A_path = os.path.join(wc_dir, 'A')
+  A_Z_path = os.path.join(A_path, 'Z')
+  svntest.main.file_append(A_Z_path, 'Look, Mom, no ... switch success.')
+
+  # This switch should fail for reasons of obstruction.
+  out, err = svntest.main.run_svn(1, 'switch',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  C_url, wc_dir)
+  if not err:
+    raise svntest.Failure
+
+  # However, the URL for A should now reflect A/C/A, not something else.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'info', A_path)
+  if out[1].find('/A/C/A') == -1:
+    raise svntest.Failure
+  
+
+
+#----------------------------------------------------------------------
+# Regression test for issue #1825: failed switch may corrupt
+# working copy
+
+def obstructed_switch(sbox):
+  "obstructed switch"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E_url      = svntest.main.current_repo_url + '/A/B/E'
+  E_url2     = svntest.main.current_repo_url + '/A/B/Esave'
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp', '-m', 'msgcopy', E_url, E_url2)
+
+  E_path     = os.path.join(wc_dir, 'A', 'B', 'E')
+  alpha_path = os.path.join(E_path, 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E/alpha')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  svntest.main.file_append(alpha_path, "hello")
+  out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
+  for line in err:
+    if line.find("object of the same name already exists") != -1:
+      break
+  else:
+    raise svntest.Failure
+
+  os.remove(alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', E_url2, E_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', wc_rev=3)
+  expected_status.tweak('A/B/E', switched='S')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -820,6 +898,8 @@ test_list = [ None,
               XFail(file_dir_file),
               nonrecursive_switching,
               failed_anchor_is_target,
+              bad_intermediate_urls,
+              obstructed_switch,
              ]
 
 if __name__ == '__main__':

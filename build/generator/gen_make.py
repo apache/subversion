@@ -9,7 +9,7 @@ import string
 import gen_base
 
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
-      build_path_basename, build_path_dirname, build_path_retreat
+      build_path_basename, build_path_dirname, build_path_retreat, unique
 
 class Generator(gen_base.GeneratorBase):
 
@@ -20,10 +20,22 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     }
 
-  def default_output(self, conf_path):
-    return os.path.splitext(os.path.basename(conf_path))[0] + '-outputs.mk'
+  def __init__(self, fname, verfname, options=None):
+    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
+    self.section_counter = 0
 
-  def write(self, oname):
+  def begin_section(self, description):
+    self.section_counter = self.section_counter + 1
+    count = self.section_counter
+
+    self.ofile.write('\n########################################\n')
+    self.ofile.write('# Section %d: %s\n' % (count, description))
+    self.ofile.write('########################################\n\n')
+
+  def write(self):
+    self.ofile = open('build-outputs.mk', 'w')
+    self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
+
     install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
@@ -31,24 +43,75 @@ class Generator(gen_base.GeneratorBase):
     install_deps.sort()
     install_sources.sort(lambda s1, s2: cmp(s1.name, s2.name))
 
-    self.ofile = open(oname, 'w')
-    self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
+    ########################################
+    self.begin_section('Global make variables')
+    
+    for target in install_sources:
+      if isinstance(target, gen_base.TargetRaModule) or \
+         isinstance(target, gen_base.TargetFsModule):
+        # name of the module: strip 'libsvn_' and upper-case it
+        name = string.upper(target.name[7:])
 
-    # write various symbols at the top of the file so they will be
-    # defined before their use in dependency lines.
-    self.write_symbols(install_sources)
+        # construct a list of the other .la libs to link against
+        retreat = build_path_retreat(target.path)
+        deps = [ target.filename ]
+        link = [ build_path_join(retreat, target.filename) ]
+        for source in self.graph.get_sources(gen_base.DT_LINK, target.name):
+          if not isinstance(source, gen_base.TargetLib) or source.external_lib:
+            continue
+          deps.append(source.filename)
+          link.append(build_path_join(retreat, source.filename))
 
-    # write rules to build each installable item
+        self.ofile.write('%s_DEPS = %s\n'
+                         '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
+                                               name, string.join(link, ' ')))
+
+    # write a list of directories in which things are built
+    #   get all the test scripts' directories
+    script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
+
+    #   remove duplicate directories between targets and tests
+    build_dirs = unique(self.target_dirs + script_dirs + self.swig_dirs)
+
+    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs))
+
+    # write lists of test files
+    # deps = all, progs = not including those marked "testing = skip"
+    self.ofile.write('BDB_TEST_DEPS = %s\n\n' %
+                     string.join(self.bdb_test_deps + self.bdb_scripts))
+    self.ofile.write('BDB_TEST_PROGRAMS = %s\n\n' %
+                     string.join(self.bdb_test_progs + self.bdb_scripts))
+    self.ofile.write('TEST_DEPS = %s\n\n' %
+                     string.join(self.test_deps + self.scripts))
+    self.ofile.write('TEST_PROGRAMS = %s\n\n' %
+                     string.join(self.test_progs + self.scripts))
+
+    # write list of all manpages
+    self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
+
+    # write a list of files to remove during "make clean"
+    cfiles = [ ]
+    for target in install_sources:
+      # .la files are handled by the standard 'clean' rule; clean all the
+      # other targets
+      if not isinstance(target, gen_base.TargetScript) \
+         and not isinstance(target, gen_base.TargetProject) \
+         and not isinstance(target, gen_base.TargetI18N) \
+         and not isinstance(target, gen_base.TargetJava) \
+         and not target.external_lib \
+         and target.filename[-3:] != '.la':
+        cfiles.append(target.filename)
+    cfiles.sort()
+    self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
+
+    ########################################
+    self.begin_section('Individual target build rules')
+
     for target_ob in install_sources:
 
       if isinstance(target_ob, gen_base.TargetScript):
         # there is nothing to build
         continue
-
-      sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
-
-      if isinstance(target_ob, gen_base.TargetI18N):
-        sources = sources + self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name)
 
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
@@ -60,30 +123,46 @@ class Generator(gen_base.GeneratorBase):
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
+      object_srcs = [ ]
+      headers = [ ]
+      header_classes = [ ]
+      header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
 
-      for source in sources:
-        if isinstance(source, gen_base.TargetJava):
-          deps.append(source.name)
-        elif isinstance(source, gen_base.TargetLinked):
-          if source.external_lib:
-            libs.append(source.external_lib)
+      for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
+        if isinstance(link_dep, gen_base.TargetJava):
+          deps.append(link_dep.name)
+        elif isinstance(link_dep, gen_base.TargetLinked):
+          if link_dep.external_lib:
+            libs.append(link_dep.external_lib)
           else:
             # append the output of the target to our stated dependencies
-            deps.append(source.filename)
+            deps.append(link_dep.filename)
 
             # link against the library
-            libs.append(build_path_join(retreat, source.filename))
-        elif isinstance(source, gen_base.ObjectFile):
+            libs.append(build_path_join(retreat, link_dep.filename))
+        elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
-          objects.append(source.filename)
-        elif isinstance(source, gen_base.HeaderFile):
-          # skip the header files.
-          pass
+          objects.append(link_dep.filename)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
+            object_srcs.append(
+              build_path_join('$(abs_srcdir)', dep.filename))
+        elif isinstance(link_dep, gen_base.HeaderFile):
+          # link in the header file
+          # N.B. that filename_win contains the '_'-escaped class name
+          headers.append(link_dep.filename_win)
+          header_classes.append(link_dep.classname)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.ObjectFile):
+            header_class_filenames.append(dep.filename)
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
+
+      for nonlib in self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name):
+        if isinstance(nonlib, gen_base.TargetLinked):
+          if not nonlib.external_lib:
+            deps.append(nonlib.filename)
 
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
@@ -95,23 +174,47 @@ class Generator(gen_base.GeneratorBase):
 
       if isinstance(target_ob, gen_base.TargetJava):
         self.ofile.write(
-          '%s_DEPS = %s %s\n'
+          '%s_HEADERS = %s\n'
+          '%s_OBJECTS = %s\n'
+          '%s_DEPS = $(%s_HEADERS) $(%s_OBJECTS) %s %s\n'
           '%s: $(%s_DEPS)\n'
-          '\t%s -d %s -classpath %s:$(%s_CLASSPATH) '
-          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
+          % (targ_varname, string.join(headers),
 
-             target_ob.name, targ_varname,
-             target_ob.link_cmd, target_ob.output_dir, target_ob.classes,
-             targ_varname))
-        for dep in target_ob.deps:
-          if isinstance(dep, gen_base.SourceFile):
-            self.ofile.write('%s ' % build_path_join('$(abs_srcdir)',
-                                                     dep.filename))
-          elif isinstance(dep, gen_base.HeaderFile):
-            self.ofile.write('%s ' % dep.classname)
-          else:
-            print type(dep)
-            raise UnknownDependency
+             targ_varname, string.join(objects),
+
+             targ_varname, targ_varname, targ_varname, target_ob.add_deps, 
+             string.join(deps),
+
+             target_ob.name, targ_varname))
+
+        # Build the headers from the header_classes with one 'javah' call
+        if headers:
+          self.ofile.write(
+            '%s_CLASS_FILENAMES = %s\n'
+            '%s_CLASSES = %s\n'
+            '$(%s_HEADERS): $(%s_CLASS_FILENAMES)\n'
+            '\t%s -d %s -classpath %s:$(%s_CLASSPATH) $(%s_CLASSES)\n'
+            % (targ_varname, string.join(header_class_filenames),
+
+               targ_varname, string.join(header_classes),
+
+               targ_varname, targ_varname,
+
+               target_ob.link_cmd, target_ob.output_dir, target_ob.classes, 
+               targ_varname, targ_varname))
+
+        # Build the objects from the object_srcs with one 'javac' call
+        if object_srcs:
+          self.ofile.write(
+            '%s_SRC = %s\n'
+            '$(%s_OBJECTS): $(%s_SRC)\n'
+            '\t%s -d %s -classpath %s:$(%s_CLASSPATH) $(%s_SRC)\n'
+            % (targ_varname, string.join(object_srcs),
+
+               targ_varname, targ_varname,
+
+               target_ob.link_cmd, target_ob.output_dir, target_ob.classes, 
+               targ_varname, targ_varname))
 
         # Once the bytecodes have been compiled up, we produce the
         # JAR.
@@ -147,7 +250,9 @@ class Generator(gen_base.GeneratorBase):
              targ_varname, string.join(gen_base.unique(libs)))
           )
 
-    # for each install group, write a rule to build its outputs
+    ########################################
+    self.begin_section('Install-Group build targets')
+    
     for itype, i_targets in install_deps:
 
       # perl bindings do their own thing, "swig-pl" target is
@@ -161,20 +266,8 @@ class Generator(gen_base.GeneratorBase):
           outputs.append(t.filename)
       self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
-    # write a list of files to remove during "make clean"
-    cfiles = [ ]
-    for target in install_sources:
-      # .la files are handled by the standard 'clean' rule; clean all the
-      # other targets
-      if not isinstance(target, gen_base.TargetScript) \
-         and not isinstance(target, gen_base.TargetProject) \
-         and not isinstance(target, gen_base.TargetI18N) \
-         and not isinstance(target, gen_base.TargetJava) \
-         and not target.external_lib \
-         and target.filename[-3:] != '.la':
-        cfiles.append(target.filename)
-    cfiles.sort()
-    self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
+    ########################################
+    self.begin_section('Install-Group install targets')
 
     # for each install group, write a rule to install its outputs
     for area, inst_targets in install_deps:
@@ -186,15 +279,6 @@ class Generator(gen_base.GeneratorBase):
 
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
-
-      # reflect inter-library dependencies in the library install targets
-      inst_area_deps = {}
-      for target in inst_targets:
-        for target_dep in self.graph.get_sources(gen_base.DT_LINK, target.name,
-                                                 gen_base.TargetLib):
-          if target_dep.install and target_dep.install != area:
-            inst_area_deps['install-%s' % target_dep.install] = None
-      inst_area_deps = inst_area_deps.keys()
 
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
@@ -249,8 +333,7 @@ class Generator(gen_base.GeneratorBase):
         upper_var = string.upper(area_var)
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
-                         % (area, string.join(files + inst_area_deps),
-                            area_var))
+                         % (area, string.join(files), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
@@ -273,7 +356,9 @@ class Generator(gen_base.GeneratorBase):
           self.ofile.write('\t$(INSTALL_EXTRA_%s)\n' % upper_var)
         self.ofile.write('\n')
 
-    # write the install-include rule
+    ########################################
+    self.begin_section('The install-include rule')
+
     includedir = build_path_join('$(includedir)',
                                  'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
@@ -285,54 +370,17 @@ class Generator(gen_base.GeneratorBase):
                           build_path_join(includedir,
                                           build_path_basename(file))))
 
-    # write shortcut targets for manually building specific items
-    self.ofile.write('\n# handy shortcut targets\n')
+    ########################################
+    self.begin_section('Shortcut targets for manual builds of specific items')
+
     for target in install_sources:
       if not isinstance(target, gen_base.TargetScript) and \
          not isinstance(target, gen_base.TargetJava) and \
          not isinstance(target, gen_base.TargetI18N):
         self.ofile.write('%s: %s\n' % (target.name, target.filename))
-    self.ofile.write('\n')
 
-    # write a list of directories in which things are built
-    #   get target directories
-    target_dirs = self.graph.get_sources(gen_base.DT_LIST, 
-                                         gen_base.LT_TARGET_DIRS)
-
-    #   get all the test scripts' directories
-    script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
-
-    #   remove duplicate directories between targets and tests
-    build_dirs = gen_base.unique(target_dirs + script_dirs + self.swig_dirs)
-
-    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs))
-
-    # write lists of test files
-    # deps = all, progs = not including those marked "testing = skip"
-    test_progs = self.graph.get_sources(gen_base.DT_LIST,
-                                        gen_base.LT_TEST_PROGS)
-
-    test_deps = self.graph.get_sources(gen_base.DT_LIST,
-                                       gen_base.LT_TEST_DEPS)
-
-    bdb_test_progs = self.graph.get_sources(gen_base.DT_LIST,
-       	                                    gen_base.LT_BDB_TEST_PROGS)
-
-    bdb_test_deps = self.graph.get_sources(gen_base.DT_LIST,
-                                           gen_base.LT_BDB_TEST_DEPS)
-
-    self.ofile.write('BDB_TEST_DEPS = %s\n\n' %
-                     string.join(bdb_test_deps + self.bdb_scripts))
-    self.ofile.write('BDB_TEST_PROGRAMS = %s\n\n' %
-                     string.join(bdb_test_progs + self.bdb_scripts))
-    self.ofile.write('TEST_DEPS = %s\n\n' %
-                     string.join(test_deps + self.scripts))
-    self.ofile.write('TEST_PROGRAMS = %s\n\n' %
-                     string.join(test_progs + self.scripts))
-
-    # write list of all manpages
-    manpages = self.graph.get_sources(gen_base.DT_LIST, gen_base.LT_MANPAGES)
-    self.ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
+    ########################################
+    self.begin_section('Rules to build SWIG .c files from .i files')
 
     # write dependencies and build rules for generated .c files
     swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
@@ -344,6 +392,10 @@ class Generator(gen_base.GeneratorBase):
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
                           source))
+    self.ofile.write('\n')
+
+    ########################################
+    self.begin_section('Rules to build all other kinds of object-like files')
 
     # write dependencies and build rules (when not using suffix rules)
     # for all other generated files which will not be installed
@@ -364,45 +416,6 @@ class Generator(gen_base.GeneratorBase):
           self.ofile.write('\t%s %s\n\n' % (cmd, sources[0]))
       else:
         self.ofile.write('\n')
-
-  def write_symbols(self, install_sources):
-    wrappers = { }
-    for lang in self.swig_lang:
-      wrappers[lang] = [ ]
-
-    for target in install_sources:
-      if isinstance(target, gen_base.TargetRaModule) or \
-         isinstance(target, gen_base.TargetFsModule):
-        # name of the module: strip 'libsvn_' and upper-case it
-        name = string.upper(target.name[7:])
-
-        # construct a list of the other .la libs to link against
-        retreat = build_path_retreat(target.path)
-        deps = [ target.filename ]
-        link = [ build_path_join(retreat, target.filename) ]
-        for source in self.graph.get_sources(gen_base.DT_LINK, target.name):
-          if not isinstance(source, gen_base.TargetLib) or source.external_lib:
-            continue
-          deps.append(source.filename)
-          link.append(build_path_join(retreat, source.filename))
-
-        self.ofile.write('%s_DEPS = %s\n'
-                         '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
-                                               name, string.join(link, ' ')))
-
-      elif isinstance(target, gen_base.TargetSWIG):
-        wrappers[target.lang].append(target)
-
-    ### not yet
-    return
-
-    for lang in self.cfg.swig_lang:
-      libs = wrappers[lang]
-      if libs:
-        libs.sort()
-        self.ofile.write('SWIG_%s_LIBS = %s\n\n'
-                         % (string.upper(gen_base.lang_abbrev[lang]),
-                            string.join(map(str, libs), ' ')))
 
 
 class UnknownDependency(Exception):

@@ -23,6 +23,7 @@
 #include "svn_io.h"
 #include "delta.h"
 #include "svn_pools.h"
+#include "svn_private_config.h"
 
 #define NORMAL_BITS 7
 #define LENGTH_BITS 5
@@ -346,15 +347,15 @@ count_and_verify_instructions (int *ninst,
           if (p == NULL)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: insn %d cannot be decoded", n);
+               _("Invalid diff stream: insn %d cannot be decoded"), n);
           else if (op.length <= 0)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: insn %d has non-positive length", n);
+               _("Invalid diff stream: insn %d has non-positive length"), n);
           else
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: insn %d overflows the target view", n);
+               _("Invalid diff stream: insn %d overflows the target view"), n);
         }
 
       switch (op.action_code)
@@ -363,22 +364,22 @@ count_and_verify_instructions (int *ninst,
           if (op.length > sview_len - op.offset)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: "
-               "[src] insn %d overflows the source view", n);
+               _("Invalid diff stream: "
+                 "[src] insn %d overflows the source view"), n);
           break;
         case svn_txdelta_target:
           if (op.offset >= tpos)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: "
-               "[tgt] insn %d starts beyond the target view position", n);
+               _("Invalid diff stream: "
+                 "[tgt] insn %d starts beyond the target view position"), n);
           break;
         case svn_txdelta_new:
           if (op.length > new_len - npos)
             return svn_error_createf
               (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-               "Invalid diff stream: "
-               "[new] insn %d overflows the new data section", n);
+               _("Invalid diff stream: "
+                 "[new] insn %d overflows the new data section"), n);
           npos += op.length;
           break;
         }
@@ -387,10 +388,10 @@ count_and_verify_instructions (int *ninst,
     }
   if (tpos != tview_len)
     return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-                             "Delta does not fill the target window");
+                             _("Delta does not fill the target window"));
   if (npos != new_len)
     return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, NULL,
-                             "Delta does not contain enough new data");
+                             _("Delta does not contain enough new data"));
 
   *ninst = n;
   return SVN_NO_ERROR;
@@ -467,7 +468,7 @@ write_handler (void *baton,
         nheader = buflen;
       if (memcmp (buffer, "SVN\0" + db->header_bytes, nheader) != 0)
         return svn_error_create (SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,
-                                 "Svndiff has invalid header");
+                                 _("Svndiff has invalid header"));
       buflen -= nheader;
       buffer += nheader;
       db->header_bytes += nheader;
@@ -522,15 +523,16 @@ write_handler (void *baton,
           || sview_len + tview_len < sview_len
           || sview_offset + sview_len < sview_offset)
         return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL, 
-                                 "Svndiff contains corrupt window header");
+                                 _("Svndiff contains corrupt window header"));
 
       /* Check for source windows which slide backwards.  */
       if (sview_len > 0
           && (sview_offset < db->last_sview_offset
               || (sview_offset + sview_len
                   < db->last_sview_offset + db->last_sview_len)))
-        return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL, 
-                                 "Svndiff has backwards-sliding source views");
+        return svn_error_create
+          (SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL, 
+           _("Svndiff has backwards-sliding source views"));
 
       /* Wait for more data if we don't have enough bytes for the
          whole window.  */
@@ -578,7 +580,7 @@ close_handler (void *baton)
   if ((db->error_on_early_close)
       && (db->header_bytes < 4 || db->buffer->len != 0))
     return svn_error_create (SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
-                             "Unexpected end of svndiff input");
+                             _("Unexpected end of svndiff input"));
 
   /* Tell the window consumer that we're done, and clean up.  */
   err = db->consumer_func (NULL, db->consumer_baton);
@@ -625,7 +627,7 @@ read_one_byte (unsigned char *byte, svn_stream_t *stream)
   SVN_ERR (svn_stream_read (stream, &c, &len));
   if (len == 0)
     return svn_error_create (SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
-                             "Unexpected end of svndiff input");
+                             _("Unexpected end of svndiff input"));
   *byte = (unsigned char) c;
   return SVN_NO_ERROR;
 }
@@ -676,7 +678,7 @@ read_window_header (svn_stream_t *stream, svn_filesize_t *sview_offset,
       || *sview_len + *tview_len < *sview_len
       || *sview_offset + *sview_len < *sview_offset)
     return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL, 
-                             "Svndiff contains corrupt window header");
+                             _("Svndiff contains corrupt window header"));
 
   return SVN_NO_ERROR;
 }
@@ -698,7 +700,7 @@ svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
   SVN_ERR (svn_stream_read (stream, (char*)buf, &len));
   if (len < inslen + newlen)
     return svn_error_create (SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
-                             "Unexpected end of svndiff input");
+                             _("Unexpected end of svndiff input"));
   *window = apr_palloc (pool, sizeof(**window));
   SVN_ERR (decode_window (*window, sview_offset, sview_len, tview_len, inslen,
                           newlen, buf, pool));

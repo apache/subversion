@@ -45,6 +45,7 @@ struct svn_error_t;
 class JNIUtil
 {
 public:
+    static svn_error_t *preprocessPath(const char *&path, apr_pool_t * pool);
     static void throwNullPointerException(const char *message);
     static jbyteArray makeJByteArray(const signed char *data, int length);
     static void setRequestPool(Pool *pool);
@@ -62,6 +63,7 @@ public:
     static void handleAPRError(int error, const char *op);
     static void putFinalizedClient(SVNBase *cl);
     static void handleSVNError(svn_error_t *err);
+    static jstring makeSVNErrorMessage(svn_error_t *err);
     static void throwError(const char *message);
     static apr_pool_t * getPool();
     static bool JNIInit(JNIEnv *env);

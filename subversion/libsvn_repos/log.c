@@ -26,8 +26,8 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
 #include "repos.h"
 
 
@@ -209,7 +209,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
                      const apr_array_header_t *paths,
                      svn_revnum_t start,
                      svn_revnum_t end,
-                     unsigned int limit,
+                     int limit,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_repos_authz_func_t authz_read_func,
@@ -222,7 +222,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
-  unsigned int count = 0;
+  int count = 0;
 
   SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
 
@@ -303,8 +303,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
                      here in order to avoid more allocations.  */
                   svn_revnum_t *chrev = 
                     (((svn_revnum_t *)(changed_revs)->elts) + j);
-                  apr_hash_set (all_revs, (void *)chrev, sizeof (chrev), 
-                                (void *)1);
+                  apr_hash_set (all_revs, chrev, sizeof (chrev), (void *)1);
                 }
             }
 
@@ -341,7 +340,9 @@ svn_repos_get_logs3 (svn_repos_t *repos,
        ((start >= end) ? this_rev-- : this_rev++))
     {
       svn_string_t *author, *date, *message;
-      apr_hash_t *changed_paths = NULL;
+      apr_hash_t *r_props, *changed_paths = NULL;
+
+      svn_pool_clear (subpool);
 
       /* If we have a list of revs for use, check to make sure this is
          one of them.  */
@@ -358,12 +359,13 @@ svn_repos_get_logs3 (svn_repos_t *repos,
             continue;
         }
 
-      SVN_ERR (svn_fs_revision_prop
-               (&author, fs, this_rev, SVN_PROP_REVISION_AUTHOR, subpool));
-      SVN_ERR (svn_fs_revision_prop
-               (&date, fs, this_rev, SVN_PROP_REVISION_DATE, subpool));
-      SVN_ERR (svn_fs_revision_prop
-               (&message, fs, this_rev, SVN_PROP_REVISION_LOG, subpool));
+      SVN_ERR (svn_fs_revision_proplist (&r_props, fs, this_rev, pool));
+      author = apr_hash_get (r_props, SVN_PROP_REVISION_AUTHOR,
+                             APR_HASH_KEY_STRING);
+      date = apr_hash_get (r_props, SVN_PROP_REVISION_DATE,
+                           APR_HASH_KEY_STRING);
+      message = apr_hash_get (r_props, SVN_PROP_REVISION_LOG,
+                              APR_HASH_KEY_STRING);
 
       /* ### Below, we discover changed paths if the user requested
          them (i.e., "svn log -v" means `discover_changed_paths' will
@@ -420,8 +422,6 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 
       if (++count == limit)
         break;
-      
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

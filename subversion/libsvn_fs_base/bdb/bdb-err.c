@@ -32,6 +32,8 @@
 #include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 
+#include "svn_private_config.h"
+
 
 /* Return a distinguished error for any db error code we want to detect
  * programatically; otherwise return a generic error.
@@ -90,7 +92,8 @@ svn_fs_bdb__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
     return SVN_NO_ERROR;
 
   bfd = fs->fsap_data;
-  return svn_fs_bdb__dberrf (bfd->errcall_baton, db_err,
-                             "Berkeley DB error while %s for filesystem %s:\n",
-                             operation, fs->path ? fs->path : "(none)");
+  return svn_fs_bdb__dberrf
+    (bfd->errcall_baton, db_err,
+     _("Berkeley DB error for filesystem %s while %s:\n"),
+     fs->path ? fs->path : "(none)", operation);
 }

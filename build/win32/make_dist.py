@@ -178,6 +178,10 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      File('%(blddir)s/svnserve/svnserve.pdb'),
                      File('%(blddir)s/svnversion/svnversion.exe'),
                      File('%(blddir)s/svnversion/svnversion.pdb'),
+                     File('%(blddir)s/mod_dav_svn/mod_dav_svn.so'),
+                     File('%(blddir)s/mod_dav_svn/mod_dav_svn.pdb'),
+                     File('%(blddir)s/mod_authz_svn/mod_authz_svn.so'),
+                     File('%(blddir)s/mod_authz_svn/mod_authz_svn.pdb'),
                      File('%(@apr)s/%(aprrel)s/libapr.dll'),
                      File('%(@apr)s/%(aprrel)s/libapr.pdb'),
                      File('%(@apr-iconv)s/%(aprrel)s/libapriconv.dll'),
@@ -190,18 +194,12 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                      OptFile('%(@openssl)s/out32dll/libeay32.pdb'),
                      OptFile('%(@openssl)s/out32dll/ssleay32.dll'),
                      OptFile('%(@openssl)s/out32dll/ssleay32.pdb'),
-                     OptFile('%(@libintl)s/bin/intl.dll'),
-                     OptFile('%(@libintl)s/bin/intl.pdb'),
+                     OptFile('%(@libintl)s/bin/intl3_svn.dll'),
+                     OptFile('%(@libintl)s/bin/intl3_svn.pdb'),
                      ),
 
              'doc': InstallDocs('%(srcdir)s/doc/doxygen.conf',
                                 '%(srcdir)s/doc/doxygen/html'),
-
-             'httpd': (File('%(blddir)s/mod_dav_svn/mod_dav_svn.so'),
-                       File('%(blddir)s/mod_dav_svn/mod_dav_svn.pdb'),
-                       File('%(blddir)s/mod_authz_svn/mod_authz_svn.so'),
-                       File('%(blddir)s/mod_authz_svn/mod_authz_svn.pdb'),
-                       ),
 
              'iconv': InstallIconv('%(@apr-iconv)s', '%(aprrel)s'),
 
@@ -222,18 +220,18 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                           ),
 
              'perl': None,
-             'perl/SVN': (FileGlob('%(bindsrc)s/swig/perl/native/*.pm'),
-                          FileGlob('%(binddir)s/swig/perl/*.dll'),
-                          FileGlob('%(binddir)s/swig/perl/*.pdb'),
-                          FileGlob('%(binddir)s/swig/perl/libsvn_swig_perl/libsvn*.pdb'),
-                          FileGlob('%(binddir)s/swig/perl/libsvn_swig_perl/libsvn*.dll'),
-                          ),
+             'perl/site': None,
+             'perl/site/lib': None,
+             'perl/site/lib/SVN': FileGlob('%(bindsrc)s/swig/perl/native/*.pm'),
+             'perl/site/lib/auto': None,
+             'perl/site/lib/auto/SVN': None,
+             # Pearl module DLLs defined below
 
              'python': None,
              'python/libsvn': (FileGlob('%(bindsrc)s/swig/python/*.py'),
                                FileGlob('%(binddir)s/swig/python/*.dll'),
                                FileGlob('%(binddir)s/swig/python/*.pdb'),
-                              ),
+                               ),
              'python/svn': FileGlob('%(bindsrc)s/swig/python/svn/*.py'),
 
              'javahl': (FileGlob('%(binddir)s/java/javahl/native/libsvn*.dll'),
@@ -246,6 +244,11 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'share/locale': InstallMoFiles('%(svndir)s/po'),
              }
 
+# Define perl module DLLs
+for module in ('Client', 'Core', 'Delta', 'Fs', 'Ra', 'Repos', 'Wc'):
+  _disttree['perl/site/lib/auto/SVN/_' + module] = (
+    File('%(binddir)s/swig/perl/_' + module + '.dll'),
+    File('%(binddir)s/swig/perl/_' + module + '.pdb'))
 
 def _system(command):
   def reopen_log():

@@ -59,7 +59,11 @@ extern "C" {
 
 typedef struct fs_library_vtable_t
 {
-  /* This field should always remain first in the vtable. */
+  /* This field should always remain first in the vtable.
+     Apart from that, it can be changed however you like, since exact
+     version equality is required between loader and module.  This policy
+     was weaker during 1.1.x, but only in ways which do not conflict with
+     this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version) (void);
 
   svn_error_t *(*create) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
@@ -67,6 +71,7 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*delete_fs) (const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy) (const char *src_path, const char *dest_path,
                            svn_boolean_t clean, apr_pool_t *pool);
+  const char *(*get_description) (void);
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
@@ -127,7 +132,8 @@ typedef struct fs_vtable_t
   svn_error_t *(*revision_root) (svn_fs_root_t **root_p, svn_fs_t *fs,
                                  svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*begin_txn) (svn_fs_txn_t **txn_p, svn_fs_t *fs,
-                             svn_revnum_t rev, apr_pool_t *pool);
+                             svn_revnum_t rev, apr_uint32_t flags,
+                             apr_pool_t *pool);
   svn_error_t *(*open_txn) (svn_fs_txn_t **txn, svn_fs_t *fs,
                             const char *name, apr_pool_t *pool);
   svn_error_t *(*purge_txn) (svn_fs_t *fs, const char *txn_id,
@@ -135,6 +141,21 @@ typedef struct fs_vtable_t
   svn_error_t *(*list_transactions) (apr_array_header_t **names_p,
                                      svn_fs_t *fs, apr_pool_t *pool);
   svn_error_t *(*deltify) (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
+  svn_error_t *(*lock) (svn_lock_t **lock, svn_fs_t *fs,
+                        const char *path, const char *token,
+                        const char *comment, int timeout,
+                        svn_revnum_t current_rev, svn_boolean_t steal_lock,
+                        apr_pool_t *pool);
+  svn_error_t *(*generate_lock_token) (const char **token, svn_fs_t *fs,
+                                       apr_pool_t *pool);
+  svn_error_t *(*unlock) (svn_fs_t *fs, const char *path, const char *token,
+                          svn_boolean_t break_lock, apr_pool_t *pool);
+  svn_error_t *(*get_lock) (svn_lock_t **lock, svn_fs_t *fs,
+                            const char *path, apr_pool_t *pool);
+  svn_error_t *(*get_locks) (svn_fs_t *fs, const char *path,
+                             svn_fs_get_locks_callback_t get_locks_func,
+                             void *get_locks_baton,
+                             apr_pool_t *pool);
 } fs_vtable_t;
 
 
@@ -275,6 +296,13 @@ typedef struct id_vtable_t
 
 /*** Definitions of the abstract FS object types ***/
 
+/* These are transaction properties that correspond to the bitfields
+   in the 'flags' argument to svn_fs_lock().  */
+#define SVN_FS_PROP_TXN_CHECK_LOCKS            SVN_PROP_PREFIX "check-locks"
+#define SVN_FS_PROP_TXN_CHECK_OOD              SVN_PROP_PREFIX "check-ood"
+
+
+
 struct svn_fs_t
 {
   /* A pool managing this filesystem */
@@ -289,6 +317,9 @@ struct svn_fs_t
 
   /* The filesystem configuration */
   apr_hash_t *config;
+
+  /* An access context indicating who's using the fs */
+  svn_fs_access_t *access_ctx;
 
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
@@ -329,6 +360,9 @@ struct svn_fs_root_t
   /* For transaction roots, the name of the transaction  */
   const char *txn;
 
+  /* For transaction roots, flags describing the txn's behavior. */
+  apr_uint32_t txn_flags;
+
   /* For revision roots, the number of the revision.  */
   svn_revnum_t rev;
 
@@ -352,6 +386,20 @@ struct svn_fs_id_t
   id_vtable_t *vtable;
   void *fsap_data;
 };
+
+
+struct svn_fs_access_t
+{
+  /* An authenticated username using the fs */
+  const char *username;
+
+  /* A collection of lock-tokens supplied by the fs caller.
+     Hash maps (const char *) UUID --> (void *) 1
+     fs functions should really only be interested whether a UUID
+     exists as a hash key at all;  the value is irrelevant. */
+  apr_hash_t *lock_tokens;
+};
+
 
 
 #ifdef __cplusplus

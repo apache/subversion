@@ -33,15 +33,12 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
@@ -231,7 +228,15 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
       err = svn_error_wrap_apr (apr_err, _("Can't stat '%s'"), tmpfile_name);
       goto cleanup;
     }
-  
+
+  /* If the caller wants us to leave the file around, return the path
+     of the file we used, and make a note not to destroy it.  */
+  if (tmpfile_left)
+    {
+      *tmpfile_left = svn_path_join (base_dir, tmpfile_name, pool);
+      remove_file = FALSE;
+    }
+
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
       (finfo_before.size != finfo_after.size))
@@ -258,14 +263,6 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
       *edited_contents = NULL;
     }
 
-  /* If the caller wants us to leave the file around, return the path
-     of the file we used, and make a note not to destroy it.  */
-  if (tmpfile_left)
-    {
-      *tmpfile_left = svn_path_join (base_dir, tmpfile_name, pool);
-      remove_file = FALSE;
-    }
-  
  cleanup:
   if (remove_file)
     {
@@ -300,6 +297,7 @@ struct log_msg_baton
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
   apr_hash_t *config; /* client configuration hash */
+  svn_boolean_t keep_locks; /* Keep repository locks? */
   apr_pool_t *pool; /* a pool. */
 };
 
@@ -349,6 +347,7 @@ svn_cl__make_log_msg_baton (void **baton,
   lmb->base_dir = base_dir ? base_dir : "";
   lmb->tmpfile_left = NULL;
   lmb->config = config;
+  lmb->keep_locks = opt_state->no_unlock;
   lmb->pool = pool;
   *baton = lmb;
   return SVN_NO_ERROR;
@@ -492,7 +491,7 @@ svn_cl__get_log_message (const char **log_msg,
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
           const char *path = item->path;
-          char text_mod = '_', prop_mod = ' ';
+          char text_mod = '_', prop_mod = ' ', unlock = ' ';
 
           if (! path)
             path = item->url;
@@ -519,9 +518,14 @@ svn_cl__get_log_message (const char **log_msg,
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
             prop_mod = 'M';
 
+          if (! lmb->keep_locks
+              && item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+            unlock = 'U';
+
           svn_stringbuf_appendbytes (tmp_message, &text_mod, 1); 
           svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
-          svn_stringbuf_appendcstr (tmp_message, "   ");
+          svn_stringbuf_appendbytes (tmp_message, &unlock, 1); 
+          svn_stringbuf_appendcstr (tmp_message, "  ");
           svn_stringbuf_appendcstr (tmp_message, path);
           svn_stringbuf_appendcstr (tmp_message, APR_EOL_STR);
         }
@@ -533,7 +537,8 @@ svn_cl__get_log_message (const char **log_msg,
       err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
                                      lmb->editor_cmd, lmb->base_dir,
                                      msg_string, "svn-commit",
-                                     lmb->config, TRUE, NULL, pool);
+                                     lmb->config, TRUE, lmb->message_encoding,
+                                     pool);
 
       /* Dup the tmpfile path into its baton's pool. */
       *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 
@@ -616,3 +621,48 @@ svn_cl__get_log_message (const char **log_msg,
 }
 
 
+/* ### The way our error wrapping currently works, the error returned
+ * from here will look as though it originates in this source file,
+ * instead of in the caller's source file.  This can be a bit
+ * misleading, until one starts debugging.  Ideally, there'd be a way
+ * to wrap an error while preserving its FILE/LINE info.
+ */
+svn_error_t *
+svn_cl__may_need_force (svn_error_t *err)
+{
+  if (err
+      && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE ||
+          err->apr_err == SVN_ERR_CLIENT_MODIFIED))
+    {
+      /* Should this svn_error_compose a new error number? Probably not,
+         the error hasn't changed. */
+      err = svn_error_quick_wrap
+        (err, _("Use --force to override this restriction") );
+    }
+
+  return err;
+}
+
+
+svn_error_t *
+svn_cl__error_checked_fputs (const char *string, FILE* stream)
+{
+  /* This function is equal to svn_cmdline_fputs() minus
+     the utf8->local encoding translation */
+
+  /* On POSIX systems, errno will be set on an error in fputs, but this might
+     not be the case on other platforms.  We reset errno and only
+     use it if it was set by the below fputs call.  Else, we just return
+     a generic error. */
+  errno = 0;
+
+  if (fputs (string, stream) == EOF)
+    {
+      if (errno)
+        return svn_error_wrap_apr (errno, _("Write error"));
+      else
+        return svn_error_create (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}

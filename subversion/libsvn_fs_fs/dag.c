@@ -18,12 +18,13 @@
 #include <string.h>
 #include <assert.h>
 
-#include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_error.h"
-#include "svn_md5.h"
 #include "svn_fs.h"
+#include "svn_props.h"
+#include "svn_pools.h"
+#include "svn_md5.h"
 
 #include "dag.h"
 #include "err.h"
@@ -34,6 +35,8 @@
 #include "id.h"
 
 #include "../libsvn_fs/fs-loader.h"
+
+#include "svn_private_config.h"
 
 
 /* Initializing a filesystem.  */
@@ -237,29 +240,42 @@ svn_fs_fs__dag_walk_predecessors (dag_node_t *node,
   svn_fs_t *fs = svn_fs_fs__dag_get_fs (node);
   dag_node_t *this_node;
   svn_boolean_t done = FALSE;
+  apr_pool_t *last_iterpool, *iterpool, *tmp_iterpool;
 
+  last_iterpool = svn_pool_create (pool);
+  iterpool = svn_pool_create (pool);
   this_node = node;
   while ((! done) && this_node)
     {
       node_revision_t *noderev;
 
+      /* Cycle the pools so iterpool will remain valid on the next
+       * iteration. */
+      tmp_iterpool = last_iterpool;
+      last_iterpool = iterpool;
+      iterpool = tmp_iterpool;
+      svn_pool_clear (iterpool);
+
       /* Get the node revision for THIS_NODE so we can examine its
          predecessor id.  */
-      SVN_ERR (get_node_revision (&noderev, this_node, pool));
+      SVN_ERR (get_node_revision (&noderev, this_node, iterpool));
 
       /* If THIS_NODE has a predecessor, replace THIS_NODE with the
          precessor, else set it to NULL.  */
       if (noderev->predecessor_id)
         SVN_ERR (svn_fs_fs__dag_get_node (&this_node, fs, 
-                                          noderev->predecessor_id, pool));
+                                          noderev->predecessor_id,
+                                          iterpool));
       else
         this_node = NULL;
 
       /* Now call the user-supplied callback with our predecessor
          node. */
       if (callback)
-        SVN_ERR (callback (baton, this_node, &done, pool));
+        SVN_ERR (callback (baton, this_node, &done, iterpool));
     }
+  apr_pool_destroy (iterpool);
+  apr_pool_destroy (last_iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -361,19 +377,19 @@ make_entry (dag_node_t **child_p,
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to create a node with an illegal name '%s'", name);
+       _("Attempted to create a node with an illegal name '%s'"), name);
 
   /* Make sure that parent is a directory */
   if (parent->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to create entry in non-directory parent");
+       _("Attempted to create entry in non-directory parent"));
 
   /* Check that the parent is mutable. */
   if (! svn_fs_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to clone child of non-mutable node");
+       _("Attempted to clone child of non-mutable node"));
 
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
@@ -417,7 +433,7 @@ svn_fs_fs__dag_dir_entries (apr_hash_t **entries,
 
   if (noderev->kind != svn_node_dir)
     return svn_error_create (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                             "Can't get entries of non-directory");
+                             _("Can't get entries of non-directory"));
 
   return svn_fs_fs__rep_contents_dir (entries, node->fs, noderev, pool);
 }
@@ -435,13 +451,13 @@ svn_fs_fs__dag_set_entry (dag_node_t *node,
   if (node->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to set entry in non-directory node");
+       _("Attempted to set entry in non-directory node"));
   
   /* Check it's mutable. */
   if (! svn_fs_fs__dag_check_mutable (node, txn_id))
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to set entry in immutable node");
+       _("Attempted to set entry in immutable node"));
 
   return set_entry (node, entry_name, id, kind, txn_id, pool);
 }
@@ -924,8 +940,21 @@ svn_fs_fs__dag_finalize_edits (dag_node_t *file,
                                const char *txn_id, 
                                apr_pool_t *pool)
 {
-  /* A big no-op for FSFS. */
-  
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  const char *hex;
+
+  if (checksum)
+    {
+      SVN_ERR (svn_fs_fs__dag_file_checksum (digest, file, pool));
+      hex = svn_md5_digest_to_cstring (digest, pool);
+      if (hex && strcmp (checksum, hex) != 0)
+        return svn_error_createf (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                                  _("Checksum mismatch, file '%s':\n"
+                                    "   expected:  %s\n"
+                                    "     actual:  %s\n"),
+                                  file->created_path, checksum, hex);
+    }
+
   return SVN_NO_ERROR;
 }
 

@@ -32,6 +32,7 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+#include "svn_props.h"
 
 #include "dav_svn.h"
 #include <http_request.h>
@@ -45,6 +46,7 @@ typedef struct {
   svn_fs_root_t *rev_root;
 
   const char *anchor;
+  const char *target;
 
   /* if doing a regular update, then dst_path == anchor.  if this is a
      'switch' operation, then this field is the fs path that is being
@@ -74,9 +76,10 @@ typedef struct {
 
 } update_ctx_t;
 
-typedef struct {
+typedef struct item_baton_t {
   apr_pool_t *pool;
   update_ctx_t *uc;
+  struct item_baton_t *parent; /* the parent of this item. */
   const char *name;    /* the single-component name of this item */
   const char *path;    /* a telescoping extension of uc->anchor */
   const char *path2;   /* a telescoping extension of uc->dst_path */
@@ -222,7 +225,7 @@ static void add_to_path_map(apr_hash_t *hash,
   const char *repos_path = linkpath ? linkpath : norm_path;
 
   /* now, geez, put the path in the map already! */
-  apr_hash_set(hash, path, APR_HASH_KEY_STRING, (void *)repos_path);
+  apr_hash_set(hash, path, APR_HASH_KEY_STRING, repos_path);
 }
 
 
@@ -280,6 +283,7 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   baton->pool = pool;
   baton->uc = parent->uc;
   baton->name = svn_path_basename(path, pool);
+  baton->parent = parent;
 
   /* Telescope the path based on uc->anchor.  */
   baton->path = svn_path_join(parent->path, baton->name, pool);
@@ -287,9 +291,15 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   /* Telescope the path based on uc->dst_path in the exact same way. */
   baton->path2 = svn_path_join(parent->path2, baton->name, pool);
 
-  /* Telescope the third path:  it's relative, not absolute, to dst_path. */
-  baton->path3 = svn_path_join(parent->path3, baton->name, pool);
-
+  /* Telescope the third path:  it's relative, not absolute, to
+     dst_path.  Now, we gotta be careful here, because if this
+     operation had a target, and we're it, then we have to use the
+     basename of our source reflection instead of our own.  */
+  if ((*baton->uc->target) && (! parent->parent))
+    baton->path3 = svn_path_join(parent->path3, baton->uc->target, pool);
+  else
+    baton->path3 = svn_path_join(parent->path3, baton->name, pool);
+  
   return baton;
 }
 
@@ -684,7 +694,10 @@ static svn_error_t * upd_open_root(void *edit_baton,
                                  DEBUG_CR, base_revision) );
     }
 
-  SVN_ERR( send_vsn_url(b, pool) );
+  /* Only transmit the root directory's Version Resource URL if
+     there's no target. */
+  if (! *uc->target)
+    SVN_ERR( send_vsn_url(b, pool) );
 
   if (uc->resource_walk)
     SVN_ERR( dav_svn__send_xml(uc->bb, uc->output,
@@ -916,19 +929,23 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
                                          void **handler_baton)
 {
   item_baton_t *file = file_baton;
-  struct window_handler_baton *wb = apr_palloc(file->pool, sizeof(*wb));
+  struct window_handler_baton *wb;
   svn_stream_t *base64_stream;
 
-  if (file->uc->resource_walk)
+  /* Store the base checksum and the fact the file's text changed. */
+  file->base_checksum = apr_pstrdup(file->pool, base_checksum);
+  file->text_changed = TRUE;
+
+  /* If this is a resource walk, or if we're not in "send-all" mode,
+     we don't actually want to transmit text-deltas. */
+  if (file->uc->resource_walk || (! file->uc->send_all))
     {
       *handler = dummy_window_handler;
       *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
 
-  file->base_checksum = apr_pstrdup(file->pool, base_checksum);
-  file->text_changed = TRUE;
-
+  wb = apr_palloc(file->pool, sizeof(*wb));
   wb->seen_first_window = FALSE;
   wb->uc = file->uc;
   base64_stream = dav_svn_make_base64_output_stream(wb->uc->bb, wb->uc->output,
@@ -950,7 +967,8 @@ static svn_error_t * upd_close_file(void *file_baton,
 {
   item_baton_t *file = file_baton;
 
-  file->text_checksum = apr_pstrdup(file->pool, text_checksum);
+  file->text_checksum = text_checksum ?
+    apr_pstrdup(file->pool, text_checksum) : NULL;
 
   /* If we are not in "send all" mode, and this file is not a new
      addition or didn't otherwise have changed text, tell the client
@@ -997,6 +1015,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
+  svn_boolean_t text_deltas = TRUE;
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
@@ -1009,18 +1028,22 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
     {
-      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                           "This report can only be run against a VCC.");
+      return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 0,
+                               "This report can only be run against a VCC.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
 
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain the 'svn:' "
-                           "namespace, so it is not going to have an "
-                           "svn:target-revision element. That element "
-                           "is required.");
+      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have an "
+                               "svn:target-revision element. That element "
+                               "is required.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
   
   /* Look to see if client wants a report with props and textdeltas
@@ -1050,9 +1073,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
         {
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'target-revision' element contains empty cdata; "
-              "there is a problem with the client.");
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
           revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
@@ -1064,11 +1089,16 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           dav_svn_uri_info this_info;
 
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'src-path' element contains empty cdata; "
-              "there is a problem with the client.");
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* split up the 1st public URL. */
+          if ((derr = dav_svn__test_canonical
+               (child->first_cdata.first->text, resource->pool)))
+            return derr;
           serr = dav_svn_simple_parse_uri(&this_info, resource,
                                           child->first_cdata.first->text,
                                           resource->pool);
@@ -1087,12 +1117,17 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           dav_svn_uri_info this_info;
 
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'dst-path' element contains empty cdata; "
               "there is a problem with the client.  See "
-              "http://subversion.tigris.org/issues/show_bug.cgi?id=1055");
+              "http://subversion.tigris.org/issues/show_bug.cgi?id=1055",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* split up the 2nd public URL. */
+          if ((derr = dav_svn__test_canonical
+               (child->first_cdata.first->text, resource->pool)))
+            return derr;
           serr = dav_svn_simple_parse_uri(&this_info, resource,
                                           child->first_cdata.first->text,
                                           resource->pool);
@@ -1108,19 +1143,26 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'update-target' element contains empty cdata; "
-              "there is a problem with the client.");
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
+          if ((derr = dav_svn__test_canonical
+               (child->first_cdata.first->text, resource->pool)))
+            return derr;
           target = child->first_cdata.first->text;
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'recursive' element contains empty cdata; "
-              "there is a problem with the client.");
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") == 0)
@@ -1129,25 +1171,41 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'ignore-ancestry' element contains empty cdata; "
-              "there is a problem with the client.");
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
-          ignore_ancestry = TRUE;
-          if (strcmp(child->first_cdata.first->text, "no") == 0)
-            ignore_ancestry = FALSE;
+          if (strcmp(child->first_cdata.first->text, "no") != 0)
+            ignore_ancestry = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
           if (! child->first_cdata.first)
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
               "The request's 'resource-walk' element contains empty cdata; "
-              "there is a problem with the client.");
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
 
           /* ### assume no white space, no child elems, etc */
           if (strcmp(child->first_cdata.first->text, "no") != 0)
             resource_walk = TRUE;
+        }
+      if (child->ns == ns && strcmp(child->name, "text-deltas") == 0)
+        {
+          if (! child->first_cdata.first)
+            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+              "The request's 'text-deltas' element contains empty cdata; "
+              "there is a problem with the client.",
+              SVN_DAV_ERROR_NAMESPACE,
+              SVN_DAV_ERROR_TAG);
+
+          /* ### assume no white space, no child elems, etc */
+          if (strcmp(child->first_cdata.first->text, "no") == 0)
+            text_deltas = FALSE;
         }
     }
 
@@ -1184,15 +1242,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      sending a style of report that we no longer allow. */
   if (! src_path)
     {
-      return dav_new_error
+      return dav_new_error_tag
         (resource->pool, HTTP_BAD_REQUEST, 0,
          "The request did not contain the '<src-path>' element.\n"
-         "This may indicate that your client is too old.");
+         "This may indicate that your client is too old.",
+         SVN_DAV_ERROR_NAMESPACE,
+         SVN_DAV_ERROR_TAG);
     }
 
   uc.resource = resource;
   uc.output = output;  
   uc.anchor = src_path;
+  uc.target = target;
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
   if (dst_path) /* we're doing a 'switch' */
@@ -1229,6 +1290,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  resource->pool);
     }
 
+  /* If the client did *not* request 'send-all' mode, then we will be
+     sending only a "skelta" of the difference, which will not need to
+     contain actual text deltas. */
+  if (! uc.send_all)
+    text_deltas = FALSE;
+
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1237,7 +1304,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      repos->repos, 
                                      src_path, target,
                                      dst_path,
-                                     uc.send_all,
+                                     text_deltas,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
@@ -1263,6 +1330,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
             const char *linkpath = NULL;
+            const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
 
@@ -1274,6 +1342,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
                   start_empty = TRUE;
+                else if (! strcmp(this_attr->name, "lock-token"))
+                  locktoken = this_attr->value;
 
                 this_attr = this_attr->next;
               }
@@ -1295,11 +1365,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, subpool, 1);
             
             if (! linkpath)
-              serr = svn_repos_set_path(rbaton, path, rev,
-                                        start_empty, subpool);
+              serr = svn_repos_set_path2(rbaton, path, rev,
+                                         start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path(rbaton, path, linkpath, rev,
-                                         start_empty, subpool);
+              serr = svn_repos_link_path2(rbaton, path, linkpath, rev,
+                                          start_empty, locktoken, subpool);
             if (serr != NULL)
               {
                 derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1355,86 +1425,80 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      to abort this report later. */
   rbaton = NULL;
 
-  /* The potential "resource walk" part of the update-report. */
-  if (dst_path && resource_walk)  /* this was a 'switch' operation */
+  /* ### Temporarily disable resource_walks for single-file switch
+     operations.  It isn't strictly necessary. */
+  if (dst_path && resource_walk)
     {
       /* Sanity check: if we switched a file, we can't do a resource
          walk.  dir_delta would choke if we pass a filepath as the
          'target'.  Also, there's no need to do the walk, since the
          new vsn-rsc-url was already in the earlier part of the report. */
       svn_node_kind_t dst_kind;
+      if ((serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
+                                    resource->pool)))
+        {
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Failed checking destination path kind.",
+                                     resource->pool);
+          goto cleanup;
+        }
+      if (dst_kind != svn_node_dir)
+        resource_walk = FALSE;
+    }
 
-      serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
-                               resource->pool);
+  /* The potential "resource walk" part of the update-report. */
+  if (dst_path && resource_walk)  /* this was a 'switch' operation */
+    {
+      /* send a second embedded <S:resource-walk> tree that contains
+         the new vsn-rsc-urls for the switched dir.  this walk
+         contains essentially nothing but <add> tags. */
+      svn_fs_root_t *zero_root;
+      serr = svn_fs_revision_root(&zero_root, repos->fs, 0,
+                                  resource->pool);
       if (serr)
         {
           derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Failed to find the kind of a path",
+                                     "Failed to find the revision root",
                                      resource->pool);
           goto cleanup;
         }
 
-      if (dst_kind == svn_node_dir)
+      serr = dav_svn__send_xml(uc.bb, uc.output, "<S:resource-walk>" DEBUG_CR);
+      if (serr)
         {
-          /* send a second embedded <S:resource-walk> tree that contains
-             the new vsn-rsc-urls for the switched dir.  this walk
-             contains essentially nothing but <add> tags. */
-          svn_fs_root_t *zero_root;
-          serr = svn_fs_revision_root(&zero_root, repos->fs, 0,
-                                      resource->pool);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Failed to find the revision root",
-                                         resource->pool);
-              goto cleanup;
-            }
-
-          serr = dav_svn__send_xml(uc.bb, uc.output,
-                                   "<S:resource-walk>" DEBUG_CR);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Unable to begin resource walk",
-                                         resource->pool);
-              goto cleanup;
-            }
-
-          uc.resource_walk = TRUE;
-
-          /* Compare subtree DST_PATH within a pristine revision to
-             revision 0.  This should result in nothing but 'add' calls
-             to the editor. */
-          serr = svn_repos_dir_delta(/* source is revision 0: */
-                                     zero_root, "", "",
-                                     /* target is 'switch' location: */
-                                     uc.rev_root, dst_path,
-                                     /* re-use the editor */
-                                     editor, &uc,
-                                     dav_svn_authz_read,
-                                     &arb,
-                                     FALSE, /* no text deltas */
-                                     recurse,
-                                     TRUE, /* send entryprops */
-                                     FALSE, /* don't ignore ancestry */
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Unable to begin resource walk",
                                      resource->pool);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Resource walk failed.",
-                                         resource->pool);
-              goto cleanup;
-            }
+          goto cleanup;
+        }
+
+      uc.resource_walk = TRUE;
+
+      /* Compare subtree DST_PATH within a pristine revision to
+         revision 0.  This should result in nothing but 'add' calls
+         to the editor. */
+      serr = svn_repos_dir_delta(zero_root, "", target,
+                                 uc.rev_root, dst_path,
+                                 /* re-use the editor */
+                                 editor, &uc, dav_svn_authz_read,
+                                 &arb, FALSE /* text-deltas */, recurse, 
+                                 TRUE /* entryprops */, 
+                                 FALSE /* ignore-ancestry */, resource->pool);
+      if (serr)
+        {
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Resource walk failed.", resource->pool);
+          goto cleanup;
+        }
           
-          serr = dav_svn__send_xml(uc.bb, uc.output,
-                                   "</S:resource-walk>" DEBUG_CR);
-          if (serr)
-            {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Unable to complete resource walk.",
-                                         resource->pool);
-              goto cleanup;
-            }
+      serr = dav_svn__send_xml(uc.bb, uc.output, 
+                               "</S:resource-walk>" DEBUG_CR);
+      if (serr)
+        {
+          derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Unable to complete resource walk.",
+                                     resource->pool);
+          goto cleanup;
         }
     }
 

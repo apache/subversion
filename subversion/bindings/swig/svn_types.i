@@ -27,16 +27,17 @@
    Note: SWIGTYPE is just a placeholder for "some arbitrary type". This
          typemap will be applied onto a "real" type.
 */
-
 %typemap(python, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-%typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(perl5, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
+%typemap(ruby, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
+  temp = NULL;
+  $1 = ($1_ltype)&temp;
+}
+
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
                               SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
@@ -45,51 +46,78 @@
     ST(argvi) = sv_newmortal();
     SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
 }
+%typemap(ruby, argout, fragment="output_helper") SWIGTYPE **OUTPARAM {
+  $result = output_helper($result, SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+}
 
 /* -----------------------------------------------------------------------
-   Create a typemap to handle enums.
+   %apply-ing of typemaps
 */
 
-%typemap(python, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-%typemap(perl5, in, numinputs=0) enum SWIGTYPE *OUTENUM (long temp) {
-    $1 = ($1_ltype)&temp;
-}
+%apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
 
-%typemap(perl5, argout) enum SWIGTYPE *OUTENUM {
-    if (argvi >= items) {
-        EXTEND(sp,1);
-    }
-    $result = sv_newmortal();
-    sv_setiv($result,(IV) *($1));
-    argvi++;
-}
+%apply long *OUTPUT { svn_revnum_t * };
+%apply int *OUTPUT { svn_boolean_t * };
 
-%typemap(java, in) enum SWIGTYPE *OUTENUM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-%typemap(python, argout, fragment="t_output_helper") enum SWIGTYPE *OUTENUM {
-    $result = t_output_helper($result, PyInt_FromLong(*$1));
-}
+/* svn_fs_check_path() */
+%apply long *OUTPUT { svn_node_kind_t * };
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
 
-%typemap(java, in) const char *MAY_BE_NULL { 
-  /* ### WHEN IS THIS USED? */
-  $1 = 0;
-  if ($input) {
-    $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
-    if (!$1) return $null;
-  }
-}
-
 #ifdef SWIGPERL
 %apply const char * { const char *MAY_BE_NULL };
 #endif
+
+%typemap(ruby, in) const char* MAY_BE_NULL
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = StringValuePtr($input);
+  }
+}
+
+%typemap(ruby, out) const char *
+{
+  if ($1) {
+    $result = rb_str_new2($1);
+  } else {
+    $result = Qnil;
+  }
+}
+
+/* -----------------------------------------------------------------------
+   Define a more refined 'memberin' typemap for 'const char *' members. This
+   is used in place of the 'char *' handler defined automatically.
+
+   We need to do the free/malloc/strcpy special because of the const
+*/
+%typemap(memberin) const char * {
+    apr_size_t len = strlen($input) + 1;
+    char *copied;
+    if ($1) free((char *)$1);
+    copied = malloc(len);
+    memcpy(copied, $input, len);
+    $1 = copied;
+}
+
+/* -----------------------------------------------------------------------
+   Specify how svn_error_t returns are turned into exceptions.
+*/
+%typemap(python, out) svn_error_t * {
+    if ($1 != NULL) {
+        if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
+            svn_swig_py_svn_exception($1);
+        else
+            svn_error_clear($1);
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    $result = Py_None;
+}
 
 %typemap(perl5,out) svn_error_t * {
     if ($1) {
@@ -109,56 +137,28 @@
     }
 }
 
-/* -----------------------------------------------------------------------
-   Define a more refined 'varin' typemap for 'const char *' members. This
-   is used in place of the 'char *' handler defined automatically.
+%typemap(ruby, out) svn_error_t *
+{
+  if ($1) {
+    svn_error_t *error = $1;
+    VALUE message;
 
-   We need to do the free/malloc/strcpy special because of the const
-*/
-%typemap(memberin) const char * {
-    apr_size_t len = strlen($input) + 1;
-    char *copied;
-    if ($1) free((char *)$1);
-    copied = malloc(len);
-    memcpy(copied, $input, len);
-    $1 = copied;
-}
-
-/* -----------------------------------------------------------------------
-   Specify how svn_error_t returns are turned into exceptions.
-*/
-
-%typemap(python, out) svn_error_t * {
-    if ($1 != NULL) {
-        if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
-            svn_swig_py_svn_exception($1);
-        else
-            svn_error_clear($1);
-        return NULL;
+    message = rb_str_new2(error->message ? error->message : "");
+    
+    while (error->child) {
+      error = error->child;
+      if (error->message) {
+        rb_str_concat(message, rb_str_new2("\n"));
+        rb_str_concat(message, rb_str_new2(error->message));
+      }
     }
-    Py_INCREF(Py_None);
-    $result = Py_None;
+    svn_error_clear(error);
+    
+    rb_exc_raise(svn_swig_rb_svn_error_new(INT2NUM(error->apr_err),
+                                           message));
+  }
+  $result = Qnil;
 }
-
-%typemap(java, out) svn_error_t * %{
-    $result = ($1 != NULL) ? svn_swig_java_convert_error(jenv, $1) : NULL;
-%}
-%typemap(jni) svn_error_t * "jthrowable"
-%typemap(jtype) svn_error_t * "org.tigris.subversion.SubversionException"
-%typemap(jstype) svn_error_t * "org.tigris.subversion.SubversionException"
-%typemap(javain) svn_error_t * "@javainput"
-%typemap(javaout) svn_error_t * {
-	return $jnicall;
-}
-
-/* Make the proxy classes much more usable */
-%typemap(javaptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [] "public"
-
-/* -----------------------------------------------------------------------
-   'svn_revnum_t *' and 'svn_boolean_t *' will always be an OUTPUT parameter
-*/
-%apply long *OUTPUT { svn_revnum_t * };
-%apply int *OUTPUT { svn_boolean_t * };
 
 /* -----------------------------------------------------------------------
    Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
@@ -168,6 +168,9 @@
     "$1 = &temp;";
 
 %typemap(perl5,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
+    "$1 = &temp;";
+
+%typemap(ruby,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
 
 /* We have to use APR_INT64_T_FMT because SWIG won't convert the
@@ -193,6 +196,8 @@
     sv_setpv((SV*)ST(argvi++), temp);
 };
 
+%typemap(ruby,argout,fragment="output_helper") svn_filesize_t *
+    "$result = output_helper($result, LL2NUM((apr_int64_t) (*$1)));";
 #endif 
 
 /* -----------------------------------------------------------------------
@@ -208,35 +213,6 @@
     $2 = PyString_GET_SIZE($input);
 }
 
-%typemap(java, in) (const char *PTR, apr_size_t LEN) (char c) {
-    if ($input != NULL) {
-	    /* Do not use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical
-		* since the Subversion client might block the thread */
-
-       $1 = JCALL2(GetByteArrayElements, jenv, $input, NULL);
-	   $2 = JCALL1(GetArrayLength, jenv, $input);
-	}
-	else {
-       $1 = &c;
-	   $2 = 0;
-	}
-}
-
-%typemap(java, freearg) (const char *PTR, apr_size_t LEN) {
-	if ($input != NULL) {
-           JCALL3(ReleaseByteArrayElements, jenv, $input, $1, JNI_ABORT);
-        }
-	/* Since this buffer is used as input JNI_ABORT is safe as "mode" above*/
-}
-
-%typemap(jni) (const char *PTR, apr_size_t LEN) "jbyteArray"
-%typemap(jtype) (const char *PTR, apr_size_t LEN) "byte[]"
-%typemap(jstype) (const char *PTR, apr_size_t LEN) "byte[]"
-%typemap(javain) (const char *PTR, apr_size_t LEN) "$javainput"
-%typemap(javaout) (const char *PTR, apr_size_t LEN) {
-    return $jnicall;
-  }
-
 %typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
     if (SvPOK($input)) {
         $1 = SvPV($input, $2);
@@ -248,7 +224,7 @@
     }
 }
 
-/* ---------------------------------------------------------------------------------
+/* -----------------------------------------------------------------------
    Handle retrieving the error message from svn_strerror
 */
 
@@ -268,9 +244,22 @@
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
 }
+
 %typemap(perl5, in) apr_pool_t *pool "";
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
+}
+%typemap(ruby, arginit) apr_pool_t *pool (apr_pool_t *_global_pool) {
+  if (argc == 0) {
+    /* wrong # of arguments: we need at least a pool. */
+  } else if (argc <= $argnum) {
+    if (NIL_P(argv[argc - 1])) {
+      rb_raise(rb_eArgError, "pool must be not nil");
+    }
+    /* Assume that the pool here is the last argument in the list */
+    SWIG_ConvertPtr(argv[argc - 1], (void **)&$1, $1_descriptor, 1);
+    _global_pool = $1;
+  }
 }
 
 #ifdef SWIGPERL
@@ -281,19 +270,11 @@
 };
 #endif
 
-%typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
-    /* ### HACK: Get the input variable based on naming convention */
-	_global_pool = *(apr_pool_t **)&j$1;
-	$1 = 0;
-}
-
 /* -----------------------------------------------------------------------
-   result of check_path
-*/
-%apply enum SWIGTYPE *OUTENUM { svn_node_kind_t * };
-
-/* -----------------------------------------------------------------------
-   get_logs takes a callback function, so we have to thunk it
+   Callback: svn_log_message_receiver_t
+   svn_client_log()
+   svn_ra get_log()
+   svn_repos_get_logs()
 */
 
 %typemap(python, in) (svn_log_message_receiver_t receiver, 
@@ -302,17 +283,23 @@
     $2 = (void *)$input;
 }
 %typemap(perl5, in) (svn_log_message_receiver_t receiver, 
-                      void *receiver_baton) {
+                     void *receiver_baton) {
     $1 = svn_swig_pl_thunk_log_receiver;
     $2 = (void *)$input;
 }
 
-/* stream_t * */
-%apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
+%typemap(ruby, in) (svn_log_message_receiver_t receiver, 
+                    void *receiver_baton) {
+    $1 = svn_swig_rb_log_receiver;
+    $2 = (void *)$input;
+}
 
 /* -----------------------------------------------------------------------
-   thunk commit_callback
+   Callback: svn_commit_callback_t
+   svn_ra get_commit_editor()
+   svn_repos_get_commit_editor()
 */
+
 %typemap(perl5, in) (svn_commit_callback_t callback, void *callback_baton) {
     $1 = svn_swig_pl_thunk_commit_callback;
     $2 = (void *)$input;
@@ -320,8 +307,21 @@
 };
 
 /* -----------------------------------------------------------------------
-   svn_stream interpolability with io handle
+   Callback: svn_cancel_func_t
 */
+
+%typemap(python, in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
+  $1 = svn_swig_py_cancel_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
+   svn_stream_t interoperability with language native io handles
+*/
+
+%typemap(python, in) svn_stream_t *WRAPPED_STREAM {
+    $1 = svn_swig_py_make_stream ($input, _global_pool);
+}
 
 %typemap(perl5, in) svn_stream_t * {
     svn_swig_pl_make_stream (&$1, $input);
@@ -335,6 +335,10 @@
 %typemap(perl5, argout) svn_stream_t ** {
     $result = svn_swig_pl_from_stream (*$1);
     argvi++;
+}
+
+%typemap(ruby, in) svn_stream_t * {
+    $1 = svn_swig_rb_make_stream($input, _global_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -405,8 +409,16 @@
         SWIG_croak("unknown opt_revision_t type");
 }
 
+%typemap(ruby, in) svn_opt_revision_t * (svn_opt_revision_t rev) {
+  $1 = &rev;
+  svn_swig_rb_set_revision(&rev, $input);
+}
+
 /* -----------------------------------------------------------------------
-   dirents hash
+   apr_hash_t **dirents
+   svn_client_ls()
+   svn_io_get_dirents()
+   svn_ra get_dir()
 */
 
 %typemap(python,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
@@ -423,17 +435,21 @@
 }
 
 /* -----------------------------------------------------------------------
-   Special boolean mapping for java.
+   Special boolean mapping for ruby.
 */
-%typemap(java, jni) svn_boolean_t "jboolean";
-%typemap(java, jtype) svn_boolean_t "boolean";
-%typemap(java, jstype) svn_boolean_t "boolean";
-%typemap(java, in) svn_boolean_t %{
-    $1 = $input ? TRUE : FALSE;
-%}
-%typemap(java, out) svn_boolean_t %{
-    $result = $1 ? JNI_TRUE : JNI_FALSE;
-%}
+
+%typemap(ruby, in) svn_boolean_t "$1 = RTEST($input);";
+%typemap(ruby, out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
+
+%typemap(ruby, in, numinputs=0) svn_boolean_t * (svn_boolean_t temp)
+{
+  $1 = &temp;
+}
+
+%typemap(ruby, argout) svn_boolean_t *
+{
+  $result = *$1 ? Qtrue : Qfalse;
+}
 
 /* -----------------------------------------------------------------------
    Handle python thread locking.
@@ -452,9 +468,45 @@
 #endif
 }
 
+
+/* -----------------------------------------------------------------------
+   handle config and fs_config in svn_{fs,repos}_create
+*/
+
+
+%typemap(ruby, in) apr_hash_t *config (apr_hash_t *temp)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *", _global_pool);
+  }
+}
+%typemap(ruby, in) apr_hash_t *fs_config
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+  }
+}
+
+/* -----------------------------------------------------------------------
+   remove destructor for apr_pool and Ruby's GC.
+*/
+#ifdef SWIGRUBY
+#define REMOVE_DESTRUCTOR(type)                 \
+%extend type                                    \
+{                                               \
+  ~type(type *obj)                              \
+    {                                           \
+      /* do nothing */                          \
+    }                                           \
+}
+#endif
+
 /* ----------------------------------------------------------------------- */
 
-%include svn_types.h
 %{
 #include "svn_types.h"
 #include "svn_time.h"
@@ -463,11 +515,13 @@
 #include "swigutil_py.h"
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_types.h

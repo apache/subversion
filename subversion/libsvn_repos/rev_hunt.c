@@ -26,9 +26,8 @@
 #include "svn_string.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
 #include "repos.h"
-
-#include <assert.h>
 
 #include <assert.h>
 
@@ -247,11 +246,11 @@ svn_repos_history2 (svn_fs_t *fs,
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
     {
-      apr_pool_t *tmppool;
-
       /* Note that we have to do some crazy pool work here.  We can't
          get rid of the old history until we use it to get the new, so
          we alternate back and forth between our subpools.  */
+      apr_pool_t *tmppool;
+
       SVN_ERR (svn_fs_history_prev (&history, history, cross_copies, newpool));
 
       /* Only continue if there is further history to deal with. */
@@ -312,7 +311,7 @@ check_readability (svn_fs_root_t *root,
   SVN_ERR (authz_read_func (&readable, root, path, authz_read_baton, pool));
   if (! readable)
     return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL,
-                             _("Unreadable path encountered; access denied."));
+                             _("Unreadable path encountered; access denied"));
   return SVN_NO_ERROR;
 }
 
@@ -521,6 +520,7 @@ svn_repos_get_file_revs (svn_repos_t *repos,
   svn_fs_root_t *root, *last_root;
   const char *last_path;
   int i;
+  svn_node_kind_t kind;
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
@@ -531,6 +531,13 @@ svn_repos_get_file_revs (svn_repos_t *repos,
   /* ### Can we use last_pool for this? How long does the history
      object need the root? */
   SVN_ERR (svn_fs_revision_root (&root, repos->fs, end, pool));
+
+  /* The path had better be a file in this revision. This avoids calling
+     the callback before reporting an uglier error below. */
+  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path);
 
   /* Open a history object. */
   SVN_ERR (svn_fs_node_history (&history, root, path, last_pool));

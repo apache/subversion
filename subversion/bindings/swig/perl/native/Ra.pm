@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package SVN::Ra;
-use SVN::Base qw(Ra svn_ra_);
+use SVN::Base qw(Ra);
 use File::Temp;
 
 =head1 NAME
@@ -64,7 +64,7 @@ objects, with the session_baton and pool omitted.
 
 require SVN::Client;
 
-my $ralib = init_ra_libs();
+my $ralib = SVN::_Ra::svn_ra_init_ra_libs();
 
 # Ra methods that returns reporter
 my %reporter = map { $_ => 1 } qw(do_diff do_switch do_status do_update);
@@ -79,10 +79,10 @@ sub AUTOLOAD {
     my $self = shift;
     no strict 'refs';
 
-    die "no such method $AUTOLOAD"
-	unless $self->can("plugin_invoke_$method");
+    my $func = $self->{session}->can ($method)
+        or die "no such method $method";
 
-    my @ret = &{"plugin_invoke_$method"}(@{$self}{qw/ra session/}, @_);
+    my @ret = $func->($self->{session}, @_);
     return bless [@ret], 'SVN::Ra::Reporter' if $reporter{$method};
     return $#ret == 0 ? $ret[0] : @ret;
 }
@@ -109,22 +109,16 @@ sub new {
     }
 
     my $pool = $self->{pool} ||= SVN::Pool->new;
-
-    $self->{ra} = get_ra_library ($ralib, $self->{url});
     my $callback = 'SVN::Ra::Callbacks';
 
     # custom callback namespace
     if ($self->{callback} && !ref($self->{callback})) {
-	$callback = $self->{callback};
-	undef $self->{callback};
+	$callback = delete $self->{callback};
     }
-    $self->{callback} ||= $callback->new(auth => $self->{auth},
-						  pool => $pool),
+    # instantiate callbacks
+    $callback = (delete $self->{callback}) || $callback->new (auth => $self->{auth});
 
-    $self->{session} = plugin_invoke_open
-	($self->{ra}, $self->{url}, $self->{callback},
-	 $self->{config} || {}, $pool);
-
+    $self->{session} = SVN::_Ra::svn_ra_open ($self->{url}, $callback, $self->{config} || {}, $pool);
     return $self;
 }
 
@@ -132,8 +126,11 @@ sub DESTROY {
 
 }
 
+package _p_svn_ra_session_t;
+use SVN::Base qw(Ra svn_ra_);
+
 package SVN::Ra::Reporter;
-use SVN::Base qw(Ra svn_ra_reporter_);
+use SVN::Base qw(Ra svn_ra_reporter2_);
 
 =head1 SVN::Ra::Reporter
 
@@ -153,10 +150,11 @@ sub AUTOLOAD {
     my $self = shift;
     no strict 'refs';
 
-    die "no such method $AUTOLOAD"
-	unless $self->can("invoke_$AUTOLOAD");
+    my $method = $self->can("invoke_$AUTOLOAD")
+        or die "no such method $AUTOLOAD";
 
-    &{"invoke_$AUTOLOAD"}(@$self, @_);
+    no warnings 'uninitialized';
+    $method->(@$self, @_);
 }
 
 package SVN::Ra::Callbacks;
@@ -180,11 +178,11 @@ sub new {
 
 sub open_tmp_file {
     local $^W; # silence the warning for unopened temp file
-    my $self = shift;
+    my ($self, $pool) = @_;
     my ($fd, $name) = SVN::Core::io_open_unique_file(
         ( File::Temp::tempfile(
             'XXXXXXXX', OPEN => 0, DIR => File::Spec->tmpdir
-        ))[1], 'tmp', 1, $self->{pool}
+        ))[1], 'tmp', 1, $pool
     );
     return $fd;
 }

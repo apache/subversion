@@ -21,7 +21,9 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 #include "repos.h"
+#include "svn_private_config.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
@@ -45,6 +47,9 @@
        If previous is +:
          <revnum>:            Revnum of set_path or link_path
        +/-                    '+' indicates start_empty field set
+       +/-                    '+' indicates presence of lock_token field.
+       If previous is +:
+         <length>:<bytes>     Length-counted lock_token string
 
    Terminology: for brevity, this file frequently uses the prefixes
    "s_" for source, "t_" for target, and "e_" for editor.  Also, to
@@ -61,6 +66,7 @@ typedef struct path_info_t
   const char *link_path;       /* NULL for set_path or delete_path */
   svn_revnum_t rev;            /* SVN_INVALID_REVNUM for delete_path */
   svn_boolean_t start_empty;   /* Meaningless for delete_path */
+  const char *lock_token;      /* NULL if no token */
   apr_pool_t *pool;            /* Container pool */
 } path_info_t;
 
@@ -181,6 +187,11 @@ read_path_info (path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   SVN_ERR (read_rev (&(*pi)->rev, temp, pool));
   SVN_ERR (svn_io_file_getc (&c, temp, pool));
   (*pi)->start_empty = (c == '+');
+  SVN_ERR (svn_io_file_getc (&c, temp, pool));
+  if (c == '+')
+    SVN_ERR (read_string (&(*pi)->lock_token, temp, pool));
+  else
+    (*pi)->lock_token = NULL;
   (*pi)->pool = pool;
   return SVN_NO_ERROR;
 }
@@ -339,11 +350,12 @@ change_file_prop (report_baton_t *b, void *file_baton, const char *name,
    CHANGE_FN. */
 static svn_error_t *
 delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
-                 const char *t_path, proplist_change_fn_t *change_fn,
+                 const char *t_path, const char *lock_token,
+		 proplist_change_fn_t *change_fn,
                  void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
-  apr_hash_t *s_props, *t_props;
+  apr_hash_t *s_props, *t_props, *r_props;
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
@@ -351,6 +363,7 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   svn_string_t *cr_str, *cdate, *last_author;
   svn_boolean_t changed;
   const svn_prop_t *pc;
+  svn_lock_t *lock;
 
   /* Fetch the created-rev and send entry props. */
   SVN_ERR (svn_fs_node_created_rev (&crev, b->t_root, t_path, pool));
@@ -361,16 +374,18 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (change_fn (b, object,
                           SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
 
+      SVN_ERR (svn_fs_revision_proplist (&r_props, b->repos->fs, crev, pool));
+
       /* Transmit the committed-date. */
-      SVN_ERR (svn_fs_revision_prop (&cdate, b->repos->fs, crev,
-                                     SVN_PROP_REVISION_DATE, pool));
+      cdate = apr_hash_get (r_props, SVN_PROP_REVISION_DATE,
+                            APR_HASH_KEY_STRING);
       if (cdate || s_path)
         SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
                             cdate, pool));
 
       /* Transmit the last-author. */
-      SVN_ERR (svn_fs_revision_prop (&last_author, b->repos->fs, crev,
-                                     SVN_PROP_REVISION_AUTHOR, pool));
+      last_author = apr_hash_get (r_props, SVN_PROP_REVISION_AUTHOR,
+                                  APR_HASH_KEY_STRING);
       if (last_author || s_path)
         SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_LAST_AUTHOR,
                             last_author, pool));
@@ -380,6 +395,17 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       if (uuid || s_path)
         SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_UUID,
                             svn_string_create (uuid, pool), pool));
+    }
+
+  /* Update lock properties. */
+  if (lock_token)
+    {
+      SVN_ERR (svn_fs_get_lock (&lock, b->repos->fs, t_path, pool));
+
+      /* Delete a defunct lock. */
+      if (! lock || strcmp (lock_token, lock->token) != 0)
+        SVN_ERR (change_fn (b, object, SVN_PROP_ENTRY_LOCK_TOKEN,
+                            NULL, pool));
     }
 
   if (s_path)
@@ -479,10 +505,13 @@ compare_files (svn_boolean_t *changed_p, svn_fs_root_t *root1,
 }
 
 /* Make the appropriate edits on FILE_BATON to change its contents and
-   properties from those in S_REV/S_PATH to those in B->t_root/T_PATH. */
+   properties from those in S_REV/S_PATH to those in B->t_root/T_PATH,
+   possibly using LOCK_TOKEN to determine if the client's lock on the file
+   is defunct. */
 static svn_error_t *
 delta_files (report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
-             const char *s_path, const char *t_path, apr_pool_t *pool)
+             const char *s_path, const char *t_path, const char *lock_token,
+             apr_pool_t *pool)
 {
   svn_boolean_t changed;
   svn_fs_root_t *s_root = NULL;
@@ -493,8 +522,8 @@ delta_files (report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
   void *dbaton;
 
   /* Compare the files' property lists.  */
-  SVN_ERR (delta_proplists (b, s_rev, s_path, t_path, change_file_prop,
-                            file_baton, pool));
+  SVN_ERR (delta_proplists (b, s_rev, s_path, t_path, lock_token,
+                            change_file_prop, file_baton, pool));
 
   if (s_path)
     {
@@ -569,17 +598,30 @@ fake_dirent (const svn_fs_dirent_t **entry, svn_fs_root_t *root,
 }
 
 
-/* Emit an appropriate edit to transform the entry E_PATH under
-   DIR_BATON with the changes between S_REV/S_PATH (with contents
-   S_ENTRY) and B->t_root/T_PATH (with contents T_ENTRY).
-   S_PATH/S_ENTRY or T_PATH/T_ENTRY may be NULL if the entry does not
-   exist in the source or target.  The source and to some extent the
-   target may be modified by INFO.  S_PATH may be set and S_ENTRY may
-   be NULL if the caller expects report information to modify the
-   source to an existing location.  If RECURSE is not set, avoid
-   operating on directories.  (Normally RECURSE is simply taken from
-   B->recurse, but drive() needs to force us to recurse into the
-   target even if that flag is not set.) */
+/* Emit a series of editing operations to transform a source entry to
+   a target entry.
+
+   S_REV and S_PATH specify the source entry.  S_ENTRY contains the
+   already-looked-up information about the node-revision existing at
+   that location.
+
+   B->t_root and T_PATH specify the target entry.  T_ENTRY contains
+   the already-looked-up information about the node-revision existing
+   at that location.
+
+   DIR_BATON and E_PATH contain the parameters which should be passed
+   to the editor calls--DIR_BATON for the parent directory baton and
+   E_PATH for the pathname.  (E_PATH is the anchor-relative working
+   copy pathname, which may differ from the source and target
+   pathnames if the report contains a link_path.)
+
+   INFO contains the report information for this working copy path.
+   This function will internally modify the source and target entries
+   as appropriate based on the report information.
+
+   If RECURSE is not set, avoid operating on directories.  (Normally
+   RECURSE is simply taken from B->recurse, but drive() needs to force
+   us to recurse into the target even if that flag is not set.) */
 static svn_error_t *
 update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
               const svn_fs_dirent_t *s_entry, const char *t_path,
@@ -619,8 +661,8 @@ update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   /* Don't let the report carry us somewhere nonexistent. */
   if (s_path && !s_entry)
     return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                              "Working copy path '%s' does not exist in "
-                              "repository", e_path);
+                              _("Working copy path '%s' does not exist in "
+                                "repository"), e_path);
 
   if (!recurse && ((s_entry && s_entry->kind == svn_node_dir)
                    || (t_entry && t_entry->kind == svn_node_dir)))
@@ -636,7 +678,7 @@ update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     {
       distance = svn_fs_compare_ids (s_entry->id, t_entry->id);
       if (distance == 0 && !any_path_info (b, e_path)
-          && (!info || !info->start_empty))
+          && (!info || (!info->start_empty && !info->lock_token)))
         return SVN_NO_ERROR;
       else if (distance != -1 || b->ignore_ancestry)
         related = TRUE;
@@ -686,7 +728,8 @@ update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       else
         SVN_ERR (b->editor->add_file (e_path, dir_baton, NULL,
                                       SVN_INVALID_REVNUM, pool, &new_baton));
-      SVN_ERR (delta_files (b, new_baton, s_rev, s_path, t_path, pool));
+      SVN_ERR (delta_files (b, new_baton, s_rev, s_path, t_path,
+                            info ? info->lock_token : NULL, pool));
       SVN_ERR (svn_fs_file_md5_checksum (digest, b->t_root, t_path, pool));
       hex_digest = svn_md5_digest_to_cstring (digest, pool);
       return b->editor->close_file (new_baton, hex_digest, pool);
@@ -713,9 +756,11 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   path_info_t *info;
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
-     source path so that we add all the properties. */
+     source path so that we add all the properties.
+     
+     When we support directory locks, we must pass the lock token here. */
   SVN_ERR (delta_proplists (b, s_rev, start_empty ? NULL : s_path, t_path,
-                            change_dir_prop, dir_baton, pool));
+                            NULL, change_dir_prop, dir_baton, pool));
 
   /* Get the list of entries in each of source and target. */
   if (s_path && !start_empty)
@@ -734,6 +779,19 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (fetch_path_info (b, &name, &info, e_path, subpool));
       if (!name)
         break;
+
+      if (info && !SVN_IS_VALID_REVNUM (info->rev))
+        {
+          /* We want to perform deletes before non-replacement adds,
+             for graceful handling of case-only renames on
+             case-insensitive client filesystems.  So, if the report
+             item is a delete, remove the entry from the source hash,
+             but don't update the entry yet. */
+          if (s_entries)
+            apr_hash_set (s_entries, name, APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
+
       e_fullpath = svn_path_join (e_path, name, subpool);
       t_fullpath = svn_path_join (t_path, name, subpool);
       t_entry = apr_hash_get (t_entries, name, APR_HASH_KEY_STRING);
@@ -756,7 +814,30 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         svn_pool_destroy (info->pool);
     }
 
-  /* Loop over the remaining dirents in the target. */
+  /* Remove any deleted entries.  Do this before processing the
+     target, for graceful handling of case-only renames. */
+  if (s_entries)
+    {
+      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
+        {
+          svn_pool_clear (subpool);
+          apr_hash_this (hi, NULL, NULL, &val);
+          s_entry = val;
+
+          if (apr_hash_get (t_entries, s_entry->name,
+                            APR_HASH_KEY_STRING) == NULL)
+            {
+              /* There is no corresponding target entry, so delete. */
+              e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
+              if (b->recurse || s_entry->kind != svn_node_dir)
+                SVN_ERR (b->editor->delete_entry (e_fullpath,
+                                                  SVN_INVALID_REVNUM,
+                                                  dir_baton, subpool));
+            }
+        }
+    }
+
+  /* Loop over the dirents in the target. */
   for (hi = apr_hash_first (pool, t_entries); hi; hi = apr_hash_next (hi))
     {
       svn_pool_clear (subpool);
@@ -776,27 +857,6 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, t_fullpath,
                              t_entry, dir_baton, e_fullpath, NULL,
                              b->recurse, subpool));
-
-      /* Don't revisit this name in the source entries. */
-      if (s_entries)
-        apr_hash_set (s_entries, t_entry->name, APR_HASH_KEY_STRING, NULL);
-    }
-
-  /* Loop over the remaining dirents in the source. */
-  if (s_entries)
-    {
-      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
-        {
-          svn_pool_clear (subpool);
-          apr_hash_this (hi, NULL, NULL, &val);
-          s_entry = val;
-
-          /* We know there is no corresponding target entry, so just delete. */
-          e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
-          if (b->recurse || s_entry->kind != svn_node_dir)
-            SVN_ERR (b->editor->delete_entry (e_fullpath, SVN_INVALID_REVNUM,
-                                              dir_baton, subpool));
-        }
     }
 
   /* Destroy iteration subpool. */
@@ -820,8 +880,9 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   t_anchor = *b->s_operand ? svn_path_dirname (b->t_path, pool) : b->t_path;
   SVN_ERR (check_auth (b, &allowed, t_anchor, pool));
   if (!allowed)
-    return svn_error_create (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
-                             "Not authorized to open root of edit operation.");
+    return svn_error_create
+      (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
+       _("Not authorized to open root of edit operation"));
 
   SVN_ERR (b->editor->set_target_revision (b->edit_baton, b->t_rev, pool));
 
@@ -842,7 +903,7 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   if (!*b->s_operand && (!s_entry || s_entry->kind != svn_node_dir
                          || !t_entry || t_entry->kind != svn_node_dir))
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
-                             "Cannot replace a directory from within");
+                             _("Cannot replace a directory from within"));
 
   SVN_ERR (b->editor->open_root (b->edit_baton, s_rev, pool, &root_baton));
 
@@ -885,7 +946,7 @@ finish_report (report_baton_t *b, apr_pool_t *pool)
   if (!info || strcmp (info->path, b->s_operand) != 0
       || info->link_path || !SVN_IS_VALID_REVNUM(info->rev))
     return svn_error_create (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                             "Invalid report for top level of working copy");
+                             _("Invalid report for top level of working copy"));
   s_rev = info->rev;
 
   /* Initialize the lookahead pathinfo. */
@@ -900,7 +961,7 @@ finish_report (report_baton_t *b, apr_pool_t *pool)
          The next pathinfo actually describes the target. */
       if (!*b->s_operand)
         return svn_error_create (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                                 "Two top-level reports with no target");
+                                 _("Two top-level reports with no target"));
       info = b->lookahead;
       SVN_ERR (read_path_info (&b->lookahead, b->tempfile, subpool));
     }
@@ -918,9 +979,10 @@ finish_report (report_baton_t *b, apr_pool_t *pool)
 /* Record a report operation into the temporary file. */
 static svn_error_t *
 write_path_info (report_baton_t *b, const char *path, const char *lpath,
-                 svn_revnum_t rev, svn_boolean_t start_empty, apr_pool_t *pool)
+                 svn_revnum_t rev, svn_boolean_t start_empty,
+                 const char *lock_token, apr_pool_t *pool)
 {
-  const char *lrep, *rrep, *rep;
+  const char *lrep, *rrep, *ltrep, *rep;
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
@@ -930,16 +992,37 @@ write_path_info (report_baton_t *b, const char *path, const char *lpath,
                                strlen(lpath), lpath) : "-";
   rrep = (SVN_IS_VALID_REVNUM (rev)) ?
     apr_psprintf (pool, "+%ld:", rev) : "-";
-  rep = apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s%s%s%c",
-                      strlen(path), path, lrep, rrep, start_empty ? '+' : '-');
+  ltrep = lock_token ? apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s",
+                                     strlen(lock_token), lock_token) : "-";
+  rep = apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s%s%s%c%s",
+                      strlen(path), path, lrep, rrep, start_empty ? '+' : '-',
+                      ltrep);
   return svn_io_file_write_full (b->tempfile, rep, strlen(rep), NULL, pool);
+}
+
+svn_error_t *
+svn_repos_set_path2 (void *baton, const char *path, svn_revnum_t rev,
+                     svn_boolean_t start_empty, const char *lock_token,
+                     apr_pool_t *pool)
+{
+  return write_path_info (baton, path, NULL, rev, start_empty,
+                          lock_token, pool);
 }
 
 svn_error_t *
 svn_repos_set_path (void *baton, const char *path, svn_revnum_t rev,
                     svn_boolean_t start_empty, apr_pool_t *pool)
 {
-  return write_path_info (baton, path, NULL, rev, start_empty, pool);
+  return svn_repos_set_path2 (baton, path, rev, start_empty, NULL, pool);
+}
+
+svn_error_t *
+svn_repos_link_path2 (void *baton, const char *path, const char *link_path,
+                      svn_revnum_t rev, svn_boolean_t start_empty,
+                      const char *lock_token, apr_pool_t *pool)
+{
+  return write_path_info (baton, path, link_path, rev, start_empty, lock_token,
+                          pool);
 }
 
 svn_error_t *
@@ -947,13 +1030,15 @@ svn_repos_link_path (void *baton, const char *path, const char *link_path,
                      svn_revnum_t rev, svn_boolean_t start_empty,
                      apr_pool_t *pool)
 {
-  return write_path_info (baton, path, link_path, rev, start_empty, pool);
+  return svn_repos_link_path2 (baton, path, link_path, rev, start_empty,
+                               NULL, pool);
 }
 
 svn_error_t *
 svn_repos_delete_path (void *baton, const char *path, apr_pool_t *pool)
 {
-  return write_path_info (baton, path, NULL, SVN_INVALID_REVNUM, FALSE, pool);
+  return write_path_info (baton, path, NULL, SVN_INVALID_REVNUM, FALSE, NULL,
+                          pool);
 }
 
 svn_error_t *

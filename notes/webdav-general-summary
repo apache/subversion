@@ -93,7 +93,7 @@ New HTTP server response headers: {DAV, ...}
        - 'DAV:supportedlock' live property: indicates what kinds of
           locking is allowed on a resource.
 
-       - the rfc defines an 'opaquelocktoken' schema that all dav
+       - the rfc defines an 'opaquelocktoken' scheme that all dav
          servers must know how to understand: clients may generate and
          post them in an If: header.
 

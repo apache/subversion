@@ -22,17 +22,15 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
-#include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -87,11 +85,8 @@ svn_cl__propset (apr_getopt_t *os,
          _("Bad encoding option: prop value not stored as UTF8"));
   
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -183,13 +178,17 @@ svn_cl__propset (apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+          svn_boolean_t success;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_CL__TRY (svn_client_propset (pname_utf8, propval, target,
-                                           opt_state->recursive, subpool));
+          SVN_CL__TRY (svn_client_propset2 (pname_utf8, propval, target,
+                                            opt_state->recursive,
+                                            opt_state->force,
+                                            ctx, subpool),
+                       success);
 
-          if (! opt_state->quiet) 
+          if (success && (! opt_state->quiet))
             {
               SVN_ERR
                 (svn_cmdline_printf

@@ -24,9 +24,6 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
-#include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "cl.h"
@@ -41,6 +38,7 @@ struct status_baton
   svn_boolean_t detailed;
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
+  svn_boolean_t repos_locks;
   apr_pool_t *pool;
 
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
@@ -52,14 +50,15 @@ struct status_baton
 static void
 print_status (void *baton,
               const char *path,
-              svn_wc_status_t *status)
+              svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
   svn_error_t *err;
   
   err = svn_cl__print_status (path, status, sb->detailed,
                               sb->show_last_committed,
-                              sb->skip_unrecognized, sb->pool);
+                              sb->skip_unrecognized, sb->repos_locks,
+                              sb->pool);
 
   if (err)
     {
@@ -88,17 +87,14 @@ svn_cl__status (apr_getopt_t *os,
   svn_opt_revision_t rev;
   struct status_baton sb;
 
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
 
   /* The notification callback. */
-  svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE, 
+  svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE, FALSE, 
                         FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
@@ -112,6 +108,8 @@ svn_cl__status (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
+      svn_pool_clear (subpool);
+
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
       /* Retrieve a hash of status structures with the information
@@ -120,15 +118,15 @@ svn_cl__status (apr_getopt_t *os,
       sb.detailed = (opt_state->verbose || opt_state->update);
       sb.show_last_committed = opt_state->verbose;
       sb.skip_unrecognized = opt_state->quiet;
+      sb.repos_locks = opt_state->update;
       sb.pool = subpool;
-      SVN_ERR (svn_client_status (NULL, target, &rev, print_status, &sb,
-                                  opt_state->nonrecursive ? FALSE : TRUE,
-                                  opt_state->verbose,
-                                  opt_state->update,
-                                  opt_state->no_ignore,
-                                  ctx, subpool));
-
-      svn_pool_clear (subpool);
+      SVN_ERR (svn_client_status2 (NULL, target, &rev, print_status, &sb,
+                                   opt_state->nonrecursive ? FALSE : TRUE,
+                                   opt_state->verbose,
+                                   opt_state->update,
+                                   opt_state->no_ignore,
+                                   opt_state->ignore_externals,
+                                   ctx, subpool));
     }
 
   svn_pool_destroy (subpool);

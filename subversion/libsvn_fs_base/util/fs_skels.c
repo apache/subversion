@@ -18,6 +18,8 @@
 #include <string.h>
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_types.h"
+#include "svn_time.h"
 #include "fs_skels.h"
 #include "skel.h"
 #include "../id.h"
@@ -333,6 +335,24 @@ is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
           return TRUE;
         }
     }
+  return FALSE;
+}
+
+
+static svn_boolean_t
+is_valid_lock_skel (skel_t *skel)
+{
+  if ((svn_fs_base__list_length (skel) == 8)
+      && svn_fs_base__matches_atom (skel->children, "lock")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom
+      && skel->children->next->next->next->is_atom
+      && skel->children->next->next->next->next->is_atom
+      && skel->children->next->next->next->next->next->is_atom
+      && skel->children->next->next->next->next->next->next->is_atom
+      && skel->children->next->next->next->next->next->next->next->is_atom)
+    return TRUE;
+  
   return FALSE;
 }
 
@@ -766,6 +786,75 @@ svn_fs_base__parse_change_skel (change_t **change_p,
 
   /* Return the structure. */
   *change_p = change;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
+                              skel_t *skel,
+                              apr_pool_t *pool)
+{
+  svn_lock_t *lock;
+  const char *timestr;
+
+  /* Validate the skel. */
+  if (! is_valid_lock_skel (skel))
+    return skel_err ("lock");
+  
+  /* Create the returned structure */
+  lock = apr_pcalloc (pool, sizeof (*lock));
+
+  /* PATH */
+  lock->path = apr_pstrmemdup (pool, skel->children->next->data,
+                               skel->children->next->len);
+
+  /* LOCK-TOKEN */
+  lock->token = apr_pstrmemdup (pool,
+                                skel->children->next->next->data,
+                                skel->children->next->next->len);
+
+  /* OWNER */
+  lock->owner = apr_pstrmemdup (pool,
+                                skel->children->next->next->next->data,
+                                skel->children->next->next->next->len);
+
+  /* COMMENT  (could be just an empty atom) */
+  if (skel->children->next->next->next->next->len)
+    lock->comment = 
+      apr_pstrmemdup (pool,
+                      skel->children->next->next->next->next->data,
+                      skel->children->next->next->next->next->len);
+
+  /* XML_P */
+  if (svn_fs_base__matches_atom 
+      (skel->children->next->next->next->next->next, "1"))
+    lock->xml_comment = TRUE;
+  else
+    lock->xml_comment = FALSE;
+
+  /* CREATION-DATE */
+  timestr = apr_pstrmemdup 
+    (pool,
+     skel->children->next->next->next->next->next->next->data,
+     skel->children->next->next->next->next->next->next->len);
+  SVN_ERR (svn_time_from_cstring (&(lock->creation_date),
+                                  timestr, pool));
+  
+  /* EXPIRATION-DATE  (could be just an empty atom) */
+  if (skel->children->next->next->next->next->next->next->next->len)
+    {
+      timestr = 
+        apr_pstrmemdup 
+        (pool,
+         skel->children->next->next->next->next->next->next->next->data,
+         skel->children->next->next->next->next->next->next->next->len);
+      SVN_ERR (svn_time_from_cstring (&(lock->expiration_date),
+                                      timestr, pool));
+    }
+
+  /* Return the structure. */
+  *lock_p = lock;
   return SVN_NO_ERROR;
 }
 
@@ -1292,6 +1381,62 @@ svn_fs_base__unparse_change_skel (skel_t **skel_p,
     return skel_err ("change");
   if (kind != change->kind)
     return skel_err ("change");
+  *skel_p = skel;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__unparse_lock_skel (skel_t **skel_p,
+                                const svn_lock_t *lock,
+                                apr_pool_t *pool)
+{
+  skel_t *skel;
+
+  /* Create the skel. */
+  skel = svn_fs_base__make_empty_list (pool);
+
+  /* EXP-DATE is optional.  If not present, just use an empty atom. */
+  if (lock->expiration_date)
+    svn_fs_base__prepend 
+      (svn_fs_base__str_atom
+       (svn_time_to_cstring (lock->expiration_date, pool), pool), skel);
+  else
+    svn_fs_base__prepend (svn_fs_base__mem_atom (NULL, 0, pool), skel);
+
+  /* CREATION-DATE */
+  svn_fs_base__prepend 
+    (svn_fs_base__str_atom
+     (svn_time_to_cstring (lock->creation_date, pool), pool), skel);
+
+  /* XML_P */
+  if (lock->xml_comment)
+    svn_fs_base__prepend (svn_fs_base__str_atom ("1", pool), skel);
+  else
+    svn_fs_base__prepend (svn_fs_base__str_atom ("0", pool), skel);
+
+  /* COMMENT */
+  if (lock->comment)
+    svn_fs_base__prepend (svn_fs_base__str_atom (lock->comment, pool), skel);
+  else
+    svn_fs_base__prepend (svn_fs_base__mem_atom (NULL, 0, pool), skel);
+
+  /* OWNER */
+  svn_fs_base__prepend (svn_fs_base__str_atom (lock->owner, pool), skel);
+  
+  /* LOCK-TOKEN */
+  svn_fs_base__prepend (svn_fs_base__str_atom (lock->token, pool), skel);
+
+  /* PATH */
+  svn_fs_base__prepend (svn_fs_base__str_atom (lock->path, pool), skel);
+
+  /* "lock" */
+  svn_fs_base__prepend (svn_fs_base__str_atom ("lock", pool), skel);
+
+  /* Validate and return the skel. */
+  if (! is_valid_lock_skel (skel))
+    return skel_err ("lock");
+
   *skel_p = skel;
   return SVN_NO_ERROR;
 }

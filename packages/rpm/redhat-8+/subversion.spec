@@ -1,10 +1,9 @@
 %define apache_version 2.0.48-0.1
 %define apr_version 0.9.5
 %define neon_version 0.24.7
-%define swig_version 1.3.19
+%define swig_version 1.3.19-3
 %define apache_dir /usr
-# If you don't have 360+ MB of free disk space or don't want to run checks then
-# set make_*_check to 0.
+# If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_check 1
 %define make_ra_svn_check 1
 %define make_ra_dav_check 1
@@ -101,6 +100,38 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu Mar 31 2005 David Summers <david@summersoft.fay.ar.us> r13821
+- Greatly reduce disk usage by telling each test pass to cleanup after
+  successful tests.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13714
+- Make use of new swig-1.3.19-3 package which allows 1.3.19 to co-exist with
+  the swig-1.1p5 package that comes with RedHat.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13711
+- Take out "static build" feature that never actually worked as intended.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13709
+- Fix http tests to work with new locking feature which now requires
+  authentication.
+
+* Tue Mar 15 2005 David Summers <david@summersoft.fay.ar.us> r13417
+- Supplementary: Take out documentation patch altogether.
+
+* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13132
+- Bye bye book;  it is now no longer a part of the Subversion repository but
+  is at the http://svn.red-bean.com/svnbook/ URL.
+  I will probably create a separate RPM package for it now...stay tuned.
+
+* Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> 1.1.2-12650
+- Delete apr, apr-util, and neon from the distribution tree as those
+  packages are already installed.
+
+* Wed Dec 29 2004 David Summers <david@summersoft.fay.ar.us> 1.1.2-12531
+- Added "noreplace" option to subversion.conf to not replace it if it has
+  been changed.  This (hopefully) prevents the server from failing when doing
+  an upgrade.  Thanks to Peter Holzleitner for the suggestion.
+
 * Wed Jul 07 2004 David Summers <david@summersoft.fay.ar.us> 1.1.0-10174
 - Require neon-0.24.7 to fix invalid XML (compression) bug.
 
@@ -340,9 +371,6 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 patch -p1 < packages/rpm/redhat-8+/install.patch
 
-# Fix documentation version generation.
-patch -p1 < packages/rpm/redhat-8+/doc.patch
-
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
    1)
@@ -364,36 +392,19 @@ sed -e \
  "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
-echo "${RELEASE_NAME}" > doc/book/book/package.version
 
-# Configure static.
+# Delete apr, apr-util, and neon from the tree as those packages should already
+# be installed.
+rm -rf apr apr-util neon
+
 %configure \
-	--without-berkeley-db \
-	--disable-shared \
-	--enable-all-static \
-	--with-swig \
+	--with-swig=/usr/bin/swig-1.3.19 \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
 %build
-# Make svnadmin static.
-make subversion/svnadmin/svnadmin
-
-# Move static svnadmin to safe place.
-cp subversion/svnadmin/svnadmin svnadmin.static
-
-# Configure shared.
-
-%configure \
-	--with-swig \
-	--with-python=/usr/bin/python2.2 \
-	--with-apxs=%{apache_dir}/sbin/apxs \
-	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
-
-# Make everything shared.
 make clean
 make
 
@@ -411,7 +422,7 @@ cd ../../../../..
 
 %if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check
+make check CLEANUP=true
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
@@ -420,7 +431,7 @@ echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
-make svncheck
+make svncheck CLEANUP=true
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
@@ -430,9 +441,13 @@ echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
 sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
+cat > passwd <<EOF
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+EOF
 /usr/sbin/httpd -f `pwd`/httpd.conf
 sleep 1
-make check BASE_URL='http://localhost:15835'
+make check CLEANUP=true BASE_URL='http://localhost:15835'
 killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
@@ -461,33 +476,12 @@ cd ../../../../..
 # Clean up unneeded files for package installation
 rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
 
-# Copy svnadmin.static to destination
-cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
-
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
-# Set up book generation and installation
-(cd doc/book;
-rm -f book/version.xml
-# Start patch by Ben Reser <ben@reser.org> to get documentation to build.
-%{__perl} -pi -e 's#href="xsl/(html/docbook.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/html-stylesheet.xsl
-%{__perl} -pi -e 's#href="xsl/(html/chunk.xsl)"#href="%{_datadir}/sgml/docbook/xsl-stylesheets/$1"#;' tools/chunk-stylesheet.xsl
-# End patch by Ben Reser <ben@reser.org> to get documentation to build.
-make SVNVERSION=%{release} XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
-cp -r doc/book/book/html-chunk book
-cp -r doc/book/book/images     book/images
-
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
-
-%preun
-# Save current copy of svnadmin.static
-echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
-echo "Erase this program only after you make sure you won't need to dump/reload"
-echo "any of your repositories to upgrade to a new version of the database."
-cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
 
 %post server
 # Restart apache server if needed.
@@ -510,10 +504,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc BUGS CHANGES COMMITTERS COPYING HACKING INSTALL README
 %doc subversion/LICENSE
-%doc book
 /usr/bin/svn
 /usr/bin/svnadmin
-/usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve
@@ -540,7 +532,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files server
 %defattr(-,root,root)
-%config /etc/httpd/conf.d/subversion.conf
+%config(noreplace) /etc/httpd/conf.d/subversion.conf
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.la
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.so
 %{apache_dir}/lib/httpd/modules/mod_authz_svn.la

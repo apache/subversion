@@ -10,7 +10,7 @@ set tw=72
 set fo+=w fo-=2
 set ts=2 sw=2 sts=2 et
 set si
-set cinw=<para>,<varlistentry>,<orderedlist>,<listitem>,<simplesect>,<chapter,<note>,<figure,<sect1,<sect2,<footnote>
+set cinw=<para>,<variablelist>,<varlistentry>,<orderedlist>,<itemizedlist>,<listitem>,<simplesect>,<chapter,<note>,<figure,<sect1,<sect2,<sidebar,<figure,<table,<tgroup,<thead,<row>,<tbody>,<entry>,<title>
 set fdm=marker
 set nowrap
 
@@ -27,6 +27,6 @@ noremap <f5> :!~/bin/dings_it<cr>zo/@ENGLISH }}}<cr>j0f>a
 " next ENGLISH marker and go into linewise visual mode again.
 noremap <f6> gq/@ENGLISH }}}<cr>jV
 
-runtime syntax/xml.vim
+runtime! syntax/xml.vim
 
 " vim: set fdm=manual tw=72 ts=2 sw=2 sts=2 et fenc=utf8 :

@@ -82,8 +82,8 @@ extern "C" {
 /** A simple counted string. */
 typedef struct svn_string_t
 {
-  const char *data;
-  apr_size_t len;
+  const char *data; /**< pointer to the bytestring */
+  apr_size_t len;   /**< length of bytestring */
 } svn_string_t;
 
 /** A buffered string, capable of appending without an allocation and copy 
@@ -295,8 +295,6 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
  *
  * If @a chop_whitespace is true, then remove leading and trailing
  * whitespace from the returned strings.
- *
- * @a input may not be null.
  */
 apr_array_header_t *svn_cstring_split (const char *input,
                                        const char *sep_chars,
@@ -322,6 +320,22 @@ void svn_cstring_split_append (apr_array_header_t *array,
 svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            apr_array_header_t *list);
 
+/** @since New in 1.2.
+ *
+ * Return the number of line breaks in @a msg, allowing any kind of newline
+ * termination (CR, LF, CRLF, or LFCR), even inconsistent.
+ */
+int svn_cstring_count_newlines (const char *msg);
+
+/** @since New in 1.2.
+ *
+ * Return a cstring which is the concatenation of @a strings (an array
+ * of char *) each separated by @a separator.  The returned string is
+ * allocated from @a pool. */
+char *
+svn_cstring_join (apr_array_header_t *strings,
+                  const char *separator,
+                  apr_pool_t *pool);
 
 /** @} */
 

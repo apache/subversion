@@ -24,14 +24,13 @@
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "cl.h"
 
 
@@ -75,11 +74,8 @@ svn_cl__propget (apr_getopt_t *os,
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
   
   /* suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
+                                          opt_state->targets, pool));
   
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -143,12 +139,20 @@ svn_cl__propget (apr_getopt_t *os,
           apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;
           svn_boolean_t is_url = svn_path_is_url (target);
+          const char *truepath;
+          svn_opt_revision_t peg_revision;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_ERR (svn_client_propget (&props, pname_utf8, target,
-                                       &(opt_state->start_revision),
-                                       opt_state->recursive, ctx, subpool));
+
+          /* Check for a peg revision. */
+          SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
+                                       subpool));
+          
+          SVN_ERR (svn_client_propget2 (&props, pname_utf8, truepath,
+                                        &peg_revision,
+                                        &(opt_state->start_revision),
+                                        opt_state->recursive, ctx, subpool));
           
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,

@@ -27,10 +27,8 @@
 #include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
-#include <apr_lib.h>
 #include <apr_general.h>
 #include "svn_types.h"
-#include "svn_delta.h"
 #include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -40,7 +38,6 @@
 #include "svn_io.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
-#include "svn_time.h"
 #include "svn_utf.h"
 
 #include "wc.h"
@@ -168,7 +165,8 @@ svn_wc__load_prop_file (const char *propfile_path,
                                  pool));
 
       SVN_ERR_W (svn_hash_read (hash, propfile, pool),
-                 apr_psprintf (pool, _("Can't parse '%s'"), propfile_path));
+                 apr_psprintf (pool, _("Can't parse '%s'"),
+                               svn_path_local_style (propfile_path, pool)));
 
       SVN_ERR (svn_io_file_close (propfile, pool));
     }
@@ -195,7 +193,7 @@ svn_wc__save_prop_file (const char *propfile_path,
   SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
              apr_psprintf (pool, 
                            _("Can't write property hash to '%s'"),
-                           propfile_path));
+                           svn_path_local_style (propfile_path, pool)));
 
   SVN_ERR (svn_io_file_close (prop_tmp, pool));
 
@@ -248,7 +246,8 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        _("Can't find entry '%s' in '%s'"),
-       name, svn_wc_adm_access_path (adm_access));
+       name,
+       svn_path_local_style (svn_wc_adm_access_path (adm_access), pool));
 
   *reject_file = the_entry->prejfile 
                  ? apr_pstrdup (pool, the_entry->prejfile)
@@ -279,7 +278,8 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), path);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (path, pool));
 
   /* Notice that we're not using svn_path_split_if_file(), because
      that looks at the actual working file.  It's existence shouldn't
@@ -315,7 +315,8 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
     {
       SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
                                          log_accum->len, NULL, pool),
-                 apr_psprintf (pool, _("Error writing log for '%s'"), path));
+                 apr_psprintf (pool, _("Error writing log for '%s'"),
+                               svn_path_local_style (path, pool)));
 
       SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
                                        1, /* sync */ pool));
@@ -734,12 +735,12 @@ wcprop_list (apr_hash_t **props,
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                               _("'%s' does not exist"),
-                              path);
+                              svn_path_local_style (path, pool));
   
   if (kind == svn_node_unknown)
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                               _("Unknown node kind: '%s'"),
-                              path);
+                              svn_path_local_style (path, pool));
 #endif
 
   /* Construct a path to the relevant property file */
@@ -812,7 +813,8 @@ svn_wc__wcprop_set (const char *name,
   /* Write. */
   SVN_ERR_W (svn_hash_write (prophash, fp, pool),
              apr_psprintf (pool,
-                           _("Cannot write property hash for '%s'"), path));
+                           _("Cannot write property hash for '%s'"),
+                           svn_path_local_style (path, pool)));
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
@@ -836,7 +838,6 @@ svn_wc_prop_list (apr_hash_t **props,
                   svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool)
 {
-  svn_node_kind_t pkind;
   const char *prop_path;
 
   *props = apr_hash_make (pool);
@@ -844,18 +845,8 @@ svn_wc_prop_list (apr_hash_t **props,
   /* Construct a path to the relevant property file */
   SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
 
-  /* Does the property file exist? */
-  SVN_ERR (svn_io_check_path (prop_path, &pkind, pool));
-  
-  if (pkind == svn_node_none)
-    /* No property file exists.  Just go home, with an empty hash. */
-    return SVN_NO_ERROR;
-  
-  /* else... */
-
-  SVN_ERR (svn_wc__load_prop_file (prop_path, *props, pool));
-
-  return SVN_NO_ERROR;
+  /* svn_wc__load_prop_file checks if the prop file exists */
+  return svn_wc__load_prop_file (prop_path, *props, pool);
 }
 
 
@@ -916,6 +907,7 @@ validate_prop_against_node_kind (const char *name,
                                  SVN_PROP_KEYWORDS,
                                  SVN_PROP_EOL_STYLE,
                                  SVN_PROP_MIME_TYPE,
+                                 SVN_PROP_NEEDS_LOCK,
                                  NULL };
   const char **node_kind_prohibit;
 
@@ -926,20 +918,22 @@ validate_prop_against_node_kind (const char *name,
       while (*node_kind_prohibit)
         if (strcmp (name, *node_kind_prohibit++) == 0)
           return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                    _("Cannot set '%s' on a directory (%s)"),
-                                    name, path);
+                                    _("Cannot set '%s' on a directory ('%s')"),
+                                    name, svn_path_local_style (path, pool));
       break;
     case svn_node_file:
       node_kind_prohibit = file_prohibit;
       while (*node_kind_prohibit)
         if (strcmp (name, *node_kind_prohibit++) == 0)
           return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                    _("Cannot set '%s' on a file (%s)"),
-                                    name, path);
+                                    _("Cannot set '%s' on a file ('%s')"),
+                                    name,
+                                    svn_path_local_style (path, pool));
       break;
     default:
       return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                _("'%s' is not a file or directory"), path);
+                                _("'%s' is not a file or directory"),
+                                svn_path_local_style (path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -962,7 +956,8 @@ validate_eol_prop_against_file (const char *path,
   if (mime_type && svn_mime_type_is_binary (mime_type->data))
     return svn_error_createf 
       (SVN_ERR_ILLEGAL_TARGET, NULL,
-       _("File '%s' has binary mime type property"), path);
+       _("File '%s' has binary mime type property"),
+       svn_path_local_style (path, pool));
 
   /* Open PATH. */
   SVN_ERR (svn_io_file_open (&fp, path, 
@@ -983,7 +978,8 @@ validate_eol_prop_against_file (const char *path,
                                     "", FALSE, NULL, FALSE);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
-                              _("File '%s' has inconsistent newlines"), path);
+                              _("File '%s' has inconsistent newlines"),
+                              svn_path_local_style (path, pool));
   else if (err)
     return err;
 
@@ -992,12 +988,89 @@ validate_eol_prop_against_file (const char *path,
 }
 
 
+/** Return in a <tt>svn_stringbuf_t *</tt>, the
+ * canonicalized equivalent of @a value.
+ * Repeated instances of the same keyword are ignored.
+ *
+ * All memory is allocated out of @a pool.
+ */
+static svn_stringbuf_t *
+canonicalize_keywords (const svn_string_t *value,
+                       apr_pool_t *pool)
+{
+  /* Structure to be used for canonicalization of svn:keywords */
+  typedef struct canon_table_s
+  {
+    const char *prop_value; /* the property value */
+    const int index; /* the index to the corresponding canonical form */
+    const int flag;  /* bit pattern to flag that this canonical form
+                     ** is already set */
+  } canon_table_t;
+  static canon_table_t canon_kw_table[]
+    = {
+         { SVN_KEYWORD_REVISION_LONG,   2, 0x0001 },
+         { SVN_KEYWORD_REVISION_SHORT,  2, 0x0001 },
+         { SVN_KEYWORD_REVISION_MEDIUM, 2, 0x0001 },
+         { SVN_KEYWORD_DATE_LONG,       4, 0x0002 },
+         { SVN_KEYWORD_DATE_SHORT,      4, 0x0002 },
+         { SVN_KEYWORD_AUTHOR_LONG,     6, 0x0004 },
+         { SVN_KEYWORD_AUTHOR_SHORT,    6, 0x0004 },
+         { SVN_KEYWORD_URL_SHORT,       7, 0x0008 },
+         { SVN_KEYWORD_URL_LONG,        7, 0x0008 },
+         { SVN_KEYWORD_ID,              9, 0x0010 }
+      };
+  const int sizeof_canon_kw_table
+    = sizeof (canon_kw_table) / sizeof (canon_table_t);
+
+  apr_array_header_t *keyword_tokens;
+  svn_stringbuf_t *canonicalized_value = NULL;
+  int flags = 0;
+  int i, j;
+
+  /* tokenize the input */
+  keyword_tokens = svn_cstring_split (value->data, " \t\v\n\b\r\f",
+                                      TRUE /* chop */, pool);
+
+  /* for all the tokens */
+  for (i = 0; i < keyword_tokens->nelts; ++i)
+    {
+      const char *keyword = APR_ARRAY_IDX (keyword_tokens, i, const char *);
+
+      for (j = 0; j < sizeof_canon_kw_table; j++)
+        {
+          /* see if an equivalent standard form exists */
+          if ((! strcasecmp (canon_kw_table[j].prop_value, keyword))
+              && (! (flags & canon_kw_table[j].flag)))
+            {
+              /* If so, canonicalize and prepare output */
+              if (! canonicalized_value)
+                canonicalized_value = svn_stringbuf_create
+                  (canon_kw_table[canon_kw_table[j].index].prop_value,
+                   pool);
+              else
+                {
+                  svn_stringbuf_appendcstr (canonicalized_value, " ");
+                  svn_stringbuf_appendcstr
+                    (canonicalized_value,
+                     canon_kw_table[canon_kw_table[j].index].prop_value);
+                }
+              flags |= canon_kw_table[j].flag;
+              break; /* goto the next token from the input */
+            }
+        }
+    }
+
+  return canonicalized_value;
+}
+
+
 svn_error_t *
-svn_wc_prop_set (const char *name,
-                 const svn_string_t *value,
-                 const char *path,
-                 svn_wc_adm_access_t *adm_access,
-                 apr_pool_t *pool)
+svn_wc_prop_set2 (const char *name,
+                  const svn_string_t *value,
+                  const char *path,
+                  svn_wc_adm_access_t *adm_access,
+                  svn_boolean_t skip_checks,
+                  apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *prophash;
@@ -1018,19 +1091,21 @@ svn_wc_prop_set (const char *name,
 
   /* Else, handle a regular property: */
 
-  /* Setting an inappropriate property is not allowed, deleting such a
-     property is allowed since older clients allowed (and other clients
-     possibly still allow) setting it. */
+  /* Setting an inappropriate property is not allowed (unless
+     overridden by 'skip_checks', in some circumstances).  Deleting an
+     inappropriate property is allowed, however, since older clients
+     allowed (and other clients possibly still allow) setting it in
+     the first place. */
   if (value)
     {
       SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
-      if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
+      if (!skip_checks && (strcmp (name, SVN_PROP_EOL_STYLE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
           SVN_ERR (validate_eol_prop_against_file (path, adm_access, pool));
         }
-      else if (strcmp (name, SVN_PROP_MIME_TYPE) == 0)
+      else if (!skip_checks && (strcmp (name, SVN_PROP_MIME_TYPE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
@@ -1046,7 +1121,10 @@ svn_wc_prop_set (const char *name,
               svn_stringbuf_appendbytes (new_value, "\n", 1);
             }
 
-          /* Make sure this is a valid externals property. */
+          /* Make sure this is a valid externals property.  Do not
+             allow 'skip_checks' to override, as there is no circumstance in
+             which this is proper (because there is no circumstance in
+             which Subversion can handle it). */
           if (strcmp (name, SVN_PROP_EXTERNALS) == 0)
             {
               /* We don't allow "." nor ".." as target directories in
@@ -1060,7 +1138,7 @@ svn_wc_prop_set (const char *name,
         }
       else if (strcmp (name, SVN_PROP_KEYWORDS) == 0)
         {
-          new_value = svn_stringbuf_create_from_string (value, pool);
+          new_value = canonicalize_keywords (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
         }
     }
@@ -1086,6 +1164,30 @@ svn_wc_prop_set (const char *name,
 
           value = &executable_value;
           SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
+        }
+    }
+
+  if (kind == svn_node_file && strcmp (name, SVN_PROP_NEEDS_LOCK) == 0)
+    {
+      /* If the svn:needs-lock property was set to NULL, set the file
+         to read-write */
+      if (value == NULL)
+        {
+          SVN_ERR (svn_io_set_file_read_write_carefully (path, TRUE, 
+                                                         FALSE, pool));
+        }
+      else
+        {
+          /* Since we only check if the property exists or not, force the
+             property value to a specific value */
+          static const svn_string_t needs_lock_value =
+            {
+              SVN_PROP_NEEDS_LOCK_VALUE,
+              sizeof (SVN_PROP_NEEDS_LOCK_VALUE) - 1
+            };
+
+          value = &needs_lock_value;
+          /* And we'll set the file to read-only at commit time. */
         }
     }
 
@@ -1123,7 +1225,8 @@ svn_wc_prop_set (const char *name,
   /* Write. */
   SVN_ERR_W (svn_hash_write (prophash, fp, pool),
              apr_psprintf (pool, 
-                           _("Cannot write property hash for '%s'"), path));
+                           _("Cannot write property hash for '%s'"),
+                           svn_path_local_style (path, pool)));
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 0,
@@ -1155,6 +1258,18 @@ svn_wc_prop_set (const char *name,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_wc_prop_set (const char *name,
+                 const svn_string_t *value,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 apr_pool_t *pool)
+{
+  return svn_wc_prop_set2 (name, value, path, adm_access, FALSE, pool);
+}
+
 
 
 svn_boolean_t
@@ -1537,7 +1652,9 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Error parsing %s property on '%s': '%s'"),
-             SVN_PROP_EXTERNALS, parent_directory, line);
+             SVN_PROP_EXTERNALS,
+             svn_path_local_style (parent_directory, pool),
+             line);
         }
 
       item->target_dir = svn_path_canonicalize
@@ -1549,7 +1666,8 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Invalid %s property on '%s': "
                "target involves '.' or '..' or is an absolute path"),
-             SVN_PROP_EXTERNALS, parent_directory);
+             SVN_PROP_EXTERNALS,
+             svn_path_local_style (parent_directory, pool));
       }
 
       item->url = svn_path_canonicalize (item->url, pool);

@@ -66,23 +66,6 @@ Item = svntest.wc.StateItem
 #
 ####
 
-########### THINGS THAT HAVE FAILED DURING HAND-TESTING ##############
-#
-# These have all been fixed, but we want regression tests for them.
-#
-#   1. Ben encountered this:
-#      Create a greek tree, commit a keyword into one file,
-#      then commit a keyword property (i.e., turn on keywords), then
-#      try to check out head somewhere else.  See seg fault.
-#    
-#   2. Mike encountered this:
-#      Add the keyword property to a file, svn revert the file, see
-#      error.
-#
-#   3. Another one from Ben:
-#      Keywords not expanded on checkout.
-#
-######################################################################
 
 
 # Paths that the tests test.
@@ -93,7 +76,20 @@ embd_author_rev_unexp_path = ''
 embd_author_rev_exp_path = ''
 embd_bogus_keywords_path = ''
 
-def setup_working_copy(wc_dir):
+def check_keywords(actual_kw, expected_kw, name):
+  """A Helper function to compare two keyword lists"""
+
+  if len(actual_kw) != len(expected_kw):
+    print "Keyword lists are different by size"
+    raise svntest.Failure
+
+  for i in range(0,len(actual_kw)):
+    if actual_kw[i] != expected_kw[i]:
+      print '%s, Expected: %s' % (name, expected_kw[i][:-1])
+      print '%s, Got:      %s' % (name, actual_kw[i][:-1])
+      raise svntest.Failure
+ 
+def setup_working_copy(wc_dir, value_len):
   """Setup a standard test working copy, then create (but do not add)
   various files for testing translation."""
   
@@ -107,6 +103,7 @@ def setup_working_copy(wc_dir):
   global embd_author_rev_unexp_path
   global embd_author_rev_exp_path
   global embd_bogus_keywords_path
+  global fixed_length_keywords_path
 
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
@@ -123,6 +120,7 @@ def setup_working_copy(wc_dir):
   embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
   embd_bogus_keywords_path = os.path.join(wc_dir, 'embd_bogus_keywords')
+  fixed_length_keywords_path = os.path.join(wc_dir, 'fixed_length_keywords')
 
   svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
   svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
@@ -137,7 +135,29 @@ def setup_working_copy(wc_dir):
                             "blue $Author: blah $ fish$Rev: 0 $\nI fish")
   svntest.main.file_append (embd_bogus_keywords_path,
                             "you fish $Arthur$then\n we$Rev0$ \n\nchew fish")
-      
+
+  keyword_test_targets = [
+    # User tries to shoot him or herself on the foot
+    "$URL::$\n",
+    "$URL:: $\n",
+    "$URL::  $\n",
+    # Following are valid entries
+    "$URL::   $\n",
+    "$URL:: %s $\n" % (' ' * (value_len-1)),
+    "$URL:: %s $\n" % (' ' * value_len),
+    # Check we will clean the truncate marker when the value fits exactly
+    "$URL:: %s#$\n" % ('a' * value_len),
+    "$URL:: %s $\n" % (' ' * (value_len+1)),
+    # These are syntactically wrong
+    "$URL::x%s $\n" % (' ' * value_len),
+    "$URL:: %sx$\n" % (' ' * value_len),
+    "$URL::x%sx$\n" % (' ' * value_len)
+    ]
+
+  for i in keyword_test_targets:
+    svntest.main.file_append (fixed_length_keywords_path, i)
+
+
 
 ### Helper functions for setting/removing properties
 
@@ -168,21 +188,28 @@ def keywords_from_birth(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  setup_working_copy (wc_dir)
+  canonized_repo_url = svntest.main.canonize_url(sbox.repo_url)
+  if canonized_repo_url[-1:] != '/':
+    url_expand_test_data = canonized_repo_url + '/fixed_length_keywords'
+  else:
+    url_expand_test_data = canonized_repo_url + 'fixed_length_keywords'
+  
+  setup_working_copy (wc_dir, len(url_expand_test_data))
 
   # Add all the files
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'url_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'url_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'id_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'id_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'embd_author_rev_unexp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'embd_author_rev_exp' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'embd_bogus_keywords' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'author_rev_unexp' : Item(status='A ', wc_rev=0),
+    'author_rev_exp' : Item(status='A ', wc_rev=0),
+    'url_unexp' : Item(status='A ', wc_rev=0),
+    'url_exp' : Item(status='A ', wc_rev=0),
+    'id_unexp' : Item(status='A ', wc_rev=0),
+    'id_exp' : Item(status='A ', wc_rev=0),
+    'bogus_keywords' : Item(status='A ', wc_rev=0),
+    'embd_author_rev_unexp' : Item(status='A ', wc_rev=0),
+    'embd_author_rev_exp' : Item(status='A ', wc_rev=0),
+    'embd_bogus_keywords' : Item(status='A ', wc_rev=0),
+    'fixed_length_keywords' : Item(status='A ', wc_rev=0),
     })
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
@@ -195,6 +222,7 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn (None, 'add', embd_author_rev_unexp_path)
   svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
   svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
+  svntest.main.run_svn (None, 'add', fixed_length_keywords_path)
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -205,6 +233,7 @@ def keywords_from_birth(sbox):
   keywords_on (id_unexp_path)
   keywords_on (id_exp_path)
   keywords_on (embd_author_rev_exp_path)
+  keywords_on (fixed_length_keywords_path)
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
@@ -218,6 +247,7 @@ def keywords_from_birth(sbox):
     'embd_author_rev_unexp' : Item(verb='Adding'),
     'embd_author_rev_exp' : Item(verb='Adding'),
     'embd_bogus_keywords' : Item(verb='Adding'),
+    'fixed_length_keywords' : Item(verb='Adding'),
     })
 
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -259,8 +289,48 @@ def keywords_from_birth(sbox):
     print "Id expansion failed for", id_exp_path
     raise svntest.Failure
   fp.close()
+  
+  # Check fixed length keywords.
+  kw_workingcopy = [
+    '$URL::$\n',
+    '$URL:: $\n',
+    '$URL::  $\n',
+    '$URL:: %s#$\n' % url_expand_test_data[0:1],
+    '$URL:: %s#$\n' % url_expand_test_data[:-1],
+    '$URL:: %s $\n' % url_expand_test_data,
+    '$URL:: %s $\n' % url_expand_test_data,
+    '$URL:: %s  $\n'% url_expand_test_data,
+    '$URL::x%s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %sx$\n' % (' ' * len(url_expand_test_data)),
+    '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
+  ]
 
+  fp = open(fixed_length_keywords_path, 'r')
+  actual_workingcopy_kw = fp.readlines()
+  fp.close()
+  check_keywords(actual_workingcopy_kw, kw_workingcopy, "working copy")
 
+  # Check text base for fixed length keywords.
+  kw_textbase = [
+    '$URL::$\n',
+    '$URL:: $\n',
+    '$URL::  $\n',
+    '$URL::   $\n',
+    '$URL:: %s $\n' % (' ' * len(url_expand_test_data[:-1])),
+    '$URL:: %s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %s  $\n'% (' ' * len(url_expand_test_data)),
+    '$URL::x%s $\n' % (' ' * len(url_expand_test_data)),
+    '$URL:: %sx$\n' % (' ' * len(url_expand_test_data)),
+    '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
+    ]
+  
+  fp = open(os.path.join(wc_dir, '.svn', 'text-base',
+			 'fixed_length_keywords.svn-base'), 'r')
+  actual_textbase_kw = fp.readlines()
+  fp.close()
+  check_keywords(actual_textbase_kw, kw_textbase, "text base")
+  
 def enable_translation(sbox):
   "enable translation, check status, commit"
 
@@ -520,7 +590,6 @@ def cat_keyword_expansion(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/lambda' : Item(verb='Sending'),
     })
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('A/B/lambda', wc_rev=3)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
@@ -550,7 +619,7 @@ def copy_propset_commit(sbox):
                                      mu2_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/mu2' : Item(status='A ', wc_rev='-', repos_rev=1, copied='+')
+    'A/mu2' : Item(status='A ', wc_rev='-', copied='+')
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -558,14 +627,196 @@ def copy_propset_commit(sbox):
   expected_output = wc.State(wc_dir, {
     'A/mu2' : Item(verb='Adding'),
     })
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
                                          None, None, None, None, None,
                                          wc_dir)
 
+#----------------------------------------------------------------------
+#      Create a greek tree, commit a keyword into one file,
+#      then commit a keyword property (i.e., turn on keywords), then
+#      try to check out head somewhere else.
+#      This should not cause seg fault
+def propset_commit_checkout_nocrash(sbox):
+  "propset, commit, check out into another wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Put a keyword in A/mu, commit
+  svntest.main.file_append (mu_path, "\n$Rev$")
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Set property to do keyword expansion on A/mu, commit.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Rev', mu_path)
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Check out into another wc dir
+  other_wc_dir = sbox.add_wc_path('other')
+  mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
   
+  svntest.actions.run_and_verify_svn (None, None, None, 'checkout',
+                                      '--username', svntest.main.wc_author,
+                                      '--password', svntest.main.wc_passwd,
+                                      svntest.main.current_repo_url,
+                                      other_wc_dir)
+
+  mu_other_contents = open(mu_other_path).read()
+  if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
+    print "'%s' does not have the expected contents" % mu_other_path
+    raise svntest.Failure
+
+  
+#----------------------------------------------------------------------
+#      Add the keyword property to a file, svn revert the file
+#      This should not display any error message
+def propset_revert_noerror(sbox):
+  "propset, revert"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Set the Rev keyword for the mu file
+  # could use the keywords_on()/keywords_off() functions to
+  # set/del all svn:keywords
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Rev', mu_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert the propset
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', mu_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+ 
+#----------------------------------------------------------------------
+#      Testing for canonicalized input to svn:keywords
+#      Propset a case-different keyword and check if
+#      expansion works
+def canonicalize_keywords_prop(sbox):
+  "test canonicalization of the svn:keywords input"
+
+  tests = [
+           ("lastchangedrevision",                      "Revision\n"),
+           ("lastcHANgedREviSIoN",                      "Revision\n"),
+           ("revision",                                 "Revision\n"),
+           ("rev",                                      "Revision\n"),
+           ("lastchangedby",                            "Author\n"),
+           ("author",                                   "Author\n"),
+           ("aUtHoR",                                   "Author\n"),
+           ("headurl",                                  "URL\n"),
+           ("url",                                      "URL\n"),
+           ("lasTChangEDdate",                          "Date\n"),
+           ("date",                                     "Date\n"),
+           ("DaTe",                                     "Date\n"),
+           ("id",                                       "Id\n"),
+           ("lastchangedrevision author LastChangedBy", "Revision Author\n"),
+          ]
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  for given_input, expected_output in tests:
+    svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                       "svn:keywords",
+                                       given_input,
+                                       iota_path)
+    svntest.actions.run_and_verify_svn(None,  [expected_output], [], 'propget',
+                                       "svn:keywords",
+                                       iota_path)
+
+
+#----------------------------------------------------------------------
+#      Testing for expansion of keywords in the file
+#      in addition to canonicalizable input to svn:keywords
+#      Propset a case-different keyword and check if
+#      expansion works
+def canonicalized_and_keywords_expanded(sbox):
+  "test keyword expansion after canonicalization"
+
+  keywords = [
+    'LastChangedRevision',
+    'Revision',
+    'Rev',
+    'LastChangedDate',
+    'Date',
+    'LastChangedBy',
+    'Author',
+    'HeadURL',
+    'URL',
+    ]
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Z_path = os.path.join(wc_dir, 'Z')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Z_path)
+
+  # Add the file that has the keyword to be expanded
+  url_path = os.path.join(Z_path, 'url')
+  for kwd in keywords:
+    svntest.main.file_append(url_path,
+                             kwd + ":$" + kwd + "$\n" +
+                             kwd.lower() + ":$" + kwd.lower() + "$\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', url_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     "svn:keywords",
+                                     "lastchangedrevision lastchangeddate lastchangedby headurl",
+                                     url_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', wc_dir)
+
+  # Check that the properly capitalised keyword "kwd" has been expanded on
+  # the first line of "lines", and a lower-case version of it has not been
+  # expanded on the next line of "lines".
+  def kwd_test(kwd, lines):
+    if not (lines[0].startswith(kwd + ":$" + kwd + ": ")):
+      print kwd + " expansion failed for", url_path
+      print "Line is: " + lines[0]
+      raise svntest.Failure
+    kwd = kwd.lower()
+    if not (lines[1].startswith(kwd + ":$" + kwd + "$")):
+      print kwd + " expansion failed for", url_path
+      print "Line is: " + lines[1]
+      raise svntest.Failure
+
+  # Check keyword got expanded (and thus the mkdir, add, ps, commit
+  # etc. worked)
+  fp = open(url_path, 'r')
+  lines = fp.readlines()
+  for kwd in keywords:
+    kwd_test(kwd, lines)
+    lines = lines[2:]
+  fp.close()
+
 ########################################################################
 # Run the tests
 
@@ -581,6 +832,10 @@ test_list = [ None,
               keyword_expanded_on_checkout,
               cat_keyword_expansion,
               copy_propset_commit,
+              propset_commit_checkout_nocrash,
+              propset_revert_noerror, 
+              canonicalize_keywords_prop,
+              canonicalized_and_keywords_expanded,
              ]
 
 if __name__ == '__main__':

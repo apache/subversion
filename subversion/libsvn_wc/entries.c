@@ -116,7 +116,8 @@ svn_wc__entries_init (const char *path,
 
   SVN_ERR_W (svn_io_file_write_full (f, accum->data, accum->len, NULL, pool),
              apr_psprintf (pool, 
-                           _("Error writing entries file for '%s'"), path));
+                           _("Error writing entries file for '%s'"),
+                           svn_path_local_style (path, pool)));
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
@@ -481,7 +482,37 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     if (entry->cmt_author)
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
   }
-  
+
+  /* Lock token. */
+  entry->lock_token = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_token)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_TOKEN;
+
+  /* lock owner. */
+  entry->lock_owner = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_owner)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
+
+  /* lock comment. */
+  entry->lock_comment = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_comment)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_COMMENT;
+
+  /* lock creation date. */
+  {
+    const char *cdate_str = 
+      apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
+                    APR_HASH_KEY_STRING);
+    if (cdate_str)
+      {
+        SVN_ERR (svn_time_from_cstring (&entry->lock_creation_date, 
+                                        cdate_str, pool));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE;
+      }
+  }
   
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -666,7 +697,8 @@ read_entries (svn_wc_adm_access_t *adm_access,
     SVN_ERR_W (svn_xml_parse (svn_parser, buf, bytes_read, is_final),
                apr_psprintf (pool,
                              _("XML parser failed in '%s'"),
-                             svn_wc_adm_access_path (adm_access)));
+                             svn_path_local_style
+                             (svn_wc_adm_access_path (adm_access), pool)));
   } while (! is_final);
 
   /* Close the entries file. */
@@ -752,7 +784,8 @@ check_entries (apr_hash_t *entries,
   if (! default_entry)
     return svn_error_createf
       (SVN_ERR_WC_CORRUPT, NULL,
-       _("Corrupt working copy: '%s' has no default entry"), path);
+       _("Corrupt working copy: '%s' has no default entry"),
+       svn_path_local_style (path, pool));
 
   /* Validate DEFAULT_ENTRY's current schedule. */
   switch (default_entry->schedule)
@@ -769,7 +802,7 @@ check_entries (apr_hash_t *entries,
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT, NULL,
          _("Corrupt working copy: directory '%s' has an invalid schedule"),
-         path);
+         svn_path_local_style (path, pool));
     }
   
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -804,7 +837,7 @@ check_entries (apr_hash_t *entries,
             (SVN_ERR_WC_CORRUPT, NULL,
              _("Corrupt working copy: "
                "'%s' in directory '%s' has an invalid schedule"),
-             name, path);
+             name, svn_path_local_style (path, pool));
         }
 
       if ((default_entry->schedule == svn_wc_schedule_add)
@@ -813,7 +846,7 @@ check_entries (apr_hash_t *entries,
           (SVN_ERR_WC_CORRUPT, NULL,
            _("Corrupt working copy: '%s' in directory '%s' (which is "
              "scheduled for addition) is not itself scheduled for addition"),
-           name, path);
+           name, svn_path_local_style (path, pool));
   
       if ((default_entry->schedule == svn_wc_schedule_delete)
           && (this_entry->schedule != svn_wc_schedule_delete))
@@ -821,7 +854,7 @@ check_entries (apr_hash_t *entries,
           (SVN_ERR_WC_CORRUPT, NULL,
            _("Corrupt working copy: '%s' in directory '%s' (which is "
              "scheduled for deletion) is not itself scheduled for deletion"),
-           name, path);
+           name, svn_path_local_style (path, pool));
 
       if ((default_entry->schedule == svn_wc_schedule_replace)
           && (this_entry->schedule == svn_wc_schedule_normal))
@@ -829,7 +862,7 @@ check_entries (apr_hash_t *entries,
           (SVN_ERR_WC_CORRUPT, NULL,
            _("Corrupt working copy: '%s' in directory '%s' (which is "
              "scheduled for replacement) has an invalid schedule"),
-           name, path);
+           name, svn_path_local_style (path, pool));
     }
   
   return SVN_NO_ERROR;
@@ -848,7 +881,10 @@ svn_wc_entries_read (apr_hash_t **entries,
   new_entries = svn_wc__adm_access_entries (adm_access, show_hidden, pool);
   if (! new_entries)
     {
-      SVN_ERR (read_entries (adm_access, show_hidden, pool));
+      /* Ask for the deleted entries because most operations request them
+         at some stage, getting them now avoids a second file parse. */
+      SVN_ERR (read_entries (adm_access, TRUE, pool));
+
       new_entries = svn_wc__adm_access_entries (adm_access, show_hidden, pool);
     }
 
@@ -1008,6 +1044,26 @@ write_entry (svn_stringbuf_t **output,
                     svn_time_to_cstring (entry->cmt_date, pool));
     }
     
+  /* Lock token */
+  if (entry->lock_token)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN, APR_HASH_KEY_STRING,
+                  entry->lock_token);
+
+  /* Lock owner */
+  if (entry->lock_owner)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER, APR_HASH_KEY_STRING,
+                  entry->lock_owner);
+
+  /* Lock comment */
+  if (entry->lock_comment)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT, APR_HASH_KEY_STRING,
+                  entry->lock_comment);
+
+  /* Lock creation date */
+  if (entry->lock_creation_date)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
+                  APR_HASH_KEY_STRING,
+                  svn_time_to_cstring (entry->lock_creation_date, pool));
 
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
@@ -1107,7 +1163,8 @@ svn_wc__entries_write (apr_hash_t *entries,
   if (! this_dir)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               _("No default entry in directory '%s'"),
-                              svn_wc_adm_access_path (adm_access));
+                              svn_path_local_style
+                              (svn_wc_adm_access_path (adm_access), pool));
 
   /* Open entries file for writing.  It's important we don't use APR_EXCL
    * here.  Consider what happens if a log file is interrupted, it may
@@ -1140,6 +1197,8 @@ svn_wc__entries_write (apr_hash_t *entries,
       void *val;
       svn_wc_entry_t *this_entry;
 
+      svn_pool_clear (subpool);
+
       /* Get the entry and make sure its attributes are up-to-date. */
       apr_hash_this (hi, &key, NULL, &val);
       this_entry = val;
@@ -1150,7 +1209,6 @@ svn_wc__entries_write (apr_hash_t *entries,
 
       /* Append the entry to BIGSTR */
       write_entry (&bigstr, this_entry, key, this_dir, subpool);
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);
@@ -1160,7 +1218,8 @@ svn_wc__entries_write (apr_hash_t *entries,
                                      bigstr->len, NULL, pool),
              apr_psprintf (pool,
                            _("Error writing to '%s'"),
-                           svn_wc_adm_access_path (adm_access)));
+                           svn_path_local_style
+                           (svn_wc_adm_access_path (adm_access), pool)));
 
   err = svn_wc__close_adm_file (outfile,
                                 svn_wc_adm_access_path (adm_access),
@@ -1291,6 +1350,28 @@ fold_entry (apr_hash_t *entries,
     cur_entry->uuid = entry->uuid
                             ? apr_pstrdup (pool, entry->uuid) 
                             : NULL;
+
+  /* Lock token */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_TOKEN)
+    cur_entry->lock_token = (entry->lock_token
+                             ? apr_pstrdup (pool, entry->lock_token)
+                             : NULL);
+
+  /* Lock owner */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_OWNER)
+    cur_entry->lock_owner = (entry->lock_owner
+                             ? apr_pstrdup (pool, entry->lock_owner)
+                             : NULL);
+
+  /* Lock comment */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_COMMENT)
+    cur_entry->lock_comment = (entry->lock_comment
+                               ? apr_pstrdup (pool, entry->lock_comment)
+                               : NULL);
+
+  /* Lock creation date */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
+    cur_entry->lock_creation_date = entry->lock_creation_date;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
@@ -1649,6 +1730,12 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->checksum = apr_pstrdup (pool, entry->checksum);
   if (entry->cmt_author)
     dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
+  if (entry->lock_token)
+    dupentry->lock_token = apr_pstrdup (pool, entry->lock_token);
+  if (entry->lock_owner)
+    dupentry->lock_owner = apr_pstrdup (pool, entry->lock_owner);
+  if (entry->lock_comment)
+    dupentry->lock_comment = apr_pstrdup (pool, entry->lock_comment);
 
   return dupentry;
 }
@@ -1659,6 +1746,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
                      svn_revnum_t new_rev,
+                     svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,
                      apr_pool_t *pool)
 {
@@ -1695,9 +1783,13 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
      If the entry is still marked 'absent' and yet is not the same
      revision as new_rev, then the server did not re-add it, nor
-     re-absent it, so we can remove the entry. */
-  if ((entry->deleted)
-      || (entry->absent && (entry->revision != new_rev)))
+     re-absent it, so we can remove the entry.
+
+     ### This function cannot always determine whether removal is
+     ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
+     ### mess. */
+  if (allow_removal
+      && (entry->deleted || (entry->absent && entry->revision != new_rev)))
     {
       *write_required = TRUE;
       apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
@@ -1712,13 +1804,15 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 /*** Generic Entry Walker */
 
 
-/* A recursive entry-walker, helper for svn_wc_walk_entries */
+/* A recursive entry-walker, helper for svn_wc_walk_entries2 */
 static svn_error_t *
 walker_helper (const char *dirpath,
                svn_wc_adm_access_t *adm_access,
                const svn_wc_entry_callbacks_t *walk_callbacks,
                void *walk_baton,
                svn_boolean_t show_hidden,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -1734,7 +1828,7 @@ walker_helper (const char *dirpath,
   if (! dot_entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               _("Directory '%s' has no THIS_DIR entry"),
-                              dirpath);
+                              svn_path_local_style (dirpath, pool));
 
   SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton, pool));
 
@@ -1746,6 +1840,10 @@ walker_helper (const char *dirpath,
       void *val;
       const svn_wc_entry_t *current_entry; 
       const char *entrypath;
+
+      /* See if someone wants to cancel this operation. */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
 
       apr_hash_this (hi, &key, &klen, &val);
       current_entry = val;
@@ -1764,7 +1862,8 @@ walker_helper (const char *dirpath,
                                         subpool));
           SVN_ERR (walker_helper (entrypath, entry_access,
                                   walk_callbacks, walk_baton,
-                                  show_hidden, subpool));
+                                  show_hidden, cancel_func, cancel_baton,
+                                  subpool));
         }
 
       svn_pool_clear (subpool);
@@ -1784,24 +1883,41 @@ svn_wc_walk_entries (const char *path,
                      svn_boolean_t show_hidden,
                      apr_pool_t *pool)
 {
+  return svn_wc_walk_entries2 (path, adm_access, walk_callbacks,
+                               walk_baton, show_hidden, NULL, NULL,
+                               pool);
+}
+
+svn_error_t *
+svn_wc_walk_entries2 (const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      const svn_wc_entry_callbacks_t *walk_callbacks,
+                      void *walk_baton,
+                      svn_boolean_t show_hidden,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *pool)
+{
   const svn_wc_entry_t *entry;
   
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, show_hidden, pool));
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), path);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (path, pool));
 
   if (entry->kind == svn_node_file)
     return walk_callbacks->found_entry (path, entry, walk_baton, pool);
 
   else if (entry->kind == svn_node_dir)
     return walker_helper (path, adm_access, walk_callbacks, walk_baton,
-                          show_hidden, pool);
+                          show_hidden, cancel_func, cancel_baton, pool);
 
   else
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              _("'%s' has an unrecognized node kind"), path);
+                              _("'%s' has an unrecognized node kind"),
+                              svn_path_local_style (path, pool));
 }
 
 
@@ -1837,5 +1953,6 @@ svn_wc_mark_missing_deleted (const char *path,
   else
     return svn_error_createf (SVN_ERR_WC_PATH_FOUND, NULL,
                               _("Unexpectedly found '%s': "
-                                "path is marked 'missing'"), path);
+                                "path is marked 'missing'"),
+                              svn_path_local_style (path, pool));
 }

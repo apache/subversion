@@ -51,6 +51,14 @@ my $svnlook = "@SVN_BINDIR@/svnlook";
 # in the log and email messages by not printing the file, then set
 # $no_diff_deleted to 1.
 my $no_diff_deleted = 0;
+# By default, when a file is added to the repository, svnlook diff
+# prints the entire contents of the file.  If you want to save space
+# in the log and email messages by not printing the file, then set
+# $no_diff_added to 1.
+my $no_diff_added = 0;
+
+# End of Configuration section.
+######################################################################
 
 # Since the path to svnlook depends upon the local installation
 # preferences, check that the required programs exist to insure that
@@ -209,9 +217,11 @@ unless (-d _)
 ######################################################################
 # Harvest data using svnlook.
 
-# Change into /tmp so that svnlook diff can create its .svnlook
-# directory.
-my $tmp_dir = '/tmp';
+# Change into suitable directory so that svnlook diff can create its .svnlook
+# directory. This could be removed - it's only for compatibility with
+# 1.0.x svnlook - from 1.1.0, svnlook will be sensible about choosing a
+# temporary directory all by itself.
+my $tmp_dir = ( -d $ENV{'TEMP'} ? $ENV{'TEMP'} : '/tmp' );
 chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 
@@ -277,8 +287,10 @@ foreach my $line (@svnlooklines)
 
 # Get the diff from svnlook.
 my @no_diff_deleted = $no_diff_deleted ? ('--no-diff-deleted') : ();
+my @no_diff_added = $no_diff_added ? ('--no-diff-added') : ();
 my @difflines = &read_from_process($svnlook, 'diff', $repos,
-                                   '-r', $rev, @no_diff_deleted);
+                                   '-r', $rev, @no_diff_deleted,
+                                   @no_diff_added);
 
 ######################################################################
 # Modified directory name collapsing.
@@ -321,7 +333,7 @@ if (!$rootchanged and @dirschanged > 1)
               }
             else
               {
-                $dir =~ s#^$commondir/##;
+                $dir =~ s#^\Q$commondir/\E##;
               }
             push(@new_dirschanged, $dir);
           }
@@ -451,7 +463,7 @@ foreach my $project (@project_settings_list)
     if ($sendmail =~ /\w/ and @email_addresses)
       {
         # Open a pipe to sendmail.
-        my $command = "$sendmail $userlist";
+        my $command = "$sendmail -f$mail_from $userlist";
         if (open(SENDMAIL, "| $command"))
           {
             print SENDMAIL @head, @body;

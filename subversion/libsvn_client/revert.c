@@ -24,10 +24,8 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_path.h"
 #include "svn_time.h"
 #include "svn_config.h"
 #include "client.h"
@@ -36,79 +34,51 @@
 
 /*** Code. ***/
 
+/* Attempt to revert PATH, recursively if RECURSIVE is true and PATH
+   is a directory, else non-recursively.  Consult CTX to determine
+   whether or not to revert timestamp to the time of last commit
+   ('use-commit-times = yes').  Use POOL for temporary allocation.
+
+   If PATH is unversioned, return SVN_ERR_UNVERSIONED_RESOURCE. */
 static svn_error_t *
 revert (const char *path,
         svn_boolean_t recursive,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  svn_boolean_t wc_root;
+  svn_wc_adm_access_t *adm_access, *target_access;
   svn_boolean_t use_commit_times;
-  svn_error_t *err, *err2;
+  const char *target;
+  svn_config_t *cfg;
+  svn_error_t *err;
 
-  /* We need to open the parent of PATH, if PATH is not a wc root, but we
-     don't know if path is a directory.  It gets a bit messy. */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE,
-                                   recursive ? -1 : 0, pool));
-  if ((err = svn_wc_is_wc_root (&wc_root, path, adm_access, pool)))
-    goto out;
-  if (! wc_root)
-    {
-      const svn_wc_entry_t *entry;
-      if ((err = svn_wc_entry (&entry, path, adm_access, FALSE, pool)))
-        goto out;
+  cfg = ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                                    APR_HASH_KEY_STRING) : NULL;
 
-      if (entry->kind == svn_node_dir)
-        {
-          svn_node_kind_t kind;
+  SVN_ERR (svn_config_get_bool (cfg, &use_commit_times,
+                                SVN_CONFIG_SECTION_MISCELLANY,
+                                SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
+                                FALSE));
 
-          if ((err = svn_io_check_path (path, &kind, pool)))
-            goto out;
-          if (kind == svn_node_dir)
-            {
-              /* While we could add the parent to the access baton set, there
-                 is no way to close such a set. */
-              svn_wc_adm_access_t *dir_access;
-              if ((err = svn_wc_adm_close (adm_access))
-                  || (err = svn_wc_adm_open2 (&adm_access, NULL,
-                                              svn_path_dirname (path, pool),
-                                              TRUE, 0, pool))
-                  || (err = svn_wc_adm_open2 (&dir_access, adm_access,
-                                              path, TRUE,
-                                              recursive ? -1 : 0, pool)))
-                goto out;
-            }
-        }
-    }
+  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_access, &target, path,
+                                   TRUE, recursive ? -1 : 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
 
-  /* Look for run-time config variables that affect behavior. */
-  {
-    svn_config_t *cfg = ctx->config
-      ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
-                      APR_HASH_KEY_STRING)
-      : NULL;
+  err = svn_wc_revert2 (path, adm_access, recursive, use_commit_times,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        ctx->notify_func2, ctx->notify_baton2,
+                        pool);
 
-    if ((err = svn_config_get_bool (cfg, &use_commit_times,
-                                    SVN_CONFIG_SECTION_MISCELLANY,
-                                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
-                                    FALSE)))
-      goto out;
-  }
+  /* If no error, or SVN_ERR_UNVERSIONED_RESOURCE error, then we want
+     to close up before returning.  For any other kind of error, we
+     want to leave things exactly as they were when the error
+     occurred. */
 
-  err = svn_wc_revert (path, adm_access, recursive, use_commit_times,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       ctx->notify_func, ctx->notify_baton,
-                       pool);
+  if (err && err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
+    return err;
 
- out:
-  /* Close the ADM, but only return errors from that operation if we
-     aren't already in an errorful state. */
-  err2 = svn_wc_adm_close (adm_access);
-  if (err && err2)
-    svn_error_clear (err2);
-  else if (err2)
-    err = err2;
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return err;
 }
@@ -128,6 +98,8 @@ svn_client_revert (const apr_array_header_t *paths,
     {
       const char *path = APR_ARRAY_IDX (paths, i, const char *);
 
+      svn_pool_clear (subpool);
+
       /* See if we've been asked to cancel this operation. */
       if ((ctx->cancel_func) 
           && ((err = ctx->cancel_func (ctx->cancel_baton))))
@@ -138,14 +110,14 @@ svn_client_revert (const apr_array_header_t *paths,
         {
           /* If one of the targets isn't versioned, just send a 'skip'
              notification and move on. */
-          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
+              || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
             {
-              if (ctx->notify_func)
-                (*ctx->notify_func) (ctx->notify_baton, path,
-                                     svn_wc_notify_skip, svn_node_unknown,
-                                     NULL, svn_wc_notify_state_unknown,
-                                     svn_wc_notify_state_unknown,
-                                     SVN_INVALID_REVNUM);
+              if (ctx->notify_func2)
+                (*ctx->notify_func2)
+                  (ctx->notify_baton2,
+                   svn_wc_create_notify (path, svn_wc_notify_skip, subpool),
+                   subpool);
               svn_error_clear (err);
               err = SVN_NO_ERROR;
               continue;
@@ -153,14 +125,12 @@ svn_client_revert (const apr_array_header_t *paths,
           else
             goto errorful;
         }
-
-      svn_pool_clear (subpool);
     }
-  
-  svn_pool_destroy (subpool);
   
  errorful:
 
+  svn_pool_destroy (subpool);
+  
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps ();
 

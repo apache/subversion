@@ -62,7 +62,7 @@ Go to http://subversion.tigris.org/ and
 
    *  Print out and digest the Subversion design specification.
       This document can be found in the "Documents & files" area of the
-      website in the Documentation/Design folder.  A PDF and an HTML
+      website in the Documentation->Design folder.  A PDF and an HTML
       version are available on the web.  The design spec will give you
       a theoretical overview of Subversion's design.
 
@@ -112,7 +112,7 @@ Theory and documentation
       Greg Stein has written an introduction to Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
       'www/webdav-usage.html', and is also posted on the website in
-      the "File sharing" section.
+      the "Documents & files" section in "Documentation->Design".
 
 
    3. USER MANUAL
@@ -120,7 +120,8 @@ Theory and documentation
       that shows in detail how to effectively use Subversion.  The
       text of the book is free, and is actively being revised.
       On-line versions are available at http://svnbook.red-bean.com.
-      The XML source is in 'doc/book/book'.
+      The XML source and translations to other languages are maintained
+      in their own repository at http://svn.red-bean.com/svnbook.
 
 
    4. SYSTEM NOTES
@@ -430,8 +431,8 @@ In addition to the GNU standards, Subversion uses these conventions:
       width is not standardized enough, and anyway it's easier to
       manually adjust indentation that uses spaces.
 
-   *  Stay within 80 columns, the width of a minimal standard display
-      window.
+   *  Restrict lines to 79 columns, so that code will display well in a
+      minimal standard display window.
 
    *  Signify internal variables by two underscores after the prefix.
       That is, when a symbol must (for technical reasons) reside in the
@@ -460,13 +461,19 @@ In addition to the GNU standards, Subversion uses these conventions:
 
          ;;; Begin Subversion development section
          (defun my-find-file-hook ()
-           (let ((svntree-path (expand-file-name "~/projects/subversion/)))
-             (if (string-match (concat svntree-path "doc/book")
-                               buffer-file-name)
-                 (load (concat svntree-path "doc/book/tools/svnbook"))
-               (if (string-match svntree-path buffer-file-name)
-                   (load (concat svntree-path "tools/dev/svn-dev"))))))
-  
+           (let ((svn-tree-path (expand-file-name "~/projects/subversion"))
+                 (book-tree-path (expand-file-name "~/projects/svnbook")))
+             (cond
+              ((string-match svn-tree-path buffer-file-name)
+               (load (concat svn-tree-path "/tools/dev/svn-dev")))
+              ((string-match book-tree-path buffer-file-name)
+               ;; Handle load exception for svnbook.el, because it tries to
+               ;; load psgml, and not everyone has that available.
+               (condition-case nil
+                   (load (concat book-tree-path "/src/tools/svnbook"))
+                 (error
+                  (message "(Ignored problem loading svnbook.el.)")))))))
+
          (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
 
@@ -938,24 +945,24 @@ through the logs later.  Don't hide names in wildcards, because the
 globbed portion may be what someone searches for later.  For example,
 this is bad:
 
-   * twirl.c
+   * subversion/libsvn_ra_pigeons/twirl.c
      (twirling_baton_*): Removed these obsolete structures.
      (handle_parser_warning): Pass data directly to callees, instead
      of storing in twirling_baton_*.
 
-   * twirl.h: Fix indentation.
+   * subversion/libsvn_ra_pigeons/twirl.h: Fix indentation.
 
 Later on, when someone is trying to figure out what happened to
 `twirling_baton_fast', they may not find it if they just search for
 "_fast".  A better entry would be:
 
-   * twirl.c 
+   * subversion/libsvn_ra_pigeons/twirl.c
      (twirling_baton_fast, twirling_baton_slow): Removed these
      obsolete structures. 
      (handle_parser_warning): Pass data directly to callees, instead
      of storing in twirling_baton_*. 
 
-   * twirl.h: Fix indentation.
+   * subversion/libsvn_ra_pigeons/twirl.h: Fix indentation.
 
 The wildcard is okay in the description for `handle_parser_warning',
 but only because the two structures were mentioned by full name
@@ -968,6 +975,26 @@ change.  Please adhere to this format, even when only one file is
 changed -- not only does consistency aid readability, it also allows
 software to colorize log entries automatically.
 
+As an exception to the above, if you make exactly the same change in
+several files, list all the changed files in one entry. For example:
+
+   * subversion/libsvn_ra_pigeons/twirl.c,
+     subversion/libsvn_ra_pigeons/roost.c:
+     Include svn_private_config.h.
+
+If all the changed files are deep inside the source tree, you can
+shorten the file name entries by noting the common prefix before the
+change entries:
+
+   [in subversion/bindings/swig/birdsong]
+
+   * dialects/nightingale.c (get_base_pitch): Allow 3/4-tone
+     pitch variation to account for trait variability amongst
+     isolated populations Erithacus megarhynchos.
+
+   * dialects/gallus_domesticus.c: Remove. Unreliable due to
+     extremely low brain-to-body mass ratio.
+
 If your change is related to a specific issue in the issue tracker,
 then include a string like "issue #N" in the log message.  For
 example, if a patch resolves issue 1729, then the log message might
@@ -975,7 +1002,7 @@ be:
 
    Fix issue #1729: Don't crash because of a missing file.
 
-   * get_editor.c
+   * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
 
 For large changes or change groups, group the log entry into
@@ -1023,14 +1050,6 @@ that was changed:
    *  If you have rewritten a file completely, the reader understands
       that everything in it has changed, so your log entry may simply
       give the file name, and say "Rewritten".
-
-   *  If your change was only to one file, or was the same change to
-      multiple files, then there's no need to list their paths in the
-      log message (because "svn log" can show the changed paths for
-      that revision anyway).  Only when you need to describe how the
-      change affected different areas in different ways is it
-      necessary to organize the log message by paths and symbols, as
-      in the examples above.
 
    *  If your change was to multiple files, provide a brief summary of
       the change at the top of the log message (before the paths and
@@ -1134,7 +1153,7 @@ whether consensus has been reached, and if so, of what kind.  It does
 access.  Expertise in using one's mail reading software is optional,
 but recommended :-).
 
-The current patch manager is Michael Thelen <thelenm@cs.utah.edu>.
+The current patch manager is Michael Thelen <mike@pietdepsi.com>.
 
 
 Filing bugs / issues
@@ -1227,6 +1246,13 @@ from the full committers; it is assumed that sponsors know what
 they're doing and will watch the partial committer's first few commits
 to make sure everything's going smoothly.
 
+Patches submitted by a partial committer may be committed by that
+committer even if they are outside that person's domain.  This
+requires approval (often expressed as a +1 vote) from at least one
+full committer.  In such a case, the approval should be noted in the
+log message, like so:
+
+Approved by: lundblad
 
 
 The configuration/build system under unix
@@ -1484,7 +1510,7 @@ compatibility questions:
 
  2. Working copy and repository formats are backward- and
     forward-compatible for all patch releases in the same minor
-    series.  They are backward-compatible for all minor releases in
+    series.  They are forward-compatible for all minor releases in
     the same major series; however, a minor release is allowed to make
     a working copy or repository that doesn't work with previous minor
     releases, where "make" could mean "upgrade" as well as "create".
@@ -1590,9 +1616,9 @@ Stabilizing and maintaining releases
 Minor and major number releases go through a stabilization period
 before release, and remain in maintenance (bugfix) mode after release.
 To start the release process, we create an "A.B.x" branch based on the
-previous release, for example:
+latest trunk, for example:
 
-   $ svn cp http://svn.collab.net/repos/svn/tags/A.(B-1).C \
+   $ svn cp http://svn.collab.net/repos/svn/trunk \
             http://svn.collab.net/repos/svn/branches/A.B.x
 
 The stabilization period for a new A.B.0 release normally lasts four

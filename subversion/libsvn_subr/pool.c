@@ -18,13 +18,11 @@
 
 
 #include <stdarg.h>
+#include <stdlib.h>
 #include <assert.h>
 
-#include <apr_lib.h>
 #include <apr_general.h>
 #include <apr_pools.h>
-#include <apr_strings.h>
-#include <apr_hash.h>
 
 #include "svn_pools.h"
 

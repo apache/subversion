@@ -24,13 +24,12 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 /*** Code. ***/
 
@@ -50,6 +49,13 @@ rewrite_urls(apr_array_header_t *targets,
           
   from = ((const char **) (targets->elts))[0];
   to = ((const char **) (targets->elts))[1];
+
+  /* "--relocate http https" and "--relocate http://foo svn://bar" are OK,
+     but things like "--relocate http://foo svn" are not */
+  if (svn_path_is_url (from) != svn_path_is_url (to))
+    return svn_error_createf 
+      (SVN_ERR_INCORRECT_PARAMS, NULL, 
+       _("'%s' to '%s' is not a valid relocation"), from, to);
  
   subpool = svn_pool_create (pool);
 
@@ -62,9 +68,9 @@ rewrite_urls(apr_array_header_t *targets,
       for (i = 2; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+          svn_pool_clear (subpool);
           SVN_ERR (svn_client_relocate (target, from, to, recurse, 
                                         ctx, subpool));
-          svn_pool_clear (subpool);
         }
     }
 
@@ -90,11 +96,8 @@ svn_cl__switch (apr_getopt_t *os,
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
      switch to ("switch_url"). */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+                                          opt_state->targets, pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
@@ -119,19 +122,20 @@ svn_cl__switch (apr_getopt_t *os,
   if (! svn_path_is_url (switch_url))
     return svn_error_createf 
       (SVN_ERR_BAD_URL, NULL, 
-       "'%s' does not appear to be a URL", switch_url);
+       _("'%s' does not appear to be a URL"), switch_url);
 
   /* Canonicalize the URL. */
   switch_url = svn_path_canonicalize (switch_url, pool);
 
   /* Validate the target */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, FALSE, 0,
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, FALSE, 0,
+                                   ctx->cancel_func, ctx->cancel_baton,
                                    pool));
   SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-       "'%s' does not appear to be a working copy path", target);
+       _("'%s' does not appear to be a working copy path"), target);
   
   /* We want the switch to print the same letters as a regular update. */
   if (entry->kind == svn_node_file)
@@ -140,8 +144,8 @@ svn_cl__switch (apr_getopt_t *os,
     parent_dir = target;
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
 
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch (NULL, target, switch_url,

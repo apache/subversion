@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
+#include "svn_error.h"
 
 
 

@@ -54,19 +54,6 @@ def basic_utf8_conversion(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make sure the test runs in an ISO-8859-1 environment.  Otherwise,
-  # it would run in whatever random locale the testing platform
-  # happens to have, and then we couldn't predict the exact results.
-  if svntest.main.windows:
-    # In this case, it would probably be "english_usa.1252", but you should
-    # be able to set just the encoding by using ".1252" (that's codepage
-    # 1252, which is almost but not quite entirely unlike tea; um, I mean
-    # it's very similar to ISO-8859-1).
-    #                                     -- Branko Čibej <brane@xbc.nu>
-    locale.setlocale(locale.LC_ALL, '.1252')
-  else:
-    locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
-
   # Create the new i18n file and schedule it for addition
   svntest.main.file_append(os.path.join(wc_dir, i18n_filename), "hi")
   svntest.actions.run_and_verify_svn(
@@ -96,10 +83,70 @@ def basic_utf8_conversion(sbox):
 ########################################################################
 # Run the tests
 
+try:
+  # Generic setlocale so that getlocale returns something sensible
+  locale.setlocale(locale.LC_ALL, '')
+
+  # Try to make these test run in an ISO-8859-1 environment, otherwise
+  # they would run in whatever random locale the testing platform
+  # happens to have, and then we couldn't predict the exact results.
+  if svntest.main.windows:
+    # In this case, it would probably be "english_usa.1252", but you should
+    # be able to set just the encoding by using ".1252" (that's codepage
+    # 1252, which is almost but not quite entirely unlike tea; um, I mean
+    # it's very similar to ISO-8859-1).
+    #                                     -- Branko Čibej <brane@xbc.nu>
+    locale.setlocale(locale.LC_ALL, '.1252')
+  else:
+    locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
+
+    if os.putenv:
+      # propagate to the svn* executables, so they do the correct translation
+      # the line below works for Linux systems if they have the particular
+      # locale installed
+      os.environ['LC_ALL'] = "en_US.ISO8859-1"
+except:
+  pass
+
+# Check to see if the locale uses ISO-8859-1 encoding.  The regex is necessary
+# because some systems ommit the first hyphen or use lowercase letters for ISO.
+if sys.platform == 'win32':
+  localematch = 1
+else:
+  localeenc = locale.getlocale()[1]
+  if localeenc:
+    localeregex = re.compile('^ISO-?8859-1$', re.I)
+    localematch = localeregex.search(localeenc)
+    try:
+      svntest.actions.run_and_verify_svn("",svntest.SVNAnyOutput, None,"help")
+    except:
+      # We won't be able to run the client; this might be because the
+      # system does not support the iso-8859-1 locale. Anyhow, it makes
+      # no sense to run the test.
+      localematch = None
+  else:
+    localematch = None
+
+# Also check that the environment contains the expected locale settings
+# either by default, or because we set them above.
+if localematch:
+  localeregex = re.compile('^en_US\.ISO-?8859-1$', re.I)
+  for env in [ 'LC_ALL', 'LC_CTYPE', 'LANG' ]:
+    env_value = os.getenv(env)
+    if env_value:
+      if localeregex.search(env_value):
+        break
+      else:
+        localematch = None
+        break
+
+
+########################################################################
+# Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(basic_utf8_conversion, locale.getlocale()[1] != 'ISO8859-1')
+              Skip(basic_utf8_conversion, 1)
              ]
 
 if __name__ == '__main__':

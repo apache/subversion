@@ -161,9 +161,8 @@ main (int argc, const char **argv)
       printf ("    Uploads file at PATH to Subversion repository URL.\n");
       return EXIT_FAILURE;
     }
-  else
-    upload_file = argv[1];
-    URL = argv[2];
+  upload_file = argv[1];
+  URL = argv[2];
 
   /* Initialize the app.  Send all error messages to 'stderr'.  */
   if (svn_cmdline_init ("minimal_client", stderr) != EXIT_SUCCESS)
@@ -315,6 +314,6 @@ main (int argc, const char **argv)
   return EXIT_SUCCESS;
 
  hit_error:
-  svn_handle_error (err, stderr, 0);
+  svn_handle_error2 (err, stderr, FALSE, "svnput: ");
   return EXIT_FAILURE;
 }

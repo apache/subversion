@@ -22,13 +22,9 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
-#include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
-#include "svn_string.h"
-#include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_path.h"
@@ -57,11 +53,8 @@ svn_cl__propdel (apr_getopt_t *os,
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_opt_args_to_target_array (&targets, os,
-                                         opt_state->targets,
-                                         &(opt_state->start_revision),
-                                         &(opt_state->end_revision),
-                                         FALSE, pool));
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
+                                          opt_state->targets, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -117,12 +110,19 @@ svn_cl__propdel (apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+          svn_boolean_t success;
 
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-          SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
-                                       opt_state->recursive, subpool));
-          if (! opt_state->quiet) 
+
+          /* Pass 0 for 'force' because it doesn't matter here, and
+             opt_state->force doesn't apply to this command anyway. */
+          SVN_CL__TRY (svn_client_propset2 (pname_utf8, NULL, target,
+                                            opt_state->recursive,
+                                            FALSE, ctx, subpool),
+                       success);
+          
+          if (success && (! opt_state->quiet))
             {
               SVN_ERR (svn_cmdline_printf
                        (subpool, opt_state->recursive

@@ -31,20 +31,26 @@ Item = svntest.wc.StateItem
 
 #----------------------------------------------------------------------
 
-# How we currently test 'svnlook' --
-#
-#   'svnlook youngest':  We don't care about the contents of transactions;
-#                        we only care that they exist or not.
-#                        Therefore, we can simply parse transaction headers.
-#
-######################################################################
+# Convenience functions to make writing more tests easier
+
+def run_svnlook(*varargs):
+  output, dummy_errput = svntest.main.run_command(svntest.main.svnlook_binary,
+      0, 0, *varargs)
+  return output
+
+
+def expect(tag, expected, got):
+  if expected != got:
+    print "When testing: %s" % tag
+    print "Expected: %s" % expected
+    print "     Got: %s" % got
+    raise svntest.Failure
+
+
 # Tests
 
-
-#----------------------------------------------------------------------
-
-def test_youngest(sbox):
-  "test 'svnlook youngest' subcommand"
+def test_misc(sbox):
+  "test miscellaneous svnlook features"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -76,11 +82,49 @@ def test_youngest(sbox):
                                          None, None,
                                          wc_dir)
 
-  # Youngest revision should now be 2.  Let's verify that.
-  output, errput = svntest.main.run_svnlook("youngest", repo_dir)
+  # give the repo a new UUID
+  uuid = "01234567-89ab-cdef-89ab-cdef01234567"
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 1,
+                           ["SVN-fs-dump-format-version: 2\n",
+                            "\n",
+                            "UUID: ", uuid, "\n",
+                           ],
+                           'load', '--force-uuid', repo_dir)
 
-  if output[0] != "2\n":
+  expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
+
+  expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
+
+  # it would be nice to test the author too, but the current test framework
+  # does not pull a username when testing over ra_dav or ra_svn,
+  # so the commits have an empty author.
+
+  expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))
+
+  expect('propget svn:log', [ 'log msg' ],
+      run_svnlook('propget', '--revprop', repo_dir, 'svn:log'))
+
+
+  proplist = run_svnlook('proplist', '--revprop', repo_dir)
+  proplist = [prop.strip() for prop in proplist]
+  proplist.sort()
+
+  # We cannot rely on svn:author's presence. ra_svn doesn't set it.
+  if not (proplist == [ 'svn:author', 'svn:date', 'svn:log' ]
+      or proplist == [ 'svn:date', 'svn:log' ]):
+    print "Unexpected result from proplist: %s" % proplist
     raise svntest.Failure
+
+  output, errput = svntest.main.run_svnlook('propget', '--revprop', repo_dir,
+      'foo:bar-baz-quux')
+
+  rm = re.compile("Property.*not found")
+  for line in errput:
+    match = rm.search(line)
+    if match:
+      break
+  else:
+    raise svntest.main.SVNUnmatchedError
 
 
 #----------------------------------------------------------------------
@@ -109,8 +153,8 @@ def delete_file_in_moved_dir(sbox):
   expected_status.tweak(wc_rev=1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.add({
-    'A/B/E2'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/E2/beta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/E2'      : Item(status='  ', wc_rev=2),
+    'A/B/E2/beta' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
@@ -164,14 +208,9 @@ def test_print_property_diffs(sbox):
   if len(output) != len(expected_output):
     raise svntest.Failure
 
-  # On Windows, diff's still output / rather than \ in paths
-  if svntest.main.windows == 1:
-    iota_path = string.replace(iota_path, '\\', '/')
-  # Replace all occurrences of wc_dir/iota with iota in svn diff output
-  reiota = re.compile(iota_path)
-
+  # replace wcdir/iota with iota in expected_output
   for i in xrange(len(expected_output)):
-    expected_output[i] = reiota.sub('iota', expected_output[i])
+    expected_output[i] = string.replace(expected_output[i], iota_path, 'iota')
 
   svntest.actions.compare_and_display_lines('', '', expected_output, output)
 
@@ -182,7 +221,7 @@ def test_print_property_diffs(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              test_youngest,
+              test_misc,
               delete_file_in_moved_dir,
               test_print_property_diffs,
              ]

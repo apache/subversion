@@ -169,7 +169,7 @@ def revert_replaced_file_without_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'file1' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'file1' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -196,7 +196,7 @@ def revert_replaced_file_without_props(sbox):
                                      None, 'revert', file1_path)
 
   # test that file1 really was reverted
-  expected_status.tweak('file1', status='  ', wc_rev=2, repos_rev=2)
+  expected_status.tweak('file1', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 

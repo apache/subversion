@@ -35,20 +35,38 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** Baton for any arguments that need to be passed from main() to svn
+    test functions  */
+typedef struct svn_test_opts_t
+{
+  /** Description of the fs backend that should be used for testing. */
+  const char *fs_type;
+  /* Add future "arguments" here. */
+} svn_test_opts_t;
+
 /** Prototype for test driver functions. */
 typedef svn_error_t* (*svn_test_driver_t) (const char **msg, 
                                            svn_boolean_t msg_only,
+                                           svn_test_opts_t *opts,
                                            apr_pool_t *pool);
 
-/** Each test gets a test descriptor, holding the function and other associated 
- * data. */
+/** Test modes. */
+enum svn_test_mode_t
+  {
+    svn_test_pass,
+    svn_test_xfail,
+    svn_test_skip
+  };
+
+/** Each test gets a test descriptor, holding the function and other
+ * associated data. */
 struct svn_test_descriptor_t
 {
   /** A pointer to the test driver function. */
   svn_test_driver_t func;
 
   /** Is the test marked XFAIL? */
-  int xfail;
+  enum svn_test_mode_t mode;
 };
 
 /** All Subversion test programs include an array of @c svn_test_descriptor_t's
@@ -60,10 +78,13 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_NULL  {NULL, 0}
 
 /** Initializer for PASS tests */
-#define SVN_TEST_PASS(func)  {func, 0}
+#define SVN_TEST_PASS(func)  {func, svn_test_pass}
 
 /** Initializer for XFAIL tests */
-#define SVN_TEST_XFAIL(func) {func, 1}
+#define SVN_TEST_XFAIL(func) {func, svn_test_xfail}
+
+/** Initializer for SKIP tests */
+#define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
 
 
 /** Return a pseudo-random number based on @a seed, and modify @a seed.
@@ -87,7 +108,7 @@ void svn_test_add_dir_cleanup (const char *path);
  *
  * @a editor_name is a name for the editor, a string that will be
  * prepended to the editor output as shown below.  @a editor_name may
- * be the empty string, but it may not be null.
+ * be the empty string (but it may not be null).
  *
  * @a verbose is a flag for specifying whether or not your want all the
  * nitty gritty details displayed.  When @a verbose is @c FALSE, each 

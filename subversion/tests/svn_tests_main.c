@@ -23,7 +23,6 @@
 #include <stdlib.h>
 
 #include <apr_pools.h>
-#include <apr_strings.h>
 #include <apr_general.h>
 #include <apr_lib.h>
 
@@ -31,6 +30,8 @@
 #include "svn_error.h"
 #include "svn_test.h"
 #include "svn_io.h"
+#include "svn_path.h"
+#include "svn_private_config.h"
 
 
 /* Some Subversion test programs may want to parse options in the
@@ -129,10 +130,11 @@ static int
 do_test_num (const char *progname, 
              int test_num, 
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   svn_test_driver_t func;
-  int xfail;
+  svn_boolean_t skip, xfail;
   svn_error_t *err;
   int array_size = get_array_size();
   const char *msg = 0;  /* the message this individual test prints out */
@@ -146,24 +148,25 @@ do_test_num (const char *progname,
   else
     {
       func = test_funcs[test_num].func;
-      xfail = test_funcs[test_num].xfail;
+      skip = (test_funcs[test_num].mode == svn_test_skip);
+      xfail = (test_funcs[test_num].mode == svn_test_xfail);
     }
 
   /* Do test */
-  err = func(&msg, msg_only, pool);
+  err = func(&msg, msg_only || skip, opts, pool);
 
   /* If we got an error, print it out.  */
   if (err)
     {
-      svn_handle_error (err, stdout, 0);
+      svn_handle_error2 (err, stdout, FALSE, "svn_tests: ");
       svn_error_clear (err);
     }
 
   if (msg_only)
     {
-      printf (" %2d     %5s  %s\n",
+      printf (" %2d     %-5s  %s\n",
               test_num,
-              xfail ? "XFAIL" : "",
+              (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
               msg ? msg : "(test did not provide name)");
     }
   else
@@ -171,7 +174,7 @@ do_test_num (const char *progname,
       printf ("%s %s %d: %s\n", 
               (err
                ? (xfail ? "XFAIL:" : "FAIL: ")
-               : (xfail ? "XPASS:" : "PASS: ")),
+               : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
               progname,
               test_num, 
               msg ? msg : "(test did not provide name)");
@@ -205,10 +208,13 @@ main (int argc, char *argv[])
   apr_pool_t *pool, *test_pool;
   int ran_a_test = 0;
   char **arg;
-
   /* How many tests are there? */
   int array_size = get_array_size();
   
+  svn_test_opts_t opts = { NULL };
+
+  opts.fs_type = DEFAULT_FS_TYPE;
+
   /* Initialize APR (Apache pools) */
   if (apr_initialize () != APR_SUCCESS)
     {
@@ -245,6 +251,8 @@ main (int argc, char *argv[])
         cleanup_mode = 1;
       else if (strcmp(*arg, "--verbose") == 0)
         verbose_mode = 1;
+      else if (strncmp(*arg, "--fs-type=", 10) == 0)
+        opts.fs_type = apr_pstrdup (pool, (*arg) + 10);
     }
 
   /* Create an iteration pool for the tests */
@@ -263,7 +271,7 @@ main (int argc, char *argv[])
                  "------  -----  ----------------\n");
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num (prog_name, i, TRUE, test_pool))
+              if (do_test_num (prog_name, i, TRUE, &opts, test_pool))
                 got_error = 1;
 
               /* Clear the per-function pool */
@@ -279,7 +287,7 @@ main (int argc, char *argv[])
                 {
                   ran_a_test = 1;
                   test_num = atoi (argv[i]);
-                  if (do_test_num (prog_name, test_num, FALSE, test_pool))
+                  if (do_test_num (prog_name, test_num, FALSE, &opts, test_pool))
                     got_error = 1;
 
                   /* Clear the per-function pool */
@@ -300,7 +308,7 @@ main (int argc, char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          if (do_test_num (prog_name, i, FALSE, test_pool))
+          if (do_test_num (prog_name, i, FALSE, &opts, test_pool))
             got_error = 1;
 
           /* Clear the per-function pool */

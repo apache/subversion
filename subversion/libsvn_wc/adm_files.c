@@ -25,14 +25,10 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <apr_pools.h>
-#include <apr_hash.h>
 #include <apr_file_io.h>
-#include <apr_time.h>
 #include <apr_strings.h>
 #include "svn_types.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_hash.h"
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_wc.h"
@@ -623,7 +619,8 @@ svn_wc__open_props (apr_file_t **handle,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("'%s' is not a working copy"), parent_dir);
+       _("'%s' is not a working copy"),
+       svn_path_local_style (parent_dir, pool));
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
@@ -698,7 +695,8 @@ svn_wc__close_props (apr_file_t *fp,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("'%s' is not a working copy"), parent_dir);
+       _("'%s' is not a working copy"),
+       svn_path_local_style (parent_dir, pool));
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
@@ -837,7 +835,8 @@ check_adm_exists (svn_boolean_t *exists,
       /* If got an error other than dir non-existence, then
          something's weird and we should return a genuine error. */
       return svn_error_createf (APR_ENOTDIR, NULL,
-                                _("'%s' is not a directory"), tmp_path);
+                                _("'%s' is not a directory"),
+                                svn_path_local_style (tmp_path, pool));
     }
   else if (kind == svn_node_none)
     {
@@ -884,13 +883,14 @@ check_adm_exists (svn_boolean_t *exists,
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path, FALSE, 0,
-                                 pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path, FALSE, 0,
+                                 NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
       if (!entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  _("No entry for '%s'"), path);
+                                  _("No entry for '%s'"),
+                                  svn_path_local_style (path, pool));
 
       /* The revisions must match except when adding a directory with a
          name that matches a directory scheduled for deletion. That's
@@ -902,7 +902,8 @@ check_adm_exists (svn_boolean_t *exists,
           svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("Revision %ld doesn't match existing revision %ld in '%s'"),
-           revision, entry->revision, path);
+           revision, entry->revision,
+           svn_path_local_style (path, pool));
 
       /** ### comparing URLs, should they be canonicalized first? */
       if (strcmp (entry->url, url) != 0)
@@ -910,7 +911,8 @@ check_adm_exists (svn_boolean_t *exists,
           svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-           url, entry->url, path);
+           url, entry->url,
+           svn_path_local_style (path, pool));
     }
 
   *exists = wc_exists;

@@ -21,10 +21,8 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
-#include "svn_string.h"
 #include "svn_ra.h"
 #include "svn_wc.h"
-#include "svn_client.h"
 #include "svn_path.h"
 #include "client.h"
 
@@ -35,8 +33,7 @@
 
 svn_error_t *
 svn_client__get_revision_number (svn_revnum_t *revnum,
-                                 svn_ra_plugin_t *ra_lib,
-                                 void *sess,
+                                 svn_ra_session_t *ra_session,
                                  const svn_opt_revision_t *revision,
                                  const char *path,
                                  apr_pool_t *pool)
@@ -51,7 +48,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
      doesn't seem worth it.  -kff */
 
   /* Sanity check. */
-  if (((ra_lib == NULL) || (sess == NULL))
+  if (ra_session == NULL
       && ((revision->kind == svn_opt_revision_date)
           || (revision->kind == svn_opt_revision_head)))
     {
@@ -62,10 +59,10 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   if (revision->kind == svn_opt_revision_number)
     *revnum = revision->value.number;
   else if (revision->kind == svn_opt_revision_date)
-    SVN_ERR (ra_lib->get_dated_revision (sess, revnum, revision->value.date,
-                                         pool));
+    SVN_ERR (svn_ra_get_dated_revision (ra_session, revnum,
+                                        revision->value.date, pool));
   else if (revision->kind == svn_opt_revision_head)
-    SVN_ERR (ra_lib->get_latest_revnum (sess, revnum, pool));
+    SVN_ERR (svn_ra_get_latest_revnum (ra_session, revnum, pool));
   else if (revision->kind == svn_opt_revision_unspecified)
     *revnum = SVN_INVALID_REVNUM;
   else if ((revision->kind == svn_opt_revision_committed)
@@ -81,15 +78,16 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
         return svn_error_create
           (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL, NULL);
 
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, FALSE,
-                                       0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path, FALSE,
+                                       0, NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_adm_close (adm_access));
 
       if (! ent)
         return svn_error_createf
         (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-	 _("'%s' is not under version control"), path);
+	 _("'%s' is not under version control"),
+         svn_path_local_style (path, pool));
       
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
@@ -104,7 +102,8 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   else
     return svn_error_createf
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       _("Unrecognized revision type requested for '%s'"), path);
+       _("Unrecognized revision type requested for '%s'"),
+       svn_path_local_style (path, pool));
   
   return SVN_NO_ERROR;
 }

@@ -27,12 +27,11 @@
  * each file have been created the diff callback is invoked to display
  * the difference between the two files.  */
 
-#include "svn_client.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "svn_utf.h"
+#include "svn_props.h"
 
 #include "client.h"
 
@@ -47,7 +46,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  const svn_wc_diff_callbacks_t *diff_callbacks;
+  const svn_wc_diff_callbacks2_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* RECURSE is TRUE if this is a recursive diff or merge, false otherwise */
@@ -58,8 +57,7 @@ struct edit_baton {
 
   /* RA_LIB is the vtable for making requests to the RA layer, RA_SESSION
      is the open session for these requests */
-  svn_ra_plugin_t *ra_lib;
-  void *ra_session;
+  svn_ra_session_t *ra_session;
 
   /* The rev1 from the '-r Rev1:Rev2' command line option */
   svn_revnum_t revision;
@@ -72,8 +70,11 @@ struct edit_baton {
      cached here so that it can be reused, all empty files are the same. */
   const char *empty_file;
 
+  /* Empty hash used for adds. */
+  apr_hash_t *empty_hash;
+
   /* If the func is non-null, send notifications of actions. */
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
   apr_pool_t *pool;
@@ -161,26 +162,26 @@ struct temp_file_cleanup_s {
 
 /* Create a new directory baton for PATH in POOL.  ADDED is set if
  * this directory is being added rather than replaced. PARENT_BATON is
- * the baton of the parent directory, it will be null if this is the
- * root of the comparison hierarchy. The directory and its parent may
- * or may not exist in the working copy. EDIT_BATON is the overall
- * crawler editor baton.
+ * the baton of the parent directory (or NULL if this is the root of
+ * the comparison hierarchy). The directory and its parent may or may
+ * not exist in the working copy.  EDIT_BATON is the overall crawler
+ * editor baton.
  */
 static struct dir_baton *
 make_dir_baton (const char *path,
                 struct dir_baton *parent_baton,
+                struct edit_baton *edit_baton,
                 svn_boolean_t added,
                 apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
 
   dir_baton->dir_baton = parent_baton;
-  dir_baton->edit_baton = parent_baton->edit_baton;
+  dir_baton->edit_baton = edit_baton;
   dir_baton->added = added;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup (pool, path);
-  dir_baton->wcpath = svn_path_join (parent_baton->edit_baton->target,
-                                     path, pool);
+  dir_baton->wcpath = svn_path_join (edit_baton->target, path, pool);
   dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   return dir_baton;
@@ -328,12 +329,12 @@ get_file_from_ra (struct file_baton *b)
   SVN_ERR (temp_file_cleanup_register (b->path_start_revision, b->pool));
 
   fstream = svn_stream_from_aprfile (file, b->pool);
-  SVN_ERR (b->edit_baton->ra_lib->get_file (b->edit_baton->ra_session,
-                                            b->path,
-                                            b->edit_baton->revision,
-                                            fstream, NULL,
-                                            &(b->pristine_props),
-                                            b->pool));
+  SVN_ERR (svn_ra_get_file (b->edit_baton->ra_session,
+                            b->path,
+                            b->edit_baton->revision,
+                            fstream, NULL,
+                            &(b->pristine_props),
+                            b->pool));
   SVN_ERR (svn_io_file_close (file, b->pool));
 
   return SVN_NO_ERROR;
@@ -343,12 +344,12 @@ get_file_from_ra (struct file_baton *b)
 static svn_error_t *
 get_dirprops_from_ra (struct dir_baton *b)
 {
-  SVN_ERR (b->edit_baton->ra_lib->get_dir (b->edit_baton->ra_session,
-                                           b->path,
-                                           b->edit_baton->revision,
-                                           NULL, NULL,
-                                           &(b->pristine_props),
-                                           b->pool));
+  SVN_ERR (svn_ra_get_dir (b->edit_baton->ra_session,
+                           b->path,
+                           b->edit_baton->revision,
+                           NULL, NULL,
+                           &(b->pristine_props),
+                           b->pool));
 
   return SVN_NO_ERROR;
 }
@@ -478,18 +479,14 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
+  struct dir_baton *b = make_dir_baton ("", NULL, eb, FALSE, pool);
 
-  dir_baton->dir_baton = NULL;
-  dir_baton->edit_baton = eb;
-  dir_baton->added = FALSE;
-  dir_baton->pool = pool;
-  dir_baton->path = "";
-  dir_baton->wcpath = eb->target ? apr_pstrdup (pool, eb->target) : "";
-  dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
+  /* Override the wcpath in our baton. */
+  b->wcpath = eb->target ? apr_pstrdup (pool, eb->target) : "";
 
-  *root_baton = dir_baton;
+  SVN_ERR (get_dirprops_from_ra (b));
 
+  *root_baton = b;
   return SVN_NO_ERROR;
 }
 
@@ -508,11 +505,11 @@ delete_entry (const char *path,
   svn_wc_notify_action_t action = svn_wc_notify_skip;
 
   /* We need to know if this is a directory or a file */
-  SVN_ERR (pb->edit_baton->ra_lib->check_path (pb->edit_baton->ra_session,
-                                               path,
-                                               pb->edit_baton->revision,
-                                               &kind,
-                                               pool));
+  SVN_ERR (svn_ra_check_path (pb->edit_baton->ra_session,
+                              path,
+                              pb->edit_baton->revision,
+                              &kind,
+                              pool));
   SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath,
                             TRUE, pool));
   if ((! eb->adm_access) || adm_access)
@@ -536,6 +533,7 @@ delete_entry (const char *path,
                       b->path_start_revision,
                       b->path_end_revision,
                       mimetype1, mimetype2,
+                      b->pristine_props,
                       b->edit_baton->diff_cmd_baton));
             
             break;
@@ -558,14 +556,16 @@ delete_entry (const char *path,
     }
 
   if (pb->edit_baton->notify_func)
-    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                    svn_path_join (eb->target, path, pool),
-                                    action,
-                                    kind,
-                                    NULL,
-                                    state, state,
-                                    SVN_INVALID_REVNUM);
-
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (svn_path_join (eb->target, path, pool),
+                                action, pool);
+      notify->kind = kind;
+      notify->content_state = notify->prop_state = state;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton, notify,
+                                      pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -587,7 +587,7 @@ add_directory (const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton (path, pb, TRUE, pool);
+  b = make_dir_baton (path, pb, pb->edit_baton, TRUE, pool);
   *child_baton = b;
 
   SVN_ERR (get_path_access (&adm_access,
@@ -605,14 +605,12 @@ add_directory (const char *path,
     action = svn_wc_notify_update_add;
 
   if (pb->edit_baton->notify_func)
-    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                    b->wcpath,
-                                    action,
-                                    svn_node_dir,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (b->wcpath, action, pool);
+      notify->kind = svn_node_dir;
+      (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton, notify,
+                                      pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -628,7 +626,7 @@ open_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
 
-  b = make_dir_baton (path, pb, FALSE, pool);
+  b = make_dir_baton (path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
 
   SVN_ERR (get_dirprops_from_ra (b));
@@ -655,6 +653,7 @@ add_file (const char *path,
   *file_baton = b;
 
   SVN_ERR (get_empty_file (b->edit_baton, &(b->path_start_revision)));
+  b->pristine_props = pb->edit_baton->empty_hash;
 
   return SVN_NO_ERROR;
 }
@@ -766,10 +765,15 @@ close_file (void *file_baton,
       /* ### maybe try to stat the local b->wcpath? */      
       /* If the file path doesn't exist, then send a 'skipped' notification. */
       if (eb->notify_func)
-        (*eb->notify_func) (eb->notify_baton, b->wcpath,
-                            svn_wc_notify_skip, svn_node_file, NULL,
-                            svn_wc_notify_state_missing, prop_state,
-                            SVN_INVALID_REVNUM);
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify (b->wcpath,
+                                                          svn_wc_notify_skip,
+                                                          pool);
+          notify->kind = svn_node_file;
+          notify->content_state = svn_wc_notify_state_missing;
+          notify->prop_state = prop_state;
+          (*eb->notify_func) (eb->notify_baton, notify, pool);
+        }
       
       svn_error_clear (err);
       return SVN_NO_ERROR;
@@ -777,44 +781,33 @@ close_file (void *file_baton,
   else if (err)
     return err;
 
-  if (b->path_end_revision)
+  if (b->path_end_revision || b->propchanges->nelts > 0)
     {
       const char *mimetype1, *mimetype2;
       get_file_mime_types (&mimetype1, &mimetype2, b);
 
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
-                 (adm_access, &content_state,
+                 (adm_access, &content_state, &prop_state,
                   b->wcpath,
-                  b->path_start_revision,
+                  b->path_end_revision ? b->path_start_revision : NULL,
                   b->path_end_revision,
                   0,
                   b->edit_baton->target_revision,
                   mimetype1, mimetype2,
+                  b->propchanges, b->pristine_props,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
-                 (adm_access, &content_state,
+                 (adm_access, &content_state, &prop_state,
                   b->wcpath,
-                  b->path_start_revision,
+                  b->path_end_revision ? b->path_start_revision : NULL,
                   b->path_end_revision,
                   b->edit_baton->revision,
                   b->edit_baton->target_revision,
                   mimetype1, mimetype2,
+                  b->propchanges, b->pristine_props,
                   b->edit_baton->diff_cmd_baton));
-    }
-
-  /* Don't do the props_changed stuff if this is a dry_run and we don't
-     have an access baton, since in that case the file will already have
-     been recognised as added, in which case they cannot conflict. A
-     similar argument applies to directories in close_directory. */
-  if (b->propchanges->nelts > 0 && (! (eb->dry_run && b->added)))
-    {
-      SVN_ERR (eb->diff_callbacks->props_changed
-               (adm_access, &prop_state,
-                b->wcpath,
-                b->propchanges, b->pristine_props,
-                b->edit_baton->diff_cmd_baton));
     }
 
 
@@ -832,15 +825,14 @@ close_file (void *file_baton,
     action = svn_wc_notify_update_update;
 
   if (eb->notify_func)
-    (*eb->notify_func)
-      (eb->notify_baton,
-       b->wcpath,
-       action,
-       svn_node_file,
-       NULL,
-       content_state,
-       prop_state,
-       SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (b->wcpath, action,
+                                                      pool);
+      notify->kind = svn_node_file;
+      notify->content_state = content_state;
+      notify->prop_state = prop_state;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -866,22 +858,25 @@ close_directory (void *dir_baton,
           /* ### maybe try to stat the local b->wcpath? */          
           /* If the path doesn't exist, then send a 'skipped' notification. */
           if (eb->notify_func)
-            (*eb->notify_func) (eb->notify_baton, b->wcpath,
-                                svn_wc_notify_skip, svn_node_dir, NULL,
-                                svn_wc_notify_state_missing,
-                                svn_wc_notify_state_missing,
-                                SVN_INVALID_REVNUM);
-
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify (b->wcpath, svn_wc_notify_skip, pool);
+              notify->kind = svn_node_dir;
+              notify->content_state = notify->prop_state
+                = svn_wc_notify_state_missing;
+              (*eb->notify_func) (eb->notify_baton, notify, pool);
+            }
           svn_error_clear (err);      
           return SVN_NO_ERROR;
         }
       else if (err)
         return err;
 
-      /* As for close_file, whether we do this depends on whether it's a
-         dry-run */
+      /* Don't do the props_changed stuff if this is a dry_run and we don't
+         have an access baton, since in that case the directory will already
+         have been recognised as added, in which case they cannot conflict. */
       if (! eb->dry_run || adm_access)
-        SVN_ERR (eb->diff_callbacks->props_changed
+        SVN_ERR (eb->diff_callbacks->dir_props_changed
                  (adm_access, &prop_state,
                   b->wcpath,
                   b->propchanges, b->pristine_props,
@@ -889,14 +884,15 @@ close_directory (void *dir_baton,
     }
 
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        b->wcpath,
-                        svn_wc_notify_update_update,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_inapplicable,
-                        prop_state,
-                        SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (b->wcpath, svn_wc_notify_update_update, pool);
+      notify->kind = svn_node_dir;
+      notify->content_state = svn_wc_notify_state_inapplicable;
+      notify->prop_state = prop_state;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -953,14 +949,13 @@ close_edit (void *edit_baton,
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
                              svn_wc_adm_access_t *adm_access,
-                             const svn_wc_diff_callbacks_t *diff_callbacks,
+                             const svn_wc_diff_callbacks2_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_boolean_t dry_run,
-                             svn_ra_plugin_t *ra_lib,
-                             void *ra_session,
+                             svn_ra_session_t *ra_session,
                              svn_revnum_t revision,
-                             svn_wc_notify_func_t notify_func,
+                             svn_wc_notify_func2_t notify_func,
                              void *notify_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -978,10 +973,10 @@ svn_client__get_diff_editor (const char *target,
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->recurse = recurse;
   eb->dry_run = dry_run;
-  eb->ra_lib = ra_lib;
   eb->ra_session = ra_session;
   eb->revision = revision;
   eb->empty_file = NULL;
+  eb->empty_hash = apr_hash_make (subpool);
   eb->pool = subpool;
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;

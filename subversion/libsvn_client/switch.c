@@ -26,10 +26,9 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_path.h"
 #include "svn_time.h"
+#include "svn_path.h"
 #include "svn_config.h"
 #include "client.h"
 
@@ -60,16 +59,14 @@ svn_client_switch (svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access, *dir_access;
-  svn_node_kind_t kind;
   const char *diff3_cmd;
   svn_boolean_t timestamp_sleep = FALSE;  
   svn_boolean_t use_commit_times;
@@ -94,27 +91,22 @@ svn_client_switch (svn_revnum_t *result_rev,
   assert (path);
   assert (switch_url && (switch_url[0] != '\0'));
 
-  /* Use PATH to get the update's anchor and targets and get a write lock */
-  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-
-  /* Get a write-lock on the anchor and target.  We need a lock on
-     the whole target tree so we can invalidate wcprops on it. */
-  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, TRUE,
-                             *target ? 0 : -1, pool));
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (*target && (kind == svn_node_dir))
-    SVN_ERR (svn_wc_adm_open2 (&dir_access, adm_access, path,
-                               TRUE, -1, pool));
-  else
-    dir_access = adm_access;
+  /* ### Need to lock the whole target tree to invalidate wcprops. Does
+     non-recursive switch really need to invalidate the whole tree? */
+  SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &dir_access, &target, path,
+                                   TRUE, -1, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
+  anchor = svn_wc_adm_access_path (adm_access);
 
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL, 
-                              _("'%s' is not under version control"), anchor);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (anchor, pool));
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("Directory '%s' has no URL"), anchor);
+                              _("Directory '%s' has no URL"),
+                              svn_path_local_style (anchor, pool));
 
   URL = apr_pstrdup (pool, entry->url);
 
@@ -125,33 +117,29 @@ svn_client_switch (svn_revnum_t *result_rev,
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
-  /* Get the RA vtable that matches working copy's current URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
   /* Open an RA session to 'source' URL */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor, 
+  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, anchor, 
                                         adm_access, NULL, TRUE, FALSE, 
                                         ctx, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&revnum, ra_lib, session, revision, path, pool));
+           (&revnum, ra_session, revision, path, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR (svn_wc_get_switch_editor (&revnum, adm_access, target,
-                                     switch_url, use_commit_times, recurse,
-                                     ctx->notify_func, ctx->notify_baton,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     diff3_cmd,
-                                     &switch_editor, &switch_edit_baton,
-                                     traversal_info, pool));
+  SVN_ERR (svn_wc_get_switch_editor2 (&revnum, adm_access, target,
+                                      switch_url, use_commit_times, recurse,
+                                      ctx->notify_func2, ctx->notify_baton2,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      diff3_cmd,
+                                      &switch_editor, &switch_edit_baton,
+                                      traversal_info, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
-  SVN_ERR (ra_lib->do_switch (session, &reporter, &report_baton, revnum,
-                              target, recurse, switch_url,
-                              switch_editor, switch_edit_baton, pool));
-      
+  SVN_ERR (svn_ra_do_switch (ra_session, &reporter, &report_baton, revnum,
+                             target, recurse, switch_url,
+                             switch_editor, switch_edit_baton, pool));
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
      will be driven by svn_repos_dir_delta.
@@ -159,11 +147,11 @@ svn_client_switch (svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
-  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
-                                ctx->notify_func, ctx->notify_baton,
-                                NULL, /* no traversal info */
-                                pool);
+  err = svn_wc_crawl_revisions2 (path, dir_access, reporter, report_baton,
+                                 TRUE, recurse, use_commit_times,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 NULL, /* no traversal info */
+                                 pool);
     
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -184,15 +172,17 @@ svn_client_switch (svn_revnum_t *result_rev,
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Let everyone know we're finished here. */
-  if (ctx->notify_func)
-    (*ctx->notify_func) (ctx->notify_baton,
-                         anchor,
-                         svn_wc_notify_update_completed,
-                         svn_node_none,
-                         NULL,
-                         svn_wc_notify_state_inapplicable,
-                         svn_wc_notify_state_inapplicable,
-                         revnum);
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (anchor, svn_wc_notify_update_completed, pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = revnum;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)

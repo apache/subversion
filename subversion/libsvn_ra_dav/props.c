@@ -30,13 +30,14 @@
 #include <ne_xml.h>
 
 #include "svn_error.h"
-#include "svn_delta.h"
-#include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
+#include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_props.h"
+#include "../libsvn_ra/ra_loader.h"
 
 #include "svn_private_config.h"
 
@@ -529,7 +530,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                           set_parser, propfind_elements, 
                                           validate_element, 
                                           start_element, end_element, 
-                                          &pc, extra_headers, NULL, pool);
+                                          &pc, extra_headers, NULL, FALSE, 
+                                          pool);
 
   ne_buffer_destroy(body);
   *results = pc.props;
@@ -642,9 +644,15 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   ne_uri parsed_url;
   const char *lopped_path = "";
 
-  /* Split the url into its component pieces (schema, host, path,
+  /* Split the url into its component pieces (scheme, host, path,
      etc).  We want the path part. */
   ne_uri_parse (url, &parsed_url);
+  if (parsed_url.path == NULL)
+    {
+      return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                _("Neon was unable to parse URL '%s'"), url);
+    }
+
   path_s = svn_stringbuf_create (parsed_url.path, pool);
 
   /* Try to get the starting_props from the public url.  If the
@@ -1001,10 +1009,11 @@ do_setprop(ne_buffer *body,
 
 
 svn_error_t *
-svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
+svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
                           apr_array_header_t *prop_deletes,
+                          apr_hash_t *extra_headers,
                           apr_pool_t *pool)
 {
   ne_request *req;
@@ -1038,9 +1047,9 @@ svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
         {
           const void *key;
           void *val;
+          svn_pool_clear(subpool);
           apr_hash_this(hi, &key, NULL, &val);
           do_setprop(body, key, val, subpool);
-          svn_pool_clear(subpool);
         }
       ne_buffer_zappend(body, "</D:prop></D:set>");
       svn_pool_destroy(subpool);
@@ -1065,6 +1074,20 @@ svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, extra_headers);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this(hi, &key, NULL, &val);
+          ne_add_request_header(req, (const char *) key, (const char *) val); 
+        }
+    }
+
   code = ne_simple_request(ras->sess, req);
 
   if (code == NE_OK)
@@ -1087,13 +1110,13 @@ svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
 
 
 svn_error_t *
-svn_ra_dav__do_check_path(void *session_baton,
+svn_ra_dav__do_check_path(svn_ra_session_t *session,
                           const char *path,
                           svn_revnum_t revision,
                           svn_node_kind_t *kind,
                           apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   const char *url = ras->url;
   svn_error_t *err;
   svn_boolean_t is_dir;
@@ -1149,4 +1172,143 @@ svn_ra_dav__do_check_path(void *session_baton,
     }
 
   return err;
+}
+
+
+svn_error_t *
+svn_ra_dav__do_stat(svn_ra_session_t *session,
+                    const char *path,
+                    svn_revnum_t revision,
+                    svn_dirent_t **dirent,
+                    apr_pool_t *pool)
+{
+  svn_ra_dav__session_t *ras = session->priv;
+  const char *url = ras->url;
+  const char *final_url;
+  apr_hash_t *resources;
+  apr_hash_index_t *hi;
+  svn_error_t *err;
+
+  /* If we were given a relative path to append, append it. */
+  if (path)
+    url = svn_path_url_add_component(url, path, pool);
+
+  /* Invalid revision means HEAD, which is just the public URL. */
+  if (! SVN_IS_VALID_REVNUM(revision))
+    {
+      final_url = url;
+    }
+  else
+    {
+      /* Else, convert (rev, path) into an opaque server-generated URL. */
+      svn_string_t bc_url, bc_relative;
+
+      err = svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative,
+                                          NULL, ras->sess,
+                                          url, revision, pool);
+      if (err) 
+        {
+          if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+            {
+              /* easy out: */
+              svn_error_clear (err);
+              *dirent = NULL;
+              return SVN_NO_ERROR;
+            }
+          else
+            return err;
+        }
+
+      final_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                             pool);
+    }
+
+  /* Depth-zero PROPFIND is the One True DAV Way. */
+  err = svn_ra_dav__get_props(&resources, ras->sess, final_url, NE_DEPTH_ZERO,
+                              NULL, NULL /* all props */, pool);
+  if (err) 
+    {
+      if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+        {
+          /* easy out: */
+          svn_error_clear (err);
+          *dirent = NULL;
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
+
+  /* Copying parsing code from svn_ra_dav__get_dir() here.  The hash
+     of resources only contains one item, but there's no other way to
+     get the item. */
+  for (hi = apr_hash_first (pool, resources); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *childname;
+      svn_ra_dav_resource_t *resource;
+      const svn_string_t *propval;
+      apr_hash_index_t *h;
+      svn_dirent_t *entry;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      childname =  key;
+      resource = val;
+          
+      entry = apr_pcalloc (pool, sizeof(*entry));
+          
+      entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
+
+      /* entry->size is already 0 by virtue of pcalloc(). */
+      if (entry->kind == svn_node_file)
+        {
+          propval = apr_hash_get(resource->propset,
+                                 SVN_RA_DAV__PROP_GETCONTENTLENGTH,
+                                 APR_HASH_KEY_STRING);
+          if (propval)
+            entry->size = svn__atoui64(propval->data);
+        }
+          
+      /* does this resource contain any 'dead' properties? */
+      for (h = apr_hash_first (pool, resource->propset);
+           h; h = apr_hash_next (h))
+        {
+          const void *kkey;
+          void *vval;
+          apr_hash_this (h, &kkey, NULL, &vval);
+          
+          if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
+                      sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
+            entry->has_props = TRUE;
+          
+          else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
+                           sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
+            entry->has_props = TRUE;
+        }
+      
+      /* created_rev & friends */
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_VERSION_NAME,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        entry->created_rev = SVN_STR_TO_REV(propval->data);
+      
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_CREATIONDATE,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        SVN_ERR( svn_time_from_cstring(&(entry->time),
+                                       propval->data, pool) );
+      
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        entry->last_author = propval->data;
+
+      *dirent = entry;
+    }
+
+  return SVN_NO_ERROR;
 }

@@ -37,21 +37,21 @@ extern "C" {
 /* Set *REVNUM to the revision number identified by REVISION.
  *
  * If REVISION->kind is svn_opt_revision_number, just use
- * REVISION->value.number, ignoring PATH, RA_LIB, and SESSION.
+ * REVISION->value.number, ignoring PATH and RA_SESSION.
  *
  * Else if REVISION->kind is svn_opt_revision_committed,
  * svn_opt_revision_previous, or svn_opt_revision_base, or
  * svn_opt_revision_working, then the revision can be identified
  * purely based on the working copy's administrative information for
- * PATH, so RA_LIB and SESSION are ignored.  If PATH is not under
- * revision control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH
- * is null, return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
+ * PATH, so RA_SESSION is ignored.  If PATH is not under revision
+ * control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH is null,
+ * return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
  * 
  * Else if REVISION->kind is svn_opt_revision_date or
- * svn_opt_revision_head, then RA_LIB and SESSION are used to
- * retrieve the revision from the repository (using
- * REVISION->value.date in the former case), and PATH is ignored.  If
- * RA_LIB or SESSION is null, return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED. 
+ * svn_opt_revision_head, then RA_SESSION is used to retrieve the
+ * revision from the repository (using REVISION->value.date in the
+ * former case), and PATH is ignored.  If RA_SESSION is null,
+ * return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED. 
  *
  * Else if REVISION->kind is svn_opt_revision_unspecified, set
  * *REVNUM to SVN_INVALID_REVNUM.  
@@ -62,8 +62,7 @@ extern "C" {
  */
 svn_error_t *
 svn_client__get_revision_number (svn_revnum_t *revnum,
-                                 svn_ra_plugin_t *ra_lib,
-                                 void *session,
+                                 svn_ra_session_t *ra_session,
                                  const svn_opt_revision_t *revision,
                                  const char *path,
                                  apr_pool_t *pool);
@@ -135,10 +134,6 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
  *
  * @a ctx is the client context baton.
  *
- * @a ra_lib is required; it represents an already-open RA library.  A
- * temporary RA session is created and destroyed for the purpose of
- * this function.
- *
  * Use @a pool for all allocations.
  */
 svn_error_t *
@@ -150,34 +145,35 @@ svn_client__repos_locations (const char **start_url,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,
                              const svn_opt_revision_t *end,
-                             svn_ra_plugin_t *ra_lib,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute url and a revision REVISION, create an RA connection to
-   that object as it exists in that revision, following copy history
-   if necessary.
+   absolute url, a peg revision PEG_REVISON, and a desired revision
+   REVISION, create an RA connection to that object as it exists in
+   that revision, following copy history if necessary.  If REVISION is
+   younger than PEG_REVISION, then PATH_OR_URL will be checked to see
+   that it is the same node in both PEG_REVISION and REVISON.  If it
+   is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   The resulting ra_plugin is stored in *RA_LIB_P along with its
-   session baton in *SESSION_P.  The actual revision number of the
-   object is stored in *REV_P and the final resulting url is stored in
-   *URL_P.
+   Store the resulting ra_session in *RA_SESSION_P.  Store the actual
+   revision number of the object in *REV_P, and the final resulting
+   url in *URL_P.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
 
    Use POOL for all allocations. */
 svn_error_t *
-svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
-                              void **session_p,
-                              svn_revnum_t *rev_p,
-                              const char **url_p,
-                              const char *path_or_url,
-                              const svn_opt_revision_t *revision,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool);
+svn_client__ra_session_from_path (svn_ra_session_t **ra_session_p,
+                                  svn_revnum_t *rev_p,
+                                  const char **url_p,
+                                  const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const svn_opt_revision_t *revision,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------- */
@@ -199,9 +195,8 @@ typedef struct
      during working copy commits. */
   apr_array_header_t *commit_items;
 
-  /* A hash of svn_config_t's, keyed off file name (i.e. the contents of 
-     ~/.subversion/config end up keyed off of 'config'). */
-  apr_hash_t *config;
+  /* A client context. */
+  svn_client_ctx_t *ctx;
 
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
@@ -209,8 +204,7 @@ typedef struct
 } svn_client__callback_baton_t;
 
 
-/* Open an RA session, returning the session baton in SESSION_BATON. The
-   RA library to use is specified by RA_LIB.
+/* Open an RA session, returning it in *RA_SESSION.
 
    The root of the session is specified by BASE_URL and BASE_DIR.
    BASE_ACCESS is an access baton for BASE_DIR administrative data.
@@ -233,8 +227,7 @@ typedef struct
 
    The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.  */
-svn_error_t * svn_client__open_ra_session (void **session_baton,
-                                           const svn_ra_plugin_t *ra_lib,
+svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
                                            const char *base_url,
                                            const char *base_dir,
                                            svn_wc_adm_access_t *base_access,
@@ -299,11 +292,14 @@ svn_error_t *svn_client__get_auto_props (apr_hash_t **properties,
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE is TRUE.
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
-   occur, but the working copy is not modifed. */
+   occur, but the working copy is not modifed.  If NOTIFY_FUNC is not
+   null, it is called with NOTIFY_BATON for each file or directory deleted. */
 svn_error_t * svn_client__wc_delete (const char *path,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t force,
                                      svn_boolean_t dry_run,
+                                     svn_wc_notify_func2_t notify_func,
+                                     void *notify_baton,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
@@ -312,7 +308,8 @@ svn_error_t * svn_client__wc_delete (const char *path,
 /*** Checkout and update ***/
 
 /* Update a working copy PATH to REVISION, and (if not NULL) set
-   RESULT_REV to the update revision.  If TIMESTAMP_SLEEP is NULL this
+   RESULT_REV to the update revision.  RECURSE if so commanded;
+   likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP is NULL this
    function will sleep before returning to ensure timestamp integrity.
    If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
    will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
@@ -322,23 +319,27 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                              const char *path,
                              const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
+                             svn_boolean_t ignore_externals,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Checkout into PATH a working copy of URL at REVISION, and (if not
-   NULL) set RESULT_REV to the checked out revision.  If
-   TIMESTAMP_SLEEP is NULL this function will sleep before returning
-   to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then
-   the function will not sleep but will set *TIMESTAMP_SLEEP to TRUE
-   if a sleep is required, and will not change *TIMESTAMP_SLEEP if no
-   sleep is required. */
+   NULL) set RESULT_REV to the checked out revision.  RECURSE if so
+   commanded; likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP
+   is NULL this function will sleep before returning to ensure
+   timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
+   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a
+   sleep is required, and will not change *TIMESTAMP_SLEEP if no sleep
+   is required. */
 svn_error_t *
 svn_client__checkout_internal (svn_revnum_t *result_rev,
                                const char *URL,
                                const char *path,
+                               const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
+                               svn_boolean_t ignore_externals,
                                svn_boolean_t *timestamp_sleep,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
@@ -365,7 +366,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
  *
  * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
  *
- * RA_LIB/RA_SESSION define the additional RA session for requesting file
+ * RA_SESSION defines the additional RA session for requesting file
  * contents.
  *
  * REVISION is the start revision in the comparison.
@@ -378,14 +379,13 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
                              svn_wc_adm_access_t *adm_access,
-                             const svn_wc_diff_callbacks_t *diff_cmd,
+                             const svn_wc_diff_callbacks2_t *diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_boolean_t dry_run,
-                             svn_ra_plugin_t *ra_lib,
-                             void *ra_session, 
+                             svn_ra_session_t *ra_session, 
                              svn_revnum_t revision,
-                             svn_wc_notify_func_t notify_func,
+                             svn_wc_notify_func2_t notify_func,
                              void *notify_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -468,25 +468,38 @@ svn_client__get_diff_editor (const char *target,
        multi-repository support actually exists, the single key here
        will actually be some arbitrary thing to be ignored.  
 
+     - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
+
+     - if the candidate is a directory scheduled for deletion, crawl
+       the directories children recursively for any lock tokens and
+       add them to the LOCK_TOKENS array.
+
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t *
-   hash of svn_wc_adm_access_t * keyed on const char * working copy path
-   directory names which were locked in the process of this crawl.
-   These will need to be unlocked again post-commit.
+   canonical repository URLs.  LOCK_TOKENS will point to a hash table
+   with const char * lock tokens, keyed on const char * URLs.  Also,
+   LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
+   keyed
+   on const char * working copy path directory names which were locked
+   in the process of this crawl.  These will need to be unlocked again post-commit.
 
    If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications. 
+   found in TARGETS will not be crawled for modifications.
+
+   If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
+   commit candidates.
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
    cancelled the operation.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
+                                  apr_hash_t **lock_tokens,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_boolean_t just_locked,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
@@ -609,9 +622,9 @@ svn_client__fetch_externals (apr_hash_t *externals,
 
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
    other options are the same as those passed to svn_client_status(). */
-svn_error_t*
+svn_error_t *
 svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
-                                svn_wc_status_func_t status_func,
+                                svn_wc_status_func2_t status_func,
                                 void *status_baton,
                                 svn_boolean_t get_all,
                                 svn_boolean_t update,

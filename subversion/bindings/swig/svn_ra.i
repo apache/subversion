@@ -16,8 +16,10 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Ra"
+#elif defined(SWIGRUBY)
+%module "svn::ext::ra"
 #else
 %module ra
 #endif
@@ -35,29 +37,21 @@
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
 
-#ifdef SWIGJAVA
-/* Ignore these function pointer members because swig's string
-   representations of their types approach the maximum path
-   length on windows, causing swig to crash when it outputs 
-   java wrapper classes for them. */
-%ignore svn_ra_plugin_t::do_diff;
-%ignore svn_ra_plugin_t::do_switch;
-%ignore svn_ra_plugin_t::do_status;
-%ignore svn_ra_plugin_t::do_update;
-%ignore svn_ra_plugin_t::get_log;
-#endif
-
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_ra_plugin_t **,
-    session_baton **,
-    const svn_ra_reporter_t **reporter,
+    svn_ra_session_t **,
+    const svn_ra_reporter2_t **reporter,
     void **report_baton
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
 /* -----------------------------------------------------------------------
    thunk ra_callback
@@ -90,9 +84,12 @@
 					   _global_pool);
 }
 
+%typemap(perl5, in) apr_hash_t *lock_tokens {
+    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+
 /* ----------------------------------------------------------------------- */
 
-%include svn_ra.h
 %{
 #include "svn_ra.h"
 
@@ -100,16 +97,23 @@
 #include "swigutil_py.h"
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
 
+%include svn_ra.h
+
 #ifdef SWIGPERL
-%include ra_plugin.hi
 %include ra_reporter.hi
+#endif
+
+#ifdef SWIGRUBY
+REMOVE_DESTRUCTOR(svn_ra_reporter_t)
+REMOVE_DESTRUCTOR(svn_ra_callbacks_t)
+REMOVE_DESTRUCTOR(svn_ra_plugin_t)
 #endif

@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-#include <apr_strings.h>
 
 #include "svn_private_config.h"
 #include "svn_fs.h"
@@ -35,7 +34,7 @@ svn_fs_base__check_fs (svn_fs_t *fs)
     return SVN_NO_ERROR;
   else
     return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,
-                             "filesystem object has not been opened yet");
+                             _("Filesystem object has not been opened yet"));
 }
 
 
@@ -79,7 +78,7 @@ svn_fs_base__err_corrupt_clone (svn_fs_t *fs,
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
-     "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'",
+     _("Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"),
      base_path, svn_txn, fs->path);
 }
 
@@ -99,7 +98,7 @@ svn_fs_base__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
   svn_string_t *id_str = svn_fs_base__id_unparse (id, fs->pool);
   return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
-     "Reference to non-existent node '%s' in filesystem '%s'",
+     _("Reference to non-existent node '%s' in filesystem '%s'"),
      id_str->data, fs->path);
 }
 
@@ -120,7 +119,7 @@ svn_fs_base__err_corrupt_nodes_key (svn_fs_t *fs)
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
-     "Malformed ID as key in 'nodes' table of filesystem '%s'", fs->path);
+     _("Malformed ID as key in 'nodes' table of filesystem '%s'"), fs->path);
 }
 
 
@@ -130,7 +129,7 @@ svn_fs_base__err_corrupt_next_id (svn_fs_t *fs, const char *table)
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
-     "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'",
+     _("Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"),
      table, fs->path);
 }
 
@@ -142,8 +141,8 @@ svn_fs_base__err_corrupt_txn (svn_fs_t *fs,
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
-     "Corrupt entry in 'transactions' table for '%s'"
-     " in filesystem '%s'", txn, fs->path);
+     _("Corrupt entry in 'transactions' table for '%s'"
+       " in filesystem '%s'"), txn, fs->path);
 }
 
 
@@ -153,7 +152,7 @@ svn_fs_base__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
-     "Corrupt entry in 'copies' table for '%s' in filesystem '%s'",
+     _("Corrupt entry in 'copies' table for '%s' in filesystem '%s'"),
      copy_id, fs->path);
 }
 
@@ -175,7 +174,7 @@ svn_fs_base__err_path_syntax (svn_fs_t *fs, const char *path)
   return
     svn_error_createf
     (SVN_ERR_FS_PATH_SYNTAX, 0,
-     "Search for malformed path '%s' in filesystem '%s'",
+     _("Search for malformed path '%s' in filesystem '%s'"),
      path, fs->path);
 }
 
@@ -186,7 +185,7 @@ svn_fs_base__err_no_such_txn (svn_fs_t *fs, const char *txn)
   return
     svn_error_createf
     (SVN_ERR_FS_NO_SUCH_TRANSACTION, 0,
-     "No transaction named '%s' in filesystem '%s'",
+     _("No transaction named '%s' in filesystem '%s'"),
      txn, fs->path);
 }
 
@@ -197,7 +196,7 @@ svn_fs_base__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
   return
     svn_error_createf
     (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0,
-     "Cannot modify transaction named '%s' in filesystem '%s'",
+     _("Cannot modify transaction named '%s' in filesystem '%s'"),
      txn, fs->path);
 }
 
@@ -208,7 +207,7 @@ svn_fs_base__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
   return
     svn_error_createf
     (SVN_ERR_FS_NO_SUCH_COPY, 0,
-     "No copy with id '%s' in filesystem '%s'", copy_id, fs->path);
+     _("No copy with id '%s' in filesystem '%s'"), copy_id, fs->path);
 }
 
 
@@ -218,6 +217,103 @@ svn_fs_base__err_not_directory (svn_fs_t *fs, const char *path)
   return
     svn_error_createf
     (SVN_ERR_FS_NOT_DIRECTORY, 0,
-     "'%s' is not a directory in filesystem '%s'",
+     _("'%s' is not a directory in filesystem '%s'"),
      path, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_not_file (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NOT_FILE, 0,
+     _("'%s' is not a file in filesystem '%s'"),
+     path, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_BAD_LOCK_TOKEN, 0,
+     _("Token '%s' does not point to any existing lock in filesystem '%s'"),
+     lock_token, fs->path);
+}
+
+svn_error_t *
+svn_fs_base__err_no_lock_token (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_LOCK_TOKEN, 0,
+     _("No token given for path '%s' in filesystem '%s'"), path, fs->path);
+}
+
+svn_error_t *
+svn_fs_base__err_corrupt_lock (svn_fs_t *fs, const char *lock_token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0,
+     _("Corrupt lock in 'locks' table for '%s' in filesystem '%s'"),
+     lock_token, fs->path);
+}
+
+svn_error_t *
+svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_LOCK, 0,
+     _("No lock on path '%s' in filesystem '%s'"),
+     path, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_lock_expired (svn_fs_t *fs, const char *token)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_LOCK_EXPIRED, 0,
+     _("Lock has expired:  lock-token '%s' in filesystem '%s'"),
+     token, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_no_user (svn_fs_t *fs)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_USER, 0,
+     _("No username is currently associated with filesystem '%s'"),
+     fs->path);
+}
+
+svn_error_t *
+svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
+                                      const char *username,
+                                      const char *lock_owner)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_LOCK_OWNER_MISMATCH, 0,
+     _("User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"),
+     username, lock_owner, fs->path);
+}
+
+
+svn_error_t *
+svn_fs_base__err_path_locked (svn_fs_t *fs,
+                              svn_lock_t *lock)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_PATH_LOCKED, 0,
+     _("Path '%s' is locked by user '%s' in filesystem '%s'"),
+     lock->path, lock->owner, fs->path);
 }

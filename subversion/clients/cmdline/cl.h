@@ -56,6 +56,7 @@ typedef enum {
   svn_cl__force_log_opt,
   svn_cl__force_opt,
   svn_cl__ignore_ancestry_opt,
+  svn_cl__ignore_externals_opt,
   svn_cl__incremental_opt,
   svn_cl__limit_opt,
   svn_cl__merge_cmd_opt,
@@ -65,6 +66,7 @@ typedef enum {
   svn_cl__no_autoprops_opt,
   svn_cl__no_diff_deleted,
   svn_cl__no_ignore_opt,
+  svn_cl__no_unlock_opt,
   svn_cl__non_interactive_opt,
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
@@ -98,6 +100,9 @@ typedef struct svn_cl__opt_state_t
      set either of these flags, but will be recursive anyway */
   svn_boolean_t recursive, nonrecursive;
 
+  /* Was --no-unlock specified? */
+  svn_boolean_t no_unlock;
+
   const char *message;           /* log message */
   const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
@@ -122,6 +127,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_diff_deleted; /* do not show diffs for deleted files */
   svn_boolean_t notice_ancestry; /* notice ancestry for diff-y operations */
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
+  svn_boolean_t ignore_externals;/* ignore externals definitions */
   svn_boolean_t stop_on_copy;    /* don't cross copies during processing */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
@@ -160,6 +166,7 @@ svn_opt_subcommand_t
   svn_cl__help,
   svn_cl__import,
   svn_cl__info,
+  svn_cl__lock,
   svn_cl__log,
   svn_cl__ls,
   svn_cl__merge,
@@ -174,6 +181,7 @@ svn_opt_subcommand_t
   svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,
+  svn_cl__unlock,
   svn_cl__update,
   svn_cl__version;
 
@@ -186,15 +194,16 @@ extern const apr_getopt_option_t svn_cl__options[];
 
 
 /* Evaluate EXPR.  If it yields an SVN_ERR_UNVERSIONED_RESOURCE error,
- * handle the error as a warning and clear the error; if it yields any
- * other error, return that error from the current function.
- * Otherwise, continue.
+ * handle the error as a warning, clear the error, and set SUCCESS to
+ * FALSE.  If it yields any other error, don't touch SUCCESS, just
+ * return that error from the current function.  Otherwise, set
+ * SUCCESS to TRUE and continue.
  *
  * This macro is a helper for the many subcommands that merely warn
  * when invoked on an unversioned resource.  It is modeled on the
  * SVN_ERR() macro, see there for details.
  */
-#define SVN_CL__TRY(expr)                                                \
+#define SVN_CL__TRY(expr, success)                                       \
   do {                                                                   \
     svn_error_t *svn_cl__try__temp = (expr);                             \
     if (svn_cl__try__temp)                                               \
@@ -203,10 +212,13 @@ extern const apr_getopt_option_t svn_cl__options[];
           {                                                              \
             svn_handle_warning (stderr, svn_cl__try__temp);              \
             svn_error_clear (svn_cl__try__temp);                         \
+            (success) = FALSE;                                           \
           }                                                              \
         else                                                             \
           return svn_cl__try__temp;                                      \
       }                                                                  \
+    else                                                                 \
+        (success) = TRUE;                                                \
   } while (0)
 
 
@@ -231,13 +243,17 @@ svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
    the last-committed-revision and last-committed-author.
 
    If SKIP_UNRECOGNIZED is TRUE, this function will not print out
-   unversioned items found in the working copy. */
+   unversioned items found in the working copy.
+
+   When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
+   as broken WC locks. */
 svn_error_t *svn_cl__print_status (const char *path,
-                           svn_wc_status_t *status,
-                           svn_boolean_t detailed,
-                           svn_boolean_t show_last_committed,
-                           svn_boolean_t skip_unrecognized,
-                           apr_pool_t *pool);
+                                   svn_wc_status2_t *status,
+                                   svn_boolean_t detailed,
+                                   svn_boolean_t show_last_committed,
+                                   svn_boolean_t skip_unrecognized,
+                                   svn_boolean_t repos_locks,
+                                   apr_pool_t *pool);
 
 /* Print a hash that maps property names (char *) to property values
    (svn_string_t *).  The names are assumed to be in UTF-8 format;
@@ -372,7 +388,7 @@ svn_cl__auth_ssl_client_cert_pw_prompt (
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
+void svn_cl__get_notifier (svn_wc_notify_func2_t *notify_func_p,
                            void **notify_baton_p,
                            svn_boolean_t is_checkout,
                            svn_boolean_t is_export,
@@ -427,6 +443,10 @@ svn_error_t *svn_cl__cleanup_log_msg (void *log_msg_baton,
 
 /* Add a message about --force if appropriate */
 svn_error_t *svn_cl__may_need_force (svn_error_t *err);
+
+/* Write the STRING to the stdio STREAM, returning an error if it fails. */
+svn_error_t *svn_cl__error_checked_fputs (const char *string,
+                                          FILE* stream);
 
 
 #ifdef __cplusplus
