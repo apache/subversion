@@ -101,6 +101,10 @@ struct dir_baton
      directory. */
   struct dir_baton *parent_baton;
 
+  /* Gets set iff there's a change to this directory's properties, to
+     guide us when syncing adm files later. */
+  svn_boolean_t prop_changed;
+
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 };
@@ -173,8 +177,19 @@ decrement_ref_count (struct dir_baton *d)
 
 struct file_baton
 {
-  struct dir_baton *dir_baton;  /* parent dir's baton */
+  /* Baton for this file's parent directory. */
+  struct dir_baton *dir_baton;
+
+  /* Path to this file, either abs or relative to the change-root. */
   svn_string_t *path;           /* full (abs or relative) path to the file */
+
+  /* This gets set if the file underwent a text change, which guides
+     the code that syncs up the adm dir and working copy. */
+  svn_boolean_t text_changed;
+
+  /* This gets set if the file underwent a prop change, which guides
+     the code that syncs up the adm dir and working copy. */
+  svn_boolean_t prop_changed;
 };
 
 
@@ -257,8 +272,10 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (err)
     return err;
 
-  /* else */
-
+  /* Leave a note in the baton indicating that there's new text to
+     sync up. */
+  fb->text_changed = 1;
+  
   return SVN_NO_ERROR;
 }
 
@@ -409,10 +426,9 @@ change_dir_prop (void *edit_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
-#if 0
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
   struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
-#endif /* 0 */
+
+  this_dir_baton->prop_changed = 1;
 
   /* kff todo */
   return SVN_NO_ERROR;
@@ -532,8 +548,6 @@ apply_textdelta (void *edit_baton,
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
-  /* kff todo: dance the tmp file dance, eventually. */
-  
   *handler_baton = file_baton;
   *handler = window_handler;
   
@@ -548,13 +562,11 @@ change_file_prop (void *edit_baton,
                   svn_string_t *name,
                   svn_string_t *value)
 {
-#if 0
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
   struct file_baton *fb = (struct file_baton *) file_baton;
-#endif /* 0 */
 
   /* kff todo */
+
+  fb->prop_changed = 1;
 
   return SVN_NO_ERROR;
 }
@@ -570,9 +582,22 @@ close_file (void *edit_baton, void *file_baton)
   if (err)
     return err;
 
-  /* kff todo urgent: NOW, write the log and then do what it promises. */
+  /* kff todo: here is where we would first write out the log file,
+     and then loop over it doing the operations.  Below is mostly
+     cheating. */
+
+  if (fb->text_changed)
+    {
+      err = svn_wc__sync_text_base (fb->path, fb->dir_baton->pool);
+      if (err)  /* kff todo: unlock before erroring out here?  Hmmm... */
+        return (err);
+    }
 
   err = svn_wc__unlock (fb->dir_baton->path, fb->dir_baton->pool);
+  if (err)
+    return err;
+
+  err = decrement_ref_count (fb->dir_baton);
   if (err)
     return err;
 
