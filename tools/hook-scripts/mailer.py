@@ -37,11 +37,47 @@ def main(pool, config_fname, repos_dir, rev):
                                 1,  # use_copy_history
                                 pool)
 
-  ### pipe it to sendmail rather than stdout
-  generate_content(sys.stdout, cfg, repos, editor, pool)
+  output = determine_output(cfg, repos, editor.changes)
+  generate_content(output, cfg, repos, editor.changes, pool)
+  output.finish()
 
 
-def generate_content(output, cfg, repos, editor, pool):
+def determine_output(cfg, repos, changes):
+  ### process changes to determine the applicable groups
+
+  ### selecting SMTP will be more than this, but this'll do for now
+  if hasattr(cfg.general, 'smtp_hostname'):
+    return SMTPOutput(cfg)
+
+  return StandardOutput()
+
+
+class SMTPOutput:
+  def __init__(self, cfg):
+    import cStringIO
+    self.cfg = cfg
+    self.buffer = cStringIO.StringIO()
+    self.write = self.buffer.write
+
+  def finish(self):
+    import smtplib
+    server = smtplib.SMTP(self.cfg.general.smtp_hostname)
+
+    ### we need to set some headers before dumping in the content
+    server.sendmail(self.cfg.general.from_addr,
+                    [ self.cfg.general.to_addr ],
+                    self.buffer.getvalue())
+    server.quit()
+
+class StandardOutput:
+  def __init__(self):
+    self.write = sys.stdout.write
+
+  def finish(self):
+    pass
+
+
+def generate_content(output, cfg, repos, changes, pool):
 
   svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
@@ -53,22 +89,23 @@ def generate_content(output, cfg, repos, editor, pool):
                   repos.rev))
 
   # get all the changes and sort by path
-  changes = editor.changes.items()
-  changes.sort()
+  changelist = changes.items()
+  changelist.sort()
 
   # print summary sections
-  generate_list(output, 'Added', changes, _select_adds)
-  generate_list(output, 'Removed', changes, _select_deletes)
-  generate_list(output, 'Modified', changes, _select_modifies)
+  generate_list(output, 'Added', changelist, _select_adds)
+  generate_list(output, 'Removed', changelist, _select_deletes)
+  generate_list(output, 'Modified', changelist, _select_modifies)
 
   output.write('Log:\n%s\n'
                % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_LOG) or ''))
 
   # these are sorted by path already
-  for path, change in changes:
+  for path, change in changelist:
     generate_diff(output, cfg, repos, date, change, pool)
 
   ### print diffs. watch for binary files.
+
 
 def _select_adds(change):
   return change.added
@@ -77,9 +114,10 @@ def _select_deletes(change):
 def _select_modifies(change):
   return not change.added and change.path
 
-def generate_list(output, header, changes, selection):
+
+def generate_list(output, header, changelist, selection):
   items = [ ]
-  for path, change in changes:
+  for path, change in changelist:
     if selection(change):
       items.append((path, change))
   if items:
@@ -408,4 +446,5 @@ if __name__ == '__main__':
 #     o max size of diff before trimming
 #     o how to construct a ViewCVS URL for the diff
 #     o optional, non-mail log file
+#     o flag to disable generation of add/delete diffs
 #

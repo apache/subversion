@@ -10,3 +10,9 @@
 ### know how I plan to allow the insertion of spaces)
 diff = /usr/bin/diff -u -L "%(label_from)s" -L "%(label_to)s" "%(from)s" "%(to)s"
 
+# if this is set, then output is delivered via SMTP to this host
+#smtp_hostname = localhost
+
+### temporary addresses for when we use SMTP
+from_addr = invalid@example.com
+to_addr = invalid@example.com
