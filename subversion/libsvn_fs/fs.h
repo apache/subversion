@@ -228,9 +228,21 @@ typedef struct
 } svn_fs__representation_t;
 
 
+/*** Copy Kind ***/
+typedef enum
+{
+  svn_fs__copy_kind_real = 1, /* real copy */
+  svn_fs__copy_kind_soft      /* soft copy */
+
+} svn_fs__copy_kind_t;
+
+
 /*** Copy ***/
 typedef struct
 {
+  /* What kind of copy occured. */
+  svn_fs__copy_kind_t kind;
+
   /* Path of copy source. */
   const char *src_path;
 

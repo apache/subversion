@@ -278,7 +278,8 @@ static svn_boolean_t
 is_valid_copy_skel (skel_t *skel)
 {
   return (((svn_fs__list_length (skel) == 4)
-           && svn_fs__matches_atom (skel->children, "copy")
+           && (svn_fs__matches_atom (skel->children, "copy")
+               || svn_fs__matches_atom (skel->children, "soft-copy"))
            && skel->children->next->is_atom
            && skel->children->next->next->is_atom
            && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
@@ -646,6 +647,12 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
 
   /* Create the returned structure */
   copy = apr_pcalloc (pool, sizeof (*copy));
+
+  /* KIND */
+  if (svn_fs__matches_atom (skel->children, "soft-copy"))
+    copy->kind = svn_fs__copy_kind_soft;
+  else
+    copy->kind = svn_fs__copy_kind_hard;
 
   /* SRC-PATH */
   copy->src_path = apr_pstrmemdup (pool,
@@ -1112,7 +1119,10 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
     svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
   /* "copy" */
-  svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
+  if (copy->kind == svn_fs__copy_kind_hard)
+    svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
+  else
+    svn_fs__prepend (svn_fs__str_atom ("soft-copy", pool), skel);
 
   /* Validate and return the skel. */
   if (! is_valid_copy_skel (skel))

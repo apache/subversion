@@ -1024,9 +1024,10 @@ make_path_mutable (svn_fs_root_t *root,
       if (inherit == copy_id_inherit_new)
         {
           const svn_fs_id_t *new_node_id = svn_fs__dag_get_id (clone);
-          SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, copy_src_path, 
+          SVN_ERR (svn_fs__bdb_create_copy (fs, copy_id, copy_src_path, 
                                             svn_fs__id_txn_id (node_id),
-                                            new_node_id, trail));
+                                            new_node_id, 
+                                            svn_fs__copy_kind_soft, trail));
           SVN_ERR (svn_fs__add_txn_copy (fs, txn_id, copy_id, trail));
         }
     }
@@ -4012,21 +4013,41 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
 
 /* Examine the PARENT_PATH structure chain to determine how copy IDs
    would be doled out in the event that PARENT_PATH was made mutable.
-   Return the ID of the copy that last affected PARENT_PATH.
+   Return the ID of the copy that last affected PARENT_PATH (and the
+   COPY itself, if we've already fetched it).
 
    NOTE:  All items in the PARENT_PATH chain are assumed to be immutable! 
 */
-static const char *
-examine_copy_inheritance (parent_path_t *parent_path)
+static svn_error_t *
+examine_copy_inheritance (const char **copy_id,
+                          svn_fs__copy_t **copy,
+                          svn_fs_t *fs,
+                          parent_path_t *parent_path,
+                          trail_t *trail)
 {
+  /* The default response -- our current copy ID, and no fetched COPY. */
+  *copy_id = svn_fs__id_copy_id (svn_fs__dag_get_id (parent_path->node));
+  *copy = NULL;
+
   /* If we have no parent (we are looking at the root node), or if
      this node is supposed to inherit from itself, return that fact. */
-  if ((! parent_path->parent) 
-      || (parent_path->copy_inherit == copy_id_inherit_self))
-    return svn_fs__id_copy_id (svn_fs__dag_get_id (parent_path->node));
+  if (! parent_path->parent) 
+    return SVN_NO_ERROR;
+
+  if (parent_path->copy_inherit == copy_id_inherit_self)
+    {
+      if (((*copy_id)[0] == '0') && ((*copy_id)[1] == '\0'))
+        return SVN_NO_ERROR;
+
+      /* Get the COPY record. */
+      SVN_ERR (svn_fs__bdb_get_copy (copy, fs, *copy_id, trail));
+      if ((*copy)->kind != svn_fs__copy_kind_soft)
+        return SVN_NO_ERROR;
+    }
 
   /* Otherwise, our answer is dependent upon our parent. */
-  return examine_copy_inheritance (parent_path->parent);
+  return examine_copy_inheritance (copy_id, copy, fs, 
+                                   parent_path->parent, trail);
 }
 
 
@@ -4057,6 +4078,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   struct revision_root_args rr_args;
   svn_boolean_t reported = history->is_interesting;
   const char *txn_id;
+  svn_fs__copy_t *copy = NULL;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -4134,7 +4156,8 @@ txn_body_history_prev (void *baton, trail_t *trail)
   /* Calculate a possibly relevant copy ID if we don't have one
      already. */
   if (! end_copy_id)
-    end_copy_id = examine_copy_inheritance (parent_path);
+    SVN_ERR (examine_copy_inheritance (&end_copy_id, &copy, fs, 
+                                       parent_path, trail));
 
   /* Initialize some state variables. */
   src_path = NULL;
@@ -4149,13 +4172,13 @@ txn_body_history_prev (void *baton, trail_t *trail)
      then we need to report a copy.  */
   if (svn_fs__key_compare (svn_fs__id_copy_id (node_id), end_copy_id) != 0)
     {
-      svn_fs__copy_t *copy;
       const char *remainder;
       dag_node_t *dst_node;
       const char *copy_dst;
 
-      /* Get the current COPY record. */
-      SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, end_copy_id, trail));
+      /* Get the COPY record if we haven't already fetched it. */
+      if (! copy)
+        SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, end_copy_id, trail));
 
       /* Figure out the destination path of the copy operation. */
       SVN_ERR (svn_fs__dag_get_node (&dst_node, fs, 
@@ -4197,7 +4220,11 @@ txn_body_history_prev (void *baton, trail_t *trail)
         }
     }
 
-  if (src_path && SVN_IS_VALID_REVNUM (src_rev))
+  /* If we calculated a copy source path and revision, and the
+     copy source revision doesn't pre-date a revision in which we
+     *know* our node was modified, we'll make a 'copy-style' history
+     object. */
+  if (src_path && SVN_IS_VALID_REVNUM (src_rev) && (src_rev >= commit_rev))
     {
       *prev_history = assemble_history (fs, apr_pstrdup (retpool, path), 
                                         dst_rev, 1, src_path, src_rev, 

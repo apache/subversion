@@ -547,9 +547,11 @@ In the database, we always represent a copy ID in its shortest ASCII
 form.
 
 The Berkeley DB `copies' table records all filesystem copies.  Every
-key in this table is copy ID, and every value is a skel of the form:
+key in this table is copy ID, and every value is a skel of one of the
+following forms:
 
    ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
+   ("soft-copy" SRC-PATH SRC-TXN DST-NODE-ID)
 
 where:
 
@@ -771,7 +773,9 @@ Changes:
 
 Copies:
 
-                   COPY ::= ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
+                   COPY ::= REAL-COPY | SOFT-COPY
+              REAL-COPY ::= ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
+              SOFT-COPY ::= ("soft-copy" SRC-PATH SRC-TXN DST-NODE-ID)
                SRC-PATH ::= atom ;
                 SRC-REV ::= TXN ;
             DST-NODE-ID ::= NODE-REV-ID ;

@@ -129,14 +129,16 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
 
 
 svn_error_t *
-svn_fs__bdb_create_copy (const char *copy_id,
-                         svn_fs_t *fs,
+svn_fs__bdb_create_copy (svn_fs_t *fs,
+                         const char *copy_id,
                          const char *src_path,
                          const char *src_txn_id,
                          const svn_fs_id_t *dst_noderev_id,
+                         svn_fs__copy_kind_t kind,
                          trail_t *trail)
 {
   svn_fs__copy_t copy;
+  copy.kind = kind;
   copy.src_path = src_path;
   copy.src_txn_id = src_txn_id;
   copy.dst_noderev_id = (svn_fs_id_t *) dst_noderev_id;

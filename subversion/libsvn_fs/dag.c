@@ -386,7 +386,8 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
        "initial copy id not '0' in filesystem '%s'", fs->path);
-  SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, NULL, NULL, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_copy (fs, copy_id, NULL, NULL, root_id, 
+                                    svn_fs__copy_kind_real, trail));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
@@ -1523,9 +1524,9 @@ svn_fs__dag_copy (dag_node_t *to_node,
          about the copy to the `copies' table, using the COPY_ID we
          reserved above.  */
       SVN_ERR (svn_fs__bdb_create_copy 
-               (copy_id, fs, 
+               (fs, copy_id, 
                 svn_fs__canonicalize_abspath (from_path, trail->pool), 
-                from_txn_id, id, trail));
+                from_txn_id, id, svn_fs__copy_kind_real, trail));
 
       /* Finally, add the COPY_ID to the transaction's list of copies
          so that, if this transaction is aborted, the `copies' table
