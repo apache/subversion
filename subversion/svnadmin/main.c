@@ -76,6 +76,7 @@ enum
     svnadmin__force_uuid,
     svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync,
+    svnadmin__bypass_hooks,
     svnadmin__config_dir
   };
 
@@ -102,6 +103,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"incremental",   svnadmin__incremental, 0,
      "dump incrementally"},
+
+    {"bypass-hooks",  svnadmin__bypass_hooks, 0,
+     "bypass the repository hook system"},
 
     {"quiet",           'q', 0,
      "no progress (only errors) to stderr"},
@@ -191,10 +195,15 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"setlog", subcommand_setlog, {0},
      "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
-     "Set the log-message on revision REVISION to the contents of FILE.\n"
-     "(Note that revision properties are not historied, so this command\n"
-     "will permanently overwrite the previous log message.)\n",
-     {'r'} },
+     "Set the log-message on revision REVISION to the contents of FILE.  Use\n"
+     "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
+     "(for example, if you do not want an email notification sent\n"
+     "from your post-revprop-change hook, or because the modification of\n"
+     "revision properties has not been enabled in the pre-revprop-change\n"
+     "hook).\n\n"
+     "NOTE: revision properties are not historied, so this command\n"
+     "will permanently overwrite the previous log message.\n",
+     {'r', svnadmin__bypass_hooks} },
 
     {"verify", subcommand_verify, {0},
      "usage: svnadmin verify REPOS_PATH\n\n"
@@ -215,6 +224,7 @@ struct svnadmin_opt_state
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
+  svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *parent_dir;
@@ -496,7 +506,6 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_fs_t *fs;
   svn_stringbuf_t *file_contents;
   const char *filename_utf8;
   apr_array_header_t *args;
@@ -527,14 +536,24 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_subst_translate_string (&log_contents, log_contents,
                                        NULL, pool));
 
-  /* open the filesystem  */
+  /* Open the filesystem  */
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-  
-  /* set the revision property */
-  SVN_ERR (svn_fs_change_rev_prop (fs, opt_state->start_revision.value.number,
-                                   SVN_PROP_REVISION_LOG,
-                                   log_contents, pool));
+
+  /* If we are bypassing the hooks system, we just hit the filesystem
+     directly. */
+  if (opt_state->bypass_hooks)
+    {
+      svn_fs_t *fs = svn_repos_fs (repos);
+      SVN_ERR (svn_fs_change_rev_prop 
+               (fs, opt_state->start_revision.value.number, 
+                SVN_PROP_REVISION_LOG, log_contents, pool));
+    }
+  else
+    {
+      SVN_ERR (svn_repos_fs_change_rev_prop 
+               (repos, opt_state->start_revision.value.number,
+                NULL, SVN_PROP_REVISION_LOG, log_contents, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -691,15 +710,18 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
-        opt_state.parent_dir = svn_path_internal_style (opt_state.parent_dir,
-                                                        pool);
+        opt_state.parent_dir 
+          = svn_path_internal_style (opt_state.parent_dir, pool);
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
         break;
+      case svnadmin__bypass_hooks:
+        opt_state.bypass_hooks = TRUE;
+        break;
       case svnadmin__config_dir:
-        opt_state.config_dir = apr_pstrdup (pool, svn_path_canonicalize(opt_arg,
-                                                                       pool));
+        opt_state.config_dir = 
+          apr_pstrdup (pool, svn_path_canonicalize (opt_arg, pool));
         break;
       default:
         {
