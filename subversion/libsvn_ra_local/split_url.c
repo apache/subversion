@@ -31,7 +31,7 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
 
   svn_string_t *shrinking_URL = svn_string_dup (URL, subpool);
   svn_string_t *growing_URL = svn_string_create ("/", subpool);
-  svn_string_t *remainder = svn_string_create ("/", subpool);
+  svn_string_t *remainder = svn_string_create ("", subpool);
   svn_fs_t *test_fs = svn_fs_new (subpool);
 
   /* Yank path components off the end of URL_copy, storing them in an
@@ -44,22 +44,24 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
       *((svn_string_t **)apr_array_push (components)) = component;
       svn_path_remove_component (shrinking_URL, svn_path_url_style);
 
-    } while (shrinking_URL);
+    } while (! svn_string_isempty (shrinking_URL));
   
   /* Start from the 2nd item in the component array, build up a path,
      successively adding new components and trying to successfuly call
      svn_fs_open_berkeley().  */
+  i = components->nelts - 1;
   do
     {
       svn_string_t *component = (((svn_string_t **)(components)->elts)[i]);
       svn_path_add_component (growing_URL, component, svn_path_url_style);
+      printf ("Testing path: %s\n", growing_URL->data); fflush(stdout);
       err = svn_fs_open_berkeley (test_fs, growing_URL->data);
-      i++;
-    } while ((i < components->nelts) && err);
+      i--;
+    } while ((i >= 0) && err);
 
   /* We're out of the loop, either because we ran out of search
      paths... */
-  if (i >= components->nelts)
+  if (i < 0)
     return 
       svn_error_create 
       (SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
@@ -77,10 +79,11 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
      scratchwork subpool */
   *repos_path = svn_string_dup (growing_URL, pool);
 
-  while (i < components->nelts)
+  while (i >= 0)
     {
       svn_string_t *component = (((svn_string_t **)(components)->elts)[i]);
       svn_path_add_component (remainder, component, svn_path_url_style);
+      i--;
     }
 
   *fs_path = svn_string_dup (remainder, pool);
