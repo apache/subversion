@@ -214,13 +214,13 @@ class Generator(gen_base.GeneratorBase):
                           os.path.join('$(top_srcdir)', sources[0])))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
-      deps = string.join(sources)
+      deps = string.join(map(str, sources))
       self.ofile.write('%s: %s\n' % (objname, deps))
       cmd = getattr(objname, 'build_cmd', '')
       if cmd:
         if not getattr(objname, 'source_generated', 0):
           self.ofile.write('\t%s %s\n' % (cmd, os.path.join('$(top_srcdir)',
-                                                            sources[0])))
+                                                            str(sources[0]))))
         else:
           self.ofile.write('\t%s %s\n' % (cmd, sources[0]))
 

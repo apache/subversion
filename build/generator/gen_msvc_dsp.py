@@ -54,11 +54,16 @@ class Generator(gen_win.WinGeneratorBase):
     sources = [ ]
     if not isinstance(target, gen_base.TargetUtility):
       for src in self.get_win_sources(target):
+        if isinstance(src, gen_base.SourceFile):
+          reldir = src.reldir
+          src = src.fname
+        else:
+          reldir = ''
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if '-' in rsrc:
           rsrc = '"%s"' % rsrc
-        sources.append(rsrc)
-    sources.sort()
+        sources.append(_item(path=rsrc, reldir=reldir))
+    sources.sort(lambda x, y: cmp(x.path, y.path))
 
     data = {
       'target' : target,
