@@ -179,7 +179,7 @@ Possible values are: commit, revert.")
 
 (defvar svn-status-negate-meaning-of-arg-commands nil
   "*List of operations that sould use a negated meaning of the prefix argument.
-The only possible function at the moment is svn-status-update.")
+Supported functions are now 'svn-status and 'svn-status-update.")
 
 (defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
 
@@ -210,6 +210,8 @@ In either case the mark gets the face
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
 
 (defvar svn-trac-project-root nil "Path for an eventual existing trac issue tracker.")
+
+(defvar svn-status-module-name nil "A nice short name for the actual project.")
 
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
@@ -404,7 +406,9 @@ Otherwise, return \"\"."
   "Examine the status of Subversion working copy in directory DIR.
 If ARG then pass the -u argument to `svn status'."
   (interactive (list (read-directory-name "SVN status directory: "
-                                          nil default-directory nil)))
+                                          nil default-directory nil)
+                     current-prefix-arg))
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
   (if (not (file-exists-p (concat dir "/.svn/")))
@@ -895,6 +899,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
   (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
   (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
+  (define-key svn-status-mode-options-map (kbd "n") 'svn-status-set-module-name)
   (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
 (when (not svn-status-mode-trac-map)
   (setq svn-status-mode-trac-map (make-sparse-keymap))
@@ -946,6 +951,7 @@ A and B must be line-info's."
      ["Save Options" svn-status-save-state t]
      ["Load Options" svn-status-load-state t]
      ["Set Trac project root" svn-status-set-trac-project-root t]
+     ["Set Short module name" svn-status-set-module-name t]
      ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
      )
@@ -1430,9 +1436,6 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   (interactive)
   ;(message (format "buffer-name: %s" (buffer-name)))
   (unless (string= (buffer-name) "*svn-status*")
-    ;;(delete-other-windows)
-    ;;(split-window-vertically)
-    ;;(switch-to-buffer "*svn-status*")
     (set-buffer "*svn-status*"))
   (svn-status-mode)
   (let ((st-info svn-status-info)
@@ -1454,6 +1457,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (cond ((svn-status-line-info->has-usermark (car st-info))
              ;; Show a marked file always
              (svn-insert-line-in-status-buffer (car st-info)))
+            ((svn-status-line-info->update-available (car st-info))
+             (svn-insert-line-in-status-buffer (car st-info)))
             ((svn-status-line-info->hide-because-user-elide (car st-info))
              (setq user-elide-count (1+ user-elide-count)))
             ((svn-status-line-info->hide-because-unknown (car st-info))
@@ -1474,6 +1479,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                     (if svn-status-head-revision (format " (status against revision: %s)"
                                                          svn-status-head-revision)
                       "")))
+    (when svn-status-module-name
+      (insert (format "Project name: %s\n" svn-status-module-name)))
     (when svn-status-base-info
       (insert (concat "Repository: " (svn-status-base-info->url) "\n")))
     (when svn-status-hide-unknown
@@ -2877,7 +2884,8 @@ When called with a prefix argument, ask the user for the revision."
           (list
            (list "svn-trac-project-root" svn-trac-project-root)
            (list "sort-status-buffer" svn-status-sort-status-buffer)
-           (list "elide-list" svn-status-elided-list)))
+           (list "elide-list" svn-status-elided-list)
+           (list "module-name" svn-status-module-name)))
     (insert (pp-to-string svn-status-options))
     (save-buffer)
     (kill-buffer buf)))
@@ -2895,6 +2903,8 @@ When called with a prefix argument, ask the user for the revision."
                 (nth 1 (assoc "svn-trac-project-root" svn-status-options)))
           (setq svn-status-elided-list
                 (nth 1 (assoc "elide-list" svn-status-options)))
+          (setq svn-status-module-name
+                (nth 1 (assoc "module-name" svn-status-options)))
           (when svn-status-elided-list (svn-status-apply-elide-list)))
       (error "%s is not readable." file))
     (message "Loaded %s" file)))
@@ -2916,6 +2926,15 @@ display routine for svn-status is available."
         (read-string "Trac project root (e.g.: http://projects.edgewall.com/trac/): "
                      svn-trac-project-root))
   (when (yes-or-no-p "Save the new setting for svn-trac-project-root to disk? ")
+    (svn-status-save-state)))
+
+(defun svn-status-set-module-name ()
+  "Interactively set svn-status-module-name."
+  (interactive)
+  (setq svn-status-module-name
+        (read-string "Short Unit Name (e.g.: MyProject): "
+                     svn-status-module-name))
+  (when (yes-or-no-p "Save the new setting for svn-status-module-name to disk? ")
     (svn-status-save-state)))
 
 ;; --------------------------------------------------------------------------------
