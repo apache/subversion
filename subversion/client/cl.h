@@ -85,6 +85,11 @@ typedef struct svn_cl__cmd_desc_t
 
   /* The function this command invokes. */
   svn_cl__cmd_proc_t *cmd_func;
+
+  /* A brief string describing this command, for usage messages.  If
+     this command is a short synonym, this should be set to NULL. */
+  const char *help;
+
 } svn_cl__cmd_desc_t;
 
 
@@ -95,7 +100,7 @@ typedef enum {
   svn_cl__checkout_command,
   svn_cl__delete_command,
   svn_cl__help_command,
-  svn_cl__propfind_command,
+  svn_cl__proplist_command,
   svn_cl__status_command,
   svn_cl__update_command
 } svn_cl__te_command;
@@ -107,7 +112,7 @@ svn_cl__cmd_proc_t
   svn_cl__checkout,
   svn_cl__delete,
   svn_cl__help,
-  svn_cl__propfind,
+  svn_cl__proplist,
   svn_cl__status,
   svn_cl__update;
 

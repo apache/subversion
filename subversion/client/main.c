@@ -67,26 +67,49 @@
 /*** Command dispatch. ***/
 
 static svn_cl__cmd_desc_t cmd_table[] = {
-  { "add",        NULL,       TRUE,  svn_cl__add      },
-  { "ad",         "add",      TRUE,  svn_cl__add      },
-  { "new",        "add",      TRUE,  svn_cl__add      },
-  { "checkout",   NULL,       TRUE,  svn_cl__checkout },
-  { "co",         "checkout", TRUE,  svn_cl__checkout },
-  { "commit",     NULL,       TRUE,  svn_cl__commit   },
-  { "ci",         "commit",   TRUE,  svn_cl__commit   },
-  { "delete",     NULL,       TRUE,  svn_cl__delete   },
-  { "del",        "delete",   TRUE,  svn_cl__delete   },
-  { "remove",     "delete",   TRUE,  svn_cl__delete   },
-  { "rm",         "delete",   TRUE,  svn_cl__delete   },
-  { "help",       NULL,       FALSE, svn_cl__help     },
-  { "propfind",   NULL,       TRUE,  svn_cl__propfind },
-  { "pfind",      "propfind", TRUE,  svn_cl__propfind },
-  { "pf",         "propfind", TRUE,  svn_cl__propfind },
-  { "status",     NULL,       TRUE,  svn_cl__status   },
-  { "stat",       "status",   TRUE,  svn_cl__status   },
-  { "st",         "status",   TRUE,  svn_cl__status   },
-  { "update",     NULL,       TRUE,  svn_cl__update   },
-  { "up",         "update",   TRUE,  svn_cl__update   }
+  /* add */
+  { "add",        NULL,       TRUE,  svn_cl__add,
+    "Add a new file or directory to version control." },
+  { "ad",         "add",      TRUE,  svn_cl__add,      NULL },
+  { "new",        "add",      TRUE,  svn_cl__add,      NULL },
+
+  /* checkout */
+  { "checkout",   NULL,       TRUE,  svn_cl__checkout,
+    "Check out a working directory from a repository." },
+  { "co",         "checkout", TRUE,  svn_cl__checkout, NULL },
+
+  /* commit */
+  { "commit",     NULL,       TRUE,  svn_cl__commit,
+    "Commit changes from your working copy to the repository." },
+  { "ci",         "commit",   TRUE,  svn_cl__commit,   NULL },
+
+  /* delete */
+  { "delete",     NULL,       TRUE,  svn_cl__delete,
+    "Remove a file or directory from version control." },
+  { "del",        "delete",   TRUE,  svn_cl__delete,   NULL },
+  { "remove",     "delete",   TRUE,  svn_cl__delete,   NULL },
+  { "rm",         "delete",   TRUE,  svn_cl__delete,   NULL },
+
+  /* help */
+  { "help",       NULL,       FALSE, svn_cl__help, 
+    "Funny you should ask." },
+
+  /* proplist */
+  { "proplist",   NULL,       TRUE,  svn_cl__proplist,
+    "List all properties for given files and directories." },
+  { "plist",      "proplist", TRUE,  svn_cl__proplist, NULL },
+  { "pl",         "proplist", TRUE,  svn_cl__proplist, NULL },
+
+  /* status */
+  { "status",     NULL,       TRUE,  svn_cl__status,
+    "Print the status of working copy files and directories."},
+  { "stat",       "status",   TRUE,  svn_cl__status,   NULL },
+  { "st",         "status",   TRUE,  svn_cl__status,   NULL },
+
+  /* update */
+  { "update",     NULL,       TRUE,  svn_cl__update,
+    "Bring changes from the repository into the working copy." },
+  { "up",         "update",   TRUE,  svn_cl__update,   NULL }
 };
 
 
@@ -216,7 +239,7 @@ svn_cl__parse_options (int argc,
   if ((! *xml_file)
       && (command != svn_cl__add_command)
       && (command != svn_cl__status_command)
-      && (command != svn_cl__propfind_command)
+      && (command != svn_cl__proplist_command)
       && (command != svn_cl__delete_command))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
@@ -242,7 +265,7 @@ svn_cl__parse_options (int argc,
           || (command == svn_cl__update_command)
           || (command == svn_cl__commit_command)
           || (command == svn_cl__status_command)
-          || (command == svn_cl__propfind_command)))
+          || (command == svn_cl__proplist_command)))
     *target = svn_string_create (".", pool);
 }
 

@@ -3,7 +3,7 @@
 noinst_PROGRAMS = svn
 svn_SOURCES = main.c status.c trace.c props.c          \
               add-cmd.c commit-cmd.c checkout-cmd.c    \
-              propfind-cmd.c delete-cmd.c status-cmd.c \
+              proplist-cmd.c delete-cmd.c status-cmd.c \
               update-cmd.c
 
 ## Flags needed when compiling:
