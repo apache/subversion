@@ -98,9 +98,14 @@ rm -f doc/programmer/design/svn-design.info
 rm -f doc/programmer/design/svn-design.info-*
 rm -f doc/programmer/design/svn-design.html
 rm -f doc/programmer/design/svn-design.txt
-rm -f doc/user/manual/svn-handbook.info
+rm -f doc/handbook/svn-handbook.info
+rm -f doc/handbook/svn-handbook.info-*
 rm -f doc/handbook/svn-handbook.html
 rm -f doc/handbook/svn-handbook.txt
+rm -f doc/handbook/translations/french/svn-handbook-french.info
+rm -f doc/handbook/translations/french/svn-handbook-french.info-*
+rm -f doc/handbook/translations/french/svn-handbook-french.html
+rm -f doc/handbook/translations/french/svn-handbook-french.txt
 
 ### Build new docs.
 echo "Building new docs in docs/ ..."
@@ -170,9 +175,14 @@ for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.info-* \
             doc/programmer/design/svn-design.html   \
             doc/programmer/design/svn-design.txt    \
-            doc/handbook/svn-handbook.info         \
-            doc/handbook/svn-handbook.html         \
-            doc/handbook/svn-handbook.txt
+            doc/handbook/svn-handbook.info          \
+            doc/handbook/svn-handbook.info-*        \
+            doc/handbook/svn-handbook.html          \
+            doc/handbook/svn-handbook.txt	    \
+            doc/handbook/translations/french/svn-handbook-french.info         \
+            doc/handbook/translations/french/svn-handbook-french.info-*       \
+            doc/handbook/translations/french/svn-handbook-french.html         \
+            doc/handbook/translations/french/svn-handbook-french.txt
 do
    cp ${name} ${DIST_SANDBOX}/${DISTNAME}/${name}
 done
