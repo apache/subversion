@@ -23,6 +23,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_config.h"
@@ -1066,11 +1067,18 @@ svn_repos_find_root_path (const char *path,
                           apr_pool_t *pool)
 {
   const char *candidate = path;
+  const char *decoded;
+  svn_error_t *err;
 
   while (1)
     {
-      if (check_repos_path (candidate, pool))
+      /* Try to decode the path, so we don't fail if it contains characters
+         that aren't supported by the OS filesystem.  The subversion fs
+         isn't restricted by the OS filesystem character set. */
+      err = svn_utf_cstring_from_utf8 (&decoded, candidate, pool);
+      if (!err && check_repos_path (candidate, pool))
         break;
+      svn_error_clear (err);
       if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
         return NULL;
       candidate = svn_path_dirname (candidate, pool);

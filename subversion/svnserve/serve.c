@@ -28,6 +28,7 @@
 #include <apr_file_info.h>
 #include <apr_md5.h>
 
+#include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
 #include <svn_types.h>
 #include <svn_string.h>
 #include <svn_pools.h>
@@ -1144,15 +1145,42 @@ static const char *skip_scheme_part(const char *url)
   return url + 3;
 }
 
+/* Check that PATH is a valid repository path, meaning it doesn't contain any
+   '..' path segments.
+   NOTE: This is similar to svn_path_is_backpath_present, but that function
+   assumes the path separator is '/'.  This function also checks for
+   segments delimited by the local path separator. */
+static svn_boolean_t
+repos_path_valid(const char *path)
+{
+  const char *s = path;
+
+  while (*s)
+    {
+      /* Scan for the end of the segment. */
+      while (*path && *path != '/' && *path != SVN_PATH_LOCAL_SEPARATOR)
+        ++path;
+
+      /* Check for '..'. */
+      if (path - s == 2 && s[0] == '.' && s[1] == '.')
+        return FALSE;
+
+      /* Skip all separators. */
+      while (*path && (*path == '/' || *path == SVN_PATH_LOCAL_SEPARATOR))
+        ++path;
+      s = path;
+    }
+
+  return TRUE;
+}
+      
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B. */
 static svn_error_t *find_repos(const char *url, const char *root,
                                server_baton_t *b, apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  const char *path, *full_path, *path_apr, *root_apr, *repos_root, *pwdb_path;
-  char *buffer;
+  const char *path, *full_path, *repos_root, *pwdb_path;
   svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
@@ -1166,24 +1194,17 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Decode URI escapes from the path. */
   path = svn_path_uri_decode(path, pool);
 
-  SVN_ERR(svn_path_cstring_from_utf8(&path_apr,
-                                     svn_path_canonicalize(path, pool),
-                                     pool));
-
-  SVN_ERR(svn_path_cstring_from_utf8(&root_apr,
-                                     svn_path_canonicalize(root, pool),
-                                     pool));
-
-  /* Join the server-configured root with the client path. */
-  apr_err = apr_filepath_merge(&buffer, root_apr, path_apr,
-                               APR_FILEPATH_SECUREROOT, pool);
-
-  if(apr_err)
+  /* Ensure that it isn't possible to escape the root by skipping leading
+     slashes and not allowing '..' segments. */
+  while (*path == '/')
+    ++path;
+  if (!repos_path_valid(path))
     return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
                             "Couldn't determine repository path");
 
-  SVN_ERR(svn_path_cstring_to_utf8(&full_path, buffer, pool));
-  full_path = svn_path_canonicalize(full_path, pool);
+  /* Join the server-configured root with the client path. */
+  full_path = svn_path_join(svn_path_canonicalize(root, pool),
+                            svn_path_canonicalize(path, pool), pool);
 
   /* Search for a repository in the full path. */
   repos_root = svn_repos_find_root_path(full_path, pool);
