@@ -8,7 +8,7 @@ VPATH = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
-DOC_DIRS = doc/programmer/design doc/user/manual
+DOC_DIRS = doc/programmer/design doc/user/manual doc/user/svn_for_cvs_users
 
 EXTERNAL_PROJECT_DIRS = neon apr @DB_SUBDIR@
 
@@ -178,12 +178,12 @@ log changelog ChangeLog:
 
 doc: doc-info doc-txt doc-html
 
-doc-info: doc/programmer/design/svn-design.info doc/user/manual/svn-manual.info
-doc-dvi: doc/programmer/design/svn-design.dvi doc/user/manual/svn-manual.dvi
-doc-txt: doc/programmer/design/svn-design.txt doc/user/manual/svn-manual.txt
-doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html
-doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps
-doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf
+doc-info: doc/programmer/design/svn-design.info doc/user/manual/svn-manual.info doc/user/svn_for_cvs_users/svn_for_cvs_users.info
+doc-dvi: doc/programmer/design/svn-design.dvi doc/user/manual/svn-manual.dvi doc/user/svn_for_cvs_users/svn_for_cvs_users.dvi
+doc-txt: doc/programmer/design/svn-design.txt doc/user/manual/svn-manual.txt doc/user/svn_for_cvs_users/svn_for_cvs_users.txt
+doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html doc/user/svn_for_cvs_users/svn_for_cvs_users.html
+doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps doc/user/svn_for_cvs_users/svn_for_cvs_users.ps
+doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf doc/user/svn_for_cvs_users/svn_for_cvs_users.pdf
 
 doc-clean:
 	for d in $(DOC_DIRS);                               \
