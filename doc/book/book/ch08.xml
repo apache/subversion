@@ -1720,26 +1720,26 @@ svn list --verbose file:///tmp/repos
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn log [URL] [PATH...]</programlisting>
+          <programlisting>svn log [PATH]</programlisting>
+          <programlisting>svn log URL [PATH...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
-
-          <para>When using the log command, you can operate on
-            either URLs or PATHs.</para>
 
           <para>The default target is the path of your current
             directory.  If no arguments are supplied, <command>svn
             log</command> shows the log messages for all files and
             directories inside of (and including) the current
             working directory of your working copy.  You can refine
-            the results by specifying one or more paths, one or more
-            revisions, or any combination of the two.</para>
+            the results by specifying a path, one or more
+            revisions, or any combination of the two.
+            The default revision range for a local path is BASE:1.</para>
 
           <para>If you specify a URL alone, then it prints log
             messages for everything that the URL contains.  If you
             add paths past the URL, only messages for those paths
-            under that URL will be printed.</para>
+            under that URL will be printed.  The default revision range
+            for a URL is HEAD:1.</para>
 
           <para>With <option>--verbose</option>, <command>svn log</command>
             will also print all affected paths with each log message.
