@@ -1,8 +1,5 @@
-
-                         The Road to Milestone 3
-                         =======================
-
-* Post M3 tasks:
+                          Post M3 tasks
+                          =============
 
    - Get the page linked to from the Source navbar fixed.
 
