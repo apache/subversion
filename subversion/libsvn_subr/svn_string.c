@@ -188,6 +188,7 @@ svn_string_strip_whitespace (svn_string_t *str)
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
   str->len -= offset;
+  str->blocksize -= offset;
 
   /* Now that we've chomped whitespace off the front, search backwards
      from the end for the first non-whitespace. */
