@@ -68,10 +68,11 @@ svn_error_t *svn_fs__delete_rep (svn_fs_t *fs,
 
 
 
-/* Set STRKEY->data to the strings-table key pointed to by REP in FS,
-   as part of TRAIL.  */
-svn_error_t *svn_fs__string_key_from_rep (const char **strkey,
-                                          skel_t *rep);
+/* Return the string key pointed to by REP.  
+   ### todo:
+   The behavior of this function on non-fulltext representations is
+   undefined at present.  */
+const char *svn_fs__string_key_from_rep (skel_t *rep);
 
 
 /* Set STR->data to the fulltext string for REP in FS, and STR->len to

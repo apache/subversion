@@ -193,16 +193,15 @@ rep_is_fulltext (skel_t *rep)
 }
 
 
-svn_error_t *
-svn_fs__string_key_from_rep (const char **strkey,
-                             skel_t *rep)
+const char *
+svn_fs__string_key_from_rep (skel_t *rep)
 {
   if (rep_is_fulltext (rep))
-    *strkey = rep->children->next->data;
+    return (const char *) rep->children->next->data;
   else
     abort ();   /* ### we only know about fulltext right now */
 
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 
@@ -215,7 +214,7 @@ svn_fs__string_from_rep (svn_string_t *str,
   const char *strkey;
   char *data;
 
-  SVN_ERR (svn_fs__string_key_from_rep (&strkey, rep));
+  strkey = svn_fs__string_key_from_rep (rep);
   SVN_ERR (svn_fs__string_size (&(str->len), fs, strkey, trail));
   data = apr_palloc (trail->pool, str->len);
   SVN_ERR (svn_fs__string_read (fs, strkey, 0, &(str->len), data, trail));
@@ -282,7 +281,7 @@ svn_fs__get_mutable_rep (const char **new_key,
           const char *string_key, *new_string_key;
 
           /* Step 1:  Copy the string to which the rep refers. */
-          SVN_ERR (svn_fs__string_key_from_rep (&string_key, rep));
+          string_key = svn_fs__string_key_from_rep (rep);
           SVN_ERR (svn_fs__string_copy (fs, &new_string_key,
                                         string_key, trail));
           
