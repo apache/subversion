@@ -318,7 +318,7 @@ def update_binary_file_2(sbox):
                                                expected_status_tree,
                                                None, None, None,
                                                None, None, 1,
-                                               '-r', '2')
+                                               '-r', '2', wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -463,8 +463,10 @@ def update_to_rev_zero(sbox):
                                                expected_disk_tree,
                                                None, None,
                                                None, None, None, None, 0,
-                                               '-r', '0')
+                                               '-r', '0', wc_dir)
 
+
+#----------------------------------------------------------------------
 
 def receive_overlapping_same_change(sbox):
   "Make sure overlapping idental changes do not conflict."

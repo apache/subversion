@@ -344,7 +344,7 @@ This is the file 'rho'.>>>>>>> .r1
                                                None, None,
                                                do_nothing, None,
                                                None, None,
-                                               0, '-r', '1')
+                                               0, '-r', '1', wc_dir)
 
   
 
