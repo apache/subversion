@@ -780,62 +780,105 @@ $ svnadmin load newrepos < dumpfile
 
 Voila, your revisions have been recommitted into the new repository.
 
-
-@subsection Stupid dump/load tricks
-
-People who are feeling saucy with Unix can try things like this:
+And because @command{svnadmin} uses standand input and output streams for
+the repository dump and load process, people who are feeling saucy with
+Unix can try things like this:
 
 @example
 $ svnadmin create newrepos
 $ svnadmin dump myrepos | svnadmin load newrepos
 @end example
 
-Also, it's possible to create a series of smaller dumpfiles and load
-them in succession (say, if a single dumpfile is too large to fit on
-backup or transport medium.)  But it requires a small bit of hackery:
+
+@subsection Partial dump/load
+
+You can also create a dumpfile that represents a specific range of
+revisions.  @command{svnadmin dump} takes optional starting and ending
+revisions to accomplish just that task.
 
 @example
-$ svnadmin dump myrepos 0 2000 > dumpfile1
-$ svnadmin dump myrepos 2000 4000 > dumpfile2
+$ svnadmin dump myrepos 23 > rev-23.dumpfile
+$ svnadmin dump myrepos 100 200 > revs-100-200.dumpfile
 @end example
 
-So now you have two dumpfiles; the first contains revisions 0-2000,
-and the second contains revisions 2000-4000.  Why the overlap?
-
-Here's why.  The first revision dumped by @samp{svnadmin dump} is
-always compared against revision 0, which is just the empty root
-directory @file{/}.  That means that the first revision an any
-dumpfile will always look like a gigantic list of ``added'' nodes.  We
-do this so that a file like @file{dumpfile2} can be directly loaded
+Now, regardless of the range of revisions used when dumping the
+repository, the default behavior is for the first revision dumped to
+always be compared against revision 0, which is just the empty root
+directory @file{/}.  This means that the first revision in any dumpfile
+will always look like a gigantic list of ``added'' nodes.  We do this so
+that a file like @file{revs-100-200.dumpfile} can be directly loaded
 into an empty repository.
 
-But there's a flip side to this nicety.  When we want to load a number
-of dumpfiles in sequence, we need to make sure each file overlaps by
-at least one revision.  Before loading, the first revision of a file
-like @file{dumpfile2} needs to be @emph{removed}, so that the file
-begins with a description of revision 2001 as a tree-delta against
-revision 2000:
+However, if you add the @option{--incremental} option when you dump your
+repository, this tells @command{svnadmin} to compare the first dumped
+revision against the previous revision in the repository, the same way
+it treats every other revision that gets dumped.  The benefit of this is
+that you can create several small dumpfiles that can be loaded in
+succession, instead of one large one, like so:
 
-@itemize @bullet
-@item
-open the @file{dumpfile2} in an editor
-@item 
-do @emph{not} remove the @code{SVN-fs-dump-format-version} header line
-at the beginning of the file
-@item
-@emph{do} remove the first revision, which begins with a
-@code{Revision-number:} record, and goes all the way until the next
-@code{Revision-number:} block.
-@end itemize
+@example
+$ svnadmin dump myrepos 0 1000 > dumpfile1
+$ svnadmin dump myrepos 1001 2000 --incremental > dumpfile2
+$ svnadmin dump myrepos 2001 3000 --incremental > dumpfile3
+@end example
 
-Once your dumpfiles have all been properly trimmed, you can load them
-in sequence:
+These dumpfiles could be loaded into a new repository with the following
+command sequence:
 
 @example
 $ svnadmin load newrepos < dumpfile1
 $ svnadmin load newrepos < dumpfile2
+$ svnadmin load newrepos < dumpfile3
 @end example
 
+Another neat trick you can perform with this @option{--incremental}
+option involves appending to an existing dumpfile a new range of
+revisions.  For example, you might have a post-commit hook that simply
+appends the repository dump of the single revision that triggered the
+hook.  Or you might have a script like the following that runs nightly
+to append dumpfile data for all the revisions that were added to the
+repository since the last time the script ran.
+
+@example
+#!/usr/bin/perl
+
+$repos_path  = '/path/to/repos';
+$dumpfile    = '/usr/backup/svn-dumpfile';
+$last_dumped = '/var/log/svn-last-dumped';
+ 
+# Figure out the starting revision (0 if we cannot read the last-dumped file,
+# else use the revision in that file incremented by 1).
+if (open LASTDUMPED, "$last_dumped")
+@{
+    $new_start = <LASTDUMPED>;
+    chomp $new_start;
+    $new_start++;
+    close LASTDUMPED;
+@}
+else
+@{
+    $new_start = 0;
+@}
+
+# Query the youngest revision in the repos.
+$youngest = `svnadmin youngest $repos_path`;
+chomp $youngest;
+
+# Do the backup.
+`svnadmin dump $repos_path $new_start $youngest --incremental >> $dumpfile`;
+
+# Store a new last-dumped revision
+open LASTDUMPED, "> $last_dumped" or die;
+print LASTDUMPED "$youngest\n";
+close LASTDUMPED;
+
+# All done!
+@end example
+
+As you can see, the Subversion repository dumpfile format, and specifically
+@command{svnadmin}'s use of that format, can be a valuable means by
+which to backup changes to your repository over time in case of a system
+crash or some other catastrophic event.
 
 @c ------------------------------------------------------------------
 @node WebDAV
