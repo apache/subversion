@@ -1330,11 +1330,11 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
  *
- * If the administrative area already exists, and does not say this
- * working directory is scheduled for deletion, then @a url must match
- * the URL in the administrative area and @a revision must match the
- * BASE of the working copy dir, otherwise return the error
- * SVN_ERR_WC_OBSTRUCTED_UPDATE.
+ * If the administrative area already exists then the given @a url
+ * must match the URL in the administrative area or an error will be
+ * returned. The given @a revision must also match except for the
+ * special case of adding a directory that has a name matching one
+ * scheduled for deletion, in which case @a revision must be zero.
  *
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.

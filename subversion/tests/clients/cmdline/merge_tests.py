@@ -2196,129 +2196,6 @@ def merge_prop_change_to_deleted_target(sbox):
 
 
 #----------------------------------------------------------------------
-# A merge that replaces a directory
-# Tests for Issue #2144
-  
-def merge_dir_replace(sbox):
-  "merge a replacement of a directory"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  C_path = os.path.join(wc_dir, 'A', 'C')
-  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = svntest.main.current_repo_url + '/A/B/F'
-
-  foo_path = os.path.join(F_path, 'foo')
-
-  # Create foo in F
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
-
-  expected_output = wc.State(wc_dir, {
-    'A/B/F/foo' : Item(verb='Adding'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.add({
-    'A/B/F/foo'    : Item(status='  ', wc_rev=2, repos_rev=2),
-    })
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
-  
-  # Merge foo onto C
-  expected_output = wc.State(C_path, {
-    'foo' : Item(status='A '),
-    })
-  expected_disk = wc.State('', {
-    'foo' : Item(),
-    })
-  expected_status = wc.State(C_path, {
-    ''    : Item(status='  ', wc_rev=1, repos_rev=2),
-    'foo' : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    })
-  expected_skip = wc.State(C_path, { })
-  svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
-
-  # Commit merge of foo onto C
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/C/foo'    : Item(verb='Adding'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
-  expected_status.add({
-    'A/B/F/foo'  : Item(status='  ', wc_rev=2, repos_rev=3),
-    'A/C/foo'    : Item(status='  ', wc_rev=3, repos_rev=3),
-    })
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
-
-  # Delete foo on F
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', foo_path)
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/F/foo'   : Item(verb='Deleting'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
-  expected_status.tweak(wc_rev=1)
-  expected_status.add({
-    'A/C/foo'     : Item(status='  ', wc_rev=3, repos_rev=4),
-    })
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
-
-  # Recreate foo in F
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
-
-  expected_output = wc.State(wc_dir, {
-    'A/B/F/foo' : Item(verb='Adding'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
-  expected_status.tweak(wc_rev=1)
-  expected_status.add({
-    'A/B/F/foo'    : Item(status='  ', wc_rev=5, repos_rev=5),
-    'A/C/foo'     : Item(status='  ', wc_rev=3, repos_rev=5),
-    })
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
-  # Merge replacement of foo onto C
-  expected_output = wc.State(C_path, {
-    'foo' : Item(status='D '),
-    'foo' : Item(status='A '),
-    })
-  expected_disk = wc.State('', {
-    'foo' : Item(),
-    })
-  expected_status = wc.State(C_path, {
-    ''    : Item(status='  ', wc_rev=1, repos_rev=5),
-    'foo' : Item(status='R ', wc_rev='-', copied='+', repos_rev=5),
-    })
-  expected_skip = wc.State(C_path, { })
-  svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, # skip props
-                                       0) # don't do a dry-run the output differs
-
-  
-#----------------------------------------------------------------------
 def merge_file_with_space_in_its_name(sbox):
   "merge a file whose name contains a space"
   # For issue #2144
@@ -2433,7 +2310,6 @@ test_list = [ None,
               merge_funny_chars_on_path,
               merge_keyword_expansions,
               merge_prop_change_to_deleted_target,
-              merge_dir_replace,
               merge_file_with_space_in_its_name,
               merge_dir_branches,
               # property_merges_galore,  # Would be nice to have this.
