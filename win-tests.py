@@ -55,14 +55,14 @@ repo_loc = 'local repository.'
 base_url = None
 verbose = 0
 cleanup = None
-filter = 'Debug'
+objdir = 'Debug'
 log = 'tests.log'
 
 for opt,arg in opts:
   if opt in ['-r', '--release']:
-    filter = 'Release'
+    objdir = 'Release'
   elif opt in ['-d', '--debug']:
-    filter = 'Debug'
+    objdir = 'Debug'
   elif opt in ['-v', '--verbose']:
     verbose = 1
   elif opt in ['-c', '--cleanup']:
@@ -71,21 +71,26 @@ for opt,arg in opts:
     all_tests = client_tests
     repo_loc = 'remote repository ' + arg + '.'
     base_url = arg
-    log = "dav-tests.log"
+    if arg[4:] == 'http':
+      log = 'dav-tests.log'
+    elif arg[3:] == 'svn':
+      log = 'svn-tests.log'
+    else:
+      # Don't know this schema, but who're we to judge whether it's
+      # correct or not?
+      log = 'url-tests.log'
 
-print 'Testing', filter, 'configuration on', repo_loc
+print 'Testing', objdir, 'configuration on', repo_loc
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
+abs_objdir = os.path.join(abs_srcdir, objdir)
 if len(args) == 0:
-  abs_builddir = abs_srcdir
-  remove_execs = 1
+  abs_builddir = abs_objdir
   create_dirs = 0
 else:
   abs_builddir = os.path.abspath(args[0])
-  remove_execs = 0
   create_dirs = 1
-
 
 # Have to move the executables where the tests expect them to be
 copied_execs = []   # Store copied exec files to avoid the final dir scan
@@ -98,17 +103,14 @@ def create_target_dir(dirname):
         print "mkdir:", tgt_dir
       os.makedirs(tgt_dir)
 
-def copy_execs(filter, dirname, names):
+def copy_execs(dummy, dirname, names):
   global copied_execs
-  if os.path.basename(dirname) != filter:
-    return
   for name in names:
     if os.path.splitext(name)[1] != ".exe":
       continue
     src = os.path.join(dirname, name)
-    dir = os.path.dirname(dirname)
-    tgt = os.path.join(abs_builddir, dir, name)
-    create_target_dir(dir)
+    tgt = os.path.join(abs_builddir, dirname, name)
+    create_target_dir(dirname)
     try:
       if verbose:
         print "copy:", src
@@ -118,8 +120,18 @@ def copy_execs(filter, dirname, names):
     except:
       traceback.print_exc(file=sys.stdout)
       pass
-os.path.walk("subversion", copy_execs, filter)
-create_target_dir('subversion/tests/clients/cmdline')
+if create_dirs:
+  old_cwd = os.getcwd()
+  try:
+    os.chdir(abs_objdir)
+    os.path.walk('subversion', copy_execs, None)
+    create_target_dir('subversion/tests/clients/cmdline')
+  except:
+    os.chdir(old_cwd)
+    raise
+  else:
+    os.chdir(old_cwd)
+
 
 # Run the tests
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
@@ -139,16 +151,15 @@ else:
 
 
 # Remove the execs again
-if remove_execs:
-  for tgt in copied_execs:
-    try:
-      if os.path.isfile(tgt):
-        if verbose:
-          print "kill:", tgt
-        os.unlink(tgt)
-    except:
-      traceback.print_exc(file=sys.stdout)
-      pass
+for tgt in copied_execs:
+  try:
+    if os.path.isfile(tgt):
+      if verbose:
+        print "kill:", tgt
+      os.unlink(tgt)
+  except:
+    traceback.print_exc(file=sys.stdout)
+    pass
 
 
 # Print final status
