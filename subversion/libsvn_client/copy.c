@@ -228,6 +228,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
           (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "error decomposing relative path `%s'", src_rel);
     }
+  else
+    src_rel = "";
 
   dst_rel = svn_path_is_child (top_url, dst_url, pool);
   if (dst_rel)
@@ -239,6 +241,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
           (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "error decomposing relative path `%s'", dst_rel);
     }
+  else
+    dst_rel = "";
 
   /* Allocate room for the root baton, the pieces of the
      source's or destination's path, and the destination itself. */

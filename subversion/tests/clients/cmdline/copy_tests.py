@@ -936,6 +936,31 @@ def wc_to_repos(sbox):
   if errput or output != ['bar\n']:
     return 1
 
+#----------------------------------------------------------------------
+# Issue 1084: ra_svn move/copy bug
+
+def copy_to_root(sbox):
+  'copy item to root of repository'
+
+  if sbox.build():
+    return 1
+
+  root = svntest.main.test_area_url + '/' + svntest.main.current_repo_dir
+  mu = root + '/A/mu'
+
+  (outlines, errlines) = svntest.main.run_svn(None, 'cp',
+                                              '--username',
+                                              svntest.main.wc_author,
+                                              '--password',
+                                              svntest.main.wc_passwd,
+                                              '-m', '',
+                                              mu, root)
+
+  if errlines:
+    return 1
+
+  return 0
+
 ########################################################################
 # Run the tests
 
@@ -954,6 +979,7 @@ test_list = [ None,
               mv_and_revert_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
               wc_to_repos,
+              copy_to_root,
              ]
 
 if __name__ == '__main__':
