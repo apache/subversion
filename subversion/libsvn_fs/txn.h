@@ -14,15 +14,6 @@
 #ifndef SVN_LIBSVN_FS_TXN_H
 #define SVN_LIBSVN_FS_TXN_H
 
-/* Create a new `transactions' table for the new filesystem FS.
-   FS->env must already be open; this sets FS->nodes.  */
-svn_error_t *svn_fs__create_transactions (svn_fs_t *fs);
-
-
-/* Open the existing `transactions' table for the filesystem FS.
-   FS->env must already be open; this sets FS->nodes.  */
-svn_error_t *svn_fs__open_transactions (svn_fs_t *fs);
-
 
 /* Return a pointer to the ID of TXN.  The return value is live for as
    long as TXN is.  */

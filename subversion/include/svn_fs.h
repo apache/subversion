@@ -387,7 +387,7 @@ svn_error_t *svn_fs_commit_txn (svn_revnum_t *new_rev, svn_fs_txn_t *txn);
 /* Abort the transaction TXN.  Any changes made in TXN are discarded,
    and the filesystem is left unchanged.
 
-   If the commit succeeds, it frees TXN, and any temporary resources
+   If the abort succeeds, it frees TXN, and any temporary resources
    it holds.  Any root objects referring to TXN's root directory
    become invalid; performing any operation on them other than closing
    them will produce an SVN_ERR_FS_DEAD_TRANSACTION error.  */
