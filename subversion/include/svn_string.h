@@ -104,7 +104,9 @@ svn_string_t * svn_string_dup (svn_string_t *original_string);
 
 svn_boolean_t svn_string_compare (svn_string_t *str1, svn_string_t *str2);
 
+/* convenience routine */
 
+void svn_string_print (svn_string_t *str)
 
 #endif  /* __SVN_STRING_H__ */
 
