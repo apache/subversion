@@ -19,7 +19,7 @@ Candidate changes:
     Justification:  users have noticed extra fs txns lying around.
     Notes:  just add 3 calls to abort_edit() to cleanup the sloppiness.
     Votes:
-      +1: sussman
+      +1: sussman, dionisos
       +0: dlr, gstein
 
   * r8431
@@ -42,7 +42,7 @@ Candidate changes:
     Justification:  severeal users have noticed this --dry-run bug already.
     Notes:  a one-line logic fix, plus new regression test.
     Votes:
-      +1: sussman, philip
+      +1: sussman, philip, dionisos
       +0: dlr, gstein
 
   * r8616
@@ -70,7 +70,7 @@ Candidate changes:
     Fix issue #1752 - 'svn propget url' doesn't work over ra_svn.
     Justification: Simple one-line fix to a shallow bug.
     Votes:
-      +1: bliss, rooneg, sussman
+      +1: bliss, rooneg, sussman, dionisos
 
   * r8794
     Fix memory corruption bug in mod_dav_svn.
@@ -83,19 +83,20 @@ Candidate changes:
     Remove hopelessly obsolete authentication provider examples.
     Justification: Not needed and too obsolete/incorrect.
     Votes:
-      +1: bliss, sussman
+      +1: bliss, sussman, dionisos
 
   * r8828
     Fix issue #1759 -- merge fails if URL contains 'user@host'
     Justification:  Really obvious bug that blocks functionality.
     Notes:  a teeny-tiny fix.
     Votes:
-      +1: cmpilato, sussman
+      +1: cmpilato, sussman, dionisos
 
   * Issue #1733, attachment 305
     Backport r8551 to 1.0.X to cause blame to bail on binary files.
     Justification:  Nicer behavior to the end user. 
     Votes:
+      +1: dionisos
 
   * r8838
     Finish issue #1750 -- svn export [url] doesn't export any svn:externals
@@ -122,6 +123,14 @@ Candidate changes:
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
       +1: epg
+      +0: dionisos
+
+  * r8787, r8753
+    Upgrade Inno Setup to 4.1.6
+    Justification: potentially smaller distributions, better user experience
+    Votes:
+       +0: dionisos
+  
 
 Binding candidate changes:
 
