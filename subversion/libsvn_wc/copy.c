@@ -168,23 +168,19 @@ copy_file_administratively (const char *src_path,
      explanation. */
   SVN_ERR (svn_wc_entry (&src_entry, src_path, src_access, FALSE, pool));
   if (! src_entry)
-    {
-      return svn_error_createf 
-        (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-         "Cannot copy or move '%s' -- it's not under revision control",
-         src_path);
-    }
-  else if ((src_entry->schedule == svn_wc_schedule_add)
-           || (! src_entry->url)
-           || (src_entry->copied))
-    {
-      return svn_error_createf 
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Cannot copy or move '%s' -- it's not in the repository yet,\n"
-         "perhaps because it is a copy or is inside a copied tree.\n"
-         "Try committing first.",
-         src_path);
-    }
+    return svn_error_createf 
+      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+       "Cannot copy or move '%s' -- it's not under revision control",
+       src_path);
+  if ((src_entry->schedule == svn_wc_schedule_add)
+      || (! src_entry->url)
+      || (src_entry->copied))
+    return svn_error_createf 
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       "Cannot copy or move '%s' -- it's not in the repository yet,\n"
+       "perhaps because it is a copy or is inside a copied tree.\n"
+       "Try committing first.",
+       src_path);
 
   /* Now, make an actual copy of the working file. */
   SVN_ERR (svn_io_copy_file (src_path, dst_path, TRUE, pool));
@@ -212,12 +208,14 @@ copy_file_administratively (const char *src_path,
     const char *dst_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
 
     /* Discover the paths to the four prop files */
-    SVN_ERR (svn_wc__prop_path (&src_wprop, src_path, src_access, FALSE, pool));
-    SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path, src_access, FALSE,
-                                     pool));
-    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path, dst_parent, FALSE, pool));
-    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, dst_parent, FALSE,
-                                     pool));
+    SVN_ERR (svn_wc__prop_path (&src_wprop, src_path, 
+                                src_access, FALSE, pool));
+    SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path, 
+                                     src_access, FALSE, pool));
+    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path, 
+                                dst_parent, FALSE, pool));
+    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, 
+                                     dst_parent, FALSE, pool));
 
     /* Copy the text-base over unconditionally. */
     SVN_ERR (svn_io_copy_file (src_txtb, dst_txtb, TRUE, pool));
@@ -291,7 +289,8 @@ copy_dir_administratively (const char *src_path,
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
        "`%s' is not under version control", src_path);
   if ((src_entry->schedule == svn_wc_schedule_add)
-      || (! src_entry->url))
+      || (! src_entry->url)
+      || (src_entry->copied))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        "Not allowed to copy or move `%s' -- it's not in the repository yet.\n"
