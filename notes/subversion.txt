@@ -2,7 +2,7 @@
 
      Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.47 $ of this document.)
+              ($Revision: 1.48 $ of this document.)
 
 * Introduction
 
@@ -24,7 +24,7 @@ because CVS uses the r-word for both.  Bear with me.
 This document is written in plain text Emacs outline-mode (i.e.,
 "subversion.txt"), not in html.  The html incarnation is generated
 from subversion.txt by a script.  So if you want to patch this
-document, and you have the html, get subversion.txt and modify that.
+document, but you have the html, get subversion.txt and modify that.
 
 * Goals
 
@@ -753,8 +753,7 @@ locks out readers, no read-only operation locks out anyone, and write
 operations lock out other writers for as little time as possible.
 
 These two issues are not directly related, but they must be
-synchronized with each other.  This is complex, so instead of
-specifying the sequence of events formally right away, let's first run
+synchronized with each other.  This is complex, so let's first run
 through an example without locking.  Here's how to commit a new
 version of tuna:
 
@@ -857,13 +856,13 @@ it finishes.
 Below, a "lock" is a cookie consisting of user:num, where num is the
 same for all locks in this commit, and different from any other
 current locks (even ones with the same user).  Locks persist through
-server crashes (todo: can we implement that efficiently?  Doesn't it
-imply syncing to disk for every lock operation?)
+server crashes (todo: probably using lockfiles and syncfd?).
 
   1. Lock the nodes you're committing new versions for (though if
      you're adding a new file, there's no node to lock).  These
-     primary locks will last throughout the commit.  Block on all
-     locks while you block on any, so your commit will be atomic.
+     primary locks will last throughout the commit.  If you try to
+     lock a node that's already locked [todo: finish priority number
+     specification here, for avoiding the obvious race condition.]
 
   2. Create the new, unattached nodes that will hold the new versions.
      Fill them up with the new contents.  Create the back-links.
@@ -1194,6 +1193,34 @@ promises a "store-and-ignore" policy for user_props.  And users should
 never touch anything in svn_props, only Subversion does that.
 
 *** A closer look at the `node' data structure (and friends)
+
+   typedef struct version
+   {
+      unsigned int number;           /* Or maybe expressed by position? */
+      change_table *changes;         /* Cache. Table maps past version
+                                        numbers to lists of files
+                                        changed since that version, so
+                                        updates are efficient.  Also
+                                        may want to arrange
+                                        hierarchically so finding
+                                        changes for a particular
+                                        subdirectory is easy.  */
+                                        
+   } dir_entry;
+
+
+   typedef struct lock
+   {
+      bool completed;                /* Set when this lock has
+                                        everyone it wants.  Once a
+                                        lock is completed it can't be
+                                        usurped, even by a lock with
+                                        otherwise dominant priority. */
+      int num;                       /* Identification and priority
+                                        number. */
+   } dir_entry;
+
+
 
    typedef struct dir_entry
    {
