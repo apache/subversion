@@ -2318,6 +2318,40 @@ def merge_dir_replace(sbox):
                                        0) # don't do a dry-run the output differs
 
   
+#----------------------------------------------------------------------
+def merge_file_with_space_in_its_name(sbox):
+  "merge a file whose name contains a space"
+  # For issue #2144
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  new_file = os.path.join(wc_dir, "new file")
+
+  # Make r2.
+  svntest.main.file_append(new_file, "Initial text in the file.\n")
+  svntest.main.run_svn(None, "add", new_file)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r2", wc_dir)
+
+  # Make r3.
+  svntest.main.file_append(new_file, "Next line of text in the file.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r3", wc_dir)
+
+  # Try to reverse merge.
+  #
+  # The reproduction recipe requires that no explicit merge target be
+  # passed, so we run merge from inside the wc dir where the target
+  # file (i.e., the URL basename) lives.
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    target_url = svntest.main.current_repo_url + '/new%20file'
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       "merge", "-r3:2", target_url)
+  finally:
+    os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -2344,6 +2378,7 @@ test_list = [ None,
               merge_keyword_expansions,
               merge_prop_change_to_deleted_target,
               merge_dir_replace,
+              merge_file_with_space_in_its_name,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

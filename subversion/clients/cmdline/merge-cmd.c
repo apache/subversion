@@ -145,10 +145,11 @@ svn_cl__merge (apr_getopt_t *os,
       if (! strcmp (sp1_basename, sp2_basename))
         {
           svn_node_kind_t kind;
-          SVN_ERR (svn_io_check_path (sp1_basename, &kind, pool));
+          const char *decoded_path = svn_path_uri_decode (sp1_basename, pool);
+          SVN_ERR (svn_io_check_path (decoded_path, &kind, pool));
           if (kind == svn_node_file) 
             {
-              targetpath = sp1_basename;
+              targetpath = decoded_path;
             }
         }
     }
