@@ -1,13 +1,85 @@
-<appendix id="svn-ap-e">
-  <title>Other Subversion Clients</title>
+  <appendix id="svn-ap-e">
+    <title>Other Subversion Clients</title>
+    
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ap-e-sect-1">
+    <title>E Pluribus Unum</title>
 
-  <simplesect>
-    
-    <para>
-      ### TODO Write this
-    </para>
-    
-  </simplesect>
+      <para>The Subversion command line client,
+        <command>svn</command>, is the official<footnote><para>Because
+        we says so, that's why.</para></footnote> implementation of a
+        Subversion client.  Fortunately for those interested in
+        developing additional Subversion clients, Subversion is
+        implemented as a series of libraries.  These libraries are
+        accessible via C API, as other languages (See <xref
+        linkend="svn-ch-7-sect-2.3"/>).</para>
+
+      <para>This component design means that it's easy (well, at least
+        <emphasis>easier</emphasis>) to write clients and utilities
+        using these libraries.  As a result, even pre-1.0, there are a
+        number of GUI clients available for Subversion, each in
+        various phases of development.</para>
+
+      <table id="svn-ap-e-table-1">
+        <title>GUI Clients for Subversion</title>
+
+        <tgroup cols="5">
+          <thead>
+            <row>
+              <entry>name</entry>
+              <entry>Language</entry>
+              <entry>Portable</entry>
+              <entry>License</entry>
+              <entry>URL</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>RapidSVN</entry>
+              <entry>C++</entry>
+              <entry>Yes, native widgets</entry>
+              <entry>Apache-style</entry>
+              <entry>http://rapidsvn.tigris.org/</entry>
+            </row>
+
+            <row>
+              <entry>gsvn</entry>
+              <entry>Python</entry>
+              <entry>Unix only, non-native widgets</entry>
+              <entry>GPL</entry>
+              <entry>http://gsvn.tigris.org/</entry>
+            </row>
+
+            <row>
+              <entry>TortoiseSVN</entry>
+              <entry>C++</entry>
+              <entry>Win32 only</entry>
+              <entry>GPL</entry>
+              <entry>http://tortoisesvn.tigris.org/</entry>
+            </row>
+
+            <row>
+              <entry>svnup</entry>
+              <entry>Java, JNI bindings</entry>
+              <entry>Yes</entry>
+              <entry>GPL</entry>
+              <entry>http://www.qint.de/svnup.html</entry>
+            </row>
+      
+            <row>
+              <entry>jsvn</entry>
+              <entry>Java, wrapping the svn command-line client</entry>
+              <entry>Yes</entry>
+              <entry>Academic Free License</entry>
+              <entry>http://www.alternatecomputing.com/jsvn/index.php3</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+
+    </sect1>
 
 </appendix>
 
