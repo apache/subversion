@@ -278,7 +278,7 @@ svn_client__open_ra_session (void **session_baton,
          2, /* retry limit */
          ctx->default_simple_creds ? ctx->default_simple_creds->username : NULL,
          ctx->default_simple_creds ? ctx->default_simple_creds->password : NULL,
-         base_dir, base_access, pool);
+         pool);
       svn_auth_register_provider (cbtable->auth_baton, FALSE, /* prepend */
                                   provider, provider_baton, pool);
     }

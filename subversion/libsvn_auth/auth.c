@@ -248,14 +248,14 @@ svn_error_t *
 svn_auth_save_credentials (svn_auth_iterstate_t *state,
                            apr_pool_t *pool)
 {
+  int i;
   provider_t *provider;
   svn_boolean_t save_succeeded = FALSE;
 
   if (! (state && state->last_creds))
     return SVN_NO_ERROR;
 
-
-  /* Save the credentials using the provider that provided them. */
+  /* First, try to save the creds using the provider that produced them. */
   provider = APR_ARRAY_IDX (state->table->providers, 
                             state->provider_idx, 
                             provider_t *);
@@ -264,12 +264,26 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
                                                  state->last_creds,
                                                  provider->provider_baton, 
                                                  pool));
+  if (save_succeeded)
+    return SVN_NO_ERROR;
 
-  /* If provider failed to save, throw an error.
-  if (! save_succeeded)                  
-  return svn_error_create (SVN_ERR_AUTH_CREDS_NOT_SAVED, NULL,
-  "Provider failed to save credentials.");
-  */
+  /* Otherwise, loop from the top of the list, asking every provider
+     to attempt a save.  ### todo: someday optimize so we don't
+     necessarily start from the top of the list. */
+  for (i = 0; i < state->table->providers->nelts; i++)
+    {
+      provider = APR_ARRAY_IDX(state->table->providers, i, provider_t *);
+      if (provider->vtable->save_credentials)
+        SVN_ERR (provider->vtable->save_credentials 
+                 (&save_succeeded, state->last_creds,
+                  provider->provider_baton, pool));
+
+      if (save_succeeded)
+        break;
+    }
+
+  /* ### notice that at the moment, if no provider can save, there's
+     no way the caller will know. */
 
   return SVN_NO_ERROR;
 }
