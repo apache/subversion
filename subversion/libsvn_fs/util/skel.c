@@ -173,7 +173,7 @@ list (const char *data,
     {
       skel_t *s = apr_pcalloc (pool, sizeof (*s));
 
-      s->is_atom = 0;
+      s->is_atom = FALSE;
       s->data = list_start;
       s->len = data - list_start;
       s->children = children;
@@ -209,7 +209,7 @@ implicit_atom (const char *data,
 
   /* Allocate the skel representing this string.  */
   s = apr_pcalloc (pool, sizeof (*s));
-  s->is_atom = 1;
+  s->is_atom = TRUE;
   s->data = start;
   s->len = data - start;
 
@@ -248,7 +248,7 @@ explicit_atom (const char *data,
 
   /* Allocate the skel representing this string.  */
   s = apr_pcalloc (pool, sizeof (skel_t));
-  s->is_atom = 1;
+  s->is_atom = TRUE;
   s->data = data;
   s->len = size;
 
@@ -260,8 +260,7 @@ explicit_atom (const char *data,
 /* Unparsing skeletons.  */
 
 static apr_size_t estimate_unparsed_size (skel_t *);
-static svn_stringbuf_t *unparse (skel_t *, svn_stringbuf_t *,
-                              apr_pool_t *);
+static svn_stringbuf_t *unparse (skel_t *, svn_stringbuf_t *, apr_pool_t *);
 
 
 svn_stringbuf_t *
@@ -315,18 +314,18 @@ estimate_unparsed_size (skel_t *skel)
 
 /* Return non-zero iff we should use the implicit-length form for SKEL.  
    Assume that SKEL is an atom.  */
-static int
+static svn_boolean_t
 use_implicit (skel_t *skel)
 {
   /* If it's null, or long, we should use explicit-length form.  */
   if (skel->len == 0
       || skel->len >= 100)
-    return 0;
+    return FALSE;
 
   /* If it doesn't start with a name character, we must use
      explicit-length form.  */
   if (skel_char_type[(unsigned char) skel->data[0]] != type_name)
-    return 0;
+    return FALSE;
 
   /* If it contains any whitespace or parens, then we must use
      explicit-length form.  */
@@ -336,12 +335,12 @@ use_implicit (skel_t *skel)
     for (i = 1; i < skel->len; i++)
       if (skel_char_type[(unsigned char) skel->data[i]] == type_space
           || skel_char_type[(unsigned char) skel->data[i]] == type_paren)
-        return 0;
+        return FALSE;
   }
 
   /* If we can't reject it for any of the above reasons, then we can
      use implicit-length form.  */
-  return 1;
+  return TRUE;
 }
 
 
@@ -367,8 +366,7 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 
           /* Make sure we have room for the length, the space, and the
              atom's contents.  */
-          svn_stringbuf_ensure (str,
-                             str->len + length_len + 1 + skel->len);
+          svn_stringbuf_ensure (str, str->len + length_len + 1 + skel->len);
           svn_stringbuf_appendbytes (str, buf, length_len);
           str->data[str->len++] = ' ';
           svn_stringbuf_appendbytes (str, skel->data, skel->len);
@@ -410,7 +408,7 @@ skel_t *
 svn_fs__str_atom (const char *str, apr_pool_t *pool)
 {
   skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
-  skel->is_atom = 1;
+  skel->is_atom = TRUE;
   skel->data = str;
   skel->len = strlen (str);
 
@@ -424,7 +422,7 @@ svn_fs__mem_atom (const void *addr,
                   apr_pool_t *pool)
 {
   skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
-  skel->is_atom = 1;
+  skel->is_atom = TRUE;
   skel->data = addr;
   skel->len = len;
 
@@ -485,63 +483,56 @@ svn_fs__append (skel_t *skel, skel_t *list_skel)
 /* Examining skels.  */
 
 
-int
+svn_boolean_t
 svn_fs__matches_atom (skel_t *skel, const char *str)
 {
-  if (skel
-      && skel->is_atom)
+  if (skel && skel->is_atom)
     {
       apr_size_t len = strlen (str);
 
-      return (skel->len == len
-              && ! memcmp (skel->data, str, len));
+      return ((skel->len == len
+               && ! memcmp (skel->data, str, len)) ? TRUE : FALSE);
     }
-  else
-    return 0;
+  return FALSE;
 }
 
 
 int
 svn_fs__atom_matches_string (skel_t *skel, const svn_string_t *str)
 {
-  if (skel
-      && skel->is_atom)
+  if (skel && skel->is_atom)
     {
-      return (skel->len == str->len
-              && ! memcmp (skel->data, str->data, skel->len));
+      return ((skel->len == str->len
+               && ! memcmp (skel->data, str->data, skel->len)) ? TRUE : FALSE);
     }
-  else
-    return 0;
+  return FALSE;
 }
 
 
 int
 svn_fs__list_length (skel_t *skel)
 {
-  if (! skel
-      || skel->is_atom)
+  int len = 0;
+  skel_t *child;
+
+  if ((! skel) || skel->is_atom)
     return -1;
 
-  {
-    int len = 0;
-    skel_t *child;
+  for (child = skel->children; child; child = child->next)
+    len++;
 
-    for (child = skel->children; child; child = child->next)
-      len++;
-
-    return len;
-  }
+  return len;
 }
 
 
 
 /* Comparing skels. */
 
-int
+svn_boolean_t
 svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
 {
   if (skel1 == skel2)
-    return 1;
+    return TRUE;
 
   /* Else not `eq', but might still be `equal'. */
 
@@ -549,9 +540,9 @@ svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
     {
       if ((skel1->len == skel2->len)
           && (! strncmp (skel1->data, skel2->data, skel1->len)))
-        return 1;
+        return TRUE;
       else
-        return 0;
+        return FALSE;
     }
   else if (((! skel1->is_atom) && (! skel2->is_atom))
            && ((svn_fs__list_length (skel1)) == (svn_fs__list_length (skel2))))
@@ -562,12 +553,12 @@ svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
       for (i = 0; i < len; i++)
         if (! svn_fs__skels_are_equal ((skel1->children) + i,
                                        (skel2->children) + i))
-          return 0;
+          return FALSE;
 
-      return 1;
+      return TRUE;
     }
   else
-    return 0;
+    return FALSE;
 }
 
 
@@ -586,7 +577,7 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
       char *s = apr_palloc (pool, len);
 
       memcpy (s, skel->data, len);
-      copy->is_atom = 1;
+      copy->is_atom = TRUE;
       copy->data = s;
       copy->len = len;
     }
@@ -594,7 +585,7 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
     {
       skel_t *skel_child, **copy_child_ptr;
 
-      copy->is_atom = 0;
+      copy->is_atom = FALSE;
       copy->data = 0;
       copy->len = 0;
 

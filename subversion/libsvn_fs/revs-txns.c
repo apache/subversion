@@ -267,7 +267,7 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
 
 /*** Transactions ***/
 
-static int 
+static svn_boolean_t 
 is_committed (svn_fs__transaction_t *txn)
 {
   return SVN_IS_VALID_REVNUM (txn->revision);

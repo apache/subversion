@@ -485,35 +485,35 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   /* Create the databases in the environment.  */
   svn_err = BDB_WRAP (fs, "creating 'nodes' table",
-                     svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, 1));
+                     svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'revisions' table",
                      svn_fs__bdb_open_revisions_table (&fs->revisions,
-                                                       fs->env, 1));
+                                                       fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'transactions' table",
                      svn_fs__bdb_open_transactions_table (&fs->transactions,
-                                                          fs->env, 1));
+                                                          fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'copies' table",
                      svn_fs__bdb_open_copies_table (&fs->copies,
-                                                    fs->env, 1));
+                                                    fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'changes' table",
                      svn_fs__bdb_open_changes_table (&fs->changes,
-                                                     fs->env, 1));
+                                                     fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'representations' table",
                      svn_fs__bdb_open_reps_table (&fs->representations,
-                                                  fs->env, 1));
+                                                  fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'strings' table",
                      svn_fs__bdb_open_strings_table (&fs->strings,
-                                                     fs->env, 1));
+                                                     fs->env, TRUE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating 'uuids' table",
                      svn_fs__bdb_open_uuids_table (&fs->uuids,
-                                                   fs->env, 1));
+                                                   fs->env, TRUE));
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
@@ -560,35 +560,36 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   /* Open the various databases.  */
   svn_err = BDB_WRAP (fs, "opening 'nodes' table",
-                     svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, 0));
+                     svn_fs__bdb_open_nodes_table (&fs->nodes, 
+                                                   fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'revisions' table",
                      svn_fs__bdb_open_revisions_table (&fs->revisions,
-                                                       fs->env, 0));
+                                                       fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'transactions' table",
                      svn_fs__bdb_open_transactions_table (&fs->transactions,
-                                                          fs->env, 0));
+                                                          fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'copies' table",
                      svn_fs__bdb_open_copies_table (&fs->copies,
-                                                    fs->env, 0));
+                                                    fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'changes' table",
                      svn_fs__bdb_open_changes_table (&fs->changes,
-                                                     fs->env, 0));
+                                                     fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'representations' table",
                      svn_fs__bdb_open_reps_table (&fs->representations,
-                                                  fs->env, 0));
+                                                  fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'strings' table",
                      svn_fs__bdb_open_strings_table (&fs->strings,
-                                                     fs->env, 0));
+                                                     fs->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'uuids' table",
                      svn_fs__bdb_open_uuids_table (&fs->uuids,
-                                                     fs->env, 0));
+                                                     fs->env, FALSE));
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -718,7 +719,7 @@ svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
   char *newpath;
   int path_len;
   int path_i = 0, newpath_i = 0;
-  int eating_slashes = 0;
+  svn_boolean_t eating_slashes = FALSE;
 
   /* No PATH?  No problem. */
   if (! path)
@@ -748,14 +749,14 @@ svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
              that we are now eating slashes. */
           if (eating_slashes)
             continue;
-          eating_slashes = 1;
+          eating_slashes = TRUE;
         }
       else
         {
           /* The current character is NOT a '/'.  If we were eating
              slashes, we need not do that any more. */
           if (eating_slashes)
-            eating_slashes = 0;
+            eating_slashes = FALSE;
         }
 
       /* Copy the current character into our new buffer. */

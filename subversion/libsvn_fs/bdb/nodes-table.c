@@ -40,7 +40,7 @@
 int
 svn_fs__bdb_open_nodes_table (DB **nodes_p,
                               DB_ENV *env,
-                              int create)
+                              svn_boolean_t create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *nodes;

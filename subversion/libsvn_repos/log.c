@@ -193,7 +193,8 @@ svn_repos_get_logs (svn_repos_t *repos,
           revs = apr_array_make (pool, 64, sizeof (svn_revnum_t));
           SVN_ERR (svn_repos_history (fs, this_path, history_to_revs_array, 
                                       revs, start, end, 
-                                      strict_node_history ? 0 : 1, pool));
+                                      strict_node_history ? FALSE : TRUE, 
+                                      pool));
         }
       else
         {
@@ -213,7 +214,8 @@ svn_repos_get_logs (svn_repos_t *repos,
                  the hash (this will eliminate duplicates). */
               SVN_ERR (svn_repos_history (fs, this_path, history_to_revs_array,
                                           changed_revs, start, end, 
-                                          strict_node_history ? 0 : 1, pool));
+                                          strict_node_history ? FALSE : TRUE, 
+                                          pool));
               for (j = 0; j < changed_revs->nelts; j++)
                 {
                   /* We're re-using the memory allocated for the array

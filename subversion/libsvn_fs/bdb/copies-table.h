@@ -32,7 +32,7 @@ extern "C" {
    Return a Berkeley DB error code.  */
 int svn_fs__bdb_open_copies_table (DB **copies_p,
                                    DB_ENV *env,
-                                   int create);
+                                   svn_boolean_t create);
 
 /* Reserve a slot in the `copies' table in FS for a new copy operation
    as part of TRAIL.  Return the slot's id in *COPY_ID_P, allocated in

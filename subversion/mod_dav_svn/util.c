@@ -79,7 +79,7 @@ get_last_history_rev (svn_revnum_t *revision,
   SVN_ERR( svn_fs_node_history(&history, root, path, pool) );
 
   /* Now get the first *real* point of interesting history. */
-  SVN_ERR( svn_fs_history_prev(&history, history, 0, pool) );
+  SVN_ERR( svn_fs_history_prev(&history, history, FALSE, pool) );
 
   /* Fetch the location information for this history step. */
   return svn_fs_history_location(&ignored, revision, history, pool);

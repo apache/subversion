@@ -36,7 +36,7 @@ extern "C" {
    Berkeley DB error code.  */
 int svn_fs__bdb_open_revisions_table (DB **revisions_p,
                                       DB_ENV *env,
-                                      int create);
+                                      svn_boolean_t create);
 
 
 

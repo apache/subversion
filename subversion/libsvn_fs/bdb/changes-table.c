@@ -38,7 +38,7 @@
 int
 svn_fs__bdb_open_changes_table (DB **changes_p,
                                 DB_ENV *env,
-                                int create)
+                                svn_boolean_t create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *changes;
@@ -212,9 +212,9 @@ fold_change (apr_hash_t *changes,
         case svn_fs_path_change_modify:
         default:
           if (change->text_mod)
-            old_change->text_mod = 1;
+            old_change->text_mod = TRUE;
           if (change->prop_mod)
-            old_change->prop_mod = 1;
+            old_change->prop_mod = TRUE;
           break;
         }
 

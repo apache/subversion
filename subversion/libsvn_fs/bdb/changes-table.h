@@ -35,7 +35,7 @@ extern "C" {
    Berkeley DB error code.  */
 int svn_fs__bdb_open_changes_table (DB **changes_p,
                                     DB_ENV *env,
-                                    int create);
+                                    svn_boolean_t create);
 
 
 /* Add CHANGE as a record to the `changes' table in FS as part of

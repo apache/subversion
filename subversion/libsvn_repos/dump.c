@@ -258,7 +258,7 @@ dump_node (struct edit_baton *eb,
   if (action == svn_node_action_change)
     {
       svn_fs_root_t *compare_root;
-      int text_changed = 0, props_changed = 0;
+      svn_boolean_t text_changed = FALSE, props_changed = FALSE;
 
       if (eb->stream)
         SVN_ERR (svn_stream_printf (eb->stream, pool,
@@ -346,7 +346,7 @@ dump_node (struct edit_baton *eb,
       else
         {
           svn_fs_root_t *src_root;
-          int text_changed = 0, props_changed = 0;
+          svn_boolean_t text_changed = FALSE, props_changed = FALSE;
 
           if ((cmp_rev < eb->oldest_dumped_rev)
               && eb->feedback_stream)

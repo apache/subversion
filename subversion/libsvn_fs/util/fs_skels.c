@@ -36,21 +36,21 @@ skel_err (const char *skel_type)
 
 /*** Validity Checking ***/
 
-static int
+static svn_boolean_t
 is_valid_checksum_skel (skel_t *skel)
 {
   if (svn_fs__list_length (skel) != 2)
-    return 0;
+    return FALSE;
 
   if (svn_fs__matches_atom (skel->children, "md5")
       && skel->children->next->is_atom)
-    return 1;
+    return TRUE;
 
-  return 0;
+  return FALSE;
 }
 
 
-static int 
+static svn_boolean_t 
 is_valid_proplist_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -61,16 +61,16 @@ is_valid_proplist_skel (skel_t *skel)
 
       for (elt = skel->children; elt; elt = elt->next)
         if (! elt->is_atom)
-          return 0;
+          return FALSE;
 
-      return 1;
+      return TRUE;
     }
 
-  return 0;
+  return FALSE;
 }
 
 
-static int
+static svn_boolean_t
 is_valid_revision_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -78,13 +78,13 @@ is_valid_revision_skel (skel_t *skel)
   if ((len == 2)
       && svn_fs__matches_atom (skel->children, "revision")
       && skel->children->next->is_atom)
-    return 1;
+    return TRUE;
 
-  return 0;
+  return FALSE;
 }
 
 
-static int
+static svn_boolean_t
 is_valid_transaction_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -96,13 +96,13 @@ is_valid_transaction_skel (skel_t *skel)
       && skel->children->next->next->is_atom
       && (! skel->children->next->next->next->is_atom)
       && (! skel->children->next->next->next->next->is_atom))
-    return 1;
+    return TRUE;
 
-  return 0;
+  return FALSE;
 }
 
 
-static int
+static svn_boolean_t
 is_valid_rep_delta_chunk_skel (skel_t *skel)
 {
   int len;
@@ -112,25 +112,25 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
   /* check the delta skel. */
   if ((svn_fs__list_length (skel) != 2)
       || (! skel->children->is_atom))
-    return 0;
+    return FALSE;
   
   /* check the window. */
   window = skel->children->next;
   len = svn_fs__list_length (window);
   if ((len < 4) || (len > 5))
-    return 0;
+    return FALSE;
   if (! ((! window->children->is_atom)
          && (window->children->next->is_atom)
          && (svn_fs__list_length (window->children->next->next) == 2)
          && (window->children->next->next->next->is_atom)))
-    return 0;
+    return FALSE;
   if ((len == 5) 
       && (! window->children->next->next->next->next->is_atom))
-    return 0;
+    return FALSE;
   
   /* check the checksum list. */
   if (! is_valid_checksum_skel (window->children->next->next))
-    return 0;
+    return FALSE;
   
   /* check the diff. ### currently we support only svndiff version
      0 delta data. */
@@ -139,13 +139,13 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
       && (svn_fs__matches_atom (diff->children, "svndiff"))
       && (svn_fs__matches_atom (diff->children->next, "0"))
       && (diff->children->next->next->is_atom))
-    return 1;
+    return TRUE;
 
-  return 0;
+  return FALSE;
 }
 
 
-static int 
+static svn_boolean_t 
 is_valid_representation_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -155,7 +155,7 @@ is_valid_representation_skel (skel_t *skel)
   /* the rep has at least two items in it, a HEADER list, and at least
      one piece of kind-specific data. */
   if (len < 2)
-    return 0;
+    return FALSE;
 
   /* check the header.  it must have KIND and TXN atoms, and
      optionally a CHECKSUM (which is a list form). */
@@ -168,12 +168,12 @@ is_valid_representation_skel (skel_t *skel)
              && (header->children->is_atom)
              && (header->children->next->is_atom)
              && (is_valid_checksum_skel (header->children->next->next)))))
-    return 0;
+    return FALSE;
 
   /* check for fulltext rep. */
   if ((len == 2)
       && (svn_fs__matches_atom (header->children, "fulltext")))
-    return 1;
+    return TRUE;
 
   /* check for delta rep. */
   if ((len >= 2)
@@ -186,25 +186,25 @@ is_valid_representation_skel (skel_t *skel)
       while (chunk)
         {
           if (! is_valid_rep_delta_chunk_skel (chunk))
-            return 0;
+            return FALSE;
           chunk = chunk->next;
         }
 
       /* all good on this delta rep. */
-      return 1;
+      return TRUE;
     }
 
-  return 0;
+  return FALSE;
 }
 
 
-static int
+static svn_boolean_t
 is_valid_node_revision_header_skel (skel_t *skel, skel_t **kind_p)
 {
   int len = svn_fs__list_length (skel);
 
   if (len < 2)
-    return 0;
+    return FALSE;
 
   /* set the *KIND_P pointer. */
   *kind_p = skel->children;
@@ -214,7 +214,7 @@ is_valid_node_revision_header_skel (skel_t *skel, skel_t **kind_p)
       && skel->children->is_atom
       && skel->children->next->is_atom
       && (skel->children->next->data[0] == '/'))
-    return 1;
+    return TRUE;
 
   /* or with predecessor... */
   if ((len == 3)
@@ -222,7 +222,7 @@ is_valid_node_revision_header_skel (skel_t *skel, skel_t **kind_p)
       && skel->children->next->is_atom
       && (skel->children->next->data[0] == '/')
       && skel->children->next->next->is_atom)
-    return 1;
+    return TRUE;
 
   /* or with predecessor and predecessor count... */
   if ((len == 4)
@@ -231,13 +231,13 @@ is_valid_node_revision_header_skel (skel_t *skel, skel_t **kind_p)
       && (skel->children->next->data[0] == '/')
       && skel->children->next->next->is_atom
       && skel->children->next->next->next->is_atom)
-    return 1;
+    return TRUE;
 
-  return 0;
+  return FALSE;
 }
 
 
-static int
+static svn_boolean_t
 is_valid_node_revision_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
@@ -253,7 +253,7 @@ is_valid_node_revision_skel (skel_t *skel)
               && len == 3
               && header->next->is_atom
               && header->next->next->is_atom)
-            return 1;
+            return TRUE;
           
           if (svn_fs__matches_atom (kind, "file")
               && ((len == 3) || (len == 4))
@@ -261,28 +261,28 @@ is_valid_node_revision_skel (skel_t *skel)
               && header->next->next->is_atom)
             {
               if ((len == 4) && (! header->next->next->next->is_atom))
-                return 0;
-              return 1;
+                return FALSE;
+              return TRUE;
             }
         }
     }
 
-  return 0;
+  return FALSE;
 }
 
 
-static int
+static svn_boolean_t
 is_valid_copy_skel (skel_t *skel)
 {
-  return ((svn_fs__list_length (skel) == 4)
-          && svn_fs__matches_atom (skel->children, "copy")
-          && skel->children->next->is_atom
-          && skel->children->next->next->is_atom
-          && skel->children->next->next->next->is_atom);
+  return (((svn_fs__list_length (skel) == 4)
+           && svn_fs__matches_atom (skel->children, "copy")
+           && skel->children->next->is_atom
+           && skel->children->next->next->is_atom
+           && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
 }
 
 
-static int
+static svn_boolean_t
 is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
 {
   if ((svn_fs__list_length (skel) == 6)
@@ -300,34 +300,34 @@ is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
         {
           if (kind)
             *kind = svn_fs_path_change_reset;
-          return 1;
+          return TRUE;
         }
       if (svn_fs__matches_atom (kind_skel, "add"))
         {
           if (kind)
             *kind = svn_fs_path_change_add;
-          return 1;
+          return TRUE;
         }
       if (svn_fs__matches_atom (kind_skel, "delete"))
         {
           if (kind)
             *kind = svn_fs_path_change_delete;
-          return 1;
+          return TRUE;
         }
       if (svn_fs__matches_atom (kind_skel, "replace"))
         {
           if (kind)
             *kind = svn_fs_path_change_replace;
-          return 1;
+          return TRUE;
         }
       if (svn_fs__matches_atom (kind_skel, "modify"))
         {
           if (kind)
             *kind = svn_fs_path_change_modify;
-          return 1;
+          return TRUE;
         }
     }
-  return 0;
+  return FALSE;
 }
 
 
@@ -741,11 +741,11 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
 
   /* TEXT-MOD */
   if (skel->children->next->next->next->next->len)
-    change->text_mod = 1;
+    change->text_mod = TRUE;
 
   /* PROP-MOD */
   if (skel->children->next->next->next->next->next->len)
-    change->prop_mod = 1;
+    change->prop_mod = TRUE;
 
   /* Return the structure. */
   *change_p = change;

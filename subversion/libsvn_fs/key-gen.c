@@ -129,7 +129,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
   apr_size_t olen = *len;     /* remember the first length */
   int i = olen - 1;           /* initial index; we work backwards */
   char c;                     /* current char */
-  int carry = 1;              /* boolean: do we have a carry or not?
+  svn_boolean_t carry = TRUE; /* boolean: do we have a carry or not?
                                  We start with a carry, because we're
                                  incrementing the number, after all. */
   
@@ -157,7 +157,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
             next[i] = '0';
           else
             {
-              carry = 0;
+              carry = FALSE;
               
               if (c == '9')
                 next[i] = 'a';
@@ -171,7 +171,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
 
   /* The new length is OLEN, plus 1 if there's a carry out of the
      leftmost digit. */
-  *len = olen + carry;
+  *len = olen + (carry ? 1 : 0);
 
   /* Ensure that we haven't overrun the (ludicrous) bound on key length.
      Note that SVN_FS__MAX_KEY_SIZE is a bound on the size *including*
@@ -190,7 +190,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
 }
 
 
-int 
+int
 svn_fs__key_compare (const char *a, const char *b)
 {
   int a_len = strlen (a);
@@ -206,14 +206,14 @@ svn_fs__key_compare (const char *a, const char *b)
 }
 
 
-int
+svn_boolean_t
 svn_fs__same_keys (const char *a, const char *b)
 {
   if (! (a || b))
-    return 1;
+    return TRUE;
   if (a && (! b))
-    return 0;
+    return FALSE;
   if ((! a) && b)
-    return 0;
-  return (! strcmp (a, b));
+    return FALSE;
+  return (strcmp (a, b) == 0) ? TRUE : FALSE;
 }

@@ -39,11 +39,12 @@
 
 
 /* Return non-zero iff REP is mutable under transaction TXN_ID. */
-static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
+static svn_boolean_t rep_is_mutable (svn_fs__representation_t *rep, 
+                                     const char *txn_id)
 {
-  if (! rep->txn_id)
-    return 0;
-  return (strcmp (rep->txn_id, txn_id) == 0);
+  if ((! rep->txn_id) || (strcmp (rep->txn_id, txn_id) != 0))
+    return FALSE;
+  return TRUE;
 }
 
 
@@ -212,7 +213,9 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
       assert (cb->window_pool == NULL);
       cb->window = svn_txdelta__copy_window(window, window_pool);
       cb->window_pool = window_pool;
-      cb->done = (window->sview_len == 0 || window->src_ops == 0);
+      cb->done = ((window->sview_len == 0 || window->src_ops == 0) 
+                    ? TRUE 
+                    : FALSE);
     }
   else
     cb->done = TRUE;
@@ -664,7 +667,8 @@ svn_fs__rep_contents_size (svn_filesize_t *size_p,
     {
       /* Get the size by asking Berkeley for the string's length. */
       SVN_ERR (svn_fs__bdb_string_size (size_p, fs, 
-                                        rep->contents.fulltext.string_key, trail));
+                                        rep->contents.fulltext.string_key, 
+                                        trail));
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
     {
@@ -677,8 +681,8 @@ svn_fs__rep_contents_size (svn_filesize_t *size_p,
 
       assert (chunks->nelts);
 
-      last_chunk 
-        = (((svn_fs__rep_delta_chunk_t **) chunks->elts)[chunks->nelts - 1]);
+      last_chunk = APR_ARRAY_IDX (chunks, chunks->nelts - 1,
+                                  svn_fs__rep_delta_chunk_t *);
       *size_p = last_chunk->offset + last_chunk->size;
     }
   else /* unknown kind */
@@ -1293,7 +1297,8 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
   
   /* Append to the current string we're writing (or create a new one
      if WB->key is NULL). */
-  SVN_ERR (svn_fs__bdb_string_append (wb->fs, &(wb->key), *len, buf, wb->trail));
+  SVN_ERR (svn_fs__bdb_string_append (wb->fs, &(wb->key), *len, 
+                                      buf, wb->trail));
 
   /* Make sure we (still) have a key. */
   if (wb->key == NULL)
@@ -1380,7 +1385,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
      window to its own string in the `strings' table. */
   new_target_baton.fs = fs;
   new_target_baton.trail = trail;
-  new_target_baton.header_read = 0;
+  new_target_baton.header_read = FALSE;
   new_target_stream = svn_stream_create (&new_target_baton, pool);
   svn_stream_set_write (new_target_stream, write_svndiff_strings);
 

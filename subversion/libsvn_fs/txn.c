@@ -330,7 +330,8 @@ txn_body_list_transactions (void* baton,
                             trail_t *trail)
 {
   struct list_transactions_args *args = baton;
-  SVN_ERR (svn_fs__bdb_get_txn_list (args->names_p, args->fs, args->pool, trail));
+  SVN_ERR (svn_fs__bdb_get_txn_list (args->names_p, args->fs, 
+                                     args->pool, trail));
 
   return SVN_NO_ERROR;
 }

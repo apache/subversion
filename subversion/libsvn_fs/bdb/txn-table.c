@@ -32,7 +32,7 @@
 #include "txn-table.h"
 
 
-static int 
+static svn_boolean_t 
 is_committed (svn_fs__transaction_t *txn)
 {
   return SVN_IS_VALID_REVNUM (txn->revision);
@@ -42,7 +42,7 @@ is_committed (svn_fs__transaction_t *txn)
 int
 svn_fs__bdb_open_transactions_table (DB **transactions_p,
                                      DB_ENV *env,
-                                     int create)
+                                     svn_boolean_t create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *txns;

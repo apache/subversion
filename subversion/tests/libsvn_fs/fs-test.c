@@ -4934,7 +4934,7 @@ check_related (const char **msg,
             SVN_ERR (svn_fs_node_id (&id2, rev_root, pr2.path, pool));
             
             /* <exciting> Now, run the relationship check! </exciting> */
-            related = svn_fs_check_related (id1, id2);
+            related = svn_fs_check_related (id1, id2) ? 1 : 0;
             if (related == related_matrix[i][j])
               {
                 /* xlnt! */

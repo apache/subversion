@@ -35,7 +35,7 @@ extern "C" {
  */
 int svn_fs__bdb_open_uuids_table (DB **uuids_p,
                                   DB_ENV *env,
-                                  int create);
+                                  svn_boolean_t create);
 
 /* Get the UUID at index @a idx in the uuids table within @a fs,
  * storing the result in @a *uuid.

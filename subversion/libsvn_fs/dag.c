@@ -90,14 +90,14 @@ svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node)
 }
 
 
-int 
+svn_boolean_t
 svn_fs__dag_is_file (dag_node_t *node)
 {
   return (node->kind == svn_node_file);
 }
 
 
-int 
+svn_boolean_t
 svn_fs__dag_is_directory (dag_node_t *node)
 {
   return (node->kind == svn_node_dir);
@@ -243,10 +243,10 @@ set_node_revision (dag_node_t *node,
 }
 
 
-int svn_fs__dag_check_mutable (dag_node_t *node, 
-                               const char *txn_id)
+svn_boolean_t svn_fs__dag_check_mutable (dag_node_t *node, 
+                                         const char *txn_id)
 {
-  return (! strcmp (svn_fs__id_txn_id (svn_fs__dag_get_id (node)), txn_id));
+  return (strcmp (svn_fs__id_txn_id (svn_fs__dag_get_id (node)), txn_id) == 0);
 }
 
 
@@ -325,7 +325,7 @@ svn_fs__dag_walk_predecessors (dag_node_t *node,
 {
   svn_fs_t *fs = svn_fs__dag_get_fs (node);
   dag_node_t *this_node;
-  int done = 0;
+  svn_boolean_t done = FALSE;
 
   this_node = node;
   while ((! done) && this_node)
@@ -899,7 +899,8 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
       /* Of my own flesh and bone...
          (Get the NODE-REVISION for the base node, and then write
          it back out as the clone.) */
-      SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, base_root_id, trail));
+      SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, 
+                                              base_root_id, trail));
 
       /* Store it. */
       /* ### todo: Does it even makes sense to have a different copy id for
@@ -1592,7 +1593,7 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
 svn_error_t *
 svn_fs__dag_deltify (dag_node_t *target,
                      dag_node_t *source,
-                     int props_only,
+                     svn_boolean_t props_only,
                      trail_t *trail)
 {
   svn_fs__node_revision_t *source_nr, *target_nr;
@@ -1667,8 +1668,8 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
 /*** Comparison. ***/
 
 svn_error_t *
-svn_fs__things_different (int *props_changed,
-                          int *contents_changed,
+svn_fs__things_different (svn_boolean_t *props_changed,
+                          svn_boolean_t *contents_changed,
                           dag_node_t *node1,
                           dag_node_t *node2,
                           trail_t *trail)
@@ -1702,16 +1703,16 @@ svn_fs__things_different (int *props_changed,
 struct is_ancestor_baton
 {
   const svn_fs_id_t *node1_id;
-  int is_ancestor;
-  int need_parent; /* non-zero if we only care about parenthood, not
-                      full ancestry */
+  svn_boolean_t is_ancestor;
+  svn_boolean_t need_parent; /* TRUE if we only care about parenthood, not
+                                full ancestry */
 };
 
 
 static svn_error_t *
 is_ancestor_callback (void *baton,
                       dag_node_t *node,
-                      int *done,
+                      svn_boolean_t *done,
                       trail_t *trail)
 {
   struct is_ancestor_baton *b = baton;
@@ -1722,19 +1723,19 @@ is_ancestor_callback (void *baton,
     {
       /* ... compare NODE's ID with the ID we're looking for. */
       if (svn_fs__id_eq (b->node1_id, svn_fs__dag_get_id (node)))
-        b->is_ancestor = 1;
+        b->is_ancestor = TRUE;
 
       /* Now, if we only are interested in parenthood, we don't care
          to look any further than this. */
       if (b->need_parent)
-        *done = 1;
+        *done = TRUE;
     }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs__dag_is_ancestor (int *is_ancestor,
+svn_fs__dag_is_ancestor (svn_boolean_t *is_ancestor,
                          dag_node_t *node1,
                          dag_node_t *node2,
                          trail_t *trail)
@@ -1745,27 +1746,27 @@ svn_fs__dag_is_ancestor (int *is_ancestor,
     *id2 = svn_fs__dag_get_id (node2);
 
   /* Pessimism. */
-  *is_ancestor = 0;
+  *is_ancestor = FALSE;
 
   /* Ancestry holds relatedness as a prerequisite. */
   if (! svn_fs_check_related (id1, id2))
     return SVN_NO_ERROR;
 
-  baton.is_ancestor = 0;
-  baton.need_parent = 0;
+  baton.is_ancestor = FALSE;
+  baton.need_parent = FALSE;
   baton.node1_id = id1;
 
   SVN_ERR (svn_fs__dag_walk_predecessors (node2, is_ancestor_callback,
                                           &baton, trail));
   if (baton.is_ancestor)
-    *is_ancestor = 1;
+    *is_ancestor = TRUE;
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs__dag_is_parent (int *is_parent,
+svn_fs__dag_is_parent (svn_boolean_t *is_parent,
                        dag_node_t *node1,
                        dag_node_t *node2,
                        trail_t *trail)
@@ -1776,20 +1777,20 @@ svn_fs__dag_is_parent (int *is_parent,
     *id2 = svn_fs__dag_get_id (node2);
 
   /* Pessimism. */
-  *is_parent = 0;
+  *is_parent = FALSE;
 
   /* Parentry holds relatedness as a prerequisite. */
   if (! svn_fs_check_related (id1, id2))
     return SVN_NO_ERROR;
 
-  baton.is_ancestor = 0;
-  baton.need_parent = 1;
+  baton.is_ancestor = FALSE;
+  baton.need_parent = TRUE;
   baton.node1_id = id1;
 
   SVN_ERR (svn_fs__dag_walk_predecessors (node2, is_ancestor_callback,
                                           &baton, trail));
   if (baton.is_ancestor)
-    *is_parent = 1;
+    *is_parent = TRUE;
 
   return SVN_NO_ERROR;
 }

@@ -34,7 +34,9 @@ extern "C" {
 /* Open a `representations' table in ENV.  If CREATE is non-zero,
    create one if it doesn't exist.  Set *REPS_P to the new table.
    Return a Berkeley DB error code.  */
-int svn_fs__bdb_open_reps_table (DB **reps_p, DB_ENV *env, int create);
+int svn_fs__bdb_open_reps_table (DB **reps_p, 
+                                 DB_ENV *env, 
+                                 svn_boolean_t create);
 
 
 
