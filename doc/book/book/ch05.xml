@@ -273,9 +273,9 @@ dav/  db/  format  hooks/  locks/  README
             
       <screen>
 $ ls repos/hooks/
-post-commit.tmpl          pre-revprop-change.tmpl  write-sentinels.tmpl
-post-revprop-change.tmpl  read-sentinels.tmpl
-pre-commit.tmpl           start-commit.tmpl
+post-commit.tmpl          pre-revprop-change.tmpl
+post-revprop-change.tmpl  start-commit.tmpl
+pre-commit.tmpl           
 </screen>
             
       <para>There is one template for each hook that the Subversion
@@ -440,25 +440,6 @@ pre-commit.tmpl           start-commit.tmpl
         </varlistentry>
       </variablelist>
 
-      <sidebar>
-        <title>Sentinels, Those <quote>Other</quote> Hooks</title>
-
-        <para>In addition to the hook scripts, Subversion has
-          templates for two other special event handlers&mdash;the
-          <filename>read-sentinels</filename> and
-          <filename>write-sentinels</filename>.  These special
-          programs, called <firstterm>sentinels</firstterm>, are
-          intended to be daemon-like applications which are started at
-          the beginning of a user's operation, and which receive
-          multiple event notifications of a single type over the
-          course of that operation.  Depending on the sentinel's
-          responses to each of these notifications, Subversion may
-          stop or otherwise modify the operation.  Fortunately for
-          today's Subversion repository administrators, these
-          sentinels can be ignored, since support for them is not yet
-          implemented in Subversion itself!</para>
-      </sidebar>
-            
       <para>Subversion will attempt to execute hooks as the same user
         who owns the process which is accessing the Subversion
         repository.  In most cases, the repository is being accessed
