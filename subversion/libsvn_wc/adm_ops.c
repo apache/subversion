@@ -1052,11 +1052,14 @@ svn_wc_add (const char *path,
                                   svn_wc_adm_access_pool (parent_access)));
 
       /* We're making the same mods we made above, but this time we'll
-         force the scheduling. */
+         force the scheduling.  Also make sure to undo the
+         'incomplete' flag which svn_wc_ensure_adm sets by default. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace 
                            ? svn_wc_schedule_replace 
                            : svn_wc_schedule_add;
+      tmp_entry.incomplete = FALSE;
       SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry, 
                                      modify_flags, TRUE, pool));
 

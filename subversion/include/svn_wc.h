@@ -419,7 +419,9 @@ typedef struct svn_wc_diff_callbacks_t
                                 void *diff_baton);
 
   /** A file @a path was added.  The contents can be seen by comparing
-   * @a tmpfile1 and @a tmpfile2.
+   * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2
+   * of the file, respectively.  (If either file is empty, the rev
+   * will be 0.)
    *
    * If known, the @c svn:mime-type value of each file is passed into
    * @a mimetype1 and @a mimetype2;  either or both of the values can
@@ -433,6 +435,8 @@ typedef struct svn_wc_diff_callbacks_t
                               const char *path,
                               const char *tmpfile1,
                               const char *tmpfile2,
+                              svn_revnum_t rev1,
+                              svn_revnum_t rev2,
                               const char *mimetype1,
                               const char *mimetype2,
                               void *diff_baton);
@@ -464,13 +468,15 @@ typedef struct svn_wc_diff_callbacks_t
                                 const char *mimetype2,
                                 void *diff_baton);
   
-  /** A directory @a path was added.
+  /** A directory @a path was added.  @a rev is the revision that the
+   * directory came from.
    *
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
    */
   svn_error_t *(*dir_added) (svn_wc_adm_access_t *adm_access,
                              const char *path,
+                             svn_revnum_t rev,
                              void *diff_baton);
   
   /** A directory @a path was deleted.
@@ -1528,18 +1534,24 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                   const char *diff3_cmd,
                                   apr_pool_t *pool);
 
+
+/* A callback function type for retrieving a file's text and
+ * properties.  Push the file's text at @a fstream, and set @a *props
+ * to the file's properties.  Use @a baton for context.
+ */
 typedef svn_error_t * (*svn_wc_add_repos_file_helper_t)
   (svn_stream_t *fstream, apr_hash_t **props, void *baton);
 
 /*
- * Copies a single file from the repository in the working copy.
- * @a dst_path is the destination path.
- * @a adm_access is the adm_access.
- * @a helper is a callback that accepts a file stream, a pointer to 
- * a property hash, and @a helper_baton, and actually retrieves the
- * file from the back end.
- * @a pool is the memory pool associated with the calling context.
- * */
+ * Install a single file from a repository (or other source) into a
+ * working copy.  This includes installing the text-base, props, and
+ * prop-base.
+ *
+ * Use @a helper / @a helper_baton to retrieve the file's text and
+ * props, and install the file at location @a dst_path, authorized by
+ * the parental lock in @a adm_access.  Use @a pool for temporary
+ * allocations.
+ */
 svn_error_t *
 svn_wc_add_repos_file (const char *dst_path,
                        svn_wc_adm_access_t *adm_access,

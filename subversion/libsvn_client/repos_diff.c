@@ -571,6 +571,7 @@ add_directory (const char *path,
                void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
   svn_wc_adm_access_t *adm_access;
 
@@ -582,13 +583,13 @@ add_directory (const char *path,
   SVN_ERR (get_path_access (&adm_access, pb->edit_baton->adm_access, pb->wcpath,
                             pb->edit_baton->dry_run, pool));
   SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
-           (adm_access, b->wcpath,
+           (adm_access, b->wcpath, eb->target_revision,
             pb->edit_baton->diff_cmd_baton));
 
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
                                     b->wcpath,
-                                    svn_wc_notify_add,
+                                    svn_wc_notify_update_add,
                                     svn_node_dir,
                                     NULL,
                                     svn_wc_notify_state_unknown,
@@ -776,6 +777,8 @@ close_file (void *file_baton,
                  (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
+                  0,
+                  b->edit_baton->target_revision,
                   mimetype1, mimetype2,
                   b->edit_baton->diff_cmd_baton));
       else
