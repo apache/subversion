@@ -78,7 +78,6 @@
 %define rc_file     subversion.rc-%{namever}
 %define svn_patch   svn-install.patch-%{namever}
 %define svn_version svn-version.patch-%{namever}
-%define svn_java    svn-java.patch-%{namever}
 %define svn_jar     svnjavahl.jar
 
 Prefix:         %{usr}
@@ -96,9 +95,6 @@ Source3: %{?fop_src}
 %endif
 Patch0:		%{svn_patch}
 Patch1:		%{svn_version}
-%if %{create_javahl}
-Patch2:		%{svn_java}
-%endif
 Packager:	Shamim Islam <files@poetryunlimited.com>
 BuildRoot:      %{svn_root}
 BuildRequires:	apache2-devel >= %{apache_ver}
