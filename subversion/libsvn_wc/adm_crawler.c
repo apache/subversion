@@ -403,8 +403,9 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                           subdir_entry->revision,
                                           subdir_entry->incomplete,
                                           iterpool));
-          /* ... or perhaps just a differing revision. */
-          else if (subdir_entry->revision != dir_rev)
+          /* ... or perhaps just a differing revision or incomplete subdir. */
+          else if (subdir_entry->revision != dir_rev
+                   || subdir_entry->incomplete)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          subdir_entry->revision,

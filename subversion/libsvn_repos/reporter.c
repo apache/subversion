@@ -628,14 +628,15 @@ update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   /* If the source and target both exist and are of the same kind,
      then find out whether they're related.  If they're exactly the
-     same, then we don't have to do anything.  If we're ignoring
-     ancestry, then any two nodes of the same type are related enough
-     for us. */
+     same, then we don't have to do anything (unless the report has
+     changes to the source).  If we're ignoring ancestry, then any two
+     nodes of the same type are related enough for us. */
   related = FALSE;
   if (s_entry && t_entry && s_entry->kind == t_entry->kind)
     {
       distance = svn_fs_compare_ids (s_entry->id, t_entry->id);
-      if (distance == 0 && !any_path_info (b, e_path))
+      if (distance == 0 && !any_path_info (b, e_path)
+          && (!info || !info->start_empty))
         return SVN_NO_ERROR;
       else if (distance != -1 || b->ignore_ancestry)
         related = TRUE;
