@@ -1614,11 +1614,11 @@ A  build.conf
         properly format your source code for consistency with the rest
         of the codebase, how to describe your proposed changes with an
         effective change log message, how to test your changes, and so
-        on.  Commit priveleges on the Subversion source repository are
+        on.  Commit privileges on the Subversion source repository are
         earned&mdash;a government by meritocracy.
         <footnote>
           <para>While this may superficially appear as some sort of
-            elitism, this "earn your commit priveleges" notion is
+            elitism, this "earn your commit privileges" notion is
             about efficiency&mdash;whether it costs more in time and
             effort to review and apply someone else's changes that are
             likely to be safe and useful, versus the potential costs
@@ -1687,7 +1687,7 @@ A  build.conf
         developers list containing your log message and the output of
         <command>svn diff</command> (from the top of your Subversion
         working copy).  If the community members consider your changes
-        acceptable, someone who has commit priveleges (permission to
+        acceptable, someone who has commit privileges (permission to
         make new revisions in the Subversion source repository) will
         add your changes to the public source code tree.  Recall that
         permission to directly commit changes to the repository is

@@ -429,7 +429,7 @@ collabnet = svn.collab.net
             <term><literal>diff3-cmd</literal></term>
             <listitem>
               <para>This specifies the absolute path of a three-way
-                differencing program.  Subversion uses this program
+                differencing program.  Subversion uses this program to
                 merge changes made by the user with those received
                 from the repository.  The default value is the path of
                 the GNU diff3 utility, as determined by the Subversion
@@ -1344,7 +1344,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
           will continue to display the same substituted keyword value
           as before&mdash;until you update your working copy.  At that
           time the keywords in your <filename>weather.txt</filename>
-          file will be re-substituted again with information that
+          file will be re-substituted with information that
           reflects the most recent known commit to that file.</para>
 
       </sect3>

@@ -51,7 +51,7 @@
       <para>Conceptually speaking, a Subversion repository is a
         sequence of directory trees.  Each tree is a snapshot of how
         the files and directories versioned in your repository looked
-        at various points in time.  These snapshots are created as a
+        at some point in time.  These snapshots are created as a
         result of client operations, and are called revisions.</para>
 
       <para>Every revision begins life as a transaction tree.  When
@@ -69,7 +69,7 @@
       <para>At the moment, updates work in a similar way.  The client
         builds a temporary transaction tree that mirrors the state of
         the working copy.  The repository then compares that
-        transaction tree with the revision tree at the request
+        transaction tree with the revision tree at the requested
         revision (usually the most recent, or <quote>youngest</quote>
         tree), and sends back information that informs the client
         about what changes are needed to transform their working copy

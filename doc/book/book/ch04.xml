@@ -117,7 +117,7 @@
       when you're finished, you might find it very difficult to commit
       your changes.  Sally (or others) may have made many other
       changes in the repository that are difficult to merge into your
-      working copy -- especially all at once.</para>
+      working copy&mdash;especially all at once.</para>
 
     <para>The better solution is to create your own branch, or line of
       development, in the repository.  This allows you to save your
@@ -129,13 +129,13 @@
   <sect2 id="svn-ch-4-sect-2.1">
     <title>Creating a branch</title> 
       
-      <para>Creating a branch is very simple -- you make a copy of the
+      <para>Creating a branch is very simple&mdash;you make a copy of the
         project in the repository using the <command>svn
         copy</command> command.  Subversion is not only able to copy
         single files, but whole directories as well.  In this case,
         you want to make a copy of the
         <filename>/trunk/calc</filename> directory.  Where should the
-        new copy live?  Whereever you wish -- it's a matter of project
+        new copy live?  Whereever you wish&mdash;it's a matter of project
         policy.  Let's say that your team has a policy of creating
         branches in the <filename>/branches/calc</filename> area of
         the repository, and you want to name your branch
@@ -229,19 +229,19 @@ Committed revision 341.
                 
         <para>Subversion's repository has a clever design.  When you
           copy a directory, you don't need to worry about the
-          repository growing huge -- Subversion doesn't actually
+          repository growing huge&mdash;Subversion doesn't actually
           duplicate any data.  Instead, it creates a new directory
           entry that points to an <emphasis>existing</emphasis> tree.
           If you're a Unix user, this is the same concept as a
           hard-link.  From there, the copy is said to be "lazy".  That
           is, if you commit a change to one file within the copied
-          directory, then only that file changes -- the rest of the
+          directory, then only that file changes&mdash;the rest of the
           files continue to exist as links to the original files in
           the original directory.</para>
       
         <para>This is why you'll often hear Subversion users talk
           about "cheap copies".  It doesn't matter how large the
-          directory is -- it takes a very tiny, constant amount of
+          directory is&mdash;it takes a very tiny, constant amount of
           time to make a copy of it.  In fact, this feature is the
           basis of how commits work in Subversion: each revision is a
           "cheap copy" of the previous revision, with a few items
@@ -382,7 +382,7 @@ rev 98:  sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       <orderedlist>
         <listitem>
           <para>Unlike many other version control systems,
-            Subversion's branches exist a <emphasis>normal filesystem
+            Subversion's branches exist as <emphasis>normal filesystem
             directories</emphasis> in the repository, not in some
             extra dimension.</para>
         </listitem>
