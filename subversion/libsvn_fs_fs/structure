@@ -59,9 +59,9 @@ extensibility.  The following fields are defined:
             <length> gives length of rep, sans header and trailer
             <size> gives size of expanded rep
   props     "<rev> <offset>" giving location of property list
+  cpath     FS pathname node was created at
   copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
-  copyroot  "<base> <offset>" giving location of root of copy
-  cpath     FS pathname node was created at [clarify]
+  copyroot  "<rev> <offset>" giving location of root of copy
 
 The predecessor of a node-rev crosses copy history; together with the
 count field, it allows efficient determination of the base for
@@ -72,6 +72,8 @@ location of the root of the copy.  (Note that since copy IDs are
 initially inherited from parent directory to child, the root of a
 node-rev's copy may belong to a different node, perhaps of a different
 type, than the node-rev itself does.)
+
+A node-revision with no properties may omit the "props" field.
 
 [Don't know how changed-path data is represented yet.]
 
