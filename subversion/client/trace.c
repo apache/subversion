@@ -190,9 +190,14 @@ close_file (void *file_baton)
     {
       if (fb->text_changed)
         {
+          svn_error_t *err;
           svn_boolean_t modified;
-          if (svn_wc_text_modified_p 
-              (&modified, fb->path, fb->parent_dir_baton->edit_baton->pool))
+          err = svn_wc_text_modified_p 
+            (&modified, fb->path, fb->parent_dir_baton->edit_baton->pool);
+          if (err)
+            return err;
+
+          if (modified)
             statchar_buf[0] = 'G';
           else
             statchar_buf[0] = 'U';
