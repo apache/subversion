@@ -33,6 +33,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_pools.h"
 
 
 
@@ -356,6 +357,108 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
   
   return SVN_NO_ERROR;
 }
+
+
+
+
+svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
+                                          svn_stringbuf_t *dst_parent,
+                                          svn_stringbuf_t *dst_basename,
+                                          apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+  apr_status_t status;
+  apr_hash_t *dirents;
+  apr_hash_index_t *hi;
+  svn_stringbuf_t *dst_path, *src_target, *dst_target;
+
+  /* Make a subpool for recursion */
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* The 'dst_path' is simply dst_parent/dst_basename */
+  dst_path = svn_stringbuf_dup (dst_parent, pool);
+  svn_path_add_component (dst_path, dst_basename, svn_path_local_style);
+
+  /* Sanity checks:  SRC and DST_PARENT are directories, and
+     DST_BASENAME doesn't already exist in DST_PARENT. */
+  SVN_ERR (svn_io_check_path (src, &kind, subpool));
+  if (kind != svn_node_dir)
+    return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
+                              "svn_io_copy_dir: '%s' is not a directory.",
+                              src->data);
+
+  SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
+  if (kind != svn_node_dir)
+    return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
+                              "svn_io_copy_dir: '%s' is not a directory.",
+                              dst_parent->data);
+
+  SVN_ERR (svn_io_check_path (dst_path, &kind, subpool));
+  if (kind != svn_node_none)
+    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, subpool,
+                              "'%s' already exists.", dst_path->data);
+  
+  /* Create the new directory. */
+  status = apr_dir_make (dst_path->data, APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "Unable to create directory '%s'",
+                              dst_path->data);
+
+  /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
+  SVN_ERR (svn_io_get_dirents (&dirents, src, subpool));
+
+  src_target = svn_stringbuf_dup (src, subpool);
+  dst_target = svn_stringbuf_dup (dst_path, subpool);
+
+  for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t klen;
+      void *val;
+      const char *entryname;
+      enum svn_node_kind *entrykind;
+
+      /* Get next entry and its kind */
+      apr_hash_this (hi, &key, &klen, &val);
+      entryname = (char *) key;
+      entrykind = (enum svn_node_kind *) val;
+
+      /* Telescope the entryname onto the source dir. */
+      svn_path_add_component_nts (src_target, entryname,
+                                  svn_path_local_style);
+
+      /* If it's a file, just copy it over. */
+      if (*entrykind == svn_node_file)
+        {
+          /* Telescope and de-telescope the dst_target in here */
+          svn_path_add_component_nts (dst_target, entryname,
+                                      svn_path_local_style);
+          SVN_ERR (svn_io_copy_file (src_target, dst_target, subpool));
+          svn_path_remove_component (dst_target, svn_path_local_style);
+        }          
+
+      /* If it's a directory, recurse. */
+      else if (*entrykind == svn_node_dir)
+        SVN_ERR (svn_io_copy_dir_recursively (src_target,
+                                              dst_target,
+                                              svn_stringbuf_create (entryname,
+                                                                    subpool),
+                                              subpool));
+
+      /* ### someday deal with other node kinds? */
+
+      /* De-telescope the source dir for the next iteration. */
+      svn_path_remove_component (src_target, svn_path_local_style);
+    }
+    
+
+  /* Free any memory used by recursion */
+  apr_pool_destroy (subpool);
+           
+  return SVN_NO_ERROR;
+}
+
 
 
 

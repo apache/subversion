@@ -540,10 +540,13 @@ add_to_revision_control (svn_stringbuf_t *path,
 
   /* You can only add something that is a) not in revision control, or
      b) slated for deletion from revision control, or c) already
-     `deleted' from revision control.  */
+     `deleted' from revision control.   Unless, of course, you're
+     specifying an addition with -history-;  then it's okay for the
+     object to be under version control already;  it's not really new.  */
   if (orig_entry)
     {
-      if ((orig_entry->schedule != svn_wc_schedule_delete)
+      if ((! ancestor_path)
+          && (orig_entry->schedule != svn_wc_schedule_delete)
           && (orig_entry->existence != svn_wc_existence_deleted))
         {
           return svn_error_createf 
@@ -573,6 +576,8 @@ add_to_revision_control (svn_stringbuf_t *path,
   /* If a copy ancestor was given, put the proper ancestry info in a hash. */
   if (ancestor_path)
     {
+      /* Here's where we create and set the copyfrom_* args */
+
       SVN_ERR (svn_wc_entry (&anc_entry, ancestor_path, pool));
       copyfrom_url = svn_stringbuf_dup (anc_entry->ancestor, pool);
       copyfrom_rev = svn_stringbuf_createf (pool, "%ld", anc_entry->revision);
@@ -582,6 +587,19 @@ add_to_revision_control (svn_stringbuf_t *path,
       apr_hash_set (atts, 
                     SVN_WC_ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
                     copyfrom_rev);
+
+      if (kind == svn_node_dir)
+        {        
+          /* ### Add here: need to set SVN_WC_ENTRY_ATTR_ANCESTOR in the
+             hash too, to reflect the real url.  Normally,
+             __ensure_adm() would create this url.  But because the
+             copied directory already has an .svn area, the function
+             doesn't touch it. */
+          
+          /* ### split path into parent and basename,
+             get parent's url, add basename, set the hash. */
+
+        }
     }
 
 

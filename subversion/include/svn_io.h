@@ -113,6 +113,15 @@ svn_error_t *svn_io_copy_file (svn_stringbuf_t *src,
                                svn_stringbuf_t *dst,
                                apr_pool_t *pool);
 
+/* Recursively copy directory SRC into DST_PARENT, as a new entry
+   named DST_BASENAME.   If DST_BASENAME already exists in DST_PARENT,
+   return error. */
+svn_error_t *svn_io_copy_dir_recursively (svn_stringbuf_t *src,
+                                          svn_stringbuf_t *dst_parent,
+                                          svn_stringbuf_t *dst_basename,
+                                          apr_pool_t *pool);
+
+
 /* Append SRC to DST.  DST will be appended to if it exists, else it
    will be created. */
 svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
@@ -257,7 +266,7 @@ apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
 
 /* Read all of the disk entries in directory PATH.  Return a DIRENTS
    hash mapping dirent names (char *) to enumerated dirent filetypes
-   (apr_filetype_e).
+   (enum svn_node_kind *).
 
    Note:  the `.' and `..' directories normally returned by
    apr_dir_read will NOT be returned in the hash. */

@@ -142,6 +142,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_PATH_NOT_FOUND,
               "Can't find a working copy path")
 
+  SVN_ERRDEF (SVN_ERR_WC_UNEXPECTED_KIND,
+              "Unexpected node kind found")
+
   SVN_ERRDEF (SVN_ERR_WC_ENTRY_NOT_FOUND,
               "Can't find an entry")
 
