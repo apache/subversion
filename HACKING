@@ -630,8 +630,8 @@ typedef struct svn_error
 2.  If you are the *original* creator of an error, you would do
     something like this:
 
-        return svn_create_error (SVN_ERR_FOO, NULL, 
-                                  "User not permitted to write file");
+        return svn_error_create (SVN_ERR_FOO, NULL, 
+                                 "User not permitted to write file");
 
 
     NOTICE the NULL field... indicating that this error has no child,
@@ -673,7 +673,7 @@ typedef struct svn_error
         error = some_routine (foo);
         if (error)
           {
-           svn_error_t *wrapper = svn_create_error (SVN_ERR_FOO, error,
+           svn_error_t *wrapper = svn_error_create (SVN_ERR_FOO, error,
                                                     "Authorization failed");
            return wrapper;
           }
@@ -685,7 +685,7 @@ typedef struct svn_error
         error = some_routine (foo);
         if (error)
           {
-           return svn_quick_wrap_error (error, 
+           return svn_error_quick_wrap (error, 
                                         "Authorization failed");
           }
 
