@@ -176,10 +176,10 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   sentinel_position[abs(1 - idx)].offset = position_list2->offset + 1;
 
   /* These are never dereferenced, only compared by value, so we
-   * can safely fake these up.
+   * can safely fake these up and the void* cast is OK.
    */
-  sentinel_position[0].node = (svn_diff__node_t *)&sentinel_position[0];
-  sentinel_position[1].node = (svn_diff__node_t *)&sentinel_position[1];
+  sentinel_position[0].node = (void*)&sentinel_position[0];
+  sentinel_position[1].node = (void*)&sentinel_position[1];
 
   d = length[abs(1 - idx)] - length[idx];
 

@@ -93,7 +93,7 @@ test_path_split (const char **msg,
                  svn_boolean_t msg_only,
                  apr_pool_t *pool)
 {
-  int i;
+  apr_size_t i;
 
   static const char * const paths[][3] = { 
     { "/foo/bar",        "/foo",          "bar" },

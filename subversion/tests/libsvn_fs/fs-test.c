@@ -1621,7 +1621,7 @@ merging_commit (const char **msg,
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t after_rev;
   svn_revnum_t revisions[24];
-  int i;
+  apr_size_t i;
   svn_revnum_t revision_count;
 
   *msg = "merging commit";
@@ -5406,7 +5406,7 @@ canonicalize_abspath (const char **msg,
                       svn_boolean_t msg_only,
                       apr_pool_t *pool)
 { 
-  int i;
+  apr_size_t i;
   const char *paths[21][2] = 
     /* in                      out */
   { { NULL,                    NULL },
