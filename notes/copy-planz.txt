@@ -4,7 +4,8 @@ Please direct all comments and suggestions to
 C. Michael Pilato <cmpilato@collab.net>.
 
 --
- We have four use cases for 'svn cp' now.
+
+We have four use cases for 'svn cp' now.
 
     A. svn cp wc_path1 wc_path2
 
@@ -60,6 +61,7 @@ use case (C):
 I should mention that as a rule, cases (A) and (C) always notice mixed
 revisions when committing.
 
+--
 
 Second, we have a new command:  'svn switch URL [-r rev]'
 
@@ -91,14 +93,22 @@ with.  :-)
 
 Here is how I plan to handle the four basic cases for `svn copy/move',
 as determined by the type of paths supplied as the SRC and DST
-arguments to the copy command.
+arguments to the copy command (see the use cases above).
 
-* Case I - SRC is working copy path, DST is working copy path:
+* Case A - SRC is working copy path, DST is working copy path:
 
    I don't care actually care about this case.  Ben Collins-Sussman
    (and svn_wc_copy) is handling this. :-)
 
-* Case II - SRC is working copy path, DST is repository URL:
+* Case B - SRC is repository URL, DST is working copy path:
+
+   Treat this is a special checkout of SRC (at the optionally supplied
+   revision, even), except that once the checkout is complete, you
+   have DST scheduled for commit as a copy.
+
+   Moves are disallowed in this case.
+
+* Case C - SRC is working copy path, DST is repository URL:
 
    To accomplish this operation, we drive the commit crawler/editor in
    pretty much the same way we would if performing an import, except
@@ -112,15 +122,7 @@ arguments to the copy command.
 
    Moves are disallowed in this case.
 
-* Case III - SRC is repository URL, DST is working copy path:
-
-   Treat this is a special checkout of SRC (at the optionally supplied
-   revision, even), except that once the checkout is complete, you
-   have DST scheduled for commit as a copy.
-
-   Moves are disallowed in this case.
-
-* Case IV - SRC is repository URL, DST is repository URL:
+* Case D - SRC is repository URL, DST is repository URL:
 
    This is a freaky special commit drive, where we operate purely on
    our ability to split paths up into components, and then "crawl"
