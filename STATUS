@@ -21,13 +21,6 @@ Candidate changes:
           1.1?)
       +1: cmpilato
 
-  * r10775
-    Wrap svn_config_enumerator_t for Perl bindings.
-    Justification:
-      Perl bindings only; completeness.
-    Votes:
-      +1: clkao, breser
-
   * r10800 (Issue #2031)
     Add -lstdc++ to javahl binding DSO at link-time.
     Justification:
