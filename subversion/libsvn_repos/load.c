@@ -40,6 +40,7 @@ struct parse_baton
   svn_boolean_t use_history;
   svn_stream_t *outstream;
   enum svn_repos_load_uuid uuid_action;
+  const char *parent_dir;
 };
 
 struct revision_baton
@@ -565,7 +566,12 @@ make_node_baton (apr_hash_t *headers,
   /* Then add info from the headers.  */
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
                            APR_HASH_KEY_STRING)))
-    nb->path = apr_pstrdup (pool, val);
+  {
+    if (rb->pb->parent_dir)
+      nb->path = svn_path_join (rb->pb->parent_dir, val, pool);
+    else
+      nb->path = apr_pstrdup (pool, val);
+  }
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
                            APR_HASH_KEY_STRING)))
@@ -955,6 +961,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
                                svn_boolean_t use_history,
                                enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
+                               const char *parent_dir,
                                apr_pool_t *pool)
 {
   svn_repos_parser_fns_t *parser = apr_pcalloc (pool, sizeof(*parser));
@@ -975,6 +982,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   pb->use_history = use_history;
   pb->outstream = outstream;
   pb->uuid_action = uuid_action;
+  pb->parent_dir = parent_dir;
 
   *parser_callbacks = parser;
   *parse_baton = pb;
@@ -988,6 +996,7 @@ svn_repos_load_fs (svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
                    enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -1000,6 +1009,7 @@ svn_repos_load_fs (svn_repos_t *repos,
                                           TRUE, /* look for copyfrom revs */
                                           uuid_action,
                                           feedback_stream,
+                                          parent_dir,
                                           pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton, pool));

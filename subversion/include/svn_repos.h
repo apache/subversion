@@ -825,6 +825,7 @@ svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
                                 enum svn_repos_load_uuid uuid_action,
+                                const char *parent_dir,
                                 apr_pool_t *pool);
 
 
@@ -958,6 +959,10 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
  *
+ * If @a parent_dir is not null, then the parser will reparent all the
+ * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
+ * must be an existing directory in the repository.
+ *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
  *
  */
@@ -968,6 +973,7 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                svn_boolean_t use_history,
                                enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
+                               const char *parent_dir,
                                apr_pool_t *pool);
 /** @} */
 

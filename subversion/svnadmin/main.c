@@ -84,6 +84,7 @@ enum
     svnadmin__in_repos_template,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
+    svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync
   };
 
@@ -125,6 +126,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"force-uuid", svnadmin__force_uuid, 0,
      "set repos UUID to that found in stream, if any."},
+
+    {"parent-dir", svnadmin__parent_dir, 1,
+     "load at specified directory in repository"},
 
     {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
      "disable fsync at database transaction commit [Berkeley DB]."},
@@ -170,7 +174,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "new revisions into the repository's filesystem.  If the repository\n"
      "was previously empty, its UUID will, by default, be changed to the\n"
      "one specified in the stream.  Progress feedback is sent to stdout.\n",
-     {svnadmin__ignore_uuid, svnadmin__force_uuid} },
+     {svnadmin__ignore_uuid, svnadmin__force_uuid, svnadmin__parent_dir} },
 
     {"lscr", subcommand_lscr, {0},
      "usage: svnadmin lscr REPOS_PATH PATH [--copies]\n\n"
@@ -226,6 +230,7 @@ struct svnadmin_opt_state
                                                        --force-uuid */
   const char *on_disk;
   const char *in_repos;
+  const char *parent_dir;
 };
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -364,7 +369,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_stream_t *stdin_stream, *stdout_stream;
-  
+
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   
   /* Read the stream from STDIN.  Users can redirect a file. */
@@ -376,7 +381,8 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                 apr_file_open_stdout, pool));
   
   SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
-                              opt_state->uuid_action, pool));
+                              opt_state->uuid_action, opt_state->parent_dir,
+                              pool));
 
   return SVN_NO_ERROR;
 }
@@ -689,6 +695,16 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
+        break;
+      case svnadmin__parent_dir:
+        err = svn_utf_cstring_to_utf8 (&opt_state.parent_dir, opt_arg,
+                                       NULL, pool);
+        if (err)
+          {
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
