@@ -241,7 +241,7 @@ svn_error_t *svn_txdelta_apply (svn_read_fn_t *source_fn,
    written.  Allocation takes place in a sub-pool of POOL.  On return,
    *HANDLER is set to a window handler function and *HANDLER_BATON is
    set to the value to pass as the BATON argument to *HANDLER.  */
-svn_error_t *svn_txdelta_to_vcdiff (svn_write_fn_t *write_fn
+svn_error_t *svn_txdelta_to_vcdiff (svn_write_fn_t *write_fn,
                                     void *write_baton,
                                     apr_pool_t *pool,
                                     svn_txdelta_window_handler_t **handler,
