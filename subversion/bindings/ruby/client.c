@@ -165,7 +165,7 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   err = svn_client_checkout (before_editor, before_edit_baton,
                              after_editor, after_edit_baton,
                              auth_baton, URL, path, revision,
-			     TRUE, tm, xml_src, pool);
+                             TRUE, tm, xml_src, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -253,17 +253,28 @@ cl_add (VALUE class, VALUE aPath, VALUE recursive)
 }
 
 static VALUE
-cl_delete (VALUE class, VALUE aPath, VALUE force)
+cl_delete (int argc, VALUE *argv, VALUE self)
 {
-  svn_stringbuf_t *path;
+  VALUE aPath, force, aMessage;
+  svn_stringbuf_t *path, *message;
+  svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
   svn_error_t *err;
 
+  rb_scan_args (argc, argv, "21", &aPath, &force, &aMessage);
   Check_Type (aPath, T_STRING);
+  if (aMessage != Qnil)
+    Check_Type (aMessage, T_STRING);
+  Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
+  if (aMessage == Qnil)
+    message = NULL;
+  else
+    message = svn_stringbuf_create (StringValuePtr (aMessage), pool);
 
-  err = svn_client_delete (path, RTEST (force), pool);
+  err = svn_client_delete (path, RTEST (force), auth_baton,
+                           message, pool);
 
   apr_pool_destroy (pool);
 
@@ -571,7 +582,7 @@ void svn_ruby_init_client (void)
   rb_define_method (cSvnClient, "checkout", cl_checkout, -1);
   rb_define_method (cSvnClient, "update", cl_update, -1);
   rb_define_singleton_method (cSvnClient, "add", cl_add, 2);
-  rb_define_singleton_method (cSvnClient, "delete", cl_delete, 2);
+  rb_define_method (cSvnClient, "delete", cl_delete, -1);
   rb_define_method (cSvnClient, "import", cl_import, -1);
   rb_define_method (cSvnClient, "commit", cl_commit, -1);
   rb_define_method (cSvnClient, "status", cl_status, 4);
