@@ -87,7 +87,10 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
                                          svn_vernum_t version,
-                                         ...);
+                                         ...)
+{
+  return SVN_NO_ERROR;
+}
 
 
 /* For a given ENTRYNAME in PATH, read the `version's file and get its
@@ -97,14 +100,20 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
 svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
-                                         svn_vernum_t &version,
-                                         ...);
+                                         svn_vernum_t *version,
+                                         ...)
+{
+  return SVN_NO_ERROR;
+}
 
 
 /* Remove ENTRYNAME from PATH's `versions' file. */
 svn_error_t *svn_wc__remove_versions_entry (svn_string_t *path,
                                             apr_pool_t *pool,
-                                            const char *entryname);
+                                            const char *entryname)
+{
+  return SVN_NO_ERROR;
+}
 
 
 

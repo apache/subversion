@@ -141,19 +141,24 @@ svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
         2. ... and store the result in ./newfile
         
      That's right -- we don't want to update SVN/text-base/newfile
-     until after the merge, because once that's updated, the ability
-     to do any merging is lost, as we won't have the old ancestor
-     locally anymore.
+     until after the merge, because once the true text-base is
+     updated, the ability to merge is lost, as we don't have the old
+     ancestor locally anymore.
 
      But for now, we just copy the tmp text-base over to the real
      file.
   */
-     
+  svn_boolean_t exists;
+  svn_error_t *err;
+  svn_string_t *tmp_text_base = svn_wc__text_base_path (path, 1, pool);
+  err = svn_wc__file_exists_p (&exists, tmp_text_base, pool);
+  if (err)
+    return err;
 
-  return (*patch_fn) (diff,
-                      svn_wc__text_base_path (path, 1, pool),
-                      path,
-                      pool);
+  if (! exists)
+    return SVN_NO_ERROR;   /* tolerate mop-up calls gracefully */
+  else
+    return (*patch_fn) (diff, tmp_text_base, path, pool);
 }
 
 

@@ -178,6 +178,15 @@ svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
                                        apr_pool_t *pool,
                                        ...);
 
+/* Set *EXISTS to true iff PATH exists, false otherwise.
+ * If PATH's existence cannot be determined, an error will be
+ * returned, and *EXISTS untouched.
+ */
+svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
+                                    svn_string_t *path,
+                                    apr_pool_t *pool);
+
+
 /* Open the text-base for FILE.
  * FILE can be any kind of path ending with a filename.
  * Behaves like svn_wc__open_adm_file(), which see.
@@ -244,6 +253,15 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 
 /*** The log file. ***/
 
+/* Note: every entry in the logfile is either idempotent or atomic.
+ * This allows us to remove the entire logfile when every entry in it
+ * has been completed -- if you crash in the middle of running a
+ * logfile, and then later are running over it again as part of the
+ * recovery, a given entry is "safe" in the sense that you can either
+ * tell it has already been done (in which case, ignore it) or you can
+ * do it again without ill effect.
+ */
+
 /* Ops and attributes in the log file. */
 #define SVN_WC__LOG_MERGE_TEXT          "merge-text"
 #define SVN_WC__LOG_REPLACE_TEXT_BASE   "replace-text-base"
@@ -287,7 +305,7 @@ svn_error_t *svn_wc__set_versions_entry (svn_string_t *path,
 svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
                                          apr_pool_t *pool,
                                          const char *entryname,
-                                         svn_vernum_t &version,
+                                         svn_vernum_t *version,
                                          ...);
 
 
