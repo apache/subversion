@@ -12,9 +12,6 @@ command-line client can.
 This chapter describes the two libraries, and the layout of working
 copies.
 
-todo: note how the network access library is not really network right
-now!
-
 @menu
 * What working copies look like
 * The working copy management library
@@ -22,8 +19,8 @@ now!
 @end menu
 
 @c -----------------------------------------------------------------------
-@node Text vs binary issues
-@subsection Text vs binary issues
+@node What working copies look like
+@subsection What working copies look like
 
 fish
 
