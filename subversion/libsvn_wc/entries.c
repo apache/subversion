@@ -299,15 +299,17 @@ write_entry (apr_file_t *outfile,
       kindstr = NULL;  /* tolerate unknown kind, for forward compatibility */
     }
   
-  apr_hash_set (attributes,
-                SVN_WC__ENTRIES_ATTR_NAME,
-                strlen (SVN_WC__ENTRIES_ATTR_NAME),
-                entryname);
+  if (entryname)
+    apr_hash_set (attributes,
+                  SVN_WC__ENTRIES_ATTR_NAME,
+                  strlen (SVN_WC__ENTRIES_ATTR_NAME),
+                  entryname);
 
-  apr_hash_set (attributes,
-                SVN_WC__ENTRIES_ATTR_VERSION,
-                strlen (SVN_WC__ENTRIES_ATTR_VERSION),
-                verstr);
+  if (version != SVN_INVALID_VERNUM)
+    apr_hash_set (attributes,
+                  SVN_WC__ENTRIES_ATTR_VERSION,
+                  strlen (SVN_WC__ENTRIES_ATTR_VERSION),
+                  verstr);
 
   if (kind)
     apr_hash_set (attributes,
@@ -675,8 +677,9 @@ svn_wc__entry_set (svn_string_t *path,
 
 
 
-
-
+/* kff todo: I'm not sure we need both entry_merge and entry_set.
+   The merging behavior is always desired, right?  Think about
+   this... */
 svn_error_t *
 svn_wc__entry_merge (svn_string_t *path,
                      svn_string_t *entryname,
@@ -701,7 +704,7 @@ svn_wc__entry_merge (svn_string_t *path,
                            &existing_hash);
   if (err) return err;
 
-  if (! version)
+  if (version == SVN_INVALID_VERNUM)
     version = existing_version;
   if (! kind)
     kind = existing_kind;

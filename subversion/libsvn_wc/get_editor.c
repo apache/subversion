@@ -91,6 +91,9 @@ struct dir_baton
   /* The path to this directory. */
   svn_string_t *path;
 
+  /* Basename of this directory. */
+  svn_string_t *name;
+
   /* The number of other changes associated with this directory in the
      delta (typically, the number of files being changed here, plus
      this dir itself).  BATON->ref_count starts at 1, is incremented
@@ -170,6 +173,9 @@ make_dir_baton (svn_string_t *name,
   d->parent_baton = parent_baton;
   d->ref_count    = 1;
   d->pool         = subpool;
+
+  if (name)
+    d->name = svn_string_dup (name, subpool);
 
   if (parent_baton)
     parent_baton->ref_count++;
@@ -499,8 +505,17 @@ add_directory (svn_string_t *name,
                       parent_dir_baton,
                       parent_dir_baton->pool);
 
-  /* kff todo: need to also let the parent know this new subdirectory
-     exists! */
+  /* Notify the parent that this child dir exists.  This can happen
+     right away, there is no need to wait until the child is done. */
+  err = svn_wc__entry_merge (parent_dir_baton->path,
+                             this_dir_baton->name,
+                             SVN_INVALID_VERNUM,
+                             svn_dir_kind,
+                             parent_dir_baton->pool,
+                             NULL);
+  if (err)
+    return err;
+
 
   err = prep_directory (this_dir_baton->path,
                         this_dir_baton->edit_baton->repository,
