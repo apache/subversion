@@ -72,7 +72,6 @@ svn_diff__snake(apr_off_t k,
 
       previous_lcs = lcs->next;
       lcs->next = *freelist;
-      lcs->next = *freelist;
       *freelist = lcs;
       lcs = previous_lcs;
     }
