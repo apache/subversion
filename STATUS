@@ -119,3 +119,10 @@ Candidate changes:
            better than a crashing client.
     Votes:
       +1: lundblad, kfogel, breser
+
+  * r10190
+    Allow properties with colons in their name to be read with propget
+    over DAV.
+    Justification: If you can set it you should be able to read it.
+    Votes:
+      +1: breser
