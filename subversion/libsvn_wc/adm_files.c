@@ -380,7 +380,7 @@ init_adm (svn_string_t *path,
   const char *format_contents = "1\n";
   const char *readme_contents =
     "This is a Subversion working copy administrative directory.\n"
-    "Visit http://www.subversion.tigris.org/ for more information.\n";
+    "Visit http://subversion.tigris.org/ for more information.\n";
   svn_string_t *versions_contents
     = svn_wc__versions_init_contents (version, pool);
 
