@@ -15,10 +15,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Produce all the `Makefile.in's, verbosely, and create neat missing things
-# like `libtool', `install-sh', etc.
-automake --add-missing --verbose
-
 # Produce aclocal.m4, so autoconf gets the automake macros it needs
 echo "Creating aclocal.m4..."
 if [ -r aclocal.m4 ]; then
@@ -35,6 +31,10 @@ if [ -r aclocal.m4.save ]; then
     rm aclocal.m4.save
   fi
 fi
+
+# Produce all the `Makefile.in's, verbosely, and create neat missing things
+# like `libtool', `install-sh', etc.
+automake --add-missing --verbose
 
 # If there's a config.cache file, we may need to delete it.  
 # If we have an existing configure script, save a copy for comparison.
