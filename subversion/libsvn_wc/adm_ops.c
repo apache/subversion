@@ -538,7 +538,6 @@ add_to_revision_control (svn_stringbuf_t *path,
   svn_boolean_t is_replace = FALSE;
   apr_status_t apr_err;
   apr_hash_t *atts = apr_hash_make (pool);
-  svn_stringbuf_t *url = NULL;
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
@@ -595,18 +594,6 @@ add_to_revision_control (svn_stringbuf_t *path,
       apr_hash_set (atts, 
                     SVN_WC_ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
                     copyfrom_rev);
-
-      if (kind == svn_node_dir)
-        {        
-          /* Need to set SVN_WC_ENTRY_ATTR_ANCESTOR in the hash too,
-             to reflect the copied directory's final url.  Normally,
-             __ensure_adm() would create this url.  But because the
-             copied directory already has an .svn area, the function
-             doesn't touch it. */
-          SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
-          url = svn_stringbuf_dup (parent_entry->ancestor, pool);
-          svn_path_add_component (url, basename, svn_path_url_style);
-        }
     }
 
 
@@ -672,16 +659,6 @@ add_to_revision_control (svn_stringbuf_t *path,
                | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
                | SVN_WC__ENTRY_MODIFY_FORCE);
 
-      /* If we had to manually calculate a copied directory's ancestor
-         url, add to the flags. */
-      if (url)
-        {
-          flags |= SVN_WC__ENTRY_MODIFY_ANCESTOR;
-
-          /* ### call a function that recursively tweaks every
-             subdir's url to be correct   */
-        }
-
       /* And finally, make sure this entry is marked for addition in
          its own administrative directory. */
       SVN_ERR (svn_wc__entry_modify
@@ -691,9 +668,27 @@ add_to_revision_control (svn_stringbuf_t *path,
                 is_replace ? svn_wc_schedule_replace : svn_wc_schedule_add,
                 svn_wc_existence_normal,
                 FALSE, 0, 0,
-                url,   /* may or may not be null */
+                NULL,
                 atts,  /* may or may not contain copyfrom args */
                 pool, NULL));
+
+
+      if (ancestor_path)
+        {
+          /* If this new directory has ancestry, it's not enough to
+             schedule it for addition with copyfrom args.  We also
+             need to rewrite its ancestor-url, and rewrite the
+             ancestor-url of ALL its children! */
+
+          /* Figure out what the new url should be. */
+          svn_stringbuf_t *url;
+          SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
+          url = svn_stringbuf_dup (parent_entry->ancestor, pool);
+          svn_path_add_component (url, basename, svn_path_url_style);
+
+          /* Change the url recursively. */
+          SVN_ERR (svn_wc__recursively_rewrite_ancestry (path, url, pool));
+        }
     }
   
   /* Now, call our client feedback function. */
