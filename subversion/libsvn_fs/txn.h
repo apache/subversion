@@ -1,4 +1,4 @@
-/* node.h : interface to node functions, private to libsvn_fs
+/* txn.h : interface to Subversion transactions, private to libsvn_fs
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
