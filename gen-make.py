@@ -224,7 +224,7 @@ def main(fname, oname=None, skip_depends=0):
               % (string.join(includes),))
   for file in includes:
     ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'
-                % (file,
+                % (os.path.join('$(top_srcdir)', file),
                    os.path.join('$(includedir)', os.path.basename(file))))
 
   ofile.write('\n# handy shortcut targets\n')
