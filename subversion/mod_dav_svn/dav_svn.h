@@ -70,7 +70,7 @@ typedef struct {
   svn_revnum_t root_rev;
 
   /* the root of the revision tree */
-  svn_fs_dir_t *root_dir;
+  svn_fs_node_t *root_dir;
   
 } dav_svn_repos;
 

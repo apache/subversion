@@ -31,7 +31,7 @@
 
 struct dav_stream {
   const dav_resource *res;
-  svn_fs_file_t *file;
+  svn_fs_node_t *file;
   svn_read_fn_t *readfn;
   void *baton;
 };
@@ -270,15 +270,24 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
     }
   else
     {
-      /* ### no way to ask for "head" */
       /* ### note that we won't *always* go for the head... if this resource
          ### corresponds to a Version Resource, then we have a specific
          ### version to ask for.
       */
-      repos->root_rev = 1;
+      serr = svn_fs_youngest_rev(&repos->root_rev);
+      if (serr != NULL)
+        {
+          /* ### do something with serr */
+          /* ### return an error rather than log it? */
+          ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
+                        serr->apr_err, r,
+                        "Could not determine the proper revision to access");
+          return NULL;
+        }
 
       /* get the root of the tree */
-      serr = svn_fs_open_root(&repos->root_dir, repos->fs, repos->root_rev);
+      serr = svn_fs_open_rev_root(&repos->root_dir, repos->fs,
+                                  repos->root_rev, r->pool);
       if (serr != NULL)
         {
           /* ### do something with serr */
@@ -296,18 +305,14 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
       */
       if (strcmp(relative, "/") == 0)
         {
-          comb->priv.node = svn_fs_dir_to_node(repos->root_dir);
+          comb->priv.node = repos->root_dir;
           comb->res.collection = 1;
         }
       else
         {
-          svn_string_t relpath = *comb->priv.path;
-
           /* open the requested resource. note that we skip the leading "/" */
-          ++relpath.data;
-          --relpath.len;
-          serr = svn_fs_open_node(&comb->priv.node, repos->root_dir, &relpath,
-                                  r->pool);
+          serr = svn_fs_open_node(&comb->priv.node, repos->root_dir,
+                                  relative + 1, r->pool);
           if (serr != NULL)
             {
               /* ### do something with serr */
@@ -436,7 +441,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
 #if 0
   /* get an FS file object for the resource [from the node] */
-  (*stream)->file = svn_fs_node_to_file(info->node);
+  (*stream)->file = info->node;
   /* assert: file != NULL   (we shouldn't be here if node is a DIR) */
 
   /* ### assuming mode == read for now */
@@ -458,7 +463,7 @@ static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
   /* ### anything that needs to happen with stream->baton? */
 
 #if 0
-  svn_fs_close_file(stream->file);
+  svn_fs_free_file_contents(stream->baton);
 #endif
 
   return NULL;
@@ -496,7 +501,7 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
 
 const char * dav_svn_getetag(const dav_resource *resource)
 {
-  const svn_fs_id_t id[] = { 1, 1, -1 }; /* ### temp, until we can fetch */
+  const svn_fs_id_t *id;
   svn_string_t *idstr;
 
   if (!resource->exists)
@@ -504,8 +509,7 @@ const char * dav_svn_getetag(const dav_resource *resource)
 
   /* ### what kind of etag to return for collections, activities, etc? */
 
-  /* ### fetch the id from the node */
-
+  id = svn_fs_get_node_id(resource->info->node, resource->info->pool);
   idstr = svn_fs_unparse_id(id, resource->info->pool);
   return apr_psprintf(resource->info->pool, "\"%s\"", idstr);
 }
@@ -541,7 +545,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   /* set up the Content-Length header */
 #if 0
   /* ### need to get FILE */
-  serr = svn_fs_file_length(&length, file);
+  serr = svn_fs_file_length(&length, file, resource->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -592,7 +596,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   int isdir = ctx->res.collection;
   dav_error *err;
   svn_error_t *serr;
-  svn_fs_dir_t *dir;
   apr_hash_index_t *hi;
   apr_size_t path_len;
   apr_size_t uri_len;
@@ -633,8 +636,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
   /* fetch this collection's children */
   /* ### shall we worry about filling params->pool? */
-  dir = svn_fs_node_to_dir(save_node);
-  serr = svn_fs_dir_entries(&children, dir, params->pool);
+  serr = svn_fs_dir_entries(&children, save_node, params->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch collection members");
@@ -667,7 +669,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       /* open the child node */
       /* ### faster to use dirent->id? (svn_fs__open_node_by_id) */
       /* ### shall we worry about filling params->pool? */
-      serr = svn_fs_open_node(&ctx->info.node, dir, dirent->name,
+      serr = svn_fs_open_node(&ctx->info.node, save_node, dirent->name,
                               params->pool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
