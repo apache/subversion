@@ -124,7 +124,15 @@ const char *svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
    TGT_PATH and REVNUM is the fs path/revision pair that is the
    "target" of dir_delta.  In other words, a tree delta will be
    returned that transforms the transaction into TGT_PATH/REVNUM.
- 
+   TGT_PATH may (indeed, should) be NULL when the source and target
+   paths of the report are the same.  That is, TGT_PATH should *only*
+   be specified when specifying that the resultant editor drive be one
+   that tranforms the reported heirarchy into a pristing tree of
+   TGT_PATH at revision REVNUM.  Else, a NULL value for TGT_PATH will
+   indicate that the editor should be driven in such a way as to
+   transform the reported heirarchy to revision REVNUM, preserving the
+   reported heirarchy.
+
    TEXT_DELTAS instructs the driver of the EDITOR to enable to disable
    the generation of text deltas.
 
@@ -163,7 +171,9 @@ svn_error_t *svn_repos_set_path (void *report_baton,
 
 /* Given a REPORT_BATON constructed by svn_repos_begin_report(), this
    routine will build REVISION:LINK_PATH into the current transaction
-   at PATH. */
+   at PATH.  Note that while PATH is relative to the anchor/target
+   used in the creation of the REPORT_BATON, LINK_PATH is an absolute
+   filesystem path!  */
 svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
                                   const char *link_path,

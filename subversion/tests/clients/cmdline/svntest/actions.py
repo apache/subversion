@@ -159,6 +159,44 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   return 0
 
 
+
+def verify_update(actual_output, wc_dir_name,
+                  output_tree, disk_tree, status_tree,
+                  singleton_handler_a, a_baton,
+                  singleton_handler_b, b_baton,
+                  check_props):
+  """Verify update of WC_DIR_NAME.
+  
+  The subcommand output (found in ACTUAL_OUTPUT) will be verified
+  against OUTPUT_TREE, and the working copy itself will be verified
+  against DISK_TREE.  If optional STATUS_OUTPUT_TREE is given, then
+  'svn status' output will be compared.  (This is a good way to check
+  that revision numbers were bumped.)  SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
+  function's doc string for more details.  If CHECK_PROPS is set, then
+  disk comparison will examine props.  Return 0 if successful."""
+
+  # Verify actual output against expected output.
+  if tree.compare_trees (actual_output, output_tree):
+    return 1
+
+  # Create a tree by scanning the working copy
+  mytree = tree.build_tree_from_wc (wc_dir_name, check_props)
+
+  # Verify expected disk against actual disk.
+  if tree.compare_trees (mytree, disk_tree,
+                         singleton_handler_a, a_baton,
+                         singleton_handler_b, b_baton):
+    return 1
+
+  # Verify via 'status' command too, if possible.
+  if status_tree:
+    if run_and_verify_status(wc_dir_name, status_tree):
+      return 1
+  
+  return 0
+
+
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
                           singleton_handler_a = None,
@@ -183,25 +221,43 @@ def run_and_verify_update(wc_dir_name,
   output, errput = main.run_svn (None, 'up', wc_dir_name, *args)
   mytree = tree.build_tree_from_checkout (output)
 
-  # Verify actual output against expected output.
-  if tree.compare_trees (mytree, output_tree):
-    return 1
+  return verify_update (mytree, wc_dir_name,
+                        output_tree, disk_tree, status_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton,
+                        check_props)
 
-  # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name, check_props)
 
-  # Verify expected disk against actual disk.
-  if tree.compare_trees (mytree, disk_tree,
-                         singleton_handler_a, a_baton,
-                         singleton_handler_b, b_baton):
-    return 1
+def run_and_verify_switch(wc_dir_name,
+                          wc_target,
+                          switch_url,
+                          output_tree, disk_tree, status_tree,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None,
+                          check_props = 0):
 
-  # Verify via 'status' command too, if possible.
-  if status_tree:
-    if run_and_verify_status(wc_dir_name, status_tree):
-      return 1
-  
-  return 0
+  """Switch WC_TARGET (in working copy dir WC_DIR_NAME) to SWITCH_URL.
+
+  The subcommand output will be verified against OUTPUT_TREE, and the
+  working copy itself will be verified against DISK_TREE.  If optional
+  STATUS_OUTPUT_TREE is given, then 'svn status' output will be
+  compared.  (This is a good way to check that revision numbers were
+  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
+  tree.compare_trees - see that function's doc string for more details.
+  If CHECK_PROPS is set, then disk comparison will examine props.
+  Return 0 if successful."""
+
+  # Update and make a tree of the output.
+  output, errput = main.run_svn (None, 'switch', wc_target, switch_url)
+  mytree = tree.build_tree_from_checkout (output)
+
+  return verify_update (mytree, wc_dir_name,
+                        output_tree, disk_tree, status_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton,
+                        check_props)
 
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,

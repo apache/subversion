@@ -1616,7 +1616,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
   svn_xml_escape_nts (&qpath, path, rb->ras->pool);
   svn_xml_escape_nts (&qlinkpath, bc_relative.data, rb->ras->pool);
   entry = apr_psprintf(rb->ras->pool,
-                       "<S:entry rev=\"%ld\" linkpath=\"%s\">%s</S:entry>" 
+                       "<S:entry rev=\"%ld\" linkpath=\"/%s\">%s</S:entry>" 
                        DEBUG_CR,
                        revision, qlinkpath->data, qpath->data);
 

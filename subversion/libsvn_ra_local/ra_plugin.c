@@ -367,7 +367,6 @@ svn_ra_local__do_update (void *session_baton,
                          void *update_baton)
 {
   svn_revnum_t revnum_to_update_to;
-  svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
 
@@ -375,12 +374,6 @@ svn_ra_local__do_update (void *session_baton,
   const char *target;
   target = update_target ? update_target->data : NULL;
 
-  /* We want dir_delta to run on -identical- fs paths. */
-  switch_path = 
-    svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
-  if (target)
-    svn_path_add_component_nts (switch_path, target);
-  
   if (! SVN_IS_VALID_REVNUM(update_revision))
     SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
   else
@@ -396,7 +389,7 @@ svn_ra_local__do_update (void *session_baton,
                                    sbaton->repos, 
                                    sbaton->fs_path->data,
                                    target, 
-                                   switch_path->data,
+                                   NULL,
                                    TRUE, /* send text-deltas */
                                    recurse,
                                    update_editor, update_baton,
@@ -482,19 +475,12 @@ svn_ra_local__do_status (void *session_baton,
                          void *status_baton)
 {
   svn_revnum_t revnum_to_update_to;
-  svn_stringbuf_t *switch_path;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   void *rbaton;
 
   /* ### fix the status_target param at some point */
   const char *target;
   target = status_target ? status_target->data : NULL;
-
-  /* We want dir_delta to run on -identical- fs paths. */
-  switch_path =
-    svn_stringbuf_create_from_string (sbaton->fs_path, sbaton->pool);
-  if (target)
-    svn_path_add_component_nts (switch_path, target);
 
   SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_update_to));
 
@@ -508,7 +494,7 @@ svn_ra_local__do_status (void *session_baton,
                                    sbaton->repos, 
                                    sbaton->fs_path->data,
                                    target,
-                                   switch_path->data,
+                                   NULL,
                                    FALSE, /* don't send text-deltas */
                                    recurse,
                                    status_editor, status_baton,

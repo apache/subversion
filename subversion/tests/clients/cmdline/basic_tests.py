@@ -542,6 +542,108 @@ def basic_revert(sbox):
 
 #----------------------------------------------------------------------
 
+def basic_switch(sbox):
+  "basic switch command"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  ### Switch the file `iota' to `A/D/gamma'.
+
+  # Construct some paths for convenience
+  iota_path = os.path.join(wc_dir, 'iota')
+  gamma_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'gamma')
+
+  # Create expected output tree
+  output_list = [[iota_path, None, {}, {'status' : 'U '}]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree (iota will have gamma's contents)
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree[0][1] = my_greek_tree[11][1]
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Do the switch and check the results in three ways.
+  if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
+                                           expected_output_tree,
+                                           expected_disk_tree,
+                                           expected_status_tree):
+    return 1
+  
+  ### Switch the directory `A/D/H' to `A/D/G'.
+
+  # Construct some paths for convenience
+  ADH_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_path = os.path.join(ADH_path, 'chi')
+  omega_path = os.path.join(ADH_path, 'omega')
+  psi_path = os.path.join(ADH_path, 'psi')
+  pi_path = os.path.join(ADH_path, 'pi')
+  tau_path = os.path.join(ADH_path, 'tau')
+  rho_path = os.path.join(ADH_path, 'rho')
+  ADG_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'G')
+
+  # Create expected output tree
+  output_list = [[chi_path, None, {}, {'status' : 'D '}],
+                 [omega_path, None, {}, {'status' : 'D '}],
+                 [psi_path, None, {}, {'status' : 'D '}],
+                 [pi_path, None, {}, {'status' : 'A '}],
+                 [rho_path, None, {}, {'status' : 'A '}],
+                 [tau_path, None, {}, {'status' : 'A '}]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected disk tree (iota will have gamma's contents,
+  # A/D/H/* will look like A/D/G/*)
+  my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree[0][1] = my_greek_tree[11][1]
+  my_greek_tree.pop(path_index(my_greek_tree,
+                               os.path.join('A', 'D', 'H', 'chi')))
+  my_greek_tree.pop(path_index(my_greek_tree,
+                               os.path.join('A', 'D', 'H', 'omega')))
+  my_greek_tree.pop(path_index(my_greek_tree,
+                               os.path.join('A', 'D', 'H', 'psi')))
+  my_greek_tree.append([os.path.join('A', 'D', 'H', 'pi'),
+                        "This is the file 'pi'.", {}, {}])
+  my_greek_tree.append([os.path.join('A', 'D', 'H', 'rho'),
+                        "This is the file 'rho'.", {}, {}])
+  my_greek_tree.append([os.path.join('A', 'D', 'H', 'tau'),
+                        "This is the file 'tau'.", {}, {}])
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list.pop(path_index(status_list, chi_path))
+  status_list.pop(path_index(status_list, omega_path))
+  status_list.pop(path_index(status_list, psi_path))
+  status_list.append([pi_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '1',
+                       'repos_rev' : '1'}])
+  status_list.append([rho_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '1',
+                       'repos_rev' : '1'}])
+  status_list.append([tau_path, None, {},
+                      {'status' : '_ ',
+                       'wc_rev' : '1',
+                       'repos_rev' : '1'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Do the switch and check the results in three ways.
+  return svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
+
+
+  
+#----------------------------------------------------------------------
+
 
 ########################################################################
 # Run the tests
@@ -557,6 +659,7 @@ test_list = [ None,
               basic_conflict,
               basic_cleanup,
               basic_revert,
+              basic_switch,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

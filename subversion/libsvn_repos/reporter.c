@@ -157,11 +157,13 @@ svn_repos_link_path (void *report_baton,
   svn_repos_report_baton_t *rbaton = report_baton;
   svn_revnum_t *rev_ptr = apr_palloc (rbaton->pool, sizeof(*rev_ptr));
 
-  /* If this is the very first call, no second txn exists yet. */
-  if (! rbaton->txn2)
+  /* If this is the very first call, no second txn exists yet.  Of
+     course, we'll only use it if we're "updating", not when we're
+     "switching" */
+  if ((! rbaton->txn2) && (! rbaton->tgt_path))
     {
-      /* Start a transaction based on the same revision as the first
-         transaction. */
+      /* Start a transaction based on the revision to which we to
+         update. */
       SVN_ERR (svn_repos_fs_begin_txn_for_update (&(rbaton->txn2),
                                                   rbaton->repos,
                                                   rbaton->revnum_to_update_to,
@@ -188,12 +190,17 @@ svn_repos_link_path (void *report_baton,
   SVN_ERR (svn_fs_link (from_root, link_path,
                         rbaton->txn_root, from_path->data, rbaton->pool));
 
-  /* Copy into our second "goal" txn (re-use FROM_ROOT). */
-  SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
-                                 rbaton->revnum_to_update_to, rbaton->pool));
-  SVN_ERR (svn_fs_link (from_root, link_path,
-                        rbaton->txn2_root, from_path->data, rbaton->pool));
-  
+  /* Copy into our second "goal" txn (re-use FROM_ROOT) if we're using
+     it. */
+  if (rbaton->txn2)
+    {
+      SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
+                                     rbaton->revnum_to_update_to, 
+                                     rbaton->pool));
+      SVN_ERR (svn_fs_link (from_root, link_path,
+                            rbaton->txn2_root, from_path->data, rbaton->pool));
+    }
+
   /* Remember this path in our hashtable.  ### todo: Come back to
      this, as the original hash table idea mapped only paths to
      revisions, not paths to linkedpaths+revisions!  */
@@ -237,6 +244,7 @@ svn_repos_finish_report (void *report_baton)
 {
   svn_fs_root_t *target_root;
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
+  const char *tgt_path;
 
   /* If nothing was described, then we have an error */
   if (rbaton->txn == NULL)
@@ -254,6 +262,14 @@ svn_repos_finish_report (void *report_baton)
                                    rbaton->revnum_to_update_to,
                                    rbaton->pool));
 
+  /* Calculate the tgt_path if none was given. */
+  if (rbaton->tgt_path)
+    tgt_path = rbaton->tgt_path;
+  else
+    tgt_path = svn_path_join_many 
+      (rbaton->pool, rbaton->base_path,
+       rbaton->target ? rbaton->target->data : NULL, NULL);
+
   /* Drive the update-editor. */
   SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
                                 rbaton->base_path, 
@@ -261,7 +277,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->target->data : NULL,
                                 rbaton->path_rev_hash,
                                 target_root, 
-                                rbaton->tgt_path,
+                                tgt_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
@@ -328,7 +344,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->username = apr_pstrdup (pool, username);
   rbaton->base_path = apr_pstrdup (pool, fs_base);
   rbaton->target = target ? svn_stringbuf_create (target, pool) : NULL;
-  rbaton->tgt_path = apr_pstrdup (pool, tgt_path);
+  rbaton->tgt_path = tgt_path ? apr_pstrdup (pool, tgt_path) : NULL;
 
   /* Hand reporter back to client. */
   *report_baton = rbaton;

@@ -48,14 +48,6 @@ svn_cl__switch (apr_getopt_t *os,
   void *trace_edit_baton;
   svn_stringbuf_t *parent_dir, *base_tgt;
 
-  /* ### REMOVE ME when commits and updates learn how to deal with
-     disjoint urls in the working copy:  */
-  if (! opt_state->force)
-    return svn_error_create
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-       "Currently, updates and commits will not work properly in a switched\n"
-       "working copy.  If you want to switch anyway, pass the --force flag.");
-
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
      switch to ("switch_url"). */
