@@ -1,5 +1,5 @@
 /*
- * fs_loader.c:  Front-end to the various FS back ends
+ * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -27,6 +27,35 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* The FS loader library implements the a front end to "filesystem
+   abstract providers" (FSAPs), which implement the svn_fs API.
+
+   The loader library divides up the FS API into five categories:
+
+     - Top-level functions, which operate on paths to an FS
+     - Functions which operate on an FS object
+     - Functions which operate on a transaction object
+     - Functions which operate on a root object
+     - Functions which operate on a history object
+
+   Some generic fields of the FS, transaction, root, and history
+   objects are defined by the loader library; the rest are stored in
+   the "fsap_data" field which is defined by the FSAP.  Likewise, some
+   of the very simple svn_fs API functions (such as svn_fs_root_fs)
+   are defined by the loader library, while the rest are implemented
+   through vtable calls defined by the FSAP.
+
+   If you are considering writing a new database-backed filesystem
+   implementation, it may be appropriate to add a second, lower-level
+   abstraction to the libsvn_fs_base library which currently
+   implements the BDB filesystem type.  Consult the dev list for
+   details on the "FSP-level" abstraction concept.
+*/
+   
+
+
+/*** Top-level library vtable type ***/
+
 typedef struct fs_library_vtable_t
 {
   svn_error_t *(*create) (svn_fs_t *fs, const char *path, apr_pool_t *pool);
@@ -46,7 +75,9 @@ typedef struct fs_library_vtable_t
                                 apr_pool_t *pool);
 } fs_library_vtable_t;
 
-/* --- vtable types for the abstract FS objects --- */
+
+
+/*** vtable types for the abstract FS objects ***/
 
 typedef struct fs_vtable_t
 {
@@ -76,6 +107,7 @@ typedef struct fs_vtable_t
   svn_error_t *(*deltify) (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
 } fs_vtable_t;
 
+
 typedef struct txn_vtable_t
 {
   svn_error_t *(*commit) (const char **conflict_p, svn_revnum_t *new_rev,
@@ -90,6 +122,7 @@ typedef struct txn_vtable_t
   svn_error_t *(*root) (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
 			apr_pool_t *pool);
 } txn_vtable_t;
+
 
 /* Some of these operations accept multiple root arguments.  Since the
    roots may not all have the same vtable, we need a rule to determine
@@ -191,6 +224,7 @@ typedef struct root_vtable_t
                          apr_pool_t *pool);
 } root_vtable_t;
 
+
 typedef struct history_vtable_t
 {
   svn_error_t *(*prev) (svn_fs_history_t **prev_history_p,
@@ -200,8 +234,9 @@ typedef struct history_vtable_t
                             svn_fs_history_t *history, apr_pool_t *pool);
 } history_vtable_t;
 
+
 
-/* --- Definitions of the abstract FS object types --- */
+/*** Definitions of the abstract FS object types ***/
 
 struct svn_fs_t
 {
@@ -223,6 +258,7 @@ struct svn_fs_t
   void *fsap_data;
 };
 
+
 struct svn_fs_txn_t
 {
   /* The filesystem to which this transaction belongs */
@@ -240,6 +276,7 @@ struct svn_fs_txn_t
   txn_vtable_t *vtable;
   void *fsap_data;
 };
+
 
 struct svn_fs_root_t
 {
@@ -263,6 +300,7 @@ struct svn_fs_root_t
   void *fsap_data;
 };
 
+
 struct svn_fs_history_t
 {
   /* FSAP-specific vtable and private data */
@@ -270,8 +308,9 @@ struct svn_fs_history_t
   void *fsap_data;
 };
 
+
 
-/* --- Node-revision ID functions --- */
+/*** Node-revision ID functions ***/
 
 /* Node Revision IDs.
 
@@ -340,7 +379,7 @@ svn_fs_id_t *svn_fs__id_copy (const svn_fs_id_t *id,
 
 
 
-/* --- Miscellaneous utility functions --- */
+/*** Miscellaneous utility functions ***/
 
 /* Return a canonicalized version of a filesystem PATH, allocated in
    POOL.  While the filesystem API is pretty flexible about the
@@ -352,6 +391,7 @@ svn_fs_id_t *svn_fs__id_copy (const svn_fs_id_t *id,
    characters be removed.  */
 const char *
 svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
