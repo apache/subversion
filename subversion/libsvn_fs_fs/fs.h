@@ -127,10 +127,10 @@ typedef struct
 
   /* The size of the representation in bytes as seen in the revision
      file. */
-  apr_size_t size;
+  svn_filesize_t size;
 
   /* The size of the fulltext of the representation. */
-  apr_size_t expanded_size;
+  svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */
   const char *txn_id;

@@ -695,8 +695,8 @@ representation_string (representation_t *rep,
   if (rep->txn_id && mutable_rep_truncated)
     return "-1";
   else
-    return apr_psprintf (pool, "%ld %" APR_OFF_T_FMT " %" APR_SIZE_T_FMT " %"
-                         APR_SIZE_T_FMT " %s",
+    return apr_psprintf (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+                         " %" SVN_FILESIZE_T_FMT " %s",
                          rep->revision, rep->offset, rep->size,
                          rep->expanded_size,
                          svn_md5_digest_to_cstring (rep->checksum, pool));
@@ -2769,7 +2769,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   if (base_rep)
     {
       header = apr_psprintf (b->pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
-                             APR_SIZE_T_FMT "\n",
+                             SVN_FILESIZE_T_FMT "\n",
                              base_rep->revision, base_rep->offset,
                              base_rep->size);
     }
@@ -3013,7 +3013,7 @@ write_hash_handler (void *baton,
    the process, record the total size of the dump in *SIZE, and the
    md5 digest in CHECKSUM.  Perform temporary allocations in POOL. */
 static svn_error_t *
-write_hash_rep (apr_size_t *size,
+write_hash_rep (svn_filesize_t *size,
                 unsigned char checksum[APR_MD5_DIGESTSIZE],
                 apr_file_t *file,
                 apr_hash_t *hash,
@@ -3581,6 +3581,7 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
   apr_array_header_t *names;
+  apr_size_t ext_len = strlen (PATH_EXT_TXN);
 
   names = apr_array_make (pool, 1, sizeof (const char *));
   
@@ -3601,12 +3602,12 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
       name = key;
 
       /* The name must end with ".txn" to be considered a transaction. */
-      if (klen <= strlen (PATH_EXT_TXN)
-          || (strcmp (name + klen - strlen (PATH_EXT_TXN), PATH_EXT_TXN)) != 0)
+      if ((apr_size_t) klen <= ext_len
+          || (strcmp (name + klen - ext_len, PATH_EXT_TXN)) != 0)
         continue;
 
       /* Truncate the ".txn" extension and store the ID. */
-      id = apr_pstrndup (pool, name, strlen (name) - strlen (PATH_EXT_TXN));
+      id = apr_pstrndup (pool, name, strlen (name) - ext_len);
       APR_ARRAY_PUSH (names, const char *) = id;
     }
 
