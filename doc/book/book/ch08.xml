@@ -173,9 +173,10 @@ $ svn status -v myfile
         </varlistentry>
         
         <varlistentry>
-          <term><option>--ignore-ancestry</option></term>
+          <term><option>--notice-ancestry</option></term>
           <listitem>
-            <para>Ignores ancestry when calculating differences.</para>
+            <para>Pay attention to ancestry when calculating 
+              differences.</para>
           </listitem>
         </varlistentry>
       

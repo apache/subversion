@@ -1084,7 +1084,7 @@ def merge_one_file(sbox):
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target (sbox):
-  "merging a file, with no explicitly-specified target path"
+  "merging a file with no explicitly target path"
 
   sbox.build()
 
@@ -1331,7 +1331,7 @@ test_list = [ None,
               merge_with_implicit_target,
               merge_catches_nonexistent_target,
               merge_tree_deleted_in_target,
-              XFail(merge_similar_unrelated_trees),
+              merge_similar_unrelated_trees,
               merge_with_prev,
               XFail(merge_binary_file),
               # merge_one_file,          # See issue #1150.
