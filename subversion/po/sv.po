@@ -1,5 +1,5 @@
 # Swedish translations for subversion package
-# Copyright (C) 2004 Collab Net.
+# Copyright (C) 2004-2005 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
 # Translation dictionary:
@@ -16,6 +16,7 @@
 # item         objekt
 # label        märke
 # lock         lås
+# lock token   (???)
 # locked       låst
 # merge        förena
 # obstruct(ed) blockera
@@ -45,7 +46,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-03-22 21:09+0100\n"
-"PO-Revision-Date: 2005-02-24 14:21+0100\n"
+"PO-Revision-Date: 2005-03-22 21:58+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -86,7 +87,7 @@ msgstr ""
 "över"
 
 #: clients/cmdline/help-cmd.c:46
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -98,38 +99,33 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"användning: svn <subcommand> [options] [args]\n"
-"Skriv \"svn help <subcommand>\" för att få hjälp om specifika "
-"underkommandon.\n"
+"användning: svn <underkommando> [flaggor] [argument]\n"
+"Subversion kommandoradsklient, version %s.\n"
+"Skriv \"svn help <subcommand>\" för att få hjälp med specifika underkommandon.\n"
 "\n"
-"De flesta kommandona tar fil och/eller katalogargument och går ned i "
-"kataloger\n"
+"De flesta kommandona tar fil och/eller katalogargument och går ned i kataloger\n"
 "rekursivt. Om inga argument ges till sådana kommandon, använder de aktuell\n"
 "katalog rekursivt.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
 #: clients/cmdline/help-cmd.c:57
-#, fuzzy
 msgid ""
 "Subversion is a tool for version control.\n"
 "For additional information, see http://subversion.tigris.org/\n"
 msgstr ""
 "Subversion är ett verktyg för versionshantering.\n"
 "Se http://subversion.tigris.org/ för ytterligare information.\n"
-"\n"
 
 #: clients/cmdline/help-cmd.c:64
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
-msgstr ""
-"Följande åtkomstmoduler för databaser är tillgängliga:\n"
-"\n"
+msgstr "Följande arkivåtkomstmoduler är tillgängliga:\n\n"
 
 #: clients/cmdline/import-cmd.c:82
 msgid "Repository URL required when importing"
-msgstr "URL till databas måste anges vid import"
+msgstr "URL till arkiv måste anges vid import"
 
 #: clients/cmdline/import-cmd.c:86
 msgid "Too many arguments to import command"
@@ -156,14 +152,14 @@ msgid "URL: %s\n"
 msgstr "URL: %s\n"
 
 #: clients/cmdline/info-cmd.c:69
-#, fuzzy, c-format
+#, c-format
 msgid "Repository Root: %s\n"
-msgstr "Databas: %s\n"
+msgstr "Arkivrot: %s\n"
 
 #: clients/cmdline/info-cmd.c:73
 #, c-format
 msgid "Repository UUID: %s\n"
-msgstr "Databasens UUID: %s\n"
+msgstr "Arkivets UUID: %s\n"
 
 #: clients/cmdline/info-cmd.c:77
 #, c-format
@@ -196,7 +192,7 @@ msgstr "Schemalagd: att läggas till\n"
 
 #: clients/cmdline/info-cmd.c:112
 msgid "Schedule: delete\n"
-msgstr "Schemalagt: att raderas\n"
+msgstr "Schemalagd: att raderas\n"
 
 #: clients/cmdline/info-cmd.c:116
 msgid "Schedule: replace\n"
@@ -210,7 +206,7 @@ msgstr "Kopierad från URL: %s\n"
 #: clients/cmdline/info-cmd.c:128
 #, c-format
 msgid "Copied From Rev: %ld\n"
-msgstr "Kopierad Från Revision: %ld\n"
+msgstr "Kopierad från Revision: %ld\n"
 
 #: clients/cmdline/info-cmd.c:133
 #, c-format
@@ -220,7 +216,7 @@ msgstr "Författare till senaste ändringen: %s\n"
 #: clients/cmdline/info-cmd.c:137
 #, c-format
 msgid "Last Changed Rev: %ld\n"
-msgstr "Senast Ändrad I Revision: %ld\n"
+msgstr "Senast ändrad i revision: %ld\n"
 
 #: clients/cmdline/info-cmd.c:142
 msgid "Last Changed Date"
@@ -228,7 +224,7 @@ msgstr "Datum för senaste ändringen"
 
 #: clients/cmdline/info-cmd.c:148
 msgid "Text Last Updated"
-msgstr "Texten senast uppdaterad"
+msgstr "Innehållet senast uppdaterat"
 
 #: clients/cmdline/info-cmd.c:152
 msgid "Properties Last Updated"
@@ -259,23 +255,24 @@ msgstr "Konflikt: nuvarande basfil: %s\n"
 msgid "Conflict Properties File: %s\n"
 msgstr "Konfliktegenskapsfil: %s\n"
 
+# ###
 #: clients/cmdline/info-cmd.c:184
 #, c-format
 msgid "Lock Token: %s\n"
-msgstr ""
+msgstr "Låstoken: %s\n"
 
 #: clients/cmdline/info-cmd.c:188
 #, c-format
 msgid "Lock Owner: %s\n"
-msgstr ""
+msgstr "Låsägare: %s\n"
 
 #: clients/cmdline/info-cmd.c:193
 msgid "Lock Created"
-msgstr ""
+msgstr "Lås skapat"
 
 #: clients/cmdline/info-cmd.c:197
 msgid "Lock Expires"
-msgstr ""
+msgstr "Låset går ut"
 
 #: clients/cmdline/info-cmd.c:205
 #, c-format
@@ -283,6 +280,8 @@ msgid ""
 "Lock Comment (%i %s):\n"
 "%s\n"
 msgstr ""
+"Låskommentar (%i %s):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:279
 #, c-format
@@ -298,19 +297,15 @@ msgstr ""
 msgid ""
 "%s:  (Not a valid URL)\n"
 "\n"
-msgstr ""
-"%s:  (Inte en versionshanterad resurs)\n"
-"\n"
+msgstr "%s:  (Inte en giltig URL)\n\n"
 
 #: clients/cmdline/lock-cmd.c:53
-#, fuzzy
 msgid "Lock comment contains a zero byte"
-msgstr "Loggmeddelandet innehåller en noll-byte"
+msgstr "Låskommentaren innehåller en noll-byte"
 
 #: clients/cmdline/lock-cmd.c:136
-#, fuzzy
 msgid "Your lock comment was left in a temporary file:"
-msgstr "Ditt loggmeddelande lämnades i en temporär fil:"
+msgstr "Din låskommentar lämnades i en temporär fil:"
 
 #: clients/cmdline/log-cmd.c:162
 msgid "(no author)"
@@ -331,19 +326,19 @@ msgstr " (från %s:%ld)"
 
 #: clients/cmdline/log-cmd.c:446
 msgid "When specifying working copy paths, only one target may be given"
-msgstr ""
+msgstr "Endast ett mål kan anges då sökvägar till arbetskopiro anges"
 
 #: clients/cmdline/log-cmd.c:458
 msgid "Only relative paths can be specified after a URL"
-msgstr ""
+msgstr "Endast relativa sökvägar kan anges efter en URL"
 
 #: clients/cmdline/ls-cmd.c:294
 msgid "'verbose' option invalid in XML mode"
-msgstr ""
+msgstr "Flaggan \"verbose\" är inte tillåten i XML-läge"
 
 #: clients/cmdline/ls-cmd.c:306
 msgid "'incremental' option only valid in XML mode"
-msgstr ""
+msgstr "Flaggan \"incremental\" är endast tillåten i XML-läge"
 
 #: clients/cmdline/main.c:62
 msgid "force operation to run"
@@ -393,15 +388,12 @@ msgstr ""
 "                             (ARG1:ARG2)\n"
 "                             Ett revisionsargument kan vara något av:\n"
 "                                TAL          revisionsnummer\n"
-"                                \"{\"DATUM\"}\"  revision vid början av "
-"angiven dag\n"
-"                                \"HEAD\"       senaste revisionen i "
-"databasen\n"
+"                                \"{\"DATUM\"}\"  revision vid början av angiven dag\n"
+"                                \"HEAD\"       senaste revisionen i arkivet\n"
 "                                \"BASE\"       basrevisionen för objektets\n"
 "                                             arbetskopia\n"
 "                                \"COMMITTED\"  revisionen för den senaste\n"
-"                                             incheckningen vid eller före "
-"BASE\n"
+"                                             arkiveringen vid eller före BASE\n"
 "                                \"PREV\"       revisionen före COMMITTED"
 
 #: clients/cmdline/main.c:86
@@ -441,6 +433,8 @@ msgstr "ange ett lösenord ARG"
 #: clients/cmdline/main.c:98
 msgid "pass ARG to --diff-cmd as options (default: '-u')"
 msgstr ""
+"skicka ARG till --diff-cmd som flaggor\n"
+"                             (standardvärde: \"-u\")"
 
 #: clients/cmdline/main.c:100
 msgid "pass contents of file ARG as additional args"
@@ -490,7 +484,7 @@ msgstr "bortse ifrån ursprung när sammanslagningar beräknas"
 
 #: clients/cmdline/main.c:120
 msgid "ignore externals definitions"
-msgstr ""
+msgstr "bortse ifrån externals-definitioner"
 
 #: clients/cmdline/main.c:122
 msgid "use ARG as diff command"
@@ -518,7 +512,7 @@ msgstr "arbeta med en revisionsegenskap (används med -r)"
 
 #: clients/cmdline/main.c:134
 msgid "relocate via URL-rewriting"
-msgstr "flytta genom att skriva om URL:er"
+msgstr "omlokalisera genom att skriva om URL:er"
 
 #: clients/cmdline/main.c:136 svnadmin/main.c:269
 msgid "read user configuration files from directory ARG"
@@ -553,7 +547,7 @@ msgstr "maximalt antal loggposter"
 
 #: clients/cmdline/main.c:150
 msgid "don't unlock the targets"
-msgstr ""
+msgstr "lås inte upp målen"
 
 #: clients/cmdline/main.c:181
 msgid ""
@@ -562,7 +556,7 @@ msgid ""
 "usage: add PATH...\n"
 msgstr ""
 "Placera filer och kataloger under versionshantering och schemalägg dem att\n"
-"läggas till i databasen. De kommer att läggas till vid nästa incheckning.\n"
+"läggas till i arkivet. De kommer att läggas till vid nästa arkivering.\n"
 "användning: add PATH...\n"
 
 #: clients/cmdline/main.c:188
