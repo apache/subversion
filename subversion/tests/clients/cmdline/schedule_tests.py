@@ -578,8 +578,8 @@ def unschedule_missing_added(sbox):
   # Poof, all 4 added things are now missing in action.
   os.remove(file1_path)
   os.remove(file2_path)
-  shutil.rmtree(dir1_path)
-  shutil.rmtree(dir2_path)
+  svntest.main.remove_wc(dir1_path)
+  svntest.main.remove_wc(dir2_path)
 
   # Unschedule the additions, using 'svn rm' and 'svn revert'.
   svntest.main.run_svn(None, 'rm', file1_path, dir1_path)
