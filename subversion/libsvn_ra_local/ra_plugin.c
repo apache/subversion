@@ -646,7 +646,7 @@ svn_ra_local__do_check_path (svn_node_kind_t *kind,
   if (! SVN_IS_VALID_REVNUM (revision))
     SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, pool));
   SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, pool));
-  *kind = svn_fs_check_path (root, abs_path, pool);
+  SVN_ERR (svn_fs_check_path (kind, root, abs_path, pool));
   return SVN_NO_ERROR;
 }
 

@@ -820,7 +820,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   full_path = svn_path_join(b->fs_path, path, pool);
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
-  kind = svn_fs_check_path(root, full_path, pool);
+  SVN_CMD_ERR(svn_fs_check_path(&kind, root, full_path, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "w", kind_word(kind)));
   return SVN_NO_ERROR;
 }

@@ -109,13 +109,16 @@ check_path (VALUE self, VALUE aPath)
   svn_node_kind_t kind;
   svn_ruby_fs_root_t *root;
   apr_pool_t *pool;
+  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
   Data_Get_Struct (self, svn_ruby_fs_root_t, root);
   if (root->closed)
     rb_raise (rb_eRuntimeError, "closed root");
   pool = svn_pool_create (root->pool);
-  kind = svn_fs_check_path (root->root, StringValuePtr (aPath), pool);
+  err = svn_fs_check_path (&kind, root->root, StringValuePtr (aPath), pool);
+  if (err)
+    svn_ruby_raise (err);
   apr_pool_destroy (pool);
 
   return INT2FIX (kind);

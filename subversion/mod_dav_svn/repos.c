@@ -545,8 +545,15 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
                                  "repository");
     }
 
-  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
-                            pool);
+  serr = svn_fs_check_path(&kind, comb->priv.root.root,
+                           comb->priv.repos_path, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 apr_psprintf (pool, "Error checking kind of "
+                                               "path '%s' in repository",
+                                               comb->priv.repos_path));
+    }
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
@@ -668,8 +675,15 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                  "repository");
     }
 
-  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
-                            pool);
+  serr = svn_fs_check_path (&kind, comb->priv.root.root,
+                            comb->priv.repos_path, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err
+        (serr, HTTP_INTERNAL_SERVER_ERROR,
+         apr_psprintf (pool, "Error checking kind of path '%s' in repository",
+                       comb->priv.repos_path));
+    }
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
@@ -1419,8 +1433,18 @@ dav_error * dav_svn_resource_kind (request_rec *r,
         *kind = svn_node_unknown;
 
       else /* ver */
-        *kind = svn_fs_check_path (resource->info->root.root,
-                                   resource->info->repos_path, r->pool);
+        {
+          serr = svn_fs_check_path (kind, resource->info->root.root,
+                                    resource->info->repos_path, r->pool);
+
+          if (serr)
+            return 
+              dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   apr_psprintf(r->pool,
+                                                "Error checking kind of "
+                                                "path '%s' in repository",
+                                                resource->info->repos_path));
+        }
     }
   
   else if (resource->type == DAV_RESOURCE_TYPE_WORKING)
@@ -1444,8 +1468,15 @@ dav_error * dav_svn_resource_kind (request_rec *r,
                                    "Could not open root of revision %"
                                    SVN_REVNUM_T_FMT, base_rev));
       
-          *kind = svn_fs_check_path (base_rev_root,
-                                     resource->info->repos_path, r->pool);
+          serr = svn_fs_check_path (kind, base_rev_root,
+                                    resource->info->repos_path, r->pool);
+          if (serr)
+            return 
+              dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   apr_psprintf(r->pool,
+                                                "Error checking kind of "
+                                                "path '%s' in repository",
+                                                resource->info->repos_path));
         }
     }
 

@@ -937,9 +937,7 @@ verify_path (svn_node_kind_t *kind,
              const char *path,
              apr_pool_t *pool)
 {
-  /* ### ??? Whoa, svn_fs_check_path() should return error directly,
-     and return kind by reference. */
-  *kind = svn_fs_check_path (root, path, pool);
+  SVN_ERR (svn_fs_check_path (kind, root, path, pool));
 
   if (*kind == svn_node_none)
     {

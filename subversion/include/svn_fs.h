@@ -711,14 +711,16 @@ svn_error_t *svn_fs_paths_changed (apr_hash_t **changed_paths_p,
 
 /* Operations appropriate to all kinds of nodes.  */
 
-/** Return the type of node present at @a path under @a root.
+/** Set @a *kind_p to the type of node present at @a path under @a root.
  *
- * Return the type of node present at @a path under @a root.  If @a path
- * does not exist under @a root, set @a *kind to @c svn_node_none.
+ * Set @a *kind_p to the type of node present at @a path under @a
+ * root.  If @a path does not exist under @a root, set @a *kind to @c
+ * svn_node_none.  Use @a pool for temporary allocation.
  */
-svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
-                                   const char *path,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_check_path (svn_node_kind_t *kind_p,
+                                svn_fs_root_t *root,
+                                const char *path,
+                                apr_pool_t *pool);
 
 
 /** Allocate and return an array @a *revs of @c svn_revnum_t revisions in
