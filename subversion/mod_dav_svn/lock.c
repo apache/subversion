@@ -412,6 +412,14 @@ dav_svn_get_locks(dav_lockdb *lockdb,
      NULL list.  The 'calltype' arg is also meaningless, since we
      don't support locks on collections.  */
   
+  /* Sanity check:  if the resource has no associated path in the fs,
+     then there's nothing to do.  */
+  if (! resource->info->repos_path)
+    {
+      *locks = NULL;
+      return 0;
+    }
+
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
   derr = check_readability(&readable,
@@ -519,6 +527,14 @@ dav_svn_has_locks(dav_lockdb *lockdb,
   dav_error *derr;
   svn_lock_t *slock;
   svn_boolean_t readable = FALSE;
+
+  /* Sanity check:  if the resource has no associated path in the fs,
+     then there's nothing to do.  */
+  if (! resource->info->repos_path)
+    {
+      *locks_present = 0;
+      return 0;
+    }
 
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
@@ -640,6 +656,11 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
   svn_boolean_t readable = FALSE;
   svn_lock_t *slock;
   const char *token = NULL;
+
+  /* Sanity check:  if the resource has no associated path in the fs,
+     then there's nothing to do.  */
+  if (! resource->info->repos_path)
+    return 0;
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be removed from it. */
