@@ -268,3 +268,11 @@ already know about.)
      Justification: API change; allow better report processing; no risk.
      Votes:
       +1: ghudson
+
+
+   * Issue #408
+     Date parser rewrite.
+     Justification: API change; avoid permanent support for bizarre and
+     unpredictable date formats.
+     Votes:
+      +1: mbk
