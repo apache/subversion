@@ -363,6 +363,89 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
 
 
 
+/*  Convenience Routine:  pretty-print an ap_hash_t.
+
+     (ASSUMING that all keys and vals are of type (svn_string_t *) )
+
+*/
+
+void
+svn_hash_print (ap_hash_t *hash, FILE *stream)
+{
+  ap_hash_index_t *hash_index;   /* this represents a hash entry */
+  void *key, *val;
+  size_t keylen;
+  svn_string_t *keystring, *valstring;
+
+  fprintf (stream, "\n--> Printing hash:\n");
+
+  for (hash_index = ap_hash_first (hash);      /* get first hash entry */
+       hash_index;                             /* NULL if out of entries */
+       hash_index = ap_hash_next (hash_index)) /* get next hash entry */
+    {
+      /* Retrieve key and val from current hash entry */
+      ap_hash_this (hash_index, &key, &keylen, &val);
+
+      /* Cast things nicely */
+      keystring =  key;
+      valstring =  val;
+
+      /* Print them out nicely */
+      fprintf (stream, "Key: `");
+      svn_string_print (keystring, stream, FALSE, FALSE);
+      fprintf (stream, "', ");
+
+      fprintf (stream, "Val: `");
+      svn_string_print (valstring, stream, FALSE, FALSE);
+      fprintf (stream, "'\n");
+    }
+  
+  fprintf (stream, "\n");
+}
+
+
+
+/* Convenience Routine:  pretty-print "uberhash" from svn_parse().
+
+   (ASSUMING that all keys are (svn_string_t *),
+                  all vals are (ap_hash_t *) printable by svn_hash_print() )
+*/
+
+
+void
+svn_uberhash_print (ap_hash_t *uberhash, FILE *stream)
+{
+  ap_hash_index_t *hash_index;   /* this represents a hash entry */
+  void *key, *val;
+  size_t keylen;
+  svn_string_t *keystring;
+  ap_hash_t *valhash;
+
+  fprintf (stream, "\n--> Printing Uberhash:\n");
+
+  for (hash_index = ap_hash_first (uberhash);  /* get first hash entry */
+       hash_index;                             /* NULL if out of entries */
+       hash_index = ap_hash_next (hash_index)) /* get next hash entry */
+    {
+      /* Retrieve key and val from current hash entry */
+      ap_hash_this (hash_index, &key, &keylen, &val);
+
+      /* Cast things nicely */
+      keystring = key;
+      valhash = val;
+
+      /* Print them out nicely */
+      fprintf (stream, "Hashname: `");
+      svn_string_print (keystring, stream, TRUE, FALSE);
+      fprintf (stream, "'\n");
+
+      svn_hash_print (valhash, stream);
+    }
+  
+  fprintf (stream, "\nUberhash printing complete.\n\n");
+}
+
+
 
 
 /* 

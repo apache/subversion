@@ -85,7 +85,7 @@ svn_handle_error (svn_error_t *err)
           err->err, err->description);
   printf ("     ");
   fflush (stdout);
-  svn_string_print (err->message, stderr, FALSE);
+  svn_string_print (err->message, stderr, FALSE, TRUE);
   printf ("\n");
   fflush (stdout);
 
