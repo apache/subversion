@@ -1051,6 +1051,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
                   (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                    "'%s' is not under version control", src_path);
 
+              if (! entry->url)
+                return svn_error_createf
+                  (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                   "'%s' does not seem to have a URL associated with it",
+                   src_path);
+
               src_path = entry->url;
               src_is_url = TRUE;
             }
