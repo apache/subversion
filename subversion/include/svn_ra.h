@@ -147,7 +147,7 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
  *
  * Callback function type for locking and unlocking actions.
  * 
- * @a do_lock should be TRUE when locking @a path, and FALSE
+ * @a do_lock is TRUE when locking @a path, and FALSE
  * otherwise.
  * 
  * @a lock is a lock for @a path.

@@ -293,9 +293,9 @@ svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path,
 typedef struct svn_fs_access_t svn_fs_access_t;
 
 
-/** Set @a *access_ctx to a new @c svn_fs_access_t object
- *  representing @a username, allocated in @a pool.  @a username must be
- *  non-@c NULL; presumably it has already been authenticated by the caller.
+/** Set @a *access_ctx to a new @c svn_fs_access_t object representing
+ *  @a username, allocated in @a pool.  @a username is presumed to
+ *  have been authenticated by the caller.
  */
 svn_error_t *svn_fs_create_access (svn_fs_access_t **access_ctx,
                                    const char *username,
@@ -492,7 +492,9 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 /** Do on-the-fly out-of-dateness checks.  That is, an fs routine may
  * throw error if a caller tries to edit an out-of-date item in the
- * transaction.   ### NOTE:   NOT YET IMPLEMENTED. 
+ * transaction.  
+ * 
+ * @warning ### Not yet implemented. 
  */
 #define SVN_FS_TXN_CHECK_OOD                     0x00001
 
@@ -1460,7 +1462,9 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 
 
 
-/* Filesystem locks.  (@since New in 1.2.) */
+/** @defgroup svn_fs_locks filesystem locks
+ * @{ 
+ * @since New in 1.2. */
 
 /** A lock represents one user's exclusive right to modify a path in a
  * filesystem.  In order to create or destroy a lock, a username must
@@ -1603,6 +1607,7 @@ svn_error_t *svn_fs_get_locks (svn_fs_t *fs,
                                void *get_locks_baton,
                                apr_pool_t *pool);
 
+/** @} */
 
 /** @since New in 1.2.
  *
@@ -1611,7 +1616,6 @@ svn_error_t *svn_fs_get_locks (svn_fs_t *fs,
  */
 svn_error_t *svn_fs_print_modules (svn_stringbuf_t *output,
                                    apr_pool_t *pool);
-
 
 #ifdef __cplusplus
 }
