@@ -40,6 +40,10 @@ svn_client_add (svn_string_t *path, apr_pool_t *pool)
     SVN_ERR (svn_wc_add_file (path, pool));
   else if (kind == svn_node_dir)
     SVN_ERR (svn_wc_add_directory (path, pool));
+  else
+    return
+      svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                         "No such object: %s", path->data);
 
   return SVN_NO_ERROR;
 }
