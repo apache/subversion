@@ -1,5 +1,5 @@
 /*
- * delta.c:   an editor driver for svn_fs_dir_delta
+ * delta.c:   an editor driver for svn_repos_dir_delta
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -18,8 +18,6 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "apr_hash.h"
-#include "fs.h"
-
 
 
 
@@ -143,14 +141,14 @@ static svn_error_t *delta_dirs (struct context *c,
 /* Public interface to computing directory deltas.  */
 
 svn_error_t *
-svn_fs_dir_delta (svn_fs_root_t *source_root,
-                  const char *source_path,
-                  apr_hash_t *source_rev_diffs,
-                  svn_fs_root_t *target_root,
-                  const char *target_path,
-                  const svn_delta_edit_fns_t *editor,
-                  void *edit_baton,
-                  apr_pool_t *pool)
+svn_repos_dir_delta (svn_fs_root_t *source_root,
+                     const char *source_path,
+                     apr_hash_t *source_rev_diffs,
+                     svn_fs_root_t *target_root,
+                     const char *target_path,
+                     const svn_delta_edit_fns_t *editor,
+                     void *edit_baton,
+                     apr_pool_t *pool)
 {
   void *root_baton;
   struct context c;
@@ -237,38 +235,6 @@ svn_fs_dir_delta (svn_fs_root_t *source_root,
   /* All's well that ends well. */
   return SVN_NO_ERROR;
 }
-
-
-
-/* Public interface to computing file text deltas.  */
-
-svn_error_t *
-svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
-                   svn_fs_root_t *source_root,
-                   const char *source_path,
-                   svn_fs_root_t *target_root,
-                   const char *target_path,
-                   apr_pool_t *pool)
-{
-  svn_stream_t *source, *target;
-  svn_txdelta_stream_t *delta_stream;
-
-  /* Get read functions for the source file contents.  */
-  if (source_root && source_path)
-    SVN_ERR (svn_fs_file_contents (&source, source_root, source_path, pool));
-  else
-    source = svn_stream_empty (pool);
-
-  /* Get read functions for the target file contents.  */
-  SVN_ERR (svn_fs_file_contents (&target, target_root, target_path, pool));
-
-  /* Create a delta stream that turns the ancestor into the target.  */
-  svn_txdelta (&delta_stream, source, target, pool);
-
-  *stream_p = delta_stream;
-  return SVN_NO_ERROR;
-}
-
 
 
 

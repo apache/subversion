@@ -3,6 +3,7 @@
 
 lib_LTLIBRARIES = libsvn_repos.la
 libsvn_repos_la_SOURCES =                         \
+                          delta.c                 \
                           commit_editor.c         \
                           reporter.c
 

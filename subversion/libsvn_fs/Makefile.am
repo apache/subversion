@@ -9,7 +9,6 @@ libsvn_fs_la_SOURCES =				\
                         dag.h                   \
 			dbt.c			\
                         dbt.h                   \
-                        delta.c                 \
 			err.c			\
                         err.h                   \
 			fs.c			\

@@ -2404,6 +2404,37 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
 /* --- End machinery for svn_fs_apply_textdelta() ---  */
 
 
+
+/* Public interface to computing file text deltas.  */
+
+svn_error_t *
+svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
+                   svn_fs_root_t *source_root,
+                   const char *source_path,
+                   svn_fs_root_t *target_root,
+                   const char *target_path,
+                   apr_pool_t *pool)
+{
+  svn_stream_t *source, *target;
+  svn_txdelta_stream_t *delta_stream;
+
+  /* Get read functions for the source file contents.  */
+  if (source_root && source_path)
+    SVN_ERR (svn_fs_file_contents (&source, source_root, source_path, pool));
+  else
+    source = svn_stream_empty (pool);
+
+  /* Get read functions for the target file contents.  */
+  SVN_ERR (svn_fs_file_contents (&target, target_root, target_path, pool));
+
+  /* Create a delta stream that turns the ancestor into the target.  */
+  svn_txdelta (&delta_stream, source, target, pool);
+
+  *stream_p = delta_stream;
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /* Creating transaction and revision root nodes.  */
