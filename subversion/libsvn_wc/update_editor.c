@@ -97,8 +97,8 @@ struct dir_baton
   /* Basename of this directory. */
   const char *name;
 
-  /* The repository URL this directory corresponds to. */
-  const char *URL;
+  /* The repository URL this directory will correspond to. */
+  const char *new_URL;
 
   /* The global edit baton. */
   struct edit_baton *edit_baton;
@@ -145,6 +145,9 @@ struct bump_dir_info
   /* the path of the directory to bump */
   const char *path;
 
+  /* The repository URL this directory will correspond to. */
+  const char *new_URL;
+
   /* was this directory added? (if so, we'll add it to the parent dir
      at bump time) */
   svn_boolean_t added;
@@ -162,6 +165,41 @@ struct handler_baton
 };
 
 
+/* Return the url for NAME in DIR, allocated in POOL, or null if
+ * unable to obtain a url.  If NAME is null, get the url for DIR.
+ * 
+ * Use ASSOCIATED_ACCESS to retrieve an access baton for PATH, and do
+ * all temporary allocation in POOL. 
+ */
+static const char *
+get_entry_url (svn_wc_adm_access_t *associated_access,
+               const char *dir,
+               const char *name,
+               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const svn_wc_entry_t *entry;
+  svn_wc_adm_access_t *adm_access;
+
+  err = svn_wc_adm_retrieve (&adm_access, associated_access, dir, pool);
+
+  if (! err)
+    {
+      /* Note that `name' itself may be NULL. */
+      err = svn_wc_entry (&entry, svn_path_join_many (pool, dir, name, NULL),
+                          adm_access, FALSE, pool);
+    }
+  if (err || (! entry) || (! entry->url))
+    {
+      if (err)
+        svn_error_clear (err);
+      return NULL;
+    }
+
+  return entry->url;
+}
+
+
 /* Return a new dir_baton to represent NAME (a subdirectory of
    PARENT_BATON).  If PATH is NULL, this is the root directory of the
    edit. */
@@ -173,9 +211,6 @@ make_dir_baton (const char *path,
                 apr_pool_t *pool)
 {
   struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
-  const char *URL;
-  svn_error_t *err;
-  const svn_wc_entry_t *entry;
   struct bump_dir_info *bdi;
   
   /* Don't do this.  Just do NOT do this to me. */
@@ -192,38 +227,34 @@ make_dir_baton (const char *path,
   else
     d->name = NULL;
 
-  /* Figure out the URL for this directory. */
+  /* Figure out the new_URL for this directory. */
   if (eb->is_checkout)
     {
-      /* for checkouts, telescope the URL normally.  no such thing as
+      /* for checkouts, telescope the new_URL normally.  no such thing as
          disjoint urls.   */
       if (pb)
-        URL = svn_path_join (pb->URL, d->name, pool);
+        d->new_URL = svn_path_join (pb->new_URL, d->name, pool);
       else
-        URL = apr_pstrdup (pool, eb->ancestor_url);
+        d->new_URL = apr_pstrdup (pool, eb->ancestor_url);
     }
-  else 
+  else if (eb->switch_url)
     {
-      /* For updates, look in the 'entries' file */
-      svn_wc_adm_access_t *adm_access;
-      err = svn_wc_adm_retrieve (&adm_access, eb->adm_access, d->path, pool);
-      if (! err)
-        err = svn_wc_entry (&entry, d->path, adm_access, FALSE, pool);
-      if (err || (! entry) || (! entry->url))
-        {
-          if (err)
-            svn_error_clear (err);
-          URL = "";
-        }
+      if (pb)
+        d->new_URL = svn_path_join (pb->new_URL, d->name, pool);
       else
-        URL = entry->url;
+        d->new_URL = apr_pstrdup (pool, eb->switch_url);
+    }
+  else  /* must be an update */
+    {
+      d->new_URL = get_entry_url (eb->adm_access, d->path, NULL, pool);
     }
 
   /* the bump information lives in the edit pool */
   bdi = apr_palloc (eb->pool, sizeof (*bdi));
   bdi->parent = pb ? pb->bump_info : NULL;
-  bdi->ref_count = 1;   /* we refer to it */
-  bdi->path = apr_pstrdup (eb->pool, d->path);    /* full path */
+  bdi->ref_count = 1;
+  bdi->path = apr_pstrdup (eb->pool, d->path);
+  bdi->new_URL = d->new_URL ? apr_pstrdup (eb->pool, d->new_URL) : NULL;
   bdi->added = added;
 
   /* the parent's bump info has one more referer */
@@ -235,7 +266,6 @@ make_dir_baton (const char *path,
   d->pool         = pool;
   d->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   d->added        = added;
-  d->URL          = URL;
   d->bump_info    = bdi;
 
   return d;
@@ -252,35 +282,38 @@ make_dir_baton (const char *path,
    bump information to possibly mark it as done, too.
 */
 static svn_error_t *
-maybe_bump_dir_revision (struct edit_baton *eb,
-                         struct bump_dir_info *bdi,
-                         apr_pool_t *pool)
+maybe_bump_dir_info (struct edit_baton *eb,
+                     struct bump_dir_info *bdi,
+                     apr_pool_t *pool)
 {
   /* Keep moving up the tree of directories until we run out of parents,
      or a directory is not yet "done".  */
   for ( ; bdi != NULL; bdi = bdi->parent)
     {
       svn_wc_entry_t tmp_entry;
-
-      tmp_entry.revision = eb->target_revision;
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.deleted = FALSE;
+      svn_wc_adm_access_t *adm_access;
 
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
-
 
       /* Bump this dir to the new revision if this directory is beneath
          the target of an update, or unconditionally if this is a
          checkout. */
       if (eb->is_checkout || bdi->parent)
         {
-          svn_wc_adm_access_t *adm_access;
+          apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_REVISION;
+
+          tmp_entry.revision = eb->target_revision;
+          tmp_entry.url = bdi->new_URL;
+
+          if (bdi->new_URL)
+            modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+
           SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
                                         pool));
-
+          
           SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_REVISION, pool));
+                                         modify_flags, pool));
         }
 
       /* If this directory is newly added, then it probably doesn't
@@ -290,7 +323,10 @@ maybe_bump_dir_revision (struct edit_baton *eb,
       if (bdi->added && bdi->parent)
         {
           const char *name = svn_path_basename (bdi->path, pool);
-          svn_wc_adm_access_t *adm_access;
+
+          tmp_entry.kind = svn_node_dir;
+          tmp_entry.deleted = FALSE;
+
           SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                         bdi->parent->path, pool));
 
@@ -321,8 +357,8 @@ struct file_baton
   /* Path to this file, either abs or relative to the change-root. */
   const char *path;
 
-  /* The repository URL this directory corresponds to. */
-  const char *URL;
+  /* The repository URL this file will correspond to. */
+  const char *new_URL;
 
   /* Set if this file is new. */
   svn_boolean_t added;
@@ -353,9 +389,6 @@ make_file_baton (struct dir_baton *pb,
                  apr_pool_t *pool)
 {
   struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
-  const char *URL;
-  svn_error_t *err;
-  const svn_wc_entry_t *entry;
 
   /* I rather need this information, yes. */
   if (! path)
@@ -365,35 +398,20 @@ make_file_baton (struct dir_baton *pb,
   f->path = svn_path_join (pb->edit_baton->anchor, path, pool);
   f->name = svn_path_basename (path, pool);
 
-  /* Figure out the URL for this file. */
-  if (pb->edit_baton->is_checkout)
+  /* Figure out the new_URL for this file. */
+  if (pb->edit_baton->is_checkout || pb->edit_baton->switch_url)
     {
-      /* for checkouts, telescope the URL normally.  no such thing as
-         disjoint urls.   */
-      URL = svn_path_join (pb->URL, f->name, pool);
+      f->new_URL = svn_path_join (pb->new_URL, f->name, pool);
     }
   else 
     {
-      /* For updates, look in the 'entries' file */
-      svn_wc_adm_access_t *adm_access;
-      err = svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
-                                 pb->path, pool);
-      if (! err)
-        err = svn_wc_entry (&entry, f->path, adm_access, FALSE, pool);
-      if (err || (! entry) || (! entry->url))
-        {
-          if (err)
-            svn_error_clear (err);
-          URL = "";
-        }
-      else
-        URL = entry->url;
+      f->new_URL = get_entry_url (pb->edit_baton->adm_access,
+                                  pb->path, f->name, pool);
     }
 
   f->pool         = pool;
   f->edit_baton   = pb->edit_baton;
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
-  f->URL          = URL;
   f->bump_info    = pb->bump_info;
   f->added        = adding;
 
@@ -941,8 +959,8 @@ close_directory (void *dir_baton,
 
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
-     maybe_bump_dir_revision() for more information.  */
-  SVN_ERR (maybe_bump_dir_revision (db->edit_baton, db->bump_info, db->pool));
+     maybe_bump_dir_info() for more information.  */
+  SVN_ERR (maybe_bump_dir_info (db->edit_baton, db->bump_info, db->pool));
 
   /* Notify of any prop changes on this directory -- but do nothing
      if it's an added directory, because notification has already
@@ -1807,13 +1825,13 @@ close_file (void *file_baton,
                                 new_text_path,
                                 propchanges,
                                 FALSE, /* -not- a full proplist */
-                                NULL, /* inherit URL from parent dir. */
+                                fb->new_URL,
                                 fb->pool));
 
   /* We have one less referrer to the directory's bump information. */
-  SVN_ERR (maybe_bump_dir_revision (fb->edit_baton,
-                                    fb->bump_info,
-                                    fb->pool));
+  SVN_ERR (maybe_bump_dir_info (fb->edit_baton,
+                                fb->bump_info,
+                                fb->pool));
 
   if ((content_state != svn_wc_notify_state_unchanged) ||
       (prop_state != svn_wc_notify_state_unchanged))
