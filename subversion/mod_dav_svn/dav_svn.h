@@ -109,16 +109,16 @@ typedef struct {
 enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_UNSET,
 
-  DAV_SVN_RESTYPE_ROOT_COLLECTION,      /* .../$svn/     */
-  DAV_SVN_RESTYPE_VER_COLLECTION,       /* .../$svn/ver/ */
-  DAV_SVN_RESTYPE_HIS_COLLECTION,       /* .../$svn/his/ */
-  DAV_SVN_RESTYPE_WRK_COLLECTION,       /* .../$svn/wrk/ */
-  DAV_SVN_RESTYPE_ACT_COLLECTION,       /* .../$svn/act/ */
-  DAV_SVN_RESTYPE_VCC_COLLECTION,       /* .../$svn/vcc/ */
-  DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../$svn/bc/  */
-  DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../$svn/bln/ */
-  DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../$svn/wbl/ */
-  DAV_SVN_RESTYPE_VCC                   /* .../$svn/vcc/NAME */
+  DAV_SVN_RESTYPE_ROOT_COLLECTION,      /* .../!svn/     */
+  DAV_SVN_RESTYPE_VER_COLLECTION,       /* .../!svn/ver/ */
+  DAV_SVN_RESTYPE_HIS_COLLECTION,       /* .../!svn/his/ */
+  DAV_SVN_RESTYPE_WRK_COLLECTION,       /* .../!svn/wrk/ */
+  DAV_SVN_RESTYPE_ACT_COLLECTION,       /* .../!svn/act/ */
+  DAV_SVN_RESTYPE_VCC_COLLECTION,       /* .../!svn/vcc/ */
+  DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../!svn/bc/  */
+  DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../!svn/bln/ */
+  DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../!svn/wbl/ */
+  DAV_SVN_RESTYPE_VCC                   /* .../!svn/vcc/NAME */
 };
 
 
@@ -250,12 +250,12 @@ const char *dav_svn_get_fs_parent_path(request_rec *r);
    Each of these will be placed under a portion of the URL namespace
    that defines the SVN repository. For example, let's say the user
    has configured an SVN repository at http://host/svn/repos. The
-   special resources could be configured to live at .../$svn/ under
+   special resources could be configured to live at .../!svn/ under
    that repository. Thus, an activity might be located at
-   http://host/svn/repos/$svn/act/1234.
+   http://host/svn/repos/!svn/act/1234.
 
    The special URI is configurable on a per-server basis and defaults
-   to "$svn".
+   to "!svn".
 
    NOTE: the special URI is RELATIVE to the "root" of the
    repository. The root is generally available only to
@@ -369,6 +369,51 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                                       const dav_resource *relative,
                                       const char *uri,
                                       apr_pool_t *pool);
+
+
+/* Given an apache request R and a ROOT_PATH to the svn location
+   block, process R->URI and return many things, allocated in r->pool:
+
+   * CLEANED_URI:  the uri with duplicate and trailing slashes removed.
+
+   * TRAILING_SLASH:  Whether the uri had a trailing slash on it.
+
+   Three special substrings of the uri are returned for convenience:
+
+   * REPOS_NAME:      The single path component that is the directory
+                      which contains the repository.
+
+   * RELATIVE_PATH:   The remaining imaginary path components.
+
+   * REPOS_PATH:      The actual path within the repository filesystem, or
+                      NULL if no part of the uri refers to a path in
+                      the repository.  (e.g. "!svn/vcc/default" or
+                      "!svn/bln/25")
+
+
+   So for example, consider the uri
+
+       /svn/repos/proj1/!svn/blah/13//A/B/alpha
+
+   In the SVNPath case, this function would receive a ROOT_PATH of
+   '/svn/repos/proj1', and in the SVNParentPath case would receive a
+   ROOT_PATH of '/svn/repos'.  But either way, we would get back:
+
+     * CLEANED_URI:    /svn/repos/proj1/!svn/blah/13/A/B/alpha
+     * REPOS_NAME:     proj1
+     * RELATIVE_PATH:  /!svn/blah/13/A/B/alpha
+     * REPOS_PATH:     A/B/alpha
+     * TRAILING_SLASH: FALSE
+*/
+dav_error * dav_svn_split_uri (request_rec *r,
+                               const char *root_path,
+                               const char **cleaned_uri,
+                               int *trailing_slash,
+                               const char **repos_name,
+                               const char **relative_path,
+                               const char **repos_path);
+
+
 
 /* Generate the HTTP response body for a successful MERGE. */
 /* ### more docco */
