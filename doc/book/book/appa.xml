@@ -200,8 +200,8 @@
       copy, and second, to show the user which files are out-of-date.
       Unfortunately, because of CVS's hard-to-read status output, many
       CVS users don't take advantage of this command at all.  Instead,
-      they've developed a habit of running <command>cvs up</command>
-      or <command>cvs up -n</command> to quickly see their mods.  If
+      they've developed a habit of running <command>cvs update</command>
+      or <command>cvs update -n</command> to quickly see their mods.  If
       users forget to use the <option>-n</option> option, this has the
       side effect of merging repository changes they may not be ready
       to deal with.</para>
@@ -243,9 +243,9 @@
       </varlistentry>
     </variablelist>
 
-    <para>The status command has two output formats.  In the default
-      <quote>short</quote> format, local modifications look like
-      this:</para>
+    <para>The <command>status</command> command has two output
+      formats.  In the default <quote>short</quote> format, local
+      modifications look like this:</para>
 
     <screen>
 % svn status
@@ -272,8 +272,9 @@ Status against revision:   1066
       item.  In the example above, the asterisk indicates that
       <filename>faces.html</filename> would be patched if we updated,
       and that <filename>bloo.png</filename> is a newly added file in
-      the repository.  (The <command>-</command> next to bloo.png
-      means that it doesn't yet exist in the working copy.)</para>
+      the repository.  (The <command>-</command> next to
+      <filename>bloo.png</filename> means that it doesn't yet exist in
+      the working copy.)</para>
 
     <!-- ###TODO describe -u here as well as -uv. -u and -v use
          different <quote>long</quote> formats and need to be
@@ -426,7 +427,8 @@ X    Resource is external to this working copy (comes from another
     <para>To determine whether a contextual merge is possible,
       Subversion examines the <literal>svn:mime-type</literal>
       property.  If the file has no <literal>svn:mime-type</literal>
-      property, or has a mime-type that is textual (e.g. text/*),
+      property, or has a mime-type that is textual (e.g.
+      <literal>text/*</literal>),
       Subversion assumes it is text.  Otherwise, Subversion assumes
       the file is binary.  Subversion also helps users by running a
       binary-detection algorithm in the <command>svn import</command>
