@@ -81,6 +81,52 @@ Once the repository has been created, it's very likely that you'll
 want to use the svn client to import an initial tree.  (Try
 @samp{svn help import}, or @xref{Other Commands}.)
 
+You may want to give your repository an initial directory structure
+that reflects the trunk, branches, and tags of your project(s)
+(@xref{Branches and Tags}.)  You can do this via @samp{svn mkdir}:
+
+@example
+$ svnadmin create /path/to/repos
+$ svn mkdir file:///path/to/repos/projectA -m 'Base dir for A'
+Committed revision 1.
+
+$ svn mkdir file:///path/to/repos/projectA/trunk -m 'Main dir for A'
+Committed revision 2.
+
+$ svn mkdir file:///path/to/repos/projectA/branches -m 'Branches for A'
+Committed revision 3.
+
+$ svn mkdir file:///path/to/repos/projectA/tags -m 'Tags for A'
+Committed revision 4.
+
+$ svn co file:///path/to/repos/projectA/trunk projectA
+Checked out revision 4.
+ 
+# ... now work on projectA ...
+@end example
+
+With @samp{svn import}, you can create the structure with a single
+commit:
+
+@example
+$ svnadmin create /path/to/repos
+$ mkdir projectA
+$ mkdir projectA/trunk
+$ mkdir projectA/branches
+$ mkdir projectA/tags    
+$ svn import file:///path/to/repos projectA projectA -m 'Dir layout for A'
+Adding         projectA/trunk
+Adding         projectA/branches
+Adding         projectA/tags
+Committed revision 1.
+
+$ rm -rf projectA/
+$ svn co file:///path/to/repos/projectA/trunk projectA
+Checked out revision 1.
+
+#  ... now work on projectA ...
+@end example
+
 
 @c ------------------------------------------------------------------
 @node Examining a repository
@@ -519,29 +565,48 @@ Somewhere near the bottom of your configuration file, define a new
 @samp{Location} block:
 
 @example
-<Location /repos>
+<Location /repos/myrepo>
    DAV svn
-   SVNPath /absolute/path/to/myrepos
+   SVNPath /absolute/path/to/myrepo
 </Location>
 @end example
 
-This now makes your repository @file{myrepos} available at the URL
-@url{http://hostname/repos}, with no access restrictions at all:
+This now makes your @file{myrepo} repository available at the URL
+@url{http://hostname/repos/myrepo}.
+
+Alternately, you can use the @samp{SVNParentPath} directive to
+indicate a ``parent'' directory whose immediate subdirectories are
+are assumed to be independent repositories:
+
+@example
+<Location /repos>
+   DAV svn
+   SVNParentPath /absolute/path/to/parent/dir
+</Location>
+@end example
+
+If you were to run @samp{svnadmin create foorepo} within this parent
+directory, then the url @url{http://hostname/repos/foorepo} would
+automatically be accessible without having to change @file{httpd.conf}
+or restart httpd.
+
+Note that this simple @samp{<Location>} setup starts life with no
+access restrictions at all:
 
 @itemize @bullet
 @item
-Anyone can use their svn client to checkout either a working copy of
-the URL, or of any URL that corresponds to a subdirectory of the
+Anyone can use their svn client to checkout either a working copy of a
+repository URL, or of any URL that corresponds to a subdirectory of a
 repository.
 @item
-By pointing an ordinary web browser at the URL, anyone can
-interactively browse the latest revision.
+By pointing an ordinary web browser at a repository URL, anyone can
+interactively browse the repository's latest revision.
 @item
-Anyone can commit to the repository.
+Anyone can commit to a repository.
 @end itemize
 
-If you want to restrict either read or write access to the repository
-as a whole, you can use Apache's built-in access control features.
+If you want to restrict either read or write access to a repository as
+a whole, you can use Apache's built-in access control features.
 
 First, create an empty file that will hold httpd usernames and
 passwords.   Place names and crypted passwords into this file like so:

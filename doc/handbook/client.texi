@@ -794,7 +794,9 @@ An alternate way to lay out a repository:
 @end example
 
 Or, of course, you could just place each project into a dedicated
-repository.  It's up to you.  (@xref{FAQ}.) @c ###
+repository.  It's up to you.  For examples on how to create a
+repository with one of these structures, @xref{Creating a
+repository}.
 
 
 @subsection Switching to a branch with @samp{svn switch}
