@@ -426,10 +426,12 @@ typedef struct svn_delta_edit_fns_t
      well. */
   svn_error_t *(*add_root) (svn_string_t *ancestor_path,
                             svn_vernum_t ancestor_version,
+                            void *edit_baton,
                             void **dir_baton);
 
   svn_error_t *(*replace_root) (svn_string_t *ancestor_path,
                                 svn_vernum_t ancestor_version,
+                                void *edit_baton,
                                 void **dir_baton);
 
 
