@@ -1,3 +1,0 @@
-head -6 svn-fo.patch
-echo "+  <xsl:import href=\"$1/fo/docbook.xsl\"/>"
-tail -3 svn-fo.patch

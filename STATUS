@@ -71,14 +71,6 @@ Candidate changes:
     Votes:
       +1: mbk, bliss, ghudson
 
-  * r10752
-    Remove packages/rpm/mandrake-*.
-    Justification:
-      Foolish to include something that has been maintainerless since
-      before 1.0.0 in 1.1.x.
-    Votes:
-      +1: maxb, bliss, ghudson
-
   * r10775
     Wrap svn_config_enumerator_t for Perl bindings.
     Justification:
