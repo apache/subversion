@@ -217,10 +217,12 @@ Reglas mínimas para traductores
   mensaje se usa una dirección falsa. Intentar responder a esta
   dirección por correo generará un mensaje de error, pues no existe.
 
-- Si se añade un fichero de texto al repositorio, indicar que los
-  retornos de línea sean "nativos". Ejemplo:
+- Si se añade un fichero de texto al repositorio, indicar que
+  los retornos de línea sean "nativos" y que la codificación es
+  ISO-8859-1 (siempre y cuando sea esa, claro). Ejemplo:
 
      svn propset svn:eol-style native ruta_ficheros
+     svn propset svn:mime-type "text/plain; charset=ISO-8859-1" ruta_ficheros
 
   Para más información sobre esto, leer capítulo 7 del libro. No se
   crea una regla auto-props porque añadir ficheros debería ser una
