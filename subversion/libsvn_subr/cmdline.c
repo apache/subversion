@@ -172,21 +172,28 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
     const char* internal_path;
     apr_pool_t* pool;
     apr_status_t apr_err;
-    int inwords, outbytes, outlength;
+    apr_size_t inwords, outbytes, outlength;
     
     apr_pool_create (&pool, 0);
     /* get exe name - our locale info will be in '../share/locale' */
-    inwords = sizeof (ucs2_path) / sizeof(ucs2_path[0]);
-    if (! GetModuleFileNameW (0, ucs2_path, inwords))
+    inwords = GetModuleFileNameW (0, ucs2_path,
+                                  sizeof (ucs2_path) / sizeof(ucs2_path[0]));
+    if (! inwords)
       {
+        /* We must be on a Win9x machine, so attempt to get an ANSI path,
+           and convert it to Unicode. */
         CHAR ansi_path[MAX_PATH];
-        GetModuleFileNameA (0, ansi_path, sizeof (ansi_path));
-        MultiByteToWideChar (CP_ACP, 0, ansi_path,
-                             lstrlenA (ansi_path), ucs2_path,
-                             sizeof (ucs2_path) / sizeof (ucs2_path[0]));
+
+        if (! GetModuleFileNameA (0, ansi_path, sizeof (ansi_path)))
+          goto utf8_error;
+
+        inwords = 
+          MultiByteToWideChar (CP_ACP, 0, ansi_path, -1, ucs2_path,
+                               sizeof (ucs2_path) / sizeof (ucs2_path[0]));
+        if (! inwords)
+          goto utf8_error;
       }
 
-    inwords = lstrlenW (ucs2_path);
     outbytes = outlength = 3 * (inwords + 1);
     utf8_path = apr_palloc (pool, outlength);
     apr_err = apr_conv_ucs2_to_utf8 (ucs2_path, &inwords,
@@ -194,11 +201,8 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
     if (!apr_err && (inwords > 0 || outbytes == 0))
       apr_err = APR_INCOMPLETE;
     if (apr_err)
-    {
-      if (error_stream)
-        fprintf (error_stream, "Can't convert module path to UTF-8");
-      return EXIT_FAILURE;
-    }
+      goto utf8_error;
+
     utf8_path[outlength - outbytes] = '\0';
     internal_path = svn_path_internal_style (utf8_path, pool);
     /* get base path name */
@@ -218,6 +222,11 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 #endif
 
   return EXIT_SUCCESS;
+
+ utf8_error:
+  if (error_stream)
+    fprintf (error_stream, "Can't convert module path to UTF-8");
+  return EXIT_FAILURE;
 }
 
 
