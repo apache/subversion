@@ -24,22 +24,14 @@
 
 #include "svn_cmdline.h"
 #include "svn_client.h"
-#include "svn_path.h"
 #include "svn_error.h"
 #include "svn_sorts.h"
-#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "cl.h"
 
 
 /*** Code. ***/
-
-static int
-compare_items_as_paths (const svn_sort__item_t *a, const svn_sort__item_t *b)
-{
-  return svn_path_compare_paths ((const char *)a->key, (const char *)b->key);
-}
 
 static svn_error_t *
 print_dirents (apr_hash_t *dirents,
@@ -49,7 +41,7 @@ print_dirents (apr_hash_t *dirents,
   apr_array_header_t *array;
   int i;
 
-  array = svn_sort__hash (dirents, compare_items_as_paths, pool);
+  array = svn_sort__hash (dirents, svn_sort_compare_items_as_paths, pool);
   
   for (i = 0; i < array->nelts; ++i)
     {
