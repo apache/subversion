@@ -199,6 +199,15 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+# Brand release number into the displayed version number.
+RELEASE_NAME="r%{release}"
+export RELEASE_NAME
+vsn_file="subversion/include/svn_version.h"
+sed -e \
+ "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
+  < "$vsn_file" > "${vsn_file}.tmp"
+mv "${vsn_file}.tmp" "$vsn_file"
+
 %build
 make
 
