@@ -153,7 +153,7 @@ static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
       return "SVNPath cannot be defined at same time as SVNParentPath.";
 
     conf->fs_path
-      = svn_path_canonicalize_nts (apr_pstrdup(cmd->pool, arg1), cmd->pool);
+      = svn_path_canonicalize_nts(apr_pstrdup(cmd->pool, arg1), cmd->pool);
 
     return NULL;
 }
@@ -168,7 +168,7 @@ static const char *dav_svn_parent_path_cmd(cmd_parms *cmd, void *config,
       return "SVNParentPath cannot be defined at same time as SVNPath.";
 
     conf->fs_parent_path
-      = svn_path_canonicalize_nts (apr_pstrdup(cmd->pool, arg1), cmd->pool);
+      = svn_path_canonicalize_nts(apr_pstrdup(cmd->pool, arg1), cmd->pool);
 
     return NULL;
 }
