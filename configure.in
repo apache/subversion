@@ -394,6 +394,31 @@ AC_HELP_STRING([--enable-maintainer-mode],
 ])
 
 
+AC_ARG_ENABLE(gprof,
+AC_HELP_STRING([--enable-gprof],
+	       [Produce gprof profiling data in 'gmon.out' (GCC only).]),
+[
+    if test "$enableval" = "yes" ; then
+      dnl Probably other compilers support -pg or something similar;
+      dnl feel free to extend this to include them.
+      if test "$GCC" = "yes"; then
+        if test "$enable_shared" = "yes" ; then
+          AC_MSG_ERROR(Can't have --enable-gprof without --disable-shared (we
+                  recommend also using --enable-all-static).)
+        fi
+        if test ! "$enable_all_static" = "yes" ; then
+          AC_MSG_WARN(We recommend --enable-all-static with --enable-gprof.)
+        fi
+        AC_MSG_NOTICE([Enabling gprof profiling data (to gmon.out).])
+        CFLAGS="$CFLAGS -pg"
+        LT_LDFLAGS="$LT_LDFLAGS -pg"
+      else
+        AC_MSG_ERROR(We only support --enable-gprof with GCC right now.)
+      fi
+    fi
+])
+
+
 if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
