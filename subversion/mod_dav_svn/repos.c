@@ -1317,8 +1317,8 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 {
   svn_error_t *serr;
   apr_off_t length;
-  const char *mimetype;
-
+  const char *mimetype = NULL;
+  
   if (!resource->exists)
     return NULL;
 
@@ -1350,9 +1350,21 @@ static dav_error * dav_svn_set_headers(request_rec *r,
     }
   else if (resource->info->delta_base != NULL)
     {
-      mimetype = SVN_SVNDIFF_MIME_TYPE;
+      dav_svn_uri_info info;
+
+      /* First order of business is to parse it. */
+      serr = dav_svn_simple_parse_uri(&info, resource,
+                                      resource->info->delta_base,
+                                      resource->pool);
+
+      /* If we successfully parse the base URL, then send an svndiff. */
+      if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
+        {
+          mimetype = SVN_SVNDIFF_MIME_TYPE;
+        }
     }
-  else
+
+  if (mimetype == NULL)
     {
       svn_string_t *value;
 
@@ -1535,10 +1547,84 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     return NULL;
   }
 
+
   /* If we have a base for a delta, then we want to compute an svndiff
      between the provided base and the requested resource. For a simple
      request, then we just grab the file contents. */
-  if (resource->info->delta_base == NULL)
+  if (resource->info->delta_base != NULL)
+    {
+      dav_svn_uri_info info;
+      svn_fs_root_t *root;
+      int is_file;
+      svn_txdelta_stream_t *txd_stream;
+      svn_stream_t *o_stream;
+      svn_txdelta_window_handler_t handler;
+      void * h_baton;
+      dav_svn_diff_ctx_t dc = { 0 };
+
+      /* First order of business is to parse it. */
+      serr = dav_svn_simple_parse_uri(&info, resource,
+                                      resource->info->delta_base,
+                                      resource->pool);
+
+      /* If we successfully parse the base URL, then send an svndiff. */
+      if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
+        {
+          /* We are always accessing the base resource by ID, so open
+             an ID root. */
+          serr = svn_fs_revision_root(&root, resource->info->repos->fs,
+                                      info.rev, resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not open a root for the base");
+
+          /* verify that it is a file */
+          serr = svn_fs_is_file(&is_file, root, info.repos_path, 
+                                resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not determine if the base "
+                                       "is really a file");
+          if (!is_file)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                                 "the delta base does not refer to a file");
+
+          /* Okay. Let's open up a delta stream for the client to read. */
+          serr = svn_fs_get_file_delta_stream(&txd_stream,
+                                              root, info.repos_path,
+                                              resource->info->root.root,
+                                              resource->info->repos_path,
+                                              resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not prepare to read a delta");
+
+          /* create a stream that svndiff data will be written to,
+             which will copy it to the network */
+          dc.output = output;
+          dc.pool = resource->pool;
+          o_stream = svn_stream_create(&dc, resource->pool);
+          svn_stream_set_write(o_stream, dav_svn_write_to_filter);
+          svn_stream_set_close(o_stream, dav_svn_close_filter);
+
+          /* get a handler/baton for writing into the output stream */
+          svn_txdelta_to_svndiff(o_stream, resource->pool, &handler, &h_baton);
+
+          /* got everything set up. read in delta windows and shove them into
+             the handler, which pushes data into the output stream, which goes
+             to the network. */
+          serr = svn_txdelta_send_txstream(txd_stream, handler, h_baton,
+                                           resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not deliver the txdelta stream");
+
+
+          return NULL;
+        }
+    }
+
+  /* resource->info->delta_base is NULL, or we had an invalid base URL */
     {
       svn_stream_t *stream;
       char *block;
@@ -1572,7 +1658,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
         /* build a brigade and write to the filter ... */
         bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-        bkt = apr_bucket_transient_create(block, bufsize, output->c->bucket_alloc);
+        bkt = apr_bucket_transient_create(block, bufsize, 
+                                          output->c->bucket_alloc);
         APR_BRIGADE_INSERT_TAIL(bb, bkt);
         if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
           /* ### what to do with status; and that HTTP code... */
@@ -1593,81 +1680,6 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
       return NULL;
     }
-
-  /* delta_base != NULL */
-  {
-    dav_svn_uri_info info;
-    svn_fs_root_t *root;
-    int is_file;
-    svn_txdelta_stream_t *txd_stream;
-    svn_stream_t *o_stream;
-    svn_txdelta_window_handler_t handler;
-    void * h_baton;
-    dav_svn_diff_ctx_t dc = { 0 };
-
-    /* First order of business is to parse it. */
-    serr = dav_svn_simple_parse_uri(&info, resource,
-                                    resource->info->delta_base,
-                                    resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
-                                 "could not parse the delta base");
-    if (info.rev == SVN_INVALID_REVNUM)
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "the delta base was not a version "
-                           "resource URL");
-
-    /* We are always accessing the base resource by ID, so open
-       an ID root. */
-    serr = svn_fs_revision_root(&root, resource->info->repos->fs,
-                                info.rev, resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not open a root for the base");
-
-    /* verify that it is a file */
-    serr = svn_fs_is_file(&is_file, root, info.repos_path, resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not determine if the base "
-                                 "is really a file");
-    if (!is_file)
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "the delta base does not refer to a file");
-
-    /* Okay. Let's open up a delta stream for the client to read. */
-    serr = svn_fs_get_file_delta_stream(&txd_stream,
-                                        root, info.repos_path,
-                                        resource->info->root.root,
-                                        resource->info->repos_path,
-                                        resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not prepare to read a delta");
-
-    /* create a stream that svndiff data will be written to, which will copy
-       it to the network */
-    dc.output = output;
-    dc.pool = resource->pool;
-    o_stream = svn_stream_create(&dc, resource->pool);
-    svn_stream_set_write(o_stream, dav_svn_write_to_filter);
-    svn_stream_set_close(o_stream, dav_svn_close_filter);
-
-    /* get a handler/baton for writing into the output stream */
-    svn_txdelta_to_svndiff(o_stream, resource->pool, &handler, &h_baton);
-
-    /* got everything set up. read in delta windows and shove them into
-       the handler, which pushes data into the output stream, which goes
-       to the network. */
-    serr = svn_txdelta_send_txstream(txd_stream, handler, h_baton,
-                                     resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not deliver the txdelta stream");
-
-
-    return NULL;
-  }
 }
 
 static dav_error * dav_svn_create_collection(dav_resource *resource)
