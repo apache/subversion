@@ -884,7 +884,7 @@ svn_delta_default_pipe_editor (svn_delta_edit_fns_t **new_editor,
    POOL. */
 svn_error_t *
 svn_delta_get_xml_editor (svn_stream_t *output,
-                          const svn_delta_edit_fns_t **editor,
+                          const svn_delta_editor_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool);
 

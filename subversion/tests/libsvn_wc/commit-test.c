@@ -60,8 +60,10 @@ main (int argc, char *argv[])
   apr_file_t *stdout_handle;
   svn_stream_t *out_stream;
   int i;
-  const svn_delta_edit_fns_t *my_editor;
+  const svn_delta_editor_t *my_editor;
   void *my_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
 
   svn_stringbuf_t *rootdir;
   apr_array_header_t *targets;
@@ -111,6 +113,12 @@ main (int argc, char *argv[])
                                       globalpool);
       if (err)
         goto handle_error;
+
+      /* ### todo: This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                             my_editor, my_edit_baton, globalpool);
+
     }
 
   else  /* human-readable output */
@@ -118,8 +126,8 @@ main (int argc, char *argv[])
       /* A stream to print to stdout. */
       out_stream = svn_stream_from_stdio (stdout, globalpool);
 
-      err = svn_test_get_editor (&my_editor, 
-                                 &my_edit_baton,
+      err = svn_test_get_editor (&wrap_editor, 
+                                 &wrap_edit_baton,
                                  svn_stringbuf_create ("COMMIT-TEST", 
                                                     globalpool),
                                  out_stream, 
@@ -129,6 +137,7 @@ main (int argc, char *argv[])
                                  globalpool);
       if (err)
         goto handle_error;
+
     }
 
   {
@@ -144,7 +153,7 @@ main (int argc, char *argv[])
     /* Commit. */
     err = svn_wc_crawl_local_mods (rootdir,
                                    condensed_targets,
-                                   my_editor, my_edit_baton,
+                                   wrap_editor, wrap_edit_baton,
                                    NULL, NULL,
                                    globalpool);
   }
