@@ -262,6 +262,9 @@ struct file_baton
   /* This gets set if a "wc" prop was stored. */
   svn_boolean_t wcprop_changed;
 
+  /* This gets set if an "entry" prop was stored. */
+  svn_boolean_t entryprop_changed;
+
   /* This gets set if there's a conflict when merging a prop-delta
      into the locally modified props.  */
   svn_boolean_t prop_conflict;
@@ -273,6 +276,10 @@ struct file_baton
   /* An array of (svn_prop_t *)'s, representing all the "wc" property
      changes to be stored for this file. */
   apr_array_header_t *wcpropchanges;
+
+  /* An array of (svn_prop_t *)'s, representing all the "entry"
+     property changes to be stored for this file. */
+  apr_array_header_t *entrypropchanges;
 
 };
 
@@ -298,6 +305,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
   f->path       = path;
   f->propchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
   f->wcpropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
+  f->entrypropchanges = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
 
   parent_dir_baton->ref_count++;
 
@@ -645,7 +653,37 @@ change_dir_prop (void *dir_baton,
       return SVN_NO_ERROR;
     }
   
-  /* Else, it's a real property... */
+  /* If this is an 'entry' prop, store it in the entries file and get
+     on with life.  It's not a regular user property. */
+  else if (svn_wc_is_entry_prop (name))
+    {
+      /* make a temporary hash */
+      apr_pool_t *subpool = svn_pool_create (db->pool);
+      apr_hash_t *att_hash = apr_hash_make (subpool);
+
+      /* remove the 'svn:entry:' prefix from the property name. */
+      svn_wc__strip_entry_prefix (local_name);
+
+      /* push the property into the hash */
+      apr_hash_set (att_hash, local_name->data, local_name->len, local_value);
+
+      /* write out the new attribute (via the hash) to the directory's
+         THIS_DIR entry. */
+      SVN_ERR (svn_wc__entry_modify (db->path, NULL,
+                                     SVN_WC__ENTRY_MODIFY_ATTRIBUTES,
+                                     SVN_INVALID_REVNUM, svn_node_none,
+                                     svn_wc_schedule_normal, FALSE, FALSE,
+                                     0, 0, NULL,
+                                     att_hash,
+                                     subpool, NULL));
+
+      /* free whatever memory was used for this mini-operation */
+      svn_pool_destroy (subpool);
+
+      return SVN_NO_ERROR;
+    }
+
+  /* Else, it's a real ("normal") property... */
 
   /* Build propchange object */
   propchange = apr_pcalloc (db->pool, sizeof(*propchange));
@@ -1015,6 +1053,16 @@ change_file_prop (void *file_baton,
       return SVN_NO_ERROR;
     }
   
+  /* If this is an 'entry' prop, store it a different array. */
+  else if (svn_wc_is_entry_prop (name))
+    {
+      receiver = (svn_prop_t **) apr_array_push (fb->entrypropchanges);
+      *receiver = propchange;
+      
+      fb->entryprop_changed = 1;
+      return SVN_NO_ERROR;
+    }
+
   /* Else, it's a normal property... */
 
   /* Push the object to the file baton's array of propchanges */
@@ -1423,6 +1471,35 @@ close_file (void *file_baton)
     }
 
 
+  /* If there are any ENTRY PROPS, make sure those get appended to the
+     growing log as fields for the file's entry. */
+  if (fb->entryprop_changed)
+    {
+      int i;
+
+      /* foreach entry prop... */
+      for (i = 0; i < fb->entrypropchanges->nelts; i++)
+        {
+          svn_prop_t *prop;
+          prop = (((svn_prop_t **)(fb->entrypropchanges)->elts)[i]);
+
+          /* strip the 'svn:entry:' prefix from the property name. */
+          svn_wc__strip_entry_prefix (prop->name);
+
+          /* append a command to the log which will append the
+             property as a entry attribute. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_ENTRY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 fb->name,
+                                 prop->name->data,
+                                 prop->value,
+                                 NULL);         
+        }
+    }
+
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
                               "%ld",
@@ -1531,7 +1608,6 @@ close_file (void *file_baton)
                                        fb->path, fb->pool));
         }
     }
-
 
   /* Unlock, we're done with this whole file-update. */
   err = svn_wc__unlock (fb->dir_baton->path, fb->pool);
