@@ -110,6 +110,9 @@ svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Global variable indicating if we want 'quiet' output.
+quiet_mode = 0
+
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
 
@@ -202,7 +205,8 @@ def _run_command(command, error_expected, *varargs):
     args = args + ' "' + str(arg) + '"'
 
   # Log the command line
-  print 'CMD:', os.path.basename(command) + args
+  if not quiet_mode:
+    print 'CMD:', os.path.basename(command) + args
 
   infile, outfile, errfile = os.popen3(command + args)
   stdout_lines = outfile.readlines()
@@ -286,8 +290,9 @@ def copy_repos(src_path, dst_path, head_revision):
   create_repos(dst_path)
   dump_args = ' dump "' + src_path + '"'
   load_args = ' load "' + dst_path + '"'
-  print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-        '|', os.path.basename(svnadmin_binary) + load_args
+  if not quiet_mode:
+    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+          '|', os.path.basename(svnadmin_binary) + load_args
   dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
   load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
 
@@ -420,6 +425,7 @@ def run_tests(test_list):
   """
 
   global test_area_url
+  global quiet_mode
   testnum = None
 
   url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
@@ -440,6 +446,9 @@ def run_tests(test_list):
     elif arg == "--url":
       index = sys.argv.index(arg)
       test_area_url = sys.argv[index + 1]
+
+    elif arg == "-q":
+      quiet_mode = 1
 
     else:
       match = url_re.search(arg)
