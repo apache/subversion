@@ -50,7 +50,6 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   void *commit_edit_baton, *tracking_edit_baton;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  void *ra_session;
   apr_hash_t *locks = NULL;
   apr_hash_t *targets = NULL;
 

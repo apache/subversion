@@ -121,13 +121,6 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
 static svn_error_t *
 create_activity (commit_ctx_t *cc)
 {
-  /* ### damn this is annoying to have to create a string */
-  svn_string_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
-                                              cc->ras->pool);
-
-  /* ### what the hell to use for the path? and where to get it */
-  svn_string_t * path = svn_string_create(".", cc->ras->pool);
-
   svn_string_t * activity_url;
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH];
@@ -135,8 +128,18 @@ create_activity (commit_ctx_t *cc)
   int code;
 
 #if 0
-  /* get the URL where we should create activities */
-  SVN_ERR( svn_wc_prop_get(&activity_url, propname, path, cc->ras->pool) );
+  {
+    /* ### damn this is annoying to have to create a string */
+    svn_string_t * propname = svn_string_create(SVN_RA_DAV__LP_ACTIVITY_URL,
+                                                cc->ras->pool);
+
+    /* ### what the hell to use for the path? and where to get it */
+    svn_string_t * path = svn_string_create(".", cc->ras->pool);
+
+    /* get the URL where we should create activities */
+    SVN_ERR( svn_wc_prop_get(&activity_url, propname, path,
+                             cc->ras->pool) );
+  }
 #endif
 
   /* the URL for our activity will be ACTIVITY_URL/UUID */
