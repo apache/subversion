@@ -1324,12 +1324,14 @@ static svn_error_t *ra_svn_lock(void *session_baton,
                                 const char *path,
                                 const char *comment,
                                 svn_boolean_t force,
+                                svn_revnum_t current_rev,
                                 apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session_baton;
   svn_ra_svn_conn_t* conn = sess->conn;
   apr_array_header_t *list;
 
+  /* ### LUNDBLAD TODO:  marshall 'current_rev' parameter to server! */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "c(?c)b", path, comment,
                                force));
 

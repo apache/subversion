@@ -1206,7 +1206,9 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
 
+  /* ### LUNDBLAD TO-DO:  use 'current_rev' parameter from ra_svn: */
   SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, comment, force, 0,
+                                SVN_INVALID_REVNUM, /* ### CHANGE ME */
                                 pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));

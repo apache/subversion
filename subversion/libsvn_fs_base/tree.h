@@ -49,6 +49,14 @@ svn_error_t *svn_fs_base__get_path_kind (svn_node_kind_t *kind,
                                          const char *path,
                                          trail_t *trail);
 
+/* Helper func: in the context of TRAIL, set *REV to the created-rev
+   of PATH in head revision.  If PATH doesn't exist, set *REV to
+   SVN_INVALID_REVNUM. */
+svn_error_t *svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
+                                                const char *path,
+                                                trail_t *trail);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

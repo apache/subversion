@@ -968,6 +968,7 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         "lock created by svnadmin",
                         0,      /* don't steal an existing lock. */
                         0,      /* no expiration time. */
+                        SVN_INVALID_REVNUM, /* no need for out-of-date check*/
                         pool));
   
   SVN_ERR (svn_cmdline_printf (pool, _("Created lock on '%s', owned by %s.\n"),

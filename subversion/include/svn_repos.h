@@ -905,6 +905,7 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 const char *comment,
                                 svn_boolean_t force,
                                 long int timeout,
+                                svn_revnum_t current_rev,
                                 apr_pool_t *pool);
 
 
@@ -923,6 +924,7 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
  */
 svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
                                        svn_repos_t *repos,
+                                       svn_revnum_t current_rev,
                                        apr_pool_t *pool);
 
 

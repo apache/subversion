@@ -460,6 +460,9 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
 
+  /* ### TODO:  somehow get {current_rev, force flag, creation_date}
+     from ra_dav into this function.  Probably via the dav_lockdb context. */
+
   if (lock->next)
     return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
                          DAV_ERR_LOCK_SAVE_LOCK,
@@ -474,6 +477,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
+                                  SVN_INVALID_REVNUM, /* ### CHANGE ME */
                                   resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -560,6 +564,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
   /* Now use the tweaked svn_lock_t to 'refresh' the existing lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
+                                  SVN_INVALID_REVNUM,
                                   resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

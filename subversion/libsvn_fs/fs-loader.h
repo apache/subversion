@@ -139,9 +139,9 @@ typedef struct fs_vtable_t
   svn_error_t *(*lock) (svn_lock_t **lock, svn_fs_t *fs,
                         const char *path, const char *comment,
                         svn_boolean_t force, long int timeout,
-                        apr_pool_t *pool);
+                        svn_revnum_t current_rev, apr_pool_t *pool);
   svn_error_t *(*attach_lock) (svn_lock_t *lock, svn_fs_t *fs,
-                               apr_pool_t *pool);
+                               svn_revnum_t current_rev, apr_pool_t *pool);
   svn_error_t *(*unlock) (svn_fs_t *fs, const char *token,
                           svn_boolean_t force, apr_pool_t *pool);
   svn_error_t *(*get_lock_from_path) (svn_lock_t **lock, svn_fs_t *fs,

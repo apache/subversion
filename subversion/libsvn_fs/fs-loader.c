@@ -790,15 +790,17 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 svn_error_t *
 svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
              const char *comment, svn_boolean_t force, long int timeout,
-             apr_pool_t *pool)
+             svn_revnum_t current_rev, apr_pool_t *pool)
 {
-  return fs->vtable->lock (lock, fs, path, comment, force, timeout, pool);  
+  return fs->vtable->lock (lock, fs, path, comment, force, timeout,
+                           current_rev, pool);  
 }
 
 svn_error_t *
-svn_fs_attach_lock (svn_lock_t *lock, svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_attach_lock (svn_lock_t *lock, svn_fs_t *fs, svn_revnum_t current_rev,
+                    apr_pool_t *pool)
 {
-  return fs->vtable->attach_lock (lock, fs, pool);  
+  return fs->vtable->attach_lock (lock, fs, current_rev, pool);  
 }
 
 svn_error_t *

@@ -4470,3 +4470,39 @@ svn_fs_base__get_path_kind (svn_node_kind_t *kind,
   *kind = svn_fs_base__dag_node_kind (path_node);
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
+                                   const char *path,
+                                   trail_t *trail)
+{
+  svn_revnum_t head_rev, created_rev;
+  svn_fs_root_t *root;
+  dag_node_t *root_dir, *path_node;
+  svn_error_t *err;
+
+  /* Get HEAD revision, */
+  SVN_ERR (svn_fs_bdb__youngest_rev (&head_rev, trail->fs, trail));
+
+  /* Then convert it into a root_t, */
+  SVN_ERR (svn_fs_base__dag_revision_root (&root_dir, trail->fs, head_rev,
+                                           trail));
+  root = make_revision_root (trail->fs, head_rev, root_dir, trail->pool);
+
+  /* And get the dag_node for path in the root_t. */
+  err = get_dag (&path_node, root, path, trail);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+    {
+      *rev = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+  
+  /* Find the created_rev of the dag_node. */
+  SVN_ERR (svn_fs_base__dag_get_revision (&created_rev, path_node, trail));
+
+  *rev = created_rev;
+  return SVN_NO_ERROR;
+}

@@ -534,6 +534,11 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 40,
               "Lock has expired")
 
+  SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
+              SVN_ERR_FS_CATEGORY_START + 41,
+              "Item is out of date")
+
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,

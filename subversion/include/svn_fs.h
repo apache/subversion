@@ -1498,6 +1498,10 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * If @a timeout is zero, then create a non-expiring lock.  Else, the
  * lock will expire in @a timeout seconds after creation.
  *
+ * If @a current_rev is a valid revnum, then do an out-of-dateness
+ * check.  If the revnum is less than the last-changed-revision of @a
+ * path, return SVN_ERR_FS_OUT_OF_DATE.
+ *
  * If @a path is non-existent, that's fine.  The path is reserved, and
  * a lock-token is returned.
  *
@@ -1509,6 +1513,7 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           const char *comment,
                           svn_boolean_t force,
                           long int timeout,
+                          svn_revnum_t current_rev,
                           apr_pool_t *pool);
 
 
@@ -1525,13 +1530,19 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  * as a request to "refresh" the the lock with a new expiration time
  * (using @a lock->expiration_date).
  *
+ * If @a current_rev is a valid revnum, then do an out-of-dateness
+ * check.  If the revnum is less than the last-changed-revision of @a
+ * path, return SVN_ERR_FS_OUT_OF_DATE.
+ *
  * If this function returns successfully, the caller can assume that
- * @a lock now represents the lock attached to @a lock->path.
+ * @a lock now represents the lock attached to @a lock->path.  Path is
+ * allowed to be non-existent.
  *
  * ### Note:  at this time, only files can be locked.
 */
 svn_error_t *svn_fs_attach_lock (svn_lock_t *lock,
-                                 svn_fs_t *fs,                                 
+                                 svn_fs_t *fs,
+                                 svn_revnum_t current_rev,
                                  apr_pool_t *pool);
 
 

@@ -819,6 +819,10 @@ typedef struct svn_ra_plugin_t
    * Delete any lock on @a path, and unconditionally create a new
    * lock.
    *
+   * If @a current_rev is a valid revnum, then do an out-of-dateness
+   * check.  If the revnum is less than the last-changed-revision of @a
+   * path, return SVN_ERR_RA_OUT_OF_DATE.
+   *
    * If @a path is non-existent, that's fine.  The path is reserved, and
    * a lock is still returned.  
    */
@@ -827,6 +831,7 @@ typedef struct svn_ra_plugin_t
                         const char *path,
                         const char *comment,
                         svn_boolean_t force,
+                        svn_revnum_t current_rev,
                         apr_pool_t *pool);
 
   /**

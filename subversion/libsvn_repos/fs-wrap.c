@@ -408,6 +408,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
                    const char *comment,
                    svn_boolean_t force,
                    long int timeout,
+                   svn_revnum_t current_rev,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -429,7 +430,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
 
   /* Lock. */
   SVN_ERR (svn_fs_lock (lock, repos->fs, path, comment, force,
-                        timeout, pool));
+                        timeout, current_rev, pool));
 
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, path, username, pool)))
@@ -445,6 +446,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
 svn_error_t *
 svn_repos_fs_attach_lock (svn_lock_t *lock,
                           svn_repos_t *repos,
+                          svn_revnum_t current_rev,
                           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -454,7 +456,7 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
   SVN_ERR (svn_repos__hooks_pre_lock (repos, lock->path, lock->owner, pool));
 
   /* Lock. */
-  SVN_ERR (svn_fs_attach_lock (lock, repos->fs, pool));
+  SVN_ERR (svn_fs_attach_lock (lock, repos->fs, current_rev, pool));
   
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, lock->path,

@@ -69,6 +69,7 @@ struct lock_args
   const char *comment;
   svn_boolean_t force;
   long int timeout;
+  svn_revnum_t current_rev;
 };
 
 
@@ -95,6 +96,28 @@ txn_body_lock (void *baton, trail_t *trail)
     return svn_fs_base__err_no_user (trail->fs);
   else
     fs_username = trail->fs->access_ctx->username; /* for convenience */
+
+  /* Is the caller attempting to lock an out-of-date working file? */
+  if (SVN_IS_VALID_REVNUM(args->current_rev))
+    {
+      svn_revnum_t created_rev;
+      SVN_ERR (svn_fs_base__get_path_created_rev (&created_rev, args->path,
+                                                  trail));
+
+      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
+         apparently somebody is trying to lock something in their
+         working copy, but somebody else has deleted the thing
+         from HEAD.  That counts as being 'out of date'. */     
+      if (! SVN_IS_VALID_REVNUM(created_rev))
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Path '%s' doesn't exist in HEAD revision.",
+                                  args->path);
+
+      if (args->current_rev < created_rev)
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Lock failed: newer version of '%s' exists.",
+                                  args->path);
+    }
 
   /* Is the path already locked?   
 
@@ -147,6 +170,7 @@ svn_fs_base__lock (svn_lock_t **lock,
                    const char *comment,
                    svn_boolean_t force,
                    long int timeout,
+                   svn_revnum_t current_rev,
                    apr_pool_t *pool)
 {
   struct lock_args args;
@@ -158,6 +182,7 @@ svn_fs_base__lock (svn_lock_t **lock,
   args.comment = comment;
   args.force =  force;
   args.timeout = timeout;
+  args.current_rev = current_rev;
 
   return svn_fs_base__retry_txn (fs, txn_body_lock, &args, pool);
 
@@ -165,10 +190,18 @@ svn_fs_base__lock (svn_lock_t **lock,
 
 
 
+struct attach_lock_args
+{
+  svn_lock_t *lock;
+  svn_revnum_t current_rev;
+};
+
+
 static svn_error_t *
 txn_body_attach_lock (void *baton, trail_t *trail)
 {
-  svn_lock_t *lock = baton;
+  struct attach_lock_args *args = baton;
+  svn_lock_t *lock = args->lock;
   svn_node_kind_t kind = svn_node_file;
   svn_lock_t *existing_lock;
 
@@ -180,6 +213,28 @@ txn_body_attach_lock (void *baton, trail_t *trail)
     return svn_fs_base__err_not_file (trail->fs, lock->path);
   if (kind == svn_node_none)
     kind = svn_node_file;    /* pretend, so the name can be reserved */
+
+  /* Is the caller attempting to lock an out-of-date working file? */
+  if (SVN_IS_VALID_REVNUM(args->current_rev))
+    {
+      svn_revnum_t created_rev;
+      SVN_ERR (svn_fs_base__get_path_created_rev (&created_rev, lock->path,
+                                                  trail));
+
+      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
+         apparently somebody is trying to lock something in their
+         working copy, but somebody else has deleted the thing
+         from HEAD.  That counts as being 'out of date'. */     
+      if (! SVN_IS_VALID_REVNUM(created_rev))
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Path '%s' doesn't exist in HEAD revision.",
+                                  lock->path);
+
+      if (args->current_rev < created_rev)
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Lock failed: newer version of '%s' exists.",
+                                  lock->path);
+    }
 
   /* Is the path already locked? */
   SVN_ERR (svn_fs_base__get_lock_from_path_helper (&existing_lock,
@@ -212,12 +267,18 @@ txn_body_attach_lock (void *baton, trail_t *trail)
 
 svn_error_t *
 svn_fs_base__attach_lock (svn_lock_t *lock,
-                          svn_fs_t *fs,                                 
+                          svn_fs_t *fs,
+                          svn_revnum_t current_rev,
                           apr_pool_t *pool)
 {
+  struct attach_lock_args args;
+
   SVN_ERR (svn_fs_base__check_fs (fs));
 
-  return svn_fs_base__retry_txn (fs, txn_body_attach_lock, lock, pool);
+  args.lock = lock;
+  args.current_rev = current_rev;
+
+  return svn_fs_base__retry_txn (fs, txn_body_attach_lock, &args, pool);
 }
 
 

@@ -958,6 +958,7 @@ svn_ra_local__lock (void *session_baton,
                     const char *path,
                     const char *comment,
                     svn_boolean_t force,
+                    svn_revnum_t current_rev,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
@@ -967,7 +968,7 @@ svn_ra_local__lock (void *session_baton,
 
   /* This wrapper will call pre- and post-lock hooks. */
   SVN_ERR (svn_repos_fs_lock (lock, sess->repos, path, comment, force,
-                              0 /* no timeout */, pool));
+                              0 /* no timeout */, current_rev, pool));
 
   return SVN_NO_ERROR;
 }

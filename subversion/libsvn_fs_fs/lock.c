@@ -465,6 +465,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                  const char *comment,
                  svn_boolean_t force,
                  long int timeout,
+                 svn_revnum_t current_rev,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -489,6 +490,9 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   /* We need to have a username attached to the fs. */
   if (!fs->access_ctx || !fs->access_ctx->username)
     return svn_fs_fs__err_no_user (fs);
+
+  /* ### FITZ TODO:  if vaild, use current_rev here to do an
+     out-of-dateness check.  See how fs_base is doing it. */
 
   /* Is the path already locked?   
 
@@ -528,6 +532,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
 svn_error_t *
 svn_fs_fs__attach_lock (svn_lock_t *lock,
                         svn_fs_t *fs,
+                        svn_revnum_t current_rev,
                         apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -551,6 +556,9 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   /* We need to have a username attached to the fs. */
   if (!fs->access_ctx || !fs->access_ctx->username)
     return svn_fs_fs__err_no_user (fs);
+
+  /* ### FITZ TODO:  if vaild, use current_rev here to do an
+     out-of-dateness check.  See how fs_base is doing it. */
 
   /* Try and get a lock from lock->path */ 
   SVN_ERR (get_lock_from_path_helper (fs, &existing_lock, lock->path, pool));

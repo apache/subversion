@@ -115,9 +115,8 @@ svn_client_lock (const svn_lock_t **lock_p, const char *path,
                                         ctx, pool));
 
   /* Lock the path. */
-  /* ### TO-DO: Need to pass our revision of the path here when the API is
-     changed. */
-  SVN_ERR (ra_lib->lock (session, &lock, "", comment, force, pool));
+  SVN_ERR (ra_lib->lock (session, &lock, "", comment, force,
+                         entry->revision,  pool));
 
   /* Store the lock token in the entry and optionally make file writeable. */
   SVN_ERR (svn_wc_add_lock (path, lock, adm_access, pool));
