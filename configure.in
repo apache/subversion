@@ -489,7 +489,6 @@ AC_HELP_STRING([--enable-maintainer-mode],
       CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
       if test "$GCC" = "yes"; then
         CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
-        SVN_MAYBE_ADD_TO_CFLAGS([-std=c89])
       fi
     fi
 ])
