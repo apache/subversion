@@ -65,13 +65,14 @@ typedef struct {
 typedef struct {
   apr_pool_t *pool;
   update_ctx_t *uc;
+  const char *name;    /* the single-component name of this item */
   const char *path;    /* a telescoping extension of uc->anchor */
   const char *path2;   /* a telescoping extension of uc->dst_path */
   const char *path3;   /* a telescoping extension of uc->dst_path
                             without dst_path as prefix. */
   svn_boolean_t added;
-  apr_array_header_t *changed_props;
-  apr_array_header_t *removed_props;
+  apr_array_header_t *changed_props; /* array of const char * prop names */
+  apr_array_header_t *removed_props; /* array of const char * prop names */
 
   /* "entry props" */
   const char *committed_rev;
@@ -145,29 +146,25 @@ static const char *get_from_path_map(apr_hash_t *hash,
   return apr_pstrdup(pool, path);
 }
 
-static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
-				      svn_boolean_t is_dir)
+static item_baton_t *make_child_baton(item_baton_t *parent, 
+                                      const char *path,
+                                      apr_pool_t *pool)
 {
   item_baton_t *baton;
-  apr_pool_t *pool;
-
-  if (is_dir)
-    pool = svn_pool_create(parent->pool);
-  else
-    pool = parent->pool;
 
   baton = apr_pcalloc(pool, sizeof(*baton));
   baton->pool = pool;
   baton->uc = parent->uc;
+  baton->name = svn_path_basename(path, pool);
 
   /* Telescope the path based on uc->anchor.  */
-  baton->path = svn_path_join(parent->path, name, pool);
+  baton->path = svn_path_join(parent->path, baton->name, pool);
 
   /* Telescope the path based on uc->dst_path in the exact same way. */
-  baton->path2 = svn_path_join(parent->path2, name, pool);
+  baton->path2 = svn_path_join(parent->path2, baton->name, pool);
 
   /* Telescope the third path:  it's relative, not absolute, to dst_path. */
-  baton->path3 = svn_path_join(parent->path3, name, pool);
+  baton->path3 = svn_path_join(parent->path3, baton->name, pool);
 
   return baton;
 }
@@ -181,7 +178,7 @@ static void send_xml(update_ctx_t *uc, const char *fmt, ...)
   va_end(ap);
 }
 
-static void send_vsn_url(item_baton_t *baton)
+static void send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
 {
   const char *href;
   const char *path;
@@ -191,26 +188,27 @@ static void send_vsn_url(item_baton_t *baton)
      path really points to in the repos.  if it doesn't point to
      something other than itself, we'll use path2.  if it does point
      to something else, we'll use the path that it points to. */
-  path = get_from_path_map(baton->uc->pathmap, baton->path, baton->pool);
+  path = get_from_path_map(baton->uc->pathmap, baton->path, pool);
   path = strcmp(path, baton->path) ? path : baton->path2;
 
   /* Try to use the CR, assuming the path exists in CR. */
-  revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, baton->pool);
+  revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, pool);
     
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
-			   revision, path, 0 /* add_href */, baton->pool);
+			   revision, path, 0 /* add_href */, pool);
 
   send_xml(baton->uc, 
            "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 
-           apr_xml_quote_string (baton->pool, href, 1));
+           apr_xml_quote_string (pool, href, 1));
 }
 
 static void add_helper(svn_boolean_t is_dir,
-		       const char *name,
+		       const char *path,
 		       item_baton_t *parent,
-		       svn_stringbuf_t *copyfrom_path,
+		       const char *copyfrom_path,
 		       svn_revnum_t copyfrom_revision,
+                       apr_pool_t *pool,
 		       void **child_baton)
 {
   item_baton_t *child;
@@ -218,18 +216,18 @@ static void add_helper(svn_boolean_t is_dir,
   const char *qpath;
   update_ctx_t *uc = parent->uc;
 
-  child = make_child_baton(parent, name, is_dir);
+  child = make_child_baton(parent, path, pool);
   child->added = TRUE;
 
   if (uc->resource_walk)
     {
-      qpath = apr_xml_quote_string(child->pool, child->path3, 1);
+      qpath = apr_xml_quote_string(pool, child->path3, 1);
 
       send_xml(child->uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);      
     }
   else
     {
-      qname = apr_xml_quote_string(child->pool, name, 1);
+      qname = apr_xml_quote_string(pool, child->name, 1);
       
       if (copyfrom_path == NULL)
         send_xml(child->uc, "<S:add-%s name=\"%s\">" DEBUG_CR,
@@ -238,7 +236,7 @@ static void add_helper(svn_boolean_t is_dir,
         {
           const char *qcopy;
           
-          qcopy = apr_xml_quote_string(child->pool, copyfrom_path->data, 1);
+          qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
           send_xml(child->uc,
                    "<S:add-%s name=\"%s\" "
                    "copyfrom-path=\"%s\" copyfrom-rev=\"%"
@@ -248,7 +246,7 @@ static void add_helper(svn_boolean_t is_dir,
         }
     }
 
-  send_vsn_url(child);
+  send_vsn_url(child, pool);
 
   if (uc->resource_walk)
     send_xml(child->uc, "</S:resource>" DEBUG_CR);
@@ -257,24 +255,25 @@ static void add_helper(svn_boolean_t is_dir,
 }
 
 static void open_helper(svn_boolean_t is_dir,
-                        const char *name,
+                        const char *path,
                         item_baton_t *parent,
                         svn_revnum_t base_revision,
+                        apr_pool_t *pool,
                         void **child_baton)
 {
   item_baton_t *child;
   const char *qname;
 
-  child = make_child_baton(parent, name, is_dir);
+  child = make_child_baton(parent, path, pool);
 
-  qname = apr_xml_quote_string(child->pool, name, 1);
+  qname = apr_xml_quote_string(pool, child->name, 1);
   /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
      upgraded.  Will change to "open-" soon.  -kff */
   send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%"
            SVN_REVNUM_T_FMT "\">" DEBUG_CR,
 	   DIR_OR_FILE(is_dir), qname, base_revision);
 
-  send_vsn_url(child);
+  send_vsn_url(child, pool);
 
   *child_baton = child;
 }
@@ -289,14 +288,13 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   /* ### ack!  binary names won't float here! */
   if (baton->removed_props && (! baton->added))
     {
-      svn_stringbuf_t *qname;
+      const char *qname;
 
       for (i = 0; i < baton->removed_props->nelts; i++)
         {
           /* We already XML-escaped the property name in change_xxx_prop. */
-          qname = ((svn_stringbuf_t **)(baton->removed_props->elts))[i];
-          send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR,
-                   qname->data);
+          qname = ((const char **)(baton->removed_props->elts))[i];
+          send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR, qname);
         }
     }
   if (baton->changed_props && (! baton->added))
@@ -355,15 +353,15 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
              "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
              target_revision);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_open_root(void *edit_baton,
                                    svn_revnum_t base_revision,
+                                   apr_pool_t *pool,
                                    void **root_baton)
 {
   update_ctx_t *uc = edit_baton;
-  apr_pool_t *pool = svn_pool_create(uc->resource->pool);
   item_baton_t *b = apr_pcalloc(pool, sizeof(*b));
 
   /* note that we create a subpool; the root_baton is passed to the
@@ -388,91 +386,94 @@ static svn_error_t * upd_open_root(void *edit_baton,
     send_xml(uc, "<S:replace-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
              DEBUG_CR, base_revision);
 
-  send_vsn_url(b);
+  send_vsn_url(b, pool);
 
   if (uc->resource_walk)
     send_xml(uc, "</S:resource>" DEBUG_CR);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_delete_entry(svn_stringbuf_t *name,
+static svn_error_t * upd_delete_entry(const char *path,
                                       svn_revnum_t revision,
-				      void *parent_baton)
+				      void *parent_baton,
+                                      apr_pool_t *pool)
 {
   item_baton_t *parent = parent_baton;
-  const char *qname;
-
-  qname = apr_xml_quote_string(parent->pool, name->data, 1);
+  const char *qname, *name = svn_path_basename(path, pool);
+  
+  qname = apr_xml_quote_string(pool, name, 1);
   send_xml(parent->uc, "<S:delete-entry name=\"%s\"/>" DEBUG_CR, qname);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_add_directory(svn_stringbuf_t *name,
+static svn_error_t * upd_add_directory(const char *path,
 				       void *parent_baton,
-				       svn_stringbuf_t *copyfrom_path,
+				       const char *copyfrom_path,
 				       svn_revnum_t copyfrom_revision,
+                                       apr_pool_t *pool,
 				       void **child_baton)
 {
   add_helper(TRUE /* is_dir */,
-             name->data, parent_baton, copyfrom_path, copyfrom_revision,
+             path, parent_baton, copyfrom_path, copyfrom_revision, pool,
              child_baton);
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_open_directory(svn_stringbuf_t *name,
+static svn_error_t * upd_open_directory(const char *path,
                                         void *parent_baton,
                                         svn_revnum_t base_revision,
+                                        apr_pool_t *pool,
                                         void **child_baton)
 {
   open_helper(TRUE /* is_dir */,
-              name->data, parent_baton, base_revision, child_baton);
-  return NULL;
+              path, parent_baton, base_revision, pool, child_baton);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_change_xxx_prop(void *baton,
-					 svn_stringbuf_t *name,
-					 svn_stringbuf_t *value)
+					 const char *name,
+					 const svn_string_t *value,
+                                         apr_pool_t *pool)
 {
   item_baton_t *b = baton;
-  svn_stringbuf_t *qname;
+  const char *qname;
 
   /* For now, specially handle entry props that come through (using
      the ones we care about, discarding the rest).  ### this should go
      away and we should just tunnel those props on through for the
      client to deal with. */
 #define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
-  if (! strncmp(name->data, SVN_PROP_ENTRY_PREFIX, NSLEN))
+  if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
     {
-      if (! strcmp(name->data, SVN_PROP_ENTRY_COMMITTED_REV))
+      if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
         b->committed_rev = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name->data, SVN_PROP_ENTRY_COMMITTED_DATE))
+      else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
         b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name->data, SVN_PROP_ENTRY_LAST_AUTHOR))
+      else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
         b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
       
       return SVN_NO_ERROR;
     }
 #undef NSLEN
                 
-  qname = svn_stringbuf_create (apr_xml_quote_string (b->pool, name->data, 1),
-                                b->pool);
+  qname = apr_xml_quote_string (b->pool, name, 1);
   if (value)
     {
       if (! b->changed_props)
         b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((svn_stringbuf_t **)(apr_array_push (b->changed_props)))) = qname;
+      (*((const char **)(apr_array_push (b->changed_props)))) = qname;
     }
   else
     {
       if (! b->removed_props)
         b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((svn_stringbuf_t **)(apr_array_push (b->removed_props)))) = qname;
+      (*((const char **)(apr_array_push (b->removed_props)))) = qname;
     }
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_close_directory(void *dir_baton)
@@ -480,41 +481,37 @@ static svn_error_t * upd_close_directory(void *dir_baton)
   item_baton_t *dir = dir_baton;
 
   close_helper(TRUE /* is_dir */, dir);
-  svn_pool_destroy(dir->pool);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_add_file(svn_stringbuf_t *name,
+static svn_error_t * upd_add_file(const char *path,
 				  void *parent_baton,
-				  svn_stringbuf_t *copyfrom_path,
+				  const char *copyfrom_path,
 				  svn_revnum_t copyfrom_revision,
+                                  apr_pool_t *pool,
 				  void **file_baton)
 {
   add_helper(FALSE /* is_dir */,
-	     name->data, parent_baton, copyfrom_path, copyfrom_revision,
+	     path, parent_baton, copyfrom_path, copyfrom_revision, pool,
 	     file_baton);
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t * upd_open_file(svn_stringbuf_t *name,
+static svn_error_t * upd_open_file(const char *path,
                                    void *parent_baton,
                                    svn_revnum_t base_revision,
+                                   apr_pool_t *pool,
                                    void **file_baton)
 {
   open_helper(FALSE /* is_dir */,
-              name->data, parent_baton, base_revision, file_baton);
-  return NULL;
-}
-
-static svn_error_t * noop_handler(svn_txdelta_window_t *window, void *baton)
-{
-  return NULL;
+              path, parent_baton, base_revision, pool, file_baton);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
-                                       svn_txdelta_window_handler_t *handler,
-                                       void **handler_baton)
+                                         svn_txdelta_window_handler_t *handler,
+                                         void **handler_baton)
 {
   item_baton_t *file = file_baton;
 
@@ -522,15 +519,15 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   if (!file->added)
     send_xml(file->uc, "<S:fetch-file/>" DEBUG_CR);
 
-  *handler = noop_handler;
+  *handler = NULL;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * upd_close_file(void *file_baton)
 {
   close_helper(FALSE /* is_dir */, file_baton);
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -538,7 +535,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 				   const apr_xml_doc *doc,
 				   ap_filter_t *output)
 {
-  svn_delta_edit_fns_t *editor;
+  svn_delta_editor_t *editor;
   apr_xml_elem *child;
   void *rbaton;
   update_ctx_t uc = { 0 };
@@ -621,7 +618,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         }
     }
 
-  editor = svn_delta_old_default_editor(resource->pool);
+  editor = svn_delta_default_editor(resource->pool);
   editor->set_target_revision = upd_set_target_revision;
   editor->open_root = upd_open_root;
   editor->delete_entry = upd_delete_entry;
@@ -827,7 +824,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 				 "report.");
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 

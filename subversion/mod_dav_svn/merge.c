@@ -61,16 +61,10 @@ typedef struct {
 } merge_response_ctx;
 
 typedef struct mr_baton {
-  merge_response_ctx *mrc;
-
-  /* for directories, this is a subpool. otherwise, the pool to use. */
   apr_pool_t *pool;
-
-  /* path for this baton's corresponding FS object */
-  const char *path;
-
-  /* for a directory, have we seen a change yet? */
-  svn_boolean_t seen_change;
+  merge_response_ctx *mrc;
+  const char *path; /* path for this baton's corresponding FS object */
+  svn_boolean_t seen_change; /* for a directory, have we seen a change yet? */
 
 } mr_baton;
 
@@ -81,31 +75,25 @@ typedef struct mr_baton {
    PRIVATE HELPER FUNCTIONS
 */
 
-static mr_baton *make_child_baton(mr_baton *parent, const char *name,
-                                  svn_boolean_t is_dir)
+static mr_baton *make_child_baton(mr_baton *parent, 
+                                  const char *path,
+                                  apr_pool_t *pool)
 {
-  apr_pool_t *pool;
-  mr_baton *subdir;
-
-  if (is_dir)
-    pool = svn_pool_create(parent->pool);
-  else
-    pool = parent->pool;
-
-  subdir = apr_pcalloc(pool, sizeof(*subdir));
+  mr_baton *subdir = apr_pcalloc(pool, sizeof(*subdir));
   subdir->mrc = parent->mrc;
-  subdir->pool = pool;
-
-  if (parent->path[1] == '\0')  /* must be "/" */
-    subdir->path = apr_pstrcat(pool, "/", name, NULL);
+  if (path[0] == '/')
+    subdir->path = path;
   else
-    subdir->path = apr_pstrcat(pool, parent->path, "/", name, NULL);
+    subdir->path = apr_pstrcat(pool, "/", path, NULL);
+  subdir->pool = pool;
 
   return subdir;
 }
 
 /* send a response to the client for this baton */
-static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
+static svn_error_t *send_response(mr_baton *baton, 
+                                  svn_boolean_t is_dir,
+                                  apr_pool_t *pool)
 {
   merge_response_ctx *mrc = baton->mrc;
   const char *href;
@@ -117,26 +105,26 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
 
   href = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_PUBLIC,
                            SVN_IGNORED_REVNUM, baton->path,
-                           0 /* add_href */, baton->pool);
+                           0 /* add_href */, pool);
 
   rt = is_dir
     ? "<D:resourcetype><D:collection/></D:resourcetype>" DEBUG_CR
     : "<D:resourcetype/>" DEBUG_CR;
 
-  rev_to_use = dav_svn_get_safe_cr(mrc->root, baton->path, baton->pool);
+  rev_to_use = dav_svn_get_safe_cr(mrc->root, baton->path, pool);
   vsn_url = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_VERSION,
                               rev_to_use, baton->path,
-                              0 /* add_href */, baton->pool);
+                              0 /* add_href */, pool);
 
   status = ap_fputstrs(mrc->output, mrc->bb,
                        "<D:response>" DEBUG_CR
                        "<D:href>", 
-                       apr_xml_quote_string (baton->pool, href, 1),
+                       apr_xml_quote_string (pool, href, 1),
                        "</D:href>" DEBUG_CR
                        "<D:propstat><D:prop>" DEBUG_CR,
                        rt,
                        "<D:checked-in><D:href>",
-                       apr_xml_quote_string (baton->pool, vsn_url, 1),
+                       apr_xml_quote_string (pool, vsn_url, 1),
                        "</D:href></D:checked-in>" DEBUG_CR
                        "</D:prop>" DEBUG_CR
                        "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
@@ -145,7 +133,7 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
                        NULL);
 
   if (status != APR_SUCCESS)
-    return svn_error_create(status, 0, NULL, baton->pool,
+    return svn_error_create(status, 0, NULL, pool,
                             "could not write response to output");
 
   return APR_SUCCESS;
@@ -159,27 +147,25 @@ static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
 
 static svn_error_t *mr_open_root(void *edit_baton,
                                  svn_revnum_t base_revision,
+                                 apr_pool_t *pool,
                                  void **root_baton)
 {
   merge_response_ctx *mrc = edit_baton;
-  apr_pool_t *pool;
   mr_baton *b;
 
-  /* note that we create a subpool; the root_baton is passed to the
-     close_directory callback, where we will destroy the pool. */
-  pool = svn_pool_create(mrc->pool);
   b = apr_pcalloc(pool, sizeof(*b));
   b->mrc = mrc;
-  b->pool = pool;
   b->path = "/";
+  b->pool = pool;
 
   *root_baton = b;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_delete_entry(svn_stringbuf_t *name,
+static svn_error_t *mr_delete_entry(const char *path,
                                     svn_revnum_t revision,
-                                    void *parent_baton)
+                                    void *parent_baton,
+                                    apr_pool_t *pool)
 {
   mr_baton *parent = parent_baton;
 
@@ -187,17 +173,18 @@ static svn_error_t *mr_delete_entry(svn_stringbuf_t *name,
      client will get the data on the new parent. */
   parent->seen_change = TRUE;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_add_directory(svn_stringbuf_t *name,
+static svn_error_t *mr_add_directory(const char *path,
                                      void *parent_baton,
-                                     svn_stringbuf_t *copyfrom_path,
+                                     const char *copyfrom_path,
                                      svn_revnum_t copyfrom_revision,
+                                     apr_pool_t *pool,
                                      void **child_baton)
 {
   mr_baton *parent = parent_baton;
-  mr_baton *subdir = make_child_baton(parent, name->data, TRUE);
+  mr_baton *subdir = make_child_baton(parent, path, pool);
 
   /* pretend that we've already seen a change for this dir (so that a prop
      change won't generate a second response) */
@@ -210,27 +197,29 @@ static svn_error_t *mr_add_directory(svn_stringbuf_t *name,
   parent->seen_change = TRUE;
 
   *child_baton = subdir;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_open_directory(svn_stringbuf_t *name,
+static svn_error_t *mr_open_directory(const char *path,
                                       void *parent_baton,
                                       svn_revnum_t base_revision,
+                                      apr_pool_t *pool,
                                       void **child_baton)
 {
   mr_baton *parent = parent_baton;
-  mr_baton *subdir = make_child_baton(parent, name->data, TRUE);
+  mr_baton *subdir = make_child_baton(parent, path, pool);
 
   /* Don't issue a response until we see a prop change, or a file/subdir
      is added/removed inside this directory. */
 
   *child_baton = subdir;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *mr_change_dir_prop(void *dir_baton,
-                                       svn_stringbuf_t *name,
-                                       svn_stringbuf_t *value)
+                                       const char *name,
+                                       const svn_string_t *value,
+                                       apr_pool_t *pool)
 {
   mr_baton *dir = dir_baton;
 
@@ -238,7 +227,7 @@ static svn_error_t *mr_change_dir_prop(void *dir_baton,
      (which happens at close_directory time). */
   dir->seen_change = TRUE;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *mr_close_directory(void *dir_baton)
@@ -249,22 +238,21 @@ static svn_error_t *mr_close_directory(void *dir_baton)
      for it. */
   if (dir->seen_change)
     {
-      SVN_ERR( send_response(dir, TRUE /* is_dir */) );
+      SVN_ERR( send_response(dir, TRUE /* is_dir */, dir->pool) );
     }
 
-  svn_pool_destroy(dir->pool);
-
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_add_file(svn_stringbuf_t *name,
+static svn_error_t *mr_add_file(const char *path,
                                 void *parent_baton,
-                                svn_stringbuf_t *copy_path,
+                                const char *copy_path,
                                 svn_revnum_t copy_revision,
+                                apr_pool_t *pool,
                                 void **file_baton)
 {
   mr_baton *parent = parent_baton;
-  mr_baton *file = make_child_baton(parent, name->data, FALSE);
+  mr_baton *file = make_child_baton(parent, path, pool);
 
   /* We wait until close_file to issue a response for this. */
 
@@ -273,27 +261,30 @@ static svn_error_t *mr_add_file(svn_stringbuf_t *name,
   parent->seen_change = TRUE;
 
   *file_baton = file;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t *mr_open_file(svn_stringbuf_t *name,
+static svn_error_t *mr_open_file(const char *path,
                                  void *parent_baton,
                                  svn_revnum_t base_revision,
+                                 apr_pool_t *pool,
                                  void **file_baton)
 {
   mr_baton *parent = parent_baton;
-  mr_baton *file = make_child_baton(parent, name->data, FALSE);
+  mr_baton *file = make_child_baton(parent, path, pool);
 
   /* We wait until close_file to issue a response for this. */
 
   *file_baton = file;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *mr_close_file(void *file_baton)
 {
+  mr_baton *fb = file_baton;
+
   /* nothing to do except for sending the response. */
-  return send_response(file_baton, FALSE /* is_dir */);
+  return send_response(file_baton, FALSE /* is_dir */, fb->pool);
 }
 
 
@@ -315,7 +306,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   const char *vcc;
   char revbuf[20];      /* long enough for SVN_REVNUM_T_FMT */
   svn_string_t *creationdate, *creator_displayname;
-  svn_delta_edit_fns_t *editor;
+  svn_delta_editor_t *editor;
   merge_response_ctx mrc = { 0 };
 
   serr = svn_fs_revision_root(&committed_root, repos->fs, new_rev, pool);
@@ -400,7 +391,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
      ### pass back the new version URL */
 
   /* set up the editor for the delta process */
-  editor = svn_delta_old_default_editor(pool);
+  editor = svn_delta_default_editor(pool);
   editor->open_root = mr_open_root;
   editor->delete_entry = mr_delete_entry;
   editor->add_directory = mr_add_directory;
@@ -441,7 +432,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* send whatever is left in the brigade */
   (void) ap_pass_brigade(output, bb);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
