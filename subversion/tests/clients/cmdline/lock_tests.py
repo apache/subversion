@@ -447,6 +447,37 @@ def defunct_lock(sbox):
 
 
 #----------------------------------------------------------------------
+# Tests dealing with a lock on a deleted path 
+def deleted_path_lock(sbox):
+  "verify lock removal on a deleted path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_url = os.path.join(svntest.main.current_repo_url, 'iota')
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', iota_path)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'delete', iota_path)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'commit',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-unlock',
+                                     '-m', '', iota_path)
+
+  # Now make sure that we can delete the lock from iota via a URL
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     iota_url)
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -461,6 +492,7 @@ test_list = [ None,
               handle_defunct_lock,
               enforce_lock,
               Skip(defunct_lock, (os.name != 'posix')),
+              deleted_path_lock,
              ]
 
 if __name__ == '__main__':
