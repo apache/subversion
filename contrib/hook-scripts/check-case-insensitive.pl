@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w
-
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 Collab Net.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -13,6 +12,30 @@
 # individuals.  For exact contribution history, see the revision
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
+
+use strict;
+require 5.004; # This is when locale support was added.
+# This 'use encoding' and setting the LANG environment variable has the
+# desired effect of handling the comparison of extended characters and
+# preventing a commit.  However, if any of the files in conflict have
+# extended characters in them this is the error displayed by the client:
+#
+#   Commit failed (details follow):
+#   svn: MERGE request failed on '/svn/play/martinto/trunk'
+#   svn: General svn error from server
+#
+# It should list the file names which are in conflict.  But it does stop the
+# commit. 
+use encoding "utf8";
+$ENV{'LANG'} = 'en_GB.UTF-8';
+
+# Please check the path to svnlook is correct...
+my $svnlook;
+if ($^O eq 'MSWin32') {
+  $svnlook = '"c:\Program Files\subversion\bin\svnlook.exe"';
+} else {
+  $svnlook = '/usr/local/bin/svnlook';
+}
 
 # This script can be called from a pre-commit hook on either Windows or a Unix
 # like operating system.  It implements the checks required to ensure that the
@@ -47,22 +70,9 @@
 # If you have any problems with this script feel free to contact
 # Martin Tomes <martin@tomes.org.uk>
 
-# Bug fixes and some debug code added by Jeremy Bettis <jeremy@deadbeef.com>
+# Bugfixes and some debug code added by Jeremy Bettis <jeremy@deadbeef.com>
 
-use strict;
-
-my $svnlook;
-my $openstr;
-
-# Please check the path to svnlook is correct...
-if ($^O eq 'MSWin32') {
-  $svnlook = '"c:\Program Files\subversion\bin\svnlook.exe"';
-  $openstr = '-|';
-} else {
-  $svnlook = '/usr/local/bin/svnlook';
-  $openstr = '-|:utf8';
-}
-
+my $openstr = '-|';
 # Shift off any debug options.
 my $debug = 0;
 while (@ARGV and $ARGV[0] =~ /^-d(ebug)?$/) {
@@ -72,7 +82,7 @@ while (@ARGV and $ARGV[0] =~ /^-d(ebug)?$/) {
 
 # If there is too much debug output to STDERR subversion doesn't like it, so,
 # if a lot of output is expected send it to a file instead.
-if ($debug > 1) {
+if ($debug > 0) {
   if ($^O eq 'MSWin32') {
     open(STDERR, ">c:/svnlog.txt")
       or die "$0: cannot open 'c:/svnlog.txt' for writing: $!\n";
@@ -118,6 +128,7 @@ my %tree;
 # Command being executed.
 my $cmd;
 
+print STDERR "LANG=", $ENV{'LANG'}, "\n" if ($debug and defined($ENV{'LANG'}));
 # Get a list of added files.
 local *SVNLOOK;
 $cmd = "$svnlook changed \"$repos\" $flag $txn";
@@ -226,8 +237,11 @@ while (<SVNLOOK>) {
 close SVNLOOK;
 
 my $failmsg;
+
 foreach my $newfile (@added) {
   print STDERR "Checking \$tree{lc($newfile)}\n" if ($debug > 1);
+  # Without the following line it gets the lc() wrong.
+  my $junk = "x$newfile";
   if (exists($tree{lc($newfile)})) {
     $failmsg .= "\n  $newfile already exists as " . $tree{lc($newfile)};
   }
