@@ -83,7 +83,7 @@ if test -n "$APXS"; then
     INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
 
     APXS_CC="`$APXS -q CC`"
-    APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
+    APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE -I$APXS_INCLUDE/apr -I$APXS_INCLUDE/xml"
 
     AC_SUBST(APXS)
     AC_SUBST(BINNAME)
@@ -105,9 +105,10 @@ AC_SUBST(APACHE_INCLUDES)
 
 AM_CONDITIONAL(IS_STATIC_APACHE, test -n "$APACHE_TARGET")
 
-if test -n "$APXS"; then
-  CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"
-fi
+# there aren't any flags that interest us ...
+#if test -n "$APXS"; then
+#  CFLAGS="$CFLAGS `$APXS -q CFLAGS CFLAGS_SHLIB`"
+#fi
 
 if test -n "$APXS_CC" && test "$APXS_CC" != "$CC" ; then
   echo "=================================================================="
