@@ -610,6 +610,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_file_t *xml_hnd = NULL;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL, *bump_err = NULL;
   svn_boolean_t use_xml = (xml_dst && xml_dst->data) ? TRUE : FALSE;
+  svn_boolean_t commit_in_progress = FALSE;
+  svn_stringbuf_t *display_dir = svn_stringbuf_create (".", pool);
   int i;
 
   /* Condense the target list. */
@@ -671,18 +673,22 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                     pool)))
     goto cleanup;
 
-
   /* If we're committing to XML ... */
   if (use_xml)
     {
       if ((cmt_err = get_xml_editor (&xml_hnd, &editor, &edit_baton, 
                                      xml_dst->data, pool)))
         goto cleanup;
+
+      /* Make a note that we have a commit-in-progress. */
+      commit_in_progress = TRUE;
     }
 
   /* Else we're commit to RA */
   else
     {
+      svn_revnum_t head = SVN_INVALID_REVNUM;
+
       if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, 
                                     &editor, &edit_baton, auth_baton,
                                     base_url, base_dir, log_msg,
@@ -690,6 +696,38 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                     &committed_date, &committed_author, 
                                     TRUE, pool)))
         goto cleanup;
+
+      /* Make a note that we have a commit-in-progress. */
+      commit_in_progress = TRUE;
+
+      /* ### Temporary: If we have any non-added directories with
+         property mods, and we're not committing to an XML file, make
+         sure those directories are up-to-date.  Someday this should
+         just be protected against by the server.  */
+      for (i = 0; i < commit_items->nelts; i++)
+        {
+          svn_client_commit_item_t *item
+            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          if ((item->entry->kind == svn_node_dir)
+              && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+              && (! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
+            {
+              if (! SVN_IS_VALID_REVNUM (head))
+                {
+                  if ((cmt_err = ra_lib->get_latest_revnum (session, &head)))
+                    goto cleanup;
+                }
+
+              if (item->entry->revision != head)
+                {             
+                  cmt_err = svn_error_createf 
+                    (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL, pool,
+                     "Cannot commit propchanges for directory '%s'",
+                     item->path->data);
+                  goto cleanup;
+                }
+            }
+        }
     }
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */
@@ -699,18 +737,17 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                          after_editor, after_edit_baton, pool);
 
 
-  {
-    /* Calculate a display_dir. */
-    svn_stringbuf_t *display_dir = svn_stringbuf_create (".", pool);
-    if ((cmt_err = svn_path_get_absolute (&display_dir, display_dir, pool)))
-      goto cleanup;
+  /* Calculate a display_dir. */
+  if ((cmt_err = svn_path_get_absolute (&display_dir, display_dir, pool)))
+    goto cleanup;
 
-    /* Perform the commit. */
-    cmt_err = svn_client__do_commit (base_url, commit_items, 
-                                     editor, edit_baton, 
-                                     notify_func, notify_baton, display_dir,
-                                     NULL, NULL, pool);
-  }
+  /* Perform the commit. */
+  cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
+                                   notify_func, notify_baton, display_dir,
+                                   pool);
+
+  /* Make a note that our commit is finished. */
+  commit_in_progress = FALSE;
 
   /* Unlock the locked directories. */
   if (! ((unlock_err = unlock_dirs (locked_dirs, pool))))
@@ -761,6 +798,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_sleep (APR_USEC_PER_SEC * 1);
 
  cleanup:
+  if (commit_in_progress)
+    editor->abort_edit (edit_baton); /* ignore return value */
+
   if (locked_dirs)
     unlock_err = unlock_dirs (locked_dirs, pool);
 

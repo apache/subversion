@@ -798,6 +798,7 @@ def hudson_part_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove gamma from the working copy.
+  D_path = os.path.join(wc_dir, 'A', 'D')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
   svntest.main.run_svn(None, 'rm', gamma_path)
 
@@ -824,13 +825,13 @@ def hudson_part_2(sbox):
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
 
   # Make a propchange on A/D
-  svntest.main.run_svn(None, 'ps', 'foo', 'bar', os.path.join(wc_dir, 'A', 'D'))
+  svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
 
   # Commit and *expect* a repository Merge failure:
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
-                                                "out-of-date",
+                                                "not up-to-date",
                                                 None, None,
                                                 None, None,
                                                 wc_dir)
@@ -1062,14 +1063,11 @@ def merge_mixed_revisions(sbox):
     if item[0] == chi_path:
       item[3]['wc_rev'] = '4'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    return 1
-
-  return 0
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None, None, None, None, None,
+                                                wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1135,13 +1133,14 @@ def commit_uri_unsafe(sbox):
     status_list.append(item_list)
 
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    return 1
-  return 0
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None, None, None, None, None,
+                                                wc_dir)
+
+
+#----------------------------------------------------------------------
 
 def commit_deleted_edited(sbox):
   "commit files that have been deleted, but also edited"
@@ -1176,14 +1175,14 @@ def commit_deleted_edited(sbox):
   for item in status_list:
     item[3]['wc_rev'] = '1'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
-                                            None, None, None, None, None,
-                                            wc_dir):
-    return 1
-  return 0
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None, None, None, None, None,
+                                                wc_dir)
   
+#----------------------------------------------------------------------
+
 def commit_in_dir_scheduled_for_addition(sbox):
   "commit a file inside dir scheduled for addition"
 

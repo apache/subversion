@@ -2404,13 +2404,12 @@ svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
   if (tmpf != path)
     SVN_ERR (svn_io_remove_file (tmpf->data, pool));
       
-  /* Open a filehandle for tmp local file, and one for text-base if
-     applicable. */
-  if ((status = apr_file_open (&localfile, tmpf->data, 
+  /* Open a filehandle for tmp text-base. */
+  if ((status = apr_file_open (&localfile, tmp_base->data, 
                                APR_READ, APR_OS_DEFAULT, pool)))
     return svn_error_createf (status, 0, NULL, pool,
                               "do_apply_textdelta: error opening '%s'",
-                              tmpf->data);
+                              tmp_base->data);
 
   /* If this file is scheduled for addition or replacement, we don't
      want to send text-deltas against a potentially non-existent

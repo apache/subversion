@@ -350,8 +350,6 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
                        svn_stringbuf_t *display_dir,
-                       const svn_ra_get_latest_revnum_func_t *revnum_fn,
-                       void *rev_baton,
                        apr_pool_t *pool);
 
                

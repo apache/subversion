@@ -36,6 +36,13 @@
 
 
 
+/*** Uncomment this to turn on commit driver debugging. ***/
+/*
+#define SVN_CLIENT_COMMIT_DEBUG
+*/
+
+
+
 
 /*** Harvesting Commit Candidates ***/
 
@@ -729,8 +736,6 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
                        svn_stringbuf_t *display_dir,
-                       const svn_ra_get_latest_revnum_func_t *revnum_fn,
-                       void *rev_baton,
                        apr_pool_t *pool)
 {
   apr_array_header_t *db_stack;
@@ -807,7 +812,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
 
               /* Open the subdirectory. */
               SVN_ERR (push_stack (rel, db_stack, &stack_ptr, 
-                                   editor, NULL, item->entry->revision, 
+                                   editor, NULL, SVN_INVALID_REVNUM,
                                    FALSE, pool));
               
               /* If we temporarily replaced a '/' with a NULL,
@@ -830,7 +835,12 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                                notify_func, notify_baton, display_dir, pool));
 
       /* Save our state for the next iteration. */
-      last_url = (item->entry->kind == svn_node_dir) ? item_url : item_dir;
+      if ((item->entry->kind == svn_node_dir)
+          && ((! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+              || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
+        last_url = item_url;
+      else
+        last_url = item_dir;
     }
 
   /* Close down any remaining open directory batons. */
