@@ -31,7 +31,7 @@
 
     <para>Before reading on, here is the most important command you'll
       ever need when using Subversion: <command>svn help</command>.
-      The Subversion command-line client tries to be
+      The Subversion command-line client is
       self-documenting&mdash;at any time, a quick <command>svn help
       &lt;subcommand&gt;</command> will describe the syntax, switches,
       and behavior of the <command>subcommand</command>.</para>
@@ -199,10 +199,10 @@ $ svn update --revision PREV foo.c
         a range of changes in the repository using both dates and
         revisions together!</para>
       
-      <para>Subversion accepts an incredible number of date formats
-        &mdash;just remember to use quotes around any date that
-        contains spaces.  Here are just a few of the formats that
-        Subversion accepts:</para>
+      <para>Subversion accepts an incredible number of date
+        formats&mdash;just remember to use quotes around any date
+        that contains spaces.  Here are just a few of the formats
+        that Subversion accepts:</para>
 
       <screen>
 $ svn checkout --revision {2002-02-17}
@@ -422,10 +422,10 @@ Checked out revision 2499.
             <para><command>svn delete</command></para>
           </listitem>
           <listitem>
-            <para><command>svn move</command></para>
+            <para><command>svn copy</command></para>
           </listitem>
           <listitem>
-            <para><command>svn copy</command></para>
+            <para><command>svn move</command></para>
           </listitem>
         </itemizedlist>
       </listitem>
@@ -720,8 +720,8 @@ Updated to revision 2.
       <para>Once you've finished making changes, you need to commit
         them to the repository, but before you do so, it's usually a
         good idea to take a look at exactly what you've changed.  By
-        examining your changes before you commit, you cannot only
-        make a more accurate log message, but you may discover that
+        examining your changes before you commit, you can make a
+        more accurate log message. You may also discover that
         you've inadvertently changed a file, and this gives you a
         chance to revert those changes before committing.
         Additionally, this is a good opportunity to review and
@@ -886,7 +886,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
                 copy is some other kind.  For example, Subversion might
                 have a file in the repository, but you removed the file
                 and created a directory in its place, without using the
-                <command>svn delete</command> nor <command>svn add</command>
+                <command>svn delete</command> or <command>svn add</command>
                 commands.</para>
             </listitem>
           </varlistentry>
@@ -981,7 +981,7 @@ A                0         ?     ?        ./stuff/things/bloo.h
            
         <para>This is the <quote>long form</quote> output of
           <command>svn status</command>.  The first column remains
-          same, but the second column shows the working-revision of
+          the same, but the second column shows the working-revision of
           the item.  The third and fourth columns show the revision in
           which the item last changed, and who changed it.</para>
 
@@ -1047,11 +1047,11 @@ Index: ./bar.c
 +
 +#include &lt;stdio.h&gt;
 
-int main(void) {
+ int main(void) {
 -  printf("Sixty-four slices of American Cheese...\n");
 +  printf("Sixty-five slices of American Cheese...\n");
-return 0;
-}
+ return 0;
+ }
 
 Index: ./README
 ===================================================================
@@ -1231,7 +1231,7 @@ C  ./bar.c
         them.</para>
            
       <para>Whenever a conflict occurs, your Subversion client does
-      the three things:</para>
+      three things:</para>
            
       <itemizedlist>
 
@@ -1428,7 +1428,7 @@ Grilled Chicken
         the office and explain to Sally that you can't get sauerkraut
         from an Italian deli.<footnote><para>And if you ask them for
         it, they may very well ride you out of town on a
-        rail</para></footnote>  Once you've agreed on the changes you
+        rail.</para></footnote>  Once you've agreed on the changes you
         will check in, edit your file and remove the conflict markers.</para>
 
         <screen>
@@ -1614,7 +1614,7 @@ $
       and allows you to explore this history by examining previous
       versions of files and directories as well as the metadata that
       accompanies them.  With a single Subversion command, you can
-      check out (or restore an existing working copy) the repository
+      check out the repository (or restore an existing working copy)
       exactly as it was at any date or revision number in the past.
       However, sometimes you just want to <emphasis>peer
       into</emphasis> the past instead of <emphasis>going
@@ -1997,7 +1997,7 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-7">
-    <title>Other Frequently Used Commands</title>
+    <title>Other Useful Commands</title>
 
       <para>While not as frequently used as the commands previously
       discussed in this chapter, you will need these commands on
@@ -2042,8 +2042,8 @@ M      ./somedir/foo.c
     <sect2 id="svn-ch-3-sect-7.3">
       <title><command>svn import</command></title>
 
-      <para>The import command is a quick way to move an unversioned
-        tree of files into a repository.</para>
+      <para>The <command>svn import</command> command is a quick way
+        to move an unversioned tree of files into a repository.</para>
 
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
