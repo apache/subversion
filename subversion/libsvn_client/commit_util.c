@@ -330,10 +330,9 @@ harvest_committables (apr_hash_t *committables,
           const void *key;
           void *val;
           const char *name;
+          const char *full_path;
           const char *used_url = NULL;
           const char *name_uri = NULL;
-          const char *full_path = NULL;
-          const char *this_url = url;
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_wc_adm_access_t *dir_access = adm_access;
 
@@ -369,10 +368,7 @@ harvest_committables (apr_hash_t *committables,
              in copy_mode, else, we'll just extend the parent's URL
              with the entry's basename.  */
           if ((! this_entry->url) || (copy_mode))
-            {
-              this_url = svn_path_join (this_url, name_uri, loop_pool);
-              used_url = this_url;
-            }
+            used_url = svn_path_join (url, name_uri, loop_pool);
 
           /* Recurse. */
           if (this_entry->kind == svn_node_dir)
