@@ -260,7 +260,7 @@ def show_usage():
 def attr_exec():
   "detection of the executable flag"
   repos, wc, logs = ensure_conversion('main')
-  st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
+  st = os.stat(os.path.join(wc, 'single-files', 'trunk', 'attr-exec'))
   if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
 
@@ -268,15 +268,15 @@ def attr_exec():
 def space_fname():
   "conversion of filename with a space"
   repos, wc, logs = ensure_conversion('main')
-  if not os.path.exists(os.path.join(wc, 'trunk',
-                                     'single-files', 'space fname')):
+  if not os.path.exists(os.path.join(wc, 'single-files',
+                                     'trunk', 'space fname')):
     raise svntest.Failure
 
 
 def two_quick():
   "two commits in quick succession"
   repos, wc, logs = ensure_conversion('main')
-  out = run_svn('log', os.path.join(wc, 'trunk', 'single-files', 'twoquick'))
+  out = run_svn('log', os.path.join(wc, 'single-files', 'trunk', 'twoquick'))
   num_revisions = 0
   for line in out:
     if line.find("rev ") == 0:
@@ -321,17 +321,17 @@ def prune_with_care():
 
   repos, wc, logs = ensure_conversion('main')
 
-  # Confirm that revision 3 removes '/trunk/prune-with-care/first',
-  # and that revision 5 removes '/trunk/prune-with-care'.
+  # Confirm that revision 3 removes '/prune-with-care/trunk/first',
+  # and that revision 5 removes '/prune-with-care/trunk'.
 
-  if not (logs[3].changed_paths.has_key('/trunk/prune-with-care/first')
-          and logs[3].changed_paths['/trunk/prune-with-care/first'] == 'D'):
-    print "Revision 3 failed to remove ''/trunk/prune-with-care/first'."
+  if not (logs[3].changed_paths.has_key('/prune-with-care/trunk/first')
+          and logs[3].changed_paths['/prune-with-care/trunk/first'] == 'D'):
+    print "Revision 3 failed to remove '/prune-with-care/trunk/first'."
     raise svntest.Failure
 
-  if not (logs[5].changed_paths.has_key('/trunk/prune-with-care')
-          and logs[5].changed_paths['/trunk/prune-with-care'] == 'D'):
-    print "Revision 5 failed to remove '/trunk/prune-with-care'."
+  if not (logs[5].changed_paths.has_key('/prune-with-care/trunk')
+          and logs[5].changed_paths['/prune-with-care/trunk'] == 'D'):
+    print "Revision 5 failed to remove '/prune-with-care/trunk'."
     raise svntest.Failure
 
 
@@ -341,13 +341,13 @@ def simple_commits():
   repos, wc, logs = ensure_conversion('main')
 
   # The initial import.
-  for path in ('/trunk/proj', '/trunk/proj/default', '/trunk/proj/sub1',
-               '/trunk/proj/sub1/default', '/trunk/proj/sub1/subsubA',
-               '/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub1/subsubB',
-               '/trunk/proj/sub1/subsubB/default', '/trunk/proj/sub2',
-               '/trunk/proj/sub2/default', '/trunk/proj/sub2/subsubA',
-               '/trunk/proj/sub2/subsubA/default', '/trunk/proj/sub3',
-               '/trunk/proj/sub3/default'):
+  for path in ('/proj/trunk', '/proj/trunk/default', '/proj/trunk/sub1',
+               '/proj/trunk/sub1/default', '/proj/trunk/sub1/subsubA',
+               '/proj/trunk/sub1/subsubA/default', '/proj/trunk/sub1/subsubB',
+               '/proj/trunk/sub1/subsubB/default', '/proj/trunk/sub2',
+               '/proj/trunk/sub2/default', '/proj/trunk/sub2/subsubA',
+               '/proj/trunk/sub2/subsubA/default', '/proj/trunk/sub3',
+               '/proj/trunk/sub3/default'):
     if not (logs[10].changed_paths.has_key(path)
             and logs[10].changed_paths[path] == 'A'):
       raise svntest.Failure
@@ -356,7 +356,7 @@ def simple_commits():
     raise svntest.Failure
     
   # The first commit.
-  for path in ('/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub3/default'):
+  for path in ('/proj/trunk/sub1/subsubA/default', '/proj/trunk/sub3/default'):
     if not (logs[11].changed_paths.has_key(path)
             and logs[11].changed_paths[path] == 'M'):
       raise svntest.Failure
@@ -365,12 +365,12 @@ def simple_commits():
     raise svntest.Failure
 
   # The second commit.
-  for path in ('/trunk/proj/default', '/trunk/proj/sub1/default',
-               '/trunk/proj/sub1/subsubA/default',
-               '/trunk/proj/sub1/subsubB/default',
-               '/trunk/proj/sub2/default',
-               '/trunk/proj/sub2/subsubA/default',
-               '/trunk/proj/sub3/default'):
+  for path in ('/proj/trunk/default', '/proj/trunk/sub1/default',
+               '/proj/trunk/sub1/subsubA/default',
+               '/proj/trunk/sub1/subsubB/default',
+               '/proj/trunk/sub2/default',
+               '/proj/trunk/sub2/subsubA/default',
+               '/proj/trunk/sub3/default'):
     if not (logs[12].changed_paths.has_key(path)
             and logs[12].changed_paths[path] == 'M'):
       raise svntest.Failure
@@ -447,9 +447,9 @@ def simple_branch_commits():
   if not logs.has_key(14):
     raise svntest.Failure
 
-  for path in ('/branches/B_MIXED/proj/default',
-               '/branches/B_MIXED/proj/sub1/default',
-               '/branches/B_MIXED/proj/sub2/subsubA/default'):
+  for path in ('/proj/branches/B_MIXED/default',
+               '/proj/branches/B_MIXED/sub1/default',
+               '/proj/branches/B_MIXED/sub2/subsubA/default'):
     if not (logs[14].changed_paths.has_key(path)
             and logs[14].changed_paths[path] == 'M'):
       raise svntest.Failure
@@ -463,8 +463,8 @@ def mixed_commit():
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
 
-  for path in ('/trunk/proj/sub2/default', 
-               '/branches/B_MIXED/proj/sub2/branch_B_MIXED_only'):
+  for path in ('/proj/trunk/sub2/default', 
+               '/proj/branches/B_MIXED/sub2/branch_B_MIXED_only'):
     if not (logs[13].changed_paths.has_key(path)
             and logs[13].changed_paths[path] == 'M'):
       raise svntest.Failure
