@@ -51,13 +51,14 @@ svn_io_check_path (const svn_stringbuf_t *path,
 {
   apr_finfo_t finfo;
   apr_status_t apr_err;
+  const char *path_name = (path->len == 0 ? "." : path->data);
 
-  apr_err = apr_stat (&finfo, path->data, APR_FINFO_MIN, pool);
+  apr_err = apr_stat (&finfo, path_name, APR_FINFO_MIN, pool);
 
   if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "svn_io_check_path: "
-                              "problem checking path %s",
+                              "problem checking path \"%s\"",
                               path->data);
   else if (APR_STATUS_IS_ENOENT(apr_err))
     *kind = svn_node_none;
