@@ -28,6 +28,8 @@
 #include "svn_pools.h"
 #include "svn_dav.h"
 
+#undef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+
 struct dav_db {
   const dav_resource *resource;
   apr_pool_t *p;
