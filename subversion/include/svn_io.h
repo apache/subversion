@@ -96,44 +96,6 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       apr_pool_t *pool);
 
 
-
-/* A typedef for functions resembling the POSIX `read' system call,
-   representing a incoming stream of bytes, in `caller-pulls' form.
-
-   We will need to compute text deltas for data drawn from files,
-   memory, sockets, and so on.  We will need to read tree deltas from
-   various sources.  The data may be huge --- too large to read into
-   memory at one time.  Using a `read'-like function like this to
-   represent the input data allows us to process the data as we go.
-
-   BATON is some opaque structure representing what we're reading.
-   Whoever provided the function gets to use BATON however they
-   please.
-
-   BUFFER is a buffer to hold the data, and *LEN indicates how many
-   bytes to read.  Upon return, the function should set *LEN to the
-   number of bytes actually read, or zero at the end of the data
-   stream.  *LEN should only change when there is a read error or the
-   input stream ends before the full count of bytes can be read; the
-   generic read function is obligated to perform a full read when
-   possible.
-
-   Any necessary temporary allocation should be done in a sub-pool of
-   POOL.  (If the read function needs to perform allocations which
-   last beyond the lifetime of the function, it must use a different
-   pool, e.g. one referenced through BATON.)  */
-typedef svn_error_t *svn_read_fn_t (void *baton,
-                                    char *buffer,
-                                    apr_size_t *len,
-                                    apr_pool_t *pool);
-
-/* Similar to svn_read_fn_t, but for writing.  */
-typedef svn_error_t *svn_write_fn_t (void *baton,
-				     const char *data,
-				     apr_size_t *len,
-				     apr_pool_t *pool);
-
-
 /* A posix-like read function of type svn_read_fn_t (see above).
    Given an already-open APR FILEHANDLE, read LEN bytes into BUFFER.  
    (Notice that FILEHANDLE is void *, to match svn_io_read_fn_t).
@@ -187,6 +149,84 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
                                         svn_string_t *path,
                                         apr_pool_t *pool);
 
+
+
+/* Generic byte-streams */
+
+/* svn_stream_t represents an abstract stream of bytes--either
+   incoming or outgoing or both.
+
+   The creator of a stream sets functions to handle read and write.
+   Both of these handlers accept a baton whose value is determined at
+   stream creation time; this baton can point to a structure
+   containing data associated with the stream.  If a caller attempts
+   to invoke a handler which has not been set, it will generate a
+   runtime assertion failure.  The creator can also set a handler for
+   close requests so it can clean up data associated with the baton;
+   if a close handler is not specified, a close request on the stream
+   will simply be ignored.  Note that svn_stream_close() does not
+   deallocate the memory associated with the stream; destroy the pool
+   you created the stream in to do that.
+
+   The read and write handlers accept length arguments via pointer.
+   On entry to the handler, the pointed-to value should be the amount
+   of data which can be read or the amount of data to write.  When the
+   handler returns, the value is reset to the amount of data actually
+   read or written.  Handlers are obliged to complete a read or write
+   to the maximum extent possible; thus, a short read with no
+   associated error implies the end of the input stream, and a short
+   write should never occur without an associated error.
+
+   The pool argument to the read and write functions can be used for
+   temporary allocations only.  It will probably be removed in the
+   future.  */
+
+typedef struct svn_stream_t svn_stream_t;
+
+
+/* Handler functions to implement the operations on a generic stream.  */
+
+typedef svn_error_t *svn_read_fn_t (void *baton,
+                                    char *buffer,
+                                    apr_size_t *len,
+                                    apr_pool_t *pool);
+
+typedef svn_error_t *svn_write_fn_t (void *baton,
+                                     const char *data,
+                                     apr_size_t *len,
+                                     apr_pool_t *pool);
+
+typedef svn_error_t *svn_close_fn_t (void *baton);
+
+
+/* Functions for creating generic streams.  */
+
+svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
+
+void svn_stream_set_read (svn_stream_t *stream, svn_read_fn_t read_fn);
+
+void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);
+
+void svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn);
+
+
+/* Convenience functions for creating streams which operate on APR
+   files or on stdio files. */
+
+svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
+
+svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool);
+
+
+/* Functions for operating on generic streams.  */
+
+svn_error_t *svn_stream_read (svn_stream_t *stream, char *buffer,
+                              apr_size_t *len);
+
+svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
+                               apr_size_t *len);
+
+svn_error_t *svn_stream_close (svn_stream_t *stream);
 
 
 #endif /* SVN_IO_H */
