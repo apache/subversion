@@ -969,8 +969,11 @@ svn_subst_detranslate_string (svn_string_t **new_value,
     {
       err = svn_cmdline_cstring_from_utf8 (&val_nlocale_neol, val_neol, pool);
       if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-        val_nlocale_neol =
-          svn_cmdline_cstring_from_utf8_fuzzy (val_neol, pool);
+        {
+          val_nlocale_neol =
+            svn_cmdline_cstring_from_utf8_fuzzy (val_neol, pool);
+          svn_error_clear (err);
+        }
       else if (err)
         return err;
     }
@@ -978,7 +981,10 @@ svn_subst_detranslate_string (svn_string_t **new_value,
     {
       err = svn_utf_cstring_from_utf8 (&val_nlocale_neol, val_neol, pool);
       if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-        val_nlocale_neol = svn_utf_cstring_from_utf8_fuzzy (val_neol, pool);
+        {
+          val_nlocale_neol = svn_utf_cstring_from_utf8_fuzzy (val_neol, pool);
+          svn_error_clear (err);
+        }
       else if (err)
         return err;
     }

@@ -174,7 +174,10 @@ svn_cl__print_status (const char *path,
                                        svn_path_local_style (path, pool),
                                        pool);
   if (err)
-    svn_handle_error (err, stderr, FALSE);
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+    }
 
   print_status (path_stdout, detailed, show_last_committed, status, pool);
 }

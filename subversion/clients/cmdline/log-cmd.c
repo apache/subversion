@@ -204,7 +204,10 @@ log_message_receiver (void *baton,
 
   err = svn_cmdline_cstring_from_utf8 (&author_stdout, author, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    author_stdout = svn_cmdline_cstring_from_utf8_fuzzy (author, pool);
+    {
+      author_stdout = svn_cmdline_cstring_from_utf8_fuzzy (author, pool);
+      svn_error_clear (err);
+    }
   else if (err)
     return err;
 
