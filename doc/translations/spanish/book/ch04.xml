@@ -1469,19 +1469,21 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
         <emphasis>y</emphasis> el espacio.</para>
     </sidebar>
 
-    <para>Because <command>svn switch</command> is essentially a
-      variant of <command>svn update</command>, it shares the same
-      behaviors; any local modifications in your working copy are
-      preserved when new data arrives from the repository.  This
-      allows you to perform all sorts of clever tricks.</para>
+    <para>Dado que <command>svn switch</command> es esencialmente
+      una variante de <command>svn update</command>, comparte el
+      mismo comportamiento; cualquier modificación local en su
+      copia de trabajo es preservada cuando obtiene nuevos datos
+      del repositorio. Esto le permite realizar toda una variedad
+      de trucos ingeniosos.</para>
 
-    <para>For example, suppose you have a working copy of
-      <filename>/calc/trunk</filename> and make a number of changes to
-      it.  Then you suddenly realize that you meant to make the
-      changes to a branch instead.  No problem!  When you <command>svn
-      switch</command> your working copy to the branch, the local
-      changes will remain.  You can then test and commit them to the
-      branch.</para>
+    <para>Por ejemplo, suponga que tiene una copia local de
+      <filename>/calc/trunk</filename> y realiza un número de
+      cambios sobre ella. De repente se da cuenta de que se suponía
+      que tenía que realizar esos cambios en una rama. ¡No hay
+      problema! Cambie su copia local del tronco a la rama con
+      <command>svn switch</command>, y seguirá manteniendo sus
+      cambios locales. Ahora puede probarlos y enviar los cambios
+      a la rama del repositorio.</para>
 
   </sect1>
 
