@@ -335,20 +335,25 @@ check-swig-java: swig-java-tests
 # "make check TESTS=subversion/tests/clients/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
 check: $(TEST_DEPS) @BDB_TEST_DEPS@
-	@$(PYTHON) $(top_srcdir)/build/pycheck.py;                         \
-	flags="--verbose";                                                 \
-	if test "$(CLEANUP)" != ""; then                                   \
-	  flags="--cleanup $$flags";                                       \
-	fi;                                                                \
-	if test "$(BASE_URL)" != ""; then                                  \
-	  flags="--url $(BASE_URL) $$flags";                               \
-	fi;                                                                \
-	if test "$(FS_TYPE)" != ""; then                                   \
-	  flags="--fs-type $(FS_TYPE) $$flags";                            \
-	fi;                                                                \
-	$(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
-		  '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-		  $(TESTS)
+	@if test "$(PYTHON)" != "none"; then                                 \
+	  $(PYTHON) $(top_srcdir)/build/pycheck.py;                          \
+	  flags="--verbose";                                                 \
+	  if test "$(CLEANUP)" != ""; then                                   \
+	    flags="--cleanup $$flags";                                       \
+	  fi;                                                                \
+	  if test "$(BASE_URL)" != ""; then                                  \
+	    flags="--url $(BASE_URL) $$flags";                               \
+	  fi;                                                                \
+	  if test "$(FS_TYPE)" != ""; then                                   \
+	    flags="--fs-type $(FS_TYPE) $$flags";                            \
+	  fi;                                                                \
+	  $(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
+		    '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
+		    $(TESTS);                                                \
+	else                                                                 \
+	  echo "make check: Python not found";                               \
+	  echo "Please install Python 2.0 or greater";                       \
+	fi;
 
 # First, set up Apache as documented in
 # subversion/tests/clients/cmdline/README.
