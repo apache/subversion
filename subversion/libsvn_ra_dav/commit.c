@@ -52,6 +52,9 @@ typedef struct
 {
   svn_ra_session_t *ras;
   const char *activity_url;
+
+  /* ### maybe key off of URL and don't worry about local path; we never
+     ### really "need" the local path...  if so, toss RESOURCE_T.PATH */
   apr_hash_t *resources;        /* LOCAL PATH (const char *) -> RESOURCE_T */
 
   /* This is how we pass back the new revision number to our callers. */
@@ -63,6 +66,7 @@ typedef struct
 {
   commit_ctx_t *cc;
   resource_t res;
+  apr_hash_t *prop_changes;
 } dir_baton_t;
 
 /* ### combine this with dir_baton_t ? */
@@ -70,7 +74,18 @@ typedef struct
 {
   commit_ctx_t *cc;
   resource_t res;
+  apr_hash_t *prop_changes;
 } file_baton_t;
+
+/*
+** singleton_delete_prop:
+**
+** The address of this integer is used as a "singleton" value to mark
+** properties which must be deleted. Properties which are changed/added
+** will use their new values.
+*/
+static const int singleton_delete_prop;
+#define DELETE_THIS_PROP (&singleton_delete_prop)
 
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
@@ -174,6 +189,42 @@ checkout_resource (commit_ctx_t *cc, const char *path, const char **wr_url)
   return NULL;
 }
 
+static void record_prop_change(apr_pool_t *pool,
+                               apr_hash_t **prop_changes,
+                               const svn_string_t *name,
+                               const svn_string_t *value)
+{
+  if (*prop_changes == NULL)
+    *prop_changes = apr_make_hash(pool);
+
+  /* ### need to copy name/value into POOL */
+
+  /* ### put the name/value into dir->prop_changes hash */
+  if (value == NULL)
+    {
+      /* ### put name/DELETE_THIS_PROP into the hash */
+    }
+  else
+    {
+      /* ### put the name/value into the hash */
+    }
+}
+
+static svn_error_t * do_proppatch(svn_ra_session_t *ras,
+                                  const resource_t *res,
+                                  apr_hash_t *changes)
+{
+  /* ### the hash contains the FINAL state, so the ordering of the items
+     ### in the PROPPATCH is no big deal.
+     ###
+     ### iterate twice: once for all the SET items, once for the DELETE */
+
+  /* ### we should have res->wr_url */
+  /* ### maybe pass wr_url rather than resource_t* */
+
+  return NULL;
+}
+
 static svn_error_t *
 commit_replace_root (void *edit_baton, void **root_baton)
 {
@@ -181,8 +232,9 @@ commit_replace_root (void *edit_baton, void **root_baton)
   dir_baton_t *root = apr_pcalloc(cc->ras->pool, sizeof(*root));
 
   root->cc = cc;
-  root->res.url = cc->ras->root.path;
 
+  /* ### where to get res.path? */
+  root->res.url = cc->ras->root.path;
   /* ### fetch vsn_url from props */
 
   *root_baton = root;
@@ -239,6 +291,7 @@ commit_add_dir (svn_string_t *name,
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
 
   child->cc = parent->cc;
+  /* ### fill out child->res.path */
   child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
                                "/", name->data, NULL);
 
@@ -262,6 +315,7 @@ commit_rep_dir (svn_string_t *name,
   dir_baton_t *child = apr_pcalloc(parent->cc->ras->pool, sizeof(*child));
 
   child->cc = parent->cc;
+  /* ### fill out child->res.path */
   child->res.url = apr_pstrcat(child->cc->ras->pool, parent->res.url,
                                "/", name->data, NULL);
 
@@ -285,7 +339,10 @@ commit_change_dir_prop (void *dir_baton,
 {
   dir_baton_t *dir = dir_baton;
 
-  /* ### CHECKOUT, then PROPPATCH */
+  /* ### do the CHECKOUT now, or wait for close_dir? probably sooner rather
+     ### than later is better. */
+
+  record_prop_change(dir->cc->ras->pool, &dir->prop_changes, name, value);
 
   printf("[change_dir_prop] CHECKOUT: %s\n"
          "[change_dir_prop] PROPPATCH: %s (%s=%s)\n",
@@ -297,7 +354,12 @@ commit_change_dir_prop (void *dir_baton,
 static svn_error_t *
 commit_close_dir (void *dir_baton)
 {
-  /* ### nothing? */
+  dir_baton_t *dir = dir_baton;
+
+  /* ### maybe do the CHECKOUT here? */
+  /* ### issue a PROPPATCH with dir_baton->prop_changes */
+  SVN_ERR( do_proppatch(dir->cc->ras, &dir->res, dir->prop_changes) );
+
   return NULL;
 }
 
@@ -312,6 +374,7 @@ commit_add_file (svn_string_t *name,
   file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
 
   file->cc = parent->cc;
+  /* ### fill out child->res.path */
   file->res.url = apr_pstrcat(file->cc->ras->pool, parent->res.url,
                               "/", name->data, NULL);
   /* ### store name, parent? */
@@ -319,7 +382,11 @@ commit_add_file (svn_string_t *name,
   /* ### CHECKOUT parent (then PUT in apply_txdelta) */
   printf("[add_file] CHECKOUT: %s\n", file->res.url);
 
-  /* ### begin the PUT here? */
+  /* ### wait for apply_txdelta before doing a PUT. it might arrive a
+     ### "long time" from now. certainly after many other operations, so
+     ### we don't want to start a PUT just yet.
+     ### so... anything else to do here?
+  */
 
   *file_baton = file;
   return NULL;
@@ -336,15 +403,22 @@ commit_rep_file (svn_string_t *name,
   file_baton_t *file = apr_pcalloc(parent->cc->ras->pool, sizeof(*file));
 
   file->cc = parent->cc;
+  /* ### fill out child->res.path */
   file->res.url = apr_pstrcat(file->cc->ras->pool, parent->res.url,
                               "/", name->data, NULL);
   /* ### store more info? */
 
   /* ### CHECKOUT (then PUT in apply_txdelta) */
   /* ### if replacing with a specific ancestor, then COPY */
+  /* ### what about "replace with ancestor, *plus* these changes"? that
+     ### would be a COPY followed by a PUT */
   printf("[rep_file] CHECKOUT: %s\n", file->res.url);
 
-  /* ### begin the PUT/COPY here? */
+  /* ### wait for apply_txdelta before doing a PUT. it might arrive a
+     ### "long time" from now. certainly after many other operations, so
+     ### we don't want to start a PUT just yet.
+     ### so... anything else to do here? what about the COPY case?
+  */
 
   *file_baton = file;
   return NULL;
@@ -363,7 +437,8 @@ commit_apply_txdelta (void *file_baton,
 {
   file_baton_t *file = file_baton;
 
-  /* ### PUT */
+  /* ### begin a PUT here? */
+
   printf("[apply_txdelta] PUT: %s\n", file->res.url);
 
   *handler = commit_send_txdelta;
@@ -379,7 +454,10 @@ commit_change_file_prop (void *file_baton,
 {
   file_baton_t *file = file_baton;
 
-  /* ### CHECKOUT, then PROPPATCH */
+  /* ### do the CHECKOUT now, or wait for close_file? probably sooner rather
+     ### than later is better. */
+
+  record_prop_change(file->cc->ras->pool, &file->prop_changes, name, value);
 
   printf("[change_file_prop] CHECKOUT: %s\n"
          "[change_file_prop] PROPPATCH: %s (%s=%s)\n",
@@ -391,7 +469,12 @@ commit_change_file_prop (void *file_baton,
 static svn_error_t *
 commit_close_file (void *file_baton)
 {
-  /* ### nothing? */
+  file_baton_t *file = file_baton;
+
+  /* ### maybe do the CHECKOUT here? */
+  /* ### issue a PROPPATCH with file_baton->prop_changes */
+  SVN_ERR( do_proppatch(file->cc->ras, &file->res, file->prop_changes) );
+
   return NULL;
 }
 
@@ -405,7 +488,8 @@ commit_close_edit (void *edit_baton)
   printf("[close_edit] CHECKIN: %s\n",
          cc->activity_url ? cc->activity_url : "(activity)");
 
-  /* todo: set new_revision according to response from server. */
+  /* ### set new_revision according to response from server */
+  /* ### get the new version URLs for all affected resources */
 
   /* Make sure the caller (most likely the working copy library, or
      maybe its caller) knows the new revision. */
