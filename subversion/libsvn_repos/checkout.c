@@ -17,12 +17,11 @@
  */
 
 #include <assert.h>
+#include <apr_md5.h>
 #include "svn_repos.h"
 #include "svn_delta.h"
 #include "svn_path.h"
 #include "svn_pools.h"
-
-#include <apr_md5.h>
 #include "svn_md5.h"
 
 /* Helper to read data out of a file at ROOT:PATH and push it to

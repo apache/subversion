@@ -135,7 +135,7 @@ struct file_baton {
   const char *path_end_revision;
   apr_file_t *file_end_revision;
 
-  /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
+  /* APPLY_HANDLER/APPLY_BATON represent the delta application baton. */
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
 
@@ -724,7 +724,11 @@ apply_textdelta (void *file_baton,
  * file containing a pristine version of the repository file. This can
  * be compared against the working copy.
  *
- * Ignore TEXT_CHECKSUM.
+ * ### Ignore TEXT_CHECKSUM for now.  Someday we can use it to verify
+ * ### the integrity of the file being diffed.  Done efficiently, this
+ * ### would probably involve calculating the checksum as the data is
+ * ### received, storing the final checksum in the file_baton, and
+ * ### comparing against it here.
  */
 static svn_error_t *
 close_file (void *file_baton,

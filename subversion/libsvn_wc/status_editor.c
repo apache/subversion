@@ -506,7 +506,7 @@ change_file_prop (void *file_baton,
 
 static svn_error_t *
 close_file (void *file_baton,
-            const char *text_checksum,
+            const char *text_checksum,  /* ignored, as we receive no data */
             apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
