@@ -275,13 +275,13 @@ svn_error_t *svn_wc_add_file (svn_string_t *file,
 
 /* Publically declared, so libsvn_client can pass it off to the RA
    layer with svn_wc_bump_target(). */
-struct svn_wc_bump_baton
+struct svn_wc_close_commit_baton
 {
   /* The "prefix" path that must be prepended to each target that
      comes in here.  It's the original path that the user specified to
      the `svn commit' command. */
   svn_string_t *prefix_path;
-  
+
   /* Pool to use for all logging, running of logs, etc. */
   apr_pool_t *pool;
 };
@@ -295,9 +295,9 @@ struct svn_wc_bump_baton
    XML-output editor.  (svn_wc_close_commit and its helpers will then
    be deprecated!) */
 
-svn_error_t *svn_wc_bump_target (void *baton,
-                                 svn_string_t *target,
-                                 svn_revnum_t new_revnum);
+svn_error_t *svn_wc_set_revision (void *baton,
+                                  svn_string_t *target,
+                                  svn_revnum_t new_revnum);
 
 /* Update working copy PATH with NEW_REVISION after a commit has succeeded.
  * TARGETS is a hash of files/dirs that actually got committed --
@@ -320,11 +320,13 @@ svn_wc_close_commit (svn_string_t *path,
    textual and tree) to the supplied EDIT_FNS object (coupled with the
    supplied EDIT_BATON).
 
-   Any items that were found to be modified, and were therefore
-   committed, are stored in TARGETS as full paths, so caller can clean
-   up appropriately.  */
+   Any items (files or dirs) that were found to be modified, and were
+   therefore committed, are stored in TARGETS as full paths.  LOCKS is
+   a list of all directories that were locked in the process of
+   committing; the caller needs to unlock these dirs when appropriate.  */
 svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
+                         apr_hash_t **locks,
                          svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,

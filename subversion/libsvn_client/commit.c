@@ -49,6 +49,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   apr_file_t *dst = NULL; /* old habits die hard */
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
+  apr_hash_t *locks = NULL;
   apr_hash_t *targets = NULL;
 
   /* Step 1: look for local mods and send 'em out. */
@@ -85,6 +86,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
 
   /* Drive the editor, reporting local changes. */
   err = svn_wc_crawl_local_mods (&targets,
+                                 &locks,
                                  path,
                                  editor,
                                  edit_baton,

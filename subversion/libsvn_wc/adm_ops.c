@@ -90,25 +90,82 @@ svn_wc_close_commit (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc_bump_target (void *baton,
-                    svn_string_t *target,
-                    svn_revnum_t new_revnum)
+svn_wc_set_revision (void *baton,
+                     svn_string_t *target,
+                     svn_revnum_t new_revnum)
 {
-  apr_hash_t *entries;
-  struct svn_wc_bump_baton *bumper = (struct svn_wc_bump_baton *) baton;
-  apr_pool_t *pool = bumper->pool;
+  apr_status_t apr_err;
+  svn_string_t *log_parent, *logtag, *basename;
+  enum svn_node_kind kind;
+  apr_file_t *log_fp = NULL;
+  struct svn_wc_close_commit_baton *bumper =
+    (struct svn_wc_close_commit_baton *) baton;
+  apr_pool_t *pool = bumper->pool;  /* cute, eh? */
+  char *revstr = apr_psprintf (pool, "%ld", new_revnum);
 
   /* Construct the -full- path */
   svn_string_t *path = svn_string_dup (bumper->prefix_path, pool);
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* Write a log file in the adm dir of path. */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
 
-  /* TODO */
+  switch (kind)
+    {
+    case svn_node_file:
+      {
+        svn_path_split (path, &log_parent, &basename,
+                        svn_path_local_style, pool);
+        break;
+      }
+      
+    case svn_node_dir:
+      {
+        log_parent = path;
+        basename = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+        break;
+      }
+      
+    default:  /* probably svn_node_none */
+      {
+        return 
+          svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                             "can't construct logfile for %s", path->data);
+      }
+    }
+
+  SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
+                                  (APR_WRITE | APR_APPEND | APR_CREATE),
+                                  pool));
+      
+  svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
+                         SVN_WC__LOG_COMMITTED,
+                         SVN_WC__LOG_ATTR_NAME, basename,
+                         SVN_WC__LOG_ATTR_REVISION, 
+                         svn_string_create (revstr, pool),
+                         NULL);
+      
+
+  apr_err = apr_file_write_full (log_fp, logtag->data, logtag->len, NULL);
+  if (apr_err)
+    {
+      apr_file_close (log_fp);
+      return svn_error_createf (apr_err, 0, NULL, pool,
+                                "svn_wc_set_revision: "
+                                "error writing %s's log file", 
+                                path->data);
+    }
+      
+  SVN_ERR (svn_wc__close_adm_file (log_fp, log_parent, SVN_WC__ADM_LOG,
+                                   TRUE, /* sync */
+                                   pool));
+
 
   /* Run the log file we just created. */
-
-  /* TODO */
+  SVN_ERR (svn_wc__run_log (log_parent, pool));
+            
+  /* The client's commit routine will take care of removing all
+     locks en masse. */
 
   return SVN_NO_ERROR;
 }

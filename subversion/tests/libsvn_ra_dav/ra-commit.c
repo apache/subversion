@@ -35,7 +35,7 @@ main (int argc, char **argv)
   svn_revnum_t new_revision;
   const char *url_type;
   const svn_ra_plugin_t *plugin;
-  apr_hash_t *targets;
+  apr_hash_t *targets, *locks;
   svn_string_t *root_dir;
 
   apr_initialize ();
@@ -71,7 +71,8 @@ main (int argc, char **argv)
   root_dir = svn_string_create(".", pool);
 
   printf("Beginning crawl...\n");
-  err = svn_wc_crawl_local_mods(&targets, root_dir, editor, edit_baton, pool);
+  err = svn_wc_crawl_local_mods(&targets, &locks, root_dir,
+                                editor, edit_baton, pool);
   if (err)
     goto error;
 
