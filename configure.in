@@ -273,18 +273,7 @@ fi
 AC_SUBST(INSTALL_INFO)
 
 dnl decide whether we want to link against the RA libraries
-AC_ARG_ENABLE(dso,
-[  --enable-dso              Turn on DSO loading of RA libralies],
-[
-    if test "$enableval" = "yes"; then
-      enable_dso=yes
-      if test "$enable_shared" = "no"; then
-        AC_MSG_ERROR([--enable-dso conflicts with --disable-shared])
-      fi
-    fi
-])
-
-if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
+if test "$enable_shared" = "no"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
   SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
