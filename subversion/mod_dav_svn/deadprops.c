@@ -286,8 +286,9 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
          across the wire. */
       if (! svn_xml_is_xml_safe(propval->data, propval->len))
         {
-          propval = (svn_string_t *)svn_base64_encode_string(propval, pool);
-          xml_safe = propval->data;
+          const svn_string_t *enc_propval
+            = svn_base64_encode_string(propval, pool);
+          xml_safe = enc_propval->data;
           encoding = apr_pstrcat(pool, " V:encoding=\"base64\"", NULL);
         }
       else
@@ -325,7 +326,7 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
                                    const apr_xml_elem *elem,
                                    dav_namespace_map *mapping)
 {
-  svn_string_t *propval;
+  const svn_string_t *propval;
   apr_pool_t *pool = db->p;
   apr_xml_attr *attr = elem->attr;
 
@@ -347,7 +348,7 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
 
           /* Handle known encodings here. */
           if (enc_type && (strcmp (enc_type, "base64") == 0))
-            propval = (svn_string_t *)svn_base64_decode_string(propval, pool);
+            propval = svn_base64_decode_string(propval, pool);
           else
             return dav_new_error (pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                   "Unknown property encoding");
