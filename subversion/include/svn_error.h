@@ -150,7 +150,7 @@ typedef enum svn_errno_t {
    there's no reason not to use APR's native pool interface.  But you
    are using SVN errors, aren't you? */
 
-/* Return a new pool.  If CONTAINING_POOL is non-null, then the new
+/* Return a new pool.  If PARENT_POOL is non-null, then the new
  * pool will be a subpool of it, and will inherit the containing
  * pool's dedicated error subpool.
  *
