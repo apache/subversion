@@ -1815,8 +1815,9 @@ fold_change (apr_hash_t *changes,
             }
           else
             {
-              copyfrom_string = apr_psprintf (copyfrom_pool, "%" SVN_REVNUM_T_FMT
-                                              " %s", change->copyfrom_rev,
+              copyfrom_string = apr_psprintf (copyfrom_pool,
+                                              "%" SVN_REVNUM_T_FMT " %s",
+                                              change->copyfrom_rev,
                                               change->copyfrom_path);
             }
           break;
@@ -3471,17 +3472,50 @@ get_write_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Move a file into place from OLD_FILENAME in the transactions
+   directory to its final location NEW_FILENAME in the repository.  On
+   Unix, match the permissions of the new file to the permissions of
+   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+static svn_error_t *
+move_into_place (const char *old_filename, const char *new_filename,
+                 const char *perms_reference, apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+#ifndef WIN32
+  /* Match the perms on the old file to the perms reference file. */
+  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
+  if (! APR_STATUS_IS_SUCCESS (status))
+    return svn_error_wrap_apr (status, "Can't stat '%s'", perms_reference);
+  status = apr_file_perms_set (old_filename, finfo.protection);
+  if (! APR_STATUS_IS_SUCCESS (status))
+    return svn_error_wrap_apr (status, "Can't chmod '%s'", old_filename);
+#endif
+
+  /* Move the file into place. */
+  err = svn_io_file_rename (old_filename, new_filename, pool);
+  if (err && APR_STATUS_IS_EXDEV (err->apr_err))
+    {
+      /* Can't rename across devices; fall back to copying. */
+      svn_error_clear (err);
+      err = svn_io_copy_file (old_filename, new_filename, TRUE, pool);
+    }
+  return err;
+}
+
 svn_error_t *
 svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                    svn_fs_t *fs,
                    svn_fs_txn_t *txn,
                    apr_pool_t *pool)
 {
-  const char *rev_filename, *proto_filename;
+  const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
   const char *start_node_id, *start_copy_id;
-  svn_revnum_t new_rev;
+  svn_revnum_t old_rev, new_rev;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_file_t *rev_file;
   apr_off_t  changed_path_offset, offset;
@@ -3491,16 +3525,22 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   SVN_ERR (get_write_lock (fs, subpool));
 
   /* Get the current youngest revision. */
-  SVN_ERR (svn_fs_fs__youngest_rev (&new_rev, fs, subpool));
+  SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, fs, subpool));
 
   /* Get the next node_id and copy_id to use. */
   SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, fs,
                                   subpool));
 
   /* We are going to be one better than this puny old revision. */
-  new_rev++;
+  new_rev = old_rev + 1;
 
-  /* Copy the proto revision file into place. */
+  old_rev_filename = svn_path_join_many (subpool, fs->path,
+                                         SVN_FS_FS__REVS_DIR,
+                                         apr_psprintf (subpool, "%"
+                                                       SVN_REVNUM_T_FMT,
+                                                       old_rev),
+                                         NULL);
+
   rev_filename = svn_path_join_many (subpool, fs->path, SVN_FS_FS__REVS_DIR,
                                      apr_psprintf (subpool, "%"
                                                    SVN_REVNUM_T_FMT,
@@ -3513,7 +3553,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                                                     SVN_FS_FS__TXNS_EXT, NULL),
                                        SVN_FS_FS__REV, NULL);
 
-  SVN_ERR (svn_io_copy_file (proto_filename, rev_filename, TRUE, subpool));
+  SVN_ERR (move_into_place (proto_filename, rev_filename, old_rev_filename,
+                            subpool));
 
   /* Get a write handle on the proto revision file. */
   SVN_ERR (svn_io_file_open (&rev_file, rev_filename,
@@ -3543,7 +3584,6 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   
   SVN_ERR (svn_io_file_close (rev_file, subpool));
 
-  /* Move the revision properties into place. */
   revprop_filename = svn_path_join_many (subpool, fs->path,
                                          SVN_FS_FS__TXNS_DIR,
                                          apr_pstrcat (subpool, txn->id,
@@ -3557,7 +3597,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                                                     new_rev),
                                       NULL);
 
-  SVN_ERR (svn_io_copy_file (revprop_filename, final_revprop, TRUE, subpool));
+  SVN_ERR (move_into_place (revprop_filename, final_revprop, old_rev_filename,
+                            subpool));
   
   /* Update the 'current' file. */
   SVN_ERR (write_final_current (fs, txn->id, new_rev, start_node_id,
