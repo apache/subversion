@@ -58,8 +58,9 @@
 
 
 
-#define SVN_WC__TMP_EXT ".tmp"
-#define SVN_WC__REJ_EXT ".rej"
+#define SVN_WC__TMP_EXT       ".tmp"
+#define SVN_WC__TEXT_REJ_EXT  ".rej"
+#define SVN_WC__PROP_REJ_EXT  ".prej"
 
 
 /*** Asking questions about a working copy. ***/
@@ -243,6 +244,13 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool);
 /* Return a path to PATH's text-base file.
    If TMP is set, return a path to the tmp text-base file. */
 svn_string_t *svn_wc__text_base_path (const svn_string_t *path,
+                                      svn_boolean_t tmp,
+                                      apr_pool_t *pool);
+
+
+/* Return a path to file FILEPATH's working properties file.
+   If TMP is set, return a path to the tmp working property file. */
+svn_string_t *svn_wc__file_prop_path (const svn_string_t *filepath,
                                       svn_boolean_t tmp,
                                       apr_pool_t *pool);
 
@@ -529,9 +537,14 @@ svn_wc__save_prop_file (svn_string_t *propfile_path,
                         apr_pool_t *pool);
 
 
-/* Given PATH/NAME (represting a node of type KIND) and an array of
+/* Given PATH/NAME (representing a node of type KIND) and an array of
    PROPCHANGES, merge the changes into the working copy.  Necessary
-   log entries will be appended to ENTRY_ACCUM.  */
+   log entries will be appended to ENTRY_ACCUM.
+
+   Note that `merging' here means dealing with conflicts too. 
+   kff sez: can you expand on this?  How does it deal with conflicts?
+   How does caller discover the name of the reject file?
+*/
 svn_error_t *
 svn_wc__do_property_merge (svn_string_t *path,
                            const svn_string_t *name,
