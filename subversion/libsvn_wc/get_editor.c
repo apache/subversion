@@ -291,13 +291,18 @@ struct file_baton
   /* This gets set if an "entry" prop was stored. */
   svn_boolean_t entryprop_changed;
 
-  /* This gets set if SVN_PROP_EOL_STYLE was set to some value other
-     than 'none', and is -different- than the current value.   Also,
-     the new eol string that should be used. */
+  /* This gets set if SVN_PROP_EOL_STYLE was set to some value during
+     the update.  close_file() needs to know this, because it needs to
+     detect a possibly property conflict before this property is ever
+     officially written to disk. */
   svn_boolean_t got_new_eol_style;
   enum svn_wc__eol_style new_style;
   svn_stringbuf_t *new_value;
   const char *new_eol;
+
+  /* Same case as above, but for SVN_PROP_KEYWORDS property. */
+  svn_boolean_t got_new_keywords_value;
+  svn_stringbuf_t *new_keywords_value;
 
   /* This gets set if there's a conflict when merging a prop-delta
      into the locally modified props.  */
@@ -1103,6 +1108,14 @@ change_file_prop (void *file_baton,
       fb->got_new_eol_style = TRUE;
     }
 
+  /* If the keywords property was set, remember info for close_file(). */
+  if (! strcmp (local_name->data, SVN_PROP_KEYWORDS))
+    {
+      fb->new_keywords_value = value;
+      fb->got_new_keywords_value = TRUE;
+    }
+
+
   return SVN_NO_ERROR;
 }
 
@@ -1121,6 +1134,7 @@ close_file (void *file_baton)
   apr_hash_t *prop_conflicts;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
+  char *revision, *date, *author, *url;
 
   /* Lock the working directory while we change things. */
   SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
@@ -1267,7 +1281,53 @@ close_file (void *file_baton)
           s_eol_str = NULL;
       }
 
-      /* ### check keyword property here. */
+      /* Decide which value of 'svn:keywords' to use. */
+      {
+        /* Did we get a new keywords value during this update?
+           If not, use whatever value is currently in our props. */        
+        if (! fb->got_new_keywords_value)
+          SVN_ERR (svn_wc__get_keywords (&revision, &date, &author, &url,
+                                         fb->path->data, NULL, fb->pool));
+
+        else  /* got a new keywords value from the server */
+          {            
+            /* Check to see if the new property conflicted. */
+            svn_prop_t *conflict = 
+              (svn_prop_t *) apr_hash_get (prop_conflicts, SVN_PROP_KEYWORDS,
+                                           strlen(SVN_PROP_KEYWORDS));
+
+            if (conflict)
+              /* Use our current locally-modified style. */
+              SVN_ERR (svn_wc__get_keywords (&revision, &date, &author, &url,
+                                             fb->path->data, NULL, fb->pool));
+            else
+              {
+                /* Go ahead and use the new style from the repository.
+                   NOTICE: we're passing an explicit value to parse
+                   here, because the 'latest' value isn't yet in the
+                   props. */
+                SVN_ERR (svn_wc__get_keywords (&revision, &date, &author, &url,
+                                               fb->path->data, 
+                                               fb->new_keywords_value->data,
+                                               fb->pool));
+
+
+                /* And also:  when we call svn_wc_text_modified_p()
+                   below, it needs to know this new value.  So we'll
+                   set this value immediately.  This is allowed,
+                   because we know it won't conflict! */
+                SVN_ERR (svn_wc_prop_set 
+                         (svn_stringbuf_create (SVN_PROP_KEYWORDS, fb->pool),
+                          fb->new_keywords_value, fb->path, fb->pool));
+              }
+          }
+        
+        if (eol_str)
+          s_eol_str = svn_stringbuf_create (eol_str, fb->pool);
+        else
+          s_eol_str = NULL;
+      }
+
 
       /* Before doing any logic, we *know* that the first thing the
          logfile should do is overwrite the old text-base file with the
