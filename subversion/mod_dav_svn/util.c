@@ -44,6 +44,10 @@ const char *dav_svn_build_uri(const dav_resource *resource,
 
   switch (what)
     {
+    case DAV_SVN_BUILD_URI_ACT_COLLECTION:
+      return apr_psprintf(pool, "%s%s/%s/act/%s",
+                          href1, root_path, special_uri, href2);
+
     case DAV_SVN_BUILD_URI_BC:
       return apr_psprintf(pool, "%s%s/%s/bc/%ld/%s",
                           href1, root_path, special_uri, revision, href2);
