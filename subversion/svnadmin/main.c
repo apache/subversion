@@ -213,7 +213,7 @@ static const apr_getopt_option_t options_table[] =
      "read user configuration files from directory ARG"},
 
     {"clean-logs", svnadmin__clean_logs, 0,
-     "delete copied, unused log files from the source repository."},
+     "remove redundant log files from source repository."},
 
     {NULL}
   };
@@ -254,7 +254,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"hotcopy", subcommand_hotcopy, {0},
      "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
-     "Makes a hot copy of a repository.\n\n",
+     "Makes a hot copy of a repository.\n",
      {svnadmin__clean_logs} },
 
     {"list-dblogs", subcommand_list_dblogs, {0},
