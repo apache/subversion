@@ -79,3 +79,10 @@ Q. Need more descriptive error messages all around.  Perhaps a table
    internationalize.) 
 
 R. Speaking of which:  i18n plans?  Mulitlingual plans?
+
+S. Need built-in patch/diff functionality, instead of relying on
+   external tools.
+
+T. Binary files: how do we deal with diffing/patching binary files?
+   (like, say, if someone wants to keep an MS Word file under revision
+   control.)
