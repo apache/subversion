@@ -100,7 +100,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     if test "$enable_shared" = "yes"; then
         # Once we upgrade to libtool 1.4 we should change this to 
         # "$dbdir/libdb-3.3.la"
-        SVN_DB_LIBS="-L $dbdir/.libs -ldb-3.3"
+        SVN_DB_LIBS="-L$dbdir/.libs -ldb-3.3"
     else
         SVN_DB_LIBS="-L$dbdir -ldb"
     fi
