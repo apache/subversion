@@ -90,12 +90,16 @@ create_activity (commit_ctx_t *cc)
   return NULL;
 }
 
+#if 0  /* With -Wall, we keep getting a warning that this is defined
+          but not used.  It aids Emacs reflexes to have no warnings at
+          all, so #if this out until it's actually used.  -kff*/  
 static svn_error_t *
 checkout_resource (commit_ctx_t *cc, const char *src_url, const char **wr_url)
 {
   /* ### examine cc->workrsrc -- we may already have a WR */
   return NULL;
 }
+#endif /* 0 */
 
 static svn_error_t *
 commit_delete (svn_string_t *name,

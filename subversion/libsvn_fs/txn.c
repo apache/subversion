@@ -212,6 +212,12 @@ create_txn_body (svn_fs_txn_t *svn_txn,
   DBT key, value;
   int id;
 
+  /* Jim, svn_fs__nodata_dbt keeps getting an `implicit declaration'
+     warning.  It's helpful right now have a tree that compiles
+     without warning unless something's wrong, so I've put this bogus
+     declaration here to sidestep the warning.  -karl */
+  void svn_fs__nodata_dbt (DBT *value);
+
   /* Create a cursor.  */
   SVN_ERR (DB_WRAP (svn_txn->fs, "creating transaction (allocating cursor)",
 		    transactions->cursor (transactions, db_txn, cursor_p, 0)));
