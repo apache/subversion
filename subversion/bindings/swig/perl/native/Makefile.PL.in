@@ -95,8 +95,7 @@ sub MY::postamble {
                                    "$svnlib_builddir/libsvn_$_/libsvn_$_-1.la ".
                                    "ra_plugin.hi ra_reporter.hi ".
                                    "delta_editor.hi\n" .
-                                   "\t$swig_command -module SVN::_".
-                                   main::perlish($_) .
+                                   "\t$swig_command".
                                    " -o svn_$_.c $swig_srcdir/svn_$_.i\n"}
                                    @modules
                                  );
@@ -124,7 +123,7 @@ modules :: $module_c_files
 $module_make_commands\t\$(NOECHO) \$(TOUCH) \$\@
 
 core.c :: $swig_srcdir/core.i
-\t$swig_command -module SVN::_Core -o core.c $swig_srcdir/core.i
+\t$swig_command -o core.c $swig_srcdir/core.i
 
 $swig_modules_command
 

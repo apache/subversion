@@ -16,7 +16,12 @@
  * ====================================================================
  */
 
+#ifdef SWIGPERL
+%module "SVN::_Repos"
+#else
 %module repos
+#endif
+
 %include typemaps.i
 
 %import apr.i

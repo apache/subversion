@@ -317,16 +317,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
                 includes = self.get_win_includes(target)
                 if target.lang == "perl":
-                  modules = {
-                    "perl_client" : "_Client",
-                    "perl_core" : "_Core",
-                    "perl_delta" : "_Delta",
-                    "perl_fs" : "_Fs",
-                    "perl_ra" : "_Ra",
-                    "perl_repos" : "_Repos",
-                    "perl_wc" : "_Wc",
-                  }
-
                   objects = (("svn_delta_editor_t",
                               "svn_delta.h",
                               "delta_editor.hi"),
@@ -353,8 +343,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
                     user_deps.append(ofile)
 
-                  cbuild = "swig %s -%s -noproxy -nopm -module SVN::%s %s -o %s $(InputPath)" % \
-                           (self.swig_options, target.lang, modules[target.name],
+                  cbuild = "swig %s -%s -noproxy -nopm %s -o %s $(InputPath)" % \
+                           (self.swig_options, target.lang,
                             string.join(map(lambda x: "-I%s" % self.quote(x),
                                             includes)),
                             self.quote(csrc))

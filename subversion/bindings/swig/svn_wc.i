@@ -16,7 +16,12 @@
  * ====================================================================
  */
 
+#ifdef SWIGPERL
+%module "SVN::_Wc"
+#else
 %module wc
+#endif
+
 %include typemaps.i
 
 %import apr.i

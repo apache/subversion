@@ -16,7 +16,11 @@
  * ====================================================================
  */
 
+#ifdef SWIGPERL
+%module "SVN::_Delta"
+#else
 %module delta
+#endif
 
 %include "typemaps.i"
 
