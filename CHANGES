@@ -1,3 +1,38 @@
+Version 0.30.0 (released ?? Sep 2003, revision ??)
+http://svn.collab.net/repos/svn/tags/0.30.0
+
+ User-visible changes:
+ * SSL changes:  (r7134, #1330)
+      - client now prompts to cache server certificates       
+      - no more 'ssl-ignore-unknown-ca' option
+      - 'ssl-ignore-host-mismatch' is renamed to 'ssl-override-cert-hostname'
+      - new 'ssl-trust-default-ca' option to trust 'default' openssl CAs
+ * 'svn log' doesn't no longer dies on unversioned args (r6989, #777)
+ * local mods now obstruct 'svn up' deletions (r7050, #1196)
+ * 'svnserve' now takes optional (unauthenticated) -u username arg (r7060)
+ * no more 'svnadmin createtxn' subcommand. (r7062)
+ * 'svn ls -v' now shows years when appropriate
+ * document some new things in Book (r7014), plus minor technical fixes
+ * website changes:  new sidebar, new 'svn links' page, new tigris.org!!
+ * other issues:  hooks use proper stdout handles on win32 (r7001),
+   prevent copies of copies in wc (r7077, #1259), display failed
+   revprop change over ra_dav (r7081, #1520), 'svn st -u' throws RA
+   error properly (r7094, #1506)
+
+ Developer-visible changes:
+ * ra_dav now requires neon-0.24.X
+ * many gen_make.py/gen-base.py improvements, especially for win32 builds
+ * many improvements to swig/perl bindings
+ * improvements to contrib/:  psvn.el, and new svn-push program.
+ * more cvs2svn bugfixes:  issue #1504, #1421, #1514, and new --username arg.
+ * python testsuite only raises exceptions, never status codes. (#1192)
+ * various libsvn_fs re-org (prepwork) for issue #1499.
+ * other issues: code-complete timestamp feature (r6983, #1445), add
+   op-counting features to trails (r6984, #655), fs UUID caching
+   (r7037), almost finish win32 iconv issues (#872), restored-file
+   entry-timestamp bugfix (r7090, #1523), always print CWD as '.' (r7097)
+
+
 Version 0.29.0 (released 05 Sep 2003, revision 6976)
 http://svn.collab.net/repos/svn/tags/0.29.0
 
