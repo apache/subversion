@@ -51,13 +51,10 @@
           </row>
         </thead>
         <tbody>
-          <!--
           <row>
-          <entry>libsvn_auth</entry> 
-          <entry>Authentication and
-          authorization functionality (in progress)</entry>
+            <entry>libsvn_auth</entry> 
+            <entry>Authentication and authorization functionality</entry>
           </row>
-          -->
           <row>
             <entry>libsvn_client</entry> 
             <entry>Primary interface for client programs</entry>
@@ -82,13 +79,10 @@
             <entry>libsvn_ra_local</entry>
             <entry>The local Repository Access module</entry>
           </row>
-          <!--
           <row>
-          <entry>libsvn_ra_pipe</entry>
-          <entry>A proprietary protocal Repository Access module (in
-          progress)</entry>
+            <entry>libsvn_ra_svn</entry>
+            <entry>A proprietary protocal Repository Access module</entry>
           </row>
-          -->
           <row>
             <entry>libsvn_repos</entry>
             <entry>Repository interface</entry>
@@ -141,11 +135,11 @@
     <para>Another benefit of modularity is the ability to replace a
       given module with a whole new library that implements the same
       API without affecting the rest of the code base.  In some sense,
-      this happens within Subversion already.  The libsvn_ra_dav and
-      libsvn_ra_local libraries both implement the same interface, and
-      both communicate with the Repository Layer, except that the
-      former uses a network to talk to that layer, and the latter
-      talks to it directly.</para>
+      this happens within Subversion already.  The libsvn_ra_dav,
+      libsvn_ra_local, and libsvn_ra_svn all implement the same
+      interface.  And all three communicate with the Repository
+      Layer&mdash; libsvn_ra_dav and libsvn_ra_svn do so across a
+      network, and libsvn_ra_local connects to it directly.</para>
 
     <para>The client itself also highlights modularity in the
       Subversion design.  While Subversion currently comes with only a
@@ -320,7 +314,7 @@
       <!-- Perhaps dig into the DAG/tree layers a bit here, talking
            about the hard-link design and how that affords such
            pleasures as cheap copies.  If "bubble-up" isn't covered
-           twelve other times in the book, maybe give it go here. -->
+           twelve other times in the book, maybe give it a go here. -->
 
       <para>As we mentioned earlier, the libsvn_fs API looks and feels
         like any other filesystem, except that it has this wonderful
@@ -449,9 +443,9 @@ make_new_directory (const char *repos_path,
 </programlisting>
       </example>
 
-      <para>As you can see in the previous code segment, calls were made
-        to both the repository and filesystem interfaces.  Note that
-        we could just as easily have committed the transaction using
+      <para>In the previous code segment, calls were made to both the
+        repository and filesystem interfaces.  We could just as easily
+        have committed the transaction using
         <function>svn_fs_commit_txn</function>.  But the filesystem
         API knows nothing about the repository library's hook
         mechanism.  If you want your Subversion repository to
@@ -467,6 +461,8 @@ make_new_directory (const char *repos_path,
         special kind of reporting mechanism that does not really
         belong in the core filesystem library itself.</para>
       
+      <!-- ### cmpilato todo: link to the hook stuff in chapter 5 -->
+
       <para>The hook mechanism requirement is but one of the reasons
         for the abstraction of a separate repository library from the
         rest of the filesystem code.  The libsvn_repos API provides
@@ -508,6 +504,8 @@ make_new_directory (const char *repos_path,
     <!-- ****************************************************************** -->
     <sect2 id="svn-ch-7-sect-1.2">
       <title>Repository Access Layer</title>
+
+      <!-- ### cmpilato todo: add in the ra_svn stuffs here -->
 
       <para>If the Subversion Repository Layer is at "the other end of
         the line", the Repository Access Layer is the line itself.
