@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
   import os, sys
   r = p.parse(os.path.join(os.path.dirname(sys.argv[0]),
-                           '../../subversion/include/svn_version.h'))
+                           '../subversion/include/svn_version.h'))
   print "Subversion %d.%d.%d" % (r.major, r.minor, r.patch)
   print "Library version %d" % r.libver
 
