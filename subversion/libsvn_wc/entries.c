@@ -246,9 +246,9 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
            these attributes at all when they have values of "true", so
            let's not go overboard on the paranoia here. */
         if (addstr)
-          entry->state |= SVN_WC_ENTRY_ADDED;
+          entry->state |= SVN_WC_ENTRY_ADD;
         if (delstr)
-          entry->state |= SVN_WC_ENTRY_DELETED;
+          entry->state |= SVN_WC_ENTRY_DELETE;
         if (conflictstr)
           entry->state |= SVN_WC_ENTRY_CONFLICTED;
       }
@@ -270,7 +270,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   
   /* Inherits parent's ancestor if doesn't have an ancestor of one's
      own and is not marked for addition */
-  if ((! dst->ancestor) && (! (dst->state & SVN_WC_ENTRY_ADDED)))
+  if ((! dst->ancestor) && (! (dst->state & SVN_WC_ENTRY_ADD)))
     {
       svn_string_t *name = apr_hash_get (dst->attributes,
                                          SVN_WC_ENTRY_ATTR_NAME,
@@ -392,12 +392,12 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 
     apr_hash_set (entry->attributes,
                   SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING,
-                  (entry->state & SVN_WC_ENTRY_ADDED) ?
+                  (entry->state & SVN_WC_ENTRY_ADD) ?
                   svn_string_create ("true", pool) : NULL);
 
     apr_hash_set (entry->attributes,
                   SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING,
-                  (entry->state & SVN_WC_ENTRY_DELETED) ?
+                  (entry->state & SVN_WC_ENTRY_DELETE) ?
                   svn_string_create ("true", pool) : NULL);
 
     apr_hash_set (entry->attributes,
@@ -898,8 +898,8 @@ interpret_changes (apr_hash_t *entries,
   char new_addonly, new_delonly;
 
   /* If no flags are being changed, GET OUT! */
-  if ( (! (*state & SVN_WC_ENTRY_DELETED))
-       && (! (*state & SVN_WC_ENTRY_ADDED)) )
+  if ( (! (*state & SVN_WC_ENTRY_DELETE))
+       && (! (*state & SVN_WC_ENTRY_ADD)) )
     return SVN_NO_ERROR;
 
   /* Get the entry */
@@ -910,11 +910,11 @@ interpret_changes (apr_hash_t *entries,
                                  APR_HASH_KEY_STRING);
 
 
-  if ((*state & SVN_WC_ENTRY_ADDED)
+  if ((*state & SVN_WC_ENTRY_ADD)
       && (this_dir_entry)
       && (entry != this_dir_entry)
-      && (this_dir_entry->state & SVN_WC_ENTRY_DELETED)
-      && (this_dir_entry->state & SVN_WC_ENTRY_ADDED))
+      && (this_dir_entry->state & SVN_WC_ENTRY_DELETE)
+      && (this_dir_entry->state & SVN_WC_ENTRY_ADD))
     {
       /* If there is a default entry in this entries list, and
          this is not it, and that default entry is marked for
@@ -931,7 +931,7 @@ interpret_changes (apr_hash_t *entries,
      fold_entry() routines are being asked to create it. */
   if (! entry)
     {
-      if (*state == SVN_WC_ENTRY_ADDED)
+      if (*state == SVN_WC_ENTRY_ADD)
         /* The -only- permissible flag to set, if the entry doesn't
            yet exist, is the ADD flag. */
         return SVN_NO_ERROR;
@@ -953,28 +953,28 @@ interpret_changes (apr_hash_t *entries,
      this is an egregious error.  (It's possible to have both flags
      set at the same time, but *only* because some caller first set
      the delete flag, then another caller set the add flag later.) */
-  if ((new_state & SVN_WC_ENTRY_DELETED)
-      && (new_state & SVN_WC_ENTRY_ADDED))
+  if ((new_state & SVN_WC_ENTRY_DELETE)
+      && (new_state & SVN_WC_ENTRY_ADD))
     return 
       svn_error_createf 
       (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool, 
        "error: simultaneous set of add & del flags on `%s'", name->data);
 
   /* All the (remaining) possible current states. */
-  current_addonly = ((current_state & SVN_WC_ENTRY_ADDED)
-                     && (! (current_state & SVN_WC_ENTRY_DELETED)));
-  current_delonly = ((current_state & SVN_WC_ENTRY_DELETED)
-                     && (! (current_state & SVN_WC_ENTRY_ADDED)));
-  current_both = ((current_state & SVN_WC_ENTRY_DELETED)
-                  && (current_state & SVN_WC_ENTRY_ADDED));
-  current_neither = ((! (current_state & SVN_WC_ENTRY_DELETED))
-                     && (! (current_state & SVN_WC_ENTRY_ADDED)));
+  current_addonly = ((current_state & SVN_WC_ENTRY_ADD)
+                     && (! (current_state & SVN_WC_ENTRY_DELETE)));
+  current_delonly = ((current_state & SVN_WC_ENTRY_DELETE)
+                     && (! (current_state & SVN_WC_ENTRY_ADD)));
+  current_both = ((current_state & SVN_WC_ENTRY_DELETE)
+                  && (current_state & SVN_WC_ENTRY_ADD));
+  current_neither = ((! (current_state & SVN_WC_ENTRY_DELETE))
+                     && (! (current_state & SVN_WC_ENTRY_ADD)));
 
   /* All the (remaining) possible proposed states. */
-  new_addonly = ((new_state & SVN_WC_ENTRY_ADDED)
-                 && (! (new_state & SVN_WC_ENTRY_DELETED)));
-  new_delonly = ((new_state & SVN_WC_ENTRY_DELETED)
-                 && (! (new_state & SVN_WC_ENTRY_ADDED)));
+  new_addonly = ((new_state & SVN_WC_ENTRY_ADD)
+                 && (! (new_state & SVN_WC_ENTRY_DELETE)));
+  new_delonly = ((new_state & SVN_WC_ENTRY_DELETE)
+                 && (! (new_state & SVN_WC_ENTRY_ADD)));
   
 
   /* Remaining logic, yum. */
@@ -1022,10 +1022,10 @@ interpret_changes (apr_hash_t *entries,
              flag gets *un*set during the flag merge. */
 
           /* Unset the delete flag, it's irrelevant. */
-          *state &= ~SVN_WC_ENTRY_DELETED;
+          *state &= ~SVN_WC_ENTRY_DELETE;
 
           /* Set the add and "clear" flag */
-          *state |= SVN_WC_ENTRY_ADDED;
+          *state |= SVN_WC_ENTRY_ADD;
           *state |= SVN_WC_ENTRY_CLEAR_NAMED;
 
           /* When *state is merged, fold_entry should only unset the

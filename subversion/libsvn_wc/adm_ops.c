@@ -195,7 +195,7 @@ svn_wc_set_revision (void *baton,
       SVN_ERR (svn_wc__entry_fold_sync (pdir, bname, new_revnum,
                                         svn_node_none, 
                                         (SVN_WC_ENTRY_CLEAR_NAMED |
-                                         SVN_WC_ENTRY_ADDED),
+                                         SVN_WC_ENTRY_ADD),
                                         0, 0, pool, NULL, NULL));
     }
 
@@ -348,13 +348,13 @@ mark_tree (svn_string_t *dir, enum mark_tree_state state, apr_pool_t *pool)
         case mark_tree_state_delete:
           SVN_ERR (svn_wc__entry_fold_sync_intelligently 
                    (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-                    SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
+                    SVN_WC_ENTRY_DELETE, 0, 0, pool, NULL, NULL));
           break;
 
         case mark_tree_state_unadd:
           SVN_ERR (svn_wc__entry_fold_sync
                    (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-                    SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADDED,
+                    SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADD,
                     0, 0, pool, NULL, NULL));
           break;
 
@@ -398,7 +398,7 @@ svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
   
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
            (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-            SVN_WC_ENTRY_DELETED, 0, 0, pool, NULL, NULL));
+            SVN_WC_ENTRY_DELETE, 0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;
 }
@@ -430,13 +430,13 @@ svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
   /* Now, add the entry for this directory to the parent_dir's entries
      file, marking it for addition. */
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-           (parent_dir, basename, 0, svn_node_dir, SVN_WC_ENTRY_ADDED,
+           (parent_dir, basename, 0, svn_node_dir, SVN_WC_ENTRY_ADD,
             0, 0, pool, NULL, NULL));
 
   /* And finally, make sure this entry is marked for addition in its
      own administrative directory. */
   SVN_ERR (svn_wc__entry_fold_sync
-           (dir, NULL, 0, svn_node_dir, SVN_WC_ENTRY_ADDED,
+           (dir, NULL, 0, svn_node_dir, SVN_WC_ENTRY_ADD,
             0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;
@@ -451,7 +451,7 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
-           (dir, basename, 0, svn_node_file, SVN_WC_ENTRY_ADDED,
+           (dir, basename, 0, svn_node_file, SVN_WC_ENTRY_ADD,
             0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;
@@ -482,7 +482,7 @@ svn_wc_unadd (svn_string_t *path,
   
   SVN_ERR (svn_wc__entry_fold_sync
            (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
-            SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADDED,
+            SVN_WC_ENTRY_CLEAR_NAMED | SVN_WC_ENTRY_ADD,
             0, 0, pool, NULL, NULL));
 
   return SVN_NO_ERROR;

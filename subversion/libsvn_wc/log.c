@@ -653,10 +653,10 @@ log_do_modify_entry (struct log_runner *loggy,
   /* Stuff state flags. */
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_ADD,
                     APR_HASH_KEY_STRING))
-    state |= SVN_WC_ENTRY_ADDED;
+    state |= SVN_WC_ENTRY_ADD;
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_DELETE,
                     APR_HASH_KEY_STRING))
-    state |= SVN_WC_ENTRY_DELETED;
+    state |= SVN_WC_ENTRY_DELETE;
   if (apr_hash_get (ah, SVN_WC_ENTRY_ATTR_MERGED,
                     APR_HASH_KEY_STRING))
     state |= SVN_WC_ENTRY_MERGED;
@@ -958,7 +958,7 @@ log_do_committed (struct log_runner *loggy,
         SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
       }
 
-      if (entry && (entry->state & SVN_WC_ENTRY_DELETED))
+      if (entry && (entry->state & SVN_WC_ENTRY_DELETE))
         {
           err = remove_from_revision_control (loggy, sname, TRUE);
           if (err)

@@ -134,6 +134,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_CHECKSUM  "checksum"
 #define SVN_WC_ENTRY_ATTR_ADD       "add"
 #define SVN_WC_ENTRY_ATTR_DELETE    "delete"
+#define SVN_WC_ENTRY_ATTR_DELETED   "deleted"
 #define SVN_WC_ENTRY_ATTR_MERGED    "merged"
 #define SVN_WC_ENTRY_ATTR_CONFLICT  "conflict"
 #define SVN_WC_ENTRY_ATTR_ANCESTOR  "ancestor"
@@ -144,12 +145,13 @@ typedef struct svn_wc_entry_t
 /* Bitmasks for `svn_wc_entry_t.state'.
    REMINDER: if you add a new mask here, make sure to update
    sync_entry() in entries.c. */
-#define SVN_WC_ENTRY_ADDED         1  /* entry marked for addition */
-#define SVN_WC_ENTRY_DELETED       2  /* entry marked for deletion */
-#define SVN_WC_ENTRY_MERGED        4  /* wfile merged as of timestamp */
-#define SVN_WC_ENTRY_CONFLICTED    8  /* wfile conflicted as of timestamp */
-#define SVN_WC_ENTRY_CLEAR_NAMED  16  /* action: clear mentioned flags */
-#define SVN_WC_ENTRY_CLEAR_ALL    32  /* action: clear all flags */
+#define SVN_WC_ENTRY_ADD           1  /* entry marked for addition */
+#define SVN_WC_ENTRY_DELETE        2  /* entry marked for deletion */
+#define SVN_WC_ENTRY_DELETED       4  /* entry deleted */
+#define SVN_WC_ENTRY_MERGED        8  /* wfile merged as of timestamp */
+#define SVN_WC_ENTRY_CONFLICTED   16  /* wfile conflicted as of timestamp */
+#define SVN_WC_ENTRY_CLEAR_NAMED  32  /* action: clear mentioned flags */
+#define SVN_WC_ENTRY_CLEAR_ALL    64  /* action: clear all flags */
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
