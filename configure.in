@@ -217,7 +217,7 @@ fi
 
 
 dnl Define the version number
-AC_DEFINE(SVN_VERSION, "M2",
+AC_DEFINE(SVN_VERSION, "M3",
         [Define to be the version of Subversion])
 
 dnl Find a version of GNU patch

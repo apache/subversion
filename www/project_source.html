@@ -12,47 +12,88 @@ Project Subversion Source Code
 <TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
 
 
-<P>
-The source code is under (very) active development right now.  You can:
-</p>
-
 <p>
-      <ul>
-<!--  
-      Not available until closer to release...
-      <li>
-      <a href="http://www.tigris.org/download/download_source.html">
-      Download a source code archive</a>
-      </li>
--->
-      <li>
-      <a href="/cvs_help.html">
-      Download the source code with CVS</a>
-      </li>
-      <li>
-      <a href="/source/browse/subversion/">
-      Browse the CVS repository over the web</a>
-      </li>
-      </ul>
-<br>
+
+The Subversion sources are now under revision control in a 
+<a href="http://svn.collab.net">Subversion repository</a>.  The CVS
+repository is obsolete.  To obtain Subversion now, you should:
+
+<ol>
+
+   <li>Download a tarball distribution from the <a
+   href="http://subversion.tigris.org/servlets/ProjectDownloadList">Downloads
+   Page</a>
+   </li>
+ <p>
+   <li>Build and install it according to the instructions in the
+   INSTALL file in the top level of the distribution.
+   </li>
+ <p>
+   <li>Use it to check out a working copy of Subversion:
+   <p>
+   <pre>
+      $ svn co http://svn.collab.net/repos/svn
+   </pre>
+   <p>
+   That will get you a new subdirectory named `svn/', with another
+   subdirectory in, `svn/trunk/'.  The sources you know and love are
+   under `trunk/'.  For now, do the checkout command exactly as given
+   above; there's a known path-correspondence bug that will cause you
+   some inconvenience in your working copy if your initial checkout is
+   of a repository subdir; and another bug if it has a trailing slash.
+   These will be fixed as soon as possible; see issues 
+   <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=454">#454</a>
+   and
+   <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=471">#471</a>
+   for more information.
+   </li>
+   <p>
+   Some people reported DNS lookup errors for `svn.collab.net'.  The
+   IP address is 216.127.237.133, in case you should need it.
+ <p>
+   <li>
+   <pre>
+      cd svn/trunk
+      svn status
+      svn update
+      etc, etc, etc...
+   </pre>
+   </li>
+ <p>
+   <li>Now you have a working copy.  Most commands work like you
+   would expect.  Many of them have bugs, or misconfigured defaults.
+   Many features are missing.  Please make sure you're subscribed to
+   dev@subversion.tigris.org if you're going to run this.
+   </li>
+ <p>
+   <li>Generally, you should always rebuild and install Subversion
+   from your working copy (read the INSTALL and HACKING files).  The
+   latest available tarball is still not as recent as an up-to-date
+   working copy.  The tarballs are just there to help people
+   bootstrap, and (eventually) to provide stability checkpoints.
+   </li>
+ <p>
+   <li>Read the <a
+   href="http://subversion.tigris.org/inconveniences.html">Warnings
+   and Inconveniences Page</a> for information about some particularly
+   annoying bugs and their workarounds.
+   </li>
+ <p>
+</ul>
+
 </td>
 </tr>
 </TABLE>
 <BR>
 
 <p>
-Standard "<tt>tar.gz</tt>" and other download formats will be made
-available as we approach release; for now, the CVS tree is the best
-way to get Subversion.
-</p>
-
 
 <TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
 
 <TR>
 <TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="#000033"
 FACE="Arial, Helvetica, sans-serif">
-Contributing Source Code
+Contributing To The Project
 </font></STRONG></TD>
 </TR>
 
@@ -60,7 +101,7 @@ Contributing Source Code
 <TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
 
 <P>
-To contribute code to Subversion:
+To contribute to Subversion:
 
 </p>
 
@@ -75,9 +116,10 @@ To contribute code to Subversion:
       by the Apache <a href="http://apr.apache.org">APR project</a>.
       Please review these. </li>
 
-     <li> After checking out a copy of the source, read the file
-     <b>HACKING</b> at the top of the tree.  It describes coding and
-     logging conventions, as well as how to build.
+     <li> After checking out a copy of the source as described above,
+      read the file <b>HACKING</b> at the top of the tree.  It
+      describes coding and logging conventions, as well as how to
+      build from a working copy.
 
      </ul>
 <br>
