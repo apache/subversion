@@ -151,8 +151,6 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                    || (n->prop_state == svn_wc_notify_state_unknown)
                    || (n->prop_state == svn_wc_notify_state_unchanged))))
           {
-            nb->received_some_change = TRUE;
-            
             if (n->kind == svn_node_file)
               {
                 if (n->content_state == svn_wc_notify_state_conflicted)
@@ -173,10 +171,11 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             if (n->lock_state == svn_wc_notify_lock_state_unlocked)
               statchar_buf[2] = 'B';
 
-            if (! ((n->content_state == svn_wc_notify_state_unchanged
-                    || n->content_state == svn_wc_notify_state_unknown)
-                   && (n->prop_state == svn_wc_notify_state_unchanged
-                       || n->prop_state == svn_wc_notify_state_unknown)))
+            if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
+              nb->received_some_change = TRUE;
+
+            if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
+                || statchar_buf[2] != ' ')
               {
                 if ((err = svn_cmdline_printf (pool, "%s %s\n",
                                                statchar_buf, path_local)))
