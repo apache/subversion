@@ -44,9 +44,7 @@ each particular interface lies.
  |                                         |                            
  |          Subversion Filesystem          |                            
  |                                         |                            
- +-+--------------+--------+---------+-----+ <===== Database interface  
-   | Berkeley DBM |        |   SQL   |                                  
-   +--------------+        +---------+      
+ +-----------------------------------------+
                
 @end example
 @c Let's just say that emacs' "picture" mode is an excellent thing!
