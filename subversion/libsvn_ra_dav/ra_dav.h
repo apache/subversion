@@ -218,6 +218,8 @@ svn_error_t *svn_ra_dav__do_check_path(
     SVN_PROP_PREFIX "baseline-relative-path"
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
+#define SVN_RA_DAV__PROP_MD5_CHECKSUM SVN_DAV_PROP_NS_DAV "md5-checksum"
+
 
 typedef struct {
   /* what is the URL for this resource */
@@ -400,6 +402,7 @@ enum {
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   ELEM_baseline_relpath_old,
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  ELEM_md5_checksum,
   ELEM_deleted_path,  /* used in log reports */
   ELEM_replaced_path,  /* used in log reports */
   ELEM_added_path,    /* used in log reports */
