@@ -16,14 +16,14 @@ Candidate changes:
     Notes:
       I vote that this block 1.2.0-rc2 --maxb
     Votes:
-      +1: maxb, lundblad
+      +1: maxb, lundblad, epg
 
   * r13954
     Remove GCCisms.
     Justification:
       We are C89, nothing else.
     Votes:
-      +1: lundblad, maxb
+      +1: lundblad, maxb, epg
 
   * r13961, r13981
     Make Ruby bindings install to the correct location.
