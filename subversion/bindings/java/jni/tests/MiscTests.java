@@ -32,7 +32,7 @@ public class MiscTests extends TestCase
 
     public void testMiscThrowExceptionByName()
 	{
-	    String name="org.tigris.subversion.SubversionException";
+	    String name="org/tigris/subversion/SubversionException";
 	    String message="the answer is 42";
 
 	    try

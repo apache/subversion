@@ -60,6 +60,11 @@ public class NativeWrapper
     public static native Date dateCreate(long date);
 
     /**
+     * wrapper for function "entry__create" (entry.h)
+     */
+    public static native Entry entryCreate();
+
+    /**
      * setter for "url" in Entry class
      */
     public static native void entrySetUrl(Entry entry, String url);
