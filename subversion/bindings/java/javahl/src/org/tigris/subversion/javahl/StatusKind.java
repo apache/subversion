@@ -16,6 +16,9 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+/**
+ * class for kind status of the item or its properties
+ */
 public interface StatusKind
 {
     /** does not exist */

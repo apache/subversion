@@ -34,12 +34,15 @@ class Targets;
 class JNIByteArray;
 class Prompter;
 class BlameCallback;
+class CommitMessage;
 #include <svn_client.h>
 #include "SVNBase.h"
 
 class SVNClient :public SVNBase
 {
 public:
+	void cancelOperation();
+	void commitMessageHandler(CommitMessage *commitMessage);
 	const char * getConfigDirectory();
 	void setConfigDirectory(const char *configDir);
 	jbyteArray blame(const char *path, Revision& revisionStart,
@@ -106,6 +109,7 @@ public:
 	SVNClient();
 	virtual ~SVNClient();
 private:
+	static svn_error_t * checkCancel(void *cancelBaton);
 	void propertySet(const char *path, const char *name,
                          svn_string_t *value, bool recurse);
 	jobject createJavaProperty(jobject jthis, const char *path,
@@ -115,13 +119,14 @@ private:
 	Notify *m_notify;
 	Prompter *m_prompter;
     Path m_lastPath;
+    bool m_cancelOperation;
+	CommitMessage *m_commitMessage;
+	void *getCommitMessageBaton(const char *message);
 	static svn_error_t *getCommitMessage(const char **log_msg,
                                              const char **tmp_file,
                                              apr_array_header_t *commit_items,
                                              void *baton,
                                              apr_pool_t *pool);
-	void *getCommitMessageBaton(const char *message,
-                                    const char *baseDir = NULL);
     std::string m_userName;
     std::string m_passWord;
 	std::string m_configDir;

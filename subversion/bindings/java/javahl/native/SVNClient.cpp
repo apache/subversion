@@ -28,6 +28,7 @@
 #include "Revision.h"
 #include "BlameCallback.h"
 #include "JNIByteArray.h"
+#include "CommitMessage.h"
 #include <svn_client.h>
 #include <svn_sorts.h>
 #include <svn_time.h>
@@ -38,6 +39,7 @@
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
+#include "JNIStringHolder.h"
 #include <vector>
 #include <iostream>
 //////////////////////////////////////////////////////////////////////
@@ -46,13 +48,14 @@
 struct log_msg_baton
 {
   const char *message;
-  const char *base_dir;
+  CommitMessage *messageHandler;
 };
 
 SVNClient::SVNClient()
 {
 	m_notify = NULL;
 	m_prompter = NULL;
+    m_commitMessage = NULL;
 }
 
 SVNClient::~SVNClient()
@@ -1248,7 +1251,6 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_baton_t *ab;
-	//svn_client_ctx_t *ctx = (svn_client_ctx_t *) apr_pcalloc (JNIUtil::getRequestPool()->pool(), sizeof (*ctx));
 	svn_client_ctx_t *ctx;
 	svn_error_t *err = NULL;
     if (( err = svn_client_create_context(&ctx, pool)))
@@ -1318,8 +1320,9 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 	ctx->notify_baton = m_notify;
 	ctx->log_msg_func = getCommitMessage;
 	ctx->log_msg_baton = getCommitMessageBaton(message);
-	ctx->cancel_func = NULL;
-	ctx->cancel_baton = NULL;
+	ctx->cancel_func = checkCancel;
+    m_cancelOperation = false;
+	ctx->cancel_baton = this;
     if (( err = svn_config_get_config (&(ctx->config), m_configDir.c_str(), pool)))
     {
 		JNIUtil::handleSVNError(err);
@@ -1337,7 +1340,17 @@ svn_error_t *SVNClient::getCommitMessage(const char **log_msg, const char **tmp_
 	*tmp_file = NULL;
 	log_msg_baton *lmb = (log_msg_baton *) baton;
 
-	if (lmb && lmb->message)
+	if (lmb && lmb->messageHandler)
+	{
+        jstring jmsg = lmb->messageHandler->getCommitMessage(commit_items);
+        if(jmsg != NULL)
+        {
+            JNIStringHolder msg(jmsg);
+            *log_msg = apr_pstrdup (pool, msg);
+        }
+		return SVN_NO_ERROR;
+	}
+	else if (lmb && lmb->message)
 	{
 		*log_msg = apr_pstrdup (pool, lmb->message);
 		return SVN_NO_ERROR;
@@ -1345,15 +1358,15 @@ svn_error_t *SVNClient::getCommitMessage(const char **log_msg, const char **tmp_
 
 	return SVN_NO_ERROR;
 }
-void *SVNClient::getCommitMessageBaton(const char *message, const char *baseDir)
+void *SVNClient::getCommitMessageBaton(const char *message)
 {
-	if(message != NULL)
+	if(message != NULL || m_commitMessage)
 	{
 		log_msg_baton *baton = (log_msg_baton *)
 			apr_palloc (JNIUtil::getRequestPool()->pool(), sizeof (*baton));
 
 		baton->message = message;
-		baton->base_dir = baseDir ? baseDir : ".";
+		baton->messageHandler = m_commitMessage;
 
 		return baton;
 	}
@@ -1372,7 +1385,9 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 	if(mid == 0)
 	{
 		mid = env->GetMethodID(clazz, "<init>", 
-			"(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZ)V");
+			"(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
+               "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
+               "Ljava/lang/String;JZ)V");
 		if(JNIUtil::isJavaExceptionThrown())
 		{
 			return NULL;
@@ -1476,10 +1491,10 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status_t *status)
 	if (jUrl != NULL)
 	{
 		env->DeleteLocalRef(jUrl);
-	if(JNIUtil::isJavaExceptionThrown())
-	{
-		return NULL;
-	}
+	    if(JNIUtil::isJavaExceptionThrown())
+        {
+		    return NULL;
+        }
 	}
 	if(jLastCommitAuthor != NULL)
 	{
@@ -2074,7 +2089,8 @@ blame_receiver2 (void *baton,
 	((BlameCallback *)baton)->callback(revision, author, date, line, pool);
 	return NULL;
 }
-void SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback)
+void SVNClient::blame(const char *path, Revision &revisionStart, 
+                      Revision &revisionEnd, BlameCallback *callback)
 {
   Pool subPool;
     if(path == NULL)
@@ -2112,4 +2128,25 @@ void SVNClient::setConfigDirectory(const char *configDir)
 const char * SVNClient::getConfigDirectory()
 {
 	return m_configDir.c_str();
+}
+
+void SVNClient::commitMessageHandler(CommitMessage *commitMessage)
+{
+	delete m_commitMessage;
+	m_commitMessage = commitMessage;
+}
+
+void SVNClient::cancelOperation()
+{
+    m_cancelOperation = true;
+}
+
+svn_error_t * SVNClient::checkCancel(void *cancelBaton)
+{
+    SVNClient *that = (SVNClient*)cancelBaton;
+    if(that->m_cancelOperation)
+        return svn_error_create (SVN_ERR_CANCELLED, NULL, 
+            _("Operation canceled"));
+    else
+        return SVN_NO_ERROR;
 }

@@ -16,6 +16,9 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+/**
+ * The type of action triggering the notification
+ */
 public interface NotifyAction
 {
     /** Adding a path to revision control. */
@@ -86,6 +89,9 @@ public interface NotifyAction
     /** Processed a single revision's blame. */
     public static final int blame_revision = 20;
 
+    /**
+     * textual representation of the action types
+     */
     public static final String[] actionNames =
     {
         "add",

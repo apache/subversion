@@ -16,6 +16,16 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+/**
+ * Various ways of specifying revisions.
+ *
+ * Note:
+ * In contexts where local mods are relevant, the `working' kind
+ * refers to the uncommitted "working" revision, which may be modified
+ * with respect to its base revision.  In other contexts, `working'
+ * should behave the same as `committed' or `current'.
+ *
+ */
 public interface RevisionKind
 {
     /** No revision information given. */

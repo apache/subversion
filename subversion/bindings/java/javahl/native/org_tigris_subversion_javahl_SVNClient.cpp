@@ -27,12 +27,14 @@
 #include "SVNClient.h"
 #include "Revision.h"
 #include "Notify.h"
+#include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
 #include "BlameCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
+#include "Outputer.h"
 #include <iostream>
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
@@ -329,6 +331,28 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification
 		return;
 	}
 	cl->notification(notify);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    commitMessageHandler
+ * Signature: (Lorg/tigris/subversion/javahl/CommitMessage;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_commitMessageHandler
+  (JNIEnv *env, jobject jthis, jobject jcommitMessage)
+{
+	JNIEntry(SVNClient, commitMessageHandler);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return;
+	}
+	CommitMessage *commitMessage = CommitMessage::makeCCommitMessage(jcommitMessage);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}
+    cl->commitMessageHandler(commitMessage);
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
@@ -992,7 +1016,7 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyGe
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diff
   (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1, jstring jtarget2, jobject jrevision2, jstring joutfileName,jboolean jrecurse)
 {
-	JNIEntry(SVNClient, propertyGet);
+	JNIEntry(SVNClient, diff);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
 	if(cl == NULL)
 	{
@@ -1272,4 +1296,20 @@ JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getConfigD
 
 	const char *configDir = cl->getConfigDirectory();
 	return JNIUtil::makeJString(configDir);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    cancelOperation
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_cancelOperation
+  (JNIEnv *env, jobject jthis)
+{
+	JNIEntry(SVNClient, cancelOperation);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return;
+	}
 }

@@ -33,6 +33,9 @@ public final class NodeKind
 
     /* something's here, but we don't know what */
     public static final int unknown = 3;
+    /**
+     * mapping for the constants to text
+     */
 	private static final String[] statusNames =
 	{
 		"none",
@@ -40,6 +43,11 @@ public final class NodeKind
 		"dir ",
 		"unknown",
 	};
+    /**
+     * Returns the textual representation for a NodeKind
+     * @param kind  kind of node
+     * @return english text
+     */
 	public static final String getNodeKindName(int kind)
 	{
 		return statusNames[kind];

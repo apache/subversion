@@ -1,10 +1,3 @@
-package org.tigris.subversion.javahl;
-
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.PipedOutputStream;
-import java.io.PipedInputStream;
-
 /**
  * @copyright
  * ====================================================================
@@ -22,14 +15,35 @@ import java.io.PipedInputStream;
  * ====================================================================
  * @endcopyright
  */
+package org.tigris.subversion.javahl;
+
+import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+/**
+ * This class connects a java.io.PipedInputStream to a OutputInterface.
+ * The outherside of the Pipe must read by another thread, or deadlocks
+ * will occure
+ */
 public class SVNInputStream extends PipedInputStream
 {
+    /**
+     * my connection to put data into subversion
+     */
     Outputer myOutputer;
+    /**
+     * Creates a SVNInputStream so that it is connected with an internal
+     * PipedOutputStream
+     * @throws IOException
+     */
     public SVNInputStream() throws IOException
     {
         myOutputer = new Outputer(this);
     }
-
+    /**
+     * Get the Interface to connect to SVNAdmin
+     * @return the connetion interface
+     */
     public OutputInterface getOutputer()
     {
         return myOutputer;
@@ -49,14 +63,27 @@ public class SVNInputStream extends PipedInputStream
         super.close();
     }
 
+    /**
+     * this class implements the connection to SVNAdmin
+     */
     public class Outputer implements OutputInterface
     {
+        /**
+         * my side of the pipe
+         */
         PipedOutputStream myStream;
+        /**
+         * flag that the other side of the pipe has been closed
+         */
         boolean closed;
+        /**
+         * build a new connection object
+         * @param myMaster  the other side of the pipe
+         * @throws IOException
+         */
         Outputer(SVNInputStream myMaster) throws IOException
         {
             myStream =new PipedOutputStream(myMaster);
-
         }
         /**
          * write the bytes in data to java

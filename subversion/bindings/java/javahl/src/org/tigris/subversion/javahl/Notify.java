@@ -43,18 +43,34 @@ public interface Notify
      */
     public void onNotify(String path, int action, int kind, String mimeType, int contentState, int propState, long revision);
 
-    /** The type of action occuring. */
+    /**
+     * The type of action occuring.
+     * The values are defined in the interface NotifyAction for building reasons.
+     */
     public static final class Action implements NotifyAction
     {
+        /**
+         * Returns the textual representation for the action kind
+         * @param action kind of action
+         * @return english text
+         */
 		public static final String getActionName(int action)
 		{
 			return actionNames[action];
 		}
 
     }
-    /** The type of notification that is occuring. */
+    /**
+     * The type of notification that is occuring.
+     * The values are defined in the interface NotifyStatus for building reasons.
+     */
     public static final class Status implements NotifyStatus
    {
+        /**
+         * Returns the textual representation for the notification type
+         * @param status    type of the notification
+         * @return  english text
+         */
 		public static final String getStatusName(int status)
 		{
 			return statusNames[status];

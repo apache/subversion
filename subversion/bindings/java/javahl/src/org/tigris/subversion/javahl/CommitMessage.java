@@ -16,22 +16,16 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
-
-import java.util.Date;
-
 /**
- * this interface is used to receive every single line for a file on a
- * the SVNClientinterface.blame call.
+ * this is callback interface which has to implemented by the client to
+ * receive which files will be commited and to enter the log message
  */
-public interface BlameCallback
+public interface CommitMessage
 {
     /**
-     * the method will be called for every line in a file.
-     * @param changed   the date of the last change.
-     * @param revision  the revision of the last change.
-     * @param author    the author of the last change.
-     * @param line      the line in the file
+     * Retrieve a commit message from the user based on the items to be commited
+     * @param elementsToBeCommited  Array of elements to be commited
+     * @return  the log message of the commit.
      */
-    public void singleLine(Date changed, long revision, String author,
-                           String line);
+    String getLogMessage(CommitItem[] elementsToBeCommited);
 }

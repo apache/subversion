@@ -16,8 +16,12 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+/**
+ *  status of the text or the property of the item triggering the notification
+ */
 public interface NotifyStatus
 {
+    /** It not applicable*/
     public static final int inapplicable = 0;
 
     /** Notifier doesn't know or isn't saying. */
@@ -41,8 +45,9 @@ public interface NotifyStatus
     /** Modified state got conflicting mods. */
     public static final int conflicted = 7;
 
-
-
+    /**
+     * the textual represention for the status types
+     */
     public static final String[] statusNames =
     {
         "inapplicable",

@@ -37,7 +37,7 @@ public:
                   bool incremental);
 	void deltify(const char *path, Revision &start, Revision &end);
 	void create(const char *path, bool ignoreUUID, bool forceUUID,
-                    const char *configPath);
+                    const char *configPath, const char *fstype);
 	SVNAdmin();
 	virtual ~SVNAdmin();
 	jlong getCppAddr();
