@@ -61,7 +61,7 @@ svn_cl__status( int argc, char** argv, apr_pool_t* pool )
   svn_error_t *err = NULL;
   apr_hash_t *statushash;
 
-  svn_cl__parse_options (argc, argv, STATUS_COMMAND,
+  svn_cl__parse_options (argc, argv, svn_cl__status_command,
                  &xml_file, &target, &revision, &ancestor_path, &force,
                  pool);
 

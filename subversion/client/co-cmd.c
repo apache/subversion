@@ -62,7 +62,7 @@ svn_cl__checkout( int argc, char** argv, apr_pool_t* pool )
   void *trace_edit_baton;
   svn_error_t *err = NULL;
 
-  svn_cl__parse_options (argc, argv, CHECKOUT_COMMAND,
+  svn_cl__parse_options (argc, argv, svn_cl__checkout_command,
                  &xml_file, &target, &revision, &ancestor_path, &force,
                  pool);
 
