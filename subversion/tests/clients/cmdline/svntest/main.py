@@ -60,11 +60,45 @@ class SVNTypeMismatch(Exception): pass
 class SVNTreeIsNotDirectory(Exception): pass
 
 
+# Windows specifics
+if sys.platform == 'win32':
+  windows = 1
+  _exe = '.exe'
+
+  # svn on windows doesn't support backslashes in path names
+  _os_path_abspath_orig = os.path.abspath
+  def _os_path_abspath(arg):
+    path = _os_path_abspath_orig(arg)
+    return path.replace('\\', '/')
+  os.path.abspath = _os_path_abspath
+
+  _os_path_join_orig = os.path.join
+  def _os_path_join(*args):
+    path = apply(_os_path_join_orig, args)
+    return path.replace('\\', '/')
+  os.path.join = _os_path_join
+
+  _os_path_normpath_orig = os.path.normpath
+  def _os_path_normpath(arg):
+    path = _os_path_normpath_orig(arg)
+    return path.replace('\\', '/')
+  os.path.normpath = _os_path_normpath
+
+  _os_path_dirname_orig = os.path.dirname
+  def _os_path_dirname(arg):
+    path = _os_path_dirname_orig(arg)
+    return path.replace('\\', '/')
+  os.path.dirname = _os_path_dirname
+
+else:
+  windows = 0
+  _exe = ''
+
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
-svn_binary = os.path.abspath('../../../clients/cmdline/svn')
-svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin')
-svnlook_binary = os.path.abspath('../../../svnlook/svnlook')
+svn_binary = os.path.abspath('../../../clients/cmdline/svn' + _exe)
+svnadmin_binary = os.path.abspath('../../../svnadmin/svnadmin' + _exe)
+svnlook_binary = os.path.abspath('../../../svnlook/svnlook' + _exe)
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -88,7 +122,7 @@ pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = "file://" + os.path.abspath(os.getcwd())
+test_area_url = "file://" + os.path.splitdrive(os.path.abspath(os.getcwd()))[1]
 
 
 # Our pristine greek-tree list of lists.
@@ -161,8 +195,9 @@ def run_svn(error_expected, *varargs):
      If ERROR_EXPECTED is None, any stderr also will be printed. """
 
   command = svn_binary
-  for arg in varargs:
-    command = command + " " + `arg`    # build the command string
+  for arg in varargs:                   # build the command string
+    if windows: command = command + ' "' + str(arg) + '"'
+    else: command = command + " " + `arg`
 
   infile, outfile, errfile = os.popen3(command)
   stdout_lines = outfile.readlines()
@@ -182,8 +217,9 @@ def run_svnadmin(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
 
   command = svnadmin_binary
-  for arg in varargs:
-    command = command + " " + `arg`    # build the command string
+  for arg in varargs:                   # build the command string
+    if windows: command = command + ' "' + str(arg) + '"'
+    else: command = command + " " + `arg`
 
   infile, outfile, errfile = os.popen3(command)
   stdout_lines = outfile.readlines()
@@ -203,6 +239,16 @@ def remove_wc(dirname):
   if os.path.exists(dirname):
     shutil.rmtree(dirname)
 
+# Chmod recursively on a whole subtree
+def chmod_tree(path, mode, mask):
+  def visit(arg, dirname, names):
+    mode, mask = arg
+    for name in names:
+      fullname = os.path.join(dirname, name)
+      new_mode = (os.stat(fullname).st_mode & ~mask) | mode
+      os.chmod(fullname, new_mode)
+  os.path.walk(path, visit, (mode, mask))
+
 # For making local mods to files
 def file_append(path, new_text):
   "Append NEW_TEXT to file at PATH"
@@ -221,7 +267,7 @@ def create_repos(path):
   run_svnadmin("create", path)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  os.system('chmod -R a+rw ' + path)
+  chmod_tree(path, 0666, 0666)
 
 # Convert a list of lists of the form [ [path, contents], ...] into a
 # real tree on disk.
