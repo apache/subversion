@@ -1485,16 +1485,16 @@ svn_wc_cleanup (const char *path,
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
    necessary allocations in POOL.
 
-   ADM_ACCESS is an access baton for the directory containing
-   PATH. ADM_ACCESS can be NULL in which case the function will open and
-   close acess batons as required.
+   PARENT_ACCESS is an access baton for the directory containing PATH,
+   unless PATH is a wc root, in which case PARENT_ACCESS refers to PATH
+   itself.
 
    For each item reverted, NOTIFY_FUNC will be called with NOTIFY_BATON
    and the path of the reverted item. NOTIFY_FUNC may be NULL if this
    notification is not needed.  */
 svn_error_t *
 svn_wc_revert (const char *path, 
-               svn_wc_adm_access_t *optional_adm_access,
+               svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive, 
                svn_wc_notify_func_t notify_func,
                void *notify_baton,

@@ -1194,7 +1194,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
 svn_error_t *
 svn_wc_revert (const char *path,
-               svn_wc_adm_access_t *optional_parent_access,
+               svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
@@ -1206,14 +1206,9 @@ svn_wc_revert (const char *path,
   svn_wc_entry_t *tmp_entry;
   svn_boolean_t wc_root = FALSE, reverted = FALSE;
   apr_uint32_t modify_flags = 0;
-  svn_wc_adm_access_t *parent_access, *dir_access;
+  svn_wc_adm_access_t *dir_access;
 
-  if (! optional_parent_access)
-    SVN_ERR (svn_wc_adm_probe_open (&dir_access, NULL, path, TRUE, recursive,
-                                    pool));
-  else
-    SVN_ERR (svn_wc_adm_probe_retrieve (&dir_access, optional_parent_access,
-                                        path, pool));
+  SVN_ERR (svn_wc_adm_probe_retrieve (&dir_access, parent_access, path, pool));
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, dir_access, FALSE, pool));
@@ -1247,21 +1242,6 @@ svn_wc_revert (const char *path,
     {
       /* Split the base_name from the parent path. */
       svn_path_split_nts (path, &p_dir, &bname, pool);
-    }
-
-  if (! optional_parent_access)
-    {
-      if (wc_root)
-        parent_access = NULL;
-      else if (kind != svn_node_dir)
-        parent_access = dir_access;
-      else
-        SVN_ERR (svn_wc_adm_open (&parent_access, NULL, p_dir, TRUE, FALSE,
-                                  pool));
-    }
-  else
-    {
-      parent_access = optional_parent_access;
     }
 
   tmp_entry = svn_wc_entry_dup (entry, pool);
@@ -1441,14 +1421,6 @@ svn_wc_revert (const char *path,
         svn_pool_destroy (subpool);
     }
   
-  if (! optional_parent_access)
-    {
-      if (parent_access)
-        SVN_ERR (svn_wc_adm_close (parent_access));
-      if (dir_access != parent_access)
-        SVN_ERR (svn_wc_adm_close (dir_access));
-    }
-
   return SVN_NO_ERROR;
 }
 
