@@ -336,18 +336,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 }
 
 
-/* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
- * to BASE_FILE, or false if it is not.  The comparison compensates
- * for VERSIONED_FILE's eol and keyword properties, but leaves
- * BASE_FILE alone (as though BASE_FILE were a text-base file, which
- * it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).
- * 
- * Use POOL for temporary allocation.
- * 
- * ### Note: this function will become internal public soon.
- */
-static svn_error_t *
+svn_error_t *
 svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                  svn_stringbuf_t *versioned_file,
                                  svn_stringbuf_t *base_file,

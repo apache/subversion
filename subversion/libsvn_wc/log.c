@@ -703,10 +703,11 @@ log_do_committed (struct log_runner *loggy,
               if (kind == svn_node_file)
                 {
                   svn_boolean_t same;
-                  err = svn_wc__files_contents_same_p (&same,
-                                                       working_file,
-                                                       tmp_base,
-                                                       loggy->pool);
+
+                  svn_wc__versioned_file_modcheck (&same,
+                                                   working_file,
+                                                   tmp_base,
+                                                   loggy->pool);
                   if (err)
                     return svn_error_createf 
                       (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
