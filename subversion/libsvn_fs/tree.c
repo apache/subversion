@@ -169,6 +169,102 @@ make_txn_root (svn_fs_t *fs,
 
 
 
+/* Creating transaction and revision root nodes.  */
+
+struct txn_root_args
+{
+  svn_fs_root_t **root_p;
+  svn_fs_txn_t *txn;
+};
+
+
+static svn_error_t *
+txn_body_txn_root (void *baton,
+                   trail_t *trail)
+{
+  struct txn_root_args *args = baton;
+  svn_fs_root_t **root_p = args->root_p;
+  svn_fs_txn_t *txn = args->txn;
+  svn_fs_t *fs = svn_fs_txn_fs (txn);
+  const char *svn_txn_id = svn_fs__txn_id (txn);
+  const svn_fs_id_t *root_id, *base_root_id;
+  svn_fs_root_t *root;
+
+  /* Verify that the transaction actually exists.  */
+  SVN_ERR (svn_fs__get_txn_ids (&root_id, &base_root_id, fs, 
+                                svn_txn_id, trail));
+
+  root = make_txn_root (fs, svn_txn_id, trail->pool);
+
+  *root_p = root;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_txn_root (svn_fs_root_t **root_p,
+                 svn_fs_txn_t *txn,
+                 apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  struct txn_root_args args;
+
+  args.root_p = &root;
+  args.txn    = txn;
+  SVN_ERR (svn_fs__retry_txn (svn_fs_txn_fs (txn), txn_body_txn_root,
+                              &args, pool));
+
+  *root_p = root;
+  return SVN_NO_ERROR;
+}
+
+
+struct revision_root_args
+{
+  svn_fs_root_t **root_p;
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+};
+
+
+static svn_error_t *
+txn_body_revision_root (void *baton,
+                        trail_t *trail)
+{
+  struct revision_root_args *args = baton;
+  dag_node_t *root_dir;
+  svn_fs_root_t *root;
+
+  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
+  root = make_revision_root (args->fs, args->rev, root_dir, trail->pool);
+
+  *args->root_p = root;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_revision_root (svn_fs_root_t **root_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  struct revision_root_args args;
+  svn_fs_root_t *root;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  args.root_p = &root;
+  args.fs     = fs;
+  args.rev    = rev;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &args, pool));
+
+  *root_p = root;
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Constructing nice error messages for roots.  */
 
 /* Return a detailed `file not found' error message for PATH in ROOT.  */
@@ -3534,7 +3630,9 @@ find_relevant_copies (apr_hash_t *revs,
               const char *txn_id = svn_fs__id_txn_id (copy->dst_noderev_id);
               svn_revnum_t *rev;
               struct node_id_args nid_args;
+              struct revision_root_args rr_args;
               const svn_fs_id_t *src_id;
+              svn_fs_root_t *rev_root;
 
               /* If we get here, then our current path is the
                  destination of, or the child of the destination of, a
@@ -3546,15 +3644,27 @@ find_relevant_copies (apr_hash_t *revs,
                                         trail->pool);
               rev = apr_palloc (apr_hash_pool_get (revs), sizeof (*rev));
               SVN_ERR (svn_fs__txn_get_revision (rev, fs, txn_id, trail));
-              if (SVN_IS_VALID_REVNUM (*rev))
-                apr_hash_set (revs, (void *)rev, sizeof (rev), (void *)1);
+              if (! SVN_IS_VALID_REVNUM (*rev))
+                abort();
 
-              /* Jump back to the copy-id of the copy source. */
-              nid_args.root = make_txn_root (fs, txn_id, trail->pool);
+              /* Jump back to the copy-id of the copy source.  We need
+                 to build a revision root first... */
+              rr_args.root_p = &rev_root;
+              rr_args.fs = fs;
+              SVN_ERR (svn_fs__txn_get_revision (&(rr_args.rev), fs, 
+                                                 copy->src_txn_id, trail));
+              SVN_ERR (txn_body_revision_root (&rr_args, trail));
+
+              /* ... and then use that root to get the NODE-REV-ID
+                 (and hence, the COPY-ID) of the copy source. */
+              nid_args.root = rev_root;
               nid_args.path = cur_path;
               nid_args.id_p = &src_id;
               SVN_ERR (txn_body_node_id (&nid_args, trail));
+
+              /* Squirrel away the copy id. */
               strcpy (cur_id, svn_fs__id_copy_id (src_id));
+              apr_hash_set (revs, (void *)rev, sizeof (rev), (void *)1);
             }
           else
             {
@@ -3849,102 +3959,5 @@ svn_fs_paths_changed (apr_hash_t **changed_paths_p,
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root), txn_body_paths_changed,
                               &args, pool));
   *changed_paths_p = args.changes;
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Creating transaction and revision root nodes.  */
-
-
-struct txn_root_args
-{
-  svn_fs_root_t **root_p;
-  svn_fs_txn_t *txn;
-};
-
-
-static svn_error_t *
-txn_body_txn_root (void *baton,
-                   trail_t *trail)
-{
-  struct txn_root_args *args = baton;
-  svn_fs_root_t **root_p = args->root_p;
-  svn_fs_txn_t *txn = args->txn;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-  const char *svn_txn_id = svn_fs__txn_id (txn);
-  const svn_fs_id_t *root_id, *base_root_id;
-  svn_fs_root_t *root;
-
-  /* Verify that the transaction actually exists.  */
-  SVN_ERR (svn_fs__get_txn_ids (&root_id, &base_root_id, fs, 
-                                svn_txn_id, trail));
-
-  root = make_txn_root (fs, svn_txn_id, trail->pool);
-
-  *root_p = root;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_txn_root (svn_fs_root_t **root_p,
-                 svn_fs_txn_t *txn,
-                 apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-  struct txn_root_args args;
-
-  args.root_p = &root;
-  args.txn    = txn;
-  SVN_ERR (svn_fs__retry_txn (svn_fs_txn_fs (txn), txn_body_txn_root,
-                              &args, pool));
-
-  *root_p = root;
-  return SVN_NO_ERROR;
-}
-
-
-struct revision_root_args
-{
-  svn_fs_root_t **root_p;
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-};
-
-
-static svn_error_t *
-txn_body_revision_root (void *baton,
-                        trail_t *trail)
-{
-  struct revision_root_args *args = baton;
-  dag_node_t *root_dir;
-  svn_fs_root_t *root;
-
-  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
-  root = make_revision_root (args->fs, args->rev, root_dir, trail->pool);
-
-  *args->root_p = root;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_revision_root (svn_fs_root_t **root_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
-{
-  struct revision_root_args args;
-  svn_fs_root_t *root;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.root_p = &root;
-  args.fs     = fs;
-  args.rev    = rev;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &args, pool));
-
-  *root_p = root;
   return SVN_NO_ERROR;
 }
