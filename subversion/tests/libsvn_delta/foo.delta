@@ -5,7 +5,7 @@
       <tree-delta>
         <add name="mu">
           <file ancestor="/A/mu">
-            <text-delta>This is the file 'mu'.</text-delta>
+            <text-delta>W3bOAAAAFiEYnnRqcZMicZMifGjnIGbrdGWiJ433J06=</text-delta>
           </file>
         </add>
         <add name="B">
@@ -13,7 +13,7 @@
             <tree-delta>
               <add name="lambda">
                 <file ancestor="/A/B/lambda">
-                  <text-delta>This is the file 'lambda'.</text-delta>
+                  <text-delta>W3bOAAAAGiEconRqcZMicZMifGjnIGbrdGWiJ4zjdYJmaSew</text-delta>
                 </file>
               </add>
               <add name="E">
@@ -43,7 +43,7 @@
                       <delete name="lemon"/>
                       <set name="crabgrass">epistimological</set>
                   </prop-delta>      
-                  <text-delta>This is the file 'gamma'.</text-delta>
+                  <text-delta>W3bOAAAAGQEboXRqcZMicZMifGjnIGbrdGWiJ4fjdY3jJ06=</text-delta>
                 </file>
               </add>
               <add name="G">
@@ -51,17 +51,17 @@
                   <tree-delta>
                     <add name="pi">
                       <file ancestor="/A/D/G/pi">
-                        <text-delta>This is the file 'pi'.</text-delta>
+                        <text-delta>W3bOAAAAFiEYnnRqcZMicZMifGjnIGbrdGWiJ5BrJ06=</text-delta>
                       </file>
                     </add>
                     <add name="rho">
                       <file ancestor="/A/D/G/rho">
-                        <text-delta>This is the file 'rho'.</text-delta>
+                        <text-delta>W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ5Jqd0ew</text-delta>
                       </file>
                     </add>
                     <add name="tau">
                       <file ancestor="/A/D/G/tau">
-                        <text-delta>This is the file 'tau'.</text-delta>
+                        <text-delta>W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ5RjfSew</text-delta>
                       </file>
                     </add>
                   </tree-delta>
@@ -75,17 +75,17 @@
                   <tree-delta>
                     <add name="chi">
                       <file ancestor="/A/D/H/chi">
-                        <text-delta>This is the file 'chi'.</text-delta>
+                        <text-delta>W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ4NqcSew</text-delta>
                       </file>
                     </add>
                     <add name="psi">
                       <file ancestor="/A/D/H/psi">
-                        <text-delta>This is the file 'psi'.</text-delta>
+                        <text-delta>W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ5B1cSew</text-delta>
                       </file>
                     </add>
                     <add name="omega">
                       <file ancestor="/A/D/H/omega">
-                        <text-delta>This is the file 'omega'.</text-delta>
+                        <text-delta>W3bOAAAAGQEboXRqcZMicZMifGjnIGbrdGWiJ4/vbYfjJ06=</text-delta>
                       </file>
                     </add>
                   </tree-delta>
