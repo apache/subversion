@@ -19,10 +19,10 @@ _svn()
 	# Possible expansions, without pure-prefix abbreviations such as "up".
 	cmds='add blame annotate praise cat checkout co cleanup commit ci \
               copy cp delete remove rm diff export help ? import info \
-              list ls log merge mkdir move mv rename \
+              list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
-              status switch update version --version'
+              status switch unlock update version --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -74,7 +74,8 @@ _svn()
 		cmdOpts="--diff3-cmd"
 		;;
 	commit|ci)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
+		         --no-unlock"
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
@@ -103,6 +104,9 @@ _svn()
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
                          --incremental --xml"
+		;;
+	lock)
+		cmdOpts="$mOpts --targets --editor-cmd --force $pOpts"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
@@ -148,6 +152,9 @@ _svn()
 		;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
+		;;
+	unlock)
+		cmdOpts="$mOpts --targets --editor-cmd --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
@@ -221,8 +228,9 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='create deltify dump help ? hotcopy load list-dblogs \
-	      list-unused-dblogs lstxns recover rmtxns setlog verify --version'
+	cmds='create deltify dump help ? hotcopy list-dblogs \
+	      list-unused-dblogs load lslocks lstxns recover rmlocks \
+	      rmtxns setlog verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -260,11 +268,8 @@ _svnadmin ()
 		cmdOpts="--clean-logs"
 		;;
 	load)
-		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet"
-		;;
-	list-dblogs)
-		;;
-	list-unused-dblogs)
+		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
+		         --use-pre-commit-hook --use-post-commit-hook"
 		;;
 	rmtxns)
 		cmdOpts="-q --quiet"
