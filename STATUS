@@ -87,3 +87,9 @@ Candidate changes:
     Notes:  Simple patch which allocates errors in a longer-lived pool.
     Votes:
       +1: sussman
+
+  * r8820
+    Remove hopelessly obsolete authentication provider examples.
+    Justification: Not needed and too obsolete/incorrect.
+    Votes:
+      +1: bliss
