@@ -719,7 +719,7 @@ svn_fs__rep_contents (svn_string_t *str,
   if (contents_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "svn_fs__rep_contents: rep contents are too largs "
+       "svn_fs__rep_contents: rep contents are too large "
        "(got %" SVN_FILESIZE_T_FMT ", limit is %" APR_SIZE_T_FMT ")",
        contents_size, SVN_MAX_OBJECT_SIZE);
   else
