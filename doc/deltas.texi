@@ -1,35 +1,51 @@
 @node Deltas
 @chapter Deltas
 
-A delta is a data structure that compactly describes the differences
-between two arbitrary directory trees.  Deltas can also carry ancestry
-information, indicating how the files in one tree are related to files
-in the other tree, if this is available.  Finally, deltas can describe
-changes to file meta-information, like permission bits, creation dates,
-and so on.  Both the working copy and repository access libraries
-operate on deltas.
+Subversion uses three kinds of deltas:
 
-Deltas use three distinct structures:
 @itemize @bullet
 @item
-@dfn{text deltas}, which describe changes to a string of bytes, like the
-contents of a file,
+A @b{@dfn{tree delta}} describes the difference between two arbitrary
+directory trees, the way a traditional patch describes the difference
+between two files.  For example, the delta between directories A and B
+could be applied to A, to produce B.
+
+Tree deltas can also carry ancestry information, indicating how the
+files in one tree are related to files in the other tree.  And deltas
+can describe changes to file meta-information, like permission bits,
+creation dates, and so on.  The repository and working copy use deltas
+to communicate changes.
+
 @item
-@dfn{property deltas}, which describe changes to a list of named
-properties, perhaps using text deltas, and
+A @b{@dfn{text delta}} describes changes to a string of bytes, such as the
+contents of a file.  It is analogous to traditional patch format, except
+that it works equally well on binary and text files, and is not
+invertible (because context and deleted data are not recorded).
+
 @item
-@dfn{tree deltas} proper, which describe changes to directory trees.
+A @b{@dfn{property delta}} describes changes to a list of named
+properties (@pxref{Properties}).
 @end itemize
 
 The term @dfn{delta} without qualification generally means a tree delta,
 unless some other meaning is clear from context.
+
+In the examples below, deltas will be described in XML, which happens to
+be Subversion's import/export format.  However, note that deltas are an
+abstract data structure, of which the XML format is merely one
+representation.  Later, we will describe other representations: for
+example, there is a serialized representation (useful for streaming
+protocols, among other things), and a db-style representation, used for
+repository storage.  The various representations of a given delta are
+(in theory, anyway) perfectly isomorphic to one another, since they
+describe the same underlying structure.
 
 @menu
 * Text Deltas::                 
 * Property Deltas::             
 * Tree Deltas::                 
 * Postfix Text Deltas::                     
-* The "Editor" Interface::
+* Serializing Deltas via the "Editor" Interface::
 @end menu
 
 
@@ -64,8 +80,8 @@ empirical study of delta algorithms.  Lecture Notes in Computer Science
 stored in a custom data format called @dfn{svndiff}, invented by Greg
 Hudson <@email{ghudson@@mit.edu}>, a Subversion developer.
 
-The concrete form of a text delta, used for transmitting such deltas
-over the net, is a well-formed XML element, having the following form:
+The concrete form of a text delta is a well-formed XML element, having
+the following form:
 @example
 <text-delta>@var{data}</text-delta>
 @end example
@@ -78,8 +94,8 @@ format.
 
 A property delta describes changes to a property list, of the sort
 associated with files, directories, and directory entries, and revision
-numbers.  A property delta can record creating, deleting, and changing
-the text of any number of properties.
+numbers (@pxref{Properties}).  A property delta can record creating,
+deleting, and changing the text of any number of properties.
 
 A property delta is an unordered set of name/change pairs.  No two
 pairs within a given property delta have the same name.  A pair's name
@@ -101,13 +117,12 @@ value afresh, and a client which believes it is changing the value of an
 existing property.  It may simplify conflict detection to divide
 @code{set} into two separate @code{add} and @code{change} operations.
 
-In the future, we may add a @code{vdelta} change, which specifies a
-change to an existing property's value as a VDelta-format text delta.
-This would give us a compact way to describe small changes to large
-property values.
+In the future, we may add a @code{text-delta} change, which specifies a
+change to an existing property's value as a text delta.  This would give
+us a compact way to describe small changes to large property values.
 
-The concrete form of a property delta, used for transmitting such deltas
-over the net, is a well-formed XML element, having the following form:
+The concrete form of a property delta is a well-formed XML element,
+having the following form:
 @example
 <property-delta>@var{change}@dots{}</property-delta>
 @end example
@@ -440,9 +455,9 @@ Move @file{dir2} into @file{dir3}, and move @file{dir3} into @file{/}.
 It is sometimes useful to represent a set of changes to a tree without
 providing text deltas in the middle of the stream.  Text deltas are
 often large and expensive to compute, and tree deltas can be useful
-without them.  For example, one can detect whether two changes conflict
---- whether they change the same file, for example --- without knowing
-exactly how the conflicting files changed.
+without them.  For example, one can detect whether two changes might
+conflict --- whether they change the same file, for example --- without
+knowing exactly how the conflicting files changed.
 
 For this reason, our XML representation of a tree delta allows the text
 deltas to come @emph{after} the </tree-delta> closure.  This allows the
@@ -475,19 +490,27 @@ part appears after the tree delta is complete.  Here's an example:
 
 
 @c ----------------------------------------------------------------------
-@node The "Editor" Interface
-@section The "Editor" Interface
+@node Serializing Deltas via the "Editor" Interface
+@section Serializing Deltas via the "Editor" Interface
 
-This section describes the specific mechanism by which client and server
-transmit tree-deltas to one another.  It is perhaps the most critical
-interface -- and most important to understand -- for any would-be
-Subversion developer.
+Static XML is a useful representation for import/export and
+visualization of deltas, but we also need a way to express deltas as a
+@emph{series of operations}, to be performed on the source tree,
+resulting in the target tree.  This is necessary for implementing tree
+diffing and patching, and also turns out to be useful as a
+protocol-independent network API.
+
+KFF TODO: WORKING HERE
+
+This section describes the mechanism by which client and server transmit
+tree-deltas to one another.  It is perhaps the most critical interface
+to understand for any prospective Subversion developer.
 
 Suppose that the user has made a number of local changes to her working
 copy and wants to commit them to the repository.  Let's represent her
 changes with the same tree-delta from a previous example.  Notice,
 however, that she has also made textual modifications to @file{file3};
-hence the in-line <text-delta>:
+hence the in-line @code{<text-delta>}:
 
 @example
 <tree-delta>
@@ -518,6 +541,8 @@ hence the in-line <text-delta>:
   </replace>
 </tree-delta>
 @end example
+
+fooo
 
 So how does the client send this information to the server?
 
