@@ -66,13 +66,8 @@ Core changes that don't have three +1's yet, or have a veto.  (If you
 make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
-    * r8139
-      Fix authentication bugs. 
-      Justification: Bugs that happen when prompt providers aren't
-        turned on.  Which includes the command line client when
-        --non-interactive is used.
-      Votes:
-       +1: ghudson, bliss
+
+
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
@@ -89,6 +84,16 @@ the section for unapproved changes.)
              please note it here so the merger can do it.
       Votes:
        +1: ghudson, kfogel, bliss
+
+
+    * r8139
+      Fix authentication bugs. 
+      Justification: Bugs that happen when prompt providers aren't
+        turned on.  Which includes the command line client when
+        --non-interactive is used.
+      Votes:
+       +1: ghudson, bliss, sussman
+
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
