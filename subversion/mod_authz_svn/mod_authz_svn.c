@@ -373,8 +373,18 @@ static int req_check_access(request_rec *r,
         return DECLINED;
     }
 
-    /* XXX: DELETE, MOVE, MKCOL and PUT, if the path doesn't exist yet, also
-     * XXX: require write access to the parent dir of repos_path.
+    /* XXX: MKCOL, MOVE
+     * XXX: Require write access to the parent dir of repos_path.
+     */
+
+    /* XXX: DELETE
+     * XXX: Require write access to the parent dir of repos_path,
+     * XXX: and to each item contained in repos_path, recursively.
+     */
+
+    /* XXX: PUT
+     * XXX: If the path doesn't exist, require write access to the
+     * XXX: parent dir of repos_path.
      */
 
     /* Only MOVE and COPY have a second uri we have to check access to. */
