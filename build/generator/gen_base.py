@@ -557,18 +557,11 @@ class TargetProject(TargetSpecial):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.project_name = options.get('project_name')
 
-class TargetExternal(TargetSpecial):
-  """Represents "External" MSVC projects which wrap an external build command
-  and bypass the MSVC's build system
-  """
-
+class TargetUtility(TargetSpecial):
+  """Represents projects which don't produce any output"""
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.cmd = options.get('cmd')
-
-class TargetUtility(TargetSpecial):
-  """Represents projects which don't produce any output"""
-
 
 class TargetSWIGUtility(TargetUtility):
   def __init__(self, name, options, cfg, extmap):
@@ -582,7 +575,6 @@ _build_types = {
   'doc' : TargetDoc,
   'swig' : TargetSWIG,
   'project' : TargetProject,
-  'external' : TargetExternal,
   'utility' : TargetUtility,
   'swig_runtime' : TargetSWIGRuntime,
   'swig_utility' : TargetSWIGUtility,
