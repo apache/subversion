@@ -358,6 +358,22 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
                                apr_pool_t *pool);
 
 /**
+ * @since New in 1.2.
+ *
+ * Lock file at @a lock_file. If @exclusive is TRUE,
+ * obtain exclusive lock, otherwise obtain shared lock.
+ *
+ * If @a nonblocking is TRUE, do not wait for the lock if it
+ * is not available: throw an error instead.
+ *
+ * Lock will be automaticaly released when @a pool is cleared or destroyed.
+ * Use @a pool for memory allocations.
+ */
+svn_error_t *svn_io_file_lock2 (const char *lock_file,
+                                svn_boolean_t exclusive,
+                                svn_boolean_t nonblocking,
+                                apr_pool_t *pool);
+/**
  * @since New in 1.1.
  *
  * Flush any unwritten data from @a file to disk.  Use @a pool for
