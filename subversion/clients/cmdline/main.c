@@ -298,12 +298,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'v', 'R'} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
-    "Set property PROPNAME to PROPVAL on files or directories.\n"
-    "usage: propset PROPNAME PROPVAL [TARGETS]\n\n"
-    "    Use -F (instead of PROPVAL) to get the value from a file.\n"
-    "\n"
-    "    Note: svn recognizes the following special properties but will \n"
-    "    store any arbitrary properties set:\n"
+    "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
+    "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] [WC_TARGETS]\n"
+    "       2. propset PROPNAME [PROPVAL | -F VALFILE] -r REV [URL]\n\n"
+    "First usage creates a versioned, local propchange in working copy.\n"
+    "Second usage creates an unversioned, remote propchange on repos revision.\n\n"
+    "    Note: svn recognizes the following special verisoned properties\n"
+    "    but will store any arbitrary properties set:\n"
     "      svn:ignore     - A newline separated list of file patterns to ignore.\n"
     "      svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
     "        URL, HeadURL             - The URL for the head version of "
@@ -328,7 +329,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "        revision flags, and an URL.  For example\n"
     "           foo            http://example.com/repos/zig\n"
     "           foo/bar -r1234 http://example.com/repos/zag\n",
-    {'F', 'q', svn_cl__targets_opt, 'R'} },
+    {'F', 'q', 'r', svn_cl__targets_opt, 'R'} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"

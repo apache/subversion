@@ -72,6 +72,11 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
                                              apr_time_t timestamp);
 
+svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
+                                          svn_revnum_t rev,
+                                          const char *name,
+                                          const svn_string_t *value);
+
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_editor_t **editor,

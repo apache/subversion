@@ -107,6 +107,22 @@ svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
 }
 
 
+const char *
+svn_repos_pre_revprop_change_hook (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE,
+                        pool);
+}
+
+
+const char *
+svn_repos_post_revprop_change_hook (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_POST_REVPROP_CHANGE,
+                        pool);
+}
+
+
 static svn_error_t *
 create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 {
@@ -175,7 +191,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
   /*** Write a default template for each standard hook file. */
 
-  /* Start-commit hooks. */
+  /* Start-commit hook. */
   {
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_start_commit_hook (repos, pool),
@@ -245,9 +261,9 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, pool, 
                                 "closing hook file `%s'", this_path);
-  }  /* end start-commit hooks */
+  }  /* end start-commit hook */
 
-  /* Pre-commit hooks. */
+  /* Pre-commit hook. */
   {
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_pre_commit_hook (repos, pool),
@@ -324,9 +340,91 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, pool, 
                                 "closing hook file `%s'", this_path);
-  }  /* end pre-commit hooks */
+  }  /* end pre-commit hook */
 
-  /* Post-commit hooks. */
+
+  /* Pre-revprop-change hook. */
+  {
+    this_path = apr_psprintf (pool, "%s%s",
+                              svn_repos_pre_revprop_change_hook (repos, pool),
+                              SVN_REPOS__HOOK_DESC_EXT);
+
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
+
+    contents =
+      "#!/bin/sh\n"
+      "\n"
+      "# PRE-REVPROP-CHANGE HOOK\n"
+      "#\n"
+      "# The pre-revprop-change hook is invoked before a revision property\n"
+      "# is modified.  Subversion runs this hook by invoking a program\n"
+      "# (script, executable, binary, etc.) named "
+      "`" 
+      SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' (for which\n"
+      "# this file is a template), with the following ordered arguments:\n"
+      "#\n"
+      "#   [1] REPOS-PATH   (the path to this repository)\n"
+      "#   [2] REVISION     (the revision being tweaked)\n"
+      "#   [3] PROPNAME     (the property being set on the revision)\n"
+      "#\n"
+      "#   [STDIN] PROPVAL  ** the property value is passed via STDIN.\n"
+      "#\n"
+      "# If the hook program exits with success, the propchange happens; but\n"
+      "# if it exits with failure (non-zero), the propchange doesn't happen.\n"
+      "# The hook program can use the `svnlook' utility to examine the \n"
+      "# existing value of the revision property.\n"
+      "#\n"
+      "# WARNING: unlike other hooks, this hook MUST exist for revision\n"
+      "# properties to be changed.  If the hook does not exist, Subversion \n"
+      "# will behave as if the hook were present, but failed.  The reason\n"
+      "# for this is that revision properties are UNVERSIONED, meaning that\n"
+      "# a successful propchange is destructive;  the old value is gone\n"
+      "# forever.  We recommend the hook back up the old value somewhere.\n"
+      "#\n"      
+      "# On a Unix system, the normal procedure is to have "
+      "`"
+      SVN_REPOS__HOOK_PRE_REVPROP_CHANGE
+      "'\n" 
+      "# invoke other programs to do the real work, though it may do the\n"
+      "# work itself too.\n"
+      "#\n"
+      "# Note that"
+      " `" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' "
+      "must be executable by the user(s) who will\n"
+      "# invoke it (typically the user httpd runs as), and that user must\n"
+      "# have filesystem-level permission to access the repository.\n"
+      "#\n"
+      "# On a Windows system, you should name the hook program\n"
+      "# `" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".bat' or "
+      "`" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".exe', but the basic idea is\n"
+      "# the same.\n"
+      "#\n"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
+      "\n"
+      "REPOS=\"$1\"\n"
+      "REV=\"$2\"\n"
+      "PROPNAME=\"$3\"\n"
+      "\n"
+      "if [ \"$PROPNAME\" = \"svn:log\" ]; then exit 0; fi\n"
+      "exit 1\n";
+    
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, pool, 
+                                "writing hook file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, pool, 
+                                "closing hook file `%s'", this_path);
+  }  /* end pre-revprop-change hook */
+
+
+  /* Post-commit hook. */
   {
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_post_commit_hook (repos, pool),
@@ -394,9 +492,82 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, pool, 
                                 "closing hook file `%s'", this_path);
-  } /* end post-commit hooks */
+  } /* end post-commit hook */
 
-  /* Read sentinels. */
+
+  /* Post-revprop-change hook. */
+  {
+    this_path = apr_psprintf (pool, "%s%s",
+                              svn_repos_post_revprop_change_hook (repos, pool),
+                              SVN_REPOS__HOOK_DESC_EXT);
+
+    SVN_ERR_W (svn_io_file_open (&f, this_path,
+                                 (APR_WRITE | APR_CREATE | APR_EXCL),
+                                 APR_OS_DEFAULT,
+                                 pool),
+               "creating hook file");
+    
+    contents =
+      "#!/bin/sh\n"
+      "\n"
+      "# POST-REVPROP-CHANGE HOOK\n"
+      "#\n"
+      "# The post-revprop-change hook is invoked after a revision property\n"
+      "# has been changed. Subversion runs this hook by invoking a program\n"
+      "# (script, executable, binary, etc.) named `"
+      SVN_REPOS__HOOK_POST_REVPROP_CHANGE 
+      "' \n"
+      "(for which this file is a template),\n"
+      "# with the following ordered arguments:\n"
+      "#\n"
+      "#   [1] REPOS-PATH   (the path to this repository)\n"
+      "#   [2] REV          (the revision that was tweaked)\n"
+      "#   [3] PROPNAME     (the property that was changed)\n"
+      "#\n"
+      "# Because the propchange has already completed and cannot be undone,\n"
+      "# the exit code of the hook program is ignored.  The hook program\n"
+      "# can use the `svnlook' utility to help it examine the\n"
+      "# new property value.\n"
+      "#\n"
+      "# On a Unix system, the normal procedure is to have "
+      "`"
+      SVN_REPOS__HOOK_POST_REVPROP_CHANGE
+      "'\n" 
+      "# invoke other programs to do the real work, though it may do the\n"
+      "# work itself too.\n"
+      "#\n"
+      "# Note that"
+      " `" SVN_REPOS__HOOK_POST_REVPROP_CHANGE "' "
+      "must be executable by the user(s) who will\n"
+      "# invoke it (typically the user httpd runs as), and that user must\n"
+      "# have filesystem-level permission to access the repository.\n"
+      "#\n"
+      "# On a Windows system, you should name the hook program\n"
+      "# `" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".bat' or "
+      "`" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".exe', but the basic idea is\n"
+      "# the same.\n"
+      "# \n"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
+      "\n"
+      "REPOS=\"$1\"\n"
+      "REV=\"$2\"\n"
+      "PROPNAME=\"$3\"\n"
+      "\n"
+      "propchange-email.pl \"$REV\" \"$PROPNAME\" watchers@example.org\n";
+
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, pool, 
+                                "writing hook file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, pool, 
+                                "closing hook file `%s'", this_path);
+  } /* end post-revprop-change hook */
+
+
+  /* Read sentinel. */
   {
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_read_sentinel_hook (repos, pool),
@@ -423,9 +594,9 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, pool, 
                                 "closing hook file `%s'", this_path);
-  }  /* end read sentinels */
+  }  /* end read sentinel */
 
-  /* Write sentinels. */
+  /* Write sentinel. */
   {
     this_path = apr_psprintf (pool, "%s%s",
                               svn_repos_write_sentinel_hook (repos, pool),
@@ -452,7 +623,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, pool, 
                                 "closing hook file `%s'", this_path);
-  }  /* end write sentinels */
+  }  /* end write sentinel */
 
   return SVN_NO_ERROR;
 }

@@ -799,6 +799,27 @@ svn_client_propset (const char *propname,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
+/* Set PROPNAME to PROPVAL on revision REVISION in the repository
+   represented by URL.  Use AUTH_BATON for authentication, and POOL
+   for all memory allocation.  Return the actual rev affected in *SET_REV.
+
+   Note that unlike its cousin svn_client_propset(), this routine
+   doesn't affect the working copy at all;  it's a pure network
+   operation that changes an *unversioned* property attached to a
+   revision.  This can be used to tweak log messages, dates, authors,
+   and the like.  Be careful:  it's a lossy operation.
+
+   Also note that unless the administrator creates a
+   pre-revprop-change hook in the repository, this feature will fail. */
+svn_error_t *
+svn_client_revprop_set (const char *propname,
+                        const svn_string_t *propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_client_auth_baton_t *auth_baton,
+                        svn_revnum_t *set_rev,
+                        apr_pool_t *pool);
+                        
 /* Set *PROPS to a hash table whose keys are `char *' paths,
    prefixed by TARGET, of items in the working copy on which 
    property PROPNAME is set, and whose values are `svn_string_t *'

@@ -1457,6 +1457,23 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 }
 
 
+svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
+                                          svn_revnum_t rev,
+                                          const char *name,
+                                          const svn_string_t *value)
+{
+  svn_ra_session_t *ras = session_baton;
+
+  /* ### need to do a PROPPATCH on a baseline-collection.  (don't
+     forget to escape the binary value someday too!)  that's easy.
+     the harder part is teaching mod_dav_svn how to handle the
+     PROPPATCH on a bc.. */
+  
+  return svn_error_create
+    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, ras->pool,
+     "ra_dav does not currently support changing revision properties.  ");
+}
+
 /* -------------------------------------------------------------------------
 **
 ** UPDATE HANDLING

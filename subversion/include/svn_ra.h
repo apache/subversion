@@ -312,6 +312,13 @@ typedef struct svn_ra_plugin_t
                                       svn_revnum_t *revision,
                                       apr_time_t tm);
 
+  /* Set the property NAME to VALUE on revision REV.  
+     Please note that properties attached to revisions are **unversioned**. */
+  svn_error_t *(*change_rev_prop) (void *session_baton,
+                                   svn_revnum_t rev,
+                                   const char *name,
+                                   const svn_string_t *value);
+                                   
   /* Set *EDITOR and *EDIT_BATON to an editor for committing changes
      to the repository, using LOG_MSG as the log message.  The
      revisions being committed against are passed to the editor

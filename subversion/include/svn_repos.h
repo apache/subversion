@@ -99,6 +99,8 @@ const char *svn_repos_pre_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
 const char *svn_repos_post_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
 const char *svn_repos_read_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool);
 const char *svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_pre_revprop_change_hook (svn_repos_t *repos, apr_pool_t *pool);
+const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos, apr_pool_t *pool);
 
 
 
@@ -405,6 +407,18 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
                                                 const char *author,
                                                 apr_pool_t *pool);
 
+
+/* Like svn_fs_change_rev_prop(), but invoke the REPOS's pre- and
+ * post-revprop-change hooks around the change.  Use POOL for
+ * temporary allocations.
+ *
+ * REV, NAME, and VALUE are as in svn_fs_commit_txn().  */
+svn_error_t *
+svn_repos_fs_change_rev_prop (svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
