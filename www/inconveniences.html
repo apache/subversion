@@ -13,12 +13,21 @@ most likely to annoy new users.
 
 
 <ol>
-   <li><b>Charset conversion not yet supported on Win32</b><br>
-   <p>Charset encoding (i18n) conversion is not yet supported on
-      Win32, due to problems with our portability libraries, apr
-      and apr-util.  There is no issue associated with this, but 
-      it is being actively worked on and should be fixed soon.
-      Meanwhile, stick with 7-bit ascii on Windows.</p>
+   <li><b>Repository deadlocks</b><br>
+   <p>If an svn client is directly accessing a repository via a
+      file:/// url and is interrupted, or crashes, (or if httpd
+      crashes), the repository is likely to be left in a 'wedged'
+      state.  You'll need to run 
+      '<tt>svnadmin&nbsp;recover&nbsp;/path/to/repos</tt>' to
+      unwedge the repository.  Make sure you shut down httpd before
+      doing this.</p>
+   <p>See
+        <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=739"
+        >Issue&nbsp;#739</a>
+      and 
+        <a href="http://subversion.tigris.org/project_faq.html#wedged-repos"
+        >http://subversion.tigris.org/project_faq.html#wedged-repos</a>
+      for more details.</p>
    </li>
 
    <p>
@@ -32,19 +41,5 @@ most likely to annoy new users.
       locale is ISO-8859-1 (Latin-1).</p>
    <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=807"
       >Issue #807</a> for more details.</p>
-   </li>
-
-   <p>
-
-   <li><b>Repository deadlocks</b><br>
-   <p>If an svn client is directly accessing a repository via a
-      file:/// url and is interrupted, or crashes, (or if httpd
-      crashes), the repository is likely to be left in a 'wedged'
-      state.  You'll need to run Berkeley DB's 
-      '<tt>db_recover&nbsp;-ve&nbsp;-h&nbsp;repos/db</tt>' to
-      unwedge the repository.  Make sure you shut down httpd before
-      doing this.</p>
-   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=739"
-      >Issue #739</a> for more details.</p>
    </li>
 </ol>
