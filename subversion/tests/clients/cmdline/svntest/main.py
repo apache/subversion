@@ -239,9 +239,9 @@ def run_svnadmin(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
   return _run_command(svnadmin_binary, 1, *varargs)
 
-# For running svnadmin.  Ignores the output.
+# For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
-  "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
+  "Run svnlook with VARARGS, returns stdout, stderr as list of lines."
   return _run_command(svnlook_binary, 1, *varargs)
 
 def run_svnversion(*varargs):

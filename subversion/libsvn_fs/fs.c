@@ -429,7 +429,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
     static const char dbconfig_txn_nosync[] =
       "#\n"
       "# Disable fsync of log files on transaction commit. Read the\n"
-      "# documentation abtou DB_TXN_NOSYNC at:\n"
+      "# documentation about DB_TXN_NOSYNC at:\n"
       "#\n"
       "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
       "#\n"
