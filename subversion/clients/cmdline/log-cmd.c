@@ -78,7 +78,13 @@ num_lines (const char *msg)
 /* Baton for log_message_receiver(). */
 struct log_receiver_baton
 {
-  svn_boolean_t quiet;  /* Don't print log message body nor line count. */
+  /* Check for cancellation on each invocation of a log receiver. */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
+  /* Don't print log message body nor line count.  This is ignored for
+     xml output. */
+  svn_boolean_t quiet;
 };
 
 
@@ -180,6 +186,9 @@ log_message_receiver (void *baton,
 
   /* Number of lines in the msg. */
   int lines;
+
+  if (lb->cancel_func)
+    SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
   if (rev == 0)
     {
@@ -326,10 +335,14 @@ log_message_receiver_xml (void *baton,
                           const char *msg,
                           apr_pool_t *pool)
 {
+  struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
   char *revstr;
   const char *msg_native_eol;  
+
+  if (lb->cancel_func)
+    SVN_ERR (lb->cancel_func (lb->cancel_baton));
 
   if (rev == 0)
     return SVN_NO_ERROR;
@@ -485,6 +498,10 @@ svn_cl__log (apr_getopt_t *os,
         }
     }
 
+  lb.cancel_func = ctx->cancel_func;
+  lb.cancel_baton = ctx->cancel_baton;
+  lb.quiet = opt_state->quiet;
+
   if (opt_state->xml)
     {
       /* If output is not incremental, output the XML header and wrap
@@ -509,7 +526,7 @@ svn_cl__log (apr_getopt_t *os,
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver_xml,
-                               NULL,  /* no baton necessary */
+                               &lb,
                                ctx,
                                pool));
       
@@ -525,8 +542,6 @@ svn_cl__log (apr_getopt_t *os,
     }
   else  /* default output format */
     {
-      lb.quiet = opt_state->quiet;
-
       /* ### Ideally, we'd also pass the `quiet' flag through to the
        * repository code, so we wouldn't waste bandwith sending the
        * log message bodies back only to have the client ignore them.
