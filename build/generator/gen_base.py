@@ -84,7 +84,7 @@ class GeneratorBase:
       if parser.get(target, 'project_name'):
         target_ob.project_name = parser.get(target, 'project_name')
 
-      if parser.has_option(target, 'language'):
+      if parser.get(target, 'language'):
         target_ob.language = parser.get(target, 'language')
 
       self.targets[target] = target_ob
@@ -580,6 +580,8 @@ class Config:
 class GenError(Exception):
   pass
 
+
+# for each configuration option, specify the default value:
 _cfg_defaults = {
   'sources' : '',
   'libs' : '',
@@ -593,6 +595,7 @@ _cfg_defaults = {
   'debug' : '',
   'project_name' : '',
   'description' : '',
+  'language' : '',
   }
 
 _predef_sections = [

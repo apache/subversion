@@ -129,3 +129,11 @@ class Generator(gen_win.WinGeneratorBase):
       }
 
     self.write_with_template(oname, 'msvc_dsw.ezt', data)
+
+
+# compatibility with older Pythons:
+try:
+  True
+except NameError:
+  True = 1
+  False = 0
