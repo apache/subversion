@@ -67,6 +67,12 @@ Candidate changes:
     Votes:
       +1: breser
 
+  * r8564
+    Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
+    Justification: script is broken without this obvious parsing fix.
+    Votes:
+      +1: kfogel, dlr, gstein
+
 
 Status of 1.0.1:
 ================
@@ -118,12 +124,6 @@ Candidate changes:
     Votes:
       +1: sussman, dlr, philip
       +0: gstein  (isn't that output considered part of the contract?)
-
-  * r8564
-    Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
-    Justification: script is broken without this obvious parsing fix.
-    Votes:
-      +1: kfogel, dlr, gstein
 
   * r8577, r8584
     Prevent a potential ra_dav commit race-condition.
