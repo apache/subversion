@@ -28,6 +28,8 @@
 #include "svn_time.h"
 #include "svn_dav.h"
 
+#undef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+
 /*
 ** The namespace URIs that we use. This list and the enumeration must
 ** stay in sync.
