@@ -32,6 +32,8 @@
 #include "svn_path.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */
 
+#include "svn_private_config.h"
+
 
 svn_error_t *
 svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
@@ -48,7 +50,7 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
          ensure this directory's existence, so just return the error.
          Might happen if there's a file in the way, for example. */
       return svn_error_createf (APR_ENOTDIR, NULL,
-                                "'%s' is not a directory", path);
+                                _("'%s' is not a directory"), path);
     }
   else if (kind == svn_node_none)
     {
@@ -79,7 +81,7 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
             {
               /* A weird and probably rare situation. */
               return svn_error_create (0, NULL,
-                                       "Unable to make any directories");
+                                       _("Unable to make any directories"));
             }
           else  /* We have a valid path, so recursively ensure it. */
             {

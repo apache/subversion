@@ -918,11 +918,11 @@ validate_prop_against_node_kind (const char *name,
     {
     case svn_node_dir:
       node_kind_prohibit = dir_prohibit;
-      node_kind_text = "directory";
+      node_kind_text = _("directory");
       break;
     case svn_node_file:
       node_kind_prohibit = file_prohibit;
-      node_kind_text = "file";
+      node_kind_text = _("file");
       break;
     default:
       return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,

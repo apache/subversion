@@ -41,6 +41,8 @@
 #include "svn_md5.h"
 #include <apr_md5.h>
 
+#include "svn_private_config.h"
+
 
 /* ### todo: make this compare repository too?  Or do so in parallel
    code.  See also adm_files.c:check_adm_exists(), which should
@@ -58,7 +60,7 @@ svn_wc_check_wc (const char *path,
   if (kind == svn_node_none)
     {
       return svn_error_createf
-        (APR_ENOENT, NULL, "'%s' does not exist", path);
+        (APR_ENOENT, NULL, _("'%s' does not exist"), path);
     }
   else if (kind != svn_node_dir)
     *wc_format = 0;
@@ -99,16 +101,16 @@ svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         "Working copy format of '%s' is too old (%d); "
-         "please check out your working copy again",
+         _("Working copy format of '%s' is too old (%d); "
+           "please check out your working copy again"),
          path, wc_format);
     }
   else if (wc_format > SVN_WC__VERSION)
     {
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         "This client is too old to work with working copy '%s'; "
-         "please get a newer Subversion client",
+         _("This client is too old to work with working copy '%s'; "
+           "please get a newer Subversion client"),
          path);
     }
 
@@ -166,7 +168,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   if (entry == NULL)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "'%s' is not under version control", path);
+       _("'%s' is not under version control"), path);
 
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
@@ -343,9 +345,9 @@ compare_and_verify (svn_boolean_t *modified_p,
       {
         return svn_error_createf
           (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-           "Checksum mismatch indicates corrupt text base: '%s'\n"
-           "   expected:  %s\n"
-           "     actual:  %s\n",
+           _("Checksum mismatch indicates corrupt text base: '%s'\n"
+             "   expected:  %s\n"
+             "     actual:  %s\n"),
            base_file, entry->checksum, checksum);
       }
 
