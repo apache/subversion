@@ -619,21 +619,30 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
   apr_hash_t *headers;
   svn_fs__node_revision_t *noderev;
   char *value;
+  svn_error_t *err;
   
   if (id->txn_id)
       {
         /* This is a transaction node-rev. */
-        SVN_ERR (open_txn_node_rev (&revision_file, fs, svn_fs__id_node_id (id),
-                                    svn_fs__id_copy_id (id),
-                                    svn_fs__id_txn_id (id), pool));
+        err = open_txn_node_rev (&revision_file, fs, svn_fs__id_node_id (id),
+                                 svn_fs__id_copy_id (id),
+                                 svn_fs__id_txn_id (id), pool);
       }
   else
     {
       /* This is a revision node-rev. */
-      SVN_ERR (open_and_seek_revision (&revision_file, fs,
-                                       svn_fs__id_rev (id),
-                                       svn_fs__id_offset (id),
-                                       pool));
+      err = open_and_seek_revision (&revision_file, fs,
+                                    svn_fs__id_rev (id),
+                                    svn_fs__id_offset (id),
+                                    pool);
+    }
+
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT (err->apr_err))
+        return svn_fs__err_dangling_id (fs, id);
+      
+      return err;
     }
   
   SVN_ERR (read_header_block (&headers, revision_file, pool) );
@@ -642,6 +651,8 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   /* Read the node-rev id. */
   value = apr_hash_get (headers, SVN_FS_FS__NODE_ID, APR_HASH_KEY_STRING);
+
+  SVN_ERR (svn_io_file_close (revision_file, pool));
 
   noderev->id = svn_fs_parse_id (value, strlen (value), pool);
 
@@ -1235,8 +1246,12 @@ struct rep_read_baton
      we read data, and finalized when the stream is closed. */
   struct apr_md5_ctx_t md5_context;
 
-  /* Used for temporary allocations, iff `trail' (above) is null.  */
+  /* Used for temporary allocations during the read. */
   apr_pool_t *pool;
+
+  /* Pool used to store file handles and other data that is persistant
+     for the entire stream read. */
+  apr_pool_t *filehandle_pool;
 };
 
 /* Create a rep_read_baton structure for node revision NODEREV in
@@ -1255,10 +1270,13 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   apr_md5_init (&(b->md5_context));
 
   b->fs = fs;
-  SVN_ERR (build_rep_list (&b->rs_list, &b->src_state, fs, id, rep, pool));
   b->chunk_index = 0;
   b->buf = NULL;
   b->pool = svn_pool_create (pool);
+  b->filehandle_pool = svn_pool_create (pool);
+  
+  SVN_ERR (build_rep_list (&b->rs_list, &b->src_state, fs, id, rep,
+                           b->filehandle_pool));
 
   /* Save our output baton. */
   *rb_p = b;
@@ -1334,6 +1352,17 @@ get_combined_window (svn_txdelta_window_t **result,
     }
 
   *result = window;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+rep_read_contents_close (void *baton)
+{
+  struct rep_read_baton *rb = baton;
+  
+  svn_pool_destroy (rb->pool);
+  svn_pool_destroy (rb->filehandle_pool);
+  
   return SVN_NO_ERROR;
 }
 
@@ -1462,6 +1491,7 @@ get_representation_at_offset (svn_stream_t **contents_p,
       SVN_ERR (rep_read_get_baton (&rb, fs, id, rep, pool));
       *contents_p = svn_stream_create (rb, pool);
       svn_stream_set_read (*contents_p, rep_read_contents);
+      svn_stream_set_close (*contents_p, rep_read_contents_close);
     }
   
   return SVN_NO_ERROR;
@@ -1751,14 +1781,19 @@ read_change (svn_fs__change_t **change_p,
   apr_size_t len = sizeof (buf);
   svn_fs__change_t *change;
   char *str, *last_str;
+  svn_error_t *err;
 
-  SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+  err = svn_io_read_length_line (file, buf, &len, pool);
 
   /* Check for a blank line. */
-  if (strlen (buf) == 0)
+  if (err)
     {
-      *change_p = NULL;
-      return SVN_NO_ERROR;
+      if (err->apr_err == APR_EOF)
+        {
+          *change_p = NULL;
+          return SVN_NO_ERROR;
+        }
+      return err;
     }
 
   change = apr_pcalloc (pool, sizeof (*change));
@@ -2316,13 +2351,22 @@ svn_fs__fs_purge_txn (svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   const char *txn_dir;
+  svn_error_t *err;
   
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                 apr_pstrcat (pool, txn_id,
                                              SVN_FS_FS__TXNS_EXT, NULL), NULL);
 
-  SVN_ERR (svn_io_remove_dir (txn_dir, pool));
-  return SVN_NO_ERROR;
+  /* Umm, we really have no way to determine the difference between a
+     transaction not existing, and a transaction not being mutable.
+     We'll just always return not-mutable and hope no one passes us
+     bogus transaction IDs. */
+  err = svn_io_remove_dir (txn_dir, pool);
+
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    return svn_fs__err_txn_not_mutable (fs, txn_id);
+  
+  return err;
 }
 
 /* Given a hash ENTRIES of dirent structions, return a hash in
@@ -2408,6 +2452,7 @@ svn_fs__fs_add_change (svn_fs_t *fs,
   apr_file_t *file;
   svn_stream_t *stream;
   const char *txn_dir, *change_string;
+  const char *idstr;
 
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                 apr_pstrcat (pool, txn_id,
@@ -2440,8 +2485,17 @@ svn_fs__fs_add_change (svn_fs_t *fs,
       break;
     }
 
+  if (id)
+    {
+      idstr = svn_fs_unparse_id (id, pool)->data;
+    }
+  else
+    {
+      idstr = SVN_FS_FS__ACTION_RESET;
+    }
+  
   SVN_ERR (svn_stream_printf (stream, pool, "%s %s %s %s %s\n",
-                              svn_fs_unparse_id (id, pool)->data,
+                              idstr,
                               change_string,
                               text_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
                               prop_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
@@ -2488,6 +2542,8 @@ struct rep_write_baton
   struct apr_md5_ctx_t md5_context;
 
   apr_pool_t *pool;
+
+  apr_pool_t *parent_pool;
 };
 
 /* Handler for the write method of the representation writable stream.
@@ -2642,6 +2698,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   apr_md5_init (&(b->md5_context));
 
   b->fs = fs;
+  b->parent_pool = pool;
   b->pool = svn_pool_create (pool);
   b->rep_size = 0;
   b->is_data_rep = is_data_rep;
@@ -2650,13 +2707,13 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   /* Open the file we are writing to. */
   SVN_ERR (open_and_seek_representation_write (&file, fs, noderev->id,
                                                is_directory_contents,
-                                               is_data_rep, pool));
+                                               is_data_rep, b->pool));
 
 
   b->file = file;
-  b->rep_stream = svn_stream_from_aprfile (file, pool);
+  b->rep_stream = svn_stream_from_aprfile (file, b->pool);
   
-  SVN_ERR (get_file_offset (&b->rep_offset, file, pool));
+  SVN_ERR (get_file_offset (&b->rep_offset, file, b->pool));
 
   /* If the representation is a property rep, or the contents of a
      directory, write it out in plaintext. */
@@ -2672,14 +2729,14 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
       void *whb;
 
       /* Get the base for this delta. */
-      SVN_ERR (choose_delta_base (&base_rep, fs, noderev, pool));
+      SVN_ERR (choose_delta_base (&base_rep, fs, noderev, b->pool));
       SVN_ERR (get_representation_at_offset (&source, fs, NULL, base_rep,
-                                             pool));
+                                             b->pool));
 
       /* Write out the rep header. */
       if (base_rep)
         {
-          header = apr_psprintf (pool, SVN_FS_FS__DELTA " %" SVN_REVNUM_T_FMT
+          header = apr_psprintf (b->pool, SVN_FS_FS__DELTA " %" SVN_REVNUM_T_FMT
                                  " %" APR_OFF_T_FMT " %" APR_SIZE_T_FMT "\n",
                                  base_rep->revision, base_rep->offset,
                                  base_rep->size);
@@ -2689,14 +2746,14 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
           header = SVN_FS_FS__DELTA "\n";
         }
       SVN_ERR (svn_io_file_write_full (file, header, strlen (header), NULL,
-                                       pool));
+                                       b->pool));
 
       /* Now determine the offset of the actual svndiff data. */
-      SVN_ERR (get_file_offset (&b->delta_start, file, pool));
+      SVN_ERR (get_file_offset (&b->delta_start, file, b->pool));
       
       /* Prepare to write the svndiff data. */
       svn_txdelta_to_svndiff (b->rep_stream, pool, &wh, &whb);
-      b->delta_stream = svn_txdelta_target_push (wh, whb, source, pool);
+      b->delta_stream = svn_txdelta_target_push (wh, whb, source, b->pool);
     }      
       
   *wb_p = b;
@@ -2714,7 +2771,7 @@ rep_write_contents_close (void *baton)
   svn_fs__representation_t *rep;
   apr_off_t offset;
 
-  rep = apr_pcalloc (b->pool, sizeof (*rep));
+  rep = apr_pcalloc (b->parent_pool, sizeof (*rep));
   rep->offset = b->rep_offset;
 
   /* Close our delta stream so the last bits of svndiff are written
@@ -3141,17 +3198,25 @@ write_final_changed_path_info (apr_off_t *offset_p,
         return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                  "Malformed changes line.");
 
-      id = svn_fs_parse_id (str, strlen (str), iterpool);
+      if (strcmp (str, SVN_FS_FS__ACTION_RESET))
+        {
+          id = svn_fs_parse_id (str, strlen (str), iterpool);
+          
+          SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, id, iterpool));
 
-      SVN_ERR (svn_fs__fs_get_node_revision (&noderev, fs, id, iterpool));
-
-      /* noderev has the permanent node-id at this point, so we just
-         substitute it for the temporary one. */
-
-      buf = svn_stringbuf_createf (iterpool, "%s %s\n",
-                                   svn_fs_unparse_id (noderev->id,
-                                                      iterpool)->data,
-                                   last_str);
+          /* noderev has the permanent node-id at this point, so we just
+             substitute it for the temporary one. */
+          
+          buf = svn_stringbuf_createf (iterpool, "%s %s\n",
+                                       svn_fs_unparse_id (noderev->id,
+                                                          iterpool)->data,
+                                       last_str);
+        }
+      else
+        {
+          buf = svn_stringbuf_createf (iterpool, "%s %s\n",
+                                       SVN_FS_FS__ACTION_RESET, last_str);
+        }
 
       SVN_ERR (svn_io_file_write_full (file, buf->data, buf->len, NULL,
                                        iterpool));

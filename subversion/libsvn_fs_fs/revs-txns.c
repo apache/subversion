@@ -142,6 +142,7 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
                         const svn_string_t *value,
                         apr_pool_t *pool)
 {
+  SVN_ERR (svn_fs__check_fs (fs));
   SVN_ERR (svn_fs__set_rev_prop (fs, rev, name, value, pool));
 
   return SVN_NO_ERROR;
