@@ -41,7 +41,7 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
   const char *pathname;
   apr_datum_t key;
   apr_datum_t value;
-  const char *txn_name;
+  const char *txn_name = NULL;
 
   pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
   status = apr_dbm_open(&dbm, pathname, APR_DBM_READONLY, 
@@ -55,21 +55,104 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
 
   key.dptr = (char *)activity_id;
   key.dsize = strlen(activity_id) + 1;  /* null-term'd */
-  status = apr_dbm_fetch(dbm, key, &value);
-  if (status != APR_SUCCESS)
+  if (apr_dbm_exists(dbm, key))
     {
-      /* ### again: assume failure means it doesn't exist */
-      apr_dbm_close(dbm);
-      return NULL;
+      status = apr_dbm_fetch(dbm, key, &value);
+      if (status != APR_SUCCESS)
+        {
+          /* ### again: assume failure means it doesn't exist */
+          apr_dbm_close(dbm);
+          return NULL;
+        }
+      txn_name = apr_pstrdup(repos->pool, value.dptr);   /* null-term'd */
     }
 
-  txn_name = apr_pstrdup(repos->pool, value.dptr);   /* null-term'd */
   apr_dbm_freedatum(dbm, value);
-
   apr_dbm_close(dbm);
 
   return txn_name;
 }
+
+
+dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
+                                   const char *activity_id)
+{
+  apr_dbm_t *dbm;
+  apr_status_t status;
+  const char *pathname;
+  apr_datum_t key;
+  apr_datum_t value;
+  const char *txn_name = NULL;
+  svn_fs_txn_t *txn;
+  svn_error_t *serr;
+
+  /* gstein sez: If the activity ID is not in the database, return a
+     404.  If the transaction is not present or is immutable, return a
+     204.  For all other failures, return a 500. */
+
+  /* Open the activities database. */
+  pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
+  status = apr_dbm_open(&dbm, pathname, APR_DBM_READWRITE, 
+                        APR_OS_DEFAULT, repos->pool);
+  if (status != APR_SUCCESS)
+    return dav_new_error(repos->pool, HTTP_NOT_FOUND, 0,
+                         "could not open activities database.");
+
+  /* Get the activity from the activity database. */
+  key.dptr = (char *)activity_id;
+  key.dsize = strlen(activity_id) + 1;  /* null-term'd */
+  if (apr_dbm_exists(dbm, key))
+    {
+      status = apr_dbm_fetch(dbm, key, &value);
+      if (status == APR_SUCCESS)
+        txn_name = value.dptr;
+    }
+  if (! txn_name)
+    return dav_new_error(repos->pool, HTTP_NOT_FOUND, 0,
+                         "could not find activity.");
+
+  /* Now, we attempt to delete TXN_NAME from the Subversion
+     repository.  If we couldn't open the transaction because it was
+     not mutable, then that's not such a big deal.  Otherwise, it is. */
+  serr = svn_fs_open_txn(&txn, repos->fs, txn_name, repos->pool);
+  if (! serr)
+    {
+      if ((serr = svn_fs_abort_txn (txn)))
+        {
+          apr_dbm_freedatum(dbm, value);
+          apr_dbm_close(dbm);
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "could not abort txn.");
+        }
+    }
+  else if (serr->apr_err == SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
+    {
+      svn_error_clear(serr);
+    }
+  else
+    {
+      apr_dbm_freedatum(dbm, value);
+      apr_dbm_close(dbm);
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not open txn.");
+    }
+  
+  /* Finally, we remove the activity from the activities database. */
+  status = apr_dbm_delete(dbm, key);
+  if (status)
+    {
+      apr_dbm_freedatum(dbm, value);
+      apr_dbm_close(dbm);
+      return dav_new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                           "unable to remove activity.");
+    }
+
+  apr_dbm_freedatum(dbm, value);
+  apr_dbm_close(dbm);
+
+  return NULL;
+}
+
 
 dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
                                   const char *activity_id,

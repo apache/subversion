@@ -949,13 +949,13 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                    display_dir,
                                    &tempfiles, ctx, pool);
 
-  /* Make a note that our commit is finished. */
-  commit_in_progress = FALSE;
-
-  /* Bump the revision if the commit went well. */
+  /* Handle a successful commit. */
   if (! cmt_err)
     {
       apr_pool_t *subpool = svn_pool_create (pool);
+
+      /* Make a note that our commit is finished. */
+      commit_in_progress = FALSE;
 
       for (i = 0; i < commit_items->nelts; i++)
         {

@@ -1291,6 +1291,12 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
                                         DAV_SVN_RESTYPE_WRK_COLLECTION);
       break;
 
+    case DAV_RESOURCE_TYPE_ACTIVITY:
+      *parent_resource =
+        dav_svn_create_private_resource(resource,
+                                        DAV_SVN_RESTYPE_ACT_COLLECTION);
+      break;
+
     default:
       /* ### needs more work. need parents for other resource types
          ###
@@ -2326,9 +2332,10 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
   svn_error_t *serr;
   dav_error *err;
 
-  /* Only working or regular resources can be deleted... */
+  /* Only activities, and working or regular resources can be deleted... */
   if (resource->type != DAV_RESOURCE_TYPE_WORKING
-      && resource->type != DAV_RESOURCE_TYPE_REGULAR)
+      && resource->type != DAV_RESOURCE_TYPE_REGULAR
+      && resource->type != DAV_RESOURCE_TYPE_ACTIVITY)
     return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
                            "DELETE called on invalid resource type.");
 
@@ -2338,6 +2345,13 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
     return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
                          "DELETE called on regular resource, but "
                          "autoversioning is not active.");
+
+  /* Handle activity deletions (early exit). */
+  if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY)
+    {
+      return dav_svn_delete_activity(resource->info->repos,
+                                     resource->info->root.activity_id);
+    }
 
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
