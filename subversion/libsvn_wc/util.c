@@ -111,24 +111,26 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
 {
   enum svn_wc__eol_style style;
   const char *eol;
-  
-  /* ### todo: add keyword handling here too. */
+  char *revision, *author, *date, *url;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile->data, pool));
+  SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
+                                 vfile->data, NULL, pool));
+
   if ((style == svn_wc__eol_style_none)
-      || (style == svn_wc__eol_style_fixed))
+      && (! revision) && (! author) && (! date) && (! url))
     {
+      /* Translation would be a no-op, so return the original file. */
       *xlated_p = vfile;
     }
-  else if (style == svn_wc__eol_style_native)
+  else  /* some translation is necessary */
     {
-      /* Because base_file and working file do not use the same eol
-         style, our only recourse is to convert one of them and do a
-         byte-for-byte comparison. */
       svn_stringbuf_t *tmp_dir, *tmp_vfile;
-      apr_file_t *ignored;
       apr_status_t apr_err;
-      
+      apr_file_t *ignored;
+
+      /* First, reserve a tmp file name. */
+
       svn_path_split (vfile, &tmp_dir, &tmp_vfile,
                       svn_path_local_style, pool);
       
@@ -142,32 +144,43 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
                                         FALSE,
                                         pool));
       
-      /* We were just reserving the name, we don't actually need the
+      /* We were just reserving the name and don't actually need the
          filehandle, so close immediately. */
       apr_err = apr_file_close (ignored);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
           (0, 0, NULL, pool,
            "svn_wc_translated_file: unable to close %s", tmp_vfile->data);
+      
+      if (style == svn_wc__eol_style_fixed)
+        {
+          SVN_ERR (svn_io_copy_and_translate (vfile->data,
+                                              tmp_vfile->data,
+                                              eol,
+                                              TRUE,
+                                              revision, author, date, url,
+                                              FALSE,
+                                              pool));
+        }
+      else if (style == svn_wc__eol_style_native)
+        {
+          SVN_ERR (svn_io_copy_and_translate (vfile->data,
+                                              tmp_vfile->data,
+                                              SVN_WC__DEFAULT_EOL_MARKER,
+                                              FALSE,
+                                              revision, author, date, url,
+                                              FALSE,
+                                              pool));
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
+             "svn_wc_translated_file: %s has unknown eol style property",
+             vfile->data);
+        }
 
-      SVN_ERR (svn_io_copy_and_translate (vfile->data,
-                                          tmp_vfile->data,
-                                          SVN_WC__DEFAULT_EOL_MARKER,
-                                          0,
-                                          "",
-                                          "",
-                                          "",
-                                          "",
-                                          0,
-                                          pool));
       *xlated_p = tmp_vfile;
-    }
-  else
-    {
-      return svn_error_createf
-        (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
-         "svn_wc_translated_file: %s has unknown eol style property",
-         vfile->data);
     }
 
   return SVN_NO_ERROR;
