@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if test "$#" != 1; then
-  echo "ERROR: not enough arguments. Must supply SOURCE-DIR."
+  echo "ERROR ($0): not enough arguments. Must supply SOURCE-DIR."
   exit 1
 fi
 
