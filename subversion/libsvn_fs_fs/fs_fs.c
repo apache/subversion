@@ -1053,9 +1053,8 @@ get_root_changes_offset (apr_off_t *root_offset,
                          apr_pool_t *pool)
 {
   apr_off_t offset;
-  apr_size_t num_bytes;
   char buf[65];
-  int i;
+  int i, num_bytes;
   
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
@@ -1438,7 +1437,7 @@ rep_read_contents (void *baton,
     {
       copy_len = remaining;
       rs = rb->src_state;
-      if (copy_len > rs->end - rs->off)
+      if (((apr_off_t) copy_len) > rs->end - rs->off)
         copy_len = rs->end - rs->off;
       SVN_ERR (svn_io_file_read_full (rs->file, cur, copy_len, NULL,
                                       rb->pool));
@@ -2603,7 +2602,7 @@ svn_fs_fs__add_change (svn_fs_t *fs,
 {
   apr_file_t *file;
   svn_stream_t *stream;
-  const char *txn_dir, *change_string;
+  const char *txn_dir, *change_string = NULL;
   const char *idstr;
 
   txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
@@ -2635,6 +2634,9 @@ svn_fs_fs__add_change (svn_fs_t *fs,
     case svn_fs_path_change_reset:
       change_string = SVN_FS_FS__ACTION_RESET;
       break;
+    default:
+      return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                               "Invalid change type.");
     }
 
   if (id)
