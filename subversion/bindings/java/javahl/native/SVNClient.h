@@ -83,7 +83,7 @@ public:
 	jlong checkout(const char *moduleName, const char *destPath,
                        Revision &revision, bool recurse);
 	jobjectArray logMessages(const char *path, Revision &revisionStart,
-                                 Revision &revisionEnd);
+                                 Revision &revisionEnd, bool stopOnCopy);
 	void setPrompt(Prompter *prompter);
 	void password(const char *password);
 	void username(const char *username);

@@ -33,7 +33,14 @@ public class SVNAdmin
         }
         catch(UnsatisfiedLinkError ex)
         {
-            System.loadLibrary("svnjavahl");
+            try
+            {
+                System.loadLibrary("libsvnjavahl-1");
+            }
+            catch (UnsatisfiedLinkError e)
+            {
+                System.loadLibrary("svnjavahl");
+            }
         }
     }
 
