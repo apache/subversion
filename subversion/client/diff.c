@@ -20,12 +20,14 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_file_io.h>
+
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_private_config.h"         /* for SVN_CLIENT_DIFF */
+
 #include "cl.h"
-#include "config.h"  /* for SVN_CLIENT_DIFF */
 
 
 svn_error_t *

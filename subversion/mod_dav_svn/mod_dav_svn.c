@@ -22,7 +22,7 @@
 
 #include <apr_strings.h>
 
-#include "config.h"
+#include "svn_private_config.h"
 #include "dav_svn.h"
 
 

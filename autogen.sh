@@ -34,7 +34,7 @@ echo "Creating configure..."
 autoconf
 
 # Produce config.h.in
-echo "Creating config.h.in..."
+echo "Creating svn_private_config.h.in..."
 autoheader
 
 # Meta-configure apr/ subdir
