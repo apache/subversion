@@ -105,3 +105,11 @@ svn_error_t *svn_wc__get_versions_entry (svn_string_t *path,
 svn_error_t *svn_wc__remove_versions_entry (svn_string_t *path,
                                             apr_pool_t *pool,
                                             const char *entryname);
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
