@@ -4,4 +4,4 @@ test-repo-*
 *.o
 *~
 .*~
-.*.ra_dav
+
