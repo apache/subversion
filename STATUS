@@ -114,7 +114,7 @@ section for approved changes.)
       Fix "svn dump -rN" core dump introduced by r8216
       Justification: Absolute cosmic brokenness, itty bitty fix
       Votes:
-       +1: ghudson
+       +1: ghudson, cmpilato
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
