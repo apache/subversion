@@ -61,7 +61,7 @@ string__j_to_svn_string(JNIEnv *env,
 	   * otherwise throw an exception */
 	  if( buffer == NULL )
 	    {
-	      throw_exception_by_name(env, 
+	      misc__throw_exception_by_name(env, 
                                       "java/lang/OutOfMemoryError", 
                                       NULL);
 	      _hasException = JNI_TRUE;
