@@ -1,6 +1,7 @@
 Version 0.17.1 (released ?? Jan 2003, revision ???)
 
  User-visible changes:
+ * changed non-baseline build version number display.
  * compatibility change: make sure old clients can talk to newest servers.
  * some changes to the Book
 
