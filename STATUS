@@ -19,4 +19,4 @@ Candidate changes:
     Shouldn't tell people that --without-berkeley-db will keep us
     from building the server parts of Subversion when it really doesn't.
     Votes:
-      +1: rooneg
+      +1: rooneg, epg
