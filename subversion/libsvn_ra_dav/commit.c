@@ -1156,6 +1156,8 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   ne_proppatch_operation po[2] = { { 0 } };
   int rv;
   svn_stringbuf_t *xml_data;
+  svn_error_t *err;
+  int retry_count = 5;
 
   /* ### this whole sequence can/should be replaced with an expand-property
      ### REPORT when that is available on the server. */
@@ -1167,12 +1169,36 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   /* ### we should use DAV:apply-to-version on the CHECKOUT so we can skip
      ### retrieval of the baseline */
 
-  /* Get the Baseline from the DAV:checked-in value */
-  SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess, vcc->data, 
-                                    NULL, &svn_ra_dav__checked_in_prop, pool));
-  baseline_rsrc.pool = pool;
-  baseline_rsrc.vsn_url = baseline_url->data;
-  SVN_ERR( checkout_resource(cc, &baseline_rsrc, FALSE, pool) );
+  do {
+    /* Get the latest baseline from VCC's DAV:checked-in property.
+       This should give us the HEAD revision of the moment. */
+    SVN_ERR( svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess,
+                                      vcc->data, NULL,
+                                      &svn_ra_dav__checked_in_prop, pool));
+    baseline_rsrc.pool = pool;
+    baseline_rsrc.vsn_url = baseline_url->data;
+    
+    /* To set the log message, we must checkout the latest baseline
+       and get back a mutable "working" baseline.  */
+    err = checkout_resource(cc, &baseline_rsrc, FALSE, pool);
+
+    /* There's a small chance of a race condition here, if apache is
+       experiencing heavy commit concurrency or if the network has
+       long latency.  It's possible that the value of HEAD changed
+       between the time we fetched the latest baseline and the time we
+       checkout that baseline.  If that happens, apache will throw us
+       a BAD_BASELINE error (deltaV says you can only checkout the
+       latest baseline).  We just ignore that specific error and
+       retry a few times, asking for the latest baseline again. */
+    if (err && err->apr_err != SVN_ERR_APMOD_BAD_BASELINE)
+      return err;
+
+  } while (err && (--retry_count > 0));
+
+  /* Yikes, if we couldn't hold onto HEAD after a few retries, throw a
+     real error.*/
+  if (retry_count == 0)
+    return err;
 
   /* XML-Escape the log message. */
   xml_data = NULL;           /* Required by svn_xml_escape_*. */
