@@ -4696,9 +4696,8 @@ msgid ""
 msgstr ""
 "版权所有 (C) 2000-2004 CollabNet.\n"
 "Subversion 是开放源代码软件，请看 http://subversion.tigris.org/\n"
-"此产品包含的软件由 CollabNet (http://www.Collab.Net/)开发，\n"
-"简体中文信息由YingNing Huang (h y n @ h y n n e t.c o m)(http://www.hynnet."
-"com/)整理。\n"
+"此产品包含的软件由 CollabNet (http://www.Collab.Net/)开发。\n"
+"\n"
 "\n"
 
 #: libsvn_subr/opt.c:777
