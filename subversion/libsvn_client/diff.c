@@ -506,9 +506,9 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
           /* ### FIXME: This will get the file again! */
           /* ### 838 When 838 stops using svn_client_copy the adm_access
-             parameter can be removed from the function. */
-          SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
-                                    adm_access, merge_b->ctx, merge_b->pool));
+             parameter can be removed from the function. */          
+          SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision,
+                                    mine, adm_access, merge_b->ctx, subpool));
         }
       break;
     case svn_node_dir:
