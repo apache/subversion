@@ -497,12 +497,8 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           svn_path_add_component (tfile, sname, svn_path_local_style);
 
           /* Create a full path to the file's property component */
-          pfile = svn_wc__adm_path (loggy->path,
-                                    0, /* not tmp */
-                                    loggy->pool,
-                                    SVN_WC__ADM_PROPS,
-                                    name,
-                                    NULL);
+          err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
+
 
           /* kff todo: similar to code in entries.c:handle_start().
              Would be nice to either write a function mapping string
@@ -567,10 +563,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                    tfile->data));
                     return;
                   }
-                if (tfile_kind == svn_node_file)
-                  err = svn_io_file_affected_time (&text_time,
-                                                   tfile,
-                                                   loggy->pool);
+                err = svn_io_file_affected_time (&text_time,
+                                                 tfile,
+                                                 loggy->pool);
                 if (err)
                   {
                     signal_error (loggy, svn_error_createf
@@ -619,10 +614,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                    pfile->data));
                     return;
                   }
-                if (pfile_kind == svn_node_file)
-                  err = svn_io_file_affected_time (&prop_time,
-                                                   pfile,
-                                                   loggy->pool);
+                err = svn_io_file_affected_time (&prop_time,
+                                                 pfile,
+                                                 loggy->pool);
                 if (err)
                   {
                     signal_error (loggy, svn_error_createf
