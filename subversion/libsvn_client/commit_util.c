@@ -475,9 +475,11 @@ harvest_committables (apr_hash_t *committables,
                       /* A missing, schedule-delete child dir is
                          allowable.  Just don't try to recurse. */
                       svn_node_kind_t childkind;
-                      SVN_ERR (svn_io_check_path (full_path,
-                                                  &childkind, loop_pool));
-                      if (childkind == svn_node_none
+                      svn_error_t *err = svn_io_check_path (full_path,
+                                                            &childkind,
+                                                            loop_pool);
+                      if (! err
+                          && childkind == svn_node_none
                           && this_entry->schedule == svn_wc_schedule_delete)
                         {
                           add_committable (committables, full_path,
@@ -485,11 +487,15 @@ harvest_committables (apr_hash_t *committables,
                                            SVN_INVALID_REVNUM, 
                                            NULL,
                                            SVN_CLIENT_COMMIT_ITEM_DELETE);
+                          svn_error_clear (lockerr);
                           svn_pool_clear (loop_pool);
                           continue; /* don't recurse! */
                         }
                       else
-                        return lockerr;
+                        {
+                          svn_error_clear (err);
+                          return lockerr;
+                        }
                     }
                   else
                     return lockerr;
