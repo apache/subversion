@@ -435,8 +435,7 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
   else
     baton->message = opt_state->message;
 
-  if (opt_state->filedata_encoding)
-    baton->message_encoding = opt_state->filedata_encoding;
+  baton->message_encoding = opt_state->filedata_encoding;
 
   baton->base_dir = base_dir ? base_dir : ".";
 
