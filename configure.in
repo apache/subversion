@@ -161,9 +161,10 @@ if test "$enable_debugging" = "yes"; then
 fi
 
 
-dnl kff todo fooo
-dnl AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
-dnl AC_DEFINE(SVN_CLIENT_DIFF, "how to get SVN_CLIENT_DIFF here?", [Full path to local diff program.])
+dnl Find a diff
+AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
+AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF", 
+	[Define to be the full path to your diff program])
 
 
 dnl Pass some config data ----------------------------
