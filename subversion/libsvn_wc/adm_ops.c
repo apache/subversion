@@ -598,7 +598,7 @@ svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
   
   /* Derive the ancestor path for our new addition here. */
   ancestor_path = svn_stringbuf_dup (entry->ancestor, pool);
-  svn_path_add_component (ancestor_path, basename, svn_path_repos_style);
+  svn_path_add_component (ancestor_path, basename, svn_path_url_style);
   
   /* Make sure this new directory has an admistrative subdirectory
      created inside of it */

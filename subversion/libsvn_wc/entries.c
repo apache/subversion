@@ -395,7 +395,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
                                          APR_HASH_KEY_STRING);
       dst->ancestor = svn_stringbuf_dup (src->ancestor, pool);
       svn_path_add_component (dst->ancestor, name,
-                              svn_path_repos_style);
+                              svn_path_url_style);
     }
 }
 
@@ -917,7 +917,7 @@ write_entry (svn_stringbuf_t **output,
             {
               this_path = svn_stringbuf_dup (this_dir->ancestor, pool);
               svn_path_add_component_nts (this_path, this_entry_name,
-                                          svn_path_repos_style);
+                                          svn_path_url_style);
               if (svn_stringbuf_compare (this_path, this_entry->ancestor))
                 apr_hash_set (this_entry->attributes, 
                               SVN_WC_ENTRY_ATTR_ANCESTOR,
