@@ -13,7 +13,10 @@ MUST HAVE
 
 * fix svn_fs_access_t handling in svnserve (lundblad)
 
-* possibly teach mailer.py to send lock/unlock mails (fitz)
+* fix 'svnadmin lslocks', 'svnlook lock', and 'svn info wcpath-or-URL'
+  to handle the lock comment output, which can be multiple lines, in
+  the same (at least similar) way that 'svn log' treats log messages,
+  so they can be machine parseable. (fitz)
 
 * autoversioning:
 
@@ -50,6 +53,8 @@ NICE TO HAVE
 ------------
 
 * improve cmdline help messages
+
+* possibly teach mailer.py to send lock/unlock mails (fitz)
 
 * remove ra_svn shim for multiple locks/unlocks (fitz)
 
