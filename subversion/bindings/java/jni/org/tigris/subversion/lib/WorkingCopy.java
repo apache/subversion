@@ -133,6 +133,21 @@ public interface WorkingCopy {
   public void addFile(String file) throws SubversionException;
 
   /**
+   * Recursively un-mark a tree (beginning at a directory or a file
+   * PATH) for addition.
+   */
+  public void unadd(String path) throws SubversionException;
+
+  /**
+   * Un-mark a PATH for deletion.  If RECURSE is TRUE and PATH
+   * represents a directory, un-mark the entire tree under PATH for
+   * deletion.
+   */
+  public void undelete(String path, boolean recurse)
+    throws SubversionException;
+
+
+  /**
    * Remove entry NAME in PATH from revision control.  NAME must be
    * either a file or SVN_WC_ENTRY_THIS_DIR.
    *
