@@ -1024,7 +1024,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                "svn_ra_dav__get_file: checksum mismatch for '%s':\n"
                "   expected checksum:  %s\n"
                "   actual checksum:    %s\n",
-               path, expected_checksum, hex_digest);
+               path, expected_checksum->data, hex_digest);
         }
     }
 
