@@ -101,6 +101,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   apr_pool_t *p = resource->pool;
   const dav_liveprop_spec *info;
   int global_ns;
+  svn_error_t *serr;
 
   /*
   ** None of SVN provider properties are defined if the resource does not
@@ -170,7 +171,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           && resource->info->restype == DAV_SVN_RESTYPE_VCC)
         {
           svn_revnum_t revnum;
-          svn_error_t *serr;
 
           serr = svn_fs_youngest_rev(&revnum, resource->info->repos->fs, p);
           if (serr != NULL)
@@ -191,8 +191,24 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         }
       else
         {
-          /* ### need to fetch the resource's ID */
-          return DAV_PROP_INSERT_NOTSUPP;
+          svn_fs_id_t *id;
+          svn_string_t *stable_id;
+
+          serr = svn_fs_node_id(&id, resource->info->root.root,
+                                resource->info->repos_path, p);
+          if (serr != NULL)
+            {
+              /* ### what to do? */
+              value = "###error###";
+              break;
+            }
+
+          stable_id = svn_fs_unparse_id(id, p);
+          svn_string_appendcstr(stable_id, resource->info->repos_path);
+
+          value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_VERSION,
+                                    SVN_INVALID_REVNUM, stable_id->data,
+                                    1 /* add_href */, p);
         }
       break;
 
