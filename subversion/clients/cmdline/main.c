@@ -188,14 +188,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "delete", svn_cl__delete, {"del", "remove", "rm"},
     "Remove files and directories from version control.\n"
-    "usage: delete [TARGET [TARGET ... ]]\n\n"
-    "  If run on a working copy TARGET, the item is scheduled for deletion\n"
+    "usage: 1. delete PATH [PATH ... ]\n"
+    "       2. delete URL [URL ...]\n\n"
+    "  If run on a working copy PATHs, each item is scheduled for deletion\n"
     "  upon the next commit.  Files, and directories that have not been\n"
     "  committed, are immediately removed from the working copy.  The\n"
-    "  command will not remove TARGETs that are, or contain, unversioned\n"
+    "  command will not remove PATHs that are, or contain, unversioned\n"
     "  or modified items; use the --force option to override this\n"
     "  behaviour.\n\n"
-    "  If run on an URL, the item is deleted from the repository via an\n"
+    "  If run on URLs, the items are deleted from the repository via an\n"
     "  immediate commit.\n",
     {svn_cl__force_opt, 'm', 'F', 'q', svn_cl__targets_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__editor_cmd_opt, svn_cl__encoding_opt} },

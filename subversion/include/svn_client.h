@@ -534,23 +534,26 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   apr_pool_t *pool);
                   
 
-/** Delete an item from a repository or working copy.
+/** Delete items from a repository or working copy.
  *
- * If @a path is a @a url, use the authentication baton in @a ctx and 
- * @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately attempt to 
- * commit a deletion of the @a url from the repository.  If the commit 
- * succeeds, allocate (in @a pool) and populate @a *commit_info.
+ * If the paths in @a paths are URLs, use the authentication baton in
+ * @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to
+ * immediately attempt to commit a deletion of the URLs from the
+ * repository.  If the commit succeeds, allocate (in @a pool) and
+ * populate @a *commit_info.  Every path must belong to the same
+ * repository.
  *
- * Else, schedule a working copy @a path for removal from the repository.
- * @a path's parent must be under revision control. This is just a
- * *scheduling* operation.  No changes will happen to the repository until
- * a commit occurs.  This scheduling can be removed with
- * @c svn_client_revert. If @a path is a file it is immediately removed from 
- * the working copy. If @a path is a directory it will remain in the working 
- * copy but all the files, and all unversioned items, it contains will be
- * removed. If @a force is not set then this operation will fail if @a path
- * contains locally modified and/or unversioned items. If @a force is set 
- * such items will be deleted.
+ * Else, schedule the working copy paths in @a paths for removal from
+ * the repository.  Each path's parent must be under revision control.
+ * This is just a *scheduling* operation.  No changes will happen to
+ * the repository until a commit occurs.  This scheduling can be
+ * removed with @c svn_client_revert. If a path is a file it is
+ * immediately removed from the working copy. If the path is a
+ * directory it will remain in the working copy but all the files, and
+ * all unversioned items, it contains will be removed. If @a force is
+ * not set then this operation will fail if any path contains locally
+ * modified and/or unversioned items. If @a force is set such items
+ * will be deleted.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
  * this function can use to query for a commit log message when one is
@@ -558,11 +561,10 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  *
  * If @a ctx->notify_func is non-null, then for each item deleted, call
  * @a ctx->notify_func with @a ctx->notify_baton and the path of the deleted
- * item.
- */
+ * item.  */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
-                   const char *path,
+                   apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
