@@ -540,7 +540,8 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
         svn_path_remove_component(path_s);
         if (path_s->len == len)          
             /* whoa, infinite loop, get out. */
-          return err;
+          return svn_error_quick_wrap(err,
+                                      "The path was not part of a repository");
 
         svn_error_clear (err);
       }
