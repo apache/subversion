@@ -421,7 +421,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
        * overlap to the beginning of the new buffer.  */
       if (ab->sbuf_offset + ab->sbuf_len > window->sview_offset)
         {
-          apr_size_t start = window->sview_offset - ab->sbuf_offset;
+          apr_size_t start = (apr_size_t)(window->sview_offset - ab->sbuf_offset);
           memmove (ab->sbuf, old_sbuf + start, ab->sbuf_len - start);
           ab->sbuf_len -= start;
         }

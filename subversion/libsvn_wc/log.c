@@ -1090,14 +1090,17 @@ svn_wc_cleanup (svn_stringbuf_t *path,
       apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *entry;
-      svn_boolean_t is_this_dir = FALSE;
+      svn_boolean_t is_this_dir;
 
       apr_hash_this (hi, &key, &keylen, &val);
       entry = val;
 
-      if ((keylen == strlen (SVN_WC_ENTRY_THIS_DIR))
-          && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR) == 0))
-        is_this_dir = TRUE;
+#define KLEN (sizeof(SVN_WC_ENTRY_THIS_DIR) - 1)
+
+      is_this_dir = keylen == KLEN
+                    && memcmp(key, SVN_WC_ENTRY_THIS_DIR, KLEN) == 0;
+
+#undef KLEN
 
       if ((entry->kind == svn_node_dir) && (! is_this_dir))
         {

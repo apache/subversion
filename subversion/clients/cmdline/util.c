@@ -463,10 +463,11 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
       else
         {
           /* Read the entire file into memory. */
-          svn_stringbuf_ensure (new_contents, finfo_after.size + 1);
+          svn_stringbuf_ensure (new_contents,
+                                (apr_size_t)(finfo_after.size + 1));
           apr_err = apr_file_read_full (tmp_file, 
                                         new_contents->data, 
-                                        finfo_after.size,
+                                        (apr_size_t)finfo_after.size,
                                         &(new_contents->len));
           new_contents->data[new_contents->len] = 0;
           

@@ -112,8 +112,8 @@ enum svn_delta_action {
 /* A single text delta instruction.  */
 typedef struct svn_txdelta_op_t {
   enum svn_delta_action action_code;
-  apr_off_t offset;
-  apr_off_t length;
+  apr_size_t offset;
+  apr_size_t length;
 } svn_txdelta_op_t;
 
 

@@ -80,7 +80,7 @@ encode_int (char *p, apr_off_t val)
   while (--n >= 0)
     {
       cont = ((n > 0) ? 0x1 : 0x0) << 7;
-      *p++ = ((val >> (n * 7)) & 0x7f) | cont;
+      *p++ = (char)(((val >> (n * 7)) & 0x7f) | cont);
     }
 
   return p;
