@@ -140,6 +140,8 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
     {
       /* Couldn't lock */
       
+      svn_error_t *err2;
+
       /* Remove _all_ previous commit locks */
       apr_hash_index_t *hi;
       for (hi = apr_hash_first (locks); hi; hi = apr_hash_next (hi))
@@ -152,22 +154,21 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
           apr_hash_this (hi, &key, &klen, &val);
           unlock_path = svn_string_create ((char *)key, pool);
           
-          err = svn_wc__unlock (unlock_path, pool);
-          if (err) 
+          err2 = svn_wc__unlock (unlock_path, pool);
+          if (err2) 
             {
               char *message =
                 apr_psprintf (pool,
                               "commit-crawler failed to lock %s,\n
                                and also couldn't unlock previously-locked %s",
                               path->data, unlock_path->data);
-              return svn_error_quick_wrap (err, message);
+              return svn_error_quick_wrap (err2, message);
             }          
         }
             
       /* Return a wrapped error */
-      msg =
-        apr_psprintf (pool,
-                      "commit-crawler failed to lock %s", path->data);
+      msg = apr_psprintf (pool,
+                          "commit-crawler failed to lock %s", path->data);
       return svn_error_quick_wrap (err, msg);
     }
   
