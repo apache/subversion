@@ -415,7 +415,6 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_fs_root_t *rev_root;
   svn_revnum_t youngest_rev;
   apr_array_header_t *revs, *args;
   const char *path_utf8;
@@ -435,9 +434,8 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
   svn_fs_youngest_rev (&youngest_rev, fs, pool);
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, path_utf8,
-                                     opt_state->follow_copies, pool));
+  SVN_ERR (svn_repos_revisions_changed (&revs, fs, path_utf8, youngest_rev, 0,
+                                        opt_state->follow_copies, pool));
   for (i = 0; i < revs->nelts; i++)
     {
       svn_revnum_t this_rev = ((svn_revnum_t *)revs->elts)[i];

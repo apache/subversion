@@ -140,6 +140,9 @@ typedef struct
      is always NULL for kinds other than "file".  */
   const char *edit_key;
 
+  /* path at which this node first came into existence.  */
+  const char *created_path;
+
 } svn_fs__node_revision_t;
 
 
@@ -229,7 +232,7 @@ typedef struct
   /* Path of copy source. */
   const char *src_path;
 
-  /* Revision of copy source. */
+  /* Transaction id of copy source. */
   const char *src_txn_id;
 
   /* Node-revision of copy destination. */

@@ -439,6 +439,21 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
                               const char *path,
                               apr_pool_t *pool);
 
+
+/** Allocate aned return and array @a revs of revisions (type @c
+ * svn_revnum_t) in which @a path in @a fs changed, bounded by the
+ * revisions @a start and @a end.  Only cross filesystem copy history
+ * if @a cross_copies is @c TRUE.  And do all of this in @a pool.
+ */
+svn_error_t *
+svn_repos_revisions_changed (apr_array_header_t **revs,
+                             svn_fs_t *fs,
+                             const char *path,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             svn_boolean_t cross_copies,
+                             apr_pool_t *pool);
+
 /* ### other queries we can do someday --
 
      * fetch the last revision created by <user>

@@ -76,6 +76,9 @@ struct dag_node_t
      `get_node_revision' and `set_node_revision', which take care of
      things for you.  */
   svn_fs__node_revision_t *node_revision;
+
+  /* the path at which this node was created. */
+  const char *created_path;
 };
 
 
@@ -105,6 +108,13 @@ const svn_fs_id_t *
 svn_fs__dag_get_id (dag_node_t *node)
 {
   return node->id;
+}
+
+
+const char *
+svn_fs__dag_get_created_path (dag_node_t *node)
+{
+  return node->created_path;
 }
 
 
@@ -140,7 +150,8 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
     nr->data_key = apr_pstrdup (pool, noderev->data_key);
   if (noderev->edit_key)
     nr->edit_key = apr_pstrdup (pool, noderev->edit_key);
-
+  if (noderev->created_path)
+    nr->created_path = apr_pstrdup (pool, noderev->created_path);
   return nr;
 }
 
@@ -254,12 +265,13 @@ svn_fs__dag_get_node (dag_node_t **node,
   new_node->id = svn_fs__id_copy (id, trail->pool); 
   new_node->pool = trail->pool;
 
-  /* Grab the contents so we can inspect the node's kind. */
+  /* Grab the contents so we can inspect the node's kind and created path. */
   SVN_ERR (get_node_revision (&noderev, new_node, trail));
 
-  /* Initialize the KIND attribute */
+  /* Initialize the KIND and CREATED_PATH attributes */
   new_node->kind = noderev->kind;
-  
+  new_node->created_path = apr_pstrdup (trail->pool, noderev->created_path);
+
   /* Return a fresh new node */
   *node = new_node;
   return SVN_NO_ERROR;
@@ -271,18 +283,11 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
                           dag_node_t *node,
                           trail_t *trail)
 {
-  svn_fs__transaction_t *txn;
-
-  /* Get the txn ID from the node revision ID. */
-  const char *txn_id = svn_fs__id_txn_id (svn_fs__dag_get_id (node));
-  
-  /* Use the txn ID to look up the transaction.  */
-  SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node), txn_id, trail));
-
-  /* If the transaction has been committed, we can return the revision
-     number, else we return the invalid revision number. */
-  *rev = txn->revision;
-  return SVN_NO_ERROR;
+  /* Use the txn ID from the NODE's id to look up the transaction and
+     get its revision number.  */
+  return svn_fs__txn_get_revision 
+    (rev, svn_fs__dag_get_fs (node), 
+     svn_fs__id_txn_id (svn_fs__dag_get_id (node)), trail);
 }
 
 
@@ -365,6 +370,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   /* Create empty root directory with node revision 0.0.0. */
   memset (&noderev, 0, sizeof (noderev));
   noderev.kind = svn_node_dir;
+  noderev.created_path = "/";
   SVN_ERR (svn_fs__bdb_put_node_revision (fs, root_id, &noderev, trail));
 
   /* Create a new transaction (better have an id of "0") */
@@ -582,6 +588,7 @@ set_entry (dag_node_t *parent,
 static svn_error_t *
 make_entry (dag_node_t **child_p,
             dag_node_t *parent,
+            const char *parent_path,
             const char *name,
             svn_boolean_t is_dir,
             const char *txn_id,
@@ -618,6 +625,7 @@ make_entry (dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
+  new_noderev.created_path = svn_path_join (parent_path, name, trail->pool);
   SVN_ERR (svn_fs__create_node 
            (&new_node_id, svn_fs__dag_get_fs (parent),
             &new_noderev, svn_fs__id_copy_id (svn_fs__dag_get_id (parent)),
@@ -810,6 +818,7 @@ svn_fs__dag_txn_base_root (dag_node_t **node_p,
 svn_error_t *
 svn_fs__dag_clone_child (dag_node_t **child_p,
                          dag_node_t *parent,
+                         const char *parent_path,
                          const char *name,
                          const char *copy_id,
                          const char *txn_id,
@@ -852,6 +861,7 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
       noderev->predecessor_id = svn_fs__id_copy (cur_entry->id, trail->pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
+      noderev->created_path = svn_path_join (parent_path, name, trail->pool);
       SVN_ERR (svn_fs__create_successor (&new_node_id, fs, cur_entry->id, 
                                          noderev, copy_id, txn_id, trail));
       
@@ -1143,24 +1153,26 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
 svn_error_t *
 svn_fs__dag_make_file (dag_node_t **child_p,
                        dag_node_t *parent,
+                       const char *parent_path,
                        const char *name,
                        const char *txn_id, 
                        trail_t *trail)
 {
   /* Call our little helper function */
-  return make_entry (child_p, parent, name, FALSE, txn_id, trail);
+  return make_entry (child_p, parent, parent_path, name, FALSE, txn_id, trail);
 }
 
 
 svn_error_t *
 svn_fs__dag_make_dir (dag_node_t **child_p,
                       dag_node_t *parent,
+                      const char *parent_path,
                       const char *name,
                       const char *txn_id, 
                       trail_t *trail)
 {
   /* Call our little helper function */
-  return make_entry (child_p, parent, name, TRUE, txn_id, trail);
+  return make_entry (child_p, parent, parent_path, name, TRUE, txn_id, trail);
 }
 
 
@@ -1425,8 +1437,9 @@ svn_fs__dag_dup (dag_node_t *node,
 
   new_node->fs = node->fs;
   new_node->pool = trail->pool;
-  new_node->id = svn_fs__id_copy (node->id, node->pool);
+  new_node->id = svn_fs__id_copy (node->id, trail->pool);
   new_node->kind = node->kind;
+  new_node->created_path = apr_pstrdup (trail->pool, node->created_path);
 
   /* Leave new_node->node_revision zero for now, so it'll get read in.
      We can get fancy and duplicate node's cache later.  */
@@ -1494,6 +1507,9 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev->predecessor_id = svn_fs__id_copy (src_id, trail->pool);
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
+      to_noderev->created_path = 
+        svn_path_join (svn_fs__dag_get_created_path (to_node), entry, 
+                       trail->pool);
       SVN_ERR (svn_fs__create_successor (&id, fs, src_id, to_noderev,
                                          copy_id, txn_id, trail));
 
@@ -1555,14 +1571,11 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                          id_copy_id, trail));
           if (svn_fs__id_eq (copy->dst_noderev_id, id))
             {
-              /* We need to translate the COPY's transaction ID into a
-                 revision.  So we lookup the transaction, and pull the
-                 revision from it.  It's really not that complicated.  */
-              svn_fs__transaction_t *txn;
-              SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node),
-                                            copy->src_txn_id, trail));
-              *rev_p = txn->revision;
+
               *path_p = copy->src_path;
+              SVN_ERR (svn_fs__txn_get_revision (rev_p, 
+                                                 svn_fs__dag_get_fs (node),
+                                                 copy->src_txn_id, trail));
             }
         }
     }

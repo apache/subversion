@@ -101,6 +101,11 @@ svn_error_t *svn_fs__dag_get_revision (svn_revnum_t *rev,
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 
 
+/* Return the created path of NODE.  The value returned is shared
+   with NODE, and will be deallocated when NODE is.  */
+const char *svn_fs__dag_get_created_path (dag_node_t *node);
+
+
 /* Set *ID_P to the node revision ID of NODE's immediate predecessor,
    or NULL if NODE has no predecessor, as part of TRAIL.  The returned
    ID will be allocated in TRAIL->pool.  */
@@ -276,15 +281,21 @@ svn_error_t *svn_fs__dag_set_entry (dag_node_t *node,
    unless NAME in PARENT already refers to a mutable node.  In either
    case, set *CHILD_P to a reference to the new node, allocated in
    TRAIL->pool.  PARENT must be mutable.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.  
+   component; it cannot be a slash-separated directory path.
+   PARENT_PATH must be the canonicalized absolute path of the parent
+   directory.
 
    COPY_ID, if non-NULL, is a key into the `copies' table, and
    indicates that this new node is being created as the result of a
    copy operation, and specifically which operation that was.  
 
+   PATH is the canonicalized absolute path at which this node is being
+   created.
+
    TXN_ID is the Subversion transaction under which this occurs.  */
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       dag_node_t *parent,
+                                      const char *parent_path,
                                       const char *name,
                                       const char *copy_id,
                                       const char *txn_id, 
@@ -351,12 +362,14 @@ svn_error_t *svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
    TRAIL.  Set *CHILD_P to a reference to the new node, allocated in
    TRAIL->pool.  The new directory has no contents, and no properties.
    PARENT must be mutable.  NAME must be a single path component; it
-   cannot be a slash-separated directory path.  PARENT must not
-   currently have an entry named NAME.  Do any temporary allocation in
-   TRAIL->pool.  TXN_ID is the Subversion transaction under which this
-   occurs.  */
+   cannot be a slash-separated directory path.  PARENT_PATH must be
+   the canonicalized absolute path of the parent directory.  PARENT
+   must not currently have an entry named NAME.  Do any temporary
+   allocation in TRAIL->pool.  TXN_ID is the Subversion transaction
+   under which this occurs.  */
 svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
                                    dag_node_t *parent,
+                                   const char *parent_path,
                                    const char *name,
                                    const char *txn_id,
                                    trail_t *trail);
@@ -427,9 +440,12 @@ svn_fs__dag_file_checksum (unsigned char digest[],
    TRAIL->pool.  The new file's contents are the empty string, and it
    has no properties.  PARENT must be mutable.  NAME must be a single
    path component; it cannot be a slash-separated directory path.
-   TXN_ID is the Subversion transaction under which this occurs.  */
+   PARENT_PATH must be the canonicalized absolute path of the parent
+   directory.  TXN_ID is the Subversion transaction under which this
+   occurs.  */
 svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
                                     dag_node_t *parent,
+                                    const char *parent_path,
                                     const char *name,
                                     const char *txn_id,
                                     trail_t *trail);
