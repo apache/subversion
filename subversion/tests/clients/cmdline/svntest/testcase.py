@@ -23,6 +23,12 @@ import svntest
 
 __all__ = ['TestCase', 'XFail', 'Skip']
 
+
+class SVNTestStatusCodeError(Exception):
+  'Test driver returned a status code.'
+  pass
+
+
 class _Predicate:
   """A general-purpose predicate that encapsulates a test case (function),
   a condition for its execution and a set of display properties for test
@@ -92,13 +98,15 @@ class TestCase:
       print self.pred.skip_text(),
     else:
       try:
-        # FIXME: Remove this return code check after all tests
-        # have # been converted to throw exceptions instead of
-        # returning error codes.
         rc = apply(self.pred.func, args)
         if rc is not None:
           error = rc
-          print 'WARNING: Test driver returned a status code'
+          raise SVNTestStatusCodeError
+      except SVNTestStatusCodeError, ex:
+        print "STYLE ERROR in",
+        self._print_name()
+        print ex.__doc__
+        sys.exit(255)
       except svntest.Failure, ex:
         error = 1
         # We captured Failure and its subclasses. We don't want to print
