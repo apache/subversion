@@ -762,7 +762,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
-static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
+static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
 {
   /* We're being very strict with the validity of XML elements here. If
      something exists that we don't know about, then we might not update

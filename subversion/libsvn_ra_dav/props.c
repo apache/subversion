@@ -169,7 +169,7 @@ static void process_results(void *userdata, const char *uri,
   (void) ne_propset_iterate(rset, add_to_hash, r);
 }
 
-static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
+static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
 {
   switch (parent)
     {
