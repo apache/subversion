@@ -140,12 +140,11 @@ do_lock (svn_string_t *path, apr_hash_t *locks, apr_pool_t *pool)
     {
       /* Couldn't lock */
       
-      svn_error_t *err2;
-
       /* Remove _all_ previous commit locks */
       apr_hash_index_t *hi;
       for (hi = apr_hash_first (locks); hi; hi = apr_hash_next (hi))
         {
+          svn_error_t *err2;
           const void *key;
           void *val;
           apr_size_t klen;
