@@ -290,6 +290,9 @@ struct svn_fs_t
   /* The filesystem configuration */
   apr_hash_t *config;
 
+  /* An access context indicating who's using the fs */
+  svn_fs_access_t *access_ctx;
+
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
   void *fsap_data;
@@ -351,6 +354,17 @@ struct svn_fs_id_t
   /* FSAP-specific vtable and private data */
   id_vtable_t *vtable;
   void *fsap_data;
+};
+
+
+struct svn_fs_access_t
+{
+  /* An authenticated username using the fs */
+  const char *username;
+
+  /* A collection of lock-tokens supplied by the fs caller.
+     Hash maps (const char *) path --> (const svn_lock_token_t *) token. */
+  apr_hash_t *lock_tokens;
 };
 
 

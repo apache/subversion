@@ -326,7 +326,9 @@ svn_error_t *svn_fs_access_get_username (const char **username,
 
 /** Push a lock-token @a token into the context @a access_ctx.  The
  * context remembers all tokens it receives, and makes them available
- * to fs functions. */
+ * to fs functions.  The token is not duplicated into @a access_ctx's
+ * pool;  make sure the token's lifetime is at least as long as @a
+ * access_ctx. */
 svn_error_t *svn_fs_access_add_lock_token (svn_fs_access_t *access_ctx,
                                            const svn_lock_token_t *token);
 
