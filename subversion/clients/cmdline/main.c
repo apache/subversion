@@ -412,15 +412,21 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
   if (help)
     {
       const apr_getopt_option_t *option;
+      svn_boolean_t have_options = FALSE;
 
-      fprintf (stream, ": %s\n", canonical_cmd->help);
-      fprintf (stream, "Valid options:\n");
+      fprintf (stream, ": %s", canonical_cmd->help);
 
       /* Loop over all valid option codes attached to the subcommand */
       for (i = 0; i < SVN_CL__MAX_OPTS; i++)
-        {          
+        {
           if (canonical_cmd->valid_options[i])
             {
+              if (have_options == FALSE)
+                {
+                  fprintf (stream, "\nValid options:\n");
+                  have_options = TRUE;
+                }
+
               /* convert each option code into an option */
               option = 
                 svn_cl__get_option_from_enum (canonical_cmd->valid_options[i],
@@ -434,8 +440,10 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
                   fprintf (stream, "  %s\n", optstr);
                 }
             }
-        }    
-      fprintf (stream, "\n");  
+        }
+
+      if (have_options)
+        fprintf (stream, "\n");
     }
 }
 
