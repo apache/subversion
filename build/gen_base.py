@@ -210,6 +210,12 @@ class _TargetScript(_Target):
   default_install = 'bin'
   # no default_sources
 
+  def find_sources(self, patterns):
+    # Script "sources" are actually final targets, which means they may be
+    # generated, which means they are not available the time this program
+    # is run. Therefore, we have no work to do in find_sources().
+    pass
+
 class _TargetLib(_Target):
   default_install = 'lib'
   default_sources = '*.c'
