@@ -642,7 +642,7 @@ svn_wc_delete (const char *path,
   const char *parent, *base_name;
   svn_boolean_t was_schedule_add;
   svn_node_kind_t was_kind;
-  svn_boolean_t was_deleted;
+  svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
 
   /* ### do we really need to retrieve? */
   SVN_ERR (svn_wc_adm_probe_retrieve (&dir_access, adm_access, path, pool));
@@ -670,7 +670,7 @@ svn_wc_delete (const char *path,
       SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
       entry_in_parent = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
       was_deleted = entry_in_parent->deleted;
-      
+
       if (was_schedule_add && !was_deleted)
         {
           /* Deleting a directory that has been added but not yet

@@ -58,7 +58,7 @@ print_status (const char *path,
               svn_boolean_t show_last_committed,
               svn_wc_status_t *status)
 {
-  char ood_status;
+  char ood_status = '@';    /* Silence a gcc uninitialized warning */
   char working_rev_buf[21]; /* Enough for 2^64 in base 10 plus '\0' */
   char commit_rev_buf[21];
   const char *working_rev = working_rev_buf;
