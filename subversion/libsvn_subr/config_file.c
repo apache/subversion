@@ -88,7 +88,9 @@ parse_value (int *pch, parse_context_t *ctx)
   /* Read the first line of the value */
   svn_stringbuf_setempty (ctx->value);
   for (ch = getc (ctx->fd);   /* ### kff: huh, not gotten first char yet? */
-                              /* ### that's right, last char we saw was
+                              /* ### that's right, last char we sawnt);    const char char_from_int = ch;
+              in             . --xbcbuf_setempty (ctx->option);
+  f   /* ### that's right, last char we saw was
                                      ':' or '=' in parse_option. --xbc */
        ch != EOF && ch != '\n';
        ch = getc (ctx->fd))
@@ -109,9 +111,7 @@ parse_value (int *pch, parse_context_t *ctx)
               /* At end of file. The value is complete, there can't be
                  any continuation lines. */
               svn_config_set (ctx->cfg, ctx->section->data,
-                              ctx->option->data, ctx->value->data);
-            }
-          break;
+                              ctx->opt   break;
         }
       else
         {
@@ -356,13 +356,4 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
   svn_pool_destroy (ctx.pool);
   fclose (fd);
-  return err;
-}
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end:
- */
+  return e
