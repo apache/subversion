@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-02-14 18:01:48 $
+              Last updated:  $Date: 2001-03-06 00:30:53 $
 
 
 TABLE OF CONTENTS
@@ -18,10 +18,11 @@ TABLE OF CONTENTS
   * Building on Win32
   * Coding style
   * Using page breaks
+  * Other conventions
   * Writing log entries
   * Generating changelogs
-  * Other conventions
   * Automated tests
+  * Writing test cases before code
   * APR status codes
 
 
@@ -210,6 +211,42 @@ C-x C-p C-h in Emacs sometime.
 
 
 
+Other Conventions:
+==================
+
+In addition to the GNU standards, Subversion uses these conventions:
+
+   * Use only spaces for indenting code, never tabs.  Tab display
+     width is not standardized enough, and anyway it's easier to
+     manually adjust indentation that uses spaces.
+
+   * Stay within 80 columns, the width of a minimal standard display
+     window.
+
+   * Signify internal variables by two underscores after the prefix.
+     That is, when a symbol must (for technical reasons) reside in the
+     global namespace despite not being part of a published interface,
+     then use two underscores following the module prefix.  For
+     example:
+
+        svn_fs_get_rev_prop ()       /* Part of published API. */
+        svn_fs__parse_props ()       /* For internal use only. */
+
+   * Put this comment at the bottom of new source files to make Emacs
+     automatically load svn-dev.el:
+
+        /* 
+         * local variables:
+         * eval: (load-file "../svn-dev.el")
+         * end:
+         */
+
+     (This assumes the C file is located in a subdirectory of
+     subversion/subversion/, which most are.)
+
+
+
+
 Writing Log Entries
 ===================
 
@@ -328,47 +365,50 @@ Run "cvs2cl.pl --help" for more information.
 
 
 
-Other Conventions:
-==================
-
-In addition to the GNU standards, Subversion uses these conventions:
-
-   * Use only spaces for indenting code, never tabs.  Tab display
-     width is not standardized enough, and anyway it's easier to
-     manually adjust indentation that uses spaces.
-
-   * Stay within 80 columns, the width of a minimal standard display
-     window.
-
-   * Signify internal variables by two underscores after the prefix.
-     That is, when a symbol must (for technical reasons) reside in the
-     global namespace despite not being part of a published interface,
-     then use two underscores following the module prefix.  For
-     example:
-
-        svn_fs_get_rev_prop ()       /* Part of published API. */
-        svn_fs__parse_props ()       /* For internal use only. */
-
-   * Put this comment at the bottom of new source files to make Emacs
-     automatically load svn-dev.el:
-
-        /* 
-         * local variables:
-         * eval: (load-file "../svn-dev.el")
-         * end:
-         */
-
-     (This assumes the C file is located in a subdirectory of
-     subversion/subversion/, which most are.)
-
-
-
-
 Automated Tests:
 ================
 
 For a description of how to use and add tests to Subversion's
 automated test framework, please read subversion/tests/README.
+
+
+
+Writing test cases before code:
+===============================
+
+From: Karl Fogel <kfogel@collab.net>
+Subject: writing test cases
+To: dev@subversion.tigris.org
+Date: Mon, 5 Mar 2001 15:58:46 -0600
+
+Many of us implementing the filesystem interface have now gotten into
+the habit of writing the test cases (see fs-test.c) *before* writing
+the actual code.  It's really helping us out a lot -- for one thing,
+it forces one to define the task precisely in advance, and also it
+speedily reveals the bugs in one's first try (and second, and
+third...).
+
+I'd like to recommend this practice to everyone.  If you're
+implementing an interface, or adding an entirely new feature, or even
+just fixing a bug, a test for it is a good idea.  And if you're going
+to write the test anyway, you might as well write it first. :-)
+
+Yoshiki Hayashi's been sending test cases with all his patches lately,
+which is what inspired me to write this mail to encourage everyone to
+do the same.  Having those test cases makes patches easier to examine,
+because they show the patch's purpose very clearly.  It's like having
+a second log message, one whose accuracy is verified at run-time.
+
+That said, I don't think we want a rigid policy about this, at least
+not yet.  If you encounter a bug somewhere in the code, but you only
+have time to write a patch with no test case, that's okay -- having
+the patch is still useful; someone else can write the test case.
+
+As Subversion gets more complex, though, the automated test suite gets
+more crucial, so let's all get in the habit of using it early.
+
+-K
+
 
 
 APR Status Codes:
