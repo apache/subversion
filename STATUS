@@ -73,4 +73,4 @@ Candidate changes:
     "apr_int64_t". The python bindings will not build without it.
     Votes:
       +0: breser (I haven't tested python bindings but it looks and builds ok)
-
+          dlr
