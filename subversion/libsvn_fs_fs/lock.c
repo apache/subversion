@@ -624,29 +624,20 @@ get_locks_callback (void *baton,
 /* The main routine for lock enforcement, used throughout libsvn_fs_fs. */
 svn_error_t *
 svn_fs_fs__allow_locked_operation (const char *path,
-                                   svn_node_kind_t kind,
                                    svn_fs_t *fs,
                                    svn_boolean_t recurse,
                                    apr_pool_t *pool)
 {
   path = svn_fs_fs__canonicalize_abspath (path, pool);
-  if (kind == svn_node_dir)
+  if (recurse)
     {
-      if (recurse)
-        {
-          /* Discover all locks at or below the path. */
-          SVN_ERR (svn_fs_fs__get_locks (fs, path, get_locks_callback,
-                                         fs, pool));
-        }
-      /* If this function is called on a directory non-recursively,
-         then just return -- directory locking isn't supported, so a
-         directory can't be locked. */
+      /* Discover all locks at or below the path. */
+      SVN_ERR (svn_fs_fs__get_locks (fs, path, get_locks_callback, fs, pool));
     }
   else 
     {
-      svn_lock_t *lock;
-
       /* Discover and verify any lock attached to the path. */
+      svn_lock_t *lock;
       SVN_ERR (get_lock_helper (fs, &lock, path, pool));
       if (lock)
         SVN_ERR (verify_lock (fs, lock, pool));

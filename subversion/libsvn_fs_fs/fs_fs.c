@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_md5.h"
+#include "svn_sorts.h"
 #include "../libsvn_delta/delta.h"
 
 #include "fs.h"
@@ -3644,6 +3645,85 @@ svn_fs_fs__get_write_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+
+/* Verify that there registed with FS all the locks necessary to
+   permit all the changes associate with TXN_NAME. */
+static svn_error_t *
+verify_locks (svn_fs_t *fs,
+              const char *txn_name,
+              apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *changes;
+  apr_hash_index_t *hi;
+  apr_array_header_t *changed_paths;
+  svn_stringbuf_t *last_recursed = NULL;
+  int i;
+
+  /* Fetch the changes for this transaction. */
+  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changes, fs, txn_name, NULL, pool));
+
+  /* Make an array of the changed paths, and sort them depth-first-ily.  */
+  changed_paths = apr_array_make (pool, apr_hash_count (changes) + 1, 
+                                  sizeof (const char *));
+  for (hi = apr_hash_first (pool, changes); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_hash_this (hi, &key, NULL, NULL);
+      APR_ARRAY_PUSH (changed_paths, const char *) = key;
+    }
+  qsort (changed_paths->elts, changed_paths->nelts,
+         changed_paths->elt_size, svn_sort_compare_paths);
+  
+  /* Now, traverse the array of changed paths, verify locks.  Note
+     that if we need to do a recursive verification a path, we'll skip
+     over children of that path when we get to them. */
+  for (i = 0; i < changed_paths->nelts; i++)
+    {
+      const char *path;
+      svn_fs_path_change_t *change;
+      svn_boolean_t recurse = TRUE;
+
+      svn_pool_clear (subpool);
+      path = APR_ARRAY_IDX (changed_paths, i, const char *);
+
+      /* If this path has already been verified as part of a recursive
+         check of one of its parents, no need to do it again.  */
+      if (last_recursed 
+          && svn_path_is_child (last_recursed->data, path, subpool))
+        continue;
+
+      /* Fetch the change associated with our path.  */
+      change = apr_hash_get (changes, path, APR_HASH_KEY_STRING);
+
+      /* What does it mean to succeed at lock verification for a given
+         path?  For an existing file or directory getting modified
+         (text, props), it means we hold the lock on the file or
+         directory.  For paths being added or removed, we need to hold
+         the locks for that path and any children of that path.
+
+         ### WHEW!  We have no reliable way to determine the node kind
+         of deleted items, but fortunately we are going to do a
+         recursive check on deleted paths regardless of their kind.  */
+      if (change->change_kind == svn_fs_path_change_modify)
+        recurse = FALSE;
+      SVN_ERR (svn_fs_fs__allow_locked_operation (path, fs, recurse, subpool));
+
+      /* If we just did a recursive check, remember the path we
+         checked (so children can be skipped).  */
+      if (recurse)
+        {
+          if (! last_recursed)
+            last_recursed = svn_stringbuf_create (path, pool);
+          else
+            svn_stringbuf_set (last_recursed, path);
+        }
+    }
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                    svn_fs_t *fs,
@@ -3660,8 +3740,6 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   apr_off_t changed_path_offset, offset;
   char *buf;
   apr_hash_t *txnprops;
-  apr_hash_t *changed_paths;
-  apr_hash_index_t *hi;
 
   /* First grab a write lock. */
   SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
@@ -3682,39 +3760,7 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
      previous svn_fs.h functions and svn_fs_commit_txn(), so we need
      to re-examine every changed-path in the txn and re-verify all
      discovered locks. */
-  SVN_ERR (svn_fs_fs__txn_changes_fetch (&changed_paths, fs, txn->id, 
-                                         NULL, pool));
-
-  for (hi = apr_hash_first (pool, changed_paths);
-       hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      const char *path;
-      dag_node_t *node;
-      svn_fs_path_change_t *change;
-      svn_node_kind_t kind;
-      
-      apr_hash_this (hi, &key, NULL, &val);
-      path = key;
-      change = val;
-      
-      SVN_ERR (svn_fs_fs__dag_get_node
-               (&node, fs, change->node_rev_id, pool));
-      kind = svn_fs_fs__dag_node_kind (node);
-      /* always do a non-recursive lock check on a file. */         
-      if (kind == svn_node_file)
-        SVN_ERR (svn_fs_fs__allow_locked_operation (path, kind, fs, 0, pool));
-      /* if a directory wasn't added or deleted, then it must be
-         listed because of a propchange only;  do a non-recursive
-         lock-check.   otherwise, added/deleted dirs must be checked
-         recursively. */
-      else
-        SVN_ERR (svn_fs_fs__allow_locked_operation 
-                 (path, kind, fs,                 
-                  (change->change_kind == svn_fs_path_change_modify) ? 0 : 1,
-                  pool));
-    }
+  SVN_ERR (verify_locks (fs, txn->id, subpool));
 
   /* Get the next node_id and copy_id to use. */
   SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, fs,

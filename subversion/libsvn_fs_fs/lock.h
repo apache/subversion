@@ -65,7 +65,7 @@ svn_error_t *svn_fs_fs__get_locks (svn_fs_t *fs,
 
 
 /* Examine PATH for existing locks, and check whether they can be
-   used.  Use pool for temporary allocations.
+   used.  Use POOL for temporary allocations.
 
    If no locks are present, return SVN_NO_ERROR.
 
@@ -86,7 +86,6 @@ svn_error_t *svn_fs_fs__get_locks (svn_fs_t *fs,
    If all three conditions are met, return SVN_NO_ERROR.
 */
 svn_error_t *svn_fs_fs__allow_locked_operation (const char *path,
-                                                svn_node_kind_t kind,
                                                 svn_fs_t *fs,
                                                 svn_boolean_t recurse,
                                                 apr_pool_t *pool);
