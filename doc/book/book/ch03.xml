@@ -925,7 +925,7 @@ C  ./bar.c
 
         <listitem>
           <para>For every conflicted file, Subversion places three
-            extra files in your working copy:
+            extra files in your working copy:</para>
 
             <!-- ###TODO make this a varlist -->
             <!-- ###TODO sidebar about svn not screwing up your file. -->
@@ -1701,7 +1701,7 @@ Committed revision 1123.
     <para>Now we've covered all of the Subversion client commands with
       the exception of those dealing with branching and merging (see
       <xref linkend="svn-ch-4"/>) and properties (see <xref
-      linkend="svn-ch-6-sect-2">).  However, you may want to take a
+      linkend="svn-ch-6-sect-2"/>).  However, you may want to take a
       moment to skim through <xref linkend="svn-ch-8"/> to get an idea
       of the many different ways that you can use the commands that we
       covered above.</para>
