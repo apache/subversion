@@ -591,6 +591,10 @@ svn_path_uri_encode (const svn_string_t *path, apr_pool_t *pool)
   if (i - copied)
     svn_stringbuf_appendbytes (retstr, path->data + copied, i - copied);
 
+  /* Null-terminate this bad-boy. */
+  svn_stringbuf_ensure (retstr, retstr->len + 1);
+  retstr->data[retstr->len] = 0;
+
   return retstr;
 }
 
