@@ -101,12 +101,7 @@ class Generator(gen_win.WinGeneratorBase):
     self.targets['depsubr'] = gen_base.TargetUtility('depsubr', 'build/win32', None, None, self.cfg, None)
     self.targets['depdelta'] = gen_base.TargetUtility('depdelta', 'build/win32', None, None, self.cfg, None)
 
-    bar="###############################################################################\n\n"
-
-    fout = StringIO()
-    fout.write("Microsoft Developer Studio Workspace File, Format Version 6.00\n")
-    fout.write("# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!\n\n")
-    fout.write(bar)
+    targets = [ ]
 
     for name, target in self.targets.items():
       # This isn't working yet
@@ -114,15 +109,13 @@ class Generator(gen_win.WinGeneratorBase):
         continue
 
       # These aren't working yet
-      if isinstance(target, gen_base.TargetScript):
-        continue
-
-      # These aren't working yet
-      if isinstance(target, gen_base.TargetSWIG):
+      if isinstance(target, gen_base.TargetScript) \
+         or isinstance(target, gen_base.TargetSWIG):
         continue
 
       if isinstance(target, gen_base.TargetProject):
-        fname = self.find_win_project(os.path.join(target.path, name), ['.dsp'])
+        fname = self.find_win_project(os.path.join(target.path, name),
+                                      ['.dsp'])
       else:
         fname = os.path.join(self.projfilesdir,
                              "%s_msvc.dsp" % (string.replace(name, '-', '_')))
@@ -132,15 +125,6 @@ class Generator(gen_win.WinGeneratorBase):
       if '-' in fname:
         fname = '"%s"' % fname
 
-      fout.write("Project: \"%s\"=%s - Package Owner=<4>\n\n"
-                 % (string.replace(name, '-', ''),
-                    string.replace(fname, os.sep, '\\')))
-      fout.write("Package=<5>\n")
-      fout.write("{{{\n")
-      fout.write("}}}\n\n")
-      fout.write("Package=<4>\n")
-      fout.write("{{{\n")
-    
       # For MSVC we need to hack around mod_dav_svn &
       # libsvn_ra because dependencies implies linking
       # and there is no way around that
@@ -162,26 +146,27 @@ class Generator(gen_win.WinGeneratorBase):
       else:
         assert 0
 
+      dep_names = [ ]
       for dep in depends:
-        fout.write("    Begin Project Dependency\n")
-        fout.write("    Project_Dep_Name %s\n"
-                   % string.replace(dep.name, '-', ''))
-        fout.write("    End Project Dependency\n")
+        dep_names.append(string.replace(dep.name, '-', ''))
 
-      fout.write("}}}\n\n")
-      fout.write(bar)
+      targets.append(_item(name=string.replace(name, '-', ''),
+                           dsp=string.replace(fname, os.sep, '\\'),
+                           depends=dep_names))
 
-    fout.write("Global:\n\n")
-    fout.write("Package=<5>\n")
-    fout.write("{{{\n")
-    fout.write("}}}\n\n")
-    fout.write("Package=<3>\n")
-    fout.write("{{{\n")
-    fout.write("}}}\n\n")
-    fout.write(bar)
+    data = {
+      'targets' : targets,
+      }
+
+    fout = StringIO()
+
+    template = ezt.Template(compress_whitespace = 0)
+    template.parse_file(os.path.join('build', 'generator', 'msvc_dsw.ezt'))
+    template.generate(fout, data)
 
     if self.write_file_if_changed(oname, fout.getvalue()):
       print "Wrote %s\n" % oname
+
 
 class _item:
   def __init__(self, **kw):
