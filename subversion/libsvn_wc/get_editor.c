@@ -653,13 +653,13 @@ add_or_replace_file (svn_string_t *name,
                               parent_dir_baton->pool,
                               "trying to add versioned file "
                               "%s in directory %s",
-                              name, parent_dir_baton->path);
+                              name->data, parent_dir_baton->path->data);
   else if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL,
                               parent_dir_baton->pool,
                               "trying to replace non-versioned file "
                               "%s in directory %s",
-                              name, parent_dir_baton->path);
+                              name->data, parent_dir_baton->path->data);
 
         
   /* Make sure we've got a working copy to put the file in. */
