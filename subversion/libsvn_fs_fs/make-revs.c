@@ -38,6 +38,7 @@ struct entry
 
 struct parse_baton
 {
+  svn_revnum_t txn_rev;
   apr_array_header_t *roots;
   struct entry *current_node;
   svn_revnum_t current_rev;
@@ -334,9 +335,9 @@ write_hash_rep(struct parse_baton *pb, apr_hash_t *hash,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-write_directory_rep(struct parse_baton *pb, struct entry *entry,
-                    apr_pool_t *pool)
+/* Convert a directory's children map into a dumpable hash map. */
+static apr_hash_t *
+children_to_dirmap(apr_hash_t *children, apr_pool_t *pool)
 {
   apr_hash_t *tmpmap;
   apr_hash_index_t *hi;
@@ -345,8 +346,7 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
   struct entry *child;
   const char *rep;
 
-  /* Convert the children hash to something we can dump. */
-  tmpmap = apr_hash_copy(pool, entry->children);
+  tmpmap = apr_hash_copy(pool, children);
   for (hi = apr_hash_first(pool, tmpmap); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &key, NULL, &val);
@@ -357,8 +357,7 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
       apr_hash_set(tmpmap, key, APR_HASH_KEY_STRING,
                    svn_string_create(rep, pool));
     }
-
-  return write_hash_rep(pb, tmpmap, &entry->text_rep, pool);
+  return tmpmap;
 }
 
 static svn_error_t *
@@ -374,7 +373,7 @@ write_props(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
 }
 
 static svn_error_t *
-write_field(struct parse_baton *pb, apr_pool_t *pool, const char *name,
+write_field(svn_stream_t *out, apr_pool_t *pool, const char *name,
             const char *fmt, ...)
 {
   const char *val;
@@ -385,7 +384,7 @@ write_field(struct parse_baton *pb, apr_pool_t *pool, const char *name,
   val = apr_pvsprintf(pool, fmt, ap);
   va_end(ap);
 
-  return svn_stream_printf(pb->rev_stream, pool, "%s: %s\n", name, val);
+  return svn_stream_printf(out, pool, "%s: %s\n", name, val);
 }
 
 static svn_error_t *
@@ -397,24 +396,25 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
   entry->node_off = 0;
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &entry->node_off, pool));
 
-  SVN_ERR(write_field(pb, pool, "id", "%s", node_rev_id(entry, pool)));
-  SVN_ERR(write_field(pb, pool, "type", entry->children ? "dir" : "file"));
+  SVN_ERR(write_field(out, pool, "id", "%s", node_rev_id(entry, pool)));
+  SVN_ERR(write_field(out, pool, "type", entry->children ? "dir" : "file"));
   if (entry->pred)
-    SVN_ERR(write_field(pb, pool, "pred", "%s",
+    SVN_ERR(write_field(out, pool, "pred", "%s",
                         node_rev_id(entry->pred, pool)));
-  SVN_ERR(write_field(pb, pool, "count", "%d", entry->pred_count));
-  SVN_ERR(write_field(pb, pool, "text", "%s", repstr(&entry->text_rep, pool)));
+  SVN_ERR(write_field(out, pool, "count", "%d", entry->pred_count));
+  SVN_ERR(write_field(out, pool, "text", "%s",
+                      repstr(&entry->text_rep, pool)));
   if (SVN_IS_VALID_REVNUM(entry->props_rep.rev))
-    SVN_ERR(write_field(pb, pool, "props", "%s",
+    SVN_ERR(write_field(out, pool, "props", "%s",
                         repstr(&entry->props_rep, pool)));
-  SVN_ERR(write_field(pb, pool, "cpath", "%s", entry->created_path));
+  SVN_ERR(write_field(out, pool, "cpath", "%s", entry->created_path));
   if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
-    SVN_ERR(write_field(pb, pool, "copyfrom",
+    SVN_ERR(write_field(out, pool, "copyfrom",
                         "%s %" SVN_REVNUM_T_FMT " %s",
                         (entry->soft_copy) ? "soft" : "hard",
                         entry->copyfrom_rev, entry->copyfrom_path));
   if (entry->copyroot != entry)
-    SVN_ERR(write_field(pb, pool, "copyroot", "%s",
+    SVN_ERR(write_field(out, pool, "copyroot", "%s",
                         node_rev_id(entry->copyroot, pool)));
   SVN_ERR(svn_stream_printf(out, pool, "\n"));
 
@@ -445,12 +445,18 @@ write_entry(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
         }
       svn_pool_destroy(subpool);
 
-      if (entry->node_rev == pb->current_rev)
-        SVN_ERR(write_directory_rep(pb, entry, pool));
+      /* XXX want some way to detect if children haven't changed */
+      SVN_ERR(write_hash_rep(pb, children_to_dirmap(entry->children, pool),
+                             &entry->text_rep, pool));
     }
 
   if (entry->props)
-    SVN_ERR(write_props(pb, entry, pool));
+    {
+      if (apr_hash_count(entry->props) == 0)
+        entry->props_rep.rev = SVN_INVALID_REVNUM;
+      else
+        SVN_ERR(write_props(pb, entry, pool));
+    }
 
   if (entry->node_rev == pb->current_rev)
     SVN_ERR(write_node_rev(pb, entry, pool));
@@ -512,6 +518,232 @@ write_changed_path_data(struct parse_baton *pb, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Dump a hash to PATH. */
+static svn_error_t *
+write_hash_to_file(apr_hash_t *hash, const char *path, apr_pool_t *pool)
+{
+  apr_file_t *file;
+  svn_stream_t *stream;
+
+  SVN_ERR(svn_io_file_open(&file, path,
+                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  stream = svn_stream_from_aprfile(file, pool);
+  SVN_ERR(hash_write(hash, stream, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_current(struct parse_baton *pb, apr_pool_t *pool)
+{
+  apr_file_t *current_file;
+  const char *str;
+
+  SVN_ERR(svn_io_file_open(&current_file, "current",
+                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  str = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT " %d %d\n", pb->current_rev,
+                     pb->next_node_id, pb->next_copy_id);
+  SVN_ERR(svn_io_file_write_full(current_file, str, strlen(str), NULL, pool));
+  SVN_ERR(svn_io_file_close(current_file, pool));
+  return SVN_NO_ERROR;
+}
+
+static const char *
+txn_node_rev_id(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
+{
+  const char *node_id, *copy_id, *txn_id;
+
+  node_id = (entry->node_id < 0) ? apr_psprintf(pool, "_%d", -entry->node_id)
+    : apr_psprintf(pool, "%d", entry->node_id);
+  copy_id = (entry->copy_id < 0) ? apr_psprintf(pool, "_%d", -entry->copy_id)
+    : apr_psprintf(pool, "%d", entry->copy_id);
+  txn_id = (entry->node_rev == pb->current_rev) ? "t0" :
+      apr_psprintf(pool, "r%" SVN_REVNUM_T_FMT "/%" APR_OFF_T_FMT,
+                   entry->node_rev, entry->node_off);
+  return apr_psprintf(pool, "%s.%s.%s", node_id, copy_id, txn_id);
+}
+
+static const char *
+txn_repstr(struct parse_baton *pb, struct rep_pointer *rep,
+           svn_boolean_t only_this, apr_pool_t *pool)
+{
+  const char *revstr;
+
+  if (rep->rev == pb->current_rev && only_this)
+    return "this";
+
+  revstr = (rep->rev == pb->current_rev) ? "this"
+    : apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, rep->rev);
+
+  return apr_psprintf(pool, "%s %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
+                      " %" APR_OFF_T_FMT " %s",
+                      revstr, rep->off, rep->len, rep->len, rep->digest);
+}
+
+static svn_error_t *
+write_txn_dir_children(struct parse_baton *pb, struct entry *entry,
+                       const char *nrpath, apr_pool_t *pool)
+{
+  apr_hash_t *oldmap, *newmap;
+  const char *path;
+  apr_file_t *children_file;
+  svn_stream_t *out;
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  struct entry *child;
+  const char *name, *rep;
+
+  path = apr_psprintf(pool, "%s.children", nrpath);
+  SVN_ERR(svn_io_file_open(&children_file, path,
+                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  out = svn_stream_from_aprfile(children_file, pool);
+
+  oldmap = entry->pred ? entry->pred->children : apr_hash_make(pool);
+  newmap = entry->children;
+
+  /* Dump the old directory contents. */
+  SVN_ERR(hash_write(children_to_dirmap(oldmap, pool), out, pool));
+
+  /* Dump an entry for each deletion. */
+  for (hi = apr_hash_first(pool, oldmap); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, NULL);
+      name = key;
+      if (apr_hash_get(newmap, key, APR_HASH_KEY_STRING) == NULL)
+        SVN_ERR(svn_stream_printf(out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
+                                  strlen(name), name));
+    }
+
+  /* Dump an entry for each change or addition. */
+  for (hi = apr_hash_first(pool, newmap); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      name = key;
+      if (apr_hash_get(oldmap, name, APR_HASH_KEY_STRING) != val)
+        {
+          child = val;
+          rep = apr_psprintf(pool, "%s %s",
+                             (child->children == NULL) ? "file" : "dir",
+                             txn_node_rev_id(pb, child, pool));
+          SVN_ERR(svn_stream_printf(out, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
+                                    "V %" APR_SIZE_T_FMT "\n%s\n",
+                                    strlen(name), name, strlen(rep), rep));
+        }
+    }
+
+  SVN_ERR(svn_io_file_close(children_file, pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+dump_txn_node_rev(struct parse_baton *pb, struct entry *entry,
+                  apr_pool_t *pool)
+{
+  apr_pool_t *subpool;
+  apr_hash_index_t *hi;
+  void *val;
+  const char *nrpath, *path;
+  apr_file_t *nrfile;
+  svn_stream_t *out;
+
+  if (entry->node_rev != pb->current_rev)
+    return SVN_NO_ERROR;
+
+  nrpath = txn_node_rev_id(pb, entry, pool);
+  *strrchr(nrpath, '.') = '\0';
+  nrpath = apr_psprintf(pool, "transactions/0/%s", nrpath);
+
+  if (entry->children)
+    {
+      subpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, entry->children); hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_pool_clear(subpool);
+          apr_hash_this(hi, NULL, NULL, &val);
+          SVN_ERR(dump_txn_node_rev(pb, val, subpool));
+        }
+
+      /* XXX want some way to know if children haven't changed */
+      SVN_ERR(write_txn_dir_children(pb, entry, nrpath, pool));
+      entry->text_rep.rev = pb->current_rev;
+    }
+
+  if (entry->props)
+    {
+      if (apr_hash_count(entry->props) == 0)
+        entry->props_rep.rev = SVN_INVALID_REVNUM;
+      else
+        {
+          path = apr_psprintf(pool, "%s.props", nrpath);
+          SVN_ERR(write_hash_to_file(entry->props, path, pool));
+          entry->props_rep.rev = pb->current_rev;
+        }
+    }
+
+  SVN_ERR(svn_io_file_open(&nrfile, nrpath,
+                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  out = svn_stream_from_aprfile(nrfile, pool);
+
+  SVN_ERR(write_field(out, pool, "id", "%s",
+                      txn_node_rev_id(pb, entry, pool)));
+  SVN_ERR(write_field(out, pool, "type", entry->children ? "dir" : "file"));
+  if (entry->pred)
+    SVN_ERR(write_field(out, pool, "pred", "%s",
+                        node_rev_id(entry->pred, pool)));
+  SVN_ERR(write_field(out, pool, "count", "%d", entry->pred_count));
+  SVN_ERR(write_field(out, pool, "text", "%s",
+                      txn_repstr(pb, &entry->text_rep,
+                                 (entry->children != NULL), pool)));
+  if (SVN_IS_VALID_REVNUM(entry->props_rep.rev))
+    SVN_ERR(write_field(out, pool, "props", "%s",
+                        txn_repstr(pb, &entry->props_rep, TRUE, pool)));
+  SVN_ERR(write_field(out, pool, "cpath", "%s", entry->created_path));
+  if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
+    SVN_ERR(write_field(out, pool, "copyfrom",
+                        "%s %" SVN_REVNUM_T_FMT " %s",
+                        (entry->soft_copy) ? "soft" : "hard",
+                        entry->copyfrom_rev, entry->copyfrom_path));
+  if (entry->copyroot != entry)
+    SVN_ERR(write_field(out, pool, "copyroot", "%s",
+                        node_rev_id(entry->copyroot, pool)));
+  SVN_ERR(svn_stream_printf(out, pool, "\n"));
+
+  SVN_ERR(svn_io_file_close(nrfile, pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+dump_txn(struct parse_baton *pb, apr_pool_t *pool)
+{
+  apr_file_t *next_ids_file;
+  const char *str;
+
+  /* We're done writing the prototype rev file. */
+  SVN_ERR(svn_io_file_close(pb->rev_file, pool));
+
+  /* Open a file for the rev-props. */
+  SVN_ERR(write_hash_to_file(pb->rev_props, "transactions/0/props", pool));
+
+  /* Dump the new node-revisions in the transaction. */
+  SVN_ERR(dump_txn_node_rev(pb, get_root(pb, pb->current_rev), pool));
+
+  /* Write the next-ids file. */
+  SVN_ERR(svn_io_file_open(&next_ids_file, "transactions/0/next-ids",
+                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  str = "10001 10001";
+  SVN_ERR(svn_io_file_write_full(next_ids_file, str, strlen(str), NULL, pool));
+  SVN_ERR(svn_io_file_close(next_ids_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* --- The parser functions --- */
 
 static svn_error_t *
@@ -529,17 +761,29 @@ new_revision_record(void **revision_baton, apr_hash_t *headers, void *baton,
   rev = SVN_STR_TO_REV(revstr);
   assert(rev == pb->roots->nelts);
   assert(rev == pb->current_rev + 1);
-  pb->current_rev = rev;
 
   pb->rev_pool = svn_pool_create(pb->pool);
 
   /* Open a file for this revision. */
-  SVN_ERR(svn_io_make_dir_recursively("revs", pb->rev_pool));
-  path = svn_path_join("revs", revstr, pb->rev_pool);
+  if (rev == pb->txn_rev)
+    {
+      /* We've been asked to dump this rev as a transaction. */
+      SVN_ERR(write_current(pb, pb->rev_pool));
+      pb->next_node_id = -10000;
+      pb->next_copy_id = -10000;
+      SVN_ERR(svn_io_make_dir_recursively("transactions/0", pb->rev_pool));
+      path = "transactions/0/rev";
+    }
+  else
+    {
+      SVN_ERR(svn_io_make_dir_recursively("revs", pb->rev_pool));
+      path = svn_path_join("revs", revstr, pb->rev_pool);
+    }
   SVN_ERR(svn_io_file_open(&pb->rev_file, path,
                            APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
                            APR_OS_DEFAULT, pb->rev_pool));
   pb->rev_stream = svn_stream_from_aprfile(pb->rev_file, pb->rev_pool);
+  pb->current_rev = rev;
 
   /* Initialize the changed-path hash tables and rev-props. */
   pb->deleted_paths = apr_hash_make(pb->rev_pool);
@@ -752,15 +996,21 @@ close_node(void *baton)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *close_revision(void *baton)
+svn_error_t *
+close_revision(void *baton)
 {
   struct parse_baton *pb = baton;
   struct entry *root = get_root(pb, pb->current_rev);
   apr_pool_t *pool = pb->rev_pool;
   apr_off_t offset;
-  apr_file_t *revprops_file;
-  svn_stream_t *revprops_stream;
   const char *revstr, *path;
+
+  if (pb->current_rev == pb->txn_rev)
+    {
+      /* We've been asked to dump this rev as a transaction and exit. */
+      SVN_ERR(dump_txn(pb, pool));
+      exit(0);
+    }
 
   SVN_ERR(write_entry(pb, root, pool));
 
@@ -776,18 +1026,11 @@ svn_error_t *close_revision(void *baton)
                             root->node_off, offset));
   SVN_ERR(svn_io_file_close(pb->rev_file, pool));
 
-  /* Open a file for the rev-props. */
+  /* Dump the rev-props. */
   SVN_ERR(svn_io_make_dir_recursively("revprops", pool));
   revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, pb->current_rev);
   path = svn_path_join("revprops", revstr, pool);
-  SVN_ERR(svn_io_file_open(&revprops_file, path,
-                           APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  revprops_stream = svn_stream_from_aprfile(revprops_file, pool);
-
-  /* Dump the rev-props. */
-  SVN_ERR(hash_write(pb->rev_props, revprops_stream, pool));
-  apr_file_close(revprops_file);
+  SVN_ERR(write_hash_to_file(pb->rev_props, path, pool));
 
   svn_pool_destroy(pb->rev_pool);
   return SVN_NO_ERROR;
@@ -807,7 +1050,8 @@ static svn_repos_parser_fns2_t parser = {
   close_revision
 };
 
-int main()
+int
+main(int argc, char **argv)
 {
   apr_pool_t *pool;
   apr_file_t *infile;
@@ -819,6 +1063,7 @@ int main()
   pool = svn_pool_create(NULL);
   apr_file_open_stdin(&infile, pool);
   instream = svn_stream_from_aprfile(infile, pool);
+  pb.txn_rev = (argc > 1) ? SVN_STR_TO_REV(argv[1]) : SVN_INVALID_REVNUM;
   pb.roots = apr_array_make(pool, 1, sizeof(struct entry *));
   pb.current_rev = SVN_INVALID_REVNUM;
   pb.rev_file = NULL;
@@ -827,6 +1072,8 @@ int main()
   pb.next_copy_id = 0;
   pb.pool = pool;
   err = svn_repos_parse_dumpstream2(instream, &parser, &pb, NULL, NULL, pool);
+  if (!err)
+    err = write_current(&pb, pool);
   if (err)
     svn_handle_error(err, stderr, TRUE);
   return 0;
