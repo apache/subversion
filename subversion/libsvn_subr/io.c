@@ -22,6 +22,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
@@ -1921,7 +1922,20 @@ svn_io_read_version_file (int *version,
     return svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, pool,
                               "reading `%s'", path);
 
-  /* ...string to integer conversion... */
+  /* Check that the first line contains only digits. */
+  {
+    char *c;
+
+    for (c = version_str->data; *c; c++)
+      {
+        if (! apr_isdigit (*c))
+          return svn_error_createf
+            (SVN_ERR_BAD_VERSION_FILE_FORMAT, 0, NULL, pool,
+             "first line of '%s' contains non-digit", path);
+      }
+  }
+
+  /* Convert to integer. */
   *version = atoi (version_str->data);
 
   /* And finally, close the file. */

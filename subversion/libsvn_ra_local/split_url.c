@@ -107,9 +107,23 @@ svn_ra_local__split_URL (const char **repos_path,
       /* Attempt to open a repository at URL. */
       err = svn_repos_open (&repos, candidate_url, subpool);
 
-      /* Hey, cool, we were successfully.  Stop loopin'. */
+      /* Hey, cool, we were successful.  Stop looping. */
       if (err == SVN_NO_ERROR)
         break;
+
+      /* It would be strange indeed if "/" were a repository, but hey,
+         people do strange things sometimes.  Anyway, if "/" failed
+         the test above, then reduce it to the empty string.
+
+         ### I'm not sure whether SVN_EMPTY_PATH and SVN_PATH_IS_EMPTY
+         in libsvn_subr/path.c is are supposed to be changeable.  If
+         they are, this code could conceivably break.  If they're not,
+         then we should probably make SVN_PATH_EMPTY_PATH a public
+         constant and use it here.  But either way, note that the test
+         for '/' below is kosher, because we know it's the canonical
+         APR separator. */
+      if ((candidate_url[0] == '/') && (candidate_url[1] == '\0'))
+        candidate_url = "";
 
       /* If we're down to an empty path here, and we still haven't
          found the repository, we're just out of luck.  Time to bail
