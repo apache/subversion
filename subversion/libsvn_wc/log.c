@@ -70,41 +70,6 @@ struct log_runner
 
 /*** The XML handlers. ***/
 
-#if 0
-static svn_error_t *
-run_cmd_under_directory (svn_string_t *path,
-                         const char *cmd,
-                         const char *dest,
-                         svn_boolean_t rename,
-                         apr_pool_t *pool)
-{
-  apr_status_t status;
-  svn_string_t *full_from_path, *full_dest_path;
-
-  full_from_path = svn_string_dup (path, pool);
-  full_dest_path = svn_string_dup (path, pool);
-
-  svn_path_add_component_nts (full_from_path, name, svn_path_local_style);
-  svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
-
-  if (rename)
-    {
-      status = apr_rename_file (full_from_path->data,
-                                full_dest_path->data, pool);
-      if (status)
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "cp_or_mv_under_directory: "
-                                  "can't move %s to %s",
-                                  name, dest);
-    }
-  else
-    return svn_io_copy_file (full_from_path, full_dest_path, pool);
-
-  return SVN_NO_ERROR;
-}
-#endif /* 0 */
-
-
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
    PATH is the common parent of both locations. */
 static svn_error_t *
@@ -269,7 +234,19 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 
   if (strcmp (eltname, SVN_WC__LOG_RUN_CMD) == 0)
     {
-      /* kff todo */
+      int ret;
+      ret = system (name);
+      if (ret & 255)
+        {
+          signal_error
+            (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                       0,
+                                       NULL,
+                                       loggy->pool,
+                                       "error (%d) running command \"%s\"",
+                                       ret, name));
+          return;
+        }
     }
   else if ((strcmp (eltname, SVN_WC__LOG_MV) == 0)
            || (strcmp (eltname, SVN_WC__LOG_CP) == 0))

@@ -1043,9 +1043,6 @@ close_file (void *file_baton)
   if (err)
     return err;
 
-  /* kff todo: save *local_changes somewhere, maybe to a tmp file
-     in SVN/. */
-  
   entry_accum = svn_string_create ("", fb->pool);
 
   if (fb->text_changed)
@@ -1053,6 +1050,7 @@ close_file (void *file_baton)
       enum svn_node_kind wfile_status = svn_node_unknown;
       svn_string_t *tmp_txtb  = svn_wc__text_base_path (fb->name, 1, fb->pool);
       svn_string_t *txtb      = svn_wc__text_base_path (fb->name, 0, fb->pool);
+      svn_string_t *received_diff_filename;
       
       err = svn_io_check_path (fb->path, &wfile_status, fb->pool);
       if (err)
@@ -1065,7 +1063,6 @@ close_file (void *file_baton)
              applied over the working file.  Rejected hunks will be from
              the received changes, not the user's changes. */
           apr_file_t *received_diff_file;
-          svn_string_t *received_diff_file_name;
           svn_string_t *diff_cmd;
           int diff_status;
           svn_string_t *tmp_txtb_full_path
@@ -1077,7 +1074,7 @@ close_file (void *file_baton)
                                 fb->name->data, NULL);
 
           err = svn_io_open_unique_file (&received_diff_file,
-                                         &received_diff_file_name,
+                                         &received_diff_filename,
                                          tmp_loc,
                                          ".diff",
                                          fb->pool);
@@ -1090,7 +1087,7 @@ close_file (void *file_baton)
               if (apr_err)
                 return svn_error_createf (apr_err, 0, NULL, fb->pool,
                                           "close_file: error closing %s",
-                                          received_diff_file_name->data);
+                                          received_diff_filename->data);
             }
           
           /* kff todo: need to handle non-text formats here, and support
@@ -1106,14 +1103,14 @@ close_file (void *file_baton)
           svn_string_appendcstr (diff_cmd, " ");
           svn_string_appendstr (diff_cmd, tmp_txtb_full_path);
           svn_string_appendcstr (diff_cmd, " > ");
-          svn_string_appendstr (diff_cmd, received_diff_file_name);
+          svn_string_appendstr (diff_cmd, received_diff_filename);
           diff_status = system (diff_cmd->data);
           if (diff_status & 255)
             return svn_error_createf
               (0, diff_status, NULL, fb->pool,
                "close_file: error diffing %s with %s, outputting to %s",
                tmp_txtb_full_path->data, txtb_full_path->data,
-               received_diff_file_name->data);
+               received_diff_filename->data);
         }
           
       /* Move new text base over old text base. */
@@ -1126,31 +1123,69 @@ close_file (void *file_baton)
                              SVN_WC__LOG_ATTR_DEST,
                              txtb,
                              NULL);
+      
+      if (wfile_status == svn_node_none)
+        {
+          /* Copy the new base text to the working file. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_CP,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 txtb,
+                                 SVN_WC__LOG_ATTR_DEST,
+                                 fb->name,
+                                 NULL);
+        }
+      else if (wfile_status == svn_node_file)
+        {
+          /* Patch repos changes into an existing local file. */
+          svn_string_t *patch_cmd = svn_string_create ("patch", fb->pool);
+          apr_file_t *reject_file = NULL;
+          svn_string_t *reject_filename = NULL;
+          
+          /* Get the reject file ready. */
+          /* kff todo: code dup with above, abstract it? */
+          err = svn_io_open_unique_file (&reject_file,
+                                         &reject_filename,
+                                         fb->path,
+                                         ".rej",
+                                         fb->pool);
+          if (err)
+            return err;
+          else
+            {
+              apr_status_t apr_err;
+              apr_err = apr_close (reject_file);
+              if (apr_err)
+                return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                                          "close_file: error closing %s",
+                                          reject_filename->data);
+            }
 
-      /* kff todo: Overwrite local mods again, briefly. */
-      svn_xml_make_open_tag (&entry_accum,
-                             fb->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_CP,
-                             SVN_WC__LOG_ATTR_NAME,
-                             txtb,
-                             SVN_WC__LOG_ATTR_DEST,
-                             fb->name,
-                             NULL);
-
-#if 0
-      svn_xml_make_open_tag (&entry_accum,
-                             fb->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_RUN_CMD,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_txtb,
-                             SVN_WC__LOG_ATTR_NAME,
-                             txtb,
-                             SVN_WC__LOG_ATTR_DEST,
-                             svn_string_create ("kff todo", fb->pool),
-                             NULL);
-#endif /* 0 */
+          /* Build the patch command, for text files anyway. */
+          svn_string_appendcstr (patch_cmd, " ");
+          svn_string_appendcstr (patch_cmd, "--reject-file");
+          svn_string_appendcstr (patch_cmd, "=");
+          svn_string_appendstr (patch_cmd, reject_filename);
+          svn_string_appendcstr (patch_cmd, " ");
+          svn_string_appendstr (patch_cmd, fb->path);
+          svn_string_appendcstr (patch_cmd, " < ");
+          svn_string_appendstr (patch_cmd, received_diff_filename);
+          
+          /* Log the patch command. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_RUN_CMD,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 patch_cmd,
+                                 NULL);
+        }
+      else
+        {
+          /* kff todo: handle edge cases */
+        }
     }
 
   /* MERGE ANY PROPERTY CHANGES, if they exist... */
