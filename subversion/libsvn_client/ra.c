@@ -214,7 +214,6 @@ svn_client__open_ra_session (void **session_baton,
                              apr_array_header_t *commit_items,
                              svn_boolean_t do_store,
                              svn_boolean_t use_admin,
-                             svn_boolean_t read_only_wc,
                              svn_client_auth_baton_t *auth_baton,
                              apr_pool_t *pool)
 {
@@ -225,7 +224,7 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_committed_rev = use_admin ? get_committed_rev : NULL;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
-  cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
+  cbtable->set_wc_prop = commit_items ? set_wc_prop : NULL;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;

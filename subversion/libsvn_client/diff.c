@@ -716,8 +716,7 @@ do_merge (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, FALSE, FALSE, auth_baton, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
            (&start_revnum, ra_lib, session, revision1, NULL, pool));
@@ -731,8 +730,7 @@ do_merge (svn_wc_notify_func_t notify_func,
      reused. This applies to ra_dav, ra_local does not appears to have
      this limitation. */
   SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL1, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        NULL, FALSE, FALSE, auth_baton, pool));
   
   SVN_ERR (svn_client__get_diff_editor (target_wcpath,
                                         adm_access,
@@ -813,8 +811,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
   SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, URL1, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, FALSE, FALSE, auth_baton, pool));
   SVN_ERR (svn_client__get_revision_number
            (&rev1, ra_lib, session1, revision1, NULL, pool));
   SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, NULL, &props1));
@@ -825,8 +822,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL2, pool));
   SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, NULL, NULL,
-                                        NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, FALSE, FALSE, auth_baton, pool));
   SVN_ERR (svn_client__get_revision_number
            (&rev2, ra_lib, session2, revision2, NULL, pool));
   SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL, &props2));
@@ -1027,8 +1023,8 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton,
                                       url_anchor, pool));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_anchor,  NULL,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_anchor, NULL,
+                                            NULL, NULL, FALSE, FALSE,
                                             auth_baton, pool));
       
       /* Set up diff editor according to path2's anchor/target. */
@@ -1094,10 +1090,10 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, NULL, NULL,
-                                            NULL, FALSE, FALSE, TRUE, 
+                                            NULL, FALSE, FALSE,
                                             auth_baton, pool));
-      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, NULL, NULL,
-                                            NULL, FALSE, FALSE, TRUE, 
+      SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, NULL,
+                                            NULL, NULL, FALSE, FALSE, 
                                             auth_baton, pool));
 
       /* Do the right thing in resolving revisions;  if the caller
@@ -1170,14 +1166,14 @@ do_diff (const apr_array_header_t *options,
       
       /* The main session is opened to the anchor of URL1. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor1, NULL,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
+                                            NULL, NULL, FALSE, FALSE, 
                                             auth_baton, pool));
 
 
       /* Open a second session used to request individual file
          contents from URL1's anchor.  */
       SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, anchor1, NULL,
-                                            NULL, NULL, FALSE, FALSE, TRUE,
+                                            NULL, NULL, FALSE, FALSE,
                                             auth_baton, pool));      
 
       /* Set up the repos_diff editor on path2's anchor, assuming
