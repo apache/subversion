@@ -52,12 +52,6 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
-  * r8712
-    apr_time_t warning fixes.
-    Justification: Easy warning fix.
-    Votes:
-      +1: breser, clkao
-
   * r8715
     apr_file_open_stdout and apr_file_open_stdout bindings fix.
     Justification: Easy warning fix.
