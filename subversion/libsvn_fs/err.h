@@ -106,7 +106,7 @@ svn_error_t *svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id);
 
 /* SVN_ERR_FS_CORRUPT: something in FS refers to filesystem revision REV,
    but that filesystem revision doesn't exist.  */
-svn_error_t *svn_fs__err_dangling_rev (svn_fs_t *fs, const svn_revnum_t rev);
+svn_error_t *svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev);
 
 /* SVN_ERR_FS_CORRUPT: a key in FS's `nodes' table is bogus.  */
 svn_error_t *svn_fs__err_corrupt_nodes_key (svn_fs_t *fs);
