@@ -674,9 +674,9 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                  const char *path,
                  const char *token,
                  const char *comment,
-                 long int timeout,
+                 int timeout,
                  svn_revnum_t current_rev,
-                 svn_boolean_t force,
+                 svn_boolean_t steal_lock,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -756,14 +756,14 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   SVN_ERR (get_lock_helper (fs, &existing_lock, path, TRUE, pool));
   if (existing_lock)
     {
-      if (! force)
+      if (! steal_lock)
         {
           /* Sorry, the path is already locked. */
           return svn_fs_fs__err_path_locked (fs, existing_lock);
         }
       else
         {
-          /* Force was passed, so fs_username is "stealing" the
+          /* STEAL_LOCK was passed, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
           SVN_ERR (delete_lock (fs, existing_lock, pool));
         }          
@@ -818,7 +818,7 @@ svn_error_t *
 svn_fs_fs__unlock (svn_fs_t *fs,
                    const char *path,
                    const char *token,
-                   svn_boolean_t force,
+                   svn_boolean_t break_lock,
                    apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -833,7 +833,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
   SVN_ERR (get_lock (&lock, fs, path, TRUE, pool));
   
   /* Unless breaking the lock, we do some checks. */
-  if (! force)
+  if (! break_lock)
     {
       /* Sanity check:  the incoming token should match lock->token. */
       if (strcmp (token, lock->token) != 0)
