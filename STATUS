@@ -30,16 +30,6 @@ synchronized between the trunk and 1.0 lines, before we roll a 1.0 tarball:
 
 Candidate changes:
 
-  * r8561
-    Clarify help text for 'svn switch'.
-    Justification:  Multiple people were recently confused by '--relocate';
-                    this change only affects 'svn help' output.
-    Notes:  the book should help this common confusion, but 'svn help switch'
-            should also help prevent the confusion as much as it can.
-    Votes:
-      +1: sussman, kfogel, dlr
-
-
   * r8637
     Add documentation of working directory to hook templates.
     Justification: Hook writers need to know, and experimenting is no fun.

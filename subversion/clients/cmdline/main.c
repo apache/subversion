@@ -575,12 +575,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "usage: 1. switch URL [PATH]\n"
     "       2. switch --relocate FROM TO [PATH...]\n"
     "\n"
-    "  1. Update the working copy to mirror a new URL.  This behaviour is a\n"
-    "     superset of 'svn update'.\n"
-    "     Note:  this is the way to move a working copy to a new branch.\n"
+    "  1. Update the working copy to mirror a new URL within the repository.\n"
+    "     This behaviour is similar to 'svn update', and is the way to\n"
+    "     move a working copy to a branch or tag within the same repository.\n"
     "\n"
-    "  2. Reconnect the working copy when the repository URL has changed.\n"
-    ,
+    "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
+    "     This is used when repository's root URL changes (such as a schema\n"
+    "     or hostname change) but your working copy still reflects the same\n"
+    "     directory within the same repository.\n",
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
