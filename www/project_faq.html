@@ -806,6 +806,19 @@ The above instructions are specific to the graphical version of
 Ethereal, and may not apply to the commandline version (whose binary
 is usually named tethereal).</p>
 
+<p>Alternatively, if you have an up-to-date client (more recent than
+the 0.16 tarball) you may set the <tt>http-debug</tt> parameter in the
+<tt>servers</tt> configuration file to cause neon's debugging output
+to appear when you run the <tt>svn</tt> client.  The numeric value of
+<tt>neon-debug</tt> is a combination of the <tt>NE_DBG_...</tt> values
+in the header file <tt>ne_utils.h</tt>.  For neon 0.23.5 setting
+<tt>http-debug</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
+will cause the HTTP data to be shown.</p>
+
+<p>You may well want to disable compression when doing a network
+trace, see the <tt>compression</tt> parameter in the <tt>config</tt>
+configuration file.</p>
+
 
 <![CDATA[=========================================================]]>
 

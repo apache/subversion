@@ -125,24 +125,26 @@ static int ssl_set_verify_callback(void *userdata, int failures,
 }
 
 
-/* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD and
- * *TIMEOUT_SECONDS to the proxy information for REQUESTED_HOST, allocated
- * in POOL, if there is any applicable information.  If there is no
- * applicable information or if there is an error, then set *PROXY_PORT to
- * (unsigned int) -1 and the rest to NULL.  This function can return an
- * error, so before checking *PROXY_*, check for error return value.
+/* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
+ * *TIMEOUT_SECONDS and *NEON_DEBUG to the information for REQUESTED_HOST,
+ * allocated in POOL, if there is any applicable information.  If there is
+ * no applicable information or if there is an error, then set *PROXY_PORT
+ * to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG to zero, and the
+ * rest to NULL.  This function can return an error, so before checking any
+ * values, check the error return value.
  */
 static svn_error_t *get_server_settings(const char **proxy_host,
                                         unsigned int *proxy_port,
                                         const char **proxy_username,
                                         const char **proxy_password,
                                         int *timeout_seconds,
+                                        int *neon_debug,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *exceptions;
-  const char *port_str, *timeout_str, *server_group;
+  const char *port_str, *timeout_str, *server_group, *debug_str;
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -151,6 +153,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   *proxy_password = NULL;
   port_str        = NULL;
   timeout_str     = NULL;
+  debug_str       = NULL;
 
   SVN_ERR( svn_config_read_servers(&cfg, pool) );
 
@@ -167,6 +170,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, proxy_password, "default", "http-proxy-password",
                      NULL);
       svn_config_get(cfg, &timeout_str, "default", "http-timeout", NULL);
+      svn_config_get(cfg, &debug_str, "default", "http-debug", NULL);
     }
 
   server_group = svn_config_find_group(cfg, requested_host, "groups", pool);
@@ -182,6 +186,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      *proxy_password);
       svn_config_get(cfg, &timeout_str, server_group, "http-timeout",
                      timeout_str);
+      svn_config_get(cfg, &debug_str, server_group, "http-debug",
+                     debug_str);
     }
 
   /* Special case: convert the port value, if any. */
@@ -211,15 +217,29 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int timeout = strtol(timeout_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_TIMEOUT, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, 0, NULL,
                                 "illegal character in timeout value");
       if (timeout < 0)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_TIMEOUT, 0, NULL,
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, 0, NULL,
                                 "negative timeout value");
       *timeout_seconds = timeout;
     }
   else
     *timeout_seconds = 0;
+
+  if (debug_str)
+    {
+      char *endstr;
+      const long int debug = strtol(debug_str, &endstr, 10);
+
+      if (*endstr)
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, 0, NULL,
+                                "illegal character in debug value");
+
+      *neon_debug = debug;
+    }
+  else
+    *neon_debug = 0;
 
   return SVN_NO_ERROR;
 }
@@ -310,11 +330,6 @@ svn_ra_dav__open (void **session_baton,
                               "network socket initialization failed");
     }
 
-#if 0
-  /* #### enable this block for debugging output on stderr. */
-  ne_debug_init(stderr, NE_DBG_HTTP|NE_DBG_HTTPBODY);
-#endif
-
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
 
@@ -353,6 +368,7 @@ svn_ra_dav__open (void **session_baton,
     const char *proxy_username;
     const char *proxy_password;
     int timeout;
+    int debug;
     svn_error_t *err;
     
     err = get_server_settings(&proxy_host,
@@ -360,6 +376,7 @@ svn_ra_dav__open (void **session_baton,
                               &proxy_username,
                               &proxy_password,
                               &timeout,
+                              &debug,
                               uri.host,
                               pool);
     if (err)
@@ -367,6 +384,9 @@ svn_ra_dav__open (void **session_baton,
         ne_uri_free(&uri);
         return err;
       }
+
+    if (debug)
+      ne_debug_init(stderr, debug);
 
     if (proxy_host)
       {
