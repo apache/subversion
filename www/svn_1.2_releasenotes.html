@@ -29,23 +29,30 @@ href="http://svnbook.red-bean.com">svnbook.red-bean.com</a> site.
 feature, (2) full DAV autoversioning, (3) faster 'svn blame', and (4)
 a large number of improved APIs.  Details are given below.</p>
 
-<p>Subversion 1.2 is a superset of all previous Subversion
-releases.  The 1.0.x and 1.1.x releases contain nothing but critical
-bugfixes backported from the 1.2 development line.  Subversion 1.2,
-however, introduces new features and fixes many additional bugs.</p>
+<p>Subversion 1.2 is a superset of all previous Subversion releases.
+The 1.0.x and 1.1.x releases contain nothing but important bugfixes
+backported from the 1.2 development line.  Subversion 1.2, however,
+introduces new features and fixes many additional bugs.</p>
 
 <p>Note that the 1.0.x line is no longer supported.  This doesn't mean
 that your 1.0 installation is doomed; if it works well and is all you
 need, that's fine.  By "no longer supported", we simply mean that bug
 reports are no longer accepted on 1.0.x versions, nor will there be
-any more 1.0.x releases.</p>
+any more 1.0.x bugfix releases (except perhaps for a critical security
+or data-loss bug.)</p>
+
 
 <h3>Compatibility Concerns</h3>
 
+<p>To upgrade to the latest release, there's nothing special one has
+to do.  Just install the newest libraries and binaries "on top of" an
+older release.  Older clients or servers will continue to interoperate
+with 1.2 clients and servers.</p>
+
 <p>Subversion's compatibility and version-numbering policy is
-    documented in the project's <a
-    href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a>
-    file.  Here's a quick summary:</p>
+documented in the project's <a
+href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> file.
+Here's a quick summary:</p>
 
 <ul>
 
@@ -71,15 +78,70 @@ any more 1.0.x releases.</p>
 
 <h4>File Locking (<em>requires new client and server</em>)</h4>
 
-<p>
-   - locking files only
-   - reiterate goals:  1. forced serialization of write access,
-                       2. prevention of wasted time.  
-                    -->  explain how goals are achieved
-   - point to func-spec and ui docs.
-   - quick overview of feature
-         --> note that locking can be totally disabled via pre-lock hook.
-</p>
+<p>"Locking" is a long-requested feature, often known in other systems
+as "reserved checkouts".  While Subversion is still primarily a <a
+href="http://svnbook.red-bean.com/en/1.1/ch02s02.html#svn-ch-2-sect-2.3">copy-modify-merge</a>
+system focused on parallel development, there is widespread
+acknowledgement that not all files are contextually mergeable &mdash;
+binary files in particular, such as audio, video, images, proprietary
+binary formats, or any other non-line-based data.</p>
+
+<p>The goal of the new locking feature is twofold.  First, provide a
+means to force serialized write-access to a file.  Second, provide a
+communication mechanism to prevent users from wasting time on
+unmergable changes.</p>
+
+<p>The first goal is accomplished by two new commands: <tt>svn
+lock</tt> and <tt>svn unlock</tt>.  When a user locks a file, no other
+user may commit a change to the file or delete it from the repository.
+The lock exists as a piece of metadata both managed and enforced by
+the repository.  The working copy caches a lock-token which represents
+the repository lock.  The lock-token is an authentication credential
+which (along with normal user authentication) gives the locker an
+exclusive right to commit changes to the file.  By default, the
+<tt>svn commit</tt> command releases any locks it discovers in the
+working copy, although this behavior can be customized.</p>
+
+<p>Locks are discoverable and examinable.  <tt>svn status</tt> shows
+any lock-tokens cached in the working copy, and <tt>svn status -u</tt>
+shows information about other locks in the repository.  The <tt>svn
+info</tt> command now works on both working-copy paths and URLs, and
+shows the detailed fields of a lock: who made the lock, when it was
+made, and any associated comment.  On the server, scripts can examine
+a lock directly via <tt>svnlook lock</tt>.</p>
+
+<p>Locks can be stolen or broken by using the <tt>--force</tt> option
+with <tt>svn lock</tt> or <tt>svn unlock</tt>.  Using the new
+<tt>pre-lock</tt> and <tt>pre-unlock</tt> repository hooks,
+administrators are free to enforce custom policies regarding breaking
+and stealing locks.  (In fact, the entire locking feature can be
+completely disabled by making <tt>pre-lock</tt> always return
+failure.)  There are also new <tt>post-lock</tt> and
+<tt>post-unlock</tt> hooks which can be used to send announcement
+emails about locks.  Administrators can forcibly find and destroy
+locks with the new <tt>svnadmin lslocks</tt> and <tt>svnadmin
+rmlocks</tt> commands.  If a lock no longer exists in the repository,
+<tt>svn update</tt> will remove a corresponding "defunct" lock-token
+from the working copy.</p>
+
+<p>The second goal &mdash; preventing a user from wasting time on an
+unmergable change &mdash; is accomplished via a new property,
+<tt>svn:needs-lock</tt>.  Users (or administrators) are encouraged to
+set this property on any file that is unmergeable.  When present, this
+property causes the file to be read-only <em>unless</em> the working
+copy holds a lock on the file, in which case the file is read-write.
+The theory is that the default read-only state will remind users to
+lock the file before attempting edits.  Note that while this system is
+effective, it's can never be perfect; there's nothing Subversion can
+do to prevent a rogue application from forcibly "hijacking" the file
+and changing the permissions to read-write.</p>
+
+<p>Until the Subversion book documents this feature more carefully,
+you can see more details in the original <a
+href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-functional-spec.txt">functional
+specification</a> and <a
+href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-ui.txt">UI
+specification</a> documents.</p>
 
 <p/>
 
@@ -138,10 +200,8 @@ speedup.  The dump and reload is necessary because the repository is
 now using a new binary-differencing algorithm (xdelta) to store
 compressed versions of files.  xdelta is much faster at reconstructing
 differences than the older vdelta algorithm.  By dumping and reloading
-the repository, you're forcing the repository to recompress all
-history using the xdelta algorithm.</p>
-
-
+the repository, you're forcing the repository to re-encode/re-compress
+all history using the xdelta algorithm.</p>
 
 </p>
 
@@ -161,7 +221,7 @@ feature</em>)</h4></dt>
 binary-differencing algorithm (instead of vdelta) to store compressed
 binary difference data.  When you upgrade to Subversion 1.2, existing
 repositories will continue to work fine; the history will simply be a
-mixture of both vdelta- and xdelta-compressed differences.</p>
+mixture of both vdelta- and xdelta-encoded differences.</p>
 
 <p>The xdelta algorithm is much faster at reconstructing older files,
 and thus (as mentioned already) you might have incentive to dump and
@@ -172,6 +232,10 @@ examining history or constructing differences: <tt>svn checkout</tt>,
 <tt>svn diff</tt>, <tt>svn merge</tt>, and so on.  Even dumping the
 repository will be faster.</p>
 
+<p>Note that there's a small tradeoff between speed and disk space.
+If you choose to re-deltify your whole repository using xdelta, its
+size will grow by roughly 10 to 15 percent.</p>
+
 <p/>
 
 <dt><h4>FSFS repositories are now the default (<em>new server
@@ -179,7 +243,7 @@ feature</em>)</h4></dt>
 
 <dd>
 
-<p>After the widespread success of FSFS repositories since the 1.1
+<p>After the tremendous success of FSFS repositories since the 1.1
 release, we've changed the <tt>svnadmin create</tt> command now to
 create FSFS repositories by default.  Everyone agrees that this will
 provide a much friendlier "out of box" experience for new users.</p>
