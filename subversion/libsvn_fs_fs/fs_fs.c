@@ -3875,8 +3875,11 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
                    svn_fs_txn_t *txn,
                    apr_pool_t *pool)
 {
-  struct commit_baton cb = { new_rev_p, fs, txn };
+  struct commit_baton cb;
 
+  cb.new_rev_p = new_rev_p;
+  cb.fs = fs;
+  cb.txn = txn;
   return svn_fs_fs__with_write_lock (fs, commit_body, &cb, pool);
 }
 
