@@ -715,7 +715,7 @@ typedef void (*svn_wc_notify_func_t) (void *baton,
  */
 typedef struct svn_wc_diff_callbacks2_t
 {
-  /** A file @a path has changed.  If tmpfile2 is non-null, the
+  /** A file @a path has changed.  If @a tmpfile2 is non-null, the
    * contents have changed and those changes can be seen by comparing
    * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2 of 
    * the file, respectively.
@@ -934,13 +934,13 @@ typedef struct svn_wc_diff_callbacks_t
                              svn_revnum_t rev,
                              void *diff_baton);
   
-  /** The same as @c dir_deleted in @c svn_diff_callbacks2_t. */
+  /** The same as @c dir_deleted in @c svn_wc_diff_callbacks2_t. */
   svn_error_t *(*dir_deleted) (svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *state,
                                const char *path,
                                void *diff_baton);
   
-  /** Similar to @c dir_props_changed in @c svn_diff_callbacks2_t, but this
+  /** Similar to @c dir_props_changed in @c svn_wc_diff_callbacks2_t, but this
    * function is called for files as well as directories. */
   svn_error_t *(*props_changed) (svn_wc_adm_access_t *adm_access,
                                  svn_wc_notify_state_t *state,
@@ -2030,7 +2030,7 @@ svn_error_t *svn_wc_process_committed2 (const char *path,
 /** @deprecated Provided for backwards compability with the 1.1 API.
  *
  * Similar to @c svn_wc_process_committed2, but with @a remove_lock set to
- * @a FALSE. */
+ * @c FALSE. */
 svn_error_t *svn_wc_process_committed (const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t recurse,

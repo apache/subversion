@@ -899,7 +899,7 @@ svn_client_status (svn_revnum_t *result_rev,
  * Use @a pool for any temporary allocation.
  *
  * IMPORTANT: A special case for the revision range HEAD:1, which was present
- * in svn_client_log(), has been removed from svn_client_log2().  Instead. it
+ * in svn_client_log(), has been removed from svn_client_log2().  Instead, it
  * is expected that callers will specify the range HEAD:0, to avoid a 
  * SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
  * (i.e. one not containing a revision 1).
