@@ -53,6 +53,10 @@ struct svn_config_t
   /* Temporary string used for lookups.  (Using a stringbuf so that
      frequent resetting is efficient.) */
   svn_stringbuf_t *tmp_key;
+
+  /* Temporary value used for expanded default values in svn_config_get.
+     (Using a stringbuf so that frequent resetting is efficient.) */
+  svn_stringbuf_t *tmp_value;
 };
 
 
@@ -61,7 +65,9 @@ svn_error_t *svn_config__parse_file (svn_config_t *cfg,
                                      const char *file,
                                      svn_boolean_t must_exist);
 
+/* The name of the magic [DEFAULT] section. */
 #define SVN_CONFIG__DEFAULT_SECTION "DEFAULT"
+
 
 #ifdef SVN_WIN32
 /* Get the common or user-specific AppData folder */

@@ -81,6 +81,7 @@ svn_config_read (svn_config_t **cfgp, const char *file,
   cfg->x_pool = svn_pool_create (pool);
   cfg->x_values = FALSE;
   cfg->tmp_key = svn_stringbuf_create ("", pool);
+  cfg->tmp_value = svn_stringbuf_create ("", pool);
 
   /* Yes, this is platform-specific code in Subversion, but there's no
      practical way to migrate it into APR, as it's simultaneously
@@ -396,37 +397,44 @@ make_string_from_option (const char **valuep, svn_config_t *cfg,
                          cfg_section_t *section, cfg_option_t *opt,
                          apr_pool_t* x_pool)
 {
-  apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create (cfg->x_pool));
-  expand_option_value (cfg, section, opt->value, &opt->x_value, tmp_pool);
-  opt->expanded = TRUE;
+  /* Expand the option value if necessary. */
+  if (!opt->expanded)
+    {
+      apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create (cfg->x_pool));
 
-  /* For legacy reasons, the cfg is still using counted-length strings
-     internally.  But the public interfaces just use null-terminated
-     C strings now, so below we ignore length and use only data. */ 
+      expand_option_value (cfg, section, opt->value, &opt->x_value, tmp_pool);
+      opt->expanded = TRUE;
+
+      if (!x_pool)
+        {
+          /* Grab the fully expanded value from tmp_pool before its
+             disappearing act. */
+          if (opt->x_value)
+            opt->x_value = apr_pstrmemdup (cfg->x_pool, opt->x_value,
+                                           strlen (opt->x_value));
+          svn_pool_destroy (tmp_pool);
+        }
+    }
 
   if (opt->x_value)
-    {
-      if (!x_pool)
-        /* Grab the fully expanded value from tmp_pool before its
-           disappearing act. */
-        opt->x_value = apr_pstrmemdup (cfg->x_pool, opt->x_value,
-                                       strlen (opt->x_value));
-      *valuep = opt->x_value;
-    }
+    *valuep = opt->x_value;
   else
     *valuep = opt->value;
-
-  if (!x_pool)
-    svn_pool_destroy (tmp_pool);
 }
 
 
+/* Start of variable-replacement placeholder */
 #define FMT_START     "%("
-#define FMT_END       ")s"
 #define FMT_START_LEN (sizeof (FMT_START) - 1)
+
+/* End of variable-replacement placeholder */
+#define FMT_END       ")s"
 #define FMT_END_LEN   (sizeof (FMT_END) - 1)
 
 
+/* Expand OPT_VALUE in SECTION to *OPT_X_VALUE. If no variable
+   replacements are done, set OPT_X_VALUE to NULL. Allocate from
+   X_POOL */
 static void
 expand_option_value (svn_config_t *cfg, cfg_section_t *section,
                      const char *opt_value, const char **opt_x_valuep,
@@ -498,8 +506,7 @@ expand_option_value (svn_config_t *cfg, cfg_section_t *section,
     {
       /* Copy the remainder of the plain text. */
       svn_stringbuf_appendcstr (buf, copy_from);
-
-      *opt_x_valuep = apr_pstrmemdup (x_pool, buf->data, buf->len);
+      *opt_x_valuep = buf->data;
     }
   else
     *opt_x_valuep = NULL;
@@ -522,9 +529,17 @@ svn_config_get (svn_config_t *cfg, const char **valuep,
         }
       else
         {
-          expand_option_value (cfg, sec, default_value, valuep, cfg->x_pool);
-          if (! *valuep)
+          apr_pool_t *tmp_pool = svn_pool_create (cfg->x_pool);
+          const char *x_default;
+          expand_option_value (cfg, sec, default_value, &x_default, tmp_pool);
+          if (x_default)
+            {
+              svn_stringbuf_set (cfg->tmp_value, x_default);
+              *valuep = cfg->tmp_value->data;
+            }
+          else
             *valuep = default_value;
+          svn_pool_destroy (tmp_pool);
         }
     }
   else
