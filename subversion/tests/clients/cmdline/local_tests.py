@@ -354,12 +354,12 @@ def basic_status():
   
 #----------------------------------------------------------------------
 
-def commit_from_wc_top():
+def basic_commit():
   "commit '.' in working copy"
 
-  wc_dir = os.path.join (general_wc_dir, 'commit_from_wc_top')
+  wc_dir = os.path.join (general_wc_dir, 'basic_commit')
   
-  if make_repo_and_wc('commit_from_wc_top'):
+  if make_repo_and_wc('basic_commit'):
     return 1
 
   # Make a couple of local mods to files
@@ -548,16 +548,16 @@ def commit_multiple_targets_2():
   
 #----------------------------------------------------------------------
 
-def update_from_wc_top():
+def basic_update():
   "update '.' in working copy"
 
-  wc_dir = os.path.join (general_wc_dir, 'update_from_wc_top')
+  wc_dir = os.path.join (general_wc_dir, 'basic_update')
   
-  if make_repo_and_wc('update_from_wc_top'):
+  if make_repo_and_wc('basic_update'):
     return 1
 
   # Make a backup copy of the working copy
-  wc_backup = os.path.join (general_wc_dir, 'update_from_wc_top_backup')
+  wc_backup = os.path.join (general_wc_dir, 'basic_update_backup')
   duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
@@ -608,12 +608,12 @@ def update_from_wc_top():
                                expected_status_tree)
 
 #----------------------------------------------------------------------
-def merge_from_wc_top():
+def basic_merge():
   "merge into working copy"
 
-  wc_dir = os.path.join (general_wc_dir, 'merge_from_wc_top')
+  wc_dir = os.path.join (general_wc_dir, 'basic_merge')
   
-  if make_repo_and_wc('merge_from_wc_top'):
+  if make_repo_and_wc('basic_merge'):
     return 1
   # First change the greek tree to make two files 10 lines long
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -645,7 +645,7 @@ def merge_from_wc_top():
                             expected_status_tree, None, None, wc_dir):
     return 1
   # Make a backup copy of the working copy
-  wc_backup = os.path.join (general_wc_dir, 'merge_from_wc_top_backup')
+  wc_backup = os.path.join (general_wc_dir, 'basic_merge_backup')
   duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
@@ -755,16 +755,16 @@ def verify_rej_file(node):
     raise svn_tree.SVNTreeUnequal
 
 
-def conflict_from_wc_top():
+def basic_conflict():
   "make a conflict in working copy"
 
-  wc_dir = os.path.join (general_wc_dir, 'conflict_from_wc_top')
+  wc_dir = os.path.join (general_wc_dir, 'basic_conflict')
   
-  if make_repo_and_wc('conflict_from_wc_top'):
+  if make_repo_and_wc('basic_conflict'):
     return 1
 
   # Make a backup copy of the working copy
-  wc_backup = os.path.join (general_wc_dir, 'conflict_from_wc_top_backup')
+  wc_backup = os.path.join (general_wc_dir, 'basic_conflict_backup')
   duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files which will be committed
@@ -845,13 +845,13 @@ def conflict_from_wc_top():
 test_list = [ None,
               basic_checkout,
               basic_status,
-              commit_from_wc_top,
+              basic_commit,
               commit_one_file,
               commit_multiple_targets,
               commit_multiple_targets_2,
-              update_from_wc_top,
-              merge_from_wc_top,
-              conflict_from_wc_top,
+              basic_update,
+              basic_merge,
+              basic_conflict
              ]
 
 if __name__ == '__main__':  
