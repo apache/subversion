@@ -39,7 +39,7 @@ main ()
      We would then use this structure for all our wrappered filesystem
      calls.  */
 
-  policy= svn_svr_init (configdata, pool);
+  policy = svn_svr_init (configdata, pool);
 
 
 

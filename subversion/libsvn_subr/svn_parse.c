@@ -198,11 +198,13 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
   
   if (result != APR_SUCCESS)
     {
+      char *finalmsg;
       svn_string_t *msg = svn_string_create 
         ("svn_parse(): can't open for reading, file ", pool);
       svn_string_appendstr (msg, filename, pool);
 
-      return (svn_create_error (result, SVN_NON_FATAL, msg, pool));
+      finalmsg = svn_string_2cstring (msg, pool);
+      return (svn_create_error (result, finalmsg, NULL, pool));
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
@@ -210,9 +212,8 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
     {
       return
         (svn_create_error 
-         (result, SVN_FATAL, 
-          svn_string_create ("svn_parse(): fatal: can't create scratchpool",
-                             pool), pool));
+         (result, "svn_parse(): fatal: can't create scratchpool",
+          NULL, pool));
     }
 
 
@@ -261,15 +262,17 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
            
             if (new_section == NULL)  /* couldn't find a ']' ! */
               {
+                char *finalmsg;
                 svn_string_t *msg = 
                   svn_string_create 
                   ("svn_parse(): warning: skipping malformed line: ", pool);
                 svn_string_appendstr (msg, currentline, pool);
 
                 /* Instead of returning an error, just print warning */
+                finalmsg = svn_string_2cstring (msg, pool);
                 svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
-                                   msg, NULL, pool));
+                                  (SVN_ERR_MALFORMED_LINE, finalmsg, 
+                                   NULL, pool));
                 break;
               }
                                         
@@ -306,15 +309,17 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
 
             if (new_key == NULL)  /* didn't find a colon! */
               {
+                char *finalmsg;
                 svn_string_t *msg = 
                   svn_string_create 
                   ("svn_parse(): warning: skipping malformed line: ", pool);
                 svn_string_appendstr (msg, currentline, pool);
                
                 /* Instead of returning an error, just print warning */
+                finalmsg = svn_string_2cstring (msg, pool);                
                 svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, SVN_NON_FATAL,
-                                   msg, NULL, pool));
+                                  (SVN_ERR_MALFORMED_LINE, finalmsg,
+                                   NULL, pool));
                 break;
               }
 
@@ -353,12 +358,14 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
   result = ap_close (FILE);
   if (result != APR_SUCCESS)
     {
+      char *finalmsg;
       svn_string_t *msg = svn_string_create 
         ("svn_parse(): warning: can't close file ", pool);
       svn_string_appendstr (msg, filename, pool);
       
       /* Not fatal, just annoying.  Send a warning instead returning error. */
-      svn_handle_error (svn_create_error (result, SVN_NON_FATAL, msg, pool));
+      finalmsg = svn_string_2cstring (msg, pool);
+      svn_handle_error (svn_create_error (result, finalmsg, NULL, pool));
     }
   
   ap_destroy_pool (scratchpool);
