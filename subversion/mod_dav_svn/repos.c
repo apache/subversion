@@ -1363,23 +1363,23 @@ static int is_our_resource(const dav_resource *res1,
       if (res2->info->root.txn_name)
         {
           /* reopen the txn by name */
-          (void) svn_fs_open_txn(&(res2->info->root.txn),
-                                 res2->info->repos->fs,
-                                 res2->info->root.txn_name,
-                                 res2->info->repos->pool);
+          svn_error_clear (svn_fs_open_txn(&(res2->info->root.txn),
+                                           res2->info->repos->fs,
+                                           res2->info->root.txn_name,
+                                           res2->info->repos->pool));
 
           /* regenerate the txn "root" object */
-          (void) svn_fs_txn_root(&(res2->info->root.root),
-                                 res2->info->root.txn,
-                                 res2->info->repos->pool);
+          svn_error_clear (svn_fs_txn_root(&(res2->info->root.root),
+                                           res2->info->root.txn,
+                                           res2->info->repos->pool));
         }
       else if (res2->info->root.rev)
         {
           /* default:  regenerate the revision "root" object */
-          (void) svn_fs_revision_root(&(res2->info->root.root),
-                                      res2->info->repos->fs,
-                                      res2->info->root.rev,
-                                      res2->info->repos->pool);
+          svn_error_clear (svn_fs_revision_root(&(res2->info->root.root),
+                                                res2->info->repos->fs,
+                                                res2->info->root.rev,
+                                                res2->info->repos->pool));
         }
     }
 
