@@ -61,7 +61,7 @@ extern "C" {
  *
  * Modify for every released patch.
  */
-#define SVN_VER_MICRO      7
+#define SVN_VER_MICRO      8
 
 /** Library version number.
  *
@@ -83,7 +83,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (r11033)"
+#define SVN_VER_TAG        " (r11084)"
 
 
 /** Number tag: a string describing the version.
@@ -109,7 +109,7 @@ extern "C" {
  * When rolling a tarball, we automatically replace it with what we
  * guess to be the correct revision number.
  */
-#define SVN_VER_REVISION   11033
+#define SVN_VER_REVISION   11084
 
 
 /* Version strings composed from the above definitions. */
