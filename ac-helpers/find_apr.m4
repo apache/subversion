@@ -38,6 +38,13 @@ dnl
 AC_DEFUN(APR_FIND_APR, [
   apr_found="no"
 
+  if test "$ac_cv_emxos2" = "yes"; then
+    # Scripts don't pass test -x on OS/2
+    TEST_X="test -f"
+  else
+    TEST_X="test -x"
+  fi
+
   AC_MSG_CHECKING(for APR)
   AC_ARG_WITH(apr,
   [  --with-apr=DIR|FILE     prefix for installed APR, path to APR build tree,
@@ -47,13 +54,13 @@ AC_DEFUN(APR_FIND_APR, [
       AC_MSG_ERROR([--with-apr requires a directory to be provided])
     fi
 
-    if test -x "$withval/bin/apr-config"; then
+    if $TEST_X "$withval/bin/apr-config"; then
       apr_found="yes"
       apr_config="$withval/bin/apr-config"
-    elif test -x "$withval/apr-config"; then
+    elif $TEST_X "$withval/apr-config"; then
       apr_found="yes"
       apr_config="$withval/apr-config"
-    elif test -x "$withval" && $withval --help > /dev/null 2>&1 ; then
+    elif $TEST_X "$withval" && $withval --help > /dev/null 2>&1 ; then
       apr_found="yes"
       apr_config="$withval"
     fi
@@ -71,7 +78,7 @@ build directory, or an apr-config file.])
     else
       dnl look in some standard places (apparently not in builtin/default)
       for lookdir in /usr /usr/local /opt/apr ; do
-        if test -x "$lookdir/bin/apr-config"; then
+        if $TEST_X "$lookdir/bin/apr-config"; then
           apr_found="yes"
           apr_config="$lookdir/bin/apr-config"
           break
