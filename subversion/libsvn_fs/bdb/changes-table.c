@@ -205,8 +205,6 @@ merge_change (apr_hash_t *changes,
     }
 
   /* Add (or update) this path, removing any leading slash that might exist. */
-  if (*path == '/')
-    path++;
   apr_hash_set (changes, path, APR_HASH_KEY_STRING, new_change);
 
   return SVN_NO_ERROR;

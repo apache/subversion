@@ -653,7 +653,7 @@ add_change (svn_fs_t *fs,
             trail_t *trail)
 {
   svn_fs__change_t change;
-  change.path = path;
+  change.path = svn_fs__canonicalize_abspath (path, trail->pool);
   change.noderev_id = noderev_id;
   change.kind = change_kind;
   change.text_mod = text_mod;

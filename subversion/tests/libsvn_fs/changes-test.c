@@ -33,22 +33,22 @@ static const char *standard_txns[6]
   = { "0", "1", "2", "3", "4", "5" };
 static const char *standard_changes[16][6] 
      /* KEY   PATH   NODEREVID  KIND     TEXT PROP */
-  = { { "0",  "foo",  "1.0.0",  "add",     0,  0  },
-      { "0",  "foo",  "1.0.0",  "modify",  0, "1" },
-      { "0",  "bar",  "2.0.0",  "add",     0,  0  },
-      { "0",  "bar",  "2.0.0",  "modify", "1", 0  },
-      { "0",  "bar",  "2.0.0",  "modify",  0, "1" },
-      { "0",  "baz",  "3.0.0",  "add",     0,  0  },
-      { "0",  "baz",  "3.0.0",  "modify", "1", 0  },
-      { "1",  "foo",  "1.0.1",  "modify", "1", 0  },
-      { "2",  "foo",  "1.0.2",  "modify",  0, "1" },
-      { "2",  "bar",  "2.0.2",  "modify", "1", 0  },
-      { "3",  "baz",  "3.0.3",  "modify", "1", 0  },
-      { "4",  "fob",  "4.0.4",  "add",     0,  0  },
-      { "4",  "fob",  "4.0.4",  "modify", "1", 0  },
-      { "5",  "baz",  "3.0.3",  "delete",  0,  0, },
-      { "5",  "baz",  "5.0.5",  "add",     0, "1" },
-      { "5",  "baz",  "5.0.5",  "modify", "1", 0  } };
+  = { { "0",  "/foo",  "1.0.0",  "add",     0,  0  },
+      { "0",  "/foo",  "1.0.0",  "modify",  0, "1" },
+      { "0",  "/bar",  "2.0.0",  "add",     0,  0  },
+      { "0",  "/bar",  "2.0.0",  "modify", "1", 0  },
+      { "0",  "/bar",  "2.0.0",  "modify",  0, "1" },
+      { "0",  "/baz",  "3.0.0",  "add",     0,  0  },
+      { "0",  "/baz",  "3.0.0",  "modify", "1", 0  },
+      { "1",  "/foo",  "1.0.1",  "modify", "1", 0  },
+      { "2",  "/foo",  "1.0.2",  "modify",  0, "1" },
+      { "2",  "/bar",  "2.0.2",  "modify", "1", 0  },
+      { "3",  "/baz",  "3.0.3",  "modify", "1", 0  },
+      { "4",  "/fob",  "4.0.4",  "add",     0,  0  },
+      { "4",  "/fob",  "4.0.4",  "modify", "1", 0  },
+      { "5",  "/baz",  "3.0.3",  "delete",  0,  0, },
+      { "5",  "/baz",  "5.0.5",  "add",     0, "1" },
+      { "5",  "/baz",  "5.0.5",  "modify", "1", 0  } };
 
 
 static svn_fs_path_change_kind_t string_to_kind (const char *str)
@@ -338,21 +338,21 @@ get_ideal_changes (const char *txn_id,
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 0;
       change->prop_mod = 1;
-      apr_hash_set (ideal, "foo", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
       change->node_rev_id = svn_fs_parse_id ("2.0.0", 5, pool);
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 1;
-      apr_hash_set (ideal, "bar", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/bar", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
       change->node_rev_id = svn_fs_parse_id ("3.0.0", 5, pool);
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, "baz", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "1") == 0)
     {
@@ -361,7 +361,7 @@ get_ideal_changes (const char *txn_id,
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, "foo", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "2") == 0)
     {
@@ -370,14 +370,14 @@ get_ideal_changes (const char *txn_id,
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 0;
       change->prop_mod = 1;
-      apr_hash_set (ideal, "foo", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/foo", APR_HASH_KEY_STRING, change);
 
       change = apr_palloc (pool, sizeof (*change));
       change->node_rev_id = svn_fs_parse_id ("2.0.2", 5, pool);
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, "bar", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/bar", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "3") == 0)
     {
@@ -386,7 +386,7 @@ get_ideal_changes (const char *txn_id,
       change->change_kind = svn_fs_path_change_modify;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, "baz", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "4") == 0)
     {
@@ -395,7 +395,7 @@ get_ideal_changes (const char *txn_id,
       change->change_kind = svn_fs_path_change_add;
       change->text_mod = 1;
       change->prop_mod = 0;
-      apr_hash_set (ideal, "fob", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/fob", APR_HASH_KEY_STRING, change);
     }
   if (strcmp (txn_id, "5") == 0)
     {
@@ -404,7 +404,7 @@ get_ideal_changes (const char *txn_id,
       change->change_kind = svn_fs_path_change_replace;
       change->text_mod = 1;
       change->prop_mod = 1;
-      apr_hash_set (ideal, "baz", APR_HASH_KEY_STRING, change);
+      apr_hash_set (ideal, "/baz", APR_HASH_KEY_STRING, change);
     }
   return ideal;
 }

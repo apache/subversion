@@ -46,6 +46,9 @@ svn_error_t *svn_fs__reserve_copy_id (const char **copy_id_p,
    source, and DST_NODEREV_ID is the node revision id of the copy
    destination.  
 
+   SRC_PATH is expected to be a canonicalized filesystem path (see
+   svn_fs__canonicalize_abspath).
+   
    COPY_ID should generally come from a call to svn_fs__reserve_copy_id().  */
 svn_error_t *svn_fs__create_copy (const char *copy_id,
                                   svn_fs_t *fs,

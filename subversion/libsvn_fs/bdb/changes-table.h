@@ -39,6 +39,9 @@ int svn_fs__open_changes_table (DB **changes_p,
 /* Add CHANGE as a record to the `changes' table in FS as part of
    TRAIL, keyed on KEY.  
 
+   CHANGE->path is expected to be a canonicalized filesystem path (see
+   svn_fs__canonicalize_abspath).
+
    Note that because the `changes' table uses duplicate keys, this
    function will not overwrite prior additions that have the KEY
    key, but simply adds this new record alongside previous ones.  */
