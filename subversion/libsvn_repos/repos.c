@@ -826,6 +826,30 @@ create_repos_structure (svn_repos_t *repos,
       "# anon-access = read"
       APR_EOL_STR
       "# auth-access = write"
+      APR_EOL_STR
+      "### This option controls the location of the password database.  This"
+      APR_EOL_STR
+      "### path may be relative to the repository root.  There is no default."
+      APR_EOL_STR
+      "### The format of the password database is:"
+      APR_EOL_STR
+      "### [users]"
+      APR_EOL_STR
+      "### USERNAME = PASSWORD"
+      APR_EOL_STR
+      "# password-db = passwd"
+      APR_EOL_STR
+      "### This option specifies the authentication realm of the repository."
+      APR_EOL_STR
+      "### If two repositories have the same authentication realm, they should"
+      APR_EOL_STR
+      "### have the same password database, and vice versa.  The default realm"
+      APR_EOL_STR
+      "### is the path to the repository, relative to the server's repository"
+      APR_EOL_STR
+      "### root."
+      APR_EOL_STR
+      "# realm = My First Repository"
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (svnserve_conf_file_name,
