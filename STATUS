@@ -31,28 +31,6 @@ Candidate changes:
       +1: sussman
       +0: dlr, gstein
 
-  * r8553
-    Fix invalid REPORT response when updating a deleted wc. (issue #1721)
-    Justification:  users have noticed unintelligible XML parse error.
-    Notes:  one-line change to mod_dav_svn allows a real error to get through.
-    Votes:
-      +1: sussman, dlr, gstein
-
-  * r8253
-    Make svnlook use apr_tempdir(), instead of trying to write in '.'
-    Justification: users have been bitten by this a few times already.
-    Notes:  just some internal changes to svnlook's main.c.
-    Votes:
-      +1: sussman, dlr, bliss
-      +0: gstein  (big patch; not sure)
-
-  * r8302, 8304
-    Fix issue #1694:  can't checkout repos with space in path.
-    Justification: users (especially on win32) have reported this.
-    Notes:  whoops, we forgot to uri-encode the root_path.  duh.
-    Votes:
-      +1: sussman, dlr, bliss, philip, gstein
-
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
     Justification:  reported by a user, an unnecessary restriction.
@@ -60,14 +38,6 @@ Candidate changes:
     Votes:
       +1: sussman
       +0: dlr, gstein
-
-  * r8256
-    Improve presentation of directory property conflicts.
-    Justification:  already bit kfogel;  his dir_conflicts.prej looked awful.
-    Notes:  just adds some newlines to printed strings.
-    Votes:
-      +1: sussman, dlr, philip
-      +0: gstein  (isn't that output considered part of the contract?)
 
   * r8577, r8584
     Prevent a potential ra_dav commit race-condition.
@@ -84,18 +54,6 @@ Candidate changes:
       +1: sussman, philip
       +0: dlr, gstein
 
-  * r8618
-    Fix segfault in mod_dav_svn.
-    Justification: it's a seg fault, and the fix is simple.
-    Votes:
-      +1: cmpilato, dlr, sussman, philip, gstein
-
-  * r8617
-    Fix improper cursor shutdown in libsvn_fs leading to wedgitude.
-    Justification: severe lossage occurs if this bug is encountered.
-    Votes:
-      +1: cmpilato, dlr, gstein
-
   * r8616
     Improved warnings from svnlook and svnadmin.
     Justification: greatly increased admin-friendliness.
@@ -104,23 +62,6 @@ Candidate changes:
       -1: julianfoad (memory leak and inappropriate verbosity; see the dev@
             mailing list thread "r8616: candidate for 1.0.1: Improved warnings
             from svnlook and svnadmin")
-
-  * r8581
-    Detect invalid UTF8 filenames when native locale is UTF8.
-    Justification:  it's really easy to get invalid utf8 into the repository,
-                    which then hoses checkouts.
-    Notes:  This has the potential to burn a whole lot of new users.
-    Votes:
-      +1: sussman, brane, philip
-      +0: dlr
-      -0: gstein  (woah. lots o' code)
-
-  * r8681
-    Fix issue 1692: obscure bugs in formatting of time/date strings.
-    Justification: Simple fix; affects all "svn log" output in time zone
-      "Canada/Newfoundland".
-    Votes:
-      +1: julianfoad, dlr, gstein
 
   * r8672
     Fix svn_io_dir_walk 'dot-first' ordering required by 'svnadmin hotcopy'
