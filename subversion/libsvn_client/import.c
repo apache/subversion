@@ -16,15 +16,16 @@
 
 
 #include <assert.h>
-#include "apr_pools.h"
-#include "apr_file_io.h"
-#include "apr_hash.h"
-#include "wc.h"
+#include <apr.h>
+#include <apr_errno.h>
+#include <apr_pools.h>
+#include <apr_file_io.h>
+#include <apr_hash.h>
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_io.h"
 #include "svn_delta.h"
-
+#include "svn_path.h"
 
 
 /* Apply PATH's contents (as a delta against the empty string) to
@@ -144,6 +145,16 @@ import_dir (const svn_delta_edit_fns_t *editor,
               || (strcmp (this_entry.name, "..") == 0))
             continue;
 
+          /* If someone's trying to import a tree with SVN/ subdirs,
+             that's probably not what they wanted to do.  Someday we
+             can take an option to make the SVN/ subdirs be silently
+             ignored, but for now, seems safest to error. */
+          if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
+            return svn_error_createf
+              (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, subpool,
+               "cannot import directory named \"%s\" (in `%s')",
+               this_entry.name, path->data);
+
           /* Get descent baton from the editor. */
           SVN_ERR (editor->add_directory (name,
                                           dir_baton,
@@ -210,14 +221,28 @@ svn_wc_import (svn_string_t *path,
   /* Basic sanity check. */
   if (new_entry && (strcmp (new_entry->data, "") == 0))
     return svn_error_create
-      (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "new entry name may not be the empty string when importing");
+
+  /* The repository doesn't know about the reserved. */
+  if (strcmp (new_entry->data, SVN_WC_ADM_DIR_NAME) == 0)
+    return svn_error_createf
+      (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, pool,
+       "the name \"%s\" is reserved and cannot be imported",
+       SVN_WC_ADM_DIR_NAME);
 
   /* Get a root dir baton. */
   SVN_ERR (editor->replace_root (edit_baton, 0, &root_baton));
 
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+  /* Note that there is no need to check whether PATH's basename is
+     "SVN".  It would be strange but not illegal to import the
+     contents of a directory named SVN/, because the directory's own
+     name is not part of those contents.  Of course, if something
+     underneath it is also named "SVN", then we'll error. */
+
   if (kind == svn_node_file)
     {
       svn_string_t *filename;

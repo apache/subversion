@@ -73,6 +73,26 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 
 
+/*** Administrative subdir. ***/
+
+/* Ideally, this would be completely private to wc internals (in fact,
+   it used to be that adm_files.c:adm_subdir() was the only function
+   who knew the adm subdir's name).  However, import wants to protect
+   against importing administrative subdirs, so now the name is a
+   matter of public record.
+
+   ### kff:
+   Note that the import issue throws a wrench in our tentative plans
+   to give client users optional control over the adm subdir name.
+   Sure, I can tell my client to override this constant, but all the
+   other people in the world importing trees don't know about my
+   choice.  What happens when I try to check out their tree?  Perhaps
+   a centralized decision is called for after all. */
+
+#define SVN_WC_ADM_DIR_NAME   "SVN"
+
+
+
 /*** Entries and status. ***/
 
 /* A working copy entry -- that is, revision control information about
