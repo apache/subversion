@@ -198,7 +198,7 @@ sub status_update_commit
 # Populate a working copy
 sub populate
   {
-    my ( $dir, $dir_width, $file_width, $depth, $pad ) = @_;
+    my ( $dir, $dir_width, $file_width, $depth, $pad, $props ) = @_;
     return if not $depth--;
 
     for $nfile ( 1..$file_width )
@@ -212,10 +212,20 @@ sub populate
             map { print FOO $_ x 255, "\n"; } ("a", "b", "c", "d")
               foreach (1..$pad);
           }
+        print FOO "\$HeadURL: \$\n" or die "write to $filename: $!\n" if $props;
         close FOO or die "close $filename: $!\n";
 
         my $svn_cmd = "svn add $filename";
         system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+
+        if ( $props )
+          {
+            $svn_cmd = "svn propset svn:eol-style native $filename";
+            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+
+            $svn_cmd = "svn propset svn:keywords HeadURL $filename";
+            system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+          }
       }
 
     if ( $depth )
@@ -226,7 +236,8 @@ sub populate
             my $svn_cmd = "svn mkdir $dirname";
             system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
 
-            populate( "$dirname", $dir_width, $file_width, $depth, $pad );
+            populate( "$dirname", $dir_width, $file_width, $depth, $pad,
+                      $props );
           }
       }
   }
@@ -257,6 +268,7 @@ where
   -c cause repository creation
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
   -n the number of sets of changes to commit
+  -p add svn:eol-style and svn:keywords properties to the files
   -s the sleep delay (-1 wait for key, 0 none)
   -x the number of files to modify in each commit
   -D the number of sub-directories per directory in the tree
@@ -280,11 +292,12 @@ where
     $cmd_opts{'W'} = 0;            # create with --bdb-txn-nosync
     $cmd_opts{'c'} = 0;            # create repository
     $cmd_opts{'i'} = 0;            # ID
-    $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'n'} = 200;          # sets of changes
+    $cmd_opts{'p'} = 0;            # add file properties
+    $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'ci:n:s:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'ci:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
 
     # default ID if not set
     $cmd_opts{'i'} = 1 - $cmd_opts{'c'} if not $cmd_opts{'i'};
@@ -329,7 +342,7 @@ if ( $cmd_opts{'c'} )
     my $svn_cmd = "svn mkdir $wc_dir/trunk";
     system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
     populate( "$wc_dir/trunk", $cmd_opts{'D'}, $cmd_opts{'F'}, $cmd_opts{'N'},
-              $cmd_opts{'P'} );
+              $cmd_opts{'P'}, $cmd_opts{'p'} );
     status_update_commit $wc_dir, 0 and die "populate checkin failed\n";
   }
 
