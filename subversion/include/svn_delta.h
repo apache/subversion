@@ -42,8 +42,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_delta version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_delta version information.
  */
 const svn_version_t *svn_delta_version (void);
 

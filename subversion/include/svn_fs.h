@@ -38,8 +38,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_fs version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_fs version information.
  */
 const svn_version_t *svn_fs_version (void);
 
@@ -319,7 +320,8 @@ svn_boolean_t svn_fs_check_related (const svn_fs_id_t *id1,
                                     const svn_fs_id_t *id2);
 
 
-/** @deprecated Provided for backward compatibility with the 1.0 API.
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * NOTE: This function is not guaranteed to work with all filesystem
  * types.  There is currently no un-deprecated equivalent; contact the

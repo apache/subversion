@@ -39,8 +39,9 @@ extern "C" {
 /* ---------------------------------------------------------------*/
 
 /**
- * Get libsvn_repos version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_repos version information.
  */
 const svn_version_t *svn_repos_version (void);
 
@@ -72,7 +73,9 @@ typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
                                                 void *baton,
                                                 apr_pool_t *pool);
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * A callback function type for use in @c svn_repos_get_file_revs.
  * @a baton is provided by the caller, @a path is the pathname of the file
  * in revision @a rev and @a rev_props are the revision properties.
@@ -777,7 +780,9 @@ svn_repos_get_logs (svn_repos_t *repos,
 
 /* Retreiving multiple revisions of a file. */
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * Retrieve a subset of the interesting revisions of a file @a path in
  * @a repos as seen in revision @a end.  Invoke @a handler with
  * @a handler_baton as its first argument for each such revision.

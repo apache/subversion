@@ -34,7 +34,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
  *
