@@ -970,7 +970,7 @@ svn_client_revprop_list (apr_hash_t **props,
            (set_rev, ra_lib, session, revision, NULL, pool));
 
   /* The actual RA call. */
-  SVN_ERR (ra_lib->rev_proplist (session, *set_rev, &proplist));
+  SVN_ERR (ra_lib->rev_proplist (session, *set_rev, &proplist, pool));
 
   for (hi = apr_hash_first (pool, proplist); hi; hi = apr_hash_next (hi))
     {

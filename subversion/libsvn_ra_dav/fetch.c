@@ -1582,12 +1582,13 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
 
 svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
                                        svn_revnum_t rev,
-                                       apr_hash_t **props)
+                                       apr_hash_t **props,
+                                       apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
 
-  *props = apr_hash_make (ras->pool);
+  *props = apr_hash_make (pool);
 
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
@@ -1595,13 +1596,13 @@ svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
                                           ras->url,
                                           rev,
                                           NULL, /* get ALL properties */
-                                          ras->pool));
+                                          pool));
 
   /* Build a new property hash, based on the one in the baseline
      resource.  In particular, convert the xml-property-namespaces
      into ones that the client understands.  Strip away the DAV:
      liveprops as well. */
-  SVN_ERR (filter_props (*props, baseline, FALSE, ras->pool));
+  SVN_ERR (filter_props (*props, baseline, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

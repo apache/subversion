@@ -313,10 +313,13 @@ typedef struct svn_ra_plugin_t
    * Set @a *props to the list of unversioned properties attached to
    * revision @a rev.  The hash maps (<tt>const char *</tt>) names to
    * (<tt>@c svn_string_t *</tt>) values.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*rev_proplist) (void *session_baton,
                                 svn_revnum_t rev,
-                                apr_hash_t **props);
+                                apr_hash_t **props,
+                                apr_pool_t *pool);
 
   /** Set @a *value to the value of unversioned property @a name attached to
    * revision @a rev.
