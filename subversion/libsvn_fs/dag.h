@@ -424,6 +424,31 @@ svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
 #endif /* SVN_LIBSVN_FS_DAG_H */
 
 
+/* Find out what is the same between two nodes.
+ *
+ * If PROPS_CHANGED is non-null, set *PROPS_CHANGED to 1 if the two
+ * nodes have different property lists, or to 0 if same.
+ *
+ * If CONTENTS_CHANGED is non-null, set *CONTENTS_CHANGED to 1 if the
+ * two nodes have different contents, or to 0 if same.  For files,
+ * file contents are compared; for directories, the entries lists are
+ * compared.  If one is a file and the other is a directory, the one's
+ * contents will be compared to the other's entries list.  (Not
+ * terribly useful, I suppose, but that's the caller's business.)
+ *
+ * ### todo:
+ * This function only compares rep keys at the moment.  This may leave
+ * us with a slight chance of a false positive, though I don't really
+ * see how that would happen in practice.  Nevertheless, it should
+ * probably be fixed.
+ */
+svn_error_t *svn_fs__things_different (int *props_changed,
+                                       int *contents_changed,
+                                       dag_node_t *node1,
+                                       dag_node_t *node2,
+                                       trail_t *trail);
+
+
 
 /* 
  * local variables:

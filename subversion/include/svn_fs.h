@@ -718,6 +718,18 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       const svn_string_t *value,
                                       apr_pool_t *pool);
 
+
+/* fooo */
+/* Set *CHANGED_P to 1 if the properties at PATH differ under ROOT1
+   versus ROOT2, or set it to 0 if they are the same.  Both roots must
+   be in the same filesystem, and PATH must exist in both. */
+svn_error_t *svn_fs_props_changed (int *changed_p,
+                                   svn_fs_root_t *root1,
+                                   svn_fs_root_t *root2,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+
 /* Discover a node's copy ancestry, if any.
 
    If the node at PATH in ROOT was copied from some other node, set
@@ -998,6 +1010,16 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                                      svn_fs_root_t *root,
                                      const char *path,
                                      apr_pool_t *pool);
+
+
+/* Set *CHANGED_P to 1 if the contents at PATH differ under ROOT1
+   versus ROOT2, or set it to 0 if they are the same.  Both roots must
+   be in the same filesystem, and PATH must be a file in both. */
+svn_error_t *svn_fs_contents_changed (int *changed_p,
+                                      svn_fs_root_t *root1,
+                                      svn_fs_root_t *root2,
+                                      const char *path,
+                                      apr_pool_t *pool);
 
 
 
