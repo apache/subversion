@@ -258,132 +258,136 @@ $ svnadmin create /path/to/repos
       el repositorio fue creado.</para>
 
     <warning>
-      <para>Do not create your repository on a network share&mdash;it
-        <emphasis>cannot</emphasis> exist on a remote filesystem such
-        as NFS, AFS, or Windows SMB.  Berkeley DB requires that the
-        underlying filesystem implement strict POSIX locking
-        semantics, and more importantly, the ability to map files
-        directly into process memory.  Almost no network filesystems
-        provide these features.  If you attempt to use Berkeley DB on
-        a network share, the results are unpredictable&mdash;you may see
-        mysterious errors right away, or it may be months before you
-        discover that your repository database is subtly
-        corrupted.</para>
+      <para>No crees tu repositorio en una unidad de red compartida
+        &mdash;no <emphasis>puede</emphasis> existir un un sistema
+        de ficheros remoto como NFS, AFS, o Windows SMB. La DB Berkeley
+        necesita que el sistema de ficheros subyacente implemente
+        estrictamente la semántica de bloqueo POSIX, y más importante,
+	la habilidad para mapear ficheros directamente <!--TODO into 
+        process memory.--> Casi ningún sistema de ficheros de red
+        tiene estas características. Si intentas usar una BD Berkeley
+        en una unidad compartida de red, los resultados son impredecibles
+        &mdash;puede que veas errores misteriosoo, o pueden pasar meses
+        hasta que descubras que la base de datos de tu repositorio está
+        sutilmente corrupta.</para>
 
-      <para>If you need multiple computers to access the repository,
-        you should set up a server process (such as Apache or
-        <command>svnserve</command>), store the repository on a local
-        filesystem which the server can access, and make the
-        repository available over a network.  <xref
-        linkend="svn-ch-6"/> covers this process in detail.</para>
+      <para>Si necesitas que varios ordenadores accedan al repositorio,
+        deberías instalar un proceso servidor ( como Apache o <command>svnserve</command>),
+        almacenar el repositorio en un sistema de ficheros local al que
+        el servidor pueda acceder, y hacer que el repositorio esté
+        disponible por la red. <xref linkend="svn-ch-6"/> se ocupa
+        de este proceso en detalle.</para>
     </warning>
           
-    <para>You may have noticed that the path argument to
-      <command>svnadmin</command> was just a regular filesystem path
-      and not a URL like the <command>svn</command> client program
-      uses when referring to repositories.  Both
-      <command>svnadmin</command> and <command>svnlook</command> are
-      considered server-side utilities&mdash;they are used on the
-      machine where the repository resides to examine or modify
-      aspects of the repository, and are in fact unable to perform
-      tasks across a network.  A common mistake made by Subversion
-      newcomers is trying to pass URLs (even <quote>local</quote>
-      <literal>file:</literal> ones) to these two programs.</para>
+    <para>Te habrás dado cuenta de que el argumento de ruta de
+      <command>svnadmin</command> fue sólo una ruta normal del sistema
+      de ficheros y no una URL como la que el programa cliente
+      <command>svn</command> usa cuando se refiere a los repositorios.
+      Tanto  <command>svnadmin</command> como <command>svnlook</command>
+      son considerados como utilidades del lado del servidor&mdash;
+      se usan en la máquina donde reside el repositorio para examinar
+      o modificar aspectos del mismo, y son de hecho, tareas imposibles
+      de realizar por red. Un error común hecho por recién llegados a
+      Subversion es tratar de pasar URLs ( incluso las  <literal>file:</literal>
+      <quote>locales</quote> ) a ambos programas.</para>
 
-    <para>So, after you've run the <command>svnadmin create</command>
-      command, you have a shiny new Subversion repository in its own
-      directory.  Let's take a peek at what is actually created inside
-      that subdirectory.</para>
+    <para>Así, después de que hayas ejecutado el comando <command>svnadmin create</command>,
+      tienes un nuevo y brillante repositorio Subversion en su propio
+      directorio. Echemos una ojeada a qué es lo que realmente se crea
+      dentro de ese subdirectorio.</para>
             
     <screen>
 $ ls repos
 conf/  dav/  db/  format  hooks/  locks/  README.txt
 </screen>
       
-    <para>With the exception of the <filename>README.txt</filename> and
-      <filename>format</filename> files,
-      the repository directory is a collection of subdirectories.  As
-      in other areas of the Subversion design, modularity is given
-      high regard, and hierarchical organization is preferred to
-      cluttered chaos.  Here is a brief description of all of
-      the items you see in your new repository directory:</para>
+    <para>Con la excepción de los ficheros <filename>README.txt</filename> y
+      <filename>format</filename>, el directorio del repositorio es un grupo
+      de subdirectorios. Al igual que en otras áreas del diseño de Subversion,
+      se le tiene mucho respeto a la modularidad, y se prefiere una
+      organización jerárquica antes que un caos que estorbe. He aquí una breve
+      descripción de todos los objetos que puedes ver en tu nuevo directorio
+      de repositorio:</para>
 
     <variablelist>
      <varlistentry>
         <term>conf</term>
         <listitem>
-          <para>A directory containing repository configuration files.</para>
+          <para>Un directorio que contiene los ficheros de configuración del repositorio.</para>
         </listitem>
       </varlistentry>
      <varlistentry>
         <term>dav</term>
         <listitem>
-          <para>A directory provided to Apache and mod_dav_svn for
-            their private housekeeping data.</para>
+          <para>Un directorio para Apache y mod_dav_svn y su
+            economía privada de datos.<!--TODO:comprobar "housekeeping"--></para>	  
         </listitem>
       </varlistentry>
      <varlistentry>
         <term>db</term>
         <listitem>
-          <para>The main Berkeley DB environment, full of DB tables
-            that comprise the data store for Subversion's filesystem
-            (where all of your versioned data resides).</para>
+          <para>El entorno principal de la BD Berkeley, lleno de tablas
+            que <!--TODO:comprise--> el almacenamiento de datos para
+            el sistema de ficheros de Subversion ( donde todos tus
+            datos versionados residen.</para>
         </listitem>
       </varlistentry>
      <varlistentry>
         <term>format</term>
         <listitem>
-          <para>A file whose contents are a single integer value that
-            dictates the version number of the repository layout.</para>
+          <para>Un fichero cuyo contenido es un simple valor entero que
+            nos dice el número de versión del repositorio <!--TODO:layout--></para>	  
         </listitem>
       </varlistentry>
      <varlistentry>
         <term>hooks</term>
         <listitem>
-          <para>A directory full of hook script templates (and hook
-            scripts themselves, once you've installed some).</para>
+          <para>Un directorio lleno de <!--hook script templates-->
+            ( y los mismos <!--TODO: hook scripts-->, una vez que hayas instalados
+            algunos.</para>
         </listitem>
       </varlistentry>
      <varlistentry>
         <term>locks</term>
         <listitem>
-          <para>A directory for Subversion's repository locking
-            data, used for tracking accessors to the repository.</para>
+          <para>Un directorio para el bloqueo de datos de repositorio
+            de Subversion, usado para <!--TODO: tracking --> los
+            accesos al repositorio.</para>
         </listitem>
       </varlistentry>
      <varlistentry>
         <term>README.txt</term>
         <listitem>
-          <para>A file which merely informs its readers that they
-            are looking at a Subversion repository.</para>
+          <para>Un fichero que simplemente informa a sus lectores que
+            están mirando un repositorio Subversion.</para>
         </listitem>
       </varlistentry>
     </variablelist>
       
-    <para>In general, you shouldn't tamper with your repository
-      <quote>by hand</quote>.  The <command>svnadmin</command> tool
-      should be sufficient for any changes necessary to your
-      repository, or you can look to third-party tools (such as
-      Berkeley DB's tool suite) for tweaking relevant subsections of
-      the repository.  Some exceptions exist, though, and we'll cover
-      those here.</para>
+    <para>En general, no deberías <!--TODO: tamper --> con tu repositorio
+      <quote>a mano</quote>. La herramienta <command>svnadmin</command>
+      debería ser suficiente para cualquier cambio necesarios en tu
+      repositorio, o puedes echar una ojeada a herramientas de terceros
+      ( como la suite<!--TODO: suite-->de herramientas de la BD Berkeley )
+      para <!--TODO: tweaking--> subsectiones relevantes del repositorio.
+      Sin embargo, hay algunas excepciones, y las veremos aquí.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-2.1">
       <title>Hook Scripts</title>
 
-      <para>A <firstterm>hook</firstterm> is a program triggered by
-        some repository event, such as the creation of a new revision
-        or the modification of an unversioned property.  Each hook is
-        handed enough information to tell what that event is, what
-        target(s) it's operating on, and the username of the person
-        who triggered the event.  Depending on the hook's output or
-        return status, the hook program may continue the action, stop
-        it, or suspend it in some way.</para>
+       <!--TODO: párrafo complicado, revisar -->
+       <para>Un <firstterm><!--TODO: hook-->hook</firstterm> es un programa
+        <!--TODO: triggered --> por algún evento del repositorio, como la
+        creación de una nueva revisión o la modificación de una propiedad
+        no versionada. A cada hook se le da suficiente información para
+        que sepa de qué evento se trata, cuál es su objetivo, y el nombre
+        de usuario de la persona que disparó el evento. Dependiendo de
+        la salida del hook o de estado de su salida, el programa hook
+        puede continuar la acción, pararla, o suspenderla de alguna manera.</para>
             
-      <para>The <filename>hooks</filename> subdirectory is, by
-        default, filled with templates for various repository
-        hooks.</para>
+      <para>El subdirectorio  <filename>hooks</filename> se rellena,
+        por defecto, con plantillas para varios hooks de repositorio.</para>
             
       <screen>
 $ ls repos/hooks/
