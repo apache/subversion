@@ -68,7 +68,7 @@
 }
 
 /* -----------------------------------------------------------------------
-   Define a more refined 'varin' typemap for 'const char *' members. This
+   Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
    We need to do the free/malloc/strcpy special because of the const
