@@ -336,6 +336,7 @@ svn_error_t *svn_wc__entry_get (svn_string_t *path,
 /* Remove ENTRYNAME from PATH's `entries' file. */
 svn_error_t *svn_wc__entry_remove (svn_string_t *path,
                                    apr_pool_t *pool,
+                                   /* Ben, svn_string_t below? */
                                    const char *entryname);
 
 
