@@ -1995,8 +1995,68 @@ ServerName svn.red-bean.com
           details.</para>
   
       </sect3> 
-  
+
       <sect3 id="svn-ch-5-sect-4.1.5">
+        <title>Browsing the HEAD of the Repository</title>
+
+        <para>One of the most useful benefits of an Apache/WebDAV
+          configuration for your Subversion repository is that the
+          youngest revisions of your versioned files and directories
+          are immediately available for viewing via a regular web
+          browser.  Since Subversion uses URLs to identify versioned
+          resources, those URLs used for HTTP-based repository access
+          can be typed directly into a Web browser.  Your browser will
+          issue a <literal>GET</literal> request for that URL, and
+          based on whether that URL represents a versioned directory
+          or file, mod_dav_svn will respond with a directory listing
+          or with file contents.</para>
+
+        <para>Since the URLs do not contain any information about
+          which version of the resource you wish to see, mod_dav_svn
+          will always answer with the youngest version.  This
+          functionality has the wonderful side-effect that you can
+          pass around Subversion URLs to your peers as references to
+          documents, and those URLs will always point at the latest
+          manifestation of that document.  Of course, you can even use
+          the URLs as hyperlinks from other web sites, too.</para>
+
+        <para>You generally will get more use out of URLs to versioned
+          files&mdash;after all, that's where the interesting content
+          tends to lie.  But you might have occasion to browse a
+          Subversion directory listing, where you'll quickly note that
+          the generated HTML used to display that listing is very
+          basic, and certainly not intended to be aesthetically
+          pleasing (or even interesting).  To enable customization of
+          these directory displays, Subversion provides an XML index
+          feature.  A single <literal>SVNIndexXSLT</literal> directive
+          in your repository's <literal>Location</literal> block of
+          <filename>httpd.conf</filename> will instruct mod_dav_svn to
+          generate XML output when displaying a directory listing, and
+          to reference the XSLT stylesheet of your choice:</para>
+ 
+        <screen>
+&lt;Location /svn&gt;
+  DAV svn
+  SVNParentPath /usr/local/svn
+  SVNIndexXSLT "/svnindex.xsl"
+  &hellip;
+&lt;/Location&gt;
+</screen>
+
+        <para>Using the <literal>SVNIndexXSLT</literal> directive and
+          a creative XSLT stylesheet, you can make your directory
+          listings match the color schemes and imagery used in other
+          parts of your website.  Or, if you'd prefer, you can use the
+          sample stylesheets provided in the Subversion source
+          distribution's <filename>tools/xslt/</filename> directory.
+          Keep in mind that the path provided to the
+          <literal>SVNIndexXSLT</literal> directory is actually a URL
+          path&mdash;browsers need to be able to read your stylesheets
+          in order to make use of them!</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-5-sect-4.1.6">
         <title>Miscellaneous Apache Features</title>
   
         <para>Several of the features already provided by Apache in
