@@ -745,10 +745,10 @@ then include a string like "issue #N" in the log message.  For
 example, if a patch resolves issue 1729, then the log message might
 be:
 
-   Fix issue #1729:
+   Fix issue #1729: Don't crash because of a missing file.
 
    * get_editor.c
-     (frobnicate_file): Check that file exists first.
+     (frobnicate_file): Check that file exists before frobnicating.
 
 For large changes or change groups, group the log entry into
 paragraphs separated by blank lines.  Each paragraph should be a set
