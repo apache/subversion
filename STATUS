@@ -40,5 +40,15 @@ Candidate changes:
       you need 1.3.19 or newer...
     Votes:
       +1: breser
+
+  * r12144, r12485
+    Adds type caching to the perl bindings.  Otherwise mostly
+    adds a code cleanup.
+    Justificaton:
+      Makes the perl bindings build with r12397 which we merged
+      already.
+    Votes:
+      +1: breser
+
 Approved changes (further review is welcome, but not required):
 
