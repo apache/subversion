@@ -590,13 +590,14 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc_unlock (pb->path, pool));
 
   if (pb->edit_baton->notify_func)
-    (pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                   pb->path,
-                                   svn_wc_notify_delete,
-                                   svn_node_unknown,
-                                   svn_wc_notify_state_unknown,
-                                   svn_wc_notify_state_unknown,
-                                   SVN_INVALID_REVNUM);
+    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
+                                    pb->path,
+                                    svn_wc_notify_delete,
+                                    svn_node_unknown,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    svn_wc_notify_state_unknown,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -665,13 +666,14 @@ add_directory (const char *path,
   *child_baton = db;
 
   if (db->edit_baton->notify_func)
-    (db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                   db->path,
-                                   svn_wc_notify_add,
-                                   svn_node_dir,
-                                   svn_wc_notify_state_unknown,
-                                   svn_wc_notify_state_unknown,
-                                   SVN_INVALID_REVNUM);
+    (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
+                                    db->path,
+                                    svn_wc_notify_add,
+                                    svn_node_dir,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    svn_wc_notify_state_unknown,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -949,13 +951,14 @@ close_directory (void *dir_baton)
             prop_state = svn_wc_notify_state_modified;
         }
       
-      (db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                     db->path,
-                                     svn_wc_notify_update,
-                                     svn_node_dir,
-                                     svn_wc_notify_state_unknown,
-                                     prop_state,
-                                     SVN_INVALID_REVNUM);
+      (*db->edit_baton->notify_func) (db->edit_baton->notify_baton,
+                                      db->path,
+                                      svn_wc_notify_update,
+                                      svn_node_dir,
+                                      NULL,
+                                      svn_wc_notify_state_unknown,
+                                      prop_state,
+                                      SVN_INVALID_REVNUM);
     }
 
   return SVN_NO_ERROR;
@@ -1214,7 +1217,7 @@ change_file_prop (void *file_baton,
    used extensively by the update-editor, as well as by
    svn_client_switch(), when switching a single file in-place. */
 svn_error_t *
-svn_wc_install_file (svn_wc_notify_state_t *text_state,
+svn_wc_install_file (svn_wc_notify_state_t *content_state,
                      svn_wc_notify_state_t *prop_state,
                      const char *file_path,
                      svn_revnum_t new_revision,
@@ -1736,7 +1739,7 @@ svn_wc_install_file (svn_wc_notify_state_t *text_state,
         }
     }
 
-  if (text_state)
+  if (content_state)
     {
       svn_wc_entry_t *entry;
       svn_boolean_t tc, pc;
@@ -1757,16 +1760,16 @@ svn_wc_install_file (svn_wc_notify_state_t *text_state,
          seems okay to me.  I guess.  I dunno.  You? */
 
       if (tc)
-        *text_state = svn_wc_notify_state_conflicted;
+        *content_state = svn_wc_notify_state_conflicted;
       else if (new_text_path)
         {
           if (is_locally_modified)
-            *text_state = svn_wc_notify_state_merged;
+            *content_state = svn_wc_notify_state_merged;
           else
-            *text_state = svn_wc_notify_state_modified;
+            *content_state = svn_wc_notify_state_modified;
         }
       else
-        *text_state = svn_wc_notify_state_unknown;
+        *content_state = svn_wc_notify_state_unknown;
     }
 
   /* Unlock the parent dir, we're done with this file installation. */
@@ -1784,7 +1787,7 @@ close_file (void *file_baton)
   struct file_baton *fb = file_baton;
   const char *new_text_path = NULL;
   apr_array_header_t *propchanges = NULL;
-  svn_wc_notify_state_t text_state, prop_state;
+  svn_wc_notify_state_t content_state, prop_state;
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
@@ -1793,7 +1796,7 @@ close_file (void *file_baton)
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
-  SVN_ERR (svn_wc_install_file (&text_state,
+  SVN_ERR (svn_wc_install_file (&content_state,
                                 &prop_state,
                                 fb->path,
                                 fb->edit_baton->target_revision,
@@ -1809,12 +1812,13 @@ close_file (void *file_baton)
                                     fb->pool));
 
   if (fb->edit_baton->notify_func)
-    (fb->edit_baton->notify_func)
+    (*fb->edit_baton->notify_func)
       (fb->edit_baton->notify_baton,
        fb->path,
        fb->added ? svn_wc_notify_add : svn_wc_notify_update,
        svn_node_file,
-       text_state,
+       NULL,  /* ### if svn_wc_install_file gave mimetype, we could use here */
+       content_state,
        prop_state,
        SVN_INVALID_REVNUM);
 
@@ -1860,13 +1864,14 @@ close_edit (void *edit_baton)
     }
 
   if (eb->notify_func)
-    (eb->notify_func) (eb->notify_baton,
-                       eb->anchor,
-                       svn_wc_notify_update_completed,
-                       svn_node_unknown,
-                       svn_wc_notify_state_unknown,
-                       svn_wc_notify_state_unknown,
-                       eb->target_revision);
+    (*eb->notify_func) (eb->notify_baton,
+                        eb->anchor,
+                        svn_wc_notify_update_completed,
+                        svn_node_none,
+                        NULL,
+                        svn_wc_notify_state_inapplicable,
+                        svn_wc_notify_state_inapplicable,
+                        eb->target_revision);
 
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
@@ -1958,6 +1963,8 @@ svn_wc_get_update_editor (const char *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
                           svn_boolean_t recurse,
+                          svn_wc_notify_func_t notify_func,
+                          void *notify_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t **traversal_info,
@@ -1965,7 +1972,7 @@ svn_wc_get_update_editor (const char *anchor,
 {
   return make_editor (anchor, target, target_revision, 
                       FALSE, NULL, NULL,
-                      recurse, NULL, NULL,
+                      recurse, notify_func, notify_baton,
                       editor, edit_baton, traversal_info, pool);
 }
 
@@ -1996,6 +2003,8 @@ svn_wc_get_switch_editor (const char *anchor,
                           svn_revnum_t target_revision,
                           const char *switch_url,
                           svn_boolean_t recurse,
+                          svn_wc_notify_func_t notify_func,
+                          void *notify_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t **traversal_info,
@@ -2005,7 +2014,7 @@ svn_wc_get_switch_editor (const char *anchor,
 
   return make_editor (anchor, target, target_revision,
                       FALSE, NULL, switch_url,
-                      recurse, NULL, NULL,
+                      recurse, notify_func, notify_baton,
                       editor, edit_baton,
                       traversal_info, pool);
 }

@@ -41,9 +41,9 @@ svn_cl__merge (apr_getopt_t *os,
                apr_pool_t *pool)
 {
   apr_array_header_t *targets;
+  const svn_delta_editor_t *trace_editor = NULL;
+  void *trace_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
-  const svn_delta_editor_t *trace_editor;
-  void *trace_edit_baton;
   const char *parent_dir, *entry;
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
@@ -119,8 +119,10 @@ svn_cl__merge (apr_getopt_t *os,
   */
 
   SVN_ERR (svn_wc_get_actual_target (targetpath, &parent_dir, &entry, pool));
-  SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor, &trace_edit_baton,
-                                            parent_dir, FALSE, TRUE, pool));
+
+  if (! opt_state->quiet)
+    SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor, &trace_edit_baton,
+                                              parent_dir, FALSE, TRUE, pool));
 
   err = svn_client_merge (trace_editor, trace_edit_baton,
                           auth_baton,

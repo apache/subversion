@@ -42,6 +42,8 @@ svn_cl__update (apr_getopt_t *os,
   apr_array_header_t *condensed_targets;
   int i;
   svn_client_auth_baton_t *auth_baton;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
@@ -56,11 +58,12 @@ svn_cl__update (apr_getopt_t *os,
                                          targets,
                                          pool));
 
+  if (! opt_state->quiet)
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
-      const svn_delta_editor_t *trace_editor;
-      void *trace_edit_baton;
       const char *parent_dir, *entry;
 
       SVN_ERR (svn_wc_get_actual_target (target,
@@ -68,23 +71,13 @@ svn_cl__update (apr_getopt_t *os,
                                          &entry,
                                          pool));
 
-      SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
-                                                &trace_edit_baton,
-                                                parent_dir, 
-                                                FALSE, /* is checkout */
-                                                FALSE,
-                                                pool));
-
       SVN_ERR (svn_client_update
-               (NULL, NULL,
-                trace_editor, trace_edit_baton,
-                auth_baton,
+               (auth_baton,
                 target,
                 opt_state->xml_file,
                 &(opt_state->start_revision),
                 opt_state->nonrecursive ? FALSE : TRUE,
-                SVN_CL_NOTIFY(opt_state), 
-                svn_cl__make_notify_baton (pool),
+                notify_func, notify_baton,
                 pool));
     }
 

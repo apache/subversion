@@ -264,23 +264,21 @@ void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
    to property values (svn_stringbuf_t *). */
 void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 
+
 /* Returns an editor that prints out events in an update or checkout.
    The IS_CHECKOUT boolean tells the editor what kind of final
    revision line to print;  the SUPPRESS_FINAL_LINE flag indicates
-   whether to print the final revision line at all. */
+   whether to print the final revision line at all. 
+
+   ### OBSOLETE, please do not use.  Left only for merge-cmd.c, until
+   ### svn_client_merge() changes to the new notification system.
+*/
 svn_error_t *
 svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
                                  const char *initial_path,
                                  svn_boolean_t is_checkout,
                                  svn_boolean_t suppress_final_line,
-                                 apr_pool_t *pool);
-
-/* Returns an editor that prints out events in a commit. */
-svn_error_t *
-svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
-                                 void **edit_baton,
-                                 const char *initial_path,
                                  apr_pool_t *pool);
 
 
@@ -333,33 +331,19 @@ svn_cl__generate_status_codes (char *str_status,
 
 /*** Notification functions to display results on the terminal. */
 
-/* This implements `svn_wc_notify_func_t'. 
-   A notifier for non-update operations, and its baton. */
-void svn_cl__notify_func (void *baton, 
-                          const char *path,
-                          svn_wc_notify_action_t action,
-                          svn_node_kind_t kind,
-                          svn_wc_notify_state_t text_state,
-                          svn_wc_notify_state_t prop_state,
-                          svn_revnum_t revision);
-
-void *svn_cl__make_notify_baton (apr_pool_t *pool);
-
-/* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for
-   checkouts, updates, and switches.  The notifier will use POOL for
-   temporary allocations. */
-void svn_cl__get_checkout_notifier (svn_wc_notify_func_t *notify_func_p,
-                                    void **notify_baton_p,
-                                    svn_boolean_t is_checkout,
-                                    svn_boolean_t suppress_final_line,
-                                    apr_pool_t *pool);
-
-
-/* This macro is used to specify a notification function, or NULL if the
-   user has requested "quiet" mode. */
-#define SVN_CL_NOTIFY(opt_state) \
-		((opt_state)->quiet ? NULL : svn_cl__notify_func)
-
+/* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
+ * operations, allocated in POOL.
+ * 
+ * If this is a checkout, set IS_CHECKOUT.
+ * 
+ * If don't want a summary line at the end of notifications, set
+ * SUPPRESS_FINAL_LINE.
+ */
+void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
+                           void **notify_baton_p,
+                           svn_boolean_t is_checkout,
+                           svn_boolean_t suppress_final_line,
+                           apr_pool_t *pool);
 
 
 /*** Log message callback stuffs. ***/

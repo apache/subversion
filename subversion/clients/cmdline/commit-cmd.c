@@ -50,6 +50,8 @@ svn_cl__commit (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
   svn_revnum_t revnum;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
     
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
@@ -81,13 +83,13 @@ svn_cl__commit (apr_getopt_t *os,
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
 
+  if (! opt_state->quiet)
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+
   /* Commit. */
-  SVN_ERR (svn_client_commit 
+  SVN_ERR (svn_client_commit
            (&commit_info,
-            NULL, NULL,
-            NULL, NULL,
-            SVN_CL_NOTIFY(opt_state), 
-            svn_cl__make_notify_baton (pool),
+            notify_func, notify_baton,
             auth_baton,
             targets,
             svn_cl__get_log_message,

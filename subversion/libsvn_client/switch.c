@@ -49,11 +49,7 @@
 
 
 svn_error_t *
-svn_client_switch (const svn_delta_editor_t *before_editor,
-                   void *before_edit_baton,
-                   const svn_delta_editor_t *after_editor,
-                   void *after_edit_baton,
-                   svn_client_auth_baton_t *auth_baton,
+svn_client_switch (svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *switch_url,
                    const svn_client_revision_t *revision,
@@ -126,8 +122,6 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
     {
       const svn_delta_editor_t *switch_editor;
       void *switch_edit_baton;
-      const svn_delta_editor_t *wrap_editor;
-      void *wrap_edit_baton;
       const svn_delta_edit_fns_t *wrapped_old_editor;
       void *wrapped_old_edit_baton;
 
@@ -143,19 +137,14 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
          on. */
       SVN_ERR (svn_wc_get_switch_editor (anchor, target,
                                          revnum, switch_url, recurse,
+                                         notify_func, notify_baton,
                                          &switch_editor, &switch_edit_baton,
                                          NULL, pool));
 
-      /* Wrap it up with outside editors. */
-      svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
-                             before_editor, before_edit_baton,
-                             switch_editor, switch_edit_baton,
-                             after_editor, after_edit_baton, pool);
-      
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */
       svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                             wrap_editor, wrap_edit_baton, pool);
+                             switch_editor, switch_edit_baton, pool);
 
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision. */
@@ -249,6 +238,7 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
       if (notify_func != NULL)
         (*notify_func) (notify_baton, path, svn_wc_notify_update,
                         svn_node_file,
+                        NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);

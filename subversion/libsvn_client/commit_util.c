@@ -766,32 +766,45 @@ do_item_commit (const char *url,
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
         (*notify_func) (notify_baton, path, svn_wc_notify_commit_replaced,
-                        svn_node_unknown,
+                        item->kind,
+                        NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);
 
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         (*notify_func) (notify_baton, path, svn_wc_notify_commit_deleted,
-                        svn_node_unknown,
+                        item->kind,
+                        NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);
 
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         (*notify_func) (notify_baton, path, svn_wc_notify_commit_added,
-                        svn_node_unknown,
+                        item->kind,
+                        NULL,  /* ### Where can we get mime type? */
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);
 
       else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
                || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
-        (*notify_func) (notify_baton, path, svn_wc_notify_commit_modified,
-                        svn_node_unknown,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+        {
+          svn_boolean_t tmod
+            = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS);
+          svn_boolean_t pmod
+            = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS);
+
+          (*notify_func) (notify_baton, path, svn_wc_notify_commit_modified,
+                          item->kind,
+                          NULL,
+                          (tmod ? svn_wc_notify_state_modified
+                                : svn_wc_notify_state_unchanged),
+                          (pmod ? svn_wc_notify_state_modified
+                                : svn_wc_notify_state_unchanged),
+                          SVN_INVALID_REVNUM);
+        }
     }
 
   /* If this item is supposed to be deleted, do so. */
@@ -1045,7 +1058,8 @@ svn_client__do_commit (const char *base_url,
       if (notify_func)
         (*notify_func) (notify_baton, item->path,
                         svn_wc_notify_commit_postfix_txdelta, 
-                        svn_node_unknown,
+                        svn_node_file,
+                        NULL,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);

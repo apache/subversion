@@ -90,9 +90,19 @@ send_file_contents (const char *path,
 /* Import file PATH as EDIT_PATH in the repository directory indicated
  * by DIR_BATON in EDITOR.  
  *
- * Use POOL for any temporary allocation.  */
+ * Accumulate file paths and their batons in FILES, which must be
+ * non-null.  (These are used to send postfix textdeltas later).
+ *
+ * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
+ * file.  ### add mime-type (or at least binary) indicator to
+ *            notify_func ###
+ *
+ * Use POOL for any temporary allocation.
+ */
 static svn_error_t *
 import_file (apr_hash_t *files,
+             svn_wc_notify_func_t notify_func,
+             void *notify_baton,
              const svn_delta_editor_t *editor,
              void *dir_baton,
              const char *path,
@@ -118,6 +128,16 @@ import_file (apr_hash_t *files,
                                        svn_string_create (mimetype, pool), 
                                        pool));
   
+  if (notify_func)
+    (*notify_func) (notify_baton,
+                    path,
+                    svn_wc_notify_commit_added,
+                    svn_node_file,
+                    mimetype,
+                    svn_wc_notify_state_inapplicable,
+                    svn_wc_notify_state_inapplicable,
+                    SVN_INVALID_REVNUM);
+
   /* Finally, add the file's path and baton to the FILES hash. */
   value->subpool = subpool;
   value->file_baton = file_baton;
@@ -131,9 +151,17 @@ import_file (apr_hash_t *files,
  * DIR_BATON in EDITOR.  ROOT_PATH is the path imported as the root
  * directory, so all edits are relative to that.
  *
+ * Accumulate file paths and their batons in FILES, which must be
+ * non-null.  (These are used to send postfix textdeltas later).
+ *
+ * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
+ * directory.
+ *
  * Use POOL for any temporary allocation.  */
 static svn_error_t *
 import_dir (apr_hash_t *files,
+            svn_wc_notify_func_t notify_func,
+            void *notify_baton,
             const svn_delta_editor_t *editor, 
             void *dir_baton,
             const char *path,
@@ -160,8 +188,9 @@ import_dir (apr_hash_t *files,
       if (finfo.filetype == APR_DIR)
         {
           /* Skip entries for this dir and its parent.  
-             ### kff todo: APR actually promises that they'll come first,
-             so this guard could be moved outside the loop. */
+             (APR promises that they'll come first, so technically
+             this guard could be moved outside the loop.  But somehow
+             that feels iffy. */ 
           if (! (strcmp (finfo.name, ".") && strcmp (finfo.name, "..")))
             continue;
 
@@ -177,8 +206,9 @@ import_dir (apr_hash_t *files,
                finfo.name, path);
         }
 
-      /* Make a stringbuf version of the entry name, and append it as
-         a path component to THIS_PATH and THIS_EDIT_PATH. */
+      /* Typically, we started importing from ".", in which case
+         edit_path is "".  So below, this_path might become "./blah",
+         and this_edit_path might become "blah", for example. */
       this_path = svn_path_join (path, finfo.name, subpool);
       this_edit_path = svn_path_join (edit_path, finfo.name, subpool);
 
@@ -194,8 +224,24 @@ import_dir (apr_hash_t *files,
                                           NULL, SVN_INVALID_REVNUM, subpool,
                                           &this_dir_baton));
 
+          /* By notifying before the recursive call below, we display
+             a directory add before displaying adds underneath the
+             directory.  To do it the other way around, just move this
+             after the recursive call. */
+          if (notify_func)
+            (*notify_func) (notify_baton,
+                            this_path,
+                            svn_wc_notify_commit_added,
+                            svn_node_dir,
+                            NULL,
+                            svn_wc_notify_state_inapplicable,
+                            svn_wc_notify_state_inapplicable,
+                            SVN_INVALID_REVNUM);
+
           /* Recurse. */
-          SVN_ERR (import_dir (files, editor, this_dir_baton, 
+          SVN_ERR (import_dir (files,
+                               notify_func, notify_baton,
+                               editor, this_dir_baton, 
                                this_path, this_edit_path, 
                                FALSE, subpool));
 
@@ -205,10 +251,12 @@ import_dir (apr_hash_t *files,
       else if (finfo.filetype == APR_REG)
         {
           /* Import a file. */
-          SVN_ERR (import_file (files, editor, dir_baton, 
+          SVN_ERR (import_file (files,
+                                notify_func, notify_baton,
+                                editor, dir_baton, 
                                 this_path, this_edit_path, subpool));
         }
-      /* ### We're silently ignoring things that aren't files or
+      /* We're silently ignoring things that aren't files or
          directories.  If we stop doing that, here is the place to
          change your world.  */
     }
@@ -243,6 +291,10 @@ import_dir (apr_hash_t *files,
  * 
  * NEW_ENTRY can never be the empty string.
  * 
+ * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
+ * imported path, passing the actions svn_wc_notify_commit_added or
+ * svn_wc_notify_commit_postfix_txdelta.
+ * 
  * Use POOL for any temporary allocation.
  *
  * Note: the repository directory receiving the import was specified
@@ -253,6 +305,8 @@ import_dir (apr_hash_t *files,
 static svn_error_t *
 import (const char *path,
         const char *new_entry,
+        svn_wc_notify_func_t notify_func,
+        void *notify_baton,
         const svn_delta_editor_t *editor,
         void *edit_baton,
         svn_boolean_t nonrecursive,
@@ -286,7 +340,9 @@ import (const char *path,
           (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
            "new entry name required when importing a file");
 
-      SVN_ERR (import_file (files, editor, root_baton, 
+      SVN_ERR (import_file (files,
+                            notify_func, notify_baton,
+                            editor, root_baton, 
                             path, new_entry, pool));
     }
   else if (kind == svn_node_dir)
@@ -298,10 +354,38 @@ import (const char *path,
         SVN_ERR (editor->add_directory (new_entry, root_baton,
                                         NULL, SVN_INVALID_REVNUM,
                                         pool, &new_dir_baton));
-      
+
+#if 0 /* Temporarily blocked out for compatibility, see below. */
+      /* If we reactivate this notification, then
+       *
+       *   $ svn import url://blah/blah [PATH_TO_IMPORT] [NEW_ENTRY_IN_REPOS]
+       *
+       * will print PATH_TO_IMPORT (defaults to ".") as the first
+       * thing imported.  This is probably desirable good, but the
+       * current test suite does not expect it.  And see
+       *
+       *   http://subversion.tigris.org/issues/show_bug.cgi?id=735
+       *   http://subversion.tigris.org/issues/show_bug.cgi?id=736
+       *
+       * which are also about import notification paths.
+       */
+      if (notify_func)
+        (*notify_func) (notify_baton,
+                        path,
+                        svn_wc_notify_commit_added,
+                        svn_node_dir,
+                        NULL,
+                        svn_wc_notify_state_inapplicable,
+                        svn_wc_notify_state_inapplicable,
+                        SVN_INVALID_REVNUM);
+#endif /* 0 */
+
       SVN_ERR (import_dir 
-               (files, editor, new_dir_baton ? new_dir_baton : root_baton, 
-                path, new_entry ? new_entry : "", nonrecursive, pool));
+               (files,
+                notify_func, notify_baton,
+                editor, new_dir_baton ? new_dir_baton : root_baton, 
+                path, new_entry ? new_entry : "",
+                nonrecursive, pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -330,6 +414,19 @@ import (const char *path,
       full_path = key;
       SVN_ERR (send_file_contents (full_path, value->file_baton, 
                                    editor, value->subpool));
+
+      /* ### full_path is wrong, should be remainder when path is
+         subtracted */
+      if (notify_func)
+        (*notify_func) (notify_baton,
+                        full_path,
+                        svn_wc_notify_commit_postfix_txdelta,
+                        svn_node_file,
+                        NULL,
+                        svn_wc_notify_state_inapplicable,
+                        svn_wc_notify_state_inapplicable,
+                        SVN_INVALID_REVNUM);
+
       SVN_ERR (editor->close_file (value->file_baton));
       svn_pool_destroy (value->subpool);
     }
@@ -401,10 +498,8 @@ get_ra_editor (void **ra_baton,
 
 svn_error_t *
 svn_client_import (svn_client_commit_info_t **commit_info,
-                   const svn_delta_editor_t *before_editor,
-                   void *before_edit_baton,
-                   const svn_delta_editor_t *after_editor,
-                   void *after_edit_baton,
+                   svn_wc_notify_func_t notify_func,
+                   void *notify_baton,
                    svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *url,
@@ -427,6 +522,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   const char *committed_date = NULL;
   const char *committed_author = NULL;
   apr_file_t *xml_hnd;
+  int notify_path_offset;
 
   /* Sanity check: NEW_ENTRY can be null or non-empty, but it can't be
      empty. */
@@ -473,15 +569,11 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                             log_msg, NULL, &committed_rev, &committed_date,
                             &committed_author, FALSE, pool));
 
-  /* Wrap the resulting editor with BEFORE and AFTER editors. */
-  svn_delta_wrap_editor (&editor, &edit_baton,
-                         before_editor, before_edit_baton,
-                         editor, edit_baton, 
-                         after_editor, after_edit_baton, pool);
-
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
-  if ((err = import (path, new_entry, editor, edit_baton, nonrecursive, pool)))
+  if ((err = import (path, new_entry,
+                     notify_func, notify_baton,
+                     editor, edit_baton, nonrecursive, pool)))
     {
       editor->abort_edit (edit_baton);
       return err;
@@ -632,10 +724,6 @@ reconcile_errors (svn_error_t *commit_err,
 
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
-                   const svn_delta_editor_t *before_editor,
-                   void *before_edit_baton,
-                   const svn_delta_editor_t *after_editor,
-                   void *after_edit_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    svn_client_auth_baton_t *auth_baton,
@@ -791,13 +879,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             }
         }
     }
-
-  /* Wrap the resulting editor with BEFORE and AFTER editors. */
-  svn_delta_wrap_editor (&editor, &edit_baton,
-                         before_editor, before_edit_baton,
-                         editor, edit_baton, 
-                         after_editor, after_edit_baton, pool);
-
 
   /* Determine prefix to strip from the commit notify messages */
   /* ### this cast is a kluge */

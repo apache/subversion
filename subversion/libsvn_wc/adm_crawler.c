@@ -234,7 +234,8 @@ report_revisions (const char *wc_path,
                 (*notify_func) (notify_baton, 
                                 this_full_path,
                                 svn_wc_notify_restore,
-                                svn_node_unknown,
+                                svn_node_file,
+                                NULL,
                                 svn_wc_notify_state_unknown,
                                 svn_wc_notify_state_unknown,
                                 SVN_INVALID_REVNUM);
@@ -415,7 +416,8 @@ svn_wc_crawl_revisions (const char *path,
           /* Report the restoration to the caller. */
           if (notify_func != NULL)
             (*notify_func) (notify_baton, path, svn_wc_notify_restore,
-                            svn_node_unknown,
+                            svn_node_file,
+                            NULL,
                             svn_wc_notify_state_unknown,
                             svn_wc_notify_state_unknown,
                             SVN_INVALID_REVNUM);

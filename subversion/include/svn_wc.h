@@ -85,8 +85,9 @@ typedef enum svn_wc_notify_action_t
 
 typedef enum svn_wc_notify_state_t
 {
-  svn_wc_notify_state_unknown = 0, /* Notifier doesn't know or isn't saying. */
-  svn_wc_notify_state_unchanged,   /* This state did not change. */
+  svn_wc_notify_state_inapplicable = 0,
+  svn_wc_notify_state_unknown,     /* Notifier doesn't know or isn't saying. */
+  svn_wc_notify_state_unchanged,   /* The state did not change. */
   svn_wc_notify_state_modified,    /* Pristine state was modified. */
   svn_wc_notify_state_merged,      /* Modified state had mods merged in. */
   svn_wc_notify_state_conflicted   /* Modified state got conflicting mods. */
@@ -96,7 +97,10 @@ typedef enum svn_wc_notify_state_t
 /* Notify the world that ACTION has happened to PATH.  PATH is either
  * absolute or relative to cwd (i.e., not relative to an anchor).
  *
- * KIND, TEXT_STATE and PROP_STATE are from after ACTION, not before.
+ * KIND, CONTENT_STATE and PROP_STATE are from after ACTION, not before.
+ *
+ * If MIME_TYPE is non-null, it indicates the mime-type of PATH.  It
+ * is always NULL for directories.
  *
  * REVISION is SVN_INVALID_REVNUM, except when when ACTION is
  * svn_wc_notify_update_completed, in which case REVISION is the
@@ -107,12 +111,12 @@ typedef enum svn_wc_notify_state_t
  * been installed, so it is legitimate for an implementation of
  * svn_wc_notify_func_t to examine PATH in the working copy.
  *
- * Design Notes:
+ * ### Design Notes:
  *
- * The purpose of the KIND, TEXT_STATE, and PROP_STATE fields is to
- * provide "for free" information that this function is likely to
- * want, and which it would otherwise be forced to deduce via
- * expensive operations such as reading entries and properties.
+ * The purpose of the KIND, MIME_TYPE, CONTENT_STATE, and PROP_STATE
+ * fields is to provide "for free" information that this function is
+ * likely to want, and which it would otherwise be forced to deduce
+ * via expensive operations such as reading entries and properties.
  * However, if the caller does not have this information, it will
  * simply pass the corresponding `*_unknown' values, and it is up to
  * the implementation how to handle that (i.e., whether or not to
@@ -127,13 +131,14 @@ typedef enum svn_wc_notify_state_t
  * on receiving a text change.  Instead, wait until all changes have
  * been received, and then invoke the notify func once (from within
  * an svn_delta_editor_t's close_file(), for example), passing the
- * appropriate text_state and prop_state flags.
+ * appropriate content_state and prop_state flags.
  */
 typedef void (*svn_wc_notify_func_t) (void *baton,
                                       const char *path,
                                       svn_wc_notify_action_t action,
                                       svn_node_kind_t kind,
-                                      svn_wc_notify_state_t text_state,
+                                      const char *mime_type,
+                                      svn_wc_notify_state_t content_state,
                                       svn_wc_notify_state_t prop_state,
                                       svn_revnum_t revision);
 
@@ -755,6 +760,9 @@ typedef struct svn_wc_traversal_info_t svn_wc_traversal_info_t;
  * the root of our editor.  TARGET is the entry in ANCHOR that will
  * actually be updated, or NULL if all of ANCHOR should be updated.
  *
+ * The editor invokes NOTIFY_FUNC with NOTIFY_BATON as the update
+ * progresses, if NOTIFY_FUNC is non-null.
+ *
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  */
@@ -762,6 +770,8 @@ svn_error_t *svn_wc_get_update_editor (const char *anchor,
                                        const char *target,
                                        svn_revnum_t target_revision,
                                        svn_boolean_t recurse,
+                                       svn_wc_notify_func_t notify_func,
+                                       void *notify_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t **ti_p,
@@ -780,8 +790,8 @@ svn_error_t *svn_wc_get_update_editor (const char *anchor,
  * such a case and do as little damage as possible, but makes no
  * promises.
  *
- * Invoke NOTIFY_FUNC with NOTIFY_BATON as the checkout progresses, if
- * NOTIFY_FUNC is non-null.
+ * The editor invokes NOTIFY_FUNC with NOTIFY_BATON as the checkout
+ * progresses, if NOTIFY_FUNC is non-null.
  *
  * ANCESTOR_URL is the repository string to be recorded in this
  * working copy.
@@ -814,6 +824,9 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * the root of our editor.  TARGET is the entry in ANCHOR that will
  * actually be updated, or NULL if all of ANCHOR should be updated.
  *
+ * The editor invokes NOTIFY_FUNC with NOTIFY_BATON as the switch
+ * progresses, if NOTIFY_FUNC is non-null.
+ *
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  */
@@ -822,6 +835,8 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
                                        svn_revnum_t target_revision,
                                        const char *switch_url,
                                        svn_boolean_t recurse,
+                                       svn_wc_notify_func_t notify_func,
+                                       void *notify_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t **ti_p,
@@ -885,9 +900,9 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
    props, not just 'regular' ones that the user sees.  (See 'enum
    svn_prop_kind').
 
-   If TEXT_STATE is non-null, set *TEXT_STATE to the state of the
-   file contents after the installation; if return error, the value
-   of *TEXT_STATE is undefined.
+   If CONTENT_STATE is non-null, set *CONTENT_STATE to the state of
+   the file contents after the installation; if return error, the
+   value of *CONTENT_STATE is undefined.
 
    If PROP_STATE is non-null, set *PROP_STATE to the state of the
    properties after the installation; if return error, the value of
@@ -899,7 +914,7 @@ void svn_wc_edited_externals (apr_hash_t **externals_old,
 
    POOL is used for all bookkeeping work during the installation.
  */
-svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *text_state,
+svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                   svn_wc_notify_state_t *prop_state,
                                   const char *file_path,
                                   svn_revnum_t new_revision,

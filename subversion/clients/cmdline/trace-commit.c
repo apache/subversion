@@ -24,6 +24,7 @@
 /*** Includes. ***/
 
 
+#if 0  /* now unused, left only for reference */
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -472,7 +473,7 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
   
   return SVN_NO_ERROR;
 }
-
+#endif /* 0 */
 
 
 /* 

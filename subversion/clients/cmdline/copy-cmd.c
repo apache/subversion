@@ -42,10 +42,10 @@ svn_cl__copy (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
   svn_client_auth_baton_t *auth_baton = NULL;
-  const svn_delta_editor_t *trace_editor = NULL;
-  void *trace_edit_baton = NULL;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
   if (targets->nelts != 2)
@@ -65,15 +65,16 @@ svn_cl__copy (apr_getopt_t *os,
   dst_is_url = svn_path_is_url (dst_path);
 
   if ((! src_is_url) && (! dst_is_url))
-    /* WC->WC : No trace editor needed. */
+    /* WC->WC : No notification needed. */
     ;
   else if ((! src_is_url) && (dst_is_url))
     {
-      /* WC->URL : Use commit trace editor. */
+      /* WC->URL : Use notification. */
       /* ### todo:
          
-         We'd like to use the trace commit editor, but we have a
-         couple of problems with that:
+         We'd like to use the notifier, but we MAY have a couple of
+         problems with that, the same problems that used to apply to
+         the old trace_editor:
          
          1) We don't know where the commit editor for this case will
             be anchored with respect to the repository, so we can't
@@ -86,26 +87,15 @@ svn_cl__copy (apr_getopt_t *os,
             display like: "Adding   dir1/foo-copy.c", which could be a
             bogus path. 
       */
-      /*
-      svn_stringbuf_t *src_parent = svn_stringbuf_dup (src_path, pool);
-      svn_path_remove_component (src_parent);
-      SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
-                                                &trace_edit_baton,
-                                                src_parent, pool));
-      */
     }
   else if ((src_is_url) && (! dst_is_url))
     {
-      /* URL->WC : Use checkout trace editor. */
-      SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
-                                                &trace_edit_baton,
-                                                dst_path,
-                                                TRUE,
-                                                TRUE, /* suppress final line */
-                                                pool));
+      /* URL->WC : Use checkout-style notification. */
+      if (! opt_state->quiet)
+        svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, pool);
     }
   else
-    /* URL->URL : No trace editor needed. */
+    /* URL->URL : No notification needed. */
     ;
 
   SVN_ERR (svn_client_copy 
@@ -113,10 +103,7 @@ svn_cl__copy (apr_getopt_t *os,
             src_path, &(opt_state->start_revision), dst_path, auth_baton, 
             &svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
-            NULL, NULL,                   /* no before_editor */
-            trace_editor, trace_edit_baton, /* one after_editor */
-            SVN_CL_NOTIFY(opt_state),
-            svn_cl__make_notify_baton (pool),
+            notify_func, notify_baton,
             pool));
 
   if (commit_info)
