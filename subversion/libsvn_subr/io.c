@@ -295,7 +295,7 @@ svn_io_create_unique_link (const char **unique_name_p,
       
       apr_err = apr_get_os_error();
       
-      if (APR_STATUS_IS_EEXIST (apr_err))
+      if (rv == -1 && APR_STATUS_IS_EEXIST (apr_err))
         continue;
       else if (rv == -1 && apr_err)
         {
