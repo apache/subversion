@@ -51,6 +51,71 @@
 #include "wc.h"
 #include "adm_files.h"
 
+
+/*-------------------------------------------------------------------------*/
+/* A little helper function.
+
+   You see, when we ask the server to update us to a certain revision,
+   we construct the new fulltext, and then run 
+
+         'diff <repos_fulltext> <working_fulltext>'
+
+   which is, of course, actually backwards from the repository's point
+   of view.  It thinks we want to move from working->repos.
+
+   So when the server sends property changes, they're effectively
+   backwards from what we want.  We don't want working->repos, but
+   repos->working.  So this little helper "reverses" the value in
+   BASEPROPS and PROPCHANGES before we pass them off to the
+   prop_changed() diff-callback.  */
+static void
+reverse_propchanges (apr_hash_t *baseprops,
+                     apr_array_header_t *propchanges,
+                     apr_pool_t *pool)
+{
+  int i;
+
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      svn_prop_t *propchange
+        = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+      
+      const svn_stringbuf_t *original_value =
+        apr_hash_get (baseprops, propchange->name, APR_HASH_KEY_STRING);
+     
+      if ((original_value == NULL) && (propchange->value != NULL)) 
+        {
+          /* found an addition.  make it look like a deletion. */
+          apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING,
+                        svn_stringbuf_create_from_string (propchange->value,
+                                                          pool));
+          propchange->value = NULL;
+        }
+
+      else if ((original_value != NULL) && (propchange->value == NULL)) 
+        {
+          /* found a deletion.  make it look like an addition. */
+          propchange->value = svn_string_create_from_buf (original_value,
+                                                           pool);
+          apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING,
+                        NULL);
+        }
+
+      else if ((original_value != NULL) && (propchange->value != NULL)) 
+        {
+          /* found a change.  just swap the values.  */
+          const svn_string_t *tmpstr = propchange->value;
+          propchange->value = svn_string_create_from_buf (original_value,
+                                                           pool);
+          apr_hash_set (baseprops, propchange->name, APR_HASH_KEY_STRING,
+                        svn_stringbuf_create_from_string (tmpstr, pool));
+        }
+    }
+}
+
+
+/*-------------------------------------------------------------------------*/
+
 /* Overall crawler editor baton.
  */
 struct edit_baton {
@@ -642,6 +707,16 @@ close_directory (void *dir_baton)
                     (void*)TRUE);
     }
 
+  if (b->propchanges->nelts > 0)
+    {
+      reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+      SVN_ERR (b->edit_baton->diff_callbacks->props_changed
+               (b->path->data,
+                b->propchanges,
+                b->baseprops,
+                b->edit_baton->diff_cmd_baton));
+    }
+
   svn_pool_destroy (b->pool);
 
   return SVN_NO_ERROR;
@@ -840,11 +915,14 @@ close_file (void *file_baton)
         return err1 ? err1 : err2;
       
       if (b->propchanges->nelts > 0)
-        SVN_ERR (b->edit_baton->diff_callbacks->props_changed
-                 (b->path->data,
-                  b->propchanges,
-                  b->baseprops,
-                  b->edit_baton->diff_cmd_baton));
+        {
+          reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+          SVN_ERR (b->edit_baton->diff_callbacks->props_changed
+                   (b->path->data,
+                    b->propchanges,
+                    b->baseprops,
+                    b->edit_baton->diff_cmd_baton));
+        }
     }
 
   /* Add this file to the parent directory's list of elements that have
