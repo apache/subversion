@@ -64,8 +64,8 @@
    e. Grab the latest prebuilt book from http://svnbook.red-bean.com/
 
       cd doc/book/book
-      wget http://svnbook.red-bean.com/book.pdf .
-      wget http://svnbook.red-bean.com/book.html .
+      wget http://svnbook.red-bean.com/book.pdf
+      wget http://svnbook.red-bean.com/book.html
       cd ../../..
 
       (The book maintainers keep those files up to date, so the
