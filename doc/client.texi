@@ -552,7 +552,7 @@ The SVN subdir contains:
 
 @item
 A @file{base} directory, containing the pristine repository versions of
-the files in the corresponding working directory.
+the files in the corresponding working directory, and their properties.
 
 @item
 A @file{versions} file, the first entry of which records the version
@@ -564,11 +564,7 @@ It may help to think of this file as the functional equivalent of the
 CVS/Entries file.
 
 @item
-A @file{properties} file, recording properties for this directory and
-all directory entries and files it contains.  Although this information
-could be stored in the @file{versions} file, it is sufficiently
-separable to warrant its own file; very often one wants to look up a
-version without looking up a property, and vice-versa.
+A @file{properties} file, recording properties for this directory.
 
 @item
 A @file{changes} file, recording uncommitted changes to and from this
