@@ -1167,7 +1167,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_relocate
  * Method:    blame
  * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/Revision;)[B
  */
-JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame
+JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart, jobject jrevisionEnd)
 {
 	JNIEntry(SVNClient, blame);
