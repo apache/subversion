@@ -422,11 +422,11 @@ change_file_prop (void *file_baton,
 
 
 static svn_error_t *
-change_dir_prop (void *parent_baton,
+change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
-  struct dir_baton *d = parent_baton;
+  struct dir_baton *d = dir_baton;
   svn_error_t *err;
 
   if (d->edit_baton->editor_1->change_dir_prop)
