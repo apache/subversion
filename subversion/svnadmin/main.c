@@ -99,14 +99,22 @@ usage (const char *progname, int exit_code)
      "\n"
      "Commands are: \n"
      "\n"
-     "  create   REPOS_PATH\n"
+     "  create    REPOS_PATH\n"
+     "                Create a new, empty repository at REPOS_PATH."
      "\n"
-     "  youngest REPOS_PATH\n"
+     "  youngest  REPOS_PATH\n"
+     "                Print the latest revision number."
      "\n"
-     "  lstxns   REPOS_PATH\n"
-     "      Print all txns and their trees.\n"
+     "  rmtxn     REPOS_PATH TXN_NAME\n"
+     "                Delete the transaction named TXN_NAME."
      "\n"
-     "  lsrevs   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
+     "  createtxn REPOS_PATH BASE_REV\n"
+     "                Create a new transaction based on BASE_REV."
+     "\n"
+     "  lstxns    REPOS_PATH\n"
+     "                Print all txns and their trees.\n"
+     "\n"
+     "  lsrevs    REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
@@ -132,7 +140,9 @@ main (int argc, const char * const *argv)
     is_create = 0,
     is_youngest = 0,
     is_lstxn = 0,
-    is_lsrevs = 0;
+    is_lsrevs = 0,
+    is_rmtxn = 0,
+    is_createtxn = 0;
   const char *path = NULL;
 
   /* ### this whole thing needs to be cleaned up once client/main.c
@@ -150,7 +160,9 @@ main (int argc, const char * const *argv)
   if (! ((is_create = strcmp(argv[1], "create") == 0)
          || (is_youngest = strcmp(argv[1], "youngest") == 0)
          || (is_lstxn = strcmp(argv[1], "lstxns") == 0)
-         || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)))
+         || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)
+         || (is_rmtxn = strcmp(argv[1], "rmtxn") == 0)
+         || (is_createtxn = strcmp(argv[1], "createtxn") == 0)))      
     {
       usage (argv[0], 1);
       return EXIT_FAILURE;
@@ -283,6 +295,44 @@ main (int argc, const char * const *argv)
 
           svn_pool_destroy (this_pool);
         }
+    }
+  else if (is_rmtxn)
+    {
+      svn_fs_txn_t *txn;
+
+      if (! argv[3])
+        {
+          usage (argv[0], 1);
+          return EXIT_FAILURE;
+        }
+
+      err = svn_fs_open_berkeley(fs, path);
+      if (err) goto error;
+      
+      err = svn_fs_open_txn (&txn, fs, argv[3], pool);
+      if (err) goto error;
+
+      err = svn_fs_abort_txn (txn);
+      if (err) goto error;
+    }
+  else if (is_createtxn)
+    {
+      svn_fs_txn_t *txn;
+
+      if (! argv[3])
+        {
+          usage (argv[0], 1);
+          return EXIT_FAILURE;
+        }
+
+      err = svn_fs_open_berkeley(fs, path);
+      if (err) goto error;
+
+      err = svn_fs_begin_txn (&txn, fs, (svn_revnum_t) atoi(argv[3]), pool);
+      if (err) goto error;
+
+      err = svn_fs_close_txn (txn);
+      if (err) goto error;
     }
 
   err = svn_fs_close_fs(fs);
