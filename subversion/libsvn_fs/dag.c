@@ -545,8 +545,7 @@ set_entry (dag_node_t *parent,
      list for it.  Else, go read its existing entries list. */
   if (rep_key)
     {
-      SVN_ERR (svn_fs__rep_contents (&raw_entries, fs, 
-                                     mutable_rep_key, trail));
+      SVN_ERR (svn_fs__rep_contents (&raw_entries, fs, rep_key, trail));
       entries_skel = svn_fs__parse_skel (raw_entries.data, raw_entries.len,
                                          trail->pool);
       if (entries_skel)
@@ -564,7 +563,6 @@ set_entry (dag_node_t *parent,
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, trail->pool));
   raw_entries_buf = svn_fs__unparse_skel (entries_skel, trail->pool);
-  SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, txn_id, trail));
   wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id, 
                                                trail, trail->pool);
   len = raw_entries_buf->len;
@@ -752,7 +750,6 @@ svn_fs__dag_set_proplist (dag_node_t *node,
     raw_proplist_buf = svn_fs__unparse_skel (proplist_skel, trail->pool);
     wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
                                                  trail, trail->pool);
-    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, txn_id, trail));
     len = raw_proplist_buf->len;
     SVN_ERR (svn_stream_write (wstream, raw_proplist_buf->data, &len));
   }
@@ -987,7 +984,8 @@ delete_entry (dag_node_t *parent,
   /* Read the representation, then use it to get the string that holds
      the entries list.  Parse that list into a skel, and parse *that*
      into a hash. */
-  SVN_ERR (svn_fs__rep_contents (&str, fs, mutable_rep_key, trail));
+  
+  SVN_ERR (svn_fs__rep_contents (&str, fs, rep_key, trail));
   entries_skel = svn_fs__parse_skel (str.data, str.len, trail->pool);
   if (entries_skel)
     SVN_ERR (svn_fs__parse_entries_skel (&entries, entries_skel, trail->pool));
@@ -1034,7 +1032,6 @@ delete_entry (dag_node_t *parent,
     SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, 
                                            trail->pool));
     unparsed_entries = svn_fs__unparse_skel (entries_skel, trail->pool);
-    SVN_ERR (svn_fs__rep_contents_clear (fs, mutable_rep_key, txn_id, trail));
     ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
                                             trail, trail->pool);
     len = unparsed_entries->len;

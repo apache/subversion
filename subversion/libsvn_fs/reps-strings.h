@@ -37,18 +37,9 @@ extern "C" {
 
    TXN_ID is the id of the Subversion transaction under which this occurs.
 
-   If REP_KEY is already a mutable representation, set *NEW_REP_KEY to REP_KEY,
-   else set *NEW_REP_KEY to a new rep key allocated in TRAIL->pool.
-
-   In the latter case, if REP_KEY refers to an immutable representation,
-   then *NEW_REP_KEY refers to a mutable copy of it (a deep copy,
-   including the rep's contents); else if REP_KEY is the empty string or
-   null, *NEW_REP_KEY refers to a new, empty mutable representation
-   (containing a new, empty string).
-
-   If REP_KEY is neither null nor empty, but does not refer to any
-   representation, the error SVN_ERR_FS_NO_SUCH_REPRESENTATION is
-   returned.  */
+   If REP_KEY is already a mutable representation, set *NEW_REP_KEY to
+   REP_KEY, else set *NEW_REP_KEY to a brand new rep key allocated in
+   TRAIL->pool. */
 svn_error_t *svn_fs__get_mutable_rep (const char **new_rep_key,
                                       const char *rep_key,
                                       svn_fs_t *fs, 

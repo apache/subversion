@@ -528,96 +528,27 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
                          const char *txn_id,
                          trail_t *trail)
 {
-  svn_fs__representation_t *rep;
+  svn_fs__representation_t *rep = NULL;
+  const char *new_str = NULL;
 
+  /* We were passed an existing REP_KEY, so examine it.  If it is
+     mutable already, then just return REP_KEY as the mutable result
+     key.  */
   if (rep_key && (rep_key[0] != '\0'))
     {
-      /* We were passed an existing REP_KEY, so examine it. */
       SVN_ERR (svn_fs__bdb_read_rep (&rep, fs, rep_key, trail));
-
-      if (rep_is_mutable (rep, txn_id)) /* rep already mutable, so return it */
+      if (rep_is_mutable (rep, txn_id))
         {
           *new_rep_key = rep_key;
           return SVN_NO_ERROR;
         }
-
-      /* If REP is not mutable, we have to make a mutable copy.  It is
-         a deep copy -- we copy the immutable rep's data.  Note that
-         we copy it as fulltext, no matter how the immutable rep
-         represents the data.  */
-      if (rep->kind == svn_fs__rep_kind_fulltext)
-        {
-          /* The easy case -- copy the fulltext string directly and
-             update the representation to a) be mutable, and b) hold
-             the key of the newly created string. */
-          SVN_ERR (svn_fs__bdb_string_copy (fs, 
-                                            &(rep->contents.fulltext.string_key), 
-                                            rep->contents.fulltext.string_key, 
-                                            trail));
-          rep->txn_id = txn_id;
-        }
-      else if (rep->kind == svn_fs__rep_kind_delta)
-        {
-          /* This is a bit trickier.  The immutable rep is a delta,
-             but we're still making a fulltext copy of it.  So we do
-             an undeltifying read loop, writing the fulltext out to
-             the mutable rep.  The efficiency of this depends on the
-             efficiency of rep_read_range(); fortunately, this
-             circumstance is probably rare, and especially unlikely to
-             happen on large contents (i.e., it's more likely to
-             happen on directories than on files, because directories
-             don't have to be up-to-date to receive commits, whereas
-             files do.  */
-
-          apr_size_t offset;
-          apr_size_t size;
-          const char *new_str = NULL;
-          apr_size_t amount;
-          apr_pool_t *subpool;
-          char *buf;
-
-          struct apr_md5_ctx_t context;
-          unsigned char digest[MD5_DIGESTSIZE];
-
-          apr_md5_init (&context);
-
-          SVN_ERR (svn_fs__rep_contents_size (&size, fs, rep_key, trail));
-
-          subpool = svn_pool_create (trail->pool);
-          buf = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
-
-          for (offset = 0; offset < size; offset += amount)
-            {
-              if ((size - offset) > SVN_STREAM_CHUNK_SIZE)
-                amount = SVN_STREAM_CHUNK_SIZE;
-              else
-                amount = size - offset;
-
-              SVN_ERR (rep_read_range (fs, rep_key, buf,
-                                       offset, &amount, trail));
-              apr_md5_update (&context, buf, amount);
-              SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, amount, buf,
-                                                  trail));
-            }
-
-          svn_pool_destroy (subpool);
-
-          apr_md5_final (digest, &context);
-
-          rep = make_fulltext_rep (new_str, txn_id, digest, trail->pool);
-        }
-      else /* unknown kind */
-        abort ();
     }
-  else    /* no key, so make a new, empty, mutable, fulltext rep */
-    {
-      const char *new_str = NULL;
-
-      SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, 0, NULL, trail));
-      rep = make_fulltext_rep (new_str, txn_id, empty_digest, trail->pool);
-    }
-
-  /* If we made it here, there's a new rep to store in the fs. */
+  
+  /* Either we weren't provided a base key to examine, or the base key
+     we were provided was not mutable.  So, let's make a new
+     representation and return its key to the caller. */
+  SVN_ERR (svn_fs__bdb_string_append (fs, &new_str, 0, NULL, trail));
+  rep = make_fulltext_rep (new_str, txn_id, empty_digest, trail->pool);
   SVN_ERR (svn_fs__bdb_write_new_rep (new_rep_key, fs, rep, trail));
 
   return SVN_NO_ERROR;
@@ -1053,6 +984,9 @@ svn_fs__rep_contents_write_stream (svn_fs_t *fs,
   svn_stream_t *ws = svn_stream_create (wb, pool);
   svn_stream_set_write (ws, rep_write_contents);
 
+  if (trail && svn_fs__rep_contents_clear (fs, rep_key, txn_id, trail))
+    return NULL;
+
   return ws;
 }
 
@@ -1074,40 +1008,16 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
        "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep_key);
 
-  if (rep->kind == svn_fs__rep_kind_fulltext)
+  assert (rep->kind == svn_fs__rep_kind_fulltext);
+
+  /* If rep has no string, just return success.  Else, clear the
+     underlying string.  */
+  str_key = rep->contents.fulltext.string_key;
+  if (str_key && *str_key)
     {
-      str_key = rep->contents.fulltext.string_key;
-
-      /* If rep has no string, just return success. */
-      if ((str_key == NULL) || (str_key[0] == '\0'))
-        return SVN_NO_ERROR;
-
-      /* Else, clear the string the rep has. */
       SVN_ERR (svn_fs__bdb_string_clear (fs, str_key, trail));
       memcpy (rep->checksum, empty_digest, MD5_DIGESTSIZE);
     }
-  else if (rep->kind == svn_fs__rep_kind_delta)
-    {
-      /* For deltas, we replace the rep with a `fulltext' rep, then
-         delete all the strings associated with the old rep. */
-      apr_array_header_t *orig_keys;
-
-      /* Get the list of strings associated with this rep. */
-      SVN_ERR (delta_string_keys (&orig_keys, rep, trail->pool));
-      
-      /* Transform our rep into a `fulltext' rep with an empty string
-         behind it, and replace it in the filesystem. */
-      str_key = NULL;
-      SVN_ERR (svn_fs__bdb_string_append (fs, &str_key, 0, NULL, trail));
-      rep = make_fulltext_rep (str_key, txn_id, empty_digest, trail->pool);
-      SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
-
-      /* Now delete those old strings. */
-      SVN_ERR (delete_strings (orig_keys, fs, trail));
-    }
-  else /* unknown kind */
-    abort ();
-
   return SVN_NO_ERROR;
 }
 
