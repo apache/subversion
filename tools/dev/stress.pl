@@ -203,6 +203,10 @@ sub status_update_commit
                                     Conflict[ ]at
                                     |
                                     Baseline[ ]incorrect
+                                    |
+                                    Your[ ]file[ ]or[ ]directory[ ]
+                                    '[^']+'
+                                    [ ]is[ ]probably[ ]out-of-date
                                    )
                                    /x );
       }
