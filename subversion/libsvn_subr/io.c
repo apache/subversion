@@ -2065,6 +2065,7 @@ svn_io_write_version_file (const char *path,
                            int version,
                            apr_pool_t *pool)
 {
+  svn_error_t *err;
   apr_file_t *format_file = NULL;
   const char *format_contents = apr_psprintf (pool, "%d\n", version);
 
@@ -2074,8 +2075,15 @@ svn_io_write_version_file (const char *path,
                               "Version %d is not non-negative", version);
 
   /* Open (or create+open) PATH... */
-  SVN_ERR (svn_io_file_open (&format_file, path,
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+  err = svn_io_file_open (&format_file, path,
+                          APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_EACCES (err->apr_err))
+    {
+      svn_error_clear (err);
+      SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+      SVN_ERR (svn_io_file_open (&format_file, path,
+                                 APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+    }
   
   /* ...dump out our version number string... */
   SVN_ERR (svn_io_file_write_full (format_file, format_contents,
@@ -2083,6 +2091,7 @@ svn_io_write_version_file (const char *path,
   
   /* ...and close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));
+  SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
   
   return SVN_NO_ERROR;
 }
