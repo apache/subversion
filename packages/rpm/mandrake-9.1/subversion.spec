@@ -3,7 +3,7 @@
 # with the appropraite numbers, or use the makefile.
 
 # To provide protection against accidental ~/.rpmmacros override
-%define _topdir        @RPMSDIR@
+%define _topdir        @RPMDIR@
 %define _builddir      %{_topdir}/BUILD
 %define _rpmdir        %{_topdir}/RPMS
 %define _sourcedir     %{_topdir}/SOURCES
