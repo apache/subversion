@@ -7,8 +7,8 @@ syntactic elements, specified using ABNF [RFC 2234]:
   item   = word / number / string / list
   word   = ALPHA *(ALPHA / DIGIT / "-") space
   number = 1*DIGIT space
-  string = number ":" *OCTET space
-         ; number gives the byte count of the *OCTET portion
+  string = 1*DIGIT ":" *OCTET space
+         ; digits give the byte count of the *OCTET portion
   list   = "(" space *item ")" space
   space  = 1*(SP / LF)
 
