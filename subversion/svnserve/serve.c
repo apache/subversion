@@ -1079,6 +1079,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
         return svn_ra_svn_flush(conn, pool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "c", &client_url));
       err = find_repos(client_url, root, &b, pool);
+      if (!err && current_access(&b) == NO_ACCESS)
+        err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                               "Not authorized for access");
       if (err)
         {
           io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
