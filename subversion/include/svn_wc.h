@@ -601,14 +601,35 @@ svn_error_t *svn_wc_close_commit (void *baton,
 
 
 /* This is a function of type svn_ra_get_wc_prop_func_t.  Return
-   *VALUE for property NAME on PATH.  */
+   *VALUE for wc property NAME on PATH.
+
+   NOTE: This is only for wc properties, that is, properties for
+   which svn_wc_is_wc_prop(NAME) would return true.  
+
+   ### Greg Stein suggests a better long-term solution:
+
+   "My current position is that svn_wc_get_wc_prop() and
+    svn_wc_set_wc_prop() should simply go away.  The *only* caller is
+    in libsvn_client/ra.c.  But those functions should just call
+    svn_wc_prop_get/set() and that latter function should use
+    svn_wc_is_wc_prop() to dispatch properly.
+
+    And note that svn_wc_get/set_wc_prop() are stupid wrappers around
+    svn_wc__wcprop_get/set() (meaning that svn_wc_prop_get/set would
+    just call the internal functions once it has identified the type
+    by name)." ###
+*/
 svn_error_t *svn_wc_get_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t **value,
                                  apr_pool_t *pool);
 
 /* This is a function of type svn_ra_set_wc_prop_func_t. Set property
-   NAME to VALUE on PATH.  */
+   NAME to VALUE on PATH.  
+
+   NOTE: This is only for wc properties, that is, properties for
+   which svn_wc_is_wc_prop(NAME) would return true.  See the comments
+   by svn_wc_get_wc_prop() for more about this.  */
 svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t *value,
