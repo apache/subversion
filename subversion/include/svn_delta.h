@@ -897,9 +897,11 @@ typedef struct svn_diff_callbacks_t
                                void *diff_baton);
   
   /* A list of property changes (PROPCHANGES) was applied to PATH.
-     The array is a list of (svn_prop_t *) structures. */
+     The array is a list of (svn_prop_t) structures. 
+     The original list of properties is provided in ORIGINAL_PROPS. */
   svn_error_t *(*props_changed) (const char *path,
                                  const apr_array_header_t *propchanges,
+                                 apr_hash_t *original_props,
                                  void *diff_baton);
 
 } svn_diff_callbacks_t;

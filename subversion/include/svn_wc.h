@@ -883,12 +883,13 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
                           apr_pool_t *pool);
 
 /* Given a PATH to a file or directory under version control, discover
-   any local changes made to properties.  Return these changes as an
-   array of svn_prop_t structures stored in *PROPCHANGES.  The
-   structures and array will be allocated in POOL.
+   any local changes made to properties and/or the set of 'pristine'
+   properties.
 
-   If there are no local property modifications on PATH, then set
-   *PROPCHANGES to NULL. 
+   If PROPCHANGES is non-NULL, return these changes as an array of
+   svn_prop_t structures stored in *PROPCHANGES.  The structures and
+   array will be allocated in POOL.  If there are no local property
+   modifications on PATH, then set *PROPCHANGES to NULL.
 
    If ORIGINAL_PROPS is non-NULL, then set *ORIGINAL_PROPS to
    hashtable (const char *name -> svn_stringbuf_t *value) that
