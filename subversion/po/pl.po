@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-05-05 22:19+0200\n"
-"PO-Revision-Date: 2004-05-07 12:34+0200\n"
+"PO-Revision-Date: 2004-05-07 15:22+0200\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -72,7 +72,7 @@ msgid ""
 "overwrite"
 msgstr ""
 "Docelowy katalog już istnieje, usuń go lub podaj opcję --force by\n"
-"został nadmazany\n"
+"został nadmazany"
 
 #: clients/cmdline/help-cmd.c:35
 msgid ""
@@ -202,22 +202,22 @@ msgstr "Suma kontrolna: %s\n"
 #: clients/cmdline/info-cmd.c:196
 #, c-format
 msgid "Conflict Previous Base File: %s\n"
-msgstr "Wersja bazowa pliku w chwili wystąpienia konfliktu: %s"
+msgstr "Wersja bazowa pliku w chwili wystąpienia konfliktu: %s\n"
 
 #: clients/cmdline/info-cmd.c:203
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
-msgstr "Wesja robocza pliku w chwili wystąpienia konfliktu: %s"
+msgstr "Wesja robocza pliku w chwili wystąpienia konfliktu: %s\n"
 
 #: clients/cmdline/info-cmd.c:210
 #, c-format
 msgid "Conflict Current Base File: %s\n"
-msgstr "Wersja bieżąca (repozytorium) pliku w chwili wystąpienia konfliktu: %s"
+msgstr "Wersja bieżąca (repozytorium) pliku w chwili wystąpienia konfliktu: %s\n"
 
 #: clients/cmdline/info-cmd.c:217
 #, c-format
 msgid "Conflict Properties File: %s\n"
-msgstr "Plik z opisem konfliktu atrybutów: %s"
+msgstr "Plik z opisem konfliktu atrybutów: %s\n"
 
 #: clients/cmdline/info-cmd.c:294
 #, c-format
@@ -282,16 +282,11 @@ msgstr ""
 "ARG (niektóre polecenia obsługują też zapis ARG1:ARG2 - zakres)\n"
 "                             Jako numer wersji można podać jedno z:\n"
 "                                NUMER        faktyczny numer wersji\n"
-"                                \"{\" DATA \"}\" wersja na początku podanego "
-"dnia\n"
-"                                \"HEAD\"       najnowsza wersja w "
-"repozytorium\n"
-"                                \"BASE\"       wersja, na bazie której jest "
-"rozwijana kopia robocza\n"
-"                                \"COMMITTED\"  ostatnia modyfikacja nie "
-"późniejsza niż BASE\n"
-"                                \"PREV\"       wersja poprzedzająca "
-"COMMITTED\n"
+"                                \"{\" DATA \"}\" wersja na początku podanego dnia\n"
+"                                \"HEAD\"       najnowsza wersja w repozytorium\n"
+"                                \"BASE\"       wersja, na bazie której jest rozwijana kopia robocza\n"
+"                                \"COMMITTED\"  ostatnia modyfikacja nie późniejsza niż BASE\n"
+"                                \"PREV\"       wersja poprzedzająca COMMITTED"
 
 #: clients/cmdline/main.c:88
 msgid "read data from file ARG"
@@ -426,7 +421,7 @@ msgstr ""
 "Obejmij podane pliki i katalogi zarządzaniem wersjami, zlecając ich\n"
 "dodanie do repozytorium. Zostaną one umieszczone w repozytorium w\n"
 "trakcie najbliższego zatwierdzania.  \n"
-"Wykorzystanie: add ŚCIEŻKA..."
+"Wykorzystanie: add ŚCIEŻKA...\n"
 
 #: clients/cmdline/main.c:172
 msgid ""
@@ -437,7 +432,7 @@ msgstr ""
 "Wypisz zawartość podanych plików (wskazanych przez ścieżkę lub URL) w\n"
 "połączeniu z informacją o wersji w jakiej został ostatnio zmieniony\n"
 "każdy wiersz i o autorze tej zmiany.\n"
-"Wykorzystanie: blame OBIEKT...  "
+"Wykorzystanie: blame OBIEKT...\n"
 
 #: clients/cmdline/main.c:178
 msgid ""
@@ -445,7 +440,7 @@ msgid ""
 "usage: cat TARGET...\n"
 msgstr ""
 "Wypisz treść podanych plików (wskazanych przez ścieżkę lub URL).\n"
-"Wykorzystanie: cat OBIEKT..."
+"Wykorzystanie: cat OBIEKT...\n"
 
 #: clients/cmdline/main.c:183
 msgid ""
@@ -641,7 +636,7 @@ msgstr ""
 "     podano, katalogu o nazwie ustalonej według ostatniego elementu\n"
 "     ŚCIEŻKA1. Jeśli WERSJA nie jest podana, wszystkie lokalne zmiany\n"
 "     zostaną zachowane (skopiowane), nie zostaną jednak skopiowane\n"
-"     pliki nie podlegające zarządzaniu wersjami."
+"     pliki nie podlegające zarządzaniu wersjami.\n"
 
 #: clients/cmdline/main.c:298
 msgid ""
@@ -679,7 +674,7 @@ msgstr ""
 "Wykorzystanie: info [ŚCIEŻKA]\n"
 "\n"
 "   Wypisuje informacje o każdym z podanych parametrów (domyślnie o .\n"
-"   czyli katalogu bieżacym)."
+"   czyli katalogu bieżacym).\n"
 
 #: clients/cmdline/main.c:325
 msgid ""
@@ -851,7 +846,7 @@ msgstr ""
 "  2. Każdy z podanych katalogów jest tworzony bezpośrednio w repozytorium,\n"
 "     zmiana ta jest natychmiastowo zatwierdzana.\n"
 "\n"
-"  W obydwu wypadkach wszelkie nadrzędne katalogi muszą już istnieć."
+"  W obydwu wypadkach wszelkie nadrzędne katalogi muszą już istnieć.\n"
 
 #: clients/cmdline/main.c:427
 msgid ""
@@ -1385,7 +1380,7 @@ msgstr "Wycofano zmiany w '%s'\n"
 #: clients/cmdline/notify.c:104
 #, c-format
 msgid "Failed to revert '%s' -- try updating instead.\n"
-msgstr "Błąd wycofania zmian w '%s' - spróbuj aktualizacji."
+msgstr "Błąd wycofania zmian w '%s' - spróbuj aktualizacji.\n"
 
 #: clients/cmdline/notify.c:109
 #, c-format
@@ -1449,7 +1444,7 @@ msgstr "Nie można pobrać hasła"
 #: clients/cmdline/prompt.c:131
 #, c-format
 msgid "Authentication realm: %s\n"
-msgstr "Obszar identyfikacji: %s"
+msgstr "Obszar identyfikacji: %s\n"
 
 #: clients/cmdline/prompt.c:156 clients/cmdline/prompt.c:178
 msgid "Username: "
@@ -1463,7 +1458,7 @@ msgstr "Hasło '%s': "
 #: clients/cmdline/prompt.c:199
 #, c-format
 msgid "Error validating server certificate for '%s':\n"
-msgstr "Błąd weryfikacji certyfikatu serwera dla '%s'"
+msgstr "Błąd weryfikacji certyfikatu serwera dla '%s'\n"
 
 #: clients/cmdline/prompt.c:205
 msgid ""
@@ -1523,7 +1518,7 @@ msgstr "Hasło (passphrase) dla '%s': "
 
 #: clients/cmdline/props.c:45
 msgid "Must specify revision explicitly when operating on a revision property"
-msgstr "W trakcie obsługi atrybutów wersji, wersja musi być podana explicite\n"
+msgstr "W trakcie obsługi atrybutów wersji, wersja musi być podana explicite"
 
 #: clients/cmdline/util.c:123
 msgid ""
@@ -1586,8 +1581,9 @@ msgid ""
 "Log message unchanged or not specified\n"
 "a)bort, c)ontinue, e)dit\n"
 msgstr ""
+"\n"
 "Nie podano opisu zmian.\n"
-"Przerwij (a), kontynuuj (c), edytuj (e)?"
+"Przerwij (a), kontynuuj (c), edytuj (e)?\n"
 
 #: include/svn_error_codes.h:150
 msgid "Bad parent pool passed to svn_make_pool()"
@@ -2182,9 +2178,7 @@ msgstr "Błędne parametry"
 
 #: include/svn_error_codes.h:791
 msgid "Tried a versioning operation on an unversioned resource"
-msgstr ""
-"Polecenie wymaga pliku podlegającego zarządzaniu wersjami, podany parametr "
-"tego warunku nie spełnia.\n"
+msgstr "Polecenie wymaga pliku podlegającego zarządzaniu wersjami, podany parametr tego warunku nie spełnia."
 
 #: include/svn_error_codes.h:795
 msgid "Test failed"
@@ -2582,7 +2576,7 @@ msgid ""
 msgstr ""
 "Odpowiedź na żądanie OPTIONS nie zawiera wymaganych informacji z\n"
 "activity-collection-set. Problem taki często występuje gdy URL\n"
-"wskazuje na zasób, który nie jest obsługiwany przez WebDAV.\n"
+"wskazuje na zasób, który nie jest obsługiwany przez WebDAV."
 
 #: libsvn_ra_dav/props.c:583
 #, c-format
@@ -2624,7 +2618,7 @@ msgstr "Brak DAV:version-name w bazowym obiekcie"
 msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "Co najmniej jedna zmiana atrybutu nie powiodła się. Repozytorium nie\n"
-"uległo żadnym zmianom.\n"
+"uległo żadnym zmianom."
 
 #: libsvn_ra_dav/session.c:428
 msgid "Invalid URL: illegal character in proxy port number"
@@ -2985,7 +2979,7 @@ msgstr "Już istnieje podlegajacy zarządzaniu wersjami element '%s'"
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr ""
 "Nie można skopiować lub przenieść '%s': obiekt nie podlega zarządzaniu\n"
-"wersjami\n"
+"wersjami"
 
 #: libsvn_wc/copy.c:182
 #, c-format
@@ -3119,7 +3113,7 @@ msgstr ""
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr ""
 "'%s' jest oznaczony jako nieobecny, nie może zostać zlecone jego\n"
-"skasowanie\n"
+"skasowanie"
 
 #: libsvn_wc/entries.c:1445
 #, c-format
@@ -3305,21 +3299,21 @@ msgstr "Usunięcie pliku tymczasowego nie powiodło się"
 msgid "Property '%s' locally changed to '%s', but update deletes it\n"
 msgstr ""
 "Wartość atrybutu '%s' została lokalnie zmieniona na '%s', tymczasem\n"
-"aktualizacja powoduje skasowanie atrybutu"
+"aktualizacja powoduje skasowanie atrybutu\n"
 
 #: libsvn_wc/props.c:112
 #, c-format
 msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
 msgstr ""
 "Atrybut '%s' jest lokalnie skasowany, tymczasem aktualizacja\n"
-"przypisuje mu wartość '%s'"
+"przypisuje mu wartość '%s'\n"
 
 #: libsvn_wc/props.c:128
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
 msgstr ""
 "Wartość atrybutu '%s' jest lokalnie zmieniona na '%s', tymczasem\n"
-"aktualizacja przypisuje mu wartość '%s'"
+"aktualizacja przypisuje mu wartość '%s'\n"
 
 #: libsvn_wc/props.c:171
 #, c-format
@@ -3424,7 +3418,7 @@ msgid ""
 "Subversion client"
 msgstr ""
 "Ten klient jest zbyt stary by obsługiwać kopię roboczą '%s';\n"
-"zainstaluj nowszego klienta Subversion\n"
+"zainstaluj nowszego klienta Subversion"
 
 #: libsvn_wc/questions.c:348
 #, c-format
@@ -3543,7 +3537,7 @@ msgstr "Parametr podający repozytorium jest wymagany"
 #: svnadmin/main.c:104
 #, c-format
 msgid "'%s' is an URL when it should be a path"
-msgstr "'%s' jest URLem a powinien być ścieżką\n"
+msgstr "'%s' jest URLem a powinien być ścieżką"
 
 #: svnadmin/main.c:186 svnlook/main.c:95 svnversion/main.c:183
 msgid "show version information"
@@ -3575,8 +3569,7 @@ msgstr "ignoruj jakiekolwiek UUID repozytorium"
 
 #: svnadmin/main.c:207
 msgid "set repos UUID to that found in stream, if any"
-msgstr ""
-"ustal UUID repozytorium na obecne w pliku dump i ile tylko jest zadane\n"
+msgstr "ustal UUID repozytorium na obecne w pliku dump i ile tylko jest zadane"
 
 #: svnadmin/main.c:210
 msgid "type of repository: 'bdb' or 'fsfs'"
@@ -3590,7 +3583,7 @@ msgstr "ładuj w podanym katalogu repozytorium"
 msgid "disable fsync at transaction commit [Berkeley DB]"
 msgstr ""
 "wyłącz synchronizację zapisu na dysk przy zatwierdzaniu transakcji\n"
-"[Berkeley DB]\n"
+"[Berkeley DB]"
 
 #: svnadmin/main.c:219
 msgid "disable automatic log file removal [Berkeley DB]"
@@ -3608,7 +3601,7 @@ msgid ""
 msgstr ""
 "wykorzystanie: svnadmin create KATALOG\n"
 "\n"
-"Stwórz nowe, puste repozytorium w podanym katalogu"
+"Stwórz nowe, puste repozytorium w podanym katalogu\n"
 
 #: svnadmin/main.c:243
 msgid ""
@@ -3669,7 +3662,7 @@ msgstr ""
 "wykorzystanie: svnadmin hotcopy KATALOG_REP NOWY_KATALOG_REP\n"
 "\n"
 "Tworzy kopię repozytorium w nowym katalogu - bez konieczności\n"
-"zatrzymywania repozytorium lub wstrzymywania obsługi klientów."
+"zatrzymywania repozytorium lub wstrzymywania obsługi klientów.\n"
 
 #: svnadmin/main.c:273
 msgid ""
@@ -3685,7 +3678,7 @@ msgstr ""
 "Wypisuje listę wszystkich logów Berkeley DB.\n"
 "\n"
 "UWAGA: zmodyfikowanie lub skasowanie logów bądących jeszcze w użyciu\n"
-"spowoduje uszkodzenie repozytorium."
+"spowoduje uszkodzenie repozytorium.\n"
 
 #: svnadmin/main.c:280
 msgid ""
