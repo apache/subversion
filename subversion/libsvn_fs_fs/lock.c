@@ -488,6 +488,9 @@ struct expire_lock_baton {
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type, and assumes that the write lock is held.
 */
+/* This is temporarily commented out (see get_lock below, and Issue
+   #2262 for the details). */
+# if 0
 static svn_error_t *
 expire_lock (void *baton, apr_pool_t *pool)
 {
@@ -505,6 +508,7 @@ expire_lock (void *baton, apr_pool_t *pool)
   
   return SVN_NO_ERROR;
 }
+#endif 
 
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
@@ -529,11 +533,20 @@ get_lock (svn_lock_t **lock_p,
     {
       if (have_write_lock)
         SVN_ERR (delete_lock (fs, lock, pool));
+      /* ### TODO Do not attempt to lock the fs and expire the lock if
+         our caller doesn't have the repository-wide write lock--in
+         certain cases (commit, I believe) have_write_lock is coming
+         through as FALSE, even though the repository is locked.
+         Having this code commented out means that if you're using
+         autoversioning with clients that set expiring locks, some
+         locks *may* take a little longer to expire.  Issue #2262 has
+         been filed to track this.
       else
         {
           struct expire_lock_baton elb = { fs, digest_path, lock };
           SVN_ERR (svn_fs_fs__with_write_lock (fs, expire_lock, &elb, pool));
         }
+      */
       *lock_p = NULL;
       return svn_fs_fs__err_lock_expired (fs, lock->token); 
     }
