@@ -461,14 +461,14 @@ svn_client__harvest_committables (apr_hash_t **committables,
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, 0, NULL, pool, 
-               "Entry for `%s' has no URL, and its parent directory does "
-               "not appear to be under version control.", target);
+               "Entry for `%s' has no URL, and its parent directory\n"
+               "does not appear to be under version control.", target);
           if ((p_entry->schedule == svn_wc_schedule_add)
               || (p_entry->schedule == svn_wc_schedule_replace))
             return svn_error_createf 
               (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
                "`%s' is the child of an unversioned (or not-yet-versioned) "
-               "directory.  Try committing the directory itself.",
+               "directory.\nTry committing the directory itself.",
                target);
           
           /* Manufacture a URL for this TARGET. */
@@ -483,8 +483,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
       if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
         return svn_error_createf 
           (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool, 
-           "Entry for `%s' is marked as `copied' but is not itself scheduled "
-           "for addition.  Perhaps you're committing a target that this "
+           "Entry for `%s' is marked as `copied' but is not itself scheduled\n"
+           "for addition.  Perhaps you're committing a target that this\n"
            "inside of an unversioned (or not-yet-versioned) directory?",
            target);
 
