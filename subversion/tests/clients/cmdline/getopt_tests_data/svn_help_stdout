@@ -25,7 +25,7 @@ Available subcommands:
    merge
    mkdir
    move (mv, rename, ren)
-   propdel (pdel)
+   propdel (pdel, pd)
    propedit (pedit, pe)
    propget (pget, pg)
    proplist (plist, pl)
