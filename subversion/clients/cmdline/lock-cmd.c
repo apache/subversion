@@ -152,6 +152,13 @@ svn_cl__lock (apr_getopt_t *os,
 
   /* Put lock comment file in directory of first target. */
   base_dir = svn_path_dirname (APR_ARRAY_IDX (targets, 0, const char *), pool);
+  {
+    /* But if that doesn't work out, just grab a standard temp dir. */
+    svn_node_kind_t kind;
+    svn_io_check_path (base_dir, &kind, pool);
+    if (kind != svn_node_dir)
+      SVN_ERR (svn_io_temp_dir (&base_dir, pool));
+  }
 
   /* Get comment. */
   SVN_ERR (get_comment (&comment, &tmp_file, ctx, opt_state, base_dir, pool));

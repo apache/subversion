@@ -537,23 +537,28 @@ SVN_ERROR_START
               "Lock token is incorrect")
 
   /* @since New in 1.2. */
-  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
+  SVN_ERRDEF (SVN_ERR_FS_NO_LOCK_TOKEN,
               SVN_ERR_FS_CATEGORY_START + 38,
+              "No lock token provided")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
+              SVN_ERR_FS_CATEGORY_START + 39,
               "Username does not match lock owner")
 
   /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
-              SVN_ERR_FS_CATEGORY_START + 39,
+              SVN_ERR_FS_CATEGORY_START + 40,
               "Filesystem has no such lock")
 
   /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_LOCK_EXPIRED,
-              SVN_ERR_FS_CATEGORY_START + 40,
+              SVN_ERR_FS_CATEGORY_START + 41,
               "Lock has expired")
 
   /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
-              SVN_ERR_FS_CATEGORY_START + 41,
+              SVN_ERR_FS_CATEGORY_START + 42,
               "Item is out of date")
 
   /* @since New in 1.2.
@@ -565,7 +570,7 @@ SVN_ERROR_START
    * retains its name.
    */
   SVN_ERRDEF (SVN_ERR_FS_UNSUPPORTED_FORMAT,
-              SVN_ERR_FS_CATEGORY_START + 42,
+              SVN_ERR_FS_CATEGORY_START + 43,
               "Unsupported FS format")
 
   /* repos errors */

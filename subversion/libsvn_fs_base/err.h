@@ -112,6 +112,9 @@ svn_error_t *svn_fs_base__err_not_file (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_base__err_bad_lock_token (svn_fs_t *fs,
                                               const char *lock_token);
 
+/* SVN_ERR_FS_NO_LOCK_TOKEN: no lock token given for PATH in FS.  */
+svn_error_t *svn_fs_base__err_no_lock_token (svn_fs_t *fs, const char *path);
+
 /* SVN_ERR_FS_CORRUPT: a lock in `locks' table is corrupt.  */
 svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
                                             const char *lock_token);

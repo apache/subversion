@@ -243,6 +243,14 @@ svn_fs_base__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
      lock_token, fs->path);
 }
 
+svn_error_t *
+svn_fs_base__err_no_lock_token (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_LOCK_TOKEN, 0,
+     _("No token given for path '%s' in filesystem '%s'"), path, fs->path);
+}
 
 svn_error_t *
 svn_fs_base__err_corrupt_lock (svn_fs_t *fs, const char *lock_token)

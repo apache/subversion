@@ -358,8 +358,10 @@ txn_body_unlock (void *baton, trail_t *trail)
   /* If not breaking the lock, we need to do some more checking. */
   if (!args->force)
     {
-      /* Sanity check: The lock tokens must match. */
-      if (strcmp (lock_token, args->token) != 0)
+      /* Sanity check: The lock token must exist, and must match. */
+      if (args->token == NULL)
+        return svn_fs_base__err_no_lock_token (trail->fs, args->path);
+      else if (strcmp (lock_token, args->token) != 0)
         return svn_fs_base__err_no_such_lock (trail->fs, args->path);
 
       SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, lock_token, 
