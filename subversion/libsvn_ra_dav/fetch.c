@@ -337,7 +337,7 @@ fetch_dirents (svn_ra_session_t *ras,
         }
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static void
@@ -445,7 +445,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
   fc.files = apr_make_array(ras->pool, 10, sizeof(file_rec_t));
 
   err = (*editor->replace_root)(edit_baton, &dir_baton);
-  if (err != NULL)
+  if (err != SVN_NO_ERROR)
     return err;
 
   /* ### join ras->rep_root, start_at_URL */
@@ -551,7 +551,7 @@ static svn_error_t *
 update_delete (svn_string_t *name,
                void *parent_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -561,7 +561,7 @@ update_add_dir (svn_string_t *name,
                 svn_vernum_t ancestor_version,
                 void **child_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -571,7 +571,7 @@ update_rep_dir (svn_string_t *name,
                 svn_vernum_t ancestor_version,
                 void **child_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -579,13 +579,13 @@ update_change_dir_prop (void *dir_baton,
                         svn_string_t *name,
                         svn_string_t *value)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 update_close_dir (void *dir_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -595,7 +595,7 @@ update_add_file (svn_string_t *name,
                  svn_vernum_t ancestor_version,
                  void **file_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -605,7 +605,7 @@ update_rep_file (svn_string_t *name,
                  svn_vernum_t ancestor_version,
                  void **file_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -613,7 +613,7 @@ update_apply_txdelta (void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -621,13 +621,13 @@ update_change_file_prop (void *file_baton,
                          svn_string_t *name,
                          svn_string_t *value)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 update_close_file (void *file_baton)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -658,7 +658,7 @@ svn_ra_get_update_editor(const svn_delta_edit_fns_t **editor,
 {
   *editor = &update_editor;
   *edit_baton = NULL;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
