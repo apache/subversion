@@ -96,3 +96,17 @@ language-specific extension API (e.g. its C API for Python, JNI for
 Java, etc.).  This transitional object implements a Subversion editor
 interface, allowing it to be passed between its native library code
 and the runtime of the language which the bindings were written for.
+
+
+
+
+SWIG INTERFACE FILE CODING NOTES
+--------------------------------
+
+Always place %{ #include "foo.h" ... %} sections above any code which
+will actually cause SWIG to generate wrappers.  This is because those
+wrappers may need declarations from the headers to be valid C.
+Practically, this means that the %{ ... %} block should be above any
+"%include *.h" statements (%includes of *.i files are fine, since they
+should be self-sufficient).
+

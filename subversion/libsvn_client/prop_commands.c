@@ -167,6 +167,7 @@ svn_client_propset2 (const char *propname,
                      const char *target,
                      svn_boolean_t recurse,
                      svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -203,8 +204,9 @@ svn_client_propset2 (const char *propname,
     return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                               _("Bad property name: '%s'"), propname);
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, TRUE,
-                                   recurse ? -1 : 0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, TRUE,
+                                   recurse ? -1 : 0, ctx->cancel_func,
+                                   ctx->cancel_baton, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -222,8 +224,10 @@ svn_client_propset2 (const char *propname,
       wb.propval = propval;
       wb.force = force;
 
-      SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                    &walk_callbacks, &wb, FALSE, pool));
+      SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                     &walk_callbacks, &wb, FALSE,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
     }
   else
     {
@@ -243,7 +247,12 @@ svn_client_propset (const char *propname,
                     svn_boolean_t recurse,
                     apr_pool_t *pool)
 {
-  return svn_client_propset2 (propname, propval, target, recurse, FALSE, pool);
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR (svn_client_create_context (&ctx, pool));
+
+  return svn_client_propset2 (propname, propval, target, recurse, FALSE,
+                              ctx, pool);
 }
 
 
@@ -429,8 +438,8 @@ maybe_convert_to_url (const char **new_target,
       else
         pdir = target;
       
-      SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, pdir, FALSE,
-                                 0, pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, pdir, FALSE,
+                                 0, NULL, NULL, pool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
       if (! entry)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -579,8 +588,10 @@ svn_client_propget2 (apr_hash_t **props,
     {
       svn_boolean_t pristine;
 
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                       FALSE, recurse ? -1 : 0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                       FALSE, recurse ? -1 : 0,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf 
@@ -613,8 +624,10 @@ svn_client_propget2 (apr_hash_t **props,
           wb.propname = propname;
           wb.pristine = pristine;
 
-          SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                        &walk_callbacks, &wb, FALSE, pool));
+          SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                         &walk_callbacks, &wb, FALSE,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         pool));
         }
       else
         {
@@ -734,8 +747,8 @@ remote_proplist (apr_array_header_t *proplist,
   if (kind == svn_node_dir)
     {
       SVN_ERR (svn_ra_get_dir (ra_session, target_relative, revnum,
-                                   (recurse ? &dirents : NULL),
-                                   NULL, &prop_hash, scratchpool));
+                               (recurse ? &dirents : NULL),
+                               NULL, &prop_hash, scratchpool));
     }
   else if (kind == svn_node_file)
     {
@@ -931,8 +944,10 @@ svn_client_proplist2 (apr_array_header_t **props,
     {
       svn_boolean_t pristine;
 
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                       FALSE, recurse ? -1 : 0, pool));
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target,
+                                       FALSE, recurse ? -1 : 0,
+                                       ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf 
@@ -964,8 +979,10 @@ svn_client_proplist2 (apr_array_header_t **props,
           wb.props = *props;
           wb.pristine = pristine;
 
-          SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                        &walk_callbacks, &wb, FALSE, pool));
+          SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                         &walk_callbacks, &wb, FALSE,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         pool));
         }
       else 
         SVN_ERR (add_to_proplist (*props, target, adm_access, pristine, pool));

@@ -119,7 +119,7 @@ svn_cl__propdel (apr_getopt_t *os,
              opt_state->force doesn't apply to this command anyway. */
           SVN_CL__TRY (svn_client_propset2 (pname_utf8, NULL, target,
                                             opt_state->recursive,
-                                            FALSE, subpool),
+                                            FALSE, ctx, subpool),
                        success);
           
           if (success && (! opt_state->quiet))

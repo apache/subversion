@@ -89,6 +89,7 @@ documentation.
   book/ch00.xml
   book/ch01.xml
   book/ch02.xml
+  book/ch03.xml (line 1340, 35%)
 
 $Id$
 vim: set tw=72 nowrap et sw=2 ts=2 sts=2 fo+=2w fenc=utf8 :

@@ -41,8 +41,6 @@ print_help (apr_getopt_t *os,
             svn_boolean_t quiet,
             apr_pool_t *pool)
 {
-  void *ra_baton;
-
   /* xgettext: the %s is for SVN_VER_NUMBER. */
   char help_header_template[] =
   N_("usage: svn <subcommand> [options] [args]\n"
@@ -67,8 +65,7 @@ print_help (apr_getopt_t *os,
   svn_stringbuf_t *ra_desc_body, *ra_desc_all;
 
   ra_desc_all = svn_stringbuf_create (ra_desc_start, pool);
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_print_ra_libraries (&ra_desc_body, ra_baton, pool));
+  SVN_ERR (svn_ra_print_ra_libraries2 (&ra_desc_body, pool));
   svn_stringbuf_appendstr (ra_desc_all, ra_desc_body);
 
   return svn_opt_print_help (os,

@@ -150,6 +150,11 @@ struct compose_handler_baton
   svn_txdelta_window_t *window;
   apr_pool_t *window_pool;
 
+  /* If the incoming window was self-compressed, and the combined WINDOW
+     exists from previous iterations, SOURCE_BUF will point to the
+     expanded self-compressed window. */
+  char *source_buf;
+
   /* The trail for this operation. WINDOW_POOL will be a child of
      TRAIL->pool. No allocations will be made from TRAIL->pool itself. */
   trail_t *trail;
@@ -166,7 +171,9 @@ struct compose_handler_baton
 
 
 /* Handle one window. If BATON is emtpy, copy the WINDOW into it;
-   otherwise, combine WINDOW with the one in BATON. */
+   otherwise, combine WINDOW with the one in BATON, unless WINDOW
+   is self-compressed (i.e., does not copy from the source view),
+   in which case expand. */
 
 static svn_error_t *
 compose_handler (svn_txdelta_window_t *window, void *baton)
@@ -178,18 +185,38 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
   if (!cb->init && !window)
     return SVN_NO_ERROR;
 
+  /* We should never get here if we've already expanded a
+     self-compressed window. */
+  assert (!cb->source_buf);
+
   if (cb->window)
     {
-      /* Combine the incoming window with whatever's in the baton. */
-      apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
-      svn_txdelta_window_t *composite;
+      if (window && (window->sview_len == 0 || window->src_ops == 0))
+        {
+          /* This is a self-compressed window. Don't combine it with
+             the others, because the combiner may go quadratic. Instead,
+             expand it here and signal that the combination has
+             ended. */
+          apr_size_t source_len = window->tview_len;
+          assert (cb->window->sview_len == source_len);
+          cb->source_buf = apr_palloc (cb->window_pool, source_len);
+          svn_txdelta__apply_instructions (window, "",
+                                           cb->source_buf, &source_len);
+          cb->done = TRUE;
+        }
+      else
+        {
+          /* Combine the incoming window with whatever's in the baton. */
+          apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
+          svn_txdelta_window_t *composite;
 
-      composite = svn_txdelta__compose_windows (window, cb->window,
-                                                composite_pool);
-      svn_pool_destroy (cb->window_pool);
-      cb->window = composite;
-      cb->window_pool = composite_pool;
-      cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
+          composite = svn_txdelta__compose_windows (window, cb->window,
+                                                    composite_pool);
+          svn_pool_destroy (cb->window_pool);
+          cb->window = composite;
+          cb->window_pool = composite_pool;
+          cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
+        }
     }
   else if (window)
     {
@@ -320,7 +347,13 @@ rep_undeltify_range (svn_fs_t *fs,
 
       /* cb.window is the combined delta window. Read the source text
          into a buffer. */
-      if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
+      if (cb.source_buf)
+        {
+          /* The combiner already created the source text from a
+             self-compressed window. */
+          source_buf = cb.source_buf;
+        }
+      else if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
         {
           apr_size_t source_len = cb.window->sview_len;
           source_buf = apr_palloc (cb.window_pool, source_len);
@@ -331,8 +364,7 @@ rep_undeltify_range (svn_fs_t *fs,
         }
       else
         {
-          static char empty_buf[] = "";
-          source_buf = empty_buf; /* Won't read anything from here. */
+          source_buf = "";      /* Won't read anything from here. */
         }
 
       if (offset > 0)
@@ -1491,4 +1523,3 @@ svn_fs_base__rep_deltify (svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
-

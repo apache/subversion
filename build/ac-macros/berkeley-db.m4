@@ -171,9 +171,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
     # Or that it resides in a non-standard location which we would have
     # to compensate with using something like -R`$apu_config --prefix`/lib.
     #
-    changequote(<<, >>)dnl
-    svn_apu_bdb_lib="`$apu_config --libs | sed -e 's/.*\(-ldb[^ ]*\).*/\1/'`"
-    changequote([, ])dnl
+    svn_apu_bdb_lib=["`$apu_config --libs | sed -e 's/.*\(-ldb[^ ]*\).*/\1/'`"]
 
     CPPFLAGS="$SVN_APRUTIL_INCLUDES $CPPFLAGS" 
     LIBS="`$apu_config --ldflags` $svn_apu_bdb_lib $LIBS"

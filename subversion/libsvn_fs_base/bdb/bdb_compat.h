@@ -63,7 +63,7 @@ extern "C" {
 #define SVN_BDB_OPEN_PARAMS(env,txn) (env)
 #endif
 
-/* In BDB 4.3, the error gatherer function grew a nrw DBENV parameter,
+/* In BDB 4.3, the error gatherer function grew a new DBENV parameter,
    and the MSG parameter's type changed. */
 #if (DB_VERSION_MAJOR > 4) \
     || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)

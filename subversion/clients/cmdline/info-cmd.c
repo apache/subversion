@@ -265,8 +265,9 @@ svn_cl__info (apr_getopt_t *os,
            _("'svn info' only works on working copy paths, not URLs"));
 
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, FALSE,
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, FALSE,
                                        opt_state->recursive ? -1 : 0,
+                                       ctx->cancel_func, ctx->cancel_baton,
                                        subpool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
       if (! entry)
@@ -286,9 +287,10 @@ svn_cl__info (apr_getopt_t *os,
         {
           if (opt_state->recursive)
             /* the generic entry-walker: */
-            SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                          &entry_walk_callbacks, NULL,
-                                          FALSE, pool));
+            SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
+                                           &entry_walk_callbacks, NULL,
+                                           FALSE, ctx->cancel_func,
+                                           ctx->cancel_baton, pool));
           else
             SVN_ERR (print_entry (target, entry, subpool));
         }

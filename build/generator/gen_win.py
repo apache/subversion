@@ -671,9 +671,10 @@ class WinGeneratorBase(GeneratorBase):
     nondeplibs = target.msvc_libs[:]
     if self.enable_nls:
       if self.libintl_path:
-        nondeplibs.append(self.apath(self.libintl_path, 'lib', 'intl.lib'))
+        nondeplibs.append(self.apath(self.libintl_path,
+                                     'lib', 'intl3_svn.lib'))
       else:
-        nondeplibs.append('intl.lib')
+        nondeplibs.append('intl3_svn.lib')
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')

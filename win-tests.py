@@ -136,7 +136,7 @@ def locate_libs():
 
   libintl_path = get(cp, 'options', '--with-libintl', None)
   if libintl_path is not None:
-    shutil.copy(os.path.join(libintl_path, 'bin', 'intl.dll'), abs_objdir)
+    shutil.copy(os.path.join(libintl_path, 'bin', 'intl3_svn.dll'), abs_objdir)
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']

@@ -226,8 +226,9 @@ copy_versioned_files (const char *from,
   apr_hash_index_t *hi;
   apr_finfo_t finfo;
 
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, from, FALSE,
-                                   0, pool));
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, from, FALSE,
+                                   0, ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
   err = svn_wc_entry (&entry, from, adm_access, FALSE, pool);
   if (err)
     {

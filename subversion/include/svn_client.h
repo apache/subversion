@@ -440,6 +440,14 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with 
  * @a ctx->notify_baton as the checkout progresses.
  *
+ * If @a recurse is true, check out recursively.  Otherwise, check out
+ * just the directory represented by @a URL and its immediate
+ * non-directory children, but none of its child directories (if any).
+ *
+ * If @a URL refers to a file rather than a directory, return the
+ * error SVN_ERR_UNSUPPORTED_FEATURE.  If @a URL does not exist,
+ * return the error SVN_ERR_RA_ILLEGAL_URL.
+ *
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
@@ -494,6 +502,10 @@ svn_client_checkout (svn_revnum_t *result_rev,
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
+ * If @a recurse is true, update directories recursively; otherwise,
+ * update just their immediate entries, but not their child
+ * directories (if any).
+ *
  * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with
  * @a ctx->notify_baton for each item handled by the update, and also for
  * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
@@ -539,6 +551,10 @@ svn_client_update (svn_revnum_t *result_rev,
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date; otherwise,
  * return @c SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * If @a recurse is true, and @a path is a directory, switch it
+ * recursively; otherwise, switch just @a path and its immediate
+ * entries, but not its child directories (if any).
  *
  * If @a ctx->notify_func is non-null, invoke it with @a ctx->notify_baton 
  * on paths affected by the switch.  Also invoke it for files may be restored
@@ -1019,7 +1035,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * changed between @a start_revision and @a end_revision.  @a path can
  * be either a working-copy path or URL.
  *
- * All other options are handled identically to svn_client_diff2.
+ * All other options are handled identically to @c svn_client_diff2.
  */
 svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
                                    const char *path,
@@ -1116,7 +1132,7 @@ svn_client_merge (const char *source1,
  * revision @a peg_revision, as it changed between @a revision1 and @a
  * revision2.  
  *
- * All other options are handled identically to svn_client_merge.
+ * All other options are handled identically to @c svn_client_merge.
  */
 svn_error_t *
 svn_client_merge_peg (const char *source,
@@ -1346,6 +1362,9 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  * @a propname is "svn:mime-type", but @a propval is not a valid
  * mime-type).
  *
+ * If @a ctx->cancel_func is non-null, invoke it passing @a
+ * ctx->cancel_baton at various places during the operation.
+ *
  * Use @a pool for all memory allocation.
  */
 svn_error_t *
@@ -1354,6 +1373,7 @@ svn_client_propset2 (const char *propname,
                      const char *target,
                      svn_boolean_t recurse,
                      svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**

@@ -185,7 +185,7 @@ svn_cl__propset (apr_getopt_t *os,
           SVN_CL__TRY (svn_client_propset2 (pname_utf8, propval, target,
                                             opt_state->recursive,
                                             opt_state->force,
-                                            subpool),
+                                            ctx, subpool),
                        success);
 
           if (success && (! opt_state->quiet))

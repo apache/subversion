@@ -238,8 +238,7 @@ get_username (svn_ra_session_t *session,
 static const char *
 svn_ra_local__get_description (void)
 {
-  static const char *desc = RA_LOCAL_DESCRIPTION;
-  return _(desc);
+  return _(RA_LOCAL_DESCRIPTION);
 }
 
 static const char * const *
@@ -262,7 +261,7 @@ svn_ra_local__open (svn_ra_session_t *session,
   
   /* Allocate and stash the session_baton args we have already. */
   baton = apr_pcalloc (pool, sizeof(*baton));
-  baton->repository_URL = repos_URL;
+  baton->repository_URL = apr_pstrdup (session->pool, repos_URL);
   baton->callbacks = callbacks;
   baton->callback_baton = callback_baton;
   
@@ -478,14 +477,14 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
                                  svn_boolean_t keep_locks,
                                  apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *sess = session->priv;
+  svn_ra_local__session_baton_t *sess_baton = session->priv;
   struct deltify_etc_baton *db = apr_palloc (pool, sizeof(*db));
   apr_hash_index_t *hi;
   svn_fs_access_t *fs_access;
 
-  db->fs = sess->fs;
-  db->repos = sess->repos;
-  db->fs_path = sess->fs_path;
+  db->fs = sess_baton->fs;
+  db->repos = sess_baton->repos;
+  db->fs_path = sess_baton->fs_path;
   if (! keep_locks)
     db->lock_tokens = lock_tokens;
   else
@@ -499,7 +498,7 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
   /* If there are lock tokens to add, do so. */
   if (lock_tokens)
     {
-      SVN_ERR (svn_fs_get_access (&fs_access, sess->fs));
+      SVN_ERR (svn_fs_get_access (&fs_access, sess_baton->fs));
 
       /* If there is no access context, the filesystem will scream if a
          lock is needed. */      
@@ -519,12 +518,12 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
     }
               
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
-                                        svn_path_uri_decode (sess->repos_url,
-                                                             pool),
-                                        sess->fs_path,
-                                        sess->username, log_msg,
-                                        deltify_etc, db, pool));
+  SVN_ERR (svn_repos_get_commit_editor
+           (editor, edit_baton, sess_baton->repos,
+            svn_path_uri_decode (sess_baton->repos_url, pool),
+            sess_baton->fs_path,
+            sess_baton->username, log_msg,
+            deltify_etc, db, pool));
 
   return SVN_NO_ERROR;
 }
@@ -725,7 +724,7 @@ svn_ra_local__get_log (svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sbaton = session->priv;
   apr_array_header_t *abs_paths
-    = apr_array_make (session->pool, paths->nelts, sizeof (const char *));
+    = apr_array_make (pool, paths->nelts, sizeof (const char *));
   int i;
 
   for (i = 0; i < paths->nelts; i++)
@@ -735,7 +734,7 @@ svn_ra_local__get_log (svn_ra_session_t *session,
 
       /* Append the relative paths to the base FS path to get an
          absolute repository path. */
-      abs_path = svn_path_join (sbaton->fs_path, relative_path, session->pool);
+      abs_path = svn_path_join (sbaton->fs_path, relative_path, pool);
       (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
@@ -749,7 +748,7 @@ svn_ra_local__get_log (svn_ra_session_t *session,
                               NULL, NULL,
                               receiver,
                               receiver_baton,
-                              session->pool);
+                              pool);
 }
 
 

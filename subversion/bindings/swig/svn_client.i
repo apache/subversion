@@ -333,10 +333,6 @@
 
 /* ----------------------------------------------------------------------- */
 
-/* Include the headers before we swig-include the svn_client.h header file.
-   SWIG will split the nested svn_client_revision_t structure, and we need
-   the types declared *before* the split structure is encountered.  */
-
 %{
 #include "svn_client.h"
 #include "svn_time.h"
@@ -351,6 +347,10 @@
 
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
+#endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
 #endif
 %}
 

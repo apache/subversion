@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<appendix id="svn-ap-e">
+  <title>Sobre esta traducción</title>
+
+  <simplesect>
+
+    <para>La traducción que tiene en sus manos es fruto de la
+      colaboración desinteresada de varias personas. Su
+      esfuerzo y dedicación se ven plasmados a lo largo de
+      todo el libro, y es en este apéndice, que no existe en
+      la versión original, donde se reconoce su trabajo. Puede
+      obtener la última versión de este libro, e información
+      sobre el proyecto de traducción en <systemitem
+      class="url">http://svnbook.red-bean.com/index.es.html</systemitem>.</para>
+
+  </simplesect>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECCION 1:  ORIGEN                                          *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-e-sect-1">
+    <title>Origen del proyecto</title>
+
+      <para>El 15 de septiembre del 2004, Grzegorz Adam Hankiewicz
+        y Rubén Gómez anunciaron en la lista de correo
+        de desarrolladores de Subversion el inicio del
+        proyecto de traducción del libro de Subversion
+        al español<footnote><para>Posiblemente pueda
+        leer todavía este mensaje en el archivo público <systemitem
+        class="url">http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=77338</systemitem>.</para></footnote>.
+        No mucho más tarde (en concreto el 14 de octubre del mismo
+        año), el proyecto pasó del repositorio creado en el ordenador
+        personal de Grzegorz al repositorio principal de desarrollo
+        de Subversion, y se creó una lista de correo para discutir
+        temas relacionados con la traducción del libro.</para>
+
+      <para>Desde entonces, varias otras personas
+        se han unido al proyecto contribuyendo traducciones,
+        revisiones, críticas y sugerencias.  No considere esta
+        traducción como un producto finalizado: aparte de posibles
+        fallos en la traducción, día a día se sigue mejorando la
+        versión inglesa que puede obtener via web desde <systemitem
+        class="url">http://svnbook.red-bean.com/</systemitem>,
+        y obviamente hay que adaptar también la traducción. Así
+        que le animamos a que se pase por la lista de correo (más
+        información debajo) para comentarnos su opinión.</para>
+
+  </sect1>
+  
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 2:  QUIENES SOMOS                                   *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-e-sect-2">
+    <title>Quienes somos</title>
+
+      <para>A continuación mostramos una lista ordenada
+        alfabéticamente por nombre de las personas que han colaborado
+        con el proyecto, indicando entre paréntesis la naturaleza
+        de su aportación:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>Ariel Arjona (traducción)</para>
+        </listitem>
+        
+        <listitem>
+          <para>Diego Brouard (traducción)</para>
+        </listitem>
+        
+        <listitem>
+          <para>Federico Edelman (traducción)</para>
+        </listitem>
+        
+        <listitem>
+          <para>Grzegorz Adam Hankiewicz (coordinación,
+            traducción)</para>
+        </listitem>
+        
+        <listitem>
+          <para>Rubén Gómez (traducción)</para>
+        </listitem>
+        
+      </itemizedlist>
+        
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 3:  LISTAS DE CORREO                                *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-e-sect-3">
+    <title>Listas de correo</title>
+
+      <para>La mejor forma de ponerse en contacto con los
+        participantes del proyecto es mandando un email
+        a la lista de correo creada para coordinar
+        las traducciones relacionadas con Subversion:
+        <email>l10n-es@subversion.tigris.org</email>. No necesita
+        suscribirse a la lista para poder mandar mensajes, pero en
+        ese caso serán moderados y puede que tarden uno o dos días
+        en llegar al resto de los suscriptores.</para>
+
+      <para>Para apuntarse a esta lista de correo, mande un email
+        a la dirección
+        <email>l10n-es-subscribe@subversion.tigris.org</email>. Para
+        desapuntarse, envíe un email a la dirección
+        <email>l10n-es-unsubscribe@subversion.tigris.org</email>.
+        El servicio de lista de correo es automático, y en ambos
+        casos recibirá instrucciones para confirmar su acción.</para>
+
+      <para>Hay otras listas de correo alojadas en el servidor
+        principal de Subversion. Puede encontrar información
+        sobre éstas e instrucciones en la dirección <systemitem
+        class="url">http://subversion.tigris.org/servlets/ProjectMailingListList</systemitem>.</para>
+        
+  </sect1>
+  
+</appendix>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "appendix")
+end:
+-->

@@ -303,8 +303,8 @@ base_bdb_set_errcall (svn_fs_t *fs,
 /* Allocating an appropriate Berkeley DB environment object.  */
 
 /* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info.
-   ### bdb_error_gatherer is a macro with BDB < 4.3, so be careful how
-       you use it. */
+   Note: bdb_error_gatherer is a macro with BDB < 4.3, so be careful how
+   you use it! */
 static void
 bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
 {
@@ -340,7 +340,7 @@ create_env (DB_ENV **envp, bdb_errcall_baton_t **ec_batonp, apr_pool_t *pool)
   if (!db_err)
     {
       (*envp)->set_errpfx (*envp, (char *) (*ec_batonp));
-      /* ### bdb_error_gatherer is in params to stop macro expansion. */
+      /* bdb_error_gatherer is in parens to stop macro expansion. */
       (*envp)->set_errcall (*envp, (bdb_error_gatherer));
 
       /* Needed on Windows in case Subversion and Berkeley DB are using
@@ -423,7 +423,14 @@ bdb_write_config  (svn_fs_t *fs)
     "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
     "# See http://www.sleepycat.com/docs/ref/log/config.html and\n"
     "# http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
-    "set_lg_regionmax 131072\n";
+    "set_lg_regionmax 131072\n"
+    "#\n"
+    /* ### Configure this with "svnadmin create --bdb-cache-size" */
+    "# The default cache size in BDB is only 256k. As explained in\n"
+    "# http://svn.haxx.se/dev/archive-2004-12/0369.shtml, this is too\n"
+    "# small for most applications. Bump this number if \"db_stat -m\"\n"
+    "# shows too many cache misses.\n"
+    "set_cachesize    0 1048576 1\n";
 
   /* Run-time configurable options.
      Each option set consists of a minimum required BDB version, a

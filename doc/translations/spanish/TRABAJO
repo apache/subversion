@@ -50,11 +50,11 @@ Ficheros en proceso de traducción:
 ch05.xml: dbrouard
 ch06.xml: Federico Edelman
 ch07.xml: gradha
-appa.xml: ruben
-
+appb.xml: ruben
 
 Ficheros que han completado al menos una traducción básica:
 -----------------------------------------------------------
+appa.xml: ruben
 book.xml: gradha
 foreword.xml: gradha
 ch00.xml: gradha

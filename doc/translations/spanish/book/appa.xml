@@ -587,8 +587,9 @@ X    Resource is external to this working copy (comes from another
       conversion results-->&mdash;¡después de todo, usted ha trabajado
       duro para construir esa historia!</para>
 
-    <para>For an updated collection of links to known converter tools,
-      visit the Links page of the Subversion website (<systemitem
+    <para>Para una colección actualizada de enlaces a herramientas
+      <!--TODO:links to known converter tools-->conversoras conocidas,
+      visite la página de enlaces del website de Subversion (<systemitem
       class="url">http://subversion.tigris.org/project_links.html</systemitem>).</para>
 
   </sect1>

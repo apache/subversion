@@ -39,7 +39,7 @@
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
 ;; r     - svn-status-revert                run 'svn revert'
-;; M-v   - svn-status-resolved              run 'svn resolved'
+;; X v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
@@ -175,6 +175,15 @@ However, it is possible, that the sorting is wrong in this case.")
 (defvar svn-status-unmark-files-after-list '(commit revert)
   "*List of operations after which all user marks will be removed.
 Possible values are: commit, revert.")
+
+(defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
+
+(defvar svn-status-svn-environment-var-list nil
+  "*A list of environment variables that should be set for that svn process.
+If you set that variable, svn is called with that environment variables set.
+That is done via the env program.
+
+You could set it for example to '(\"LANG=C\")")
 
 (defvar svn-status-short-mod-flag-p t
   "*Whether the mark for out of date files is short or long.
@@ -457,6 +466,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run-svn %s: %S" cmdtype arglist))
         (let* ((proc-buf (get-buffer-create "*svn-process*"))
+               (svn-exe svn-status-svn-executable)
                (svn-proc))
           (when (listp (car arglist))
             (setq arglist (car arglist)))
@@ -471,12 +481,18 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
+            (when svn-status-svn-environment-var-list
+              (setq arglist (append svn-status-svn-environment-var-list
+                                    (list svn-status-svn-executable)
+                                    arglist))
+              (setq svn-exe "env"))
             (if run-asynchron
                 (progn
-                  (setq svn-proc (apply 'start-process "svn" proc-buf "svn" arglist))
+                  ;;(message "running asynchron: %s %S" svn-exe arglist)
+                  (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist))
                   (set-process-sentinel svn-proc 'svn-process-sentinel))
-              ;;(message "running synchron: svn %S" arglist)
-              (apply 'call-process "svn" nil proc-buf nil arglist)
+              ;;(message "running synchron: %s %S" svn-exe arglist)
+              (apply 'call-process svn-exe nil proc-buf nil arglist)
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
@@ -758,6 +774,8 @@ A and B must be line-info's."
   "Subkeymap used in `svn-status-mode' for option commands.")
 (defvar svn-status-mode-trac-map ()
   "Subkeymap used in `svn-status-mode' for trac issue tracker commands.")
+(defvar svn-status-mode-extension-map ()
+  "Subkeymap used in `svn-status-mode' for some seldom used commands.")
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -817,7 +835,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "i") 'svn-status-info)
   (define-key svn-status-mode-map (kbd "b") 'svn-status-blame)
   (define-key svn-status-mode-map (kbd "=") 'svn-status-show-svn-diff)
-  (define-key svn-status-mode-map (kbd "M-v") 'svn-status-resolved)
   ;; [(control ?=)] is unreachable on TTY, but you can use "*u" instead.
   ;; (Is the "u" mnemonic for something?)
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
@@ -859,6 +876,10 @@ A and B must be line-info's."
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map (kbd "P") svn-status-mode-property-map))
+(when (not svn-status-mode-extension-map)
+  (setq svn-status-mode-extension-map (make-sparse-keymap))
+  (define-key svn-status-mode-extension-map (kbd "v") 'svn-status-resolved)
+  (define-key svn-status-mode-map (kbd "X") svn-status-mode-extension-map))
 (when (not svn-status-mode-options-map)
   (setq svn-status-mode-options-map (make-sparse-keymap))
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)

@@ -143,7 +143,6 @@ typedef void * svn_repos_file_rev_handler_t;
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_repos.h
 %{
 #include "svn_repos.h"
 
@@ -158,4 +157,10 @@ typedef void * svn_repos_file_rev_handler_t;
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_repos.h

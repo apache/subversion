@@ -42,6 +42,7 @@ Blanket commit access:
            djh   D.J. Heap <dj@shadyvale.net>
           maxb   Max Bowsher <maxb@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
+       dberlin   Daniel Berlin <dberlin@dberlin.org>
 
 Commit access for specific areas:
 
@@ -95,7 +96,7 @@ Commit access for specific areas:
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
        marcosc   Marcos Chaves <mchvs@hotmail.com>           (po: pt_BR)
-        pynoos   Hojin Choi <pynoos@users.kldp.net>          (po: ko)
+        pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
@@ -104,7 +105,8 @@ Commit access for specific areas:
          ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
       dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
-  
+giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (doc: it)
+
   Subprojects that are complete or abandoned:
 
           xela   Alexander Müller <alex@littleblue.de>       (Java JNI b.)

@@ -79,8 +79,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
 
       /* Get the RA connection. */
       SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
-                                             &URL, url, peg_revision,
-                                             revision, ctx, pool));
+                                                 &URL, url, peg_revision,
+                                                 revision, ctx, pool));
       
       SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
       if (kind == svn_node_none)
@@ -127,8 +127,9 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
             }
 
           /* Get PATH's entry. */
-          SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, path,
-                                     FALSE, 0, pool));
+          SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, path,
+                                     FALSE, 0, ctx->cancel_func,
+                                     ctx->cancel_baton, pool));
           SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
           SVN_ERR (svn_wc_adm_close (adm_access));
 
