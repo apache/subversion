@@ -768,9 +768,19 @@ report_local_mods (svn_string_t *path,
                                       &(tb->editor_baton));  /* child */
               if (err) return err;
 
-              /* Of course, this is a new file, so we would should
-                 definitely mark the target as having new text! */
-              tb->text_modified_p = TRUE;
+              /* This might be a *newly* added file, in which case the
+                 revision is 0 or invalid; assume that the contents
+                 need to be sent. */
+              if ((current_entry->revision == 0) 
+                  || (! SVN_IS_VALID_REVNUM(current_entry->revision)))
+                tb->text_modified_p = TRUE;
+              else
+                /* This file might be added with history;  in this
+                   case, we only *might* need to send contents.  Do a
+                   real local-mod check on it. */
+                SVN_ERR (svn_wc_text_modified_p (&(tb->text_modified_p),
+                                                 full_path_to_entry,
+                                                 subpool));
             }
 
           /* Check for local property changes to send, whether we're
