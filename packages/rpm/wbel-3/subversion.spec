@@ -101,6 +101,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Wed May 05 2004 David Summers <david@summersoft.fay.ar.us> 1.1.0-9628
+- Track changes to perl binding compile and install.
+- Locale files now installed.
+
 * Wed Mar 10 2004 David Summers <david@summersoft.fay.ar.us> 1.0.0-8983
 - Fedora-1 and WBEL-3 require db42-4.2.52 or greater.
 
@@ -385,10 +389,11 @@ make swig-py
 
 # Build PERL bindings
 make swig-pl-lib
-(cd subversion/bindings/swig/perl
+cd subversion/bindings/swig/perl/native
 env APR_CONFIG=/usr/bin/apr-config perl Makefile.PL INSTALLDIRS=vendor PREFIX=$RPM_BUILD_ROOT/%{_prefix}
-make all test
-)
+make all
+make test
+cd ../../../../..
 
 %if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
@@ -435,9 +440,10 @@ rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Install PERL SWIG bindings.
 make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
-(cd subversion/bindings/swig/perl
+cd subversion/bindings/swig/perl/native
 make PREFIX=$RPM_BUILD_ROOT/%{_prefix} install
-)
+cd ../../../../..
+
 # Clean up unneeded files for package installation
 rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
 
@@ -506,6 +512,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn_repos*so*
 /usr/lib/libsvn_subr*so*
 /usr/lib/libsvn_wc*so*
+/usr/share/locale/*/*/*
 /usr/share/man/man1/*
 /usr/share/man/man5/*
 /usr/share/man/man8/*
