@@ -1604,11 +1604,22 @@ or release date:
      - Changes that are a normal part of release bookkeeping, for
        example, the steps listed in notes/releases.txt.
      - Changes to dist.sh by, or approved by, the release manager.
+     - Changes to message translations in .po files as long as format string
+       "%" codes are not touched.
    With voting:
      - Anything affecting only tools/, packages/, or bindings/.
      - Doc fixes in core code header or source files.
      - Changes to printed output, such as error and usage messages, as
        long as format string "%" codes and their args are not touched.
+     - Changes to message translations in .po files with changes to format
+       "%" codes.
+
+NOTE: The requirements on message translation changes are looser than for
+text messages in C code.  This is so a translator can fix typos and other
+errors without requiring voting.  Changing format specifiers in .po files
+is allowed because their validity can be checked mechanically (with the
+-c flag on msgfmt of GNU gettext).  If this checking is forgotten, however,
+such changes can introduce crashes, so they still require voting.
 
 Core code changes, of course, require voting, and restart the soak or
 test period, since otherwise the change could be undertested.
