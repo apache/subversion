@@ -227,8 +227,6 @@ svn_fs_parse_id (const char *data,
 }
 
 
-/* Set UNPARSED to the unparsed form of the node id ID.
-   Allocate the buffer for the unparsed form in POOL.  */
 svn_string_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)

@@ -825,6 +825,34 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 }
 
 
+
+/* Merging trees. */
+ 
+struct reroot_txn_args
+{
+  svn_fs_t *fs;
+  const char *txn_name;
+  svn_fs_id_t *id;
+};
+
+
+/* Change one or both roots of an as-yet-unchanged transaction.
+   Assuming that BATON points to a struct reroot_txn_args *, then do:
+   
+     svn_fs__dag_reroot_txn (BATON->fs, BATON->TXN_NAME, BATON->id, trail);
+
+*/
+static svn_error_t *
+txn_body_reroot_txn (void *baton, trail_t *trail)
+{
+  struct reroot_txn_args *args = baton;
+
+  SVN_ERR (svn_fs__dag_reroot_txn (args->fs, args->txn_name, args->id, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_merge (const char **conflict_p,
               svn_fs_root_t *source_root,
@@ -841,7 +869,7 @@ svn_fs_merge (const char **conflict_p,
   if (! svn_fs_is_txn_root (target_root))
     {
       return svn_error_create
-        (SVN_ERR_FS_CONFLICT, 0, NULL,
+        (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
          "attempting to merge into a non-transaction");
     }
 
@@ -858,12 +886,73 @@ svn_fs_merge (const char **conflict_p,
 
   /* Else proceed, knowing ancestor != source, and source != target. */
 
-#if 0
+#if 0   /* in development */
 
   /* target has not changed since ancestor, so merge from source */
   if (svn_fs_id_eq (ancestor_id, target_id))
     {
-      target takes source;
+      /* Target must take the change between ancestor and source.
+         This means updating target's entry in its parent; or if it's
+         the root, updating the target txn itself. */
+
+      const char *next;
+      char *target_parent = next_entry_name (&next, target_path, pool);
+
+      if ((target_parent[0] == '\0')
+          && ((next == NULL) || (next[0] == '\0')))
+        {
+          /* target_path is the unchanged root, so we need to set
+             target's txn to use either source_id or source_id's
+             content as its txn root.  This is subtle, and not
+             particularly elegant, but I don't see any way around
+             it:
+             
+             If source_id refers to an immutable node, then we
+             should set both of txn's roots.  In other words, the
+             txn gets re-based, without ever having been
+             modified.
+             
+             If source_id refers to a mutable node, then we
+             certainly don't want to share it with target, so we
+             make a new mutable root for target and *copy*
+             source_id's content over.
+             
+             Note that all of this presumes a mighty silly
+             circumstance on our caller's part.  But it would be
+             rather arbitrary of us to insist that callers only
+             pass in targets where changes have already been made.
+          */
+
+          struct reroot_txn_args args;
+          
+          args.txn_name = svn_fs_txn_root_name (target_root, pool);
+          args.id = source_id;
+          args.fs = target_root->fs;
+          
+          SVN_ERR (svn_fs__retry_txn (target_root->fs, txn_body_reroot_txn,
+                                      &args, pool));
+        }
+      else     /* target is not the root */
+        {
+          parent_path_t *t_head;
+          parent_path_t *target_parent;
+          dag_node_t *target_parent_node;
+          char *target_entry_name; 
+
+          /* kff todo: move this stuff out to txn_body helpers */
+
+          SVN_ERR (open_path (&t_head, target_root, target_path, 0, trail));
+          target_entry_name = t_head->entry;
+          target_parent = t_head->parent;
+          target_parent_node = target_parent->node;
+
+          SVN_ERR (make_path_mutable (target_root, target_parent,
+                                      target_path, trail));
+
+          SVN_ERR (svn_fs__dag_set_entry (target_parent_node,
+                                          entry_name, source_id,
+                                          trail));
+        }
     }
   /* ancestor is dir, source is dir, target is dir */
   else if (svn_fs_is_dir (source_root, source_path)
@@ -895,7 +984,24 @@ svn_fs_merge (const char **conflict_p,
           if (apr_hash_get (source_entries, key, klen)
               && apr_hash_get (target_entries, key, klen))
             {
-              recurse;
+              char *new_apath, *new_spath, *new_tpath;
+              char *new_component = apr_palloc (pool, klen + 1);
+
+              strncpy (new_component, key, klen);
+              new_component[klen] = '\0';
+
+              new_apath = apr_psprintf (pool, "%s/%s", ancestor_path,
+                                        new_component);
+              new_spath = apr_psprintf (pool, "%s/%s", source_path,
+                                        new_component);
+              new_tpath = apr_psprintf (pool, "%s/%s", target_path,
+                                        new_component);
+
+              SVN_ERR (svn_fs_merge (conflict_p,
+                                     source_root, source_path,
+                                     target_root, target_path,
+                                     ancestor_root, ancestor_path,
+                                     pool));
             }
           /* E exists in source but not target */
           else if (apr_hash_get (source_entries, key, klen)

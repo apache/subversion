@@ -1534,7 +1534,7 @@ merge_trees (const char **msg)
     *ancestor_path = "";
   const char *conflict;
 
-  *msg = "merge trees";
+  *msg = "merge trees (INCOMPLETE TEST)";
 
   /* Prepare three txns to receive a greek tree each. */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-merge-trees"));

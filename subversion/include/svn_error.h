@@ -177,6 +177,10 @@ typedef enum svn_errno_t {
      a prior change.  */
   SVN_ERR_FS_CONFLICT,
 
+  /* The transaction could not be rebased, because its root has
+     already been cloned.  */
+  SVN_ERR_FS_TXN_NOT_PRISTINE,
+
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
