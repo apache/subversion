@@ -252,7 +252,14 @@ I.    BUILD REQUIREMENTS
       project files using the gen-make.py script.
 
 
-      10. Libraries for our libraries
+      10. Perl 5.8 or newer (Windows only)
+
+      To build Subversion under any of the MS Windows platforms, you
+      will also need Perl 5.8 or newer to run apr-util's w32locatedb.pl
+      script.
+
+
+      11. Libraries for our libraries
 
       Some of the libraries that Subversion depends on themselves have
       optional dependencies that can add features to what Subversion
@@ -314,7 +321,7 @@ I.    BUILD REQUIREMENTS
       libraries.
 
 
-      11. Building The Documentation
+      12. Building The Documentation
 
       The master source format for Subversion's documentation is
       Docbook Lite.  See doc/book/README for instructions how to
@@ -591,7 +598,7 @@ II.   INSTALLATION
       [NOTE: The neon library supports secure connections with OpenSSL
           and on-the-wire compression with zlib. If you want to use
           those features, you should pass the options "--with-zlib" and
-          "--with-openssl" to the gen-make.py script. See Section I.10
+          "--with-openssl" to the gen-make.py script. See Section I.11
           for more details.]
 
       If you are installing under Win9x, NT4, or WinME, and svn.exe
@@ -625,6 +632,20 @@ II.   INSTALLATION
       and all the import libraries to <SVN>\db4-win32\lib. Again, the
       DLLs should be somewhere in your path.
 
+      The latest version of apr-util (see Section I.1) must be told
+      where to find the Berkeley DB include files and libraries. You
+      can do this with the w32locatedb.pl script (located in the "build"
+      directory in the apr-util sources), which modifies apr-util's
+      header and DSP files. The instructions at the top of the script
+      file explain how to use the script.
+
+      If your copy of apr-util does not contain build\w32locatedb.pl,
+      you can download a recent version from here:
+
+          http://subversion.tigris.org/files/documents/15/8705/w32locatedb.pl
+
+      You will need Perl 5.8 to run this script.
+
       To build the Apache module, you will also need the Apache 2.0.48
       or later Win32 source. You can download it from here:
 
@@ -635,7 +656,9 @@ II.   INSTALLATION
 
       Walkthrough:
 
-          Unzip the Apache source. Copy the Apache apr, apr-util, and
+          Unzip the Apache source, copy the w32locatedb.pl script to the
+          srclib\apr-util\build directory, and run it to prepare the
+          apr-util sources. Copy the Apache apr, apr-util, and
           apr-iconv directories from the Apache httpd-2.0.48\srclib
           directory to the top-level Subversion directory.
 
@@ -664,6 +687,8 @@ II.   INSTALLATION
       C:\SVN\src> unzip ..\db-4.0.14-win32.zip
       C:\SVN\src> cd ..
       C:\SVN> unzip httpd_2.0.48-win32-src.zip
+      C:\SVN> copy w32locatedb.pl httpd-2.0.48\srclib\apr-util\build
+      C:\SVN> perl httpd-2.0.48\srclib\apr-util\build\w32locatedb.pl dll src\db4-win32\include src\db4-win32\lib
       C:\SVN> xcopy /S httpd-2.0.48\srclib\apr src\apr
       C:\SVN> xcopy /S httpd-2.0.48\srclib\apr-util src\apr-util
       C:\SVN> xcopy /S httpd-2.0.48\srclib\apr-iconv src\apr-iconv
