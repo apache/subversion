@@ -931,7 +931,7 @@ svn_io_detect_mimetype (const char **mimetype,
      If those criteria are not met, we're calling it binary. */
   if (amt_read > 0)
     {
-      int i;
+      apr_size_t i;
       int binary_count = 0;
       
       /* Run through the data we've read, counting the 'binary-ish'
