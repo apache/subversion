@@ -211,7 +211,8 @@ make_dir_baton (const char *path,
         err = svn_wc_entry (&entry, d->path, adm_access, FALSE, pool);
       if (err || (! entry) || (! entry->url))
         {
-          svn_error_clear_all (err);
+          if (err)
+            svn_error_clear_all (err);
           URL = "";
         }
       else

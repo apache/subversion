@@ -1264,6 +1264,7 @@ svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   path = svn_path_join (svn_wc_adm_access_path(adm_access),
                         adm_subdir (), pool);
   SVN_ERR (svn_io_remove_dir (path, pool));
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }

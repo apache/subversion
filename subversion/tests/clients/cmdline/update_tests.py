@@ -813,6 +813,87 @@ def update_after_add_rm_deleted(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+#----------------------------------------------------------------------
+
+# Issue 938.
+def update_replace_dir(sbox):
+  "update that replaces a directory"
+
+  if sbox.build():
+    return 1
+  wc_dir = sbox.wc_dir
+
+  # Delete a directory
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  outlines, errlines = svntest.main.run_svn(None, 'rm', F_path)
+  if errlines:
+    return 1
+
+  # Commit deletion
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F'       : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/F')
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
+    return 1
+
+  # Add replacement directory
+  outlines, errlines = svntest.main.run_svn(None, 'mkdir', F_path)
+  if errlines:
+    return 1
+
+  # Commit addition
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F'       : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/B/F', wc_rev=3)
+  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                           expected_status, None,
+                                           None, None, None, None, wc_dir):
+    return 1
+
+  # Update to HEAD
+  expected_output = svntest.wc.State(wc_dir, {
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  if svntest.actions.run_and_verify_update(wc_dir,
+                                           expected_output,
+                                           expected_disk,
+                                           expected_status):
+    return 1
+
+  # Update to revision 1 replaces the directory
+  ### I can't get this to work :-(
+  #expected_output = svntest.wc.State(wc_dir, {
+  #  'A/B/F'       : Item(verb='Adding'),
+  #  'A/B/F'       : Item(verb='Deleting'),
+  #  })
+  #expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  #expected_status.tweak(repos_rev=3)
+  #if svntest.actions.run_and_verify_update(wc_dir,
+  #                                         expected_output,
+  #                                         expected_disk,
+  #                                         expected_status,
+  #                                         None, None, None, None, None, 0,
+  #                                         '-r', '1', wc_dir):
+  #  return 1
+
+  # Update to revision 1 replaces the directory
+  outlines, errlines = svntest.main.run_svn(None, 'up', '-r1', wc_dir)
+  if errlines:
+    return 1
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -828,6 +909,7 @@ test_list = [ None,
               update_delete_modified_files,
               update_after_add_rm_deleted,
               update_missing,
+              update_replace_dir,
              ]
 
 if __name__ == '__main__':
