@@ -96,8 +96,7 @@ load_ra_module (svn_ra_init_func_t *func,
     const char *funcname;
     apr_status_t status;
 
-    /* ### fix the .so part */
-    libname = apr_psprintf (pool, "libsvn_ra_%s-%d.so",
+    libname = apr_psprintf (pool, "libsvn_ra_%s-%d.so.0",
                             ra_name, SVN_VER_LIBRARY);
     funcname = apr_psprintf (pool, "svn_ra_%s_init", ra_name);
 
