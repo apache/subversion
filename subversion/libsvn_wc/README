@@ -1,17 +1,47 @@
+     Oh Most High and Fragrant Emacs, please be in -*- text -*- mode!
+
 This is the library described in the section "The working copy
 management library" of svn-design.texi.
 
 It performs local operations in the working copy, tweaking
-administrative files and versioned data.  It has no concept of network
-nor of server -- that's libsvn_cl's job.
+administrative files and versioned data, generally in response to a
+received delta.  It has no concept of network nor of server -- that's
+libsvn_cl's job.
 
---------------------8-<-------cut-here---------8-<-----------------------
+The Situation:
+==============
 
-For now, I'll document the wc administrative (SVN/*) file formats
-here, instead of in ../../doc/client.texi.  Once the formats have
-stabilized and have code written around them, this documentation will
-be moved to client.texi.
+The working copy is arranged as a directory tree, which, at checkout,
+mirrors a tree rooted at some node in the repository.  Over time, the
+working copy accumulates uncommitted changes, some of which may affect
+its tree layout.  By commit time, the working copy's layout could be
+arbitrarily different from the repository tree on which it was based.
 
-SO:
+Worse, even after an update/commit, the working copy and the
+repository are not necessarily perfect mirrors, since updates leave
+local changes, and updates/commits don't always involve the entire
+working copy.
 
-(tomorrow: finish other half of propdump.c, start scenario list)
+To resolve all situations safely, we must carefully define what
+constitutes a "conflict" between a repository and a working copy, and
+describe how such conflicts are resolved.
+
+The principles and definitions below do not presume any particular
+tree delta format; the semantics require merely that working copies
+and repositories have some way to communicate their `state' to each
+other.
+
+  * Modifying a file's contents is a change to that file only.
+
+  * Renames, adds, and deletes are considered changes to *both* the
+    target entity and its parent.
+
+  * A working copy's "state" is a snapshot (maybe as a skelta?) that
+    shows the base versions, and any changes, for all entities in the
+    working copy.
+
+  * A repository's "state", relative to a particular working copy
+    state, is a list of all entities that have changed w.r.t. that wc
+    state.
+
+  * Two changes "conflict" if they change the same thing.
