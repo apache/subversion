@@ -242,4 +242,8 @@ public interface SVNClientInterface
     PropertyData propertyGet(String path, String name) throws ClientException;
 
     byte[] fileContent(String path, Revision revision) throws ClientException;
+
+    void relocate(String from, String to, String path, boolean recurse) throws ClientException;
+
+    byte[] blame(String path, Revision revisionStart, Revision revisionEnd, boolean strict) throws ClientException;
 }

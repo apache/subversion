@@ -223,13 +223,13 @@ public class SVNClient implements SVNClientInterface
      * @exception ClientException
      */
     public native void merge(String path1, Revision revision1, String path2, Revision revision2, String localPath, boolean force, boolean recurse) throws ClientException;
-    
+
     /**
      * diff display the differences between two paths
      * @exception ClientException
      */
     public native void diff(String target1, Revision revision1, String target2, Revision revision2, String outFileName, boolean recurse) throws ClientException;
-    
+
     /**
      * Returns the number of properties found.
      */
@@ -242,12 +242,17 @@ public class SVNClient implements SVNClientInterface
     public native PropertyData revProperty(String path, String name, Revision rev) throws ClientException;
 
     /**
-     * get the given property 
+     * get the given property
      */
     public native PropertyData propertyGet(String path, String name) throws ClientException;
 
 
     public native byte[] fileContent(String path, Revision revision) throws ClientException;
+
+    public native void relocate(String from, String to, String path, boolean recurse) throws ClientException;
+
+    public native byte[] blame(String path, Revision revisionStart, Revision revisionEnd, boolean strict) throws ClientException;
+
     public static native void enableLogging(int logLevel, String logFilePath);
     public static native String version();
     public static native int versionMajor();

@@ -458,4 +458,20 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
+    public void relocate(String from, String to, String path, boolean recurse) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.relocate(from, to, path, recurse);
+        }
+    }
+
+    public byte[] blame(String path, Revision revisionStart, Revision revisionEnd, boolean strict) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.blame(path,revisionStart, revisionEnd, strict);
+        }
+    }
+
 }
