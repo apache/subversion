@@ -17,6 +17,7 @@ SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE1: subversion.conf
 SOURCE2: httpd.davcheck.conf
 Patch0: install.patch
+Patch1: doc.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -97,6 +98,15 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Jul 13 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6462
+- Fix revision number to be properly generated during RPM build.  Can't use
+  the normal svnversion command at this point because the SRPM is not a
+  repository that we can get the version from via svnversion command.
+
+* Sun Jul 13 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6461
+- Fix install/un-install not to bomb out on update if apache (httpd) doesn't
+  restart correctly.
+
 * Thu Jul 10 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6434
 - Apache 2.0.47 now recommended because of security issues.
 
@@ -258,6 +268,9 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+# Fix documentation version generation.
+%patch1 -p1
+
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
 export RELEASE_NAME
@@ -377,7 +390,9 @@ mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
 # Set up book generation and installation
-(cd doc/book; make XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
+(cd doc/book;
+rm -f book/version.xml
+make SVNVERSION=%{release} XSL_DIR=/usr/share/sgml/docbook/xsl-stylesheets all-html)
 cp -r doc/book/book/html-chunk book
 cp -r doc/book/book/images     book/images
 
