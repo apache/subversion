@@ -766,6 +766,7 @@ wcprop_list (apr_hash_t **props,
   /* Check validity of PATH */
   SVN_ERR( svn_io_check_path (pathbuf, &kind, pool) );
   
+#if 0
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, 0, NULL, pool,
                               "wcprop_list: non-existent path '%s'.",
@@ -775,6 +776,7 @@ wcprop_list (apr_hash_t **props,
     return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
                               "wcprop_list: unknown node kind: '%s'.",
                               path);
+#endif
 
   /* Construct a path to the relevant property file */
   SVN_ERR( svn_wc__wcprop_path (&prop_path, pathbuf, 0, pool) );
@@ -815,9 +817,16 @@ svn_wc__wcprop_get (const svn_string_t **value,
 
   /* ### it would be nice if the hash contained svn_string_t values */
   pvaluebuf = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
-  *value = pvalue = apr_palloc(pool, sizeof(*pvalue));
-  pvalue->data = pvaluebuf->data;
-  pvalue->len = pvaluebuf->len;
+  if (pvaluebuf == NULL)
+    {
+      *value = NULL;
+    }
+  else
+    {
+      *value = pvalue = apr_palloc(pool, sizeof(*pvalue));
+      pvalue->data = pvaluebuf->data;
+      pvalue->len = pvaluebuf->len;
+    }
 
   return SVN_NO_ERROR;
 }
