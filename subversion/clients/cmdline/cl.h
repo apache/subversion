@@ -126,6 +126,7 @@ svn_cl__cmd_proc_t
   svn_cl__help,
   svn_cl__import,
   svn_cl__log,
+  svn_cl__merge,
   svn_cl__mkdir,
   svn_cl__move,
   svn_cl__propdel,

@@ -164,7 +164,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "diff", svn_cl__diff, {"di"},
     "Display local changes in the working copy, or changes between the\n"
     "working copy and the repository if a revision is given.\n"
-    "usage: svn diff [-r REV] [TARGETS]\n",
+    "usage: svn diff [-r REV1[:REV2]] [TARGETS]\n",
     {'r', 'D', 'x', 'n',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
@@ -191,6 +191,12 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Show the log messages for a set of revision(s) and/or file(s).\n"
     "usage: svn log [PATH1 [PATH2] ...] \n",
     {'r', 'v', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+  
+  { "merge", svn_cl__merge, {0},
+    "Merge changes in the working copy.  IMPLEMENTATION INCOMPLETE.\n"
+    "usage: svn merge [-r REV1[:REV2]] [TARGETS]\n",
+    {'r', 'D', 'x', 'n',
+     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"

@@ -553,6 +553,36 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 
+/* Merge changes from PATH1/REVISION1 to PATH2/REVISION2 into the
+   working copy.
+
+   PATH1 and PATH2 must both represent the same node kind -- that is,
+   if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
+   file, PATH2 must also be.  (Currently, PATH1 and PATH2 must be the
+   exact same path.  ### Also true for merge, initially?)
+
+   If either REVISION1 or REVlISION2 has an `unspecified' or
+   unrecognized `kind', return SVN_ERR_CLIENT_BAD_REVISION.
+  
+   If RECURSE is true (and the PATHs are directories), apply changes
+   recursively; otherwise, only apply changes in the current
+   directory.
+  
+   MERGE_OPTIONS (an array of svn_stringbuf_t * items) is used to pass
+   additional command line options to diff3.  ### good idea?  bad?
+  
+   AUTH_BATON is used to communicate with the repository.  */
+svn_error_t *
+svn_client_merge (const apr_array_header_t *options,  /* ### ??? */
+                  svn_client_auth_baton_t *auth_baton,
+                  svn_stringbuf_t *path1,
+                  const svn_client_revision_t *revision1,
+                  svn_stringbuf_t *path2,
+                  const svn_client_revision_t *revision2,
+                  svn_boolean_t recurse,
+                  apr_pool_t *pool);
+
+
 /* Recursively cleanup a working copy directory DIR, finishing any
    incomplete operations, removing lockfiles, etc. */
 svn_error_t *
