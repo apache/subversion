@@ -103,6 +103,7 @@ server_ssl_callback(void *userdata,
 {
   svn_ra_session_t *ras = userdata;
   svn_auth_cred_server_ssl_t *credentials;
+  void *creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
@@ -115,10 +116,11 @@ server_ssl_callback(void *userdata,
                          (void*)failures);
 
   apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials((void**)&credentials, &state,
+  error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_SERVER_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
+  credentials = creds;
   failures_allowed = (credentials) ? credentials->failures_allow : 0;
   apr_pool_destroy(pool);
 
@@ -130,15 +132,17 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
 {
   svn_ra_session_t *ras = userdata;
   svn_auth_cred_client_ssl_pass_t *credentials;
+  void *creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
 
   apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials((void**)&credentials, &state,
+  error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_CLIENT_PASS_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
+  credentials = creds;
   if (credentials)
     {
       strncpy(pwbuf, credentials->password, len);
@@ -153,14 +157,16 @@ client_ssl_callback(void *userdata, ne_session *sess,
 {
   svn_ra_session_t *ras = userdata;
   svn_auth_cred_client_ssl_t *credentials;
+  void *creds;
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
   apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials((void**)&credentials, &state,
+  error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_CLIENT_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
+  credentials = creds;
   if(credentials)
     {
       if(credentials->cert_type == svn_auth_ssl_pem_cert_type)
