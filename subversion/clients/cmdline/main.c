@@ -206,7 +206,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
-    N_("Duplicate something in working copy or repos, remembering history.\n"
+    N_("Duplicate something in working copy or repository, remembering"
+       "history.\n"
        "usage: copy SRC DST\n"
        "\n"
        "  SRC and DST can each be either a working copy (WC) path or URL:\n"
@@ -263,7 +264,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  3. Shorthand for 'svn diff [-r N[:M]] --old=URL1 --new=URL2'\n"
        "\n"
        "  Use just 'svn diff' to display local modifications in "
-       "a working copy\n"),
+       "a working copy.\n"),
     {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'x', 'N',
      svn_cl__diff_cmd_opt, svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, SVN_CL__AUTH_OPTIONS,
@@ -281,8 +282,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  2. Exports a clean directory tree from the working copy specified "
        "by\n"
-       "     PATH1, at revision REV if it is given, otherwise at WORKING, "
-       "into\n"
+       "     PATH1, at revision REV if it is given, otherwise at BASE, into\n"
        "     PATH2.  If PATH2 is omitted, the last component of the "
        "PATH1 is used\n"
        "     for the local directory name. If REV is not specified,"
@@ -446,7 +446,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__config_dir_opt} },
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
-    N_("Edit property PROPNAME with $EDITOR on targets.\n"
+    N_("Edit property PROPNAME with an external editor on targets.\n"
        "usage: 1. propedit PROPNAME PATH...\n"
        "       2. propedit PROPNAME --revprop -r REV [URL]\n"
        "\n"
@@ -1018,7 +1018,7 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          fprintf (stderr, _("subcommand argument required\n"));
+          fprintf (stderr, _("Subcommand argument required\n"));
           svn_cl__help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1030,7 +1030,7 @@ main (int argc, const char * const *argv)
                                                          first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, _("unknown command: '%s'\n"), first_arg);
+              fprintf (stderr, _("Unknown command: '%s'\n"), first_arg);
               svn_cl__help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1057,7 +1057,7 @@ main (int argc, const char * const *argv)
             svn_opt_get_option_from_code (opt_id, svn_cl__options);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
-                   _("subcommand '%s' doesn't accept option '%s'\n"
+                   _("Subcommand '%s' doesn't accept option '%s'\n"
                      "Type 'svn help %s' for usage.\n"),
                    subcommand->name, optstr, subcommand->name);
           svn_pool_destroy (pool);

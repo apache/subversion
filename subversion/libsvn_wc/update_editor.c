@@ -1002,7 +1002,7 @@ add_directory (const char *path,
       if (dir_entry && dir_entry->schedule == svn_wc_schedule_add)
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "Failed to add dir '%s': object of the same name is already "
+           "Failed to add directory '%s': object of the same name is already "
            "scheduled for addition", path);
 
       /* Immediately create an entry for the new directory in the parent.

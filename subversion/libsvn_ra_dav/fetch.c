@@ -461,7 +461,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     {
        const char *msg;
 
-       msg = apr_psprintf(pool, _("GET request failed for %s"), url);
+       msg = apr_psprintf(pool, _("GET request failed for '%s'"), url);
        if (err)
          svn_error_clear (err);
        err = svn_ra_dav__convert_error(sess, msg, decompress_rv);

@@ -780,6 +780,6 @@ svn_ra_dav__request_dispatch(int *code_p,
 
   /* We either have a neon error, or some other error
      that we didn't expect. */
-  msg = apr_psprintf(pool, _("%s of %s"), method, url);
+  msg = apr_psprintf(pool, _("%s of '%s'"), method, url);
   return svn_ra_dav__convert_error(session, msg, rv);
 }

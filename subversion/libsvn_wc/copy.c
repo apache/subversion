@@ -294,7 +294,7 @@ copy_dir_administratively (const char *src_path,
       || (src_entry->copied))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Not allowed to copy or move '%s': it is not in the repository yet; "
+       _("Cannot copy or move '%s': it is not in the repository yet; "
          "try committing first"),
        src_path);
 
