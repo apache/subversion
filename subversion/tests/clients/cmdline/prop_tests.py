@@ -302,7 +302,7 @@ def remove_props():
   "commit the removal of props"
 
   # Bootstrap
-  sbox = sandbox(downdate_props)
+  sbox = sandbox(remove_props)
   wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
 
   if svntest.actions.make_repo_and_wc(sbox):
