@@ -81,11 +81,14 @@ class FileDiff:
     fp = open(file, 'w+')
     if path is not None:
       stream = file_contents(root, path, pool)
-      while 1:
-        chunk = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
-        if not chunk:
-          break
-        fp.write(chunk)
+      try:
+        while 1:
+          chunk = core.svn_stream_read(stream, core.SVN_STREAM_CHUNK_SIZE)
+          if not chunk:
+            break
+          fp.write(chunk)
+      finally:
+        core.svn_stream_close(stream)
     fp.close()
     
     
