@@ -3124,7 +3124,7 @@ struct revisions_changed_baton
 {
   apr_array_header_t *revs;
   int cross_copy_history;
-  dag_node_t *successor;
+  const svn_fs_id_t *successor_id;
 };
 
 
@@ -3137,30 +3137,41 @@ revisions_changed_callback (void *baton,
   struct revisions_changed_baton *b = baton;
 
   /* If there is no NODE, then this is the last call, so we need to
-     flush our B->SUCCESSOR cache. */
+     flush our B->SUCCESSOR_ID cache. */
   if (! node)
     {
-      b->successor = NULL;
+      b->successor_id = NULL;
     }
   else
     {
       svn_revnum_t revision;
 
-      /* ### todo:  At this point, in the future, we will check
-         B->CROSS_COPY_HISTORY, then determine if we just crossed copy
-         history by comparing with our B->SUCCESSOR.  */
+      /* Check B->CROSS_COPY_HISTORY.  If we are not supposed to cross
+         copy history, then compare NODE's ID against B->SUCCESSOR_ID
+         to see if we have done so, and if so, set the DONE flag and
+         exit. */
+      if ((! b->cross_copy_history) && (b->successor_id))
+        {
+          if (strcmp (svn_fs__id_copy_id (svn_fs__dag_get_id (node)), 
+                      svn_fs__id_copy_id (b->successor_id)))
+            {
+              *done = 1;
+              return SVN_NO_ERROR;
+            }
+        }
 
-      /* ... see what it's created revision is. */
+      /* See what NODE's created revision is. */
       SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
 
-      /* If it's a valid revision, then add this to the BATON's array. */
+      /* If it's a valid revision, then add this to the baton's array. */
       if (SVN_IS_VALID_REVNUM (revision))
         (*((svn_revnum_t *) apr_array_push (b->revs))) = revision;
 
-      /* ### todo:  And at this point, in the future, we will copy
-         NODE into B->SUCCESSOR and cache it so we can do the proper
-         copy history crossing detection mentioned above on the next
-         iteration of this callback. */
+      /* Copy NODE's ID into B->SUCCESSOR_ID and cache it so we can do
+         the proper copy history crossing detection mentioned above on
+         the next iteration of this callback. */
+      b->successor_id = svn_fs__id_copy (svn_fs__dag_get_id (node), 
+                                         trail->pool);
     }
 
   return SVN_NO_ERROR;
@@ -3172,6 +3183,7 @@ struct revisions_changed_args
   apr_array_header_t **revs;
   svn_fs_t *fs;
   apr_array_header_t *ids;
+  int cross_copy_history;
   apr_pool_t *pool;
 };
 
@@ -3189,10 +3201,8 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
      our callback baton. */
   b.revs = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
 
-  /* Also, note in our baton that we do wish to cross copy history.
-     ### todo: someday this will be an option passed to this
-     function.  */
-  b.cross_copy_history = 1;
+  /* Also, note in our baton whether we wish to cross copy history. */
+  b.cross_copy_history = args->cross_copy_history;
 
   /* Check the ID for each path */
   for (i = 0; i < args->ids->nelts; i++)
@@ -3201,10 +3211,10 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
       dag_node_t *node;
       svn_revnum_t revision;
 
-      /* Flush the SUCCESSOR member of the callback baton as we are
+      /* Flush the SUCCESSOR_ID member of the callback baton as we are
          about to start working on a new node. */
-      b.successor = NULL;
-      
+      b.successor_id = NULL;
+
       /* Get the NODE for TMP_ID.  */
       SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
 
@@ -3240,10 +3250,15 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   return SVN_NO_ERROR;
 }
 
+
+
+/* Note:  it is acceptable for this function to call back into
+   public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
 svn_fs_revisions_changed (apr_array_header_t **revs,
                           svn_fs_root_t *root,
                           const apr_array_header_t *paths,
+                          int cross_copy_history,
                           apr_pool_t *pool)
 {
   struct revisions_changed_args args;
@@ -3271,6 +3286,7 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   args.revs = revs;
   args.fs = fs;
   args.pool = pool;
+  args.cross_copy_history = cross_copy_history;
   args.ids = apr_array_make (subpool, 1, sizeof (svn_fs_id_t *));
 
   /* Get the node-id for each PATH under ROOT. */

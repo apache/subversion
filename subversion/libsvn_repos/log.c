@@ -129,7 +129,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                (&rev_root, fs, (start > end) ? start : end, pool));
 
       /* And the search is on... */
-      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, pool));
+      SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, 1, pool));
 
       /* If no revisions were found for these entries, we have nothing
          to show. Just return now before we break a sweat.  */

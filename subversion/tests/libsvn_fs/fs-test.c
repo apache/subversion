@@ -5390,7 +5390,7 @@ revisions_changed (const char **msg,
         paths = apr_array_make (spool, 1, sizeof (const char *));
         (*(const char **)apr_array_push(paths)) = path;
         
-        SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, spool));
+        SVN_ERR (svn_fs_revisions_changed (&revs, rev_root, paths, 1, spool));
 
         /* Are we at least looking at the right number of returned
            revisions? */
