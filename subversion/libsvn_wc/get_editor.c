@@ -1061,7 +1061,7 @@ close_file (void *file_baton)
           err = svn_io_open_unique_file (&received_diff_file,
                                          &received_diff_filename,
                                          tmp_loc,
-                                         ".diff",
+                                         SVN_WC__DIFF_EXT,
                                          fb->pool);
           if (err)
             return err;
@@ -1220,6 +1220,15 @@ close_file (void *file_baton)
                                  SVN_WC__LOG_ATTR_ARG_4,
                                  fb->name,
                                  SVN_WC__LOG_ATTR_INFILE,
+                                 received_diff_filename,
+                                 NULL);
+
+          /* Remove the diff file that patch will have used. */
+          svn_xml_make_open_tag (&entry_accum,
+                                 fb->pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_RM,
+                                 SVN_WC__LOG_ATTR_NAME,
                                  received_diff_filename,
                                  NULL);
         }
