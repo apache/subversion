@@ -2042,7 +2042,7 @@ fetch_all_changes (apr_hash_t *changed_paths,
   /* Read in the changes one by one, folding them into our local hash
      as necessary. */
   
-  SVN_ERR (read_change (&change, file, pool));
+  SVN_ERR (read_change (&change, file, iterpool));
 
   while (change)
     {
@@ -2081,10 +2081,10 @@ fetch_all_changes (apr_hash_t *changed_paths,
             }
         }
 
-      SVN_ERR (read_change (&change, file, pool));
-
       /* Clear the per-iteration subpool. */
       svn_pool_clear (iterpool);
+
+      SVN_ERR (read_change (&change, file, iterpool));
     }
 
   /* Destroy the per-iteration subpool. */
@@ -3276,7 +3276,8 @@ write_final_changed_path_info (apr_off_t *offset_p,
   apr_hash_t *changed_paths, *copyfrom_cache = apr_hash_make (pool);
   apr_off_t offset;
   apr_hash_index_t *hi;
-  
+  apr_pool_t *iterpool = svn_pool_create (pool);
+
   SVN_ERR (get_file_offset (&offset, file, pool));
 
   SVN_ERR (svn_fs_fs__txn_changes_fetch (&changed_paths, fs, txn_id,
@@ -3293,6 +3294,8 @@ write_final_changed_path_info (apr_off_t *offset_p,
       void *val;
       apr_ssize_t keylen;
 
+      svn_pool_clear (iterpool);
+
       apr_hash_this (hi, &key, &keylen, &val);
       change = val;
       
@@ -3304,7 +3307,7 @@ write_final_changed_path_info (apr_off_t *offset_p,
       if ((change->change_kind != svn_fs_path_change_delete) &&
           (! svn_fs_fs__id_txn_id (id)))
         {
-          SVN_ERR (svn_fs_fs__get_node_revision (&noderev, fs, id, pool));
+          SVN_ERR (svn_fs_fs__get_node_revision (&noderev, fs, id, iterpool));
           
           /* noderev has the permanent node-id at this point, so we just
              substitute it for the temporary one. */
@@ -3315,8 +3318,10 @@ write_final_changed_path_info (apr_off_t *offset_p,
       copyfrom = apr_hash_get (copyfrom_cache, key, APR_HASH_KEY_STRING);
 
       /* Write out the new entry into the final rev-file. */
-      SVN_ERR (write_change_entry (file, key, change, copyfrom, pool));
+      SVN_ERR (write_change_entry (file, key, change, copyfrom, iterpool));
     }
+
+  svn_pool_destroy (iterpool);
 
   *offset_p = offset;
   
