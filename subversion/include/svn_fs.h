@@ -365,6 +365,10 @@ extern svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
 
 
 
+/* Computing deltas.  */
+
+
+
 /* Committing changes to Subversion filesystems.  */
 
 
@@ -438,8 +442,8 @@ extern svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
 
    The following calls make changes to nodes:
      svn_fs_delete
-     svn_fs_add_file            svn_fs_add_directory
-     svn_fs_replace_file        svn_fs_replace_directory
+     svn_fs_add_file            svn_fs_add_dir
+     svn_fs_replace_file        svn_fs_replace_dir
      svn_fs_apply_textdelta    
      svn_fs_change_file_prop    svn_fs_change_dir_prop
                                 svn_fs_change_dirent_prop
@@ -500,37 +504,90 @@ extern svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
 extern svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
 
 
+/* Create a new subdirectory of PARENT named NAME.  PARENT must be
+   mutable.  Set *CHILD to a pointer to a mutable directory object
+   referring to the child.
+
+   The new directory will be based on the directory named BASE_NAME in
+   BASE_VERSION.  If BASE_NAME is zero, the directory is completely
+   new.  */
+extern svn_error_t *svn_fs_add_dir (svn_fs_dir_t **child,
+				    svn_fs_dir_t *parent,
+				    svn_string_t *name,
+				    svn_string_t *base_name,
+				    svn_vernum_t base_version);
+
+
+/* Change the subdirectory of PARENT named NAME.  PARENT must be
+   mutable.  Set *CHILD to a pointer to a mutable directory object
+   referring to the child.
+
+   The new directory will be based on the directory named BASE_NAME in
+   BASE_VERSION.  If BASE_NAME is zero, the directory is completely
+   new.  If BASE_NAME is `svn_fs_default_base', then the new directory
+   is based on the existing directory named NAME in PARENT.  */
+extern svn_error_t *svn_fs_replace_dir (svn_fs_dir_t **child,
+					svn_fs_dir_t *parent,
+					svn_string_t *name,
+					svn_string_t *base_name,
+					svn_vernum_t base_version);
+
+
+/* Change a directory's property's value, or add/delete a property.
+   - DIR is the mutable directory whose property should change.
+   - NAME is the name of the property to change.
+   - VALUE is the new value of the property, or zero if the property should
+     be removed altogether.  */
+extern svn_error_t *svn_fs_change_dir_prop (svn_fs_dir_t *dir,
+					    svn_string_t *name,
+					    svn_string_t *value);
+
+
+/* Change the value of a directory entry's property.
+   - DIR is the mutable directory whose entry's property should change.
+   - ENTRY is the name of the entry in DIR whose property should change.
+   - NAME is the name of the property to change.
+   - VALUE is the new value of the property, or zero if the property
+     should be removed altogether.  */
+extern svn_error_t *svn_fs_change_dirent_prop (svn_fs_dir_t *dir,
+					       svn_string_t *entry,
+					       svn_string_t *name,
+					       svn_string_t *value);
+
+
 /* Create a new file named NAME in the directory DIR, and set *FILE to
    a mutable file object for the new file.  DIR must be a mutable
    directory object.
 
-   The new file will be based on the file named ANCESTOR_NAME in
-   ANCESTOR_VERSION.  If ANCESTOR_NAME is zero, the file is completely
+   The new file will be based on the file named BASE_NAME in
+   BASE_VERSION.  If BASE_NAME is zero, the file is completely
    new.  */
 extern svn_error_t *svn_fs_add_file (svn_fs_file_t **file,
 				     svn_fs_dir_t *dir,
 				     svn_string_t *name,
-				     svn_string_t *ancestor_name,
-				     svn_vernum_t ancestor_version);
+				     svn_string_t *base_name,
+				     svn_vernum_t base_version);
 
 
-/* Replace the entry named NAME in the mutable directory DIR with a file, and
-   set *FILE to a mutable file object representing that file.
+/* Replace the entry named NAME in the mutable directory DIR with a
+   file, and set *FILE to a mutable file object representing that
+   file.
 
-   The file will be based on the file named ANCESTOR_NAME in
-   ANCESTOR_VERSION.  If ANCESTOR_NAME is zero, the file is completely
-   new.  */
+   The file will be based on the file named BASE_NAME in BASE_VERSION.
+   If BASE_NAME is zero, the file is completely new.  If BASE_NAME is
+   `svn_fs_default_base', then the new file is based on the existing
+   file named NAME in DIR.  */
 extern svn_error_t *svn_fs_replace_file (svn_fs_file_t **file,
 					 svn_fs_dir_t *dir,
 					 svn_string_t *name,
-					 svn_string_t *ancestor_name,
-					 svn_vernum_t ancestor_version);
+					 svn_string_t *base_name,
+					 svn_vernum_t base_version);
 
 
 /* Apply a text delta to the mutable file FILE.
    Set *CONTENTS to a function ready to receive text delta windows
-   describing the new file's contents relative to the given ancestor,
-   or the empty file if ANCESTOR_NAME is zero.  The producer should
+   describing the new file's contents relative to the given base,
+   or the empty file if BASE_NAME is zero.  The producer should
    pass CONTENTS_BATON to CONTENTS.  */
 extern svn_error_t *svn_fs_apply_textdelta (svn_fs_file_t *file,
 					    svn_txdelta_window_handler_t
@@ -548,19 +605,16 @@ extern svn_error_t *svn_fs_change_file_prop (svn_fs_file_t *file,
 					     svn_string_t *value);
 
 
+/* A magic string object.  If we pass a pointer to this object as the
+   BASE_NAME argument to certain functions, that has a special
+   meaning; search for mentions of `svn_fs_default_base' above to see
+   what they mean.  */
+extern svn_string_t *svn_fs_default_base;
+
+
 
 /* Non-historical properties.  */
 
-/* Okay, so what we said above was a lie --- there are certain changes
-   you can make to a Subversion filesystem that don't need to be part
-   of a transaction.  And you can actually go back in history and
-   change them.
-
-   Files, directories, and directory entries can have 
-
-
-
-*/
-
+/* [[Yes, do tell.]] */
 
 #endif /* SVN_FS_H */
