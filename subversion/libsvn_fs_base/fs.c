@@ -680,6 +680,30 @@ base_bdb_recover (const char *path,
 }
 
 
+/* This is the same as base_bdb_recover, but runs catastrophic
+   recovery instead of normal recovery. */
+static svn_error_t *
+bdb_catastrophic_recover (const char *path,
+                          apr_pool_t *pool)
+{
+  DB_ENV *env;
+  const char *path_native;
+
+  SVN_BDB_ERR (db_env_create (&env, 0));
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER_FATAL | DB_CREATE
+                                             | DB_INIT_LOCK | DB_INIT_LOG
+                                             | DB_INIT_MPOOL | DB_INIT_TXN
+                                             | DB_PRIVATE),
+                          0666));
+  SVN_BDB_ERR (env->close (env, 0));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 /* Running the 'archive' command on a Berkeley DB-based filesystem.  */
 
@@ -842,6 +866,7 @@ base_hotcopy (const char *src_path,
               svn_boolean_t clean_logs,
               apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_boolean_t log_autoremove = FALSE;
 
   /* Check BDB version, just in case */
@@ -874,7 +899,6 @@ base_hotcopy (const char *src_path,
   {
     apr_array_header_t *logfiles;
     int idx;
-    svn_error_t *err;
     apr_pool_t *subpool;
 
     SVN_ERR (base_bdb_logfiles (&logfiles,
@@ -909,7 +933,20 @@ base_hotcopy (const char *src_path,
   }
 
   /* Since this is a copy we will have exclusive access to the repository. */
-  SVN_ERR (base_bdb_recover (dest_path, pool));
+  err = bdb_catastrophic_recover (dest_path, pool);
+  if (err)
+    {
+      if (log_autoremove)
+        return
+          svn_error_quick_wrap 
+          (err,
+           _("Error running catastrophic recovery on hotcopy;  the \n"
+             "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
+             "hotcopy algorithm.  If the problem persists, try deactivating \n"
+             "this feature in DB_CONFIG."));
+      else
+        return err;
+    }
 
   if (clean_logs == TRUE)
     SVN_ERR (svn_fs_base__clean_logs (src_path, dest_path, pool));
