@@ -16,41 +16,20 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
-
 /**
- * Poor mans enum for svn_node_kind_t
+ * The schedule states an entry can be in.
  */
-public final class NodeKind
+public interface ScheduleKind
 {
-    /* absent */
-    public static final int none = 0;
+    /** exists, but uninteresting */
+    public static final int normal = 0;
 
-    /* regular file */
-    public static final int file = 1;
+    /** Slated for addition */
+    public static final int add = 1;
 
-    /* directory */
-    public static final int dir = 2;
+    /** Slated for deletion */
+    public static final int delete = 2;
 
-    /* something's here, but we don't know what */
-    public static final int unknown = 3;
-
-    /**
-     * mapping for the constants to text
-     */
-	private static final String[] statusNames =
-	{
-		"none",
-		"file",
-		"dir ",
-		"unknown",
-	};
-    /**
-     * Returns the textual representation for a NodeKind
-     * @param kind  kind of node
-     * @return english text
-     */
-	public static final String getNodeKindName(int kind)
-	{
-		return statusNames[kind];
-	}
+    /** Slated for replacement (delete + add) */
+    public static final int replace = 3;
 }

@@ -153,8 +153,9 @@ public class SVNClient implements SVNClientInterface
     public LogMessage[] logMessages(String path, Revision revisionStart,
                                     Revision revisionEnd) throws ClientException
     {
-        return logMessages(path, revisionStart, revisionEnd, true);
+        return logMessages(path, revisionStart, revisionEnd, true, false);
     }
+
     /**
      * Retrieve the log messages for an item
      * @param path          path or url to get the log message for.
@@ -163,9 +164,25 @@ public class SVNClient implements SVNClientInterface
      * @param stopOnCopy    do not continue on copy operations
      * @return array of LogMessages
      */
+    public LogMessage[] logMessages(String path, Revision revisionStart, 
+                                    Revision revisionEnd, boolean stopOnCopy)
+            throws ClientException
+    {
+        return logMessages(path, revisionStart, revisionEnd, stopOnCopy, false);
+    }
+
+    /**
+     * Retrieve the log messages for an item
+     * @param path          path or url to get the log message for.
+     * @param revisionStart first revision to show
+     * @param revisionEnd   last revision to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath
+     * @return array of LogMessages
+     */
     public native LogMessage[] logMessages(String path, Revision revisionStart,
                                            Revision revisionEnd,
-                                           boolean stopOnCopy)
+                                           boolean stopOnCopy, boolean discoverPath)
             throws ClientException;
     /**
      * Executes a revision checkout.
@@ -481,6 +498,15 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      */
     public native void cancelOperation() throws ClientException;
+
+    /**
+     * Retrieves the working copy information for an item
+     * @param path  path of the item
+     * @return      the information object
+     * @throws ClientException
+     */
+    public native Info info(String path) throws ClientException;
+
     /**
      * Enable logging in the JNI-code
      * @param logLevel      the level of information to log (See

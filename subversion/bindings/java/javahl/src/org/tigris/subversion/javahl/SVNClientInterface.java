@@ -109,6 +109,20 @@ public interface SVNClientInterface
                              Revision revisionEnd, boolean stopOnCopy)
             throws ClientException;
     /**
+     * Retrieve the log messages for an item
+     * @param path          path or url to get the log message for.
+     * @param revisionStart first revision to show
+     * @param revisionEnd   last revision to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath  returns the paths of the changed items in the
+     *                      returned objects
+     * @return array of LogMessages
+     */
+    LogMessage[] logMessages(String path, Revision revisionStart,
+                             Revision revisionEnd, boolean stopOnCopy,
+                             boolean discoverPath)
+            throws ClientException;
+    /**
      * Executes a revision checkout.
      * @param moduleName name of the module to checkout.
      * @param destPath destination directory for checkout.
@@ -409,4 +423,12 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     void cancelOperation() throws ClientException;
+
+    /**
+     * Retrieves the working copy information for an item
+     * @param path  path of the item
+     * @return      the information object
+     * @throws ClientException
+     */
+    Info info(String path) throws ClientException;
 }
