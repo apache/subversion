@@ -2116,15 +2116,18 @@ svn_fs__fs_set_entry (svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_hash_t *entries, *str_entries;
-  svn_fs_dirent_t *dirent;
+  svn_fs_dirent_t *dirent = NULL;
   svn_stream_t *out_stream;
 
   /* First read in the existing directory entry. */
   SVN_ERR (svn_fs__fs_rep_contents_dir (&entries, fs, parent_noderev, pool));
 
-  dirent = apr_pcalloc (pool, sizeof (*dirent));
-  dirent->id = svn_fs__id_copy (id, pool);
-  dirent->kind = kind;
+  if (id)
+    {
+      dirent = apr_pcalloc (pool, sizeof (*dirent));
+      dirent->id = svn_fs__id_copy (id, pool);
+      dirent->kind = kind;
+    }
   apr_hash_set (entries, name, APR_HASH_KEY_STRING, dirent);
 
   SVN_ERR (unparse_dir_entries (&str_entries, entries, pool));
@@ -2150,7 +2153,7 @@ svn_fs__fs_add_change (svn_fs_t *fs,
   const char *txn_dir, *change_string;
 
   txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
-                                apr_pstrcat (pool, id->txn_id,
+                                apr_pstrcat (pool, txn_id,
                                              SVN_FS_FS__TXNS_EXT, NULL),
                                 NULL);
 
@@ -2415,7 +2418,18 @@ svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
                              const char *txn_id,
                              apr_pool_t *pool)
 {
-  abort ();
+  const svn_fs_id_t *id;
+
+  id = svn_fs__create_id (svn_fs__id_node_id (old_idp), copy_id,
+                          apr_pstrcat (pool, "t", txn_id, NULL),
+                          pool);
+
+  new_noderev->id = id;
+
+  SVN_ERR (svn_fs__fs_put_node_revision (fs, new_noderev->id, new_noderev,
+                                         pool));
+
+  *new_id_p = id;
 
   return SVN_NO_ERROR;
 }
