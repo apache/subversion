@@ -116,12 +116,11 @@ Theory and documentation
 
 
    3. USER MANUAL
-      Subversion: The Definitive Guide is an upcoming title to be
-      published by O'Reilly that shows in detail how to effectively
-      use Subversion.  This book is still being written, so the
-      contents are still in flux.  You may find it in the
-      Documentation/Book folder on the "File sharing" section of the
-      Subversion website.  The XML source is in 'doc/book/book'.
+      Version Control with Subversion is a book published by O'Reilly
+      that shows in detail how to effectively use Subversion.  The
+      text of the book is free, and is actively being revised.
+      On-line versions are available at http://svnbook.red-bean.com.
+      The XML source is in 'doc/book/book'.
 
 
    4. SYSTEM NOTES
