@@ -141,7 +141,7 @@ my $tmp_dir = '/tmp';
 chdir($tmp_dir)
     or die "$0: cannot chdir `$tmp_dir': $!\n";
 
-# get the auther, date, and log from svnlook
+# Get the author, date, and log from svnlook.
 my @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'info');
 my $author = shift @svnlooklines;
 my $date = shift @svnlooklines;
@@ -151,14 +151,18 @@ my @log = map { "$_\n" } @svnlooklines;
 # figure out what directories have changed (using svnlook)
 my @dirschanged = &read_from_process($svnlook, $repos,
                                      'rev', $rev, 'dirs-changed');
+
+# Lose the trailing slash in the directory names if one exists, except
+# in the case of '/'.
 my $rootchanged = 0;
-grep 
-{
-    # lose the trailing slash if one exists (except in the case of '/')
-    $rootchanged = 1 if ($_ eq '/');
-    $_ =~ s/(.+)[\/\\]$/$1/;
-} 
-@dirschanged; 
+for (my $i=0; $i<@dirschanged; ++$i) {
+  if ($dirschanged[$i] eq '/') {
+    $rootchanged = 1;
+  }
+  else {
+    $dirschanged[$i] =~ s#^(.+)[/\\]$#$1#;
+  }
+}
 
 # figure out what's changed (using svnlook)
 @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'changed');
@@ -191,22 +195,20 @@ foreach my $line (@svnlooklines)
 # get the diff from svnlook
 my @difflines = &read_from_process($svnlook, $repos, 'rev', $rev, 'diff');
 
-######################################################################
-# Mail headers
-
-# collapse the list of changed directories
-my @commonpieces = ();
+# Collapse the list of changed directories only if the root directory
+# was not modified, because otherwise everything is under root and
+# there's no point in collapsing the directories, and only if more
+# than one directory was modified.
 my $commondir = '';
-if (($rootchanged == 0) and (scalar @commonpieces > 1))
+if (!$rootchanged and @dirschanged > 1)
 {
-    my $firstline = shift (@dirschanged);
-    push (@commonpieces, split ('/', $firstline));
+    my $firstline    = shift @dirschanged;
+    my @commonpieces = split('/', $firstline);
     foreach my $line (@dirschanged)
     {
-        my @pieces = ();
+        my @pieces = split('/', $line);
         my $i = 0;
-        push (@pieces, split ('/', $line));
-        while (($i < scalar @pieces) and ($i < scalar @commonpieces))
+        while ($i < @pieces and $i < @commonpieces)
         {
             if ($pieces[$i] ne $commonpieces[$i])
             {
@@ -217,14 +219,22 @@ if (($rootchanged == 0) and (scalar @commonpieces > 1))
         }
     }
     unshift (@dirschanged, $firstline);
+
     if (scalar @commonpieces)
     {
         $commondir = join ('/', @commonpieces);
-        grep
+        my @new_dirschanged;
+        foreach my $dir (@dirschanged)
         {
-            s/^$commondir\/(.*)/$1/eg;
+            if ($dir eq $commondir) {
+                $dir = '.';
+            }
+            else {
+                $dir =~ s#^$commondir/##;
+            }
+            push(@new_dirschanged, $dir);
         }
-        @dirschanged;
+        @dirschanged = @new_dirschanged;
     }
 }
 my $dirlist = join (' ', @dirschanged);
