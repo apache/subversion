@@ -23,7 +23,7 @@ Candidate changes:
     Votes:
       -0: ghudson, lundblad (what's the point of putting code cleanups into
           1.1?) ["Justification" has been updated in reply to these votes]
-      +1: cmpilato, maxb
+      +1: cmpilato, maxb, dionisos
 
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
