@@ -211,7 +211,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "revision trees.  If only LOWER is given, dump that one revision tree.\n"
      "If --incremental is passed, then the first revision dumped will be\n"
      "a diff against the previous revision, instead of the usual fulltext.\n",
-     {'r'} },
+     {'r', svnadmin__incremental} },
 
     { "help", subcommand_help, {"?", "h"},
       "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
