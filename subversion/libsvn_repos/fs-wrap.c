@@ -412,10 +412,11 @@ svn_error_t *
 svn_repos_fs_lock (svn_lock_t **lock,
                    svn_repos_t *repos,
                    const char *path,
+                   const char *token,
                    const char *comment,
-                   svn_boolean_t force,
                    long int timeout,
                    svn_revnum_t current_rev,
+                   svn_boolean_t force,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -441,8 +442,8 @@ svn_repos_fs_lock (svn_lock_t **lock,
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
 
   /* Lock. */
-  SVN_ERR (svn_fs_lock (lock, repos->fs, path, comment, force,
-                        timeout, current_rev, pool));
+  SVN_ERR (svn_fs_lock (lock, repos->fs, path, token, comment, timeout, 
+                        current_rev, force, pool));
 
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, paths, username, pool)))
@@ -452,40 +453,6 @@ svn_repos_fs_lock (svn_lock_t **lock,
 
   return SVN_NO_ERROR;
 }
-
-
-
-svn_error_t *
-svn_repos_fs_attach_lock (svn_repos_t *repos,
-                          svn_lock_t *lock,
-                          svn_boolean_t force,
-                          svn_revnum_t current_rev,
-                          apr_pool_t *pool)
-{
-  svn_error_t *err;
-  /* Setup an array of paths in anticipation of the ra layers handling
-     multiple locks in one request (1.3 most likely).  This is only
-     used by svn_repos__hooks_post_lock. */
-  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(paths, const char *) = lock->path;
-
-  /* Run pre-lock hook.  This could throw error, preventing
-     svn_fs_lock() from happening. */
-  SVN_ERR (svn_repos__hooks_pre_lock (repos, lock->path, lock->owner, pool));
-
-  /* Lock. */
-  SVN_ERR (svn_fs_attach_lock (repos->fs, lock, force, current_rev, pool));
-  
-  /* Run post-lock hook. */
-  if ((err = svn_repos__hooks_post_lock (repos, paths,
-                                         lock->owner, pool)))
-    return svn_error_create
-      (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
-       "Lock succeeded, but post-lock hook failed");
-
-  return SVN_NO_ERROR;
-}
-
 
 
 svn_error_t *
