@@ -30,14 +30,6 @@ Candidate changes:
     Votes:
       +1: jaa, sussman
 
-  * r11190
-    Make it possible to set SVNPathAuthz to Off.
-    Justification:
-      There is a performance regression from 1.0 when it's set to On
-      (which is why it was implemented in the first place).
-    Votes:
-      +1: bliss, sussman
-
   * r11262, r11274
     Fix issue #2012.  Allow URI-encoded drive letter and separator (: or |).
     Justification:
