@@ -470,8 +470,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                       struct stack_object **stack,
                       apr_hash_t *affected_targets,
                       apr_hash_t *locks,
-                      apr_pool_t *top_pool,
-                      apr_pool_t *pool)                      
+                      apr_pool_t *top_pool)
 {
   svn_error_t *err;
   apr_hash_t *entries;            /* _all_ of the entries in in
@@ -483,19 +482,23 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
   /** Setup -- arrival in a new subdir of working copy. **/
   /**                                                   **/
 
-  /* Retrieve _all_ the entries in this subdir. */
-  err = svn_wc__entries_read (&entries, path, pool);
+  /* First thing to do is create a new subpool to hold all temporary
+     work at this level of the working copy. */
+  apr_pool_t *subpool = svn_pool_create (top_pool);
+
+  /* Retrieve _all_ the entries in this subdir into subpool. */
+  err = svn_wc__entries_read (&entries, path, subpool);
 
   /* Grab the entry representing "." */
   this_dir = (svn_wc__entry_t *) 
     apr_hash_get (entries, SVN_WC__ENTRIES_THIS_DIR, APR_HASH_KEY_STRING);
   if (! this_dir)
     return
-      svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+      svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, subpool,
                          "Can't find `.' entry in %s", path->data);
                               
   /* Push the current {path, baton, this_dir} to the top of the stack */
-  push_stack (stack, path, dir_baton, this_dir, pool);
+  push_stack (stack, path, dir_baton, this_dir, subpool);
 
 
   /**                           **/
@@ -521,14 +524,14 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       if (! strcmp (keystring, SVN_WC__ENTRIES_THIS_DIR))
         current_entry_name = NULL;
       else
-        current_entry_name = svn_string_create (keystring, pool);
+        current_entry_name = svn_string_create (keystring, subpool);
       current_entry = (svn_wc__entry_t *) val;
 
       /* Construct a full path to the current entry */
-      full_path_to_entry = svn_string_dup (path, pool);
+      full_path_to_entry = svn_string_dup (path, subpool);
       if (current_entry_name != NULL)
         svn_path_add_component (full_path_to_entry, current_entry_name,
-                                svn_path_local_style, pool);
+                                svn_path_local_style, subpool);
 
 
       /* Start examining the current_entry: */
@@ -541,7 +544,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
             {
               err = do_dir_replaces (&dir_baton,
                                      *stack, editor, edit_baton,
-                                     locks, top_pool, pool);
+                                     locks, top_pool, subpool);
               if (err) return err;
             }
           
@@ -551,13 +554,12 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           
           /* Now replace the entry, either by calling replace_file()
              or replace_dir(). */
-
           if (current_entry->kind == svn_file_kind)
             {
-              struct target_baton *tb = apr_pcalloc (pool, sizeof (*tb));
+              struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
               svn_string_t *longpath;
 
-              tb->entry = current_entry;
+              tb->entry = svn_wc__entry_dup (current_entry, top_pool);
 
               /* Replace the file, getting a file baton */
               err = editor->replace_file (current_entry_name,
@@ -572,7 +574,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style, pool);
+                                        svn_path_local_style, top_pool);
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);              
             }
@@ -580,7 +582,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           else if (current_entry->kind == svn_dir_kind)
             {
               void *new_dir_baton;
-              svn_string_t *new_path = svn_string_dup (path, pool);
+              svn_string_t *new_path = svn_string_dup (path, subpool);
               
               err = 
                 editor->replace_directory (current_entry_name, 
@@ -594,12 +596,12 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (current_entry_name != NULL)
                 svn_path_add_component (new_path,
                                         current_entry_name,
-                                        svn_path_local_style, pool);
+                                        svn_path_local_style, subpool);
               
               err = process_subdirectory (new_path, new_dir_baton,
                                           editor, edit_baton,
                                           stack, affected_targets, locks,
-                                          top_pool, pool);
+                                          top_pool);
               if (err) return err;              
             }
         }
@@ -612,7 +614,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
             {
               err = do_dir_replaces (&dir_baton,
                                      *stack, editor, edit_baton,
-                                     locks, top_pool, pool);
+                                     locks, top_pool, subpool);
               if (err) return err;
             }
           
@@ -629,14 +631,14 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           if (current_entry->kind == svn_dir_kind)
             {
               void *new_dir_baton;
-              svn_string_t *new_path = svn_string_dup (path, pool);
+              svn_string_t *new_path = svn_string_dup (path, subpool);
               
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
                                          *stack, editor, edit_baton,
-                                         locks, top_pool, pool);
+                                         locks, top_pool, subpool);
                   if (err) return err;
                 }
               
@@ -653,29 +655,29 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               if (current_entry_name != NULL)
                 svn_path_add_component (new_path,
                                         current_entry_name,
-                                        svn_path_local_style, pool);
+                                        svn_path_local_style, subpool);
               
               err = process_subdirectory (new_path, new_dir_baton,
                                           editor, edit_baton,
                                           stack, affected_targets, locks,
-                                          top_pool, pool);
+                                          top_pool);
               if (err) return err;
             }
       
           /* Adding a new file: */
           else if (current_entry->kind == svn_file_kind)
             {
-              struct target_baton *tb = apr_pcalloc (pool, sizeof (*tb));
+              struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
               svn_string_t *longpath;
 
-              tb->entry = current_entry;
+              tb->entry = svn_wc__entry_dup (current_entry, top_pool);
 
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
                                          *stack, editor, edit_baton,
-                                         locks, top_pool, pool);
+                                         locks, top_pool, subpool);
                   if (err) return err;
                 }
               
@@ -692,7 +694,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style, pool);
+                                        svn_path_local_style, top_pool);
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);
 
@@ -704,15 +706,15 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       /* Is this entry a modified file? */      
       else if (current_entry->kind == svn_file_kind)      
         {
-          struct target_baton *tb = apr_pcalloc (pool, sizeof (*tb));
+          struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
           svn_string_t *longpath;
           svn_boolean_t modified_p;
 
-          tb->entry = current_entry;
+          tb->entry = svn_wc__entry_dup (current_entry, top_pool);
 
           err = svn_wc__file_modified_p (&modified_p,
                                          full_path_to_entry,
-                                         pool);
+                                         subpool);
           if (err) return err;
 
           if (modified_p)
@@ -722,7 +724,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                 {
                   err = do_dir_replaces (&dir_baton,
                                          *stack, editor, edit_baton,
-                                         locks, top_pool, pool);
+                                         locks, top_pool, subpool);
                   if (err) return err;
                 }
           
@@ -739,7 +741,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
               longpath = svn_string_dup (path, top_pool);
               if (current_entry_name != NULL)
                 svn_path_add_component (longpath, current_entry_name,
-                                        svn_path_local_style, pool);
+                                        svn_path_local_style, top_pool);
               apr_hash_set (affected_targets,
                             longpath->data, longpath->len, tb);
             }
@@ -757,7 +759,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           err = process_subdirectory (full_path_to_entry, NULL,
                                       editor, edit_baton,
                                       stack, affected_targets, locks,
-                                      top_pool, pool);
+                                      top_pool);
           if (err) return err;
         }
      
@@ -787,6 +789,9 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 
   /* Discard top of stack */
   pop_stack (stack);
+
+  /* Free all memory used when processing this subdir. */
+  apr_destroy_pool (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -822,7 +827,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
   err = process_subdirectory (root_directory, NULL,
                               edit_fns, edit_baton,
                               &stack, affected_targets, locks,
-                              pool, pool);
+                              pool);
   if (err) return err;
 
   /* The crawler has returned, so affected_targets potentially has some

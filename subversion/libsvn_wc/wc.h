@@ -459,6 +459,12 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
 /* Remove entry NAME from ENTRIES, unconditionally. */
 void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
 
+
+/* Utility: return a duplicate of ENTRY object allocated in POOL. */
+svn_wc__entry_t *svn_wc__entry_dup (svn_wc__entry_t *entry, apr_pool_t *pool);
+
+
+
 
 /*** General utilities that may get moved upstairs at some point. */
 
