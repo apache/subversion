@@ -84,7 +84,7 @@ print_dirents (apr_hash_t *dirents,
             apr_time_exp_lt (&exp_time, dirent->time);
 
             apr_err = apr_strftime (timestr, &size, sizeof (timestr),
-                                    "%b %d %H:%m", &exp_time);
+                                    "%b %d %H:%M", &exp_time);
 
             /* if that failed, just zero out the string and print nothing */
             if (apr_err)
