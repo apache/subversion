@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os.path
+import shutil, string, sys, re, os.path, traceback
 
 # The `svntest' module
 try:
