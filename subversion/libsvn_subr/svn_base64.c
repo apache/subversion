@@ -1,7 +1,7 @@
 /*
  * base64.c:  base64 encoding and decoding functions
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -332,6 +332,6 @@ svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
 
 /* --------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

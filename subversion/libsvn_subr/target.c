@@ -2,7 +2,7 @@
  * target.c:  functions which operate on a list of targets supplied to 
  *              a subversion subcommand.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -332,5 +332,5 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

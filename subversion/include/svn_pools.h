@@ -1,6 +1,6 @@
 /* svn_pools.h:  APR pool management for Subversion
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -145,6 +145,6 @@ void svn_pool_clear_debug (apr_pool_t *p,
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

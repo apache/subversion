@@ -1,7 +1,7 @@
 /*
- * eol-test.c -- test the eol conversion subroutines
+ * translate-test.c -- test the eol and keyword translation subroutine
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -33,7 +33,7 @@
 #include <apr_general.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
-#include <svn_io.h>
+#include <svn_wc.h>
 #include "svn_test.h"
 
 
@@ -220,7 +220,7 @@ remove_file (const char *fname, apr_pool_t *pool)
  * Create a file TEST_NAME.src using global `lines' as the initial
  * data, with SRC_EOL as the line separator, then convert it to file
  * TEST_NAME.dst (using DST_EOL, REPAIR, EXPAND, REV, AUTHOR, DATE,
- * and URL as svn_io_copy_and_translate() does), and verify that the
+ * and URL as svn_wc_copy_and_translate() does), and verify that the
  * conversion worked.  Null SRC_EOL means create a mixed eol src
  * file.
  *
@@ -236,7 +236,7 @@ remove_file (const char *fname, apr_pool_t *pool)
  *
  * Use POOL for temporary allocation.
  *
- * Note: as with svn_io_copy_and_translate(), if any of DST_EOL, REV,
+ * Note: as with svn_wc_copy_and_translate(), if any of DST_EOL, REV,
  * AUTHOR, DATE, and/or URL is null, then that substitution is not
  * performed.
  */
@@ -254,7 +254,7 @@ substitute_and_verify (const char *test_name,
 {
   svn_error_t *err;
   svn_stringbuf_t *contents;
-  svn_io_keywords_t keywords;
+  svn_wc_keywords_t keywords;
   int idx = 0;
   int i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
@@ -271,7 +271,7 @@ substitute_and_verify (const char *test_name,
   keywords.author   = author ? svn_string_create (author, pool) : NULL;
   keywords.url      = url    ? svn_string_create (url, pool)    : NULL;
 
-  err = svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
+  err = svn_wc_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
                                    &keywords, expand, pool);
 
 
@@ -1500,7 +1500,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
 
 /* 
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */
 

@@ -2,7 +2,7 @@
  * utility functions to handle the java class
  * org.tigris.subversion.lib.Schedule
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -47,6 +47,6 @@ schedule__create_from_svn_wc_schedule_t(JNIEnv *env, jboolean *hasException,
 #endif
 /* 
  * local variables:
- * eval: (load-file "../../../svn-dev.el")
+ * eval: (load-file "../../../../tools/dev/svn-dev.el")
  * end: 
  */

@@ -4,7 +4,7 @@
  * - svn strings (svn_string_t)
  * - c strings (char *)
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -72,7 +72,7 @@ string__c_to_stringbuf(JNIEnv *env,
 
 /* 
  * local variables:
- * eval: (load-file "../../../svn-dev.el")
+ * eval: (load-file "../../../../tools/dev/svn-dev.el")
  * end: 
  */
 

@@ -1,7 +1,7 @@
 /*
  * ra_dav.h :  private declarations for the RA/DAV module
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -375,6 +375,6 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

@@ -1,7 +1,7 @@
 /*
  * props.c :  routines dealing with properties in the working copy
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -1372,5 +1372,5 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 
 /*
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */

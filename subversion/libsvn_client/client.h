@@ -1,7 +1,7 @@
 /*
  * client.h :  shared stuff internal to the client library.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -211,7 +211,7 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */
 

@@ -1,7 +1,7 @@
 /*
  * svn_types.h :  Subversion's data types
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -283,6 +283,6 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

@@ -1,6 +1,6 @@
 /* proplist.h :  prototypes for PROPLIST skel-manipulation function.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -54,6 +54,6 @@ svn_error_t *svn_fs__set_prop (skel_t *proplist,
 
 /* ----------------------------------------------------------------
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

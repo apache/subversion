@@ -1,7 +1,7 @@
 /*
  * version.c: mod_dav_svn versioning provider functions for Subversion
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -508,6 +508,6 @@ const dav_hooks_vsn dav_svn_hooks_vsn = {
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

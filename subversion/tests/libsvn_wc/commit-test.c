@@ -2,7 +2,7 @@
  *
  * Crawler walks a working copy and prints a virtual `commit' to stdout.
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

@@ -1,6 +1,6 @@
 /* hooks.c : running repository hooks and sentinels
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -280,7 +280,7 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq 
  * vim:isk=a-z,A-Z,48-57,_,.,-,> 

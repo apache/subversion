@@ -1,7 +1,7 @@
 /*
  * xml_output.c:  output a Subversion "tree-delta" XML stream
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -703,6 +703,6 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */

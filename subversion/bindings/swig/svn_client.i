@@ -1,7 +1,7 @@
 /*
  * svn_client.i :  SWIG interface file for svn_client.h
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which

@@ -1,7 +1,7 @@
 /*
  * questions.c:  routines for asking questions about working copies
  *
- * ====================================================================
+  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
@@ -734,5 +734,5 @@ svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */
