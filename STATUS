@@ -62,6 +62,9 @@ Candidate changes:
       r12006: Teach mod_dav_svn how to handle the new request.
       r12136: Make sure there is a versioned entry before setting the property.
       r12146: Work around for buggy 1.1.0/1.1.1 servers by disabling res. walk.
+    Branch:
+      rs=http://svn.collab.net/repos/svn
+      svn merge -r12390:HEAD $rs/branches/1.1.x-dav-switch
     Votes:
       +1: cmpilato, kfogel, jerenkrantz
 
