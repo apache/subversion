@@ -112,14 +112,15 @@ locate_key (apr_size_t *length,
     {
       DBT rerun;
 
-      if (db_err != ENOMEM)
+      if (db_err != SVN_BDB_DB_BUFFER_SMALL)
         {
           (*cursor)->c_close (*cursor);
           return BDB_WRAP (fs, "moving cursor", db_err);
         }
 
-      /* We got an ENOMEM (typical since we have a zero length buf), so
-         we need to re-run the operation to make it happen. */
+      /* We got an SVN_BDB_DB_BUFFER_SMALL (typical since we have a
+         zero length buf), so we need to re-run the operation to make
+         it happen. */
       svn_fs_base__clear_dbt (&rerun);
       rerun.flags |= DB_DBT_USERMEM | DB_DBT_PARTIAL;
       db_err = (*cursor)->c_get (*cursor, query, &rerun, DB_SET);
@@ -160,14 +161,15 @@ get_next_length (apr_size_t *length, DBC *cursor, DBT *query)
     {
       DBT rerun;
 
-      if (db_err != ENOMEM)
+      if (db_err != SVN_BDB_DB_BUFFER_SMALL)
         {
           cursor->c_close (cursor);
           return db_err;
         }
 
-      /* We got an ENOMEM (typical since we have a zero length buf), so
-         we need to re-run the operation to make it happen. */
+      /* We got an SVN_BDB_DB_BUFFER_SMALL (typical since we have a
+         zero length buf), so we need to re-run the operation to make
+         it happen. */
       svn_fs_base__clear_dbt (&rerun);
       rerun.flags |= DB_DBT_USERMEM | DB_DBT_PARTIAL;
       db_err = cursor->c_get (cursor, query, &rerun, DB_NEXT_DUP);

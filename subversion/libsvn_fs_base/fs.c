@@ -299,13 +299,17 @@ base_bdb_set_errcall (svn_fs_t *fs,
 
 /* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info. */
 static void
-bdb_error_gatherer (const char *char_baton, char *msg)
+#if (DB_VERSION_MAJOR > 4) \
+    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)
+bdb_error_gatherer (const DB_ENV *dbenv, const char *baton, const char *msg)
+#else
+bdb_error_gatherer (const char *baton, char *msg)
+#endif
 {
-  bdb_errcall_baton_t *ec_baton = (bdb_errcall_baton_t *) char_baton;
+  bdb_errcall_baton_t *ec_baton = (bdb_errcall_baton_t *) baton;
+  svn_error_t *new_err;
 
-  svn_error_t *new_err = svn_error_createf (SVN_NO_ERROR, NULL, "bdb: %s",
-                                            msg);
-
+  new_err = svn_error_createf (SVN_NO_ERROR, NULL, "bdb: %s", msg);
   if (ec_baton->pending_errors)
     svn_error_compose (ec_baton->pending_errors, new_err);
   else

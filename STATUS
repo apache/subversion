@@ -55,10 +55,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r11871
-    Support BDB 4.3.
-    Justification:
-      System will startup with BDB 4.3, but die at run-time without this.
-    Votes:
-      +1: jerenkrantz, dionisos, maxb
-
