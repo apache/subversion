@@ -499,22 +499,6 @@ svn_stringbuf_find_char_backward (const svn_stringbuf_t *str, char ch)
 }
 
 
-apr_size_t
-svn_stringbuf_chop_back_to_char (svn_stringbuf_t *str, char ch)
-{
-  apr_size_t i = svn_stringbuf_find_char_backward (str, ch);
-
-  if (i < str->len)
-    {
-      apr_size_t nbytes = (str->len - i);
-      svn_stringbuf_chop (str, nbytes);
-      return nbytes;
-    }
-
-  return 0;
-}
-
-
 svn_boolean_t
 svn_string_compare_stringbuf (const svn_string_t *str1,
                               const svn_stringbuf_t *str2)

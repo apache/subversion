@@ -222,10 +222,6 @@ void svn_stringbuf_strip_whitespace (svn_stringbuf_t *str);
 apr_size_t svn_stringbuf_find_char_backward (const svn_stringbuf_t *str, 
                                              char ch);
 
-/* Chop STR back to CHAR, inclusive.  Returns number of chars
-   chopped, so if no such CHAR in STR, chops nothing and returns 0. */
-apr_size_t svn_stringbuf_chop_back_to_char (svn_stringbuf_t *str, char ch);
-
 /* Return TRUE iff STR1 and STR2 have identical length and data. */
 svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
                                             const svn_stringbuf_t *str2);

@@ -131,8 +131,14 @@ char *svn_path_remove_component_nts (const char *path, apr_pool_t *pool);
  * Either DIRPATH or BASE_NAME may be PATH's own address, but they may
  * not both be the same address, or the results are undefined.
  *
- * The separator between DIRPATH and BASE_NAME is not included in
- * either of the new names.
+ * If PATH has two or more components, the separator between DIRPATH
+ * and BASE_NAME is not included in either of the new names.
+ *
+ *   examples:  "/foo/bar/baz"  ==>  "/foo/bar" and "baz" 
+ *              "/bar"          ==>  "/"  and "bar"
+ *              "/"             ==>  "/"  and ""
+ *              "bar"           ==>  ""   and "bar"
+ *              ""              ==>  ""   and ""
  */
 void svn_path_split (const svn_stringbuf_t *path,
                      svn_stringbuf_t **dirpath,

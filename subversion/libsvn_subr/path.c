@@ -332,14 +332,27 @@ svn_path_add_component (svn_stringbuf_t *path,
 void
 svn_path_remove_component (svn_stringbuf_t *path)
 {
+  int i;
+
   svn_path_canonicalize (path);
 
-  if (! svn_stringbuf_chop_back_to_char (path, SVN_PATH_SEPARATOR))
+  for (i = path->len; i >= 0; i--)
+    {
+      if (path->data[i] == SVN_PATH_SEPARATOR)
+        break;
+    }
+
+  if (i < 0)
     svn_stringbuf_setempty (path);
+  else if (i == 0)
+    {
+      path->len = 1;
+      path->data[1] = '\0';
+    }
   else
     {
-      if (path->len && path->data[path->len - 1] == SVN_PATH_SEPARATOR)
-          path->data[--path->len] = '\0';
+      path->len = i;
+      path->data[i] = '\0';
     }
 }
 
@@ -359,7 +372,10 @@ svn_path_remove_component_nts (const char *path, apr_pool_t *pool)
         break;
     }
 
-  return apr_pstrndup (pool, path, (i < 0) ? 0 : i);
+  if (i < 0)
+    return apr_pstrndup (pool, path, 0);
+
+  return apr_pstrndup (pool, path, (i == 0) ? 1 : i);
 }
 
 
