@@ -182,6 +182,8 @@ Here are some miscellaneous prototypes used by the command sets:
   propdelta: ( ( name: string [ value:string ] ) ... )
   node-kind: none|file|dir|unknown
   bool:      true|false
+  lockdesc:  ( path:string token:string owner:string created:string 
+               [ expires:string ] )
 
 3.1. Command Sets
 
@@ -306,6 +308,22 @@ second place for auth-request point as noted below.
     terminated by the empty string.  If there is no delta, server just sends
     the terminator.
     response: ( )
+
+  lock
+    params:    ( path:string force:bool [ curtoken:string ] )
+    response:  ( lock:lockdesc )
+
+  unlock
+    params:    ( token:string force:bool )
+    response:  ( )
+
+  get-lock
+    params:    ( path:string )
+    response:  ( [ lock:lockdesc ] )
+
+  get-locks
+    params:    ( path:string )
+    response   ( ( lock:lockdesc ... ) )
 
 3.1.2. Editor Command Set
 

@@ -873,7 +873,7 @@ typedef struct svn_ra_plugin_t
    * the client, if it hasn't done so already.
    *
    * If @a token points to a lock, but the RA username doesn't match
-   * the lock's owner, return error.  If @force is true, however,
+   * the lock's owner, return error.  If @a force is true, however,
    * don't return error; allow the lock to be "broken" by the
    * RA user.
    *
