@@ -1201,7 +1201,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                 resource->pool);
   if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
-      svn_error_clear_all (serr);
+      svn_error_clear_all(serr);
       serr = svn_fs_make_file(resource->info->root.root,
                               resource->info->repos_path,
                               resource->pool);
