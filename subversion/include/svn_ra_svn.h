@@ -335,26 +335,16 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  */
 const svn_version_t *svn_ra_svn_version (void);
 
-/**
- * Initializes SSL session for the connection from @a ssl_ctx. 
- * @since New in 1.2.
- */
-svn_error_t *svn_ra_svn_ssl_init(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 void *ssl_ctx);
-
 /** This function is only intended for use by svnserve.
  *
- * Wait for a SSL connection. Assumes that svn_ra_svn_ssl_init has been called.
- * @since New in 1.2.
- */
-svn_error_t *svn_ra_svn_ssl_accept(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
-
-/** This function is only intended for use by client.
+ * Perform the server-side steps of the SSL session handshake
+ * initiated by the client associated with @a conn, using the @a ssl_baton
+ * obtained from the SSL provider.
  *
- * Initiate a SSL connection. Assumes that svn_ra_svn_ssl_init has been called.
  * @since New in 1.2.
  */
-svn_error_t *svn_ra_svn_ssl_connect(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
+svn_error_t *svn_ra_svn_ssl_start(svn_ra_svn_conn_t *conn, void *ssl_baton,
+                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

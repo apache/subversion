@@ -1174,3 +1174,10 @@ svn_error_t *svn_ra_svn_ssl_connect(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *svn_ra_svn_ssl_start(svn_ra_svn_conn_t *conn, void *ssl_baton,
+                                  apr_pool_t *pool)
+{
+  SVN_ERR(svn_ra_svn_ssl_init(conn, pool, ssl_baton));
+  return svn_ra_svn_ssl_accept(conn, pool);
+}

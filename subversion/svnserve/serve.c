@@ -1387,8 +1387,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
           /* Flush write buffer before SSL handshake. */
           svn_ra_svn_flush(conn, pool);
 
-          SVN_ERR(svn_ra_svn_ssl_init(conn, pool, params->ssl_baton));
-          SVN_ERR(svn_ra_svn_ssl_accept(conn, pool));
+          SVN_ERR(svn_ra_svn_ssl_start(conn, params->ssl_baton, pool));
         }
       err = find_repos(client_url, params->root, &b, pool);
       if (!err)
