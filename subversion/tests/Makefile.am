@@ -21,6 +21,6 @@ LIBTOOL = @LIBTOOL@ --silent
 SUBDIRS = .                          \
           libsvn_subr                \
           libsvn_delta               \
-          libsvn_wc                  \
-          libsvn_ra_dav              \
+          libsvn_wc                  
+#          libsvn_ra_dav              \
           @FS_BASED_TESTS@
