@@ -2212,7 +2212,7 @@ def main():
                                  "username=",
                                  "branches=", "tags=", "encoding=",
                                  "trunk-only", "no-prune",
-                                 "dump-only", "dumpfile="])
+                                 "dump-only", "dumpfile=", "svnadmin="])
   except getopt.GetoptError, e:
     sys.stderr.write('Error: ' + str(e) + '\n\n')
     usage(ctx)
