@@ -165,6 +165,8 @@ AC_DEFUN(SVN_FIND_SWIG,
       ])
       SWIG_PY_LIBS="$ac_cv_python_libs"
 
+      SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
       AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
                      [svn_cv_pycfmt_apr_int64_t], [
         if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
@@ -186,6 +188,7 @@ AC_DEFUN(SVN_FIND_SWIG,
                        [svn_cv_pycfmt_apr_int64_t="i"])
         fi
       ])
+      CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
       if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
         AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
       fi
