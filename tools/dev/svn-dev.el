@@ -310,7 +310,7 @@ Same for the ANSI bold and normal escape sequences."
           (progn
             (setq path (substring path (match-end 0)))
             ;; Kluge for Subversion developers.
-            (if (string-match "subversion/subversion" path)
+            (if (string-match "subversion/" path)
                 (substring path (+ (match-beginning 0) 11))
               path))
         (string-match (expand-file-name "~/") path)
