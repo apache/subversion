@@ -78,6 +78,8 @@ Candidate changes:
     Notes:  Simple patch which allocates errors in a longer-lived pool.
     Votes:
       +1: sussman
+      -1: cmpilato (this change is a fix followup to r8490, which is not
+                    going to live in 1.0.x line since it changes an API)
 
   * r8820
     Remove hopelessly obsolete authentication provider examples.
