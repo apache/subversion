@@ -66,9 +66,12 @@ P,LI,UL,OL,DD,DT
 TT,PRE
 {
     font-family: courier new,courier,fixed;
-    font-style: normal;
-    font-weight: normal;
-    color: black;
+}
+
+.filename
+{
+    font-family: arial,helvetica,sans-serif;
+    font-style: italic;
 }
 
 A
