@@ -131,44 +131,60 @@ struct search_groups_baton
 };
 
 
-/* This is an `svn_config_enumerator_t' function, and BATON is a
- * `struct search_groups_baton *'.
+/* Return true iff STR matches any of the elements of LIST, a
+ * comma-separated list of one or more hostname-style strings,
+ * possibly using wildcards; else return false.
  *
- * If an element of VALUE matches BATON->requested_host, then set
- * BATON->proxy_group to a copy of NAME allocated in BATON->pool, and
- * return false (to end the enumeration).  
- * 
- * VALUE is a comma-separated list of one or more expressions to match
- * a host, possibly using wildcards.  For example, these are all
- * valid VALUEs:
+ * Use POOL for temporary allocation.
+ *
+ * The following are all valid LISTs
  *
  *   "svn.collab.net"
  *   "svn.collab.net, *.tigris.org"
- *   "*.collab.net, *.tigris.org, sp.red-bean.com"
+ *   "*.tigris.org, *.collab.net, sp.red-bean.com"
  *
- * If no match, return true (to continue enumerating).
+ * and the STR "svn.collab.net" would match all of them.
+ */
+static svn_boolean_t match_in_list(const char *str,
+                                   const char *list,
+                                   apr_pool_t *pool)
+{
+  apr_array_header_t *subvals = svn_cstring_split(list, ',', TRUE, pool);
+  int i;
+
+  for (i = 0; i < subvals->nelts; i++)
+    {
+      const char *this_pattern = APR_ARRAY_IDX(subvals, i, char *);
+      if (APR_STATUS_IS_SUCCESS(apr_fnmatch(this_pattern, str, 0)))
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+/* This is an `svn_config_enumerator_t' function, and BATON is a
+ * `struct search_groups_baton *'.
+ *
+ * VALUE is in the same format as the LIST param of match_in_list().
+ * If an element of VALUE matches BATON->requested_host, then set
+ * BATON->proxy_group to a copy of NAME allocated in BATON->pool, and
+ * return false, to end the enumeration.
+ *
+ * If no match, return true, to continue enumerating.
  */
 static svn_boolean_t search_groups(const char *name,
                                    const char *value,
                                    void *baton)
 {
   struct search_groups_baton *b = baton;
-  apr_array_header_t *subvals = svn_cstring_split(value, ',', TRUE, b->pool);
-  int j;
 
-  for (j = 0; j < subvals->nelts; j++)
+  if (match_in_list(b->requested_host, value, b->pool))
     {
-      const char *this_pattern = APR_ARRAY_IDX(subvals, j, char *);
-      apr_status_t apr_err = apr_fnmatch(this_pattern, b->requested_host, 0);
-
-      if (APR_STATUS_IS_SUCCESS(apr_err))
-        {
-          b->proxy_group = apr_pstrdup(b->pool, name);
-          return FALSE;
-        }
+      b->proxy_group = apr_pstrdup(b->pool, name);
+      return FALSE;
     }
-
-  return TRUE;
+  else
+    return TRUE;
 }
 
 
@@ -188,15 +204,27 @@ static svn_error_t *get_proxy(const char **proxy_host,
 {
   struct search_groups_baton gb;
   svn_config_t *cfg;
+  const char *exceptions;
   const char *port_str;
+
+  /* If we find nothing, default to nulls. */
+  *proxy_host     = NULL;
+  *proxy_port     = -1;
+  *proxy_username = NULL;
+  *proxy_password = NULL;
 
   SVN_ERR( svn_config_read_proxies(&cfg, pool) );
 
-  /* Start out with defaults. */
-  svn_config_get(cfg, proxy_host, "default", "host", NULL);
-  svn_config_get(cfg, &port_str, "default", "port", NULL);
-  svn_config_get(cfg, proxy_username, "default", "username", NULL);
-  svn_config_get(cfg, proxy_password, "default", "password", NULL);
+  /* If there are defaults, use them, but only if the requested host
+     is not one of the exceptions to the defaults. */
+  svn_config_get(cfg, &exceptions, "default", "no_proxy", NULL);
+  if ((! exceptions) || (! match_in_list(requested_host, exceptions, pool)))
+    {
+      svn_config_get(cfg, proxy_host, "default", "host", NULL);
+      svn_config_get(cfg, &port_str, "default", "port", NULL);
+      svn_config_get(cfg, proxy_username, "default", "username", NULL);
+      svn_config_get(cfg, proxy_password, "default", "password", NULL);
+    }
 
   /* Search for a proxy pattern specific to this host. */
   gb.requested_host = requested_host;
