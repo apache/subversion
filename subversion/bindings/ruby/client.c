@@ -44,7 +44,7 @@ cl_prompt (char **info,
 
   if (self == Qnil)
     svn_error_createf
-      (APR_EGENERAL, 0, 0, pool,
+      (APR_EGENERAL, 0, 0,
        "Authentication is required but no block is given to get user data");
   obj = rb_protect (svn_ruby_protect_call2, (VALUE) args, &error);
 
@@ -52,7 +52,7 @@ cl_prompt (char **info,
     return svn_ruby_error ("authenticator", pool);
 
   if (BUILTIN_TYPE (obj) != T_STRING)
-    return svn_error_create (APR_EGENERAL, 0, 0, pool,
+    return svn_error_create (APR_EGENERAL, 0, 0,
                              "auth block must return string object");
 
   *info = apr_pstrdup (pool, StringValuePtr (obj));

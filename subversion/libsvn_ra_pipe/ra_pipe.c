@@ -58,12 +58,12 @@ svn_ra_pipe__open (void **session_baton,
   apr_status_t apr_err = apr_file_open_stdin (&sess->input, pool);
 
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Couldn't open stdin\n");
 
   apr_err = apr_file_open_stdout (&sess->output, pool);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Couldn't open stdout\n");
   sess->pool = pool;
   sess->url = apr_pstrdup (pool, repos_URL->data);
@@ -92,7 +92,7 @@ svn_ra_pipe__close (void *session_baton)
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "Could not close ra_pipe session");
 
   apr_err = apr_file_close (sess->output);
@@ -121,7 +121,7 @@ svn_ra_pipe__get_latest_revnum (void *session_baton,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not request latest revision "
                              "number");
 
@@ -156,7 +156,7 @@ svn_ra_pipe__get_dated_revision (void *session_baton,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not request latest revision "
                              "number");
 
@@ -196,7 +196,7 @@ svn_ra_pipe__get_commit_editor (void *session_baton,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not send commit info");
 
   /* ### Need to read in the values of new_rev, committed_date, and
@@ -241,7 +241,7 @@ svn_ra_pipe__do_checkout (void *session_baton,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not request check_path");
 
   svn_delta_compat_wrap (&old_editor,
@@ -384,7 +384,7 @@ svn_ra_pipe__get_log (void *session_baton,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not request log");
 
   /* ### Need to get the response. */
@@ -423,7 +423,7 @@ svn_ra_pipe__do_check_path (svn_node_kind_t *kind,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not request check_path");
 
   /* ### Need to get the response. */
@@ -463,7 +463,7 @@ svn_ra_pipe__get_file (void *session_baton,
 
   apr_err = apr_file_write_full (sess->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, sess->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "ra_pipe: Could not request get_file");
 
   abort();

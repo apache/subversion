@@ -55,7 +55,7 @@ svn_cl__mkdir (apr_getopt_t *os,
                                          FALSE, pool));
 
   if (! targets->nelts)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, "");
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool); 

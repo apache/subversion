@@ -57,7 +57,7 @@ translate_err (apr_status_t err,
                apr_pool_t *pool)
 {
   return svn_error_createf 
-    (err, 0, NULL, pool,
+    (err, 0, NULL,
      "svn_wc_copy_and_translate: error %s `%s'", verb, path);
 }
 
@@ -332,7 +332,7 @@ translate_newline (const char *eol_str,
           ((*src_format_len != newline_len) ||
            (strncmp (src_format, newline_buf, newline_len)))) 
         return svn_error_create
-          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool, src_path);
+          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, src_path);
     }
   else
     {
@@ -751,7 +751,7 @@ svn_wc_translated_file (const char **xlated_p,
       apr_err = apr_file_close (ignored);
       if (apr_err)
         return svn_error_createf
-          (0, 0, NULL, pool,
+          (0, 0, NULL,
            "svn_wc_translated_file: unable to close %s", tmp_vfile);
       
       if (style == svn_wc__eol_style_fixed)
@@ -787,7 +787,7 @@ svn_wc_translated_file (const char **xlated_p,
       else
         {
           return svn_error_createf
-            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
+            (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL,
              "svn_wc_translated_file: %s has unknown eol style property",
              vfile);
         }

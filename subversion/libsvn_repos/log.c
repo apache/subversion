@@ -139,11 +139,11 @@ svn_repos_get_logs (svn_repos_t *repos,
   /* Check that revisions are sane before ever invoking receiver. */
   if (start > head)
     return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, pool,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0,
        "svn_repos_get_logs: No such revision `%" SVN_REVNUM_T_FMT "'", start);
   if (end > head)
     return svn_error_createf
-      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, pool,
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0,
        "svn_repos_get_logs: No such revision `%" SVN_REVNUM_T_FMT "'", end);
 
   /* If paths were specified, then we only really care about revisions

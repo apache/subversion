@@ -47,7 +47,7 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
       /* If got an error other than dir non-existence, then we can't
          ensure this directory's existence, so just return the error.
          Might happen if there's a file in the way, for example. */
-      return svn_error_create (APR_ENOTDIR, 0, NULL, pool, path);
+      return svn_error_create (APR_ENOTDIR, 0, NULL, path);
     }
   else if (kind == svn_node_none)
     {
@@ -74,7 +74,7 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
           if (shorter[0] == '\0')
             {
               /* A weird and probably rare situation. */
-              return svn_error_create (0, 0, NULL, pool,
+              return svn_error_create (0, 0, NULL,
                                        "unable to make any directories");
             }
           else  /* We have a valid path, so recursively ensure it. */

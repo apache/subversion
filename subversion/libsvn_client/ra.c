@@ -160,7 +160,7 @@ push_wc_prop (void *baton,
          starts down that road will encounter this comment. */
 
       return svn_error_createf
-        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
          "Attempt to set wc property '%s' on '%s' in a non-commit operation",
          name, relpath);
     }

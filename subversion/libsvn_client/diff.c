@@ -416,7 +416,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
-      return svn_error_createf (SVN_ERR_WC_NOT_FILE, 0, NULL, subpool,
+      return svn_error_createf (SVN_ERR_WC_NOT_FILE, 0, NULL,
                                 "Cannot create file '%s' for addition, "
                                 "because a directory by that name "
                                 "already exists.", mine);
@@ -431,8 +431,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
            for deletion, then rm removed it from the working copy and the
            user must have recreated it, don't touch it */
         if (!entry || entry->schedule == svn_wc_schedule_delete)
-          return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, 
-                                    subpool,
+          return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
                                     "Cannot create file '%s' for addition, "
                                     "because an unversioned file by that name "
                                     "already exists.", mine);
@@ -474,7 +473,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
-      return svn_error_createf (SVN_ERR_WC_NOT_FILE, 0, NULL, subpool,
+      return svn_error_createf (SVN_ERR_WC_NOT_FILE, 0, NULL,
                                 "Cannot schedule file '%s' for deletion, "
                                 "because a directory by that name "
                                 "already exists.", mine);
@@ -528,7 +527,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
-      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, subpool,
+      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL,
                                 "Cannot create directory '%s' for addition, "
                                 "because a file by that name "
                                 "already exists.", path);
@@ -564,7 +563,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
-      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, subpool,
+      return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL,
                                 "Cannot schedule directory '%s' for deletion, "
                                 "because a file by that name "
                                 "already exists.", path);
@@ -671,7 +670,7 @@ convert_to_url (const char **url,
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                               "convert_to_url: %s is not versioned", path);
   
   *url = apr_pstrdup (pool, entry->url);
@@ -711,7 +710,7 @@ do_merge (svn_wc_notify_func_t notify_func,
       || (revision2->kind == svn_opt_revision_unspecified))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
+        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL,
          "do_merge: caller failed to specify all revisions");
     }
 
@@ -835,11 +834,11 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   status = apr_file_close (fp1);
   if (status)
-    return svn_error_createf (status, 0, NULL, pool, "failed to close '%s'.",
+    return svn_error_createf (status, 0, NULL, "failed to close '%s'.",
                               tmpfile1);
   status = apr_file_close (fp2);
   if (status)
-    return svn_error_createf (status, 0, NULL, pool, "failed to close '%s'.",
+    return svn_error_createf (status, 0, NULL, "failed to close '%s'.",
                               tmpfile2);   
   
   /* Perform a 3-way merge between the temporary fulltexts and the
@@ -928,7 +927,7 @@ static svn_error_t *
 polite_error (svn_error_t *child_err,
               apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, child_err, pool,
+  return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, child_err,
                            "Sorry, svn_client_diff was called in a way "
                            "that is not yet supported.");
 }
@@ -958,7 +957,7 @@ do_diff (const apr_array_header_t *options,
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_opt_revision_unspecified)
       || (revision2->kind == svn_opt_revision_unspecified))
-    return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
+    return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL,
                              "do_diff: not all revisions are specified.");
 
   /* The simplest use-case.  No repository contact required. */
@@ -969,12 +968,12 @@ do_diff (const apr_array_header_t *options,
       /* Sanity check -- path1 and path2 are the same working-copy path. */
       if (strcmp (path1, path2) != 0) 
         return polite_error (svn_error_create 
-                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL,
                               "do_diff: paths aren't equal!"),
                              pool);
       if (svn_path_is_url (path1))
         return polite_error (svn_error_create 
-                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL,
                               "do_diff: path isn't a working-copy path."),
                              pool);
 
@@ -999,7 +998,7 @@ do_diff (const apr_array_header_t *options,
       /* Sanity check -- path2 better be a working-copy path. */
       if (svn_path_is_url (path2))
         return polite_error (svn_error_create 
-                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL,
                               "do_diff: path isn't a working-copy path."),
                              pool);
 
@@ -1140,7 +1139,7 @@ do_diff (const apr_array_header_t *options,
               break;
 
             default:
-              return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+              return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL,
                                         "'%s' at rev %" SVN_REVNUM_T_FMT
                                         " wasn't found in repository.",
                                         path2, end_revnum);
@@ -1321,7 +1320,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
 
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                               "Can't merge changes into '%s':"
                               "it's not under revision control.", 
                               target_wcpath);

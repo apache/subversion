@@ -47,7 +47,7 @@ create_stdio_stream (svn_stream_t **stream,
 
   apr_status_t apr_err = open_fn (&stdio_file, pool);  
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "error opening stdio file");
   
   *stream = svn_stream_from_aprfile (stdio_file, pool);
@@ -325,10 +325,10 @@ subcommand_createtxn (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_txn_t *txn;
 
   if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "missing revision");
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "only one revision allowed");
     
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
@@ -379,7 +379,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
         
   if (lower > upper)
     return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
        "first revision cannot be higher than second");
 
   /* Run the dump to STDOUT.  Let the user redirect output into
@@ -457,7 +457,7 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
   
   if (args->nelts != 1)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "exactly one path argument required");
 
   paths = apr_array_make (pool, 1, sizeof (const char *));
@@ -521,7 +521,7 @@ subcommand_lsrevs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
         
   if (lower > upper)
     return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
        "first revision cannot be higher than second");
 
   /* Loop, printing revisions. */
@@ -753,16 +753,16 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_array_header_t *args;
   
   if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "missing revision");
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "only one revision allowed");
     
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
 
   if (args->nelts != 1)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "exactly one file argument required");
   
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
@@ -824,16 +824,16 @@ deltify_or_undeltify (svn_boolean_t is_deltify,
   apr_array_header_t *args;
 
   if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "missing revision");
   else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "only one revision allowed");
     
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
 
   if (args->nelts != 1)
-    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
                               "exactly one path argument required");
   
   path = APR_ARRAY_IDX (args, 0, const char *);
@@ -990,7 +990,7 @@ main (int argc, const char * const *argv)
             {
               svn_handle_error (svn_error_create
                                 (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                 0, NULL, pool,
+                                 0, NULL,
                                  "Multiple revision arguments encountered; "
                                  "try '-rM:N' instead of '-rM -rN'"),
                                 stderr, FALSE);
@@ -1009,7 +1009,7 @@ main (int argc, const char * const *argv)
               else
                 svn_handle_error (svn_error_createf
                                   (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                   0, NULL, pool,
+                                   0, NULL,
                                    "Syntax error in revision argument \"%s\"",
                                    utf8_opt_arg),
                                   stderr, FALSE);

@@ -960,7 +960,7 @@ svn_path_get_absolute(const char **pabsolute,
                                pool);
 
   if (apr_err)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
+    return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL,
                              "Couldn't determine absolute path of %s.", 
                              relative);
 
@@ -988,7 +988,7 @@ svn_path_split_if_file(const char *path,
   if (err || finfo.filetype == APR_REG)
     {
       if (err)
-        svn_error_clear_all (err);
+        svn_error_clear (err);
       svn_path_split_nts(path, pdirectory, pfile, pool);
     }
   else if (finfo.filetype == APR_DIR)
@@ -998,7 +998,7 @@ svn_path_split_if_file(const char *path,
     }
   else 
     {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL,
                                "%s is neither a file nor a directory name.",
                                path);
     }

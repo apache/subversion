@@ -76,7 +76,7 @@ parse_section (svn_config_t *cfg, HKEY hkey, const char *section,
         }
       if (err != ERROR_SUCCESS)
         return svn_error_create (SVN_ERR_MALFORMED_FILE,
-                                 APR_FROM_OS_ERROR(err), NULL, cfg->pool,
+                                 APR_FROM_OS_ERROR(err), NULL,
                                  "Can't enumerate registry values");
 
       /* Ignore option names that start with '#', see
@@ -94,7 +94,7 @@ parse_section (svn_config_t *cfg, HKEY hkey, const char *section,
             }
           if (err != ERROR_SUCCESS)
             return svn_error_create (SVN_ERR_MALFORMED_FILE,
-                                     APR_FROM_OS_ERROR(err), NULL, cfg->pool,
+                                     APR_FROM_OS_ERROR(err), NULL,
                                      "Can't read registry value data");
 
           svn_config_set (cfg, section, option->data, value->data);
@@ -132,7 +132,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
   else
     {
       return svn_error_createf (SVN_ERR_BAD_FILENAME,
-                                0, NULL, cfg->pool,
+                                0, NULL,
                                 "Unrecognised registry path \"%s\"", file);
     }
 
@@ -144,11 +144,11 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
       const int is_enoent = APR_STATUS_IS_ENOENT(APR_FROM_OS_ERROR(err));
       if (!is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME,
-                                  errno, NULL, cfg->pool,
+                                  errno, NULL,
                                   "Can't open registry key \"%s\"", file);
       else if (must_exist && is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME,
-                                  errno, NULL, cfg->pool,
+                                  errno, NULL,
                                   "Can't find registry key \"%s\"", file);
       else
         return SVN_NO_ERROR;
@@ -187,7 +187,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
         {
           svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE,
                                        APR_FROM_OS_ERROR(err),
-                                       NULL, cfg->pool,
+                                       NULL,
                                        "Can't enumerate registry keys");
           goto cleanup;
         }
@@ -199,7 +199,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
         {
           svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE,
                                        APR_FROM_OS_ERROR(err),
-                                       NULL, cfg->pool,
+                                       NULL,
                                        "Can't open existing subkey");
           goto cleanup;
         }

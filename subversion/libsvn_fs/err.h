@@ -32,14 +32,12 @@ extern "C" {
 
 
 /* Return an svn_error_t object that reports a Berkeley DB error.
-   DB_ERR is the error value returned by the Berkeley DB routine.
-   Allocate the error object from POOL.  */
-svn_error_t *svn_fs__dberr (apr_pool_t *pool, int db_err);
+   DB_ERR is the error value returned by the Berkeley DB routine. */
+svn_error_t *svn_fs__dberr (int db_err);
 
 
 /* Allocate an error object for a Berkeley DB error, with a formatted message.
 
-   POOL is the APR pool to allocate the svn_error_t object from.
    DB_ERR is the Berkeley DB error code.
    FMT is a printf-style format string, describing how to format any
       subsequent arguments.
@@ -50,7 +48,7 @@ svn_error_t *svn_fs__dberr (apr_pool_t *pool, int db_err);
 
    There is no separator between the two messages; if you want one,
    you should include it in FMT.  */
-svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
+svn_error_t *svn_fs__dberrf (int db_err,
                              const char *fmt, ...);
 
 

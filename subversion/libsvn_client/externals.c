@@ -158,7 +158,7 @@ parse_externals_description (apr_hash_t **externals_p,
         {
         parse_error:
           return svn_error_createf
-            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, 0, NULL, pool,
+            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, 0, NULL,
              "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
              "Invalid line: '%s'", parent_directory, line);
         }

@@ -167,7 +167,7 @@ svn_wc__do_update_cleanup (const char *path,
     }
 
   else
-    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
                               "Unrecognized node kind: '%s'\n", path);
 
   return SVN_NO_ERROR;
@@ -308,7 +308,7 @@ svn_wc_process_committed (const char *path,
   if (apr_err)
     {
       apr_file_close (log_fp);
-      return svn_error_createf (apr_err, 0, NULL, pool,
+      return svn_error_createf (apr_err, 0, NULL,
                                 "process_committed: "
                                 "error writing %s's log file", 
                                 path);
@@ -754,7 +754,7 @@ svn_wc_add (const char *path,
   /* Make sure something's there. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
                               "'%s' not found", path);
 
   /* Get the original entry for this path if one exists (perhaps
@@ -768,7 +768,7 @@ svn_wc_add (const char *path,
     err = svn_wc_entry (&orig_entry, path, parent_access, TRUE, pool);
   if (err)
     {
-      svn_error_clear_all (err);
+      svn_error_clear (err);
       orig_entry = NULL;
     }
 
@@ -784,7 +784,7 @@ svn_wc_add (const char *path,
           && (! orig_entry->deleted))
         {
           return svn_error_createf 
-            (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
+            (SVN_ERR_ENTRY_EXISTS, 0, NULL,
              "'%s' is already under revision control", path);
         }
       else if (orig_entry->kind != kind)
@@ -795,7 +795,7 @@ svn_wc_add (const char *path,
              this situation.  At present we are using a specific node-change
              error so that clients can detect it. */
           return svn_error_createf 
-            (SVN_ERR_WC_NODE_KIND_CHANGE, 0, NULL, pool,
+            (SVN_ERR_WC_NODE_KIND_CHANGE, 0, NULL,
              "Could not replace '%s' with a node of a differing type"
              " -- commit the deletion, update the parent, and then add '%s'",
              path, path);
@@ -810,12 +810,12 @@ svn_wc_add (const char *path,
                          pool));
   if (! parent_entry)
     return svn_error_createf 
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
        "Could not find parent directory's entry while trying to add '%s'",
        path);
   if (parent_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf 
-      (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL, pool,
+      (SVN_ERR_WC_SCHEDULE_CONFLICT, 0, NULL,
        "Can not add '%s' to a parent directory scheduled for deletion",
        path);
 
@@ -1227,13 +1227,13 @@ svn_wc_revert (const char *path,
   SVN_ERR (svn_wc_entry (&entry, path, dir_access, FALSE, pool));
   if (! entry)
     return svn_error_createf 
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
        "Cannot revert '%s' -- not a versioned resource", path);
 
   /* Safeguard 2:  can we handle this node kind? */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf 
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
        "Cannot revert '%s' -- unsupported entry node kind", path);
 
   /* Safeguard 3:  can we deal with the node kind of PATH current in
@@ -1243,7 +1243,7 @@ svn_wc_revert (const char *path,
       && (kind != svn_node_file)
       && (kind != svn_node_dir))
     return svn_error_createf 
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
        "Cannot revert '%s' -- unsupported node kind in working copy", path);
 
   /* For directories, determine if PATH is a WC root so that we can
@@ -1296,7 +1296,7 @@ svn_wc_revert (const char *path,
         }
       else  /* Else it's `none', or something exotic like a symlink... */
         return svn_error_createf
-          (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
+          (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
            "Unknown or unexpected kind for path %s", path);
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control, 
@@ -1509,7 +1509,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           if (text_modified_p)  /* don't kill local mods */
             {
               return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD,
-                                       0, NULL, subpool, "");
+                                       0, NULL, "");
             }
           else
             {
@@ -1577,7 +1577,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
-                  svn_error_clear_all (err);
+                  svn_error_clear (err);
                   left_something = TRUE;
                 }
               else if (err)
@@ -1597,7 +1597,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                                          destroy_wf, subpool);
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
-                  svn_error_clear_all (err);
+                  svn_error_clear (err);
                   left_something = TRUE;
                 }
               else if (err)
@@ -1633,7 +1633,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
   svn_pool_destroy (subpool);
 
   if (left_something)
-    return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, 0, NULL, pool, "");
+    return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, 0, NULL, "");
 
   else
     return SVN_NO_ERROR;
@@ -1816,7 +1816,7 @@ svn_wc_resolve_conflict (const char *path,
       const svn_wc_entry_t *entry;
       svn_wc_entry (&entry, path, adm_access, FALSE, pool);
       if (! entry)
-        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
                                   "Not under version control: '%s'", path);
 
       SVN_ERR (resolve_found_entry_callback (path, entry, baton));
@@ -1875,7 +1875,7 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
 
   status = apr_file_write_full (fp, contents->data, contents->len, &sz);
   if (status) 
-    return svn_error_createf (status, 0, NULL, pool,
+    return svn_error_createf (status, 0, NULL,
                               "error writing to auth file '%s' in '%s'",
                               filename, svn_wc_adm_access_path (adm_access));
 

@@ -47,7 +47,7 @@ test_time_to_nts (const char **msg,
   if (strcmp(timestring,test_timestring) != 0)
     {
       return svn_error_createf
-        (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        (SVN_ERR_TEST_FAILED, 0, NULL,
          "svn_time_to_nts (%" APR_TIME_T_FMT
          ") returned date string '%s' instead of '%s'",
          test_timestamp,timestring,test_timestring);
@@ -74,7 +74,7 @@ test_time_from_nts (const char **msg,
   if (timestamp != test_timestamp)
     {
       return svn_error_createf
-        (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        (SVN_ERR_TEST_FAILED, 0, NULL,
          "svn_time_from_nts (%s) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          test_timestring,timestamp,test_timestamp);
@@ -101,7 +101,7 @@ test_time_from_nts_old (const char **msg,
   if (timestamp != test_timestamp)
     {
       return svn_error_createf
-        (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        (SVN_ERR_TEST_FAILED, 0, NULL,
          "svn_time_from_nts (%s) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          test_old_timestring,timestamp,test_timestamp);
@@ -131,7 +131,7 @@ test_time_invariant (const char **msg,
   if (timestamp != current_timestamp)
     {
       return svn_error_createf
-        (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        (SVN_ERR_TEST_FAILED, 0, NULL,
          "svn_time_from_nts ( svn_time_to_nts (n) ) returned time '%" APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          timestamp,current_timestamp);

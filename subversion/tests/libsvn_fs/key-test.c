@@ -84,7 +84,7 @@ next_key (const char **msg,
          && (strlen (next_1) == len)
          && (strcmp (next_1, expected_1) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_1);
     }
@@ -96,7 +96,7 @@ next_key (const char **msg,
          && (strlen (next_2) == len)
          && (strcmp (next_2, expected_2) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_2);
     }
@@ -108,7 +108,7 @@ next_key (const char **msg,
          && (strlen (next_3) == len)
          && (strcmp (next_3, expected_3) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_3);
     }
@@ -120,7 +120,7 @@ next_key (const char **msg,
          && (strlen (next_4) == len)
          && (strcmp (next_4, expected_4) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_4);
     }
@@ -132,7 +132,7 @@ next_key (const char **msg,
          && (strlen (next_5) == len)
          && (strcmp (next_5, expected_5) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_5);
     }
@@ -144,7 +144,7 @@ next_key (const char **msg,
          && (strlen (next_6) == len)
          && (strcmp (next_6, expected_6) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_6);
     }
@@ -156,7 +156,7 @@ next_key (const char **msg,
          && (strlen (next_7) == len)
          && (strcmp (next_7, expected_7) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_7);
     }
@@ -168,7 +168,7 @@ next_key (const char **msg,
          && (strlen (next_8) == len)
          && (strcmp (next_8, expected_8) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_8);
     }
@@ -180,7 +180,7 @@ next_key (const char **msg,
          && (strlen (next_9) == len)
          && (strcmp (next_9, expected_9) == 0)))
     {
-      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL,
                                 "failed to increment key \"%s\" correctly",
                                 this_9);
     }

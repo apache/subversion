@@ -99,7 +99,7 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
       if (finfo.filetype == APR_DIR)
         SVN_ERR (svn_fs_delete_berkeley (name, pool));
       else
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "there is already a file named `%s'", name);
     }
 
@@ -183,7 +183,7 @@ get_youngest_rev (const char **msg)
   SVN_ERR (plugin->get_latest_revnum (session, &latest_rev));
   
   if (latest_rev != 0)
-      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+      return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL,
                                "youngest rev isn't 0!");
 
   /* Close the session. */
@@ -226,28 +226,28 @@ split_url_test_1 (const char **msg)
   err = try_split_url ("blah:///bin/svn/");
   if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (scheme)");
 
   /* Use only single slash after scheme */
   err = try_split_url ("file:/path/to/repos/");
   if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (slashes)");
   
   /* Use only a hostname, with no path */  
   err = try_split_url ("file://hostname");
   if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (no path)");
 
   /* Give a hostname other than `' or `localhost' */
   err = try_split_url ("file://myhost/repos/path/");
   if (err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (hostname)");
 
   /* Make sure we *don't* fuss about a good URL (note that this URL
@@ -255,12 +255,12 @@ split_url_test_1 (const char **msg)
   err = try_split_url ("file:///repos/path/");
   if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL cried foul about a good URL (no hostname)");
   err = try_split_url ("file://localhost/repos/path/");
   if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL cried foul about a good URL (localhost)");
 
   return SVN_NO_ERROR;
@@ -300,7 +300,7 @@ check_split_url (const char *repos_path,
   if ((strcmp (repos_part->data, repos_loc))
       || (strcmp (fs_part->data, fs_path)))
     return svn_error_create 
-      (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+      (SVN_ERR_TEST_FAILED, 0, NULL,
        "svn_ra_local__split_URL failed to properly split the URL");
   
   return SVN_NO_ERROR;

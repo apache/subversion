@@ -131,8 +131,7 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
   /* Create the locks directory. */
   apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, 0, pool,
-                              "creating lock dir `%s'", path);
+    return svn_error_createf (apr_err, 0, 0, "creating lock dir `%s'", path);
 
   /* Create the DB lockfile under that directory. */
   {
@@ -162,12 +161,12 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing lock file `%s'", lockfile_path);
     
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing lock file `%s'", lockfile_path);
   }
 
@@ -187,7 +186,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
   apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf 
-      (apr_err, 0, 0, pool, "creating hook directory `%s'", path);
+      (apr_err, 0, 0, "creating hook directory `%s'", path);
 
   /*** Write a default template for each standard hook file. */
 
@@ -254,12 +253,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   }  /* end start-commit hook */
 
@@ -333,12 +332,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   }  /* end pre-commit hook */
 
@@ -416,12 +415,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   }  /* end pre-revprop-change hook */
 
@@ -486,12 +485,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   } /* end post-commit hook */
 
@@ -559,12 +558,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   } /* end post-revprop-change hook */
 
@@ -589,12 +588,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   }  /* end read sentinel */
 
@@ -618,12 +617,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "writing hook file `%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, NULL, pool, 
+      return svn_error_createf (apr_err, 0, NULL,
                                 "closing hook file `%s'", this_path);
   }  /* end write sentinel */
 
@@ -701,7 +700,7 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
       SVN_ERR (svn_io_dir_empty (&is_empty, path, pool));
       if (! is_empty)
         return svn_error_createf
-          (SVN_ERR_DIR_NOT_EMPTY, 0, 0, pool,
+          (SVN_ERR_DIR_NOT_EMPTY, 0, 0,
            "`%s' exists and is non-empty, repository creation failed",
            path);
     }
@@ -722,13 +721,13 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
   apr_err = apr_dir_make (repos->dav_path, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf 
-      (apr_err, 0, 0, pool, "creating DAV sandbox dir `%s'", repos->dav_path);
+      (apr_err, 0, 0, "creating DAV sandbox dir `%s'", repos->dav_path);
 
   /* Create the conf directory.  */
   apr_err = apr_dir_make (repos->conf_path, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf 
-      (apr_err, 0, 0, pool, "creating conf dir `%s'", repos->conf_path);
+      (apr_err, 0, 0, "creating conf dir `%s'", repos->conf_path);
 
   /* Create the lock directory.  */
   SVN_ERR (create_locks (repos, repos->lock_path, pool));
@@ -763,12 +762,12 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (readme_file, readme_contents,
                                    strlen (readme_contents), NULL);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, 0, pool,
+      return svn_error_createf (apr_err, 0, 0,
                                 "writing to `%s'", readme_file_name);
     
     apr_err = apr_file_close (readme_file);
     if (apr_err)
-      return svn_error_createf (apr_err, 0, 0, pool,
+      return svn_error_createf (apr_err, 0, 0,
                                 "closing `%s'", readme_file_name);
   }
 
@@ -800,7 +799,7 @@ check_repos_version (const char *path,
     {
       if (0 != SVN_REPOS__VERSION)
         return svn_error_createf 
-          (SVN_ERR_REPOS_UNSUPPORTED_VERSION, 0, err, pool,
+          (SVN_ERR_REPOS_UNSUPPORTED_VERSION, 0, err,
            "Expected version '%d' of repository; found no version at all; "
            "is `%s' a valid repository path?",
            SVN_REPOS__VERSION, path);
@@ -808,7 +807,7 @@ check_repos_version (const char *path,
 
   if (version != SVN_REPOS__VERSION)
     return svn_error_createf 
-      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, 0, NULL, pool,
+      (SVN_ERR_REPOS_UNSUPPORTED_VERSION, 0, NULL,
        "Expected version '%d' of repository; found version '%d'", 
        SVN_REPOS__VERSION, version);
 
@@ -878,7 +877,7 @@ get_repos (svn_repos_t **repos_p,
           lockname = "exclusive";
         
         return svn_error_createf
-          (apr_err, 0, NULL, pool,
+          (apr_err, 0, NULL,
            "get_repos: %s db lock on repository `%s' failed",
            lockname, path);
       }
@@ -986,14 +985,14 @@ svn_repos_recover (const char *path,
     apr_err = apr_file_unlock (lockfile_handle);
     if (apr_err)
       return svn_error_createf
-        (apr_err, 0, NULL, subpool,
+        (apr_err, 0, NULL,
          "svn_repos_recover: failed to delete all locks on repository `%s'.",
          path);
 
     apr_err = apr_file_close (lockfile_handle);
     if (apr_err)
       return svn_error_createf
-        (apr_err, 0, NULL, subpool,
+        (apr_err, 0, NULL,
          "svn_repos_recover: failed to close lockfile on repository `%s'.",
          path);
   }

@@ -118,8 +118,7 @@ read_header_block (svn_stream_t *stream,
         {
           if (header_str->data[i] == '\0')
             return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA,
-                                     0, NULL, pool,
-                                     "Found malformed header block "
+                                     0, NULL, "Found malformed header block "
                                      "in dumpfile stream.");
           i++;
         }
@@ -131,8 +130,7 @@ read_header_block (svn_stream_t *stream,
       i += 2;
       if (i > header_str->len)
         return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA,
-                                 0, NULL, pool,
-                                 "Found malformed header block "
+                                 0, NULL, "Found malformed header block "
                                  "in dumpfile stream.");
 
       /* Point to the 'value' string. */
@@ -147,16 +145,16 @@ read_header_block (svn_stream_t *stream,
 
 
 static svn_error_t *
-stream_ran_dry (apr_pool_t *pool)
+stream_ran_dry (void)
 {
-  return svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
+  return svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0, NULL,
                            "Premature end of content data in dumpstream.");
 }
 
 static svn_error_t *
-stream_malformed (apr_pool_t *pool)
+stream_malformed (void)
 {
-  return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL, pool,
+  return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL,
                            "Dumpstream data appears to be malformed.");
 }
 
@@ -188,7 +186,7 @@ parse_property_block (svn_stream_t *stream,
           /* We could just use stream_ran_dry() or stream_malformed(),
              but better to give a non-generic property block error. */ 
           return svn_error_create
-            (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL, pool,
+            (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL,
              "incomplete or unterminated property block");
         }
 
@@ -213,7 +211,7 @@ parse_property_block (svn_stream_t *stream,
           SVN_ERR (svn_stream_read (stream, keybuf, &numread));
           content_length -= numread;
           if (numread != keylen)
-            return stream_ran_dry (pool);
+            return stream_ran_dry ();
           keybuf[keylen] = '\0';
 
           /* Suck up extra newline after key data */
@@ -221,9 +219,9 @@ parse_property_block (svn_stream_t *stream,
           SVN_ERR (svn_stream_read (stream, &c, &numread));
           content_length -= numread;
           if (numread != 1)
-            return stream_ran_dry (pool);
+            return stream_ran_dry ();
           if (c != '\n') 
-            return stream_malformed (pool);
+            return stream_malformed ();
 
           /* Read a val length line */
           SVN_ERR (svn_stream_readline (stream, &strbuf, pool));
@@ -243,7 +241,7 @@ parse_property_block (svn_stream_t *stream,
               SVN_ERR (svn_stream_read (stream, valbuf, &numread));
               content_length -= numread;
               if (numread != vallen)
-                return stream_ran_dry (pool);
+                return stream_ran_dry ();
               ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */
@@ -251,9 +249,9 @@ parse_property_block (svn_stream_t *stream,
               SVN_ERR (svn_stream_read (stream, &c, &numread));
               content_length -= numread;
               if (numread != 1)
-                return stream_ran_dry (pool);
+                return stream_ran_dry ();
               if (c != '\n') 
-                return stream_malformed (pool);
+                return stream_malformed ();
 
               /* Create final value string */
               propstring.data = valbuf;
@@ -270,10 +268,10 @@ parse_property_block (svn_stream_t *stream,
                                                            &propstring));
             }
           else
-            return stream_malformed (pool); /* didn't find expected 'V' line */
+            return stream_malformed (); /* didn't find expected 'V' line */
         }
       else
-        return stream_malformed (pool); /* didn't find expected 'K' line */
+        return stream_malformed (); /* didn't find expected 'K' line */
       
     } /* while (1) */
 
@@ -323,7 +321,7 @@ parse_text_block (svn_stream_t *stream,
       SVN_ERR (svn_stream_read (stream, buffer, &rlen));
       content_length -= rlen;
       if (rlen != num_to_read)
-        return stream_ran_dry (pool);
+        return stream_ran_dry ();
       
       if (text_stream)
         {
@@ -333,7 +331,7 @@ parse_text_block (svn_stream_t *stream,
           if (wlen != rlen)
             {
               /* Uh oh, didn't write as many bytes as we read. */
-              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, pool,
+              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
                                        "Error pushing textual contents.");
             }
         }
@@ -376,7 +374,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
   SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
   if (linebuf == NULL)
-    return stream_ran_dry (pool);
+    return stream_ran_dry ();
     
   /* The first two lines of the stream are the dumpfile-format version
      number, and a blank line. */
@@ -456,8 +454,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       else
         {
           /* What the heck is this record?!? */
-          return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA,
-                                   0, NULL, pool,
+          return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL,
                                    "Unrecognized record type in stream.");
         }
       
@@ -658,7 +655,7 @@ maybe_add_with_history (struct node_baton *nb,
       svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
 
       if (! SVN_IS_VALID_REVNUM(src_rev))
-        return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL,
                                   "Relative copyfrom_rev %" SVN_REVNUM_T_FMT
                                   " is not available in current repository.",
                                   src_rev);
@@ -727,8 +724,7 @@ new_node_record (void **node_baton,
         break;
       }
     default:
-      return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA,
-                                0, NULL, pool, 
+      return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA, 0, NULL,
                                 "Unrecognized node-action on node %s.",
                                 nb->path);
     }

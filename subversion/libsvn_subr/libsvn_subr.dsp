@@ -103,6 +103,10 @@ SOURCE=.\config_win.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\error.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\getdate.c
 # End Source File
 # Begin Source File
@@ -127,15 +131,15 @@ SOURCE=.\pipe.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\pool.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\quoprint.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\sorts.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\svn_error.c
 # End Source File
 # Begin Source File
 

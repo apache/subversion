@@ -82,7 +82,7 @@ svn_cl__checkout (apr_getopt_t *os,
   /* If there are no targets at all, then let's just give the user a
      friendly help message, rather than silently exiting.  */
   if (targets->nelts < 1)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool,
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0,
                              "" /* message is unused */);
 
   /* Add a path if the user only specified URLs */
@@ -109,7 +109,7 @@ svn_cl__checkout (apr_getopt_t *os,
       repos_url = ((const char **) (targets->elts))[i];
       if (! svn_path_is_url (repos_url))
         return svn_error_createf 
-          (SVN_ERR_BAD_URL, 0, NULL, subpool, 
+          (SVN_ERR_BAD_URL, 0, NULL, 
            "`%s' does not appear to be a URL", repos_url);
 
       repos_url = svn_path_canonicalize_nts (repos_url, subpool);

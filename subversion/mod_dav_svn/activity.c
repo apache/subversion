@@ -87,7 +87,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   if (status != APR_SUCCESS)
     {
       svn_error_t *serr = 
-        svn_error_create(status, 0, NULL, repos->pool,
+        svn_error_create(status, 0, NULL,
                          "failed to open activity db;  check repos perms.");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -103,7 +103,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   if (status != APR_SUCCESS)
     {
       svn_error_t *serr = 
-        svn_error_create(status, 0, NULL, repos->pool,
+        svn_error_create(status, 0, NULL,
                          "failed to close activity db; check repos perms.");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

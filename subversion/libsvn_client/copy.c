@@ -81,7 +81,7 @@ wc_to_wc_copy (const char *src_path,
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
                               "path `%s' does not exist.", src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
@@ -100,7 +100,7 @@ wc_to_wc_copy (const char *src_path,
       dst_parent = dst_path;
     }
   else
-    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
                               "file `%s' already exists.", dst_path);
 
   if (is_move)
@@ -224,7 +224,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       src_pieces = svn_path_decompose (src_rel, pool);
       if ((! src_pieces) || (! src_pieces->nelts))
         return svn_error_createf 
-          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
            "error decomposing relative path `%s'", src_rel);
     }
 
@@ -235,7 +235,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       dst_pieces = svn_path_decompose (dst_rel, pool);
       if ((! dst_pieces) || (! dst_pieces->nelts))
         return svn_error_createf 
-          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+          (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
            "error decomposing relative path `%s'", dst_rel);
     }
 
@@ -275,7 +275,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (ra_lib->check_path (&src_kind, sess, src_rel, src_revnum));
   if (src_kind == svn_node_none)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+      (SVN_ERR_FS_NOT_FOUND, 0, NULL,
        "path `%s' does not exist in revision `%" SVN_REVNUM_T_FMT "'",
        src_url, src_revnum);
 
@@ -302,13 +302,13 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
       SVN_ERR (ra_lib->check_path (&some_kind, sess,
                                    hypothetical_repos_path, youngest));
       if (some_kind != svn_node_none)
-        return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
                                   "fs path `%s' already exists.",
                                   hypothetical_repos_path);
     }
   else
     {
-      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL,
                                 "unrecognized node kind of %s.", dst_url);
     }
 
@@ -472,7 +472,7 @@ reconcile_errors (svn_error_t *commit_err,
   /* Else, create a new "general" error that will lead off the errors
      that follow. */
   else
-    err = svn_error_create (SVN_ERR_BASE, 0, NULL, pool,
+    err = svn_error_create (SVN_ERR_BASE, 0, NULL,
                             "Commit succeeded, but other errors follow:");
 
   /* If there was an unlock error... */
@@ -576,7 +576,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* DST_URL is an existing file, which can't be overwritten or
          used as a container, so error out. */
-      return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
                                 "file `%s' already exists.", dst_url);
     }
 
@@ -704,12 +704,12 @@ repos_to_wc_copy (const char *src_url,
     {
       if (SVN_IS_VALID_REVNUM (src_revnum))
         return svn_error_createf
-          (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+          (SVN_ERR_FS_NOT_FOUND, 0, NULL,
            "path `%s' not found in revision `%" SVN_REVNUM_T_FMT "'",
            src_url, src_revnum);
       else
         return svn_error_createf
-          (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+          (SVN_ERR_FS_NOT_FOUND, 0, NULL,
            "path `%s' not found in head revision", src_url);
     }
 
@@ -746,7 +746,7 @@ repos_to_wc_copy (const char *src_url,
     }
   else if (dst_kind != svn_node_none)  /* must be a file */
     {
-      return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL,
                                 "file `%s' already exists.", dst_path);
     }
 
@@ -754,7 +754,7 @@ repos_to_wc_copy (const char *src_url,
      nothing in the way of the upcoming checkout. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
-    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL,
                               "`%s' is in the way", dst_path);
 
   if (! optional_adm_access)
@@ -832,7 +832,7 @@ repos_to_wc_copy (const char *src_url,
       /* Close the file. */
       status = apr_file_close (fp);
       if (status)
-        return svn_error_createf (status, 0, NULL, pool,
+        return svn_error_createf (status, 0, NULL,
                                   "failed to close file '%s'.",
                                   dst_path);   
      
@@ -914,7 +914,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   if (svn_path_is_child (src_path, dst_path, pool))
     return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
        "cannot copy path '%s' into its own child '%s'",
        src_path, dst_path);
 
@@ -924,7 +924,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         {
           if (strcmp (src_path, dst_path) == 0)
             return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+              (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
                "cannot move path '%s' into itself",
                src_path);
         }
@@ -932,7 +932,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
         {
           /* Disallow moves between the working copy and the repository. */
           return svn_error_create 
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
              "no support for repos <--> working copy moves");
         }
 
@@ -947,7 +947,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
           && src_revision->kind != svn_opt_revision_head)
         {
           return svn_error_create
-            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
              "cannot specify revisions with move operations");
         }
     }

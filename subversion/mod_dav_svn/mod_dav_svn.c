@@ -64,23 +64,6 @@ static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
     return OK;
 }
 
-static int dav_svn_header_parser(request_rec *r)
-{
-    /* Use this hook to initialize the request pool as SVN's "top-most"
-       pool (and create the error sub-pool).
-
-       This hook runs before any of the other hooks used by the DAV
-       subsystem, so it provides a good control point for us.
-
-       ### we may hook translate_name at some point in the future, which
-       ### runs before this...  But: translate_name also runs for subreqs
-       ### while header_parser is only the main request
-    */
-    (void) svn_error_init_pool (r->pool);
-
-    return OK;
-}
-
 static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
 {
     return apr_pcalloc(p, sizeof(dav_svn_server_conf));
@@ -295,7 +278,6 @@ static const dav_provider dav_svn_provider =
 static void register_hooks(apr_pool_t *pconf)
 {
     ap_hook_post_config(dav_svn_init, NULL, NULL, APR_HOOK_MIDDLE);
-    ap_hook_header_parser(dav_svn_header_parser, NULL, NULL, APR_HOOK_MIDDLE);
 
     /* our provider */
     dav_register_provider(pconf, "svn", &dav_svn_provider);

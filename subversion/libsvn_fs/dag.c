@@ -370,14 +370,14 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   SVN_ERR (svn_fs__create_txn (&txn_id, fs, root_id, trail));
   if (strcmp (txn_id, "0"))
     return svn_error_createf 
-      (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+      (SVN_ERR_FS_CORRUPT, 0, 0,
        "initial transaction id not `0' in filesystem `%s'", fs->path);
 
   /* Create a default copy (better have an id of "0") */
   SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
   if (strcmp (copy_id, "0"))
     return svn_error_createf 
-      (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+      (SVN_ERR_FS_CORRUPT, 0, 0,
        "initial copy id not `0' in filesystem `%s'", fs->path);
   SVN_ERR (svn_fs__create_copy (copy_id, fs, NULL, NULL, root_id, trail));
 
@@ -385,7 +385,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   revision.txn_id = txn_id;
   SVN_ERR (svn_fs__put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
-    return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+    return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0,
                               "initial revision number is not `0'"
                               " in filesystem `%s'", fs->path);
 
@@ -429,7 +429,7 @@ get_dir_entries (apr_hash_t **entries_p,
   /* Error if this is not a directory. */
   if (noderev->kind != svn_node_dir)
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
        "Attempted to create entry in non-directory parent");
 
   /* If there's a DATA-KEY, there might be entries to fetch. */
@@ -592,26 +592,26 @@ make_entry (dag_node_t **child_p,
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
        "Attempted to create a node with an illegal name `%s'", name);
 
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
        "Attempted to create entry in non-directory parent");
     
   /* Check that the parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Attempted to clone child of non-mutable node");
 
   /* Check that parent does not already have an entry named NAME. */
   SVN_ERR (dir_entry_id_from_node (&new_node_id, parent, name, trail));
   if (new_node_id)
     return svn_error_createf 
-      (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, trail->pool,
+      (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
        "Attempted to create entry that already exists");
 
   /* Create the new node's NODE-REVISION */
@@ -656,13 +656,13 @@ svn_fs__dag_set_entry (dag_node_t *node,
   /* Check it's a directory. */
   if (! svn_fs__dag_is_directory (node))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
        "Attempted to set entry in non-directory node.");
   
   /* Check it's mutable. */
   if (! svn_fs__dag_check_mutable (node, txn_id))
     return svn_error_create
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
        "Attempted to set entry in immutable node.");
 
   return set_entry (node, entry_name, id, txn_id, trail);
@@ -722,7 +722,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
     {
       svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
       return svn_error_createf 
-        (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+        (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
          "Can't set_proplist on *immutable* node-revision %s", idstr->data);
     }
 
@@ -818,13 +818,13 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
   /* First check that the parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Attempted to clone child of non-mutable node");
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
        "Attempted to make a child clone with an illegal name `%s'", name);
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
@@ -942,19 +942,19 @@ delete_entry (dag_node_t *parent,
   /* Make sure parent is a directory. */
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_createf
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, parent->pool,
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
        "Attempted to delete entry `%s' from *non*-directory node.", name);    
 
   /* Make sure parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, parent->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Attempted to delete entry `%s' from immutable directory node.", name);
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
        "Attempted to delete a node with an illegal name `%s'", name);
 
   /* Get a fresh NODE-REVISION for the parent node. */
@@ -968,7 +968,7 @@ delete_entry (dag_node_t *parent,
      delete! */
   if (! rep_key)
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL,
        "Delete failed--directory has no entry `%s'", name);
 
   /* Ensure we have a key to a mutable representation of the entries
@@ -1001,7 +1001,7 @@ delete_entry (dag_node_t *parent,
      ... it doesn't matter), return an error.  */
   if (! id)
     return svn_error_createf 
-      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NO_SUCH_ENTRY, 0, NULL,
        "Delete failed--directory has no entry `%s'", name);
 
   /* Use the ID of this ENTRY to get the entry's node.  If the node we
@@ -1015,7 +1015,7 @@ delete_entry (dag_node_t *parent,
       SVN_ERR (svn_fs__dag_dir_entries (&entries_here, node, trail));
       if (require_empty && entries_here && apr_hash_count (entries_here))
         return svn_error_createf
-          (SVN_ERR_DIR_NOT_EMPTY, 0, NULL, parent->pool,
+          (SVN_ERR_DIR_NOT_EMPTY, 0, NULL,
            "Attempt to delete non-empty directory `%s'.", name);
     }
 
@@ -1173,32 +1173,32 @@ svn_fs__dag_link (dag_node_t *parent,
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL,
        "Attempted to create entry in non-directory parent");
     
   /* Make sure parent is mutable */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Can't add a link from an immutable parent");
 
   /* Make sure child is IMmutable */
   if (svn_fs__dag_check_mutable (child, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Can't add a link to a mutable child");
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
        "Attempted to link to a node with an illegal name `%s'", name);
 
   /* Verify that this parent node does not already have an entry named NAME. */
   SVN_ERR (dir_entry_id_from_node (&entry_id, parent, name, trail));
   if (entry_id)
     return svn_error_createf 
-      (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, trail->pool,
+      (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL,
        "Attempted to create entry that already exists");
 
   /* We can safely call set_entry because we already know that PARENT
@@ -1220,7 +1220,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_FILE, 0, NULL,
        "Attempted to get textual contents of a *non*-file node.");
   
   /* Go get a fresh node-revision for FILE. */
@@ -1252,7 +1252,7 @@ svn_fs__dag_file_length (apr_size_t *length,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_FILE, 0, NULL,
        "Attempted to get length of a *non*-file node.");
 
   /* Go get a fresh node-revision for FILE, and . */
@@ -1284,13 +1284,13 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_FILE, 0, NULL,
        "Attempted to set textual contents of a *non*-file node.");
   
   /* Make sure our node is mutable. */
   if (! svn_fs__dag_check_mutable (file, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Attempted to set textual contents of an immutable node.");
 
   /* Get the node revision. */
@@ -1333,13 +1333,13 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_FILE, 0, NULL,
        "Attempted to set textual contents of a *non*-file node.");
   
   /* Make sure our node is mutable. */
   if (! svn_fs__dag_check_mutable (file, txn_id))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL,
        "Attempted to set textual contents of an immutable node.");
 
   /* Get the node revision. */
@@ -1399,13 +1399,13 @@ svn_fs__dag_open (dag_node_t **child_p,
   SVN_ERR (dir_entry_id_from_node (&node_id, parent, name, trail));
   if (! node_id)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FOUND, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_FOUND, 0, NULL,
        "Attempted to open non-existant child node \"%s\"", name);
   
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL, trail->pool,
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, 0, NULL,
        "Attempted to open node with an illegal name `%s'", name);
 
   /* Now get the node that was requested. */

@@ -37,7 +37,7 @@ svn_error_t *
 svn_ruby_error (const char *msg, apr_pool_t *pool)
 {
   svn_error_t *err;
-  err = svn_error_createf (SVN_RUBY_ERR_PROTECTED, 0, 0, pool,
+  err = svn_error_createf (SVN_RUBY_ERR_PROTECTED, 0, 0,
 			    "%s", msg);
   apr_pool_userdata_set ((void *) ruby_errinfo, SVN_RUBY_ERR_OBJECT,
 			 apr_pool_cleanup_null, err->pool);

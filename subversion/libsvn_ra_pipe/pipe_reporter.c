@@ -61,7 +61,7 @@ svn_ra_pipe__set_path (void *report_baton,
 
   apr_err = apr_file_write_full (baton->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, baton->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "Could not write an entry to the report");
 
   return SVN_NO_ERROR;
@@ -84,7 +84,7 @@ svn_ra_pipe__delete_path (void *report_baton, const char *path)
 
   apr_err = apr_file_write_full (baton->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, baton->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "Could not delete an entry to the report");
 
   return SVN_NO_ERROR;
@@ -117,7 +117,7 @@ svn_ra_pipe__link_path (void *report_baton,
 
   apr_err = apr_file_write_full (baton->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, baton->pool,
+    return svn_error_create (apr_err, 0, NULL,
                              "Could not write an entry to the report");
   return SVN_NO_ERROR;
 }
@@ -132,8 +132,7 @@ svn_ra_pipe__finish_report (void *report_baton)
   svn_xml_make_close_tag (&buf, baton->pool, SVN_RA_PIPE__REPORT_TAG);
   apr_err = apr_file_write_full (baton->output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, baton->pool,
-                             "Could not finish the report");
+    return svn_error_create (apr_err, 0, NULL, "Could not finish the report");
   
   /* Okay, we've sent our report to the server, now we can expect an xml
    * update back. */
@@ -238,8 +237,7 @@ svn_ra_pipe__get_reporter (const svn_ra_reporter_t **reporter,
 
   apr_err = apr_file_write_full (output, buf->data, buf->len, NULL);
   if (apr_err)
-    return svn_error_create (apr_err, 0, NULL, pool,
-                             "Could not start report");
+    return svn_error_create (apr_err, 0, NULL, "Could not start report");
 
   *reporter = &ra_pipe_reporter;
   *report_baton = baton;

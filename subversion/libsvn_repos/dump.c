@@ -447,7 +447,7 @@ dump_node (struct edit_baton *eb,
                  error was returned.  According to the docstring, this
                  should never happen. */
               return 
-                svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, pool,
+                svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
                                    "Error dumping textual contents of %s.",
                                    path);
             }
@@ -831,11 +831,11 @@ svn_repos_dump_fs (svn_repos_t *repos,
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
-    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL,
                               "start_rev %ld is greater than end_rev %ld",
                               start_rev, end_rev);
   if (end_rev > youngest)
-    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, 0, NULL,
                               "end_rev %ld is invalid (youngest rev is %ld)",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)

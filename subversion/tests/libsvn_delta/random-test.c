@@ -150,7 +150,7 @@ generate_random_file (apr_uint32_t maxlen,
 
 /* Compare two open files. The file positions may change. */
 static svn_error_t *
-compare_files (FILE *f1, FILE *f2, int dump_files, apr_pool_t *pool)
+compare_files (FILE *f1, FILE *f2, int dump_files)
 {
   int c1, c2;
   apr_off_t pos = 0;
@@ -176,7 +176,7 @@ compare_files (FILE *f1, FILE *f2, int dump_files, apr_pool_t *pool)
       if (c1 == EOF && c2 == EOF)
         break;
       if (c1 != c2)
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
                                   "mismatch at position %"APR_OFF_T_FMT,
                                   pos);
     }
@@ -274,7 +274,7 @@ random_test (const char **msg,
 
       svn_pool_destroy (delta_pool);
 
-      SVN_ERR (compare_files (target, target_regen, dump_files, pool));
+      SVN_ERR (compare_files (target, target_regen, dump_files));
 
       fclose(source);
       fclose(target);
@@ -399,7 +399,7 @@ do_random_combine_test (const char **msg,
             if (composite
                 && composite->sview_len == 0 && composite->src_ops > 0)
               return svn_error_create
-                (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                (SVN_ERR_FS_GENERAL, 0, NULL,
                  "combined delta window is inconsistent");
 
             SVN_ERR (handler (composite, handler_baton));
@@ -411,7 +411,7 @@ do_random_combine_test (const char **msg,
 
       svn_pool_destroy (delta_pool);
 
-      SVN_ERR (compare_files (target, target_regen, dump_files, pool));
+      SVN_ERR (compare_files (target, target_regen, dump_files));
 
       fclose(source);
       fclose(middle);
