@@ -72,7 +72,7 @@ Candidate changes:
     Justification:  fixes malformed XML errors from large
                     ra_dav checkouts/updates/etc.  
     Votes:
-      +1: sussman
+      +1: sussman, david
 
   * r10148
     Fixes crash when deleting a revprop.
