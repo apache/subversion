@@ -730,6 +730,49 @@ void svn_swig_java_make_editor(JNIEnv *jenv,
   *edit_baton = make_baton(jenv, pool, java_editor, NULL);
 }
 
+/* This baton type is used for client prompt operations */
+typedef struct {
+  jobject callback;     /* Object to call back */
+  apr_pool_t *pool;     /* pool to use for errors */
+  JNIEnv *jenv;         /* Java native interface structure */
+} callback_baton_t;
+
+/* Pool cleanup handler. Removes global reference */
+static apr_status_t callback_baton_cleanup_handler(void *baton)
+{
+  callback_baton_t *callback_baton = (callback_baton_t *) baton;
+  JCALL1(DeleteGlobalRef, callback_baton->jenv, callback_baton->callback);
+  return APR_SUCCESS;
+}
+
+/* Create a callback baton */
+void *svn_swig_java_make_callback_baton(JNIEnv *jenv,
+                                        jobject callback,
+                                        apr_pool_t *pool)
+{
+  jobject globalref;
+  callback_baton_t *callback_baton;
+
+  globalref = JCALL1(NewGlobalRef, jenv, callback);
+  if (globalref == NULL)
+    {
+      /* Exception occured */
+      return 0;
+    }
+
+  callback_baton = apr_palloc(pool, sizeof(*callback_baton));
+
+  callback_baton->callback = globalref;
+  callback_baton->pool = pool;
+  callback_baton->jenv = jenv;
+
+  apr_pool_cleanup_register(pool, callback_baton, 
+                            callback_baton_cleanup_handler, 
+                            apr_pool_cleanup_null);
+
+  return callback_baton;
+}
+
 /* a notify function that executes a Java method on an object which is
    passed in via the baton argument */
 void svn_swig_java_notify_func(void *baton,
@@ -767,6 +810,38 @@ svn_error_t *svn_swig_java_log_message_receiver(void *baton,
 {
     return svn_error_create(APR_EGENERAL, NULL, "TODO: svn_swig_java_get_commit_log_func is not implemented yet");
 }
+
+/* Prompt for username */
+svn_error_t *svn_swig_java_client_prompt_func(const char **info,
+                                              const char *prompt,
+                                              svn_boolean_t hide,
+                                              void *baton,
+                                              apr_pool_t *pool)
+{
+  callback_baton_t *callback_baton;
+  JNIEnv *jenv;
+  jobject callback;
+  jstring jprompt;
+  jstring jresult;
+  jboolean jhide;
+  const char *c_str;
+
+  /* ### Add error checking */
+  callback_baton = (callback_baton_t *) baton;
+  jenv = callback_baton->jenv;
+  callback = callback_baton->callback;
+  jprompt = JCALL1(NewStringUTF, jenv, prompt);
+  jhide = hide ? JNI_TRUE : JNI_FALSE;
+  jresult = JCALL4(CallObjectMethod, jenv, callback, 
+                   svn_swig_java_mid_clientprompt_prompt, jprompt, jhide);
+  c_str = JCALL2(GetStringUTFChars, jenv, jresult, NULL);
+  *info = apr_pstrdup(pool, c_str);
+  JCALL2(ReleaseStringUTFChars, jenv, jresult, c_str);
+  JCALL1(DeleteLocalRef, jenv, jresult);
+  JCALL1(DeleteLocalRef, jenv, jprompt);
+  return SVN_NO_ERROR;
+}
+
 
 /* This baton type is used for stream operations */
 typedef struct {
