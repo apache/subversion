@@ -2201,12 +2201,12 @@ $
         repository access at all&mdash;and then will clean out the
         dead Berkeley log files from your live repository.</para>
 
-      <para>Even if you also have an incremental backup, you might want to run
-        this program on a regular basis.  For example, you might
-        consider adding <command>hot-backup.py</command> to a program
-        scheduler (such as <command>cron</command> on Unix systems).
-        Or, if you prefer fine-grained backup solutions, you could
-        have your post-commit hook script call
+      <para>Even if you also have an incremental backup, you might
+        want to run this program on a regular basis.  For example, you
+        might consider adding <command>hot-backup.py</command> to a
+        program scheduler (such as <command>cron</command> on Unix
+        systems).  Or, if you prefer fine-grained backup solutions,
+        you could have your post-commit hook script call
         <command>hot-backup.py</command> (see <xref
         linkend="svn-ch-5-sect-2.1" />), which will then cause a new
         backup of your repository to occur with every new revision
