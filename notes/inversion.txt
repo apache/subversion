@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.26 $ of this document.)
+              ($Revision: 1.27 $ of this document.)
 
 * Introduction
 
@@ -603,9 +603,16 @@ Although these two issues are not directly related, they both affect
 the order in which things happen in the repository, so we'll address
 them together.
 
+Below, a "lock" is a cookie consisting of user:num, where num is the
+same for all locks in this commit, and different from any other
+current locks (even ones with the same user).  Locks persist through
+server crashes (todo: can we implement such a thing efficiently?)
+
 Let's take the commit of foo:2 as an example:
 
-Step 1:  Create the new node for foo:2.
+  Step A: Put a lock on foo:1.
+
+  Step 1: Create the new node for foo:2.
 
             ________
            |F       |
@@ -613,14 +620,14 @@ Step 1:  Create the new node for foo:2.
            |        |
            |________|
 
-Nothing is attached to this new node, therefore the repository is in a
-sane state.  If the server crashes at this moment, there will be no
-problem (except that a cleanup thread might, at its leisure, delete
-the unreachable node).
+  Nothing is attached to this new node, therefore the repository is in a
+  sane state.  If the server crashes at this moment, there will be no
+  problem (except that a cleanup thread might, at its leisure, delete
+  the unreachable node, and remove the lock on the reachable node).
 
-The new node has the full contents of foo:2.
+  The new node has the full contents of foo:2.
 
-Step 2:  Create the back-link from foo:2 to foo:1.
+  Step 2: Create the back-link from foo:2 to foo:1.
 
             ________                ________
            |F       |              |F       |
@@ -629,93 +636,17 @@ Step 2:  Create the back-link from foo:2 to foo:1.
            |________|              |________|
 
 
-Again, the repository doesn't yet know that the new node even exists.
-The back-link is a pointer from foo:2 to foo:1, not the other way
-around, so foo:1 isn't even aware of the link.
+  Again, the repository doesn't yet know that the new node even
+  exists.  The back-link is a pointer from foo:2 to foo:1, not the
+  other way around, so foo:1 isn't even aware of the link.
 
-Both nodes have the full contents of their respective version; no
-diffs have been made yet.
+  Both nodes have the full contents of their respective version; no
+  diffs have been made yet.
 
-Step 3:  Make a lock.
+  Step B: Lock foo's parent node.
 
-Now, there are at least two ways we can do locks: the naive way, and
-the right way.  The naive way is:
-
-  You make a lock on version 2.  If anyone else tries to commit
-  from now until your lock is removed, they'll get bounced out with a
-  message about a commit being in progress right now.  Conversely, if
-  someone else has beaten you to the lock for version 2, then your
-  lock fails, so delete any new nodes you created and get out, telling
-  the user there's a commit in progress.
-
-However, that loses the nice property (which CVS has) that
-simultaneous commits don't interfere with each other unless they
-involve the same files.  (Actually, CVS locks by directory, but still,
-it's not as bad as locking the entire repository, even if only for a
-moment!)  Also, CVS doesn't require that your entire tree be
-up-to-date to commit, only the files you're committing.
-
-We can be that mellow and then some.  Here's how:
-
-  Below, a "lock" is a cookie consisting of user:num, where num is
-  the same for all locks in this commit, and different from any other
-  current locks (even ones with the same user).  Locks persist through
-  server crashes (todo: can we implement such a thing efficiently?)
-
-  1. Lock the nodes you're committing new versions for (not for adding
-     new files, though).  These primary locks will last throughout the
-     commit.  If you block on any of these locks, block on all of
-     them, so your commit will be atomic.  
-
-  2. Create the new, unattached nodes that will hold the new versions.
-     Fill them up with the new contents.  Create the back-links.
-
-  3. Lock the parents of the nodes you're committing (secondary
-     locks).  Again, if you block on any of these, block on all of 
-     them.
-
-  4. Set dir_entries in parents to point at the newly created
-     children.  Although this cannot be atomic if there are multiple
-     parents, it is safe because the server knows that a node doesn't
-     really exist if its parent is locked (amend the node-finding
-     algorithm given earlier to always follow back-links from a node
-     whose parent is locked, until you find a node with the same
-     lock as that parent).
-
-  5. Okay, very quickly now: lock the next available version number!
-
-  6. Remove all the other locks.
-
-  7. Unlock that version number!
-
-
-The only nodes involved in a commit are the ones being committed and
-their parents.  Furthermore, we don't actually care what version
-number this commit gets, as long as it's higher than the previous
-version number.  So the goal is not to prevent other commits from
-happening while this one is in progress, it's merely to guarantee that
-they don't interfere -- we don't care who finishes first and ends up
-called version 2 as opposed to version 3 (or 4, or whatever).
-
-Let's look more closely at the changing nodes.  The subject of the
-commit is not actually changing `foo'
-
-fooo
-
-  You don't lock any particular version, you just make a lock holding
-  the entities you're committing.  If anyone else tries to make a lock
-  that includes any of those entities, they'll be bounced out and told
-  to come back later.  Conversely, if any of the entities you're
-  trying to lock are already locked by someone else, then you get
-  bounced and told to come back later.
-
-fooo
-
-For reasons I will go into below, it's not clear that the right way is
-better than the naive way.  The jury is still out on this one...
-
-Step 4:  Change the link from the parent node, to point to the new
-foo:2 node (which in turn points to foo:1).
+  Step 3: Change the link in the parent node to point to the new foo:2
+  node (which in turn points to foo:1).
 
               \
             ___\____                    
@@ -734,52 +665,20 @@ foo:2 node (which in turn points to foo:1).
               |contents|          |contents|
               |________|          |________|
 
-The repository is still in a mostly sane state.  If the machine
-crashes now, there's this slightly weird situation in which a node for
-foo:2 is present in the tree, but myproj:2 doesn't exist yet.
+  The repository is still in a mostly sane state.  If the machine
+  crashes now, there's this slightly weird situation in which a node
+  for foo:2 is present in the tree, but the version `myproj:2' doesn't
+  exist yet.
 
-However, if you follow the three-step algorithm for retrieving FILE:N,
-you'll see that you still reach foo:1 just fine -- it's as though
-foo:2 isn't there.  Another way to look at it is that version 2 of the
-project does not exist yet, therefore you can't ask for it; if you ask
-for the head version, you'll get version 1.
+  However, if you follow the three-step algorithm for retrieving
+  FILE:N, you'll see that you still reach foo:1 just fine -- it's as
+  though foo:2 isn't there.  Another way to look at it is that version
+  2 of the project does not exist yet, therefore you can't ask for it;
+  if you ask for the head version, you'll get version 1.
 
-   [But I just thought of a problem: if someone else's simultaneous
-   commit finishes while you're at this stage, and then the machine
-   crashes, then there _will_ be a myproj:2, and it will include
-   *your* foo:2, even though your commit didn't complete.  This is one
-   reason naive locking might be better, but need to think about it
-   more...]
+  Step C: Put a lock version on 2 in the version array.
 
-Step 5: Replace foo:1's contents with a diff from foo:2.  This is
-optional, in that if you don't do it, the repository just uses more
-storage than it actually needs.  (Of course, there's a "diff-bit" on
-each node saying whether its contents are stored full-text or as a
-diff against the next youngest node that back-links to this one.)
-
-              \
-            ___\____                    
-           |D       |                   
-           |        |                   
-           | foo    |                   
-           |___\____|                   
-                \                       
-                 \                      
-               ___\____            ________
-              |F       |          |F       |
-              |        |          |        |
-              |  (1)------------->|        |
-              |        |          |        |
-              | full   |          | diffy  |
-              |contents|          |contents|
-              |________|          |________|
-
-Even now, the repository is quite sane.  If someone wants to retrieve
-foo:1 (which is the only foo publicly available), the server will
-reconstruct it by patching foo:2, which, although not globally
-visible, is available to the server.
-
-Step 6:  Instantiate version 2 in the version array.
+  Step 3: Hook up version 2 to the root node.
 
             ____________________________
            |___1_______2________3_______---->
@@ -795,14 +694,18 @@ Step 6:  Instantiate version 2 in the version array.
              /     \
             |       \
 
-(Or, if you discover that someone else's commit finished faster than
-yours and version 2 already exists, then instantiate the next
-available version.  But what root node do you point to, if the interim
-commit created a new root node?  This is the naive-vs-right locking
-question, must figure this out... Oh.  Okay, it may not be as bad as
-all that... must think.)
+  Step D: Remove all locks (starting from the most recent), the commit
+  is complete.
 
-Step 7:  Remove your lock, the commit is complete.
+You'll notice that nowhere in there did we give foo:1 diffy contents.
+A separate thread gambols about the repository, taking care of such
+mundane tasks.  There's no reason to slow up commits with that kind of
+bookkeeping.  (Of course, there's a "diff-bit" on each node, saying
+whether its contents are stored full-text or as a diff against the
+node that back-links to this one.)
+
+fooo
+
 
 ** How renames work
 
