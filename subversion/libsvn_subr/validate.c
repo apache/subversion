@@ -36,7 +36,7 @@
 svn_error_t *
 svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
 {
-  /* Since svn:mine-type can actually contain a full content type
+  /* Since svn:mime-type can actually contain a full content type
      specification, e.g., "text/html; charset=UTF-8", make sure we're
      only looking at the media type here. */
   const apr_size_t len = strcspn (mime_type, "; ");
