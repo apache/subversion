@@ -126,6 +126,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
         log_msg = "";
 
       svn_path_split_nts (path, &anchor, &target, pool);
+      target = svn_path_uri_decode (target, pool);
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

@@ -174,12 +174,11 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       /* We handle externals after the switch is complete, so that
          handling external items (and any errors therefrom) doesn't
          delay the primary operation.  */
-      SVN_ERR (svn_client__handle_externals
-               (traversal_info,
-                notify_func, notify_baton,
-                auth_baton,
-                FALSE,
-                pool));
+      SVN_ERR (svn_client__handle_externals (traversal_info,
+                                             notify_func, notify_baton,
+                                             auth_baton,
+                                             FALSE,
+                                             pool));
     }
   
   else if (entry->kind == svn_node_file)
