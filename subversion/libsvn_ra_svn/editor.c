@@ -313,6 +313,7 @@ static const svn_delta_editor_t ra_svn_editor = {
   ra_svn_add_file,
   ra_svn_open_file,
   ra_svn_apply_textdelta,
+  NULL, /* ### todo#510: implement ra_svn_apply_text() */
   ra_svn_change_file_prop,
   ra_svn_close_file,
   ra_svn_close_edit,

@@ -542,7 +542,7 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
  * have the proper lifetime). In general, it is recommended to simply
  * avoid keeping a parent directory baton in a file baton.
  */
-typedef struct
+typedef struct svn_delta_editor_t
 {
   /** Set the target revision for this edit.
    *
@@ -697,6 +697,11 @@ typedef struct
 
   /** Apply a text delta, yielding the new revision of a file.
    *
+   * ###############################################################
+   * ### WARNING: This function is deprecated.  Use apply_text() ###
+   * ###     instead, if you're implementing a new editor.       ###
+   * ###############################################################
+   *
    * @a file_baton indicates the file we're creating or updating, and the
    * ancestor file on which it is based; it is the baton set by some
    * prior @c add_file or @c open_file callback.
@@ -736,6 +741,55 @@ typedef struct
                                    apr_pool_t *pool,
                                    svn_txdelta_window_handler_t *handler,
                                    void **handler_baton);
+
+  /** Apply text to yield a file's contents in the new revision.
+   *
+   * @a file_baton indicates the file we're creating or updating, and the
+   * ancestor file on which it is based; it is the baton set by some
+   * prior @c add_file or @c open_file callback.
+   *
+   * @a target is a readable stream producing the new fulltext of the
+   * file.  If @a base is non-null, it is a readable stream producing
+   * the fulltext of the base file against which to diff target; this
+   * allows editors to generate svndiff deltas (for example, to
+   * transmit across the wire).  @a base is always optional.
+   *
+   * @a base_checksum is the hex md5 digest for the base text against
+   * which the delta is being applied; it is ignored if null, and may
+   * be ignored even if not null.  If it is not ignored, it must match
+   * the checksum of the base text against which svndiff data is
+   * applied, else the error SVN_ERR_CHECKSUM_MISMATCH is returned.
+   * (If there is no base text, there may still be an error if
+   * @a base_checksum is neither null nor the hex md5 checksum of the
+   * empty string).
+   *
+   * @a result_checksum is the hex md5 digest for the fulltext that
+   * results from this application.  It is ignored if null, but
+   * if not null, it must match the checksum of the result, else the
+   * error SVN_ERR_CHECKSUM_MISMATCH is returned.
+   *
+   * ### To resolve issue #510 ("invert textdelta interface"), we are
+   * first changing drivers to use the new interface, then changing
+   * editor implementations.  Therefore, the default editor returned
+   * by svn_delta_default_editor() will have an implementation of
+   * apply_text() that invokes @a editor->apply_textdelta with the
+   * same @a file_baton, and pushes svndiff windows at the resulting
+   * handlers, using @a base and @a target to generate the svndiff.
+   *
+   * Thus, the @a editor parameter is temporary; it is used only to
+   * get the apply_textdelta() function.  New implementations of
+   * apply_text() are free to ignore it; and when the last old editor
+   * is converted, the @a editor parameter will go away, and the
+   * default editor's implementation of apply_text() will be a no-op
+   * just like all the other editor functions.
+   */
+  svn_error_t *(*apply_text) (void *file_baton, 
+                              const char *base_checksum,
+                              const char *result_checksum,
+                              svn_stream_t *base,
+                              svn_stream_t *target,
+                              struct svn_delta_editor_t *editor,
+                              apr_pool_t *pool);
 
   /** Change the value of a file's property.
    *
