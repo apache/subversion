@@ -24,7 +24,8 @@ Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
-#BuildPreReq: apache >= %{apache_version}
+# The next line is needed because for some strange reason apxs requires httpd.
+BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
 BuildPreReq: autoconf >= 2.53
