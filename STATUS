@@ -67,15 +67,18 @@ make the threshold vote on one of these items, please move it to the
 section for approved changes.)
 
 
-    * Issue #1705
-      Exorcise apr_off_t.
-      Justification: It's a big headache we want to get rid of
-      now.  Creates crashes with the perl bindings.
-      Notes: breser (I'd vote for this but I don't think my
-                     vote counts).
+    * Issue #1705 (patch 291)
+      Change blame receivers line_no argument from apr_off_t to
+        apr_int64_t.
+      Justification:  Fixes the most user visible problem from the
+        apr_off_t issue.
       Votes:
-       +1: ghudson
-       -1: bliss (The current patch [#2] has bugs. See the issue tracker!)
+
+    * Issue #1713
+      Change svn_filesize_t to a signed value.
+      Justification:  Inconsistent with what we support and breaks
+        SVN_INVALID_FILESIZE.
+      Votes:
 
     * r8368, r8394, r8467
       Add capability to build Subversion Perl bindings RPM.
