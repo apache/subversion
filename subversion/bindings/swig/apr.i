@@ -44,25 +44,23 @@ typedef unsigned long size_t;
 /* Define the time type (rather than picking up all of apr_time.h) */
 typedef apr_int64_t apr_time_t;
 
+typedef apr_int32_t time_t;
+
 /* -----------------------------------------------------------------------
-   handle long long values so that apr_time_t works well
+   handle the mappings for apr_time_t
+
+   Note: we don't generalize this to 'long long' since SWIG is starting
+   to handle that.
 */
 
-%typemap(python,in) long long {
-    $1 = PyLong_AsLongLong($input);
-}
+%apply long long { apr_time_t };
 
-/* 'long long *' will always be an OUTPUT parameter */
-%typemap(ignore) long long * (long long temp) {
+/* 'apr_time_t *' will always be an OUTPUT parameter */
+%typemap(ignore) apr_time_t * (apr_time_t temp) {
     $1 = &temp;
 }
-%typemap(python,argout) long long * {
+%typemap(python,argout) apr_time_t * {
     $result = t_output_helper($result, PyLong_FromLongLong(*$1));
-}
-
-/* deal with return a return value */
-%typemap(python,out) long long {
-    $result = t_output_helper($result, PyLong_FromLongLong($1));
 }
 
 /* -----------------------------------------------------------------------
