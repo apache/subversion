@@ -1188,8 +1188,8 @@ msgstr ""
 "      'I' Ignored    - ignoriert\n"
 "      'M' Modified   - verändert\n"
 "      'R' Replaced   - ersetzt\n"
-"      'X' Objekt ist nicht versioniert, wird aber von einer 'svn:externals'\n"
-"          Definition verwendet\n"
+"      'X' Objekt ist nicht versioniert, wird aber von einem 'svn:externals'\n"
+"          Verweis verwendet\n"
 "      '?' Objekt ist nicht unter Versionskontrolle\n"
 "      '!' Objekt fehlt (durch nicht-svn Befehl entfernt) oder unvollständig\n"
 "      '~' versioniertes Objekt von einem Objekt anderer Art behindert\n"
@@ -1421,12 +1421,12 @@ msgid ""
 "Fetching external item into '%s'\n"
 msgstr ""
 "\n"
-"Hole externes Objekt nach '%s'\n"
+"Hole externen Verweis nach '%s'\n"
 
 #: clients/cmdline/notify.c:217
 #, c-format
 msgid "Exported external at revision %ld.\n"
-msgstr "Externes Objekt exportiert, Revision %ld.\n"
+msgstr "Externer Verweis exportiert, Revision %ld.\n"
 
 #: clients/cmdline/notify.c:218
 #, c-format
@@ -1436,7 +1436,7 @@ msgstr "Exportiert, Revision %ld.\n"
 #: clients/cmdline/notify.c:226
 #, c-format
 msgid "Checked out external at revision %ld.\n"
-msgstr "Externes Objekt ausgecheckt, Revision %ld.\n"
+msgstr "Externer Verweis ausgecheckt, Revision %ld.\n"
 
 #: clients/cmdline/notify.c:227
 #, c-format
@@ -1446,7 +1446,7 @@ msgstr "Ausgecheckt, Revision %ld.\n"
 #: clients/cmdline/notify.c:237
 #, c-format
 msgid "Updated external to revision %ld.\n"
-msgstr "Externes Objekt aktualisiert zu Revision %ld.\n"
+msgstr "Externer Verweis aktualisiert zu Revision %ld.\n"
 
 #: clients/cmdline/notify.c:238
 #, c-format
@@ -1456,7 +1456,7 @@ msgstr "Aktualisiert zu Revision %ld.\n"
 #: clients/cmdline/notify.c:246
 #, c-format
 msgid "External at revision %ld.\n"
-msgstr "Externes Objekt, Revision %ld.\n"
+msgstr "Externer Verweis, Revision %ld.\n"
 
 #: clients/cmdline/notify.c:247
 #, c-format
@@ -1465,15 +1465,15 @@ msgstr "Revision %ld.\n"
 
 #: clients/cmdline/notify.c:259
 msgid "External export complete.\n"
-msgstr "Externes Objekt vollständig exportiert.\n"
+msgstr "Export des externen Verweises abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:260
 msgid "Export complete.\n"
-msgstr "Export vollständig.\n"
+msgstr "Export abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:267
 msgid "External checkout complete.\n"
-msgstr "Externes Objekt vollständig ausgecheckt.\n"
+msgstr "Auschecken des externen Verweises abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:268
 msgid "Checkout complete.\n"
@@ -1481,7 +1481,7 @@ msgstr "Auschecken abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:275
 msgid "External update complete.\n"
-msgstr "Externes Objekt vollständig aktualisiert.\n"
+msgstr "Aktualisierung des externen Verweises abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:276
 msgid "Update complete.\n"
@@ -1494,7 +1494,7 @@ msgid ""
 "Performing status on external item at '%s'\n"
 msgstr ""
 "\n"
-"Hole Status des externen Objekts in '%s'\n"
+"Hole Status des externen Verweises in '%s'\n"
 
 #: clients/cmdline/notify.c:300
 #, c-format
@@ -1860,11 +1860,11 @@ msgstr "Eindeutige Namen ausgegangen"
 
 #: include/svn_error_codes.h:212
 msgid "Framing error in pipe protocol"
-msgstr "Rahmenfehler im pipe Protokoll"
+msgstr "Rahmenfehler im 'Pipe' Protokoll"
 
 #: include/svn_error_codes.h:216
 msgid "Read error in pipe"
-msgstr "Lesefehler in pipe"
+msgstr "Lesefehler in 'Pipe'"
 
 #: include/svn_error_codes.h:226
 msgid "Unexpected EOF on stream"
@@ -2278,7 +2278,7 @@ msgstr "Alle Anmeldemöglichkeiten erschöpft"
 
 #: include/svn_error_codes.h:669
 msgid "Read access denied for root of edit"
-msgstr "Lesezugriff verweigert für Basis dieser Veränderung"
+msgstr "Lesezugriff verweigert für Basis dieser Änderung"
 
 #: include/svn_error_codes.h:674
 msgid "Item is not readable."
@@ -3367,7 +3367,7 @@ msgstr "Keine solche Transaktion"
 #: libsvn_ra/ra_loader.c:209
 #, c-format
 msgid "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr "Version des ZM plugin '%s' stimmen nicht überein: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
+msgstr "Version des ZM-Plugin '%s' stimmt nicht überein: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
 
 #: libsvn_ra/ra_loader.c:225
 #, c-format
@@ -3789,7 +3789,7 @@ msgstr "Nichtlesbarer Pfad angetroffen; Zugriff verweigert"
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
-msgstr "Kann Fehlemeldung von APR nicht umkodieren"
+msgstr "Kann Fehlermeldung von APR nicht umkodieren"
 
 #: libsvn_subr/opt.c:148
 msgid ""
@@ -4497,8 +4497,8 @@ msgid ""
 "     actual:  %s\n"
 msgstr ""
 "Prüfsummenfehler ist Anzeichen für beschädigte Textbasis: '%s'\n"
-"     erwartet:  %s\n"
-"  tatsächlich:  %s\n"
+"      erwartet:  %s\n"
+"   tatsächlich:  %s\n"
 
 #: libsvn_wc/translate.c:131
 #, c-format
@@ -4664,7 +4664,7 @@ msgid ""
 "                             use by another process"
 msgstr ""
 "warte anstatt abzubrechen, wenn das Projektarchiv\n"
-"durch einen anderen Prozess belegt ist"
+"                             durch einen anderen Prozess belegt ist"
 
 #: svnadmin/main.c:282
 msgid ""
@@ -4840,7 +4840,7 @@ msgstr ""
 "hängenden Aktionen (pre-revprop-change, post-revprop-change) nicht auszulösen\n"
 "(z.B. falls Sie keine E-Mail Benachrichtigung durch Ihre 'post-revprop-change'\n"
 "Aktion auslösen wollen oder die Änderung von Revisionseigenschaften in der\n"
-"'pre-revprop-change' Aktion nicht gestattet wird)\n"
+"'pre-revprop-change' Aktion nicht gestattet wird).\n"
 "ACHTUNG: Revisionseigenschaften werden nicht versioniert. Dieser Befehl\n"
 "überschreibt also die vorherige Log-Meldung endgültig.\n"
 
@@ -5368,7 +5368,7 @@ msgstr "gibt den anhängenden Zeilenumbruch nicht aus"
 
 #: svnversion/main.c:200
 msgid "last changed rather than current revisions"
-msgstr "eher letzte geänderte, als aktuelle Revisionen"
+msgstr "gibt letzte geänderte statt aktueller Revisionen aus"
 
 #: svnversion/main.c:287
 msgid "exported\n"
