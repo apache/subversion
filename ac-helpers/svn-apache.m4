@@ -18,17 +18,17 @@ AC_ARG_WITH(apache,
 	if test "$withval" = "yes"; then
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)
 	fi
-	if test -r $withval/src/modules/dav/main/mod_dav.h; then
-		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/src/include -I$withval/src/os/unix -I$withval/src/modules/dav/main -I$withval/src/lib/apr/include -I$withval/src/lib/aputil"
-		APACHE_TARGET=$withval/src/modules/dav/svn
+
+        if test -r $withval/modules/dav/main/mod_dav.h; then
+		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/include -I$withval/os/unix -I$withval/modules/dav/main -I$withval/srclib/apr/include -I$withval/srclib/apr-util/include"
+		APACHE_TARGET=$withval/modules/dav/svn
 		BINNAME=mod_dav_svn.a
 
   		AC_MSG_RESULT(yes - Apache 2.0.x)
 
-                if test ! -r $withval/src/lib/apr/include/apr.h; then
+                if test ! -r $withval/srclib/apr/include/apr.h; then
                         AC_MSG_WARN(Apache 2.0.x is not configured)
                 fi
-
 	else
 		dnl if they pointed us at the wrong place, then just bail
 		AC_MSG_ERROR(no - Unable to locate $withval/src/modules/dav/main/mod_dav.h)
