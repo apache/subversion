@@ -5,8 +5,8 @@ TODO for locking
 MUST HAVE
 ---------
 
-* scan the whole patch for TODO items introduced on the branch (all, please)
-  
+* scan the whole patch for TODO items introduced on the branch 
+  (fitz doing triage right now)
 
 NICE TO HAVE
 ------------
