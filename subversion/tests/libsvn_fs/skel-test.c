@@ -302,7 +302,7 @@ parse_implicit_length (const char **msg,
 static void
 put_explicit_length (svn_stringbuf_t *str, const char *data, int len, char sep)
 {
-  char *buf = (char *) alloca (len + 100);
+  char *buf = malloc (len + 100);
   int length_len;
 
   if (! skel_is_space (sep))
@@ -316,6 +316,7 @@ put_explicit_length (svn_stringbuf_t *str, const char *data, int len, char sep)
   memcpy (buf + length_len, data, len);
 
   svn_stringbuf_appendbytes (str, buf, length_len + len);
+  free (buf);
 }
 
 

@@ -68,7 +68,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 
   /* pull the username and password from the client */
   ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                     SVN_RA_AUTH_SIMPLE_PASSWORD, 
+                                     svn_ra_auth_simple_password, 
                                      ras->callback_baton, ras->pool);      
   authenticator = (svn_ra_simple_password_authenticator_t *) a;      
   authenticator->get_user_and_pass (&uname, &pword,
