@@ -51,6 +51,20 @@ $ svn status -v myfile
       <variablelist>
         
         <varlistentry>
+          <term><option>--diff-cmd</option> <replaceable>CMD</replaceable></term>
+          <listitem>
+            <para>Specifies the diff command to use to show
+            differences between files.  When <command>svn
+            diff</command> is invoked, it uses Subversion's internal
+            diff engine, which provides unified diffs by default.  If
+            you want to use an external diff program, use
+            <option>--diff-cmd</option>.  You can pass switches to the
+            diff program with the <option>--extensions</option>
+            switch (More on that later in this section).</para>
+          </listitem>
+        </varlistentry>
+      
+        <varlistentry>
           <term><option>--dry-run</option></term>
           <listitem>
             <para>Goes through all the motions of running a command,
@@ -71,18 +85,17 @@ $ svn status -v myfile
         </varlistentry>
 
         <varlistentry>
-          <term><option>--extensions</option><replaceable>"ARGS"</replaceable></term>
+          <term><option>--extensions</option> (<option>-x</option>)
+          <replaceable>"ARGS"</replaceable></term>
           <listitem>
             <para>Specifies an argument or arguments that Subversion
-              should pass to GNU diff when providing differences
-              between files. If you wish to pass multiple arguments,
-              you must enclose all of them in quotes (for example,
-              <command>svn diff -x "-b -E"</command>).  In addition,
-              Subversion will display unified differences by default,
-              so if you want default diff output, you can pass the
-              <option>--normal</option> switch to diff
-              (e.g. <command>svn diff -x "--normal"</command>).
-              </para>
+              should pass to an external diff command when providing
+              differences between files.  If you wish to pass multiple
+              arguments, you must enclose all of them in quotes (for
+              example, <command>svn diff --diff-cmd /usr/bin/diff "-x
+              "-b -E"</command>).  This switch can
+              <emphasis>only</emphasis> be used if you also pass the
+              <option>--diff-cmd</option> switch.</para>
           </listitem>
         </varlistentry>
       
@@ -1117,6 +1130,7 @@ D         over-there
 --revision (-r) REV
 --extensions (-x) "ARGS"
 --non-recursive (-N)
+--diff-cmd CMD
 --username USER
 --password PASS
 --no-auth-cache
@@ -1185,11 +1199,13 @@ Index: COMMITTERS
 +++ COMMITTERS	(revision 3500)
             </screen>
 
-            <para>Use <option>-x</option> to pass arguments directly
-              to the external diff program</para>
+            <para>Use <option>--diff-cmd</option>
+              <replaceable>CMD</replaceable> <option>-x</option> to
+              pass arguments directly to the external diff
+              program</para>
             
             <screen>
-svn diff -x "-i -b" COMMITTERS 
+svn diff --diff-cmd /usr/bin/diff -x "-i -b" COMMITTERS 
 Index: COMMITTERS
 ===================================================================
 0a1,2
@@ -3769,9 +3785,9 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
       <para><command>svnlook</command> is typically used by the
         repository hooks, but a repository administrator might find it
         useful for diagnostic purposes.  Since
-        <command>svnlook</command> can only be used on the machine that
-        holds the repository, it takes paths as targets and not
-        URLs.</para>
+        <command>svnlook</command> works via direct repository access
+        (and thus can only be used on the machine that holds the
+        repository), it takes paths as targets and not URLs.</para>
 
       <para>If no revision or transaction is specified,
         <command>svnlook</command> defaults to the youngest (most
@@ -4067,7 +4083,7 @@ trunk/vendors/deli/
             <title>Description</title>
 
             <para>Displays the help message for svnlook.  This
-              command, like it's brother <command>svn</command>, is
+              command, like it's brother <command>svn help</command>, is
               also your friend, even though you never call it anymore
               and forgot to invite it to your last party.</para>
           </refsect1>
