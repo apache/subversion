@@ -33,9 +33,9 @@ Item = wc.StateItem
 # data.  In theory this data has different interpretations when
 # converting from 2 different charsets into UTF-8.
 
-i18n_filename =  "bÔçÅ"
+i18n_filename =  "b���"
 
-i18n_logmsg = "drieÃ«ntwintig keer was Ã©Ã©n keer teveel"
+i18n_logmsg = "drieëntwintig keer was één keer teveel"
 
 
 ######################################################################
@@ -60,7 +60,7 @@ def basic_utf8_conversion(sbox):
     # be able to set just the encoding by using ".1252" (that's codepage
     # 1252, which is almost but not quite entirely unlike tea; um, I mean
     # it's very similar to ISO-8859-1).
-    #                                     -- Branko Čibej <brane@xbc.nu>
+    #                                     -- Branko Cibej <brane@xbc.nu>
     locale.setlocale(locale.LC_ALL, '.1252')
   else:
     locale.setlocale(locale.LC_ALL, 'en_US.ISO8859-1')
