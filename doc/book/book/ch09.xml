@@ -21,7 +21,7 @@
       <command>svn</command>, the subcommand you wish to use
       <footnote><para>Yes, yes, you don't need a subcommand to use the
       <option>--version</option> switch, but we'll get to that in just
-      a minute.</para> </footnote>, and any switches or targets that
+      a minute.</para></footnote>, and any switches or targets that
       you wish to operate on&mdash;there is no specific order that the
       subcommand and the switches must appear in.  For example, all of
       the following are valid ways to use <command>svn
@@ -399,7 +399,7 @@ $ svn log -r 1729:{2002-02-17}
               which files in your working copy are out-of-date.
               This doesn't actually update any of your
               files&mdash;it just shows you which files will be
-              updated if you run <command>svn update </command>.
+              updated if you run <command>svn update</command>.
             </para>
           </listitem>
         </varlistentry>
@@ -2157,8 +2157,8 @@ r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
             log</command> normally prints out a dashed line at the
             beginning of a log message, after each subsequent log
             message, and following the final log message.  If you
-            ran svn log on a range of two revisions, you would get
-            this:</para>
+            ran <command>svn log</command> on a range of two
+            revisions, you would get this:</para>
           <screen>
 $ svn log -r 14:15
 ------------------------------------------------------------------------
@@ -3848,7 +3848,7 @@ Updated to revision 30.
           <listitem>
             <para>When loading a dumpfile, root paths at
             <replaceable>DIR</replaceable> instead of
-            <replaceable>/</replaceable>.</para>
+            <filename>/</filename>.</para>
           </listitem>
         </varlistentry>
 
@@ -3893,7 +3893,7 @@ Updated to revision 30.
               created for you.<footnote><para>Remember,
               <command>svnadmin</command> works only with local
               <emphasis>paths</emphasis>, not
-              <emphasis>URL</emphasis>s.</para></footnote></para>
+              <emphasis>URLs</emphasis>.</para></footnote></para>
           </refsect1>
 
         <refsect1>
@@ -4096,7 +4096,7 @@ Content-length: 101
         <refnamediv>
           <refname>svnadmin list-dblogs</refname>
           <refpurpose>Ask Berkeley DB which log files exist for a given
-          svn repository.</refpurpose>
+          Subversion repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4355,8 +4355,8 @@ The latest repos revision is 34.
 $ svnadmin rmtxns /usr/local/svn/repos/ 1w 1x
 </screen>
 
-          <para>Fortunately, the output of svn lstxns works great as
-            the input for rmtxns:</para>
+          <para>Fortunately, the output of <command>lstxns</command>
+            works great as the input for <command>rmtxns</command>:</para>
 
           <screen>
 $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`

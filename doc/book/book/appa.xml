@@ -272,7 +272,7 @@ Status against revision:   1066
       item.  In the example above, the asterisk indicates that
       <filename>faces.html</filename> would be patched if we updated,
       and that <filename>bloo.png</filename> is a newly added file in
-      the repository.  (The <command>-</command> next to
+      the repository.  (The <literal>-</literal> next to
       <filename>bloo.png</filename> means that it doesn't yet exist in
       the working copy.)</para>
 
@@ -303,10 +303,10 @@ X    Resource is external to this working copy (comes from another
     <!-- ###TODO:  This paragraph should be moved elsewhere.  We are
                    talking about status codes here, and not update.
                    Although CVS uses update as a form of status... -->
-    <para>Subversion has combined the CVS <command>P</command> and
-      <command>U</command> codes into just <command>U</command>.  When
+    <para>Subversion has combined the CVS <literal>P</literal> and
+      <literal>U</literal> codes into just <literal>U</literal>.  When
       a merge or conflict occurs, Subversion simply prints
-      <command>G</command> or <command>C</command>, rather than a
+      <literal>G</literal> or <literal>C</literal>, rather than a
       whole sentence about it.</para>
 
     <para>For a more detailed discussion of <command>svn
@@ -339,7 +339,7 @@ X    Resource is external to this working copy (comes from another
       up with a working copy that contains a copy of your project for
       every branch and tag you have.<footnote><para>That is, providing
       you don't run out of disk space before your checkout
-      finishes.</para> </footnote></para>
+      finishes.</para></footnote></para>
     </warning>
 
   </sect1>
@@ -373,10 +373,10 @@ X    Resource is external to this working copy (comes from another
     <title>Conflict Resolution</title>
 
     <para>CVS marks conflicts with in-line <quote>conflict
-      markers</quote>, and prints a <command>C</command> during an
+      markers</quote>, and prints a <literal>C</literal> during an
       update.  Historically, this has caused problems, because CVS
       isn't doing enough.  Many users forget about (or don't see) the
-      <command>C</command> after it whizzes by on their terminal.
+      <literal>C</literal> after it whizzes by on their terminal.
       They often forget that the conflict-markers are even present,
       and then accidentally commit files containing
       conflict-markers.</para>

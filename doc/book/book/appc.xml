@@ -451,13 +451,13 @@
         <command>svn commit</command>!  If you use this technique,
         you're giving users the opportunity to stomp on each others'
         changes.  In particular, a WebDAV client might accidentally
-        overwrite a change committed by regular svn client.</para>
+        overwrite a change committed by a regular Subversion client.</para>
 
       <para>On the other hand, if you set up your environment very
         carefully, you may mitigate the risk.  For example, if
         <emphasis>all</emphasis> of your users are working though
-        basic WebDAV clients (rather than svn clients), then things
-        should be fine.</para>
+        basic WebDAV clients (rather than Subversion clients), then
+        things should be fine.</para>
 
     </sect2>
     

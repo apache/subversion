@@ -798,8 +798,8 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         demonstrated in this example.  Now if we were to set the
         <literal>JOESSH</literal> environment variable, its value
         would override the entire value of the tunnel
-        variable&mdash;$JOESSH would be executed instead of
-        <filename>/opt/alternate/ssh -p 29934</filename>.</para>
+        variable&mdash;<command>$JOESSH</command> would be executed
+        instead of <command>/opt/alternate/ssh -p 29934</command>.</para>
 
       <para>A final note: when using <literal>svn+ssh://</literal>
         URLs to access a repository, remember that it's the
@@ -1028,7 +1028,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
         specified by the <literal>SVNParentPath</literal> directive
         are actually Subversion repositories.  This is a particularly
         convenient syntax in that, unlike the use of the
-        <filename>SVNPath</filename> directive, you don't have to
+        <literal>SVNPath</literal> directive, you don't have to
         restart Apache in order to create and network new
         repositories.</para>      
 
@@ -1116,7 +1116,7 @@ ServerName svn.example.com
          accessible to the world.  Until you configure some
          authentication and authorization policies, the Subversion
          repositories you make available via the
-         <filename>Location</filename> directive will be generally
+         <literal>Location</literal> directive will be generally
          accessible to everyone.  In other words,</para>
       
       <itemizedlist>
@@ -1445,7 +1445,7 @@ ssl-client-cert-password = somepassword
           configuration directives.  Like the
           <literal>Location</literal> directive, these blocks have
           starting and ending tags, and you would nest them inside
-          your <filename>&lt;Location&gt;</filename> block.</para>
+          your <literal>&lt;Location&gt;</literal> block.</para>
   
         <para>The parameters present on the <literal>Limit</literal>
           and <literal>LimitExcept</literal> directives are HTTP

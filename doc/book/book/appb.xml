@@ -300,7 +300,7 @@ svn_error: &hellip; The specified activity does not exist.
 
         <para>The solution is to make sure apr-util compiles against
           DB-4.  You can do this by passing specific switches to
-          either apr-util's or apache's configure: "--with-dbm=db4
+          either apr-util's or Apache's configure: "--with-dbm=db4
           --with-berkeley-db=/the/db/prefix".</para>
       </sect3>
 
@@ -446,8 +446,8 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
           <filename>/trunk</filename> to
           <filename>/branches/mybranch</filename>, then the repository
           understands that every file in the branch has a
-          "predecessor" in the trunk.  Running <filename>svn log
-          --verbose</filename> will show you the historical copy, so
+          "predecessor" in the trunk.  Running <command>svn log
+          --verbose</command> will show you the historical copy, so
           you can see the rename:</para>
 
 <screen>

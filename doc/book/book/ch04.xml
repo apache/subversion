@@ -682,9 +682,6 @@ $ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk my-calc-branch
 U   my-calc-branch/integer.c
 </screen>
 
-      <!-- ### fix the damn left arrow quoting problem in both screen
-      examples -->
-      
     </sect2>
 
     <sect2 id="svn-ch-4-sect-3.2">
@@ -1263,7 +1260,7 @@ Committed revision 1390.
   <sect1 id="svn-ch-4-sect-5">
     <title>Switching a Working Copy</title>
 
-    <para> The <command>svn switch</command> command transforms an
+    <para>The <command>svn switch</command> command transforms an
       existing working copy into a different branch.  While this
       command isn't strictly necessary for working with branches, it
       provides a nice shortcut to users.  In our earlier example,
@@ -1517,7 +1514,7 @@ Committed revision 352.
 
       <para>Now there is a new directory in the repository,
         <filename>/calc/tags/mytag</filename>, which is an exact
-        snapshot of your working copy&mdash;mixed revisions, urls,
+        snapshot of your working copy&mdash;mixed revisions, URLs,
         and all.</para>
 
       <para>Other users have found interesting uses for this feature.
