@@ -62,7 +62,6 @@ typedef struct svn_ra_plugin_t
      returns successfully, that *NEW_REVISION will be set to the
      repository's new revision number resulting from the commit. */
   svn_error_t *(*get_commit_editor) (void *session_baton,
-                                     svn_string_t *root_path,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
                                      svn_revnum_t *new_revision);
@@ -73,8 +72,7 @@ typedef struct svn_ra_plugin_t
      working copy. */
   svn_error_t *(*do_checkout) (void *session_baton,
                                const svn_delta_edit_fns_t *editor,
-                               void *edit_baton,
-                               svn_string_t *root_path);
+                               void *edit_baton);
 
 
   /* Ask the network layer to update a working copy from URL.
@@ -99,7 +97,6 @@ typedef struct svn_ra_plugin_t
      value of report_editor->close_edit() contains the result of the
      entire update.  */
   svn_error_t *(*do_update) (void *session_baton,
-                             svn_string_t *root_path,
                              const svn_delta_edit_fns_t **report_editor,
                              void **report_baton,
                              const svn_delta_edit_fns_t *update_editor,
