@@ -1,4 +1,4 @@
-Version 0.16.1 (released 6 Jan 2003, revision ?)
+Version 0.16.1 (released 6 Jan 2003, revision 4276)
 
  User-visible changes:
  * ra_svn network layer (apache alternative) now tested & ssh-tunnelable
