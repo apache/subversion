@@ -3,7 +3,7 @@ http://svn.collab.net/repos/svn/tags/0.31.0
 
  User-visible changes:
  * new 'svnlook history' command (and removal of 'svnadmin lscr').
- * new 'auto-props' feature can set properties during 'svn add/import'
+ * new 'auto-props' feature can set file properties during 'svn add/import'
  * win32 client now properly converts UTF8 to console-locale. (r7168, #872)
  * 'svn up' now notices when svn:externals value changes. (r7256, #1519)
  * authentication changes:
