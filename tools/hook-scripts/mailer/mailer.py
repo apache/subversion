@@ -7,7 +7,8 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# USAGE: mailer.py REPOS-DIR REVISION [CONFIG-FILE]
+# USAGE: ./mailer.py commit     REPOS-DIR REVISION [CONFIG-FILE]
+#        ./mailer.py propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
