@@ -1,9 +1,14 @@
 #! /bin/sh
 
-echo "buildcheck: checking installation..."
-
 # Initialize parameters
-NEON_CHECK_CONTROL="$1"
+VERSION_CHECK="$1"
+NEON_CHECK_CONTROL="$2"
+
+if test "$VERSION_CHECK" != "--release"; then
+  echo "buildcheck: checking installation..."
+else
+  echo "buildcheck: checking installation for a source release..."
+fi
 
 #--------------------------------------------------------------------------
 # autoconf 2.50 or newer
@@ -54,18 +59,22 @@ echo "buildcheck: autoheader version $ah_version (ok)"
 #
 LIBTOOL_WANTED_MAJOR=1
 LIBTOOL_WANTED_MINOR=4
+LIBTOOL_WANTED_PATCH=
+LIBTOOL_WANTED_VERSION=1.4
 
-# Solaris requires at least 1.4.3
-case `uname -sr` in
-  SunOS\ 5.*)
-    LIBTOOL_WANTED_PATCH=3
-    LIBTOOL_WANTED_VERSION=1.4.3
-    ;;
- *)
-    LIBTOOL_WANTED_PATCH=
-    LIBTOOL_WANTED_VERSION=1.4
-    ;;
-esac
+# The minimum version for source releases is 1.4.3,
+# because it's required by (at least) Solaris.
+if test "$VERSION_CHECK" = "--release"; then
+  LIBTOOL_WANTED_PATCH=3
+  LIBTOOL_WANTED_VERSION=1.4.3
+else
+  case `uname -sr` in
+    SunOS\ 5.*)
+      LIBTOOL_WANTED_PATCH=3
+      LIBTOOL_WANTED_VERSION=1.4.3
+      ;;
+  esac
+fi
 
 libtool=`which glibtool 2>/dev/null`
 if test ! -x "$libtool"; then

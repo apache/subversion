@@ -166,7 +166,7 @@ fi
 # executable on export from svn.
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
-(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh)
+(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh --release)
 
 ### Copy all the pre-built docs, so we ship with ready documentation.
 echo "Copying new docs into sandbox..."
