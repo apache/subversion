@@ -205,8 +205,8 @@ _svnadmin ()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='create createtxn dump help h ? load lscr list-dblogs list-unused-dblogs lstxns \
-	      recover rmtxns setlog'
+	cmds='create createtxn dump help h ? load lscr list-dblogs \
+	      list-unused-dblogs lstxns recover rmtxns setlog verify'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -215,8 +215,7 @@ _svnadmin ()
 
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
-	optsParam="--on-disk-template|--in-repos-template|-r|--revision|
-	           |--parent-dir"
+	optsParam="-r|--revision|--parent-dir"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -230,11 +229,10 @@ _svnadmin ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	create)
-		cmdOpts="--on-disk-template --in-repos-template \
-		         --bdb-txn-nosync"
+		cmdOpts="--bdb-txn-nosync --config-dir"
 		;;
-	create)
-		cmdOpts="-r --revision --config-dir"
+	createtxn)
+		cmdOpts="-r --revision"
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet"
