@@ -118,6 +118,10 @@ typedef struct {
      for temporary construction of relative file names. */
   svn_stringbuf_t *pathbuf;
 
+  /* If a directory, this may contain a hash of prophashes returned
+     from doing a depth 1 PROPFIND. */
+  apr_hash_t *children;
+
   /* A subpool.  It's about memory.  Ya dig? */
   apr_pool_t *pool;
 
@@ -288,14 +292,14 @@ static svn_error_t *set_special_wc_prop (const char *key,
 }
 
 
-static void add_props(const svn_ra_dav_resource_t *r,
+static void add_props(apr_hash_t *props,
                       prop_setter_t setter,
                       void *baton,
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, r->propset); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
       const void *vkey;
       void *vval;
@@ -710,7 +714,7 @@ static svn_error_t *fetch_file(ne_session *sess,
     }
 
   /* Add the properties. */
-  add_props(rsrc, editor->change_file_prop, file_baton, pool);
+  add_props(rsrc->propset, editor->change_file_prop, file_baton, pool);
 
   /* store the version URL as a property */
   err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, pool);
@@ -1265,7 +1269,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                               NULL,
                                               NULL,
                                               subpool));
-      add_props(rsrc, editor->change_dir_prop, this_baton, subpool);
+      add_props(rsrc->propset, editor->change_dir_prop, this_baton, subpool);
 
       /* finished processing the directory. clear out the gunk. */
       svn_pool_clear(subpool);
@@ -1727,6 +1731,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
   const char *att;
   svn_revnum_t base;
   const char *name;
+  const char *bc_url;
   svn_stringbuf_t *cpath = NULL;
   svn_revnum_t crev = SVN_INVALID_REVNUM;
   dir_item_t *parent_dir;
@@ -1835,6 +1840,51 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Property fetching is implied in addition. */
       TOP_DIR(rb).fetch_props = TRUE;
+
+      bc_url = get_attr(atts, "bc-url");
+      if (bc_url)
+        {
+          /* Cool, we can do a pre-emptive depth-1 propfind on the
+             directory; this prevents us from doing individual
+             propfinds on added-files later on.  */
+          apr_hash_t *bc_children;
+          CHKERR( svn_ra_dav__get_props(&bc_children,
+                                        rb->ras->sess2,
+                                        bc_url,
+                                        NE_DEPTH_ONE,
+                                        NULL, NULL /* allprops */,
+                                        TOP_DIR(rb).pool) );
+          
+          /* re-index the results into a more usable hash.
+             bc_children maps bc-url->resource_t, but we want the
+             dir_item_t's hash to map vc-url->resource_t. */
+          if (bc_children)
+            {
+              apr_hash_index_t *hi;
+              TOP_DIR(rb).children = apr_hash_make (TOP_DIR(rb).pool);
+
+              for (hi = apr_hash_first(TOP_DIR(rb).pool, bc_children);
+                   hi; hi = apr_hash_next(hi))
+                {
+                  const void *key;
+                  void *val;
+                  svn_ra_dav_resource_t *rsrc;
+                  const svn_string_t *vc_url;
+
+                  apr_hash_this(hi, &key, NULL, &val);
+                  rsrc = val;
+
+                  vc_url = apr_hash_get (rsrc->propset,
+                                         SVN_RA_DAV__PROP_CHECKED_IN,
+                                         APR_HASH_KEY_STRING);
+                  if (vc_url)
+                    apr_hash_set (TOP_DIR(rb).children,
+                                  vc_url->data, vc_url->len,
+                                  rsrc->propset);                  
+                }
+            }        
+        }
+
       break;
 
     case ELEM_open_file:
@@ -1984,7 +2034,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 static svn_error_t *
 add_node_props (report_baton_t *rb, apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav_resource_t *rsrc = NULL;
+  apr_hash_t *props = NULL;
 
   /* Do nothing if we aren't fetching content.  */
   if (!rb->fetch_content)
@@ -1995,14 +2046,23 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
       if (! rb->fetch_props)
         return SVN_NO_ERROR;
 
-      /* Fetch file props. */
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                             rb->ras->sess2,
-                                             rb->href->data,
-                                             NULL,
-                                             NULL,
-                                             pool));
-      add_props(rsrc, 
+      /* Check to see if your parent directory already has your props
+         stored, possibly from a depth-1 propfind.   Otherwise just do
+         a propfind directly on the file url. */     
+      if ( ! ((TOP_DIR(rb).children)
+              && (props = apr_hash_get(TOP_DIR(rb).children, rb->href->data,
+                                       APR_HASH_KEY_STRING))) )
+        {
+          SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
+                                                 rb->ras->sess2,
+                                                 rb->href->data,
+                                                 NULL,
+                                                 NULL,
+                                                 pool));
+          props = rsrc->propset;
+        }
+
+      add_props(props, 
                 rb->editor->change_file_prop, 
                 rb->file_baton,
                 pool);
@@ -2012,14 +2072,24 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
       if (! TOP_DIR(rb).fetch_props)
         return SVN_NO_ERROR;
 
-      /* Fetch dir props. */
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                             rb->ras->sess2,
-                                             TOP_DIR(rb).vsn_url,
-                                             NULL,
-                                             NULL,
-                                             pool));
-      add_props(rsrc, 
+      /* Check to see if your props are already stored, possibly from
+         a depth-1 propfind.  Otherwise just do a propfind directly on
+         the directory url. */     
+      if ( ! ((TOP_DIR(rb).children)
+              && (props = apr_hash_get(TOP_DIR(rb).children,
+                                       TOP_DIR(rb).vsn_url,
+                                       APR_HASH_KEY_STRING))) )
+        {
+          SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
+                                                 rb->ras->sess2,
+                                                 TOP_DIR(rb).vsn_url,
+                                                 NULL,
+                                                 NULL,
+                                                 pool));
+          props = rsrc->propset;
+        }
+
+      add_props(props, 
                 rb->editor->change_dir_prop, 
                 TOP_DIR(rb).baton, 
                 pool);
