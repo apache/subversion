@@ -520,7 +520,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
     apr_size_t len;
     svn_stringbuf_t *path_s = svn_stringbuf_create (parsed_url.path, pool);
 
-    while (! svn_path_is_empty (path_s))
+    while (! svn_path_is_empty (path_s->data))
       {
         err = svn_ra_dav__get_starting_props(&rsrc, sess, path_s->data,
                                              NULL, pool);
@@ -543,7 +543,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
         svn_error_clear (err);
       }
 
-    if (svn_path_is_empty (path_s))
+    if (svn_path_is_empty (path_s->data))
       {
         /* entire URL was bogus;  not a single part of it exists in
            the repository!  */

@@ -41,19 +41,6 @@ typedef struct {
 } svn_item_t;
 
 
-/* Compare two svn_stringbuf_t's, returning an integer greater than,
- * equal to, or less than 0, according as A is greater than, equal to,
- * or less than B.
- *
- * You can use this to do an in-place sort of an apr_array_header_t
- * HDR of svn_stringbuf_t's like so:
- * 
- *   qsort (HDR->elts, HDR->nelts, HDR->elt_size,
- *          svn_path_compare_strings_as_paths);
- */
-int svn_sort_compare_strings_as_paths (const void *a, const void *b);
-
-
 /* Compare two svn_item_t's, returning an integer greater than,
  * equal to, or less than 0, according as A is greater than, equal to,
  * or less than B.
@@ -64,6 +51,9 @@ int svn_sort_compare_strings_as_paths (const void *a, const void *b);
  * 
  *   apr_array_header_t *HDR;
  *   HDR = apr_hash_sorted_keys (HSH, svn_sort_compare_items_as_paths, pool);
+ *
+ * The key strings must be null-terminated, even though klen does not
+ * include the terminator.
  */
 int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
 

@@ -424,7 +424,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   apr_status_t apr_err;
   char *dir;
 
-  if (svn_path_is_empty_nts (path))
+  if (svn_path_is_empty (path))
     /* Empty path (current dir) is assumed to always exist,
        so we do nothing, per docs. */
     return SVN_NO_ERROR;
@@ -456,7 +456,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
       /* Missing an intermediate dir */
       svn_error_t *svn_err;
 
-      dir = svn_path_remove_component_nts (path, pool);
+      dir = svn_path_dirname (path, pool);
       svn_err = svn_io_make_dir_recursively (dir, pool);
 
       if (!svn_err)

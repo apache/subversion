@@ -38,17 +38,17 @@ extern "C" {
  * path is a file or directory, because we always canonicalize() it.
  *
  * All paths passed to the svn_path_xxx functions, with the exceptions of
- * the svn_path_canonicalize, svn_path_canonicalize_nts and
- * svn_path_internal_style functions, must be in canonical form.
+ * the svn_path_canonicalize and svn_path_internal_style functions, must
+ * be in canonical form.
  *
  * todo: this library really needs a test suite!
  ***/
 
 /* Convert PATH from the local style to the canonical internal style. */
-void svn_path_internal_style (svn_stringbuf_t *path);
+const char *svn_path_internal_style (const char *path, apr_pool_t *pool);
 
 /* Convert PATH from the canonical internal style to the local style. */
-void svn_path_local_style (svn_stringbuf_t *path);
+const char *svn_path_local_style (const char *path, apr_pool_t *pool);
 
 
 /* Join a base path (BASE) with a component (COMPONENT), allocated in POOL.
@@ -88,9 +88,9 @@ char *svn_path_join (const char *base,
 char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
 
 
-/* Get the basename of the specified PATH. The basename is defined as
-   the last component of the path (ignoring any trailing slashes). If
-   the PATH is root ("/"), then that is returned. Otherwise, the
+/* Get the basename of the specified PATH.  The basename is defined as
+   the last component of the path (ignoring any trailing slashes).  If
+   the PATH is root ("/"), then that is returned.  Otherwise, the
    returned value will have no slashes in it.
 
    Example: svn_path_basename("/foo/bar") -> "bar"
@@ -101,6 +101,13 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
 */
 char *svn_path_basename (const char *path, apr_pool_t *pool);
 
+/* Get the dirname of the specified PATH, defined as the path with its
+   basename removed.  If PATH is root ("/"), it is returned unchanged.
+
+   The returned basename will be allocated in POOL.
+*/
+
+char *svn_path_dirname (const char *path, apr_pool_t *pool);
 
 /* Add a COMPONENT (a null-terminated C-string) to PATH.  COMPONENT is
    allowed to contain directory separators.
@@ -110,24 +117,14 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
    COMPONENT; don't add any separator character.
 
    If the result ends in a separator character, then remove the separator. */
-void svn_path_add_component (svn_stringbuf_t *path,
-                             const svn_stringbuf_t *component);
-
-/* Same as `svn_path_add_component', except that the COMPONENT argument is 
-   a C-style '\0'-terminated string, not an svn_stringbuf_t.  */
-void svn_path_add_component_nts (svn_stringbuf_t *path, 
-                                 const char *component);
+void svn_path_add_component (svn_stringbuf_t *path, 
+                             const char *component);
 
 /* Remove one component off the end of PATH. */
 void svn_path_remove_component (svn_stringbuf_t *path);
 
-/* Like svn_path_remove_component(), but takes a C string, and returns
-   one allocated in POOL. */
-char *svn_path_remove_component_nts (const char *path, apr_pool_t *pool);
 
-
-/* Divide PATH into *DIRPATH and *BASE_NAME, return them by reference,
- * in their own storage in POOL.
+/* Divide PATH into *DIRPATH and *BASE_NAME, allocated in POOL.
  *
  * If DIRPATH or BASE_NAME is null, then don't set that one.
  *
@@ -143,33 +140,16 @@ char *svn_path_remove_component_nts (const char *path, apr_pool_t *pool);
  *              "bar"           ==>  ""   and "bar"
  *              ""              ==>  ""   and ""
  */
-void svn_path_split (const svn_stringbuf_t *path,
-                     svn_stringbuf_t **dirpath,
-                     svn_stringbuf_t **base_name,
+void svn_path_split (const char *path, 
+                     const char **dirpath,
+                     const char **base_name,
                      apr_pool_t *pool);
-
-
-/* Like svn_path_split(), but for C strings. */
-void svn_path_split_nts (const char *path, 
-                         const char **dirpath,
-                         const char **base_name,
-                         apr_pool_t *pool);
 
 
 /* Return non-zero iff PATH is empty ("") or represents the current
    directory -- that is, if prepending it as a component to an existing
    path would result in no meaningful change.  */
-int svn_path_is_empty (const svn_stringbuf_t *path);
-
-
-/* Like svn_path_is_empty(), but for C strings. */
-int svn_path_is_empty_nts (const char *path);
-
-
-/* Remove trailing separators that don't affect the meaning of PATH. Will
-   convert a "." path to "".  (At some future point, this may make other
-   semantically inoperative transformations.) */
-void svn_path_canonicalize (svn_stringbuf_t *path);
+int svn_path_is_empty (const char *path);
 
 
 /* Return a new path like PATH, but with any trailing separators that don't
@@ -178,15 +158,12 @@ void svn_path_canonicalize (svn_stringbuf_t *path);
 
    (At some future point, this may make other semantically inoperative
    transformations.) */
-const char *svn_path_canonicalize_nts (const char *path, apr_pool_t *pool);
+const char *svn_path_canonicalize (const char *path, apr_pool_t *pool);
 
 
 /* Return an integer greater than, equal to, or less than 0, according
    as PATH1 is greater than, equal to, or less than PATH2. */
-int svn_path_compare_paths (const svn_stringbuf_t *path1,
-                            const svn_stringbuf_t *path2);
-int svn_path_compare_paths_nts (const char *path1,
-                                const char *path2);
+int svn_path_compare_paths (const char *path1, const char *path2);
 
 
 /* Return the longest common path shared by both PATH1 and PATH2.  If

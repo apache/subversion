@@ -1116,8 +1116,7 @@ apply_textdelta (void *file_baton,
         const svn_wc_entry_t *ent;
 
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
-                                      svn_path_remove_component_nts (fb->path,
-                                                                     subpool),
+                                      svn_path_dirname (fb->path, subpool),
                                       subpool));
         SVN_ERR (svn_wc_entry (&ent, fb->path, adm_access, FALSE, subpool));
 
@@ -1254,7 +1253,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   const char *txtb = NULL, *tmp_txtb = NULL;
 
   /* Start by splitting FILE_PATH. */
-  svn_path_split_nts (file_path, &parent_dir, &base_name, pool);
+  svn_path_split (file_path, &parent_dir, &base_name, pool);
 
   /*
      When this function is called on file F, we assume the following
@@ -1795,7 +1794,7 @@ close_file (void *file_baton,
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
-  parent_path = svn_path_remove_component_nts (fb->path, fb->pool);
+  parent_path = svn_path_dirname (fb->path, fb->pool);
     
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
                                 parent_path, fb->pool));
@@ -2169,11 +2168,11 @@ check_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
-  if (svn_path_is_empty_nts (path))
+  if (svn_path_is_empty (path))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  svn_path_split_nts (path, &parent, &base_name, pool);
+  svn_path_split (path, &parent, &base_name, pool);
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, parent, FALSE, FALSE,
                                   pool));
   err = svn_wc_entry (&p_entry, parent, adm_access, FALSE, pool);
@@ -2235,7 +2234,7 @@ svn_wc_get_actual_target (const char *path,
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))
     {
-      svn_path_split_nts (path, anchor, target, pool);
+      svn_path_split (path, anchor, target, pool);
       if ((*anchor)[0] == '\0')
         *anchor = "";
     }

@@ -140,7 +140,7 @@ static svn_boolean_t okay_to_bump_path (const char *path,
     if (r == svn_recursive)
       return TRUE;
 
-  } while (! svn_path_is_empty (parent_path));
+  } while (! svn_path_is_empty (parent_path->data));
 
   /* Default answer: if we get here, don't allow the bumping. */
   return FALSE;

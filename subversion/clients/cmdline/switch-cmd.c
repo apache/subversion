@@ -81,7 +81,7 @@ svn_cl__switch (apr_getopt_t *os,
        "`%s' does not appear to be a URL", switch_url);
 
   /* Canonicalize the URL. */
-  switch_url = svn_path_canonicalize_nts (switch_url, pool);
+  switch_url = svn_path_canonicalize (switch_url, pool);
 
   /* Validate the target */
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, FALSE,

@@ -115,7 +115,7 @@ svn_client_ls (apr_hash_t **dirents,
       svn_dirent_t *the_ent;
 
       /* Re-open the session to the file's parent instead. */
-      svn_path_split_nts (url, &parent_url, &base_name, pool);
+      svn_path_split (url, &parent_url, &base_name, pool);
       SVN_ERR (ra_lib->close (session));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url, NULL,
                                             NULL, NULL, FALSE, FALSE, 

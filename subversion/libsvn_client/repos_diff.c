@@ -378,7 +378,7 @@ get_parent_access (svn_wc_adm_access_t **parent_access,
     *parent_access = NULL;  /* Avoid messing around with paths */
   else
     {
-      const char *parent_path = svn_path_remove_component_nts (path, pool);
+      const char *parent_path = svn_path_dirname (path, pool);
       SVN_ERR (get_path_access (parent_access, adm_access, parent_path,
                                 lenient, pool));
     }

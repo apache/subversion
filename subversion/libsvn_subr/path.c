@@ -43,37 +43,43 @@
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
 
-void
-svn_path_internal_style (svn_stringbuf_t *path)
+const char *
+svn_path_internal_style (const char *path, apr_pool_t *pool)
 {
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
-      /* Convert all local-style separators to the canonical ones. */
       char *p;
-      for (p = path->data; *p != '\0'; ++p)
+
+      /* Convert all local-style separators to the canonical ones. */
+      for (p = apr_pstrdup (pool, path); *p != '\0'; ++p)
         if (*p == SVN_PATH_LOCAL_SEPARATOR)
           *p = '/';
+      path = p;
     }
 
-  svn_path_canonicalize (path);
+  return svn_path_canonicalize (path, pool);
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 }
 
 
-void
-svn_path_local_style (svn_stringbuf_t *path)
+const char *
+svn_path_local_style (const char *path, apr_pool_t *pool)
 {
-  svn_path_canonicalize (path);
+  path = svn_path_canonicalize (path, pool);
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
-      /* Convert all canonical separators to the local-style ones. */
       char *p;
-      for (p = path->data; *p != '\0'; ++p)
+
+      /* Convert all canonical separators to the local-style ones. */
+      for (p = apr_pstrdup (pool, path); *p != '\0'; ++p)
         if (*p == '/')
           *p = SVN_PATH_LOCAL_SEPARATOR;
+      path = p;
     }
+
+  return path;
 }
 
 
@@ -98,30 +104,8 @@ discount_trailing_dot_slash (const char *path,
   return len;
 }
 
-void
-svn_path_canonicalize (svn_stringbuf_t *path)
-{
-  /* At some point this could eliminate redundant components.
-     For now, it just makes sure there is no trailing slashes,
-     or dots and converts "." to "". */
-
-  apr_size_t len = discount_trailing_dot_slash (path->data, path->len);
-
-  if (len == 0 && path->len > 0 && path->data[0] == '/')
-    len = 1;
-
-  if (SVN_PATH_IS_PLATFORM_EMPTY (path->data, len))
-    svn_stringbuf_set (path, SVN_EMPTY_PATH);
-  else
-    {
-      path->len = len;
-      path->data[path->len] = '\0';
-    }
-}
-
-
 const char *
-svn_path_canonicalize_nts (const char *path, apr_pool_t *pool)
+svn_path_canonicalize (const char *path, apr_pool_t *pool)
 {
   /* At some point this could eliminate redundant components.
      For now, it just makes sure there is no trailing slashes
@@ -316,11 +300,12 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
 
 
 
-static void
-add_component_internal (svn_stringbuf_t *path,
-                        const char *component,
-                        size_t len)
+void
+svn_path_add_component (svn_stringbuf_t *path, 
+                        const char *component)
 {
+  apr_size_t len = strlen (component);
+
   assert (is_canonical_nts (path->data, path->len));
   assert (is_canonical_nts (component, len));
 
@@ -338,24 +323,10 @@ add_component_internal (svn_stringbuf_t *path,
 
 
 void
-svn_path_add_component_nts (svn_stringbuf_t *path, 
-                            const char *component)
-{
-  add_component_internal (path, component, strlen (component));
-}
-
-
-void
-svn_path_add_component (svn_stringbuf_t *path, 
-                        const svn_stringbuf_t *component)
-{
-  add_component_internal (path, component->data, component->len);
-}
-
-
-void
 svn_path_remove_component (svn_stringbuf_t *path)
 {
+  apr_size_t len;
+
   assert (is_canonical_nts (path->data, path->len));
 
   while (path->len > 0 && path->data[path->len - 1] != '/')
@@ -363,12 +334,25 @@ svn_path_remove_component (svn_stringbuf_t *path)
 
   path->data[path->len] = '\0';
 
-  svn_path_canonicalize (path);
+  /* ### Right now the input path could contain redundant components,
+     since svn_path_canonicalize doesn't remove them.  So we have to
+     check and strip those off. */
+  len = discount_trailing_dot_slash (path->data, path->len);
+  if (len == 0 && path->len > 0 && path->data[0] == '/')
+    len = 1;
+
+  if (SVN_PATH_IS_PLATFORM_EMPTY (path->data, len))
+    svn_stringbuf_set (path, SVN_EMPTY_PATH);
+  else
+    {
+      path->len = len;
+      path->data[path->len] = '\0';
+    }
 }
 
 
 char *
-svn_path_remove_component_nts (const char *path, apr_pool_t *pool)
+svn_path_dirname (const char *path, apr_pool_t *pool)
 {
   apr_size_t canonical_len, len = strlen (path);
 
@@ -413,34 +397,7 @@ svn_path_basename (const char *path, apr_pool_t *pool)
 
 
 void
-svn_path_split (const svn_stringbuf_t *path, 
-                svn_stringbuf_t **dirpath,
-                svn_stringbuf_t **base_name,
-                apr_pool_t *pool)
-{
-  assert (dirpath != base_name);
-
-  if (dirpath)
-    {
-      svn_stringbuf_t *n_dirpath;
-
-      n_dirpath = svn_stringbuf_dup (path, pool);
-      svn_path_remove_component (n_dirpath);
-
-      *dirpath = n_dirpath;
-    }
-
-  if (base_name)
-    {
-      *base_name =
-        svn_stringbuf_create (svn_path_basename (path->data, pool), pool);
-    }
-}
-
-
-
-void
-svn_path_split_nts (const char *path,
+svn_path_split (const char *path,
                     const char **dirpath,
                     const char **base_name,
                     apr_pool_t *pool)
@@ -448,7 +405,7 @@ svn_path_split_nts (const char *path,
   assert (dirpath != base_name);
 
   if (dirpath)
-    *dirpath = svn_path_remove_component_nts (path, pool);
+    *dirpath = svn_path_dirname (path, pool);
 
   if (base_name)
     *base_name = svn_path_basename (path, pool);
@@ -456,20 +413,7 @@ svn_path_split_nts (const char *path,
 
 
 int
-svn_path_is_empty (const svn_stringbuf_t *path)
-{
-  assert (is_canonical_nts (path->data, path->len));
-
-  if (SVN_PATH_IS_EMPTY (path->data)
-      && path->len == sizeof (SVN_EMPTY_PATH) - 1)
-    return 1;
-
-  return 0;
-}
-
-
-int
-svn_path_is_empty_nts (const char *path)
+svn_path_is_empty (const char *path)
 {
   /* assert (is_canonical_nts (path, strlen (path)));  ### Expensive strlen */
 
@@ -481,43 +425,8 @@ svn_path_is_empty_nts (const char *path)
 
 
 int
-svn_path_compare_paths (const svn_stringbuf_t *path1,
-                        const svn_stringbuf_t *path2)
-{
-  apr_size_t min_len = ((path1->len < path2->len) ? path1->len : path2->len);
-  apr_size_t i = 0;
-  
-  assert (is_canonical_nts (path1->data, path1->len));
-  assert (is_canonical_nts (path2->data, path2->len));
-
-  /* Skip past common prefix. */
-  while (i < min_len && path1->data[i] == path2->data[i])
-    ++i;
-
-  /* Are the paths exactly the same? */
-  if ((path1->len == path2->len) && (i >= min_len))
-    return 0;    
-
-  /* Children of paths are greater than their parents, but less than
-     greater siblings of their parents. */
-  if ((path1->data[i] == '/') && (path2->data[i] == 0))
-    return 1;
-  if ((path2->data[i] == '/') && (path1->data[i] == 0))
-    return -1;
-  if (path1->data[i] == '/')
-    return -1;
-  if (path2->data[i] == '/')
-    return 1;
-
-  /* Common prefix was skipped above, next character is compared to
-     determine order */
-  return path1->data[i] < path2->data[i] ? -1 : 1;
-}
-
-
-int
-svn_path_compare_paths_nts (const char *path1,
-                            const char *path2)
+svn_path_compare_paths (const char *path1,
+                        const char *path2)
 {
   /* ### This code is inherited from the svn_stringbuf_t version of
      the function and is inefficient on plain strings, because it does
@@ -931,7 +840,7 @@ svn_path_url_add_component (const char *url,
                             apr_pool_t *pool)
 {
   /* URL can have trailing '/' */
-  url = svn_path_canonicalize_nts (url, pool);
+  url = svn_path_canonicalize (url, pool);
 
   return svn_path_join (url, svn_path_uri_encode (component, pool), pool);
 }
@@ -942,7 +851,7 @@ svn_path_get_absolute(const char **pabsolute,
                       const char *relative,
                       apr_pool_t *pool)
 {
-  /* We call svn_path_canonicalize_nts() on the input data, rather
+  /* We call svn_path_canonicalize() on the input data, rather
      than the output, so that `buffer' can be returned directly
      without const vs non-const issues. */
 
@@ -951,7 +860,7 @@ svn_path_get_absolute(const char **pabsolute,
   const char *path_native;
 
   SVN_ERR (svn_utf_cstring_from_utf8
-           (&path_native, svn_path_canonicalize_nts (relative, pool), pool));
+           (&path_native, svn_path_canonicalize (relative, pool), pool));
 
   apr_err = apr_filepath_merge(&buffer, NULL,
                                path_native,
@@ -965,7 +874,7 @@ svn_path_get_absolute(const char **pabsolute,
                              relative);
 
   return svn_utf_cstring_to_utf8 (pabsolute,
-                                  svn_path_canonicalize_nts (buffer, pool),
+                                  svn_path_canonicalize (buffer, pool),
                                   NULL, pool);
 }
 
@@ -989,7 +898,7 @@ svn_path_split_if_file(const char *path,
     {
       if (err)
         svn_error_clear (err);
-      svn_path_split_nts(path, pdirectory, pfile, pool);
+      svn_path_split(path, pdirectory, pfile, pool);
     }
   else if (finfo.filetype == APR_DIR)
     {

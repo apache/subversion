@@ -218,9 +218,9 @@ report_revisions (svn_wc_adm_access_t *adm_access,
         if (this_url_s->len > dot_entry_url_s->len)
           svn_stringbuf_chop (this_url_s,
                               this_url_s->len - dot_entry_url_s->len);
-        svn_path_add_component_nts (this_path_s, key);
-        svn_path_add_component_nts (this_full_path_s, key);
-        svn_path_add_component_nts (this_url_s, 
+        svn_path_add_component (this_path_s, key);
+        svn_path_add_component (this_full_path_s, key);
+        svn_path_add_component (this_url_s, 
                                     svn_path_uri_encode (key, pool));
 
         this_path = this_path_s->data;
@@ -389,7 +389,7 @@ svn_wc_crawl_revisions (const char *path,
   if (base_rev == SVN_INVALID_REVNUM)
     {
       SVN_ERR (svn_wc_entry (&parent_entry, 
-                             svn_path_remove_component_nts (path, pool),
+                             svn_path_dirname (path, pool),
                              adm_access,
                              FALSE, pool));
       base_rev = parent_entry->revision;
@@ -461,7 +461,7 @@ svn_wc_crawl_revisions (const char *path,
         }
       
       /* Split PATH into parent PDIR and basename BNAME. */
-      svn_path_split_nts (path, &pdir, &bname, pool);
+      svn_path_split (path, &pdir, &bname, pool);
       if (! parent_entry)
         SVN_ERR (svn_wc_entry (&parent_entry, pdir, adm_access, FALSE, pool));
       

@@ -207,7 +207,7 @@ probe (const char **dir,
     SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
 
   if (kind != svn_node_dir || ! is_wc)
-    *dir = svn_path_remove_component_nts (path, pool);
+    *dir = svn_path_dirname (path, pool);
   else
     *dir = path;
 

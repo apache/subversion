@@ -134,7 +134,7 @@ static const char *get_from_path_map(apr_hash_t *hash,
                               path + my_path->len + 1, NULL);
         }
     }
-  while (! svn_path_is_empty (my_path));
+  while (! svn_path_is_empty (my_path->data));
   
   /* well, we simply never found anything worth mentioning the map.
      PATH is its own default finding, then. */
@@ -159,7 +159,7 @@ svn_repos_set_path (void *report_baton,
 
       /* Sanity check: make that we didn't call this with real data
          before simply informing the reporter of our base revision. */
-      if (! svn_path_is_empty (pathbuf))
+      if (! svn_path_is_empty (pathbuf->data))
         return 
           svn_error_create
           (SVN_ERR_REPOS_BAD_REVISION_REPORT, 0, NULL,

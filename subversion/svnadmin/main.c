@@ -792,7 +792,7 @@ main (int argc, const char * const *argv)
                                             opt_state.repository_path,
                                             NULL, pool));
           repos_path 
-            = svn_path_canonicalize_nts (opt_state.repository_path, pool);
+            = svn_path_canonicalize (opt_state.repository_path, pool);
         }
 
       if (repos_path == NULL)

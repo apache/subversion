@@ -576,7 +576,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
-        svn_path_split_nts (path, &base_dir, NULL, pool);
+        svn_path_split (path, &base_dir, NULL, pool);
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
                               &editor, &edit_baton, auth_baton, url, base_dir,
                               NULL, log_msg, NULL, &committed_rev,
@@ -910,7 +910,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           if (item->kind == svn_node_dir)
             adm_access_path = item->path;
           else
-            svn_path_split_nts (item->path, &adm_access_path, NULL, pool);
+            svn_path_split (item->path, &adm_access_path, NULL, pool);
 
           bump_err = svn_wc_adm_retrieve (&adm_access, base_dir_access,
                                           adm_access_path, pool);

@@ -156,15 +156,14 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
-  /* XXX svn_path_canonicalize_nts doesn't do a very good job of making a 
+  /* XXX svn_path_canonicalize doesn't do a very good job of making a 
    * canonical path,  it would be nice if we could find a better way to do 
    * that, so we could pass relative paths to this function. */
 
   SVN_RB_ERR (svn_client_checkout (NULL, NULL, auth_baton,
                                    StringValuePtr(aURL),
-                                   svn_path_canonicalize_nts (StringValuePtr
-                                                               (aPath),
-                                                              pool), 
+                                   svn_path_canonicalize (StringValuePtr
+                                                           (aPath), pool), 
                                    &revision, TRUE, pool),
               pool);
 
@@ -190,9 +189,8 @@ cl_update (int argc, VALUE *argv, VALUE self)
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
   SVN_RB_ERR (svn_client_update (auth_baton,
-                                 svn_path_canonicalize_nts (StringValuePtr
-                                                             (aPath),
-                                                            pool),
+                                 svn_path_canonicalize (StringValuePtr (aPath),
+                                                        pool),
                                  &revision, RTEST (recurse), NULL, NULL, pool),
               pool);
 
@@ -208,8 +206,8 @@ cl_add (VALUE class, VALUE aPath, VALUE recursive)
 
   pool = svn_pool_create (NULL);
 
-  SVN_RB_ERR (svn_client_add (svn_path_canonicalize_nts (StringValuePtr (aPath),
-                                                         pool), 
+  SVN_RB_ERR (svn_client_add (svn_path_canonicalize (StringValuePtr (aPath),
+                                                     pool), 
                               RTEST (recursive), NULL, NULL, pool),
               pool);
 
@@ -243,9 +241,8 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
     message = StringValuePtr (aMessage);
 
   SVN_RB_ERR (svn_client_mkdir (&commit_info,
-                                svn_path_canonicalize_nts (StringValuePtr
-                                                            (aPath),
-                                                           pool),
+                                svn_path_canonicalize (StringValuePtr (aPath),
+                                                       pool),
                                 auth_baton, cl_log_message_func,
                                 (void *) message, NULL, NULL, pool),
               pool);
@@ -282,9 +279,8 @@ cl_delete (int argc, VALUE *argv, VALUE self)
     message = StringValuePtr (aMessage);
 
   SVN_RB_ERR (svn_client_delete (&commit_info,
-                                 svn_path_canonicalize_nts (StringValuePtr
-                                                             (aPath),
-                                                            pool),
+                                 svn_path_canonicalize (StringValuePtr (aPath),
+                                                        pool),
                                  NULL, RTEST (force), auth_baton,
                                  cl_log_message_func, (void *) message, NULL,
                                  NULL, pool),
@@ -327,9 +323,8 @@ cl_import (int argc, VALUE *argv, VALUE self)
 
   /* XXX it'd be nice if we could specify a log message */
   SVN_RB_ERR (svn_client_import (&commit_info, NULL, NULL, auth_baton, 
-                                 svn_path_canonicalize_nts (StringValuePtr
-                                                             (aPath),
-                                                            pool),
+                                 svn_path_canonicalize (StringValuePtr (aPath),
+                                                        pool),
                                  StringValuePtr (aURL), StringValuePtr (aEntry),
                                  cl_log_message_func, NULL, revision, pool),
               pool);
@@ -400,9 +395,8 @@ cl_status (VALUE self, VALUE aPath,
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_status (&statushash, &youngest,
-                                 svn_path_canonicalize_nts (StringValuePtr
-                                                             (aPath),
-                                                            pool),
+                                 svn_path_canonicalize (StringValuePtr (aPath),
+                                                        pool),
                                  auth_baton, RTEST (descend), RTEST (get_all),
                                  RTEST (update), RTEST (no_ignore), NULL,
                                  NULL, pool),
@@ -460,9 +454,8 @@ cl_cleanup (VALUE class, VALUE aPath)
 
   pool = svn_pool_create (NULL);
 
-  SVN_RB_ERR (svn_client_cleanup (svn_path_canonicalize_nts (StringValuePtr
-                                                              (aPath),
-                                                             pool),
+  SVN_RB_ERR (svn_client_cleanup (svn_path_canonicalize (StringValuePtr
+                                                          (aPath), pool),
                                   pool),
               pool);
 
@@ -480,9 +473,8 @@ cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 
   pool = svn_pool_create (NULL);
 
-  SVN_RB_ERR (svn_client_revert (svn_path_canonicalize_nts (StringValuePtr
-                                                             (aPath),
-                                                            pool),
+  SVN_RB_ERR (svn_client_revert (svn_path_canonicalize (StringValuePtr (aPath),
+                                                        pool),
                                  RTEST (recursive), NULL, NULL, pool),
               pool);
 

@@ -69,7 +69,7 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Canonicalize the URL. */
-  URL = svn_path_canonicalize_nts (URL, pool);
+  URL = svn_path_canonicalize (URL, pool);
 
   /* Fetch the checkout editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision

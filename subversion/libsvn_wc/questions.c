@@ -135,7 +135,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   if (kind == svn_node_dir)
     entryname = SVN_WC_ENTRY_THIS_DIR;
   else
-    svn_path_split_nts (path, NULL, &entryname, pool);
+    svn_path_split (path, NULL, &entryname, pool);
 
   /* Get the timestamp from the entries file */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));

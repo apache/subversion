@@ -38,8 +38,7 @@
 static int
 compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
 {
-  return svn_path_compare_paths_nts ((const char *)a->key,
-                                     (const char *)b->key);
+  return svn_path_compare_paths ((const char *)a->key, (const char *)b->key);
 }
 
 static svn_error_t *

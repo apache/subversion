@@ -67,8 +67,7 @@ svn_client_revert (const char *path,
               svn_wc_adm_access_t *dir_access;
               SVN_ERR (svn_wc_adm_close (adm_access));
               SVN_ERR (svn_wc_adm_open (&adm_access, NULL,
-                                        svn_path_remove_component_nts (path,
-                                                                       pool),
+                                        svn_path_dirname (path, pool),
                                         TRUE, FALSE, pool));
               SVN_ERR (svn_wc_adm_open (&dir_access, adm_access, path,
                                         TRUE, recursive, pool));

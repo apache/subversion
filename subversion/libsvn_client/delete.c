@@ -150,7 +150,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       else
         log_msg = "";
 
-      svn_path_split_nts (path, &anchor, &target, pool);
+      svn_path_split (path, &anchor, &target, pool);
       target = svn_path_uri_decode (target, pool);
 
       /* Get the RA vtable that matches URL. */
@@ -202,7 +202,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
     {
       const char *parent_path;
   
-      parent_path = svn_path_remove_component_nts (path, pool);
+      parent_path = svn_path_dirname (path, pool);
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE,
                                 pool));
     }

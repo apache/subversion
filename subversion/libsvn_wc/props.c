@@ -387,7 +387,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
       base_name = NULL;
       break;
     case svn_node_file:
-      svn_path_split_nts (path, &parent, &base_name, pool);
+      svn_path_split (path, &parent, &base_name, pool);
       break;
     default:
       return SVN_NO_ERROR; /* ### svn_node_none or svn_node_unknown */
@@ -1174,7 +1174,7 @@ svn_wc_prop_set (const char *name,
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          svn_path_split_nts (path, NULL, &base_name, pool);
+          svn_path_split (path, NULL, &base_name, pool);
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
           SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,

@@ -208,28 +208,28 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
   /* Split TGT_PATH into TGT_PARENT_DIR and TGT_ENTRY unless SRC_ENTRY
      is NULL or TGT_PATH cannot be split. */
-  if ((! src_entry) || (svn_path_is_empty_nts (tgt_path)))
+  if ((! src_entry) || (svn_path_is_empty (tgt_path)))
     {
       tgt_parent_dir = apr_pstrdup (pool, tgt_path);
       tgt_entry = NULL;
     }
   else
     {
-      svn_path_split_nts (tgt_path, &tgt_parent_dir, &tgt_entry, pool);
+      svn_path_split (tgt_path, &tgt_parent_dir, &tgt_entry, pool);
     }
 
   /* Make sure that parent dirs are really directories under both the
      source and target roots.  This also doubles as an existence
      check.  Obviously, an empty parent path is the root of the
      repository, guaranteed to exist as a directory. */
-  if (! svn_path_is_empty_nts (src_parent_dir))
+  if (! svn_path_is_empty (src_parent_dir))
     {
       int s_dir;
       SVN_ERR (svn_fs_is_dir (&s_dir, src_root, src_parent_dir, pool));
       if (! s_dir)
         return not_a_dir_error ("source parent", src_parent_dir);
     }
-  if (! svn_path_is_empty_nts (tgt_parent_dir))
+  if (! svn_path_is_empty (tgt_parent_dir))
     {
       int t_dir;
       SVN_ERR (svn_fs_is_dir (&t_dir, tgt_root, tgt_parent_dir, pool));

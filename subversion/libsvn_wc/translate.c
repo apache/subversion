@@ -798,7 +798,7 @@ svn_wc_translated_file (const char **xlated_p,
 
       /* First, reserve a tmp file name. */
 
-      svn_path_split_nts (vfile, &tmp_dir, &tmp_vfile, pool);
+      svn_path_split (vfile, &tmp_dir, &tmp_vfile, pool);
       
       tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
                                     tmp_vfile, NULL);
