@@ -129,10 +129,10 @@ replace_text_base (svn_string_t *path,
 
 
 static svn_error_t *
-set_entry (svn_string_t *path,
-           const char *name,
-           svn_vernum_t version,
-           apr_pool_t *pool)
+set_version (svn_string_t *path,
+             const char *name,
+             svn_vernum_t version,
+             apr_pool_t *pool)
 {
   svn_string_t *sname = svn_string_create (name, pool);
   apr_time_t t;
@@ -200,7 +200,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
       else
         err = replace_text_base (loggy->path, name, loggy->pool);
     }
-  else if (strcmp (eltname, SVN_WC__LOG_SET_ENTRY) == 0)
+  else if (strcmp (eltname, SVN_WC__LOG_SET_VERSION) == 0)
     {
       const char *verstr 
         = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_VERSION, atts);
@@ -210,7 +210,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
       else if (! verstr)
         signal_error (loggy, "missing version attr in %s");
       else
-        err = set_entry (loggy->path, name, atoi (verstr), loggy->pool);
+        err = set_version (loggy->path, name, atoi (verstr), loggy->pool);
     }
   else if (strcmp (eltname, "wc-log") == 0)
     /* ignore the expat pacifier */ ;

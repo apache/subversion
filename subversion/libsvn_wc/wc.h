@@ -256,14 +256,28 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
  * do it again without ill effect.
  */
 
-/* Log actions. */
+/** Log actions. **/
+
+/* Merge the mods saved in SVN_WC__LOG_ATTR_SAVED_MODS into the
+   working file SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_MERGE_TEXT          "merge-text"
+
+/* Copy SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME to
+   SVN/text-base/SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_REPLACE_TEXT_BASE   "replace-text-base"
+
+/* Merge property changes for SVN_WC__LOG_ATTR_NAME.  todo: not yet
+   done. */
 #define SVN_WC__LOG_MERGE_PROPS         "merge-props"
+
+/* Merge property changes for SVN_WC__LOG_ATTR_NAME.  todo: not yet
+   done. */
 #define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
-#define SVN_WC__LOG_SET_ENTRY           "set-entry"
-#define SVN_WC__LOG_COMMITTED           "committed"
-/* Log attributes. */
+
+/* Bump SVN_WC__LOG_ATTR_NAME's version to SVN_WC__LOG_ATTR_VERSION */
+#define SVN_WC__LOG_SET_VERSION         "set-entry"
+
+/** Log attributes. **/
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_VERSION        "version"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
