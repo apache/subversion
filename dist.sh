@@ -345,8 +345,8 @@ else
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
     "$DISTNAME.zip"
 fi
-#echo "Removing sandbox..."
-#rm -rf "$DIST_SANDBOX"
+echo "Removing sandbox..."
+rm -rf "$DIST_SANDBOX"
 
 sign_file()
 {
