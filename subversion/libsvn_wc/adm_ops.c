@@ -24,11 +24,13 @@
 
 
 #include <string.h>
+
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
+
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_string.h"
@@ -38,6 +40,7 @@
 #include "svn_wc.h"
 #include "svn_io.h"
 #include "svn_md5.h"
+#include "svn_xml.h"
 
 #include "wc.h"
 #include "log.h"

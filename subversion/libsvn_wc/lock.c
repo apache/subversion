@@ -16,16 +16,16 @@
  * ====================================================================
  */
 
+#include <assert.h>
 
-
 #include <apr_pools.h>
 #include <apr_time.h>
 
+#include "svn_pools.h"
+#include "svn_path.h"
+
 #include "wc.h"
 #include "adm_files.h"
-#include "svn_pools.h"
-
-#include <assert.h>
 
 
 
