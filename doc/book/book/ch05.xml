@@ -256,7 +256,7 @@ dav/  db/  format  hooks/  locks/  README.txt
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-2.1">
-      <title>Hook scripts</title>
+      <title>Hook Scripts</title>
 
       <para>A <firstterm>hook</firstterm> is a program triggered by
         some repository event, such as the creation of a new revision
@@ -457,7 +457,7 @@ pre-commit.tmpl
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-2.2">
-      <title>Berkeley DB configuration</title>
+      <title>Berkeley DB Configuration</title>
 
       <para>The Berkeley DB environment has it own set of default
         configuration values for things like the number of locks
@@ -903,7 +903,7 @@ Available commands:
           contents of a file.</para>
 
         <example id="svn-ch-7-sect-3.1.3-ex-1">
-          <title>Using svnshell to navigate the repository</title>
+          <title>Using svnshell to Navigate the Repository</title>
 
           <screen>
 &lt;rev: 2 /&gt;$ ls
@@ -1184,7 +1184,7 @@ $
         each outstanding transaction in your repository:</para>
 
       <example id="svn-ch-5-sect-3.2-ex-1">
-        <title>txn-info.sh (reporting outstanding transactions)</title>
+        <title>txn-info.sh (Reporting Outstanding Transactions)</title>
 
         <programlisting>
 #!/bin/sh
@@ -1258,7 +1258,7 @@ $
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.3">
-      <title>Repository recovery</title>
+      <title>Repository Recovery</title>
 
       <para>In order to protect the data in your repository, the
         database back-end uses a locking mechanism.  This mechanism
@@ -1349,7 +1349,7 @@ The latest repos revision is 19.
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.4">
-      <title>Migrating a repository</title>
+      <title>Migrating a Repository</title>
     
       <para>A Subversion filesystem has its data spread throughout
         various database tables in a fashion generally understood by
@@ -1542,7 +1542,7 @@ $ svnadmin load newrepos &lt; dumpfile3
         time the script ran.</para>
 
       <example id="svn-ch-5-sect-3.4-ex-1">
-        <title>Using incremental repository dumps</title>
+        <title>Using Incremental Repository Dumps</title>
 
         <programlisting>
 #!/usr/bin/perl
@@ -2456,7 +2456,7 @@ ssh = ssh -l username
     </sect2>
 
     <sect2 id="svn-ch-5-sect-4.3">
-      <title>Which server to use?</title>
+      <title>Which Server to Use?</title>
 
       <para>When choosing between Apache HTTP Server and the custom
         <command>svnserve</command> program, there is no single
@@ -2630,7 +2630,7 @@ ssh = ssh -l username
   <!-- *** SECTION 6:  ADDING PROJECTS                                 *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-6">
-    <title>Adding projects</title>
+    <title>Adding Projects</title>
 
     <para>Once your repository is created and configured, all that
       remains is to begin using it.  If you have a collection of
@@ -2709,7 +2709,7 @@ ssh = ssh -l username
        each project directory, as demonstrated in Figure 5-1.</para>
 
       <figure id="svn-ch5-sect5.1-dia1">
-        <title>One suggested repository layout.</title>
+        <title>One Suggested Repository Layout.</title>
         <graphic fileref="images/ch05dia1.png"/>
       </figure>
 
@@ -2720,7 +2720,7 @@ ssh = ssh -l username
        repository, as demonstrated in Figure 5-2.</para>
 
       <figure id="svn-ch5-sect5.1-dia2">
-        <title>Another suggested repository layout.</title>
+        <title>Another Suggested Repository Layout.</title>
         <graphic fileref="images/ch05dia2.png"/>
       </figure>
 

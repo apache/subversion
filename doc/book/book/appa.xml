@@ -56,7 +56,7 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-app-a-sect-2">
-    <title>Directory versions</title>
+    <title>Directory Versions</title>
     
     <para>Subversion tracks tree structures, not just file contents.
       It's one of the biggest reasons Subversion was written to
@@ -218,9 +218,9 @@
       encourage all new Subversion users to use it early and often:</para>
 
     <variablelist>
-      <title><command>svn status</command> prints all files that have
-        local modifications; the network is not accessed by
-        default.</title>
+      <title><command>svn status</command> Prints All Files That Have
+        Local Modifications: The Network is not Accessed by
+        Default</title>
       
       <varlistentry>
         <term><option>-u</option> switch</term>
@@ -351,7 +351,7 @@ X    eXternal
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-app-a-sect-7">
-    <title>Conflict resolution</title>
+    <title>Conflict Resolution</title>
 
     <para>CVS marks conflicts with in-line <quote>conflict
         markers</quote>, and prints a <command>C</command> during an
@@ -373,7 +373,7 @@ X    eXternal
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-app-a-sect-8">
-    <title>Binary files and translation</title>
+    <title>Binary Files and Translation</title>
 
     <para>In the most general sense, Subversion handles binary files
       more gracefully than CVS does.  Because CVS uses RCS, it can
