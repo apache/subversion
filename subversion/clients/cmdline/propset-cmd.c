@@ -43,6 +43,7 @@ svn_cl__propset (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   const char *pname, *pname_utf8;
   const svn_string_t *propval = NULL;
+  svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
   int i;
 
@@ -56,10 +57,16 @@ svn_cl__propset (apr_getopt_t *os,
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */
-  if (opt_state->filedata) 
-    propval = svn_string_create_from_buf (opt_state->filedata, pool);
+  if (opt_state->filedata)
+    {
+      propval = svn_string_create_from_buf (opt_state->filedata, pool);
+      propval_came_from_cmdline = FALSE;
+    }
   else
-    propval = svn_string_create (((const char **) (args->elts))[1], pool);
+    {
+      propval = svn_string_create (((const char **) (args->elts))[1], pool);
+      propval_came_from_cmdline = TRUE;
+    }
   
   /* We only want special Subversion properties to be in UTF-8.  All
      others should remain in binary format.  ### todo: make this
@@ -74,9 +81,38 @@ svn_cl__propset (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Add "." if user passed 0 file arguments */
-  svn_opt_push_implicit_dot_target (targets, pool);
-              
+  /* The customary implicit dot rule has been prone to user error in
+   * propset.  People would do intuitive things like
+   * 
+   *    $ svn propset svn:executable script
+   *
+   * and then be surprised to get an error like:
+   *
+   *    svn: Illegal target for the requested operation
+   *    svn: Cannot set svn:executable on a directory ()
+   *
+   * So this command doesn't do the implicit dot thing anymore.  A
+   * target must always be explicitly provided to propset.  See
+   * http://subversion.tigris.org/issues/show_bug.cgi?id=924 for
+   * more.
+   */
+  if (targets->nelts == 0)
+    {
+      if (propval_came_from_cmdline)
+        {
+          return svn_error_createf
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL, pool,
+             "explicit target required ('%s' seen as prop value, not target)",
+             propval->data);
+        }
+      else
+        {
+          return svn_error_create
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL, pool,
+             "explicit target argument required.\n");
+        }
+    }
+
   /* Decide if we're making a local mod to a versioned working copy
      prop, or making a permanent change to an unversioned repository
      revision prop.  The existence of the '-r' flag is the key. */
