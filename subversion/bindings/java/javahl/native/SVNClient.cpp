@@ -921,7 +921,8 @@ void SVNClient::resolved(const char *path, bool recurse)
 
 jlong SVNClient::doExport(const char *srcPath, const char *destPath, 
                           Revision &revision, Revision &pegRevision, bool force,
-                          bool ignoreExternals, const char *nativeEOL)
+                          bool ignoreExternals, bool recurse, 
+                          const char *nativeEOL)
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool ();
@@ -961,6 +962,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                                           revision.revision (),
                                           force,
                                           ignoreExternals,
+                                          recurse,
                                           nativeEOL,
                                           ctx,
                                           apr_pool);
