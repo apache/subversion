@@ -840,6 +840,7 @@ def diff_head_of_moved_file(sbox):
   new_mu_path = mu_path + '.new'
 
   svntest.main.run_svn(None, 'mv', mu_path, new_mu_path)
+  svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.")
 
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'HEAD',
                                                  new_mu_path)
