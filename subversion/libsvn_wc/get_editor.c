@@ -646,12 +646,14 @@ apply_textdelta (void *file_baton,
   struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
   svn_error_t *err;
 
-  /* Open the text base for reading.  */
+  /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
-  hb->dest = NULL;
-  err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
-  if (err && (err->apr_err != APR_ENOENT))
-    goto error;
+  if (! fb->dir_baton->edit_baton->is_checkout)
+    {
+      err = svn_wc__open_text_base (&hb->source, fb->path, APR_READ, subpool);
+      if (err)
+        goto error;
+    }
 
   /* Open the text base for writing (this will get us a temporary file).  */
   hb->dest = NULL;
