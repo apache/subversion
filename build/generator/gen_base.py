@@ -572,6 +572,11 @@ class TargetSWIGLib(TargetLib):
     TargetLib.__init__(self, name, options, gen_obj)
     self.lang = options.get('lang')
 
+  def add_dependencies(self):
+    TargetLib.add_dependencies(self)
+    if self.lang != "java":
+      self.gen_obj.graph.add(DT_LINK, self.name, TargetSWIGRuntime(self.lang))
+
   class Section(TargetLib.Section):
     def get_dep_targets(self, target):
       if target.lang == self.target.lang:
