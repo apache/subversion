@@ -909,14 +909,13 @@ typedef struct svn_ra_plugin_t
    * The callback will not be called if the commit was a no-op
    * (i.e. nothing was committed).
    *
-   * @a lock_tokens, if non-null, is a hash mapping paths (relative to
-   * the URL fo @a session_baton) of type @c const char* and lock tokens, also
-   * @c const char*.  The server will check that the correct lock token was
-   * provided for any path that is locked in the repository.
+   * @a lock_tokens, if non-NULL, is a hash mapping <tt>const char
+   * *</tt> paths (relative to the URL of @a session_baton) to <tt>
+   * const char *</tt> lock tokens.  The server checks that the
+   * correct token is provided for each committed, locked path.
    *
-   * If @a keep_locks is @c FALSE, the locks on the paths in @a
-   * lock_tokens are released using the provided tokens.  Else, all
-   * locks are kept.
+   * If @a keep_locks is @c TRUE, then do not release locks on
+   * committed objects.  Else, automatically release such locks.
    *
    * The caller may not perform any RA operations using
    * @a session_baton before finishing the edit.
@@ -931,7 +930,7 @@ typedef struct svn_ra_plugin_t
                                       void *callback_baton,
                                       apr_hash_t *lock_tokens,
                                       svn_boolean_t keep_locks,
-                                     apr_pool_t *pool);
+                                      apr_pool_t *pool);
 } svn_ra_plugin_t;
 
 
