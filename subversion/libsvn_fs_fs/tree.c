@@ -1001,11 +1001,11 @@ node_kind (svn_node_kind_t *kind_p,
 /* Set *KIND_P to the type of node present at PATH under ROOT.  If
    PATH does not exist under ROOT, set *KIND_P to svn_node_none.  Use
    POOL for temporary allocation. */
-static svn_error_t *
-fs_check_path (svn_node_kind_t *kind_p,
-               svn_fs_root_t *root,
-               const char *path,
-               apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__check_path (svn_node_kind_t *kind_p,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       apr_pool_t *pool)
 {
   svn_error_t *err = node_kind (kind_p, root, path, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
@@ -2822,12 +2822,12 @@ fs_contents_changed (svn_boolean_t *changed_p,
   {
     svn_node_kind_t kind;
 
-    SVN_ERR (fs_check_path (&kind, root1, path1, pool));
+    SVN_ERR (svn_fs_fs__check_path (&kind, root1, path1, pool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path1);
       
-    SVN_ERR (fs_check_path (&kind, root2, path2, pool));
+    SVN_ERR (svn_fs_fs__check_path (&kind, root2, path2, pool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path2);
@@ -2942,7 +2942,7 @@ fs_node_history (svn_fs_history_t **history_p,
     return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   /* And we require that the path exist in the root. */
-  SVN_ERR (fs_check_path (&kind, root, path, pool));
+  SVN_ERR (svn_fs_fs__check_path (&kind, root, path, pool));
   if (kind == svn_node_none)
     return not_found (root, path);
 
@@ -3269,7 +3269,7 @@ assemble_history (svn_fs_t *fs,
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   fs_paths_changed,
-  fs_check_path,
+  svn_fs_fs__check_path,
   fs_node_history,
   fs_node_id,
   fs_node_created_rev,

@@ -47,6 +47,14 @@ svn_error_t *svn_fs_fs__commit_txn (const char **conflict_p,
 svn_error_t *svn_fs_fs__txn_root (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                                   apr_pool_t *pool);
 
+/* Set KIND_P to the node kind of the node at PATH in ROOT.
+   Allocate the structure in POOL. */
+svn_error_t *
+svn_fs_fs__check_path (svn_node_kind_t *kind_p,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
