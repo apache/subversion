@@ -1111,6 +1111,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     }
   else
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
       SVN_ERR (adjust_rel_targets (&base_dir, &rel_targets,
                                    base_dir, rel_targets,
                                    pool));
@@ -1119,19 +1121,20 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         {
           const char *parent_dir, *name;
 
+          svn_pool_clear (subpool);
           target = svn_path_join (base_dir,
                                   APR_ARRAY_IDX (rel_targets, i, const char *),
-                                  pool);
+                                  subpool);
           SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, 
-                                             &name, pool));
+                                             &name, subpool));
 
           if (*name)
             {
               svn_node_kind_t kind;
 
-              target = svn_path_join (parent_dir, name, pool);
+              target = svn_path_join (parent_dir, name, subpool);
           
-              SVN_ERR (svn_io_check_path (target, &kind, pool));
+              SVN_ERR (svn_io_check_path (target, &kind, subpool));
 
               /* If the final target is a dir, we want to recursively
                  lock it */
@@ -1139,10 +1142,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                 {
                   if (nonrecursive)
                     APR_ARRAY_PUSH (dirs_to_lock, 
-                                    const char *) = target;
+                                    const char *) = apr_pstrdup (pool, target);
                   else
                     APR_ARRAY_PUSH (dirs_to_lock_recursive, 
-                                    const char *) = target;
+                                    const char *) = apr_pstrdup (pool, target);
                 }
             }
 
@@ -1152,10 +1155,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
               if (target[0] == '/' && target[1] == '\0')
                 abort();
 
-              APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
-              target = svn_path_dirname(target, pool);
+              APR_ARRAY_PUSH (dirs_to_lock,
+                              const char *) = apr_pstrdup (pool, target);
+              target = svn_path_dirname(target, subpool);
             }
         }
+      svn_pool_destroy (subpool);
     }
 
   SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir,
