@@ -19,6 +19,7 @@ package org.tigris.subversion.javahl;
 
 /**
  * A bit more full interface for receiving callbacks for authentification
+ * new applications should use PromptUserPassword3 instead
  */
 public interface PromptUserPassword2 extends PromptUserPassword
 {
@@ -27,7 +28,12 @@ public interface PromptUserPassword2 extends PromptUserPassword
      */
     public static final int Reject = 0;
     /**
-     * accept the connection to the server one time
+     * accept the connection to the server one time.
+     */
+    public static final int AcceptTemporary = 1;
+    /**
+     * accept the connection to the server one time.
+     * @deprecated 
      */
     public static final int AccecptTemporary = 1;
     /**

@@ -38,6 +38,9 @@ public class Revision
      */
     public Revision(int kind)
     {
+        if(kind < RevisionKind.unspecified || kind > RevisionKind.head)
+            throw new IllegalArgumentException(
+                    kind+" is not a legel revision kind");
         revKind = kind;
     }
 
@@ -48,6 +51,9 @@ public class Revision
      */
     protected Revision(int kind, boolean marker)
     {
+        if(kind < RevisionKind.unspecified || kind > RevisionKind.head)
+            throw new IllegalArgumentException(
+                    kind+" is not a legel revision kind");
         revKind = kind;
     }
 
@@ -88,6 +94,26 @@ public class Revision
             return false;
 
         return ((Revision)target).revKind == revKind;        
+    }
+
+    /**
+     * Creates a Revision.Number object
+     * @param revisionNumber    the revision number of the new object
+     * @return  the new object
+     */
+    public static Revision getInstance(long revisionNumber)
+    {
+        return new Revision.Number(revisionNumber);
+    }
+
+    /**
+     * Creates a Revision.DateSpec objet
+     * @param revisionDate  the date of the new object
+     * @return  the new object
+     */
+    public static Revision getInstance(Date revisionDate)
+    {
+        return new Revision.DateSpec(revisionDate);
     }
 
     /**
@@ -136,6 +162,9 @@ public class Revision
         public Number(long number)
         {
             super(Kind.number, true);
+            if(number < 0)
+                throw new IllegalArgumentException(
+                        "negative revision numbers are not allowed");
             revNumber = number;
         }
 
@@ -186,6 +215,8 @@ public class Revision
         public DateSpec(Date date)
         {
             super(Kind.date, true);
+            if(date == null)
+                throw new IllegalArgumentException("a date must be specified");
             revDate = date;
         }
         /**
@@ -203,7 +234,9 @@ public class Revision
          */
         public String toString() {
             
-            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US); 
+            SimpleDateFormat dateFormat =
+                    new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z",
+                            Locale.US);
             return '{'+dateFormat.format(revDate)+'}';
         }
 

@@ -17,7 +17,8 @@
  */
 package org.tigris.subversion.javahl;
 /**
- * simple interface for receiving callbacks for authentification
+ * simple interface for receiving callbacks for authentification.
+ * new applications should use PromptUserPassword3 instead
  */
 public interface PromptUserPassword
 {
