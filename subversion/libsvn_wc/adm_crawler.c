@@ -958,7 +958,6 @@ report_local_mods (svn_string_t *path,
   /* Push the current {path, baton, this_dir} to the top of the stack */
   push_stack (stack, path, dir_baton, this_dir, subpool);
 
-
   /**                           **/
   /** Main Logic                **/
   /**                           **/
@@ -1205,8 +1204,8 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
 {
   svn_error_t *err;
   int i;
-
-  svn_wc_entry_t *parent_entry;
+  svn_string_t *filename;
+  svn_wc_entry_t *parent_entry, *tgt_entry;
 
   /* A stack that will store all paths and dir_batons as we drive the
      editor depth-first. */
@@ -1223,7 +1222,10 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
   /* No targets at all? */
   if ((! condensed_targets) || (condensed_targets->nelts == 0))
     {
-      /* Do a single crawl from parent_dir, that's it. */
+      /* Do a single crawl from parent_dir, that's it.  Parent_dir
+      will be automatically pushed to the empty stack, but not
+      removed.  This way we can examine the frame to see if there's a
+      root_dir_baton, and thus whether we need to call close_edit(). */
       err = report_local_mods (parent_dir, NULL, NULL,
                                edit_fns, edit_baton,
                                &stack, affected_targets, locked_dirs,
@@ -1254,13 +1256,13 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
                   parent_dir->data); 
           printf ("Attempting to commit target '%s'\n", target->data);
           
-          /* Examine top of stack and target, and get a 'nearer'
-             common parent. */
+          /* Examine top of stack and target, and get a nearer common
+             'subparent'. */
           subparent = svn_path_get_longest_ancestor (target,
                                                      stack->path, pool);
           
-          /* If the current stack path is NOT equal to the near parent,
-             it must logically be a child of the near parent.  So... */
+          /* If the current stack path is NOT equal to the subparent,
+             it must logically be a child of the subparent.  So... */
           if (svn_path_compare_paths (stack->path, subparent,
                                       svn_path_local_style))
             /* ...close directories and remove stackframes until the stack
@@ -1269,7 +1271,7 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
           
           /* Push new stackframes to get down to the immediate parent of
              the target ("ptarget"), which must also be a child of the
-             near parent. */
+             subparent. */
           {
             int j;
             svn_string_t *ptarget;
@@ -1306,15 +1308,22 @@ svn_wc_crawl_local_mods (svn_string_t *parent_dir,
               }
           }
 
-      /* Do a crawl for local mods in TARGET.  If any are found,
-         directory batons will be automatically generated as needed
-         and stored in the stack.  File batons for postfix textdeltas
-         will be continually added to AFFECTED_TARGETS, and locked
-         directories will be appended to LOCKED_DIRS.
-         
-         (Note that the first thing the crawler will do is push a new stack
-         object with PATH=target and BATON=NULL.)  */
-          err = report_local_mods (target, NULL, NULL,
+          /* Figure out if TARGET is a file or a dir. */
+          SVN_ERR(svn_wc_entry (&tgt_entry, target, pool));
+
+          if (tgt_entry->kind == svn_node_file)
+            /* isolate the name of the file itself */
+            filename = svn_path_last_component (target,
+                                                svn_path_local_style, pool);
+          else
+            filename = NULL;
+
+          /* Do a crawl for local mods in TARGET.  If any are found,
+             directory batons will be automatically generated as needed
+             and stored in the stack.  File batons for postfix textdeltas
+             will be continually added to AFFECTED_TARGETS, and locked
+             directories will be appended to LOCKED_DIRS. */
+          err = report_local_mods (target, NULL, filename,
                                    edit_fns, edit_baton,
                                    &stack, affected_targets, locked_dirs,
                                    pool);
