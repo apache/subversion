@@ -36,26 +36,31 @@ Candidate changes:
     Fix output of notifications when merging a deletion of a directory.
     Justification:
       It just looks ugly and sloppy.
-    Branch: 1.1.x-r12100
+    Branch:
+      rs=http://svn.collab.net/repos/svn
+      svn merge -r12104:HEAD $rs/branches/1.1.x-r12100
     Votes:
       +1: breser, kfogel
+
+  * r12327
+    Fix race condition in dump loader computing the next revision.
+    Justification:
+      Loads into an active repository will be corrupted.
+    Branch:
+      rs=http://svn.collab.net/repos/svn
+      svn merge -r12381:HEAD $rs/branches/1.1.x-r12327
+    Votes:
+      +1: jerenkrantz, maxb
+
+
+Approved changes (further review is welcome, but not required):
 
   * r11871
     Support BDB 4.3.
     Justification:
       System will startup with BDB 4.3, but die at run-time without this.
     Votes:
-      +1: jerenkrantz, dionisos
-
-  * r12327
-    Fix race condition in dump loader computing the next revision.
-    Justification:
-      Loads into an active repository will be corrupted.
-    Votes:
-      +1: jerenkrantz
-
-
-Approved changes (further review is welcome, but not required):
+      +1: jerenkrantz, dionisos, maxb
 
   * r12006, r12136, r12146
     Fix issue 2124 - bugs in svn switch over ra-dav.
