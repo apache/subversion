@@ -54,7 +54,7 @@
 #include "utf_impl.h"
 
 /* Lookup table to categorise each octet in the string. */
-static char octet_category[256] = {
+static const char octet_category[256] = {
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, /* 0x00-0x7f */
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -98,7 +98,7 @@ static char octet_category[256] = {
    harder to understand?  */
 
 /* Machine transition table */
-static char machine [9][14] = {
+static const char machine [9][14] = {
   /* FSM_START */
   {FSM_START,         /* 0x00-0x7f */
    FSM_ERROR,         /* 0x80-0x8f */
