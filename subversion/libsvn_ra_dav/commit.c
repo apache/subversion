@@ -213,7 +213,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
                                              rsrc->url,
                                              revision,
                                              cc->ras->pool));
-      bc = svn_stringbuf_create(bc_url.data, cc->ras->pool);
+      bc = svn_stringbuf_create_from_string(&bc_url, cc->ras->pool);
       svn_path_add_component_nts(bc, bc_relative.data,
                                  svn_path_url_style);
 
