@@ -429,6 +429,14 @@ for  example: '(\"revert\" \"file1\"\)"
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
 
+(defun svn-process-sentinel-fixup-path-seperators()
+  (when (eq system-type 'windows-nt)
+      ;; convert path separator to UNIX style
+      (save-excursion
+        (goto-char (point-min))
+        (while (search-forward "\\" nil t)
+          (replace-match "/")))))
+    
 (defun svn-process-sentinel (process event)
   ;;(princ (format "Process: %s had the event `%s'" process event)))
   ;;(save-excursion
@@ -439,12 +447,7 @@ for  example: '(\"revert\" \"file1\"\)"
     (cond ((string= event "finished\n")
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
-                  (if (eq system-type 'windows-nt)
-                      ;; convert path separator to UNIX style
-                      (save-excursion
-                        (goto-char (point-min))
-                        (while (search-forward "\\" nil t)
-                          (replace-match "/"))))
+                  (svn-process-sentinel-fixup-path-seperators)
                   (svn-parse-status-result)
                   (set-buffer act-buf)
                   (svn-status-update-buffer)
@@ -480,11 +483,9 @@ for  example: '(\"revert\" \"file1\"\)"
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-status-remove-temp-file-maybe)
-                  ;;(svn-status-show-process-buffer-internal t)
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
-                  ;;(svn-status-update)
-                  ;;(svn-status-update), svn-status-show-process-buffer-internal should be no longer necessary!
+                  (svn-process-sentinel-fixup-path-seperators)
                   (svn-status-update-with-command-list (svn-status-parse-commit-output))
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
