@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-31 00:45:57 $
+              Last updated:  $Date: 2001-08-31 01:02:57 $
 
 
 TABLE OF CONTENTS
@@ -295,7 +295,7 @@ project files in this archive are not up-to-date, so building the neon
 libraries is not straight-forward.  Pre-build neon libraries are
 available at
 
-   http://www.xbc.nu/sbn/libneon-0.15.3-svn-win32.zip
+   http://www.xbc.nu/svn/libneon-0.15.3-svn-win32.zip
 
 Unpack the two files in this archive, libneon.lib and libneonD.lib,
 into the <SVN>/neon directory.
