@@ -700,13 +700,64 @@ svn_fs_merge (const char **conflict_p,
 /* Directories.  */
 
 
+struct dir_entries_args
+{
+  apr_hash_t **table_p;
+  svn_fs_root_t *root;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_dir_entries (void *baton,
+                      trail_t *trail)
+{
+  struct dir_entries_args *args = baton;
+  apr_pool_t *pool = trail->pool;
+  parent_path_t *parent_path;
+  skel_t *entries, *entry;
+  apr_hash_t *table;
+
+  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
+  SVN_ERR (svn_fs__dag_dir_entries (&entries, parent_path->node, trail));
+
+  /* Build a hash table from the directory entry list.  */
+  table = apr_hash_make (pool);
+  for (entry = entries->children; entry; entry = entry->next)
+    {
+      skel_t *name_skel = entry->children;
+      skel_t *id_skel   = entry->children->next;
+      svn_fs_dirent_t *dirent = apr_pcalloc (pool, sizeof (*dirent));
+
+      dirent->name = apr_palloc (pool, name_skel->len + 1);
+      memcpy (dirent->name, name_skel->data, name_skel->len);
+      dirent->name[name_skel->len] = '\0';
+      dirent->id = svn_fs_parse_id (id_skel->data, id_skel->len, pool);
+
+      apr_hash_set (table, dirent->name, name_skel->len, dirent);
+    }
+
+  *args->table_p = table;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_dir_entries (apr_hash_t **table_p,
                     svn_fs_root_t *root,
                     const char *path,
                     apr_pool_t *pool)
 {
-  abort ();
+  struct dir_entries_args args;
+  apr_hash_t *table;
+
+  args.table_p = &table;
+  args.root    = root;
+  args.path    = path;
+  SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_dir_entries, &args, pool));
+  
+  *table_p = table;
+  return SVN_NO_ERROR;
 }
 
 
