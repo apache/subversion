@@ -345,7 +345,7 @@ def visit_file(arg, dirname, files):
     if verbose:
       print pathname
     try:
-      p.parse(open(pathname), cd)
+      p.parse(open(pathname, 'rb'), cd)
       stats[0] = stats[0] + 1
     except rcsparse.common.RCSExpected:
       print "Warning: '%s' is not a valid ,v file, ignoring" % pathname
@@ -378,12 +378,12 @@ class RevInfoParser(rcsparse.Sink):
 
   def parse_cvs_file(self, rcs_pathname):
     try:
-      rcsfile = open(rcs_pathname, 'r')
+      rcsfile = open(rcs_pathname, 'rb')
     except:
       try:
         dirname, fname = os.path.split(rcs_pathname)
         rcs_pathname = os.path.join(dirname, "Attic", fname)
-        rcsfile = open(rcs_pathname, 'r')
+        rcsfile = open(rcs_pathname, 'rb')
       except:
         ### should use a better error
         raise RuntimeError, ('error: %s appeared to be under CVS control, '
@@ -1035,7 +1035,7 @@ class Dumper:
 
     basename = os.path.basename(rcs_file[:-2])
     pipe = os.popen('co -q -p%s \'%s\''
-                    % (cvs_rev, rcs_file.replace("'", "'\\''")), 'r', 102400)
+                    % (cvs_rev, rcs_file.replace("'", "'\\''")), 'r')
 
     # You might think we could just test
     #
