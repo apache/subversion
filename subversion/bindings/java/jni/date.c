@@ -37,7 +37,9 @@ date__create(JNIEnv *env, jboolean *hasException, long time)
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI_DATE__DEBUG
-  fprintf(stderr, ">>>date__create(...)\n");
+  fprintf(stderr, ">>>date__create(");
+  SVN_JNI__DEBUG_LONG(time);
+  fprintf(stderr, ")\n");
 #endif
 
   /*
@@ -90,7 +92,9 @@ date__create(JNIEnv *env, jboolean *hasException, long time)
     }
 
 #ifdef SVN_JNI_DATE__DEBUG
-  fprintf(stderr, "<<<date__create\n");
+  fprintf(stderr, "\n<<<date__create(");
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  fprintf(stderr, ")\n");
 #endif
 				    
   if( (hasException != NULL) && _hasException )
