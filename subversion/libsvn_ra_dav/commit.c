@@ -56,6 +56,15 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 
+#include "ra_session.h"
+
+
+typedef struct
+{
+  svn_ra_session_t *ras;
+
+} commit_ctx_t;
+
 
 static svn_error_t *
 commit_delete (svn_string_t *name,
@@ -180,12 +189,17 @@ static const svn_delta_walk_t commit_walker = {
 };
 
 svn_error_t *
-svn_ra_get_commit_walker(const svn_delta_walk_t **walker,
-                         void **walk_baton,
-                         ... /* more params */)
+svn_ra_get_commit_walker(svn_ra_session_t *ras,
+                         const svn_delta_walk_t **walker,
+                         void **walk_baton)
 {
+  commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
+
+  cc->ras = ras;
+  *walk_baton = cc;
+
   *walker = &commit_walker;
-  *walk_baton = NULL;
+
   return NULL;
 }
 

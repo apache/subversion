@@ -385,8 +385,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
                  int recurse,
                  const svn_delta_walk_t *walker,
                  void *walk_baton,
-                 void *dir_baton,
-                 apr_pool_t *pool)
+                 void *dir_baton)
 {
   svn_error_t *err;
   fetch_ctx_t fc = { 0 };
@@ -396,9 +395,9 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
   fc.walker = walker;
   fc.walk_baton = walk_baton;
-  fc.pool = pool;
-  fc.subdirs = apr_make_array(pool, 5, sizeof(dir_rec_t));
-  fc.files = apr_make_array(pool, 10, sizeof(file_rec_t));
+  fc.pool = ras->pool;
+  fc.subdirs = apr_make_array(ras->pool, 5, sizeof(dir_rec_t));
+  fc.files = apr_make_array(ras->pool, 10, sizeof(file_rec_t));
 
   /* ### join ras->rep_root, start_at */
   dr = apr_push_array(fc.subdirs);
@@ -406,7 +405,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
   dr->parent_baton = dir_baton;
 
   /* ### */
-  ancestor_path = svn_string_create("### ancestor_path ###", pool);
+  ancestor_path = svn_string_create("### ancestor_path ###", ras->pool);
   ancestor_version = 1;
 
   do
@@ -450,7 +449,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
 
       /* we fetched information about the directory successfully. time to
          create the local directory. */
-      name = my_basename(url, pool);
+      name = my_basename(url, ras->pool);
       err = (*walker->add_directory) (name, walk_baton, parent_baton,
                                       ancestor_path, ancestor_version,
                                       &this_baton);
