@@ -41,13 +41,23 @@ svn_fs_bdb__open_locks_table (DB **locks_p,
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *locks;
+  int error;
 
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&locks, env, 0));
-  BDB_ERR (locks->open (SVN_BDB_OPEN_PARAMS(locks, NULL),
-                        "locks", 0, DB_BTREE,
-                        open_flags | SVN_BDB_AUTO_COMMIT,
-                        0666));
+  error = locks->open (SVN_BDB_OPEN_PARAMS(locks, NULL),
+                       "locks", 0, DB_BTREE,
+                       open_flags | SVN_BDB_AUTO_COMMIT,
+                       0666);
+
+  /* Create the table if it doesn't yet exist.  This is a form of
+     automagical repository upgrading. */
+  if (error == ENOENT && (! create))
+    {
+      BDB_ERR (locks->close (locks, 0));
+      return svn_fs_bdb__open_locks_table (locks_p, env, TRUE);
+    }
+  BDB_ERR (error);
 
   *locks_p = locks;
   return 0;

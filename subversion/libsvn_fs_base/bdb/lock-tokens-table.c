@@ -40,13 +40,23 @@ svn_fs_bdb__open_lock_tokens_table (DB **lock_tokens_p,
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *lock_tokens;
+  int error;
 
   BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&lock_tokens, env, 0));
-  BDB_ERR (lock_tokens->open (SVN_BDB_OPEN_PARAMS(lock_tokens, NULL),
-                              "lock-tokens", 0, DB_BTREE,
-                              open_flags | SVN_BDB_AUTO_COMMIT,
-                              0666));
+  error = lock_tokens->open (SVN_BDB_OPEN_PARAMS(lock_tokens, NULL),
+                             "lock-tokens", 0, DB_BTREE,
+                             open_flags | SVN_BDB_AUTO_COMMIT,
+                             0666);
+
+  /* Create the table if it doesn't yet exist.  This is a form of
+     automagical repository upgrading. */
+  if (error == ENOENT && (! create))
+    {
+      BDB_ERR (lock_tokens->close (lock_tokens, 0));
+      return svn_fs_bdb__open_lock_tokens_table (lock_tokens_p, env, TRUE);
+    }
+  BDB_ERR (error);
 
   *lock_tokens_p = lock_tokens;
   return 0;
