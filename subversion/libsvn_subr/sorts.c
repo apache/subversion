@@ -75,7 +75,8 @@ svn_sort_compare_items_as_paths (const void *a, const void *b)
 int
 svn_sort_compare_strings_as_paths (const void *a, const void *b)
 {
-  const svn_string_t *str_a = a, *str_b = b;
+  const svn_string_t *str_a = *((svn_string_t **) a);
+  const svn_string_t *str_b = *((svn_string_t **) b);
   return svn_path_compare_paths (str_a, str_b, svn_path_local_style);
 }
 
