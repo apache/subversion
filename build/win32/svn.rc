@@ -24,16 +24,20 @@
 #include "../../subversion/include/svn_version.h"
 
 #ifndef _DEBUG
-# ifdef SVN_VER_NAME
+# if SVN_VER_REVISION == 0
 #  define SVN_FILEFLAGS VS_FF_PRERELEASE
+#  define SVN_SPECIALBUILD SVN_VER_TAG
 # else
 #  define SVN_FILEFLAGS 0x0L
+#  undef  SVN_SPECIALBUILD
 # endif
 #else  /* _DEBUG */
-# ifdef SVN_VER_NAME
+# if SVN_VER_REVISION == 0
 #  define SVN_FILEFLAGS VS_FF_DEBUG|VS_FF_PRERELEASE
+#  define SVN_SPECIALBUILD SVN_VER_TAG " (debug)"
 # else
 #  define SVN_FILEFLAGS VS_FF_DEBUG
+#  define SVN_SPECIALBUILD "debug build"
 # endif
 #endif /* _DEBUG */
 
@@ -41,8 +45,8 @@
 1 ICON "svn.ico"
 
 VS_VERSION_INFO VERSIONINFO
-  FILEVERSION SVN_VER_MAJOR,SVN_VER_MINOR,SVN_VER_MICRO,0
-  PRODUCTVERSION SVN_VER_MAJOR,SVN_VER_MINOR,SVN_VER_MICRO,0
+  FILEVERSION SVN_VER_MAJOR,SVN_VER_MINOR,SVN_VER_MICRO,SVN_VER_REVISION
+  PRODUCTVERSION SVN_VER_MAJOR,SVN_VER_MINOR,SVN_VER_MICRO,SVN_VER_REVISION
   FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
   FILEFLAGS SVN_FILEFLAGS
   FILEOS VOS__WINDOWS32
@@ -54,17 +58,20 @@ BEGIN
     BLOCK "040904B0"
     BEGIN
       VALUE "CompanyName", "http://subversion.tigris.org/\0"
-       VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
-       VALUE "FileVersion", SVN_VER_NUMBER "\0"
-       VALUE "InternalName", "SVN\0"
-       VALUE "LegalCopyright", "Copyright 2000-2003 CollabNet\0"
-       VALUE "OriginalFilename", APR_STRINGIFY(SVN_FILE_NAME) "\0"
-       VALUE "ProductName", "Subversion\0"
-       VALUE "ProductVersion", SVN_VERSION "\0"
-     END
-   END
-   BLOCK "VarFileInfo"
-   BEGIN
+      VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
+      VALUE "FileVersion", SVN_VER_NUMBER "\0"
+      VALUE "InternalName", "SVN\0"
+      VALUE "LegalCopyright", "Copyright (c) 2000-2003 CollabNet\0"
+      VALUE "OriginalFilename", APR_STRINGIFY(SVN_FILE_NAME) "\0"
+      VALUE "ProductName", "Subversion\0"
+      VALUE "ProductVersion", SVN_VERSION "\0"
+#ifdef SVN_SPECIALBUILD
+      VALUE "SpecialBuild", SVN_SPECIALBUILD "\0"
+#endif
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
      VALUE "Translation", 0x409, 1200
   END
 END

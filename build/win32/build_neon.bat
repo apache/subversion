@@ -1,8 +1,8 @@
 @echo off
 @rem **************************************************************************
-@rem * From the neon directory in the Subversion source tree, run this 
+@rem * From the neon directory in the Subversion source tree, run this
 @rem * batch file like so:
-@rem * 
+@rem *
 @rem *    ..\build\win32\build_neon debug|release [rebuild]
 @rem **************************************************************************
 @rem * Support for OpenSSL and zlib

@@ -1,0 +1,39 @@
+head     1.1;
+branch   1.1.1;
+access   ;
+symbols  release:1.1.1.1 vendor:1.1.1;
+locks    ; strict;
+comment  @# @;
+
+
+1.1
+date     2002.11.30.19.27.42;  author mark;  state Exp;
+branches 1.1.1.1;
+next     ;
+
+1.1.1.1
+date     2002.11.30.19.27.42;  author mark;  state Exp;
+branches ;
+next     ;
+
+
+desc
+@@
+
+
+
+1.1
+log
+@Initial revision
+@
+text
+@Just a test for spaces in the file name.
+@
+
+
+1.1.1.1
+log
+@imported
+@
+text
+@@

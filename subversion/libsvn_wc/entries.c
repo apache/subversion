@@ -19,8 +19,10 @@
 
 
 #include <string.h>
-#include <apr_strings.h>
 #include <assert.h>
+
+#include <apr_strings.h>
+
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_types.h"
@@ -108,7 +110,7 @@ svn_wc__entries_init (const char *path,
       apr_file_close (f);
       return svn_error_createf (apr_err, NULL,
                                 "svn_wc__entries_init: "
-                                "error writing %s's entries file",
+                                "error writing entries file for '%s'.",
                                 path);
     }
 
@@ -371,6 +373,14 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                     APR_HASH_KEY_STRING);
     if (entry->checksum)
       *modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+  }
+
+  /* UUID. */
+  {
+    entry->uuid = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_UUID,
+                                APR_HASH_KEY_STRING);
+    if (entry->uuid)
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_UUID;
   }
 
   /* Setup last-committed values. */
@@ -914,6 +924,10 @@ write_entry (svn_stringbuf_t **output,
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,
                   entry->cmt_author);
 
+  if (entry->uuid)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
+                  entry->uuid);
+
   if (entry->cmt_date)
     {
       apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_DATE, APR_HASH_KEY_STRING,
@@ -945,11 +959,13 @@ write_entry (svn_stringbuf_t **output,
 
       if (entry->kind == svn_node_dir)
         {
-          /* We don't write url or revision for subdir
+          /* We don't write url, revision, or uuid for subdir
              entries. */
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
+                        NULL);
+          apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
                         NULL);
         }
       else
@@ -960,7 +976,17 @@ write_entry (svn_stringbuf_t **output,
           if (entry->revision == this_dir->revision)
             apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, 
                           APR_HASH_KEY_STRING, NULL);
-          
+
+          /* If this is not the "this dir" entry, and the uuid is
+             the same as that of the "this dir" entry, don't write out
+             the uuid. */
+          if (entry->uuid && this_dir->uuid)
+            {
+              if (strcmp(entry->uuid, this_dir->uuid) == 0)
+                apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, 
+                              APR_HASH_KEY_STRING, NULL);
+            }
+
           /* If this is not the "this dir" entry, and the url is
              trivially calculable from that of the "this dir" entry,
              don't write out the url */
@@ -1174,6 +1200,11 @@ fold_entry (apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CMT_AUTHOR)
     cur_entry->cmt_author = entry->cmt_author
                             ? apr_pstrdup (pool, entry->cmt_author) 
+                            : NULL;
+
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_UUID)
+    cur_entry->uuid = entry->uuid
+                            ? apr_pstrdup (pool, entry->uuid) 
                             : NULL;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
@@ -1478,6 +1509,8 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
   /* Sync changes to disk. */
   if (do_sync)
     SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
+  else
+    svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1496,6 +1529,10 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->name = apr_pstrdup (pool, entry->name);
   if (entry->url)
     dupentry->url = apr_pstrdup (pool, entry->url);
+  if (entry->repos)
+    dupentry->repos = apr_pstrdup (pool, entry->repos);
+  if (entry->uuid)
+    dupentry->uuid = apr_pstrdup (pool, entry->uuid);
   if (entry->copyfrom_url)
     dupentry->copyfrom_url = apr_pstrdup (pool, entry->copyfrom_url);
   if (entry->conflict_old)
@@ -1506,6 +1543,8 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->conflict_wrk = apr_pstrdup (pool, entry->conflict_wrk);
   if (entry->prejfile)
     dupentry->prejfile = apr_pstrdup (pool, entry->prejfile);
+  if (entry->checksum)
+    dupentry->checksum = apr_pstrdup (pool, entry->checksum);
   if (entry->cmt_author)
     dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
 
@@ -1629,7 +1668,7 @@ svn_wc_walk_entries (const char *path,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "%s is not under revision control.", path);
+                              "'%s' is not under revision control.", path);
 
   if (entry->kind == svn_node_file)
     return walk_callbacks->found_entry (path, entry, walk_baton);

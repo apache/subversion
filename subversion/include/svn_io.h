@@ -295,19 +295,6 @@ svn_error_t *svn_io_file_checksum (unsigned char digest[],
                                    apr_pool_t *pool);
 
 
-/** Return a POSIX-like file descriptor from @a file.
- *
- * Return a POSIX-like file descriptor from @a file.
- *
- * We need this because on some platforms, notably Windows, apr_file_t
- * is not based on a file descriptor; but we have to pass an FD to neon.
- *
- * FIXME: This function will hopefully go away if/when neon gets
- *        replaced by apr-serf.
- */
-apr_status_t svn_io_fd_from_file (int *fd_p, apr_file_t *file);
-
-
 
 /** Generic byte-streams
  *
@@ -546,9 +533,9 @@ svn_error_t *svn_io_run_cmd (const char *path,
 
 /** Run diff.
  *
- * Invoke @c SVN_CLIENT_DIFF, with @a user_args (an array of utf8-encoded
- * @a num_user_args arguments), if they are specified, or "-u" if they
- * are not.
+ * Invoke @c the configured diff program, or SVN_CLIENT_DIFF, with @a
+ * user_args (an array of utf8-encoded @a num_user_args arguments), if
+ * they are specified, or "-u" if they are not.
  *
  * Diff runs in utf8-encoded @a dir, and its exit status is stored in
  * @a exitcode, if it is not @c NULL.  
@@ -560,7 +547,10 @@ svn_error_t *svn_io_run_cmd (const char *path,
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * Do all allocation in @a pool.
+ * @a config is a hash of @c svn_config_t * items, keyed on category
+ * names, and may be @c NULL.
+ *
+ * Do all allocation in @a pool. 
  */
 svn_error_t *svn_io_run_diff (const char *dir,
                               const char *const *user_args,
@@ -572,12 +562,14 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               int *exitcode,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
+                              apr_hash_t *config,
                               apr_pool_t *pool);
 
 
 /** Run diff3
  *
- * Invoke @c SVN_CLIENT_DIFF3 in utf8-encoded @a dir like this:
+ * Invoke @c the configured diff3 program, or SVN_CLIENT_DIFF3, in
+ * utf8-encoded @a dir like this:
  *
  *          diff3 -Em @a mine @a older @a yours > @a merged
  *
@@ -598,7 +590,10 @@ svn_error_t *svn_io_run_diff (const char *dir,
  * other than 0 or 1, then return @c SVN_ERR_EXTERNAL_PROGRAM.  (Note the
  * following from the diff3 info pages: "An exit status of 0 means
  * `diff3' was successful, 1 means some conflicts were found, and 2
- * means trouble.")
+ * means trouble.") 
+ *
+ * @a config is a hash of @c svn_config_t * items, keyed on category
+ * names, and may be @c NULL.
  */
 svn_error_t *svn_io_run_diff3 (const char *dir,
                                const char *mine,
@@ -609,6 +604,7 @@ svn_error_t *svn_io_run_diff3 (const char *dir,
                                const char *yours_label,
                                apr_file_t *merged,
                                int *exitcode,
+                               apr_hash_t *config,
                                apr_pool_t *pool);
 
 

@@ -41,7 +41,8 @@ svn_cl__propedit (apr_getopt_t *os,
                   void *baton,
                   apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   int i;
@@ -63,7 +64,6 @@ svn_cl__propedit (apr_getopt_t *os,
     {
       svn_revnum_t rev;
       const char *URL, *target;
-      svn_client_auth_baton_t *auth_baton;
       svn_string_t *propval;
       const char *new_propval;
 
@@ -78,15 +78,13 @@ svn_cl__propedit (apr_getopt_t *os,
          us find the right repository. */
       svn_opt_push_implicit_dot_target (targets, pool);
 
-      auth_baton = svn_cl__make_auth_baton (opt_state, pool);
-
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
                                 "No URL target available.");
       target = ((const char **) (targets->elts))[0];
-      SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));  
+      SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
         return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 "Either a URL or versioned item is required.");
@@ -94,7 +92,7 @@ svn_cl__propedit (apr_getopt_t *os,
       /* Fetch the current property. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,
                                        URL, &(opt_state->start_revision),
-                                       auth_baton, &rev, pool));
+                                       &rev, ctx, pool));
       if (! propval)
         propval = svn_string_create ("", pool);
       
@@ -102,7 +100,7 @@ svn_cl__propedit (apr_getopt_t *os,
          original property value... */
       SVN_ERR (svn_cl__edit_externally (&new_propval, NULL, ".",
                                         propval->data, "svn-prop",
-                                        pool));
+                                        ctx->config, pool));
       
       /* ...and re-set the property's value accordingly. */
       if (new_propval)
@@ -123,7 +121,7 @@ svn_cl__propedit (apr_getopt_t *os,
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
-                                           auth_baton, &rev, pool));
+                                           &rev, ctx, pool));
 
           printf ("Set new value for property `%s' on revision %"
                   SVN_REVNUM_T_FMT"\n", pname, rev);
@@ -192,8 +190,8 @@ svn_cl__propedit (apr_getopt_t *os,
           /* Fetch the current property. */
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        &(opt_state->start_revision),
-                                       NULL,  /* ### pass auth_baton here */
                                        FALSE,
+                                       NULL,  /* ### pass ctx here */
                                        pool));
           
           /* Get the property value. */
@@ -216,6 +214,7 @@ svn_cl__propedit (apr_getopt_t *os,
                                             base_dir,
                                             propval->data,
                                             "svn-prop",
+                                            ctx->config,
                                             pool));
           
           SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));

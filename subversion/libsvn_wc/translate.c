@@ -57,7 +57,7 @@ svn_wc_translated_file (const char **xlated_p,
   const char *eol;
   svn_subst_keywords_t *keywords;
   
-  SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, pool));
+  SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, adm_access, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
 
   if ((style == svn_subst_eol_style_none) && (! keywords))
@@ -91,7 +91,7 @@ svn_wc_translated_file (const char **xlated_p,
       if (apr_err)
         return svn_error_createf
           (0, NULL,
-           "svn_wc_translated_file: unable to close %s", tmp_vfile);
+           "svn_wc_translated_file: unable to close '%s'", tmp_vfile);
       
       if (style == svn_subst_eol_style_fixed)
         {
@@ -127,7 +127,7 @@ svn_wc_translated_file (const char **xlated_p,
         {
           return svn_error_createf
             (SVN_ERR_IO_INCONSISTENT_EOL, NULL,
-             "svn_wc_translated_file: %s has unknown eol style property",
+             "svn_wc_translated_file: '%s' has unknown eol style property",
              vfile);
         }
 
@@ -142,12 +142,14 @@ svn_error_t *
 svn_wc__get_eol_style (svn_subst_eol_style_t *style,
                        const char **eol,
                        const char *path,
+                       svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
   const svn_string_t *propval;
 
   /* Get the property value. */
-  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EOL_STYLE, path, pool));
+  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EOL_STYLE, path, adm_access,
+                            pool));
 
   /* Convert it. */
   svn_subst_eol_style_from_value (style, eol, propval ? propval->data : NULL);
@@ -323,7 +325,8 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
     {
       const svn_string_t *propval;
 
-      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_KEYWORDS, path, pool));
+      SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_KEYWORDS, path, adm_access,
+                                pool));
       
       list = propval ? propval->data : NULL;
     }
@@ -391,10 +394,12 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
 svn_error_t *
 svn_wc__maybe_set_executable (svn_boolean_t *did_set,
                               const char *path,
+                              svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool)
 {
   const svn_string_t *propval;
-  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EXECUTABLE, path, pool));
+  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EXECUTABLE, path, adm_access,
+                            pool));
 
   if (propval != NULL)
     {

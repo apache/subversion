@@ -43,13 +43,12 @@ svn_cl__resolve (apr_getopt_t *os,
                  void *baton,
                  apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
   apr_pool_t *subpool;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -61,15 +60,15 @@ svn_cl__resolve (apr_getopt_t *os,
     
   subpool = svn_pool_create (pool);
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
   
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
       err = svn_client_resolve (target,
-                                notify_func, notify_baton,
                                 opt_state->recursive,
+                                ctx,
                                 subpool);
       if (err)
         {

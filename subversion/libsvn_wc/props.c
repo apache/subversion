@@ -413,7 +413,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, NULL,
                                     "svn_wc_merge_prop_diffs:"
-                                    "error writing log for %s", path);
+                                    "error writing log for '%s'", path);
         }
 
       SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
@@ -479,9 +479,11 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
     }
 
   /* Get paths to the local and pristine property files. */
-  SVN_ERR (svn_wc__prop_path (&local_propfile_path, full_path, 0, pool));
+  SVN_ERR (svn_wc__prop_path (&local_propfile_path, full_path, adm_access,
+                              FALSE, pool));
   
-  SVN_ERR (svn_wc__prop_base_path (&base_propfile_path, full_path, 0, pool));
+  SVN_ERR (svn_wc__prop_base_path (&base_propfile_path, full_path, adm_access,
+                                   FALSE, pool));
 
   /* Load the base & working property files into hashes */
   localhash = apr_hash_make (pool);
@@ -576,7 +578,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                   const char *tmpname;
 
                   /* Get path to /temporary/ local prop file */
-                  SVN_ERR (svn_wc__prop_path (&tmppath, full_path, 1, pool));
+                  SVN_ERR (svn_wc__prop_path (&tmppath, full_path, adm_access,
+                                              TRUE, pool));
 
                   /* Reserve a .prej file based on it.  */
                   SVN_ERR (svn_io_open_unique_file (&reject_tmp_fp,
@@ -647,7 +650,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   paths computed are ABSOLUTE pathnames, which is what our disk
   routines require.*/
 
-  SVN_ERR (svn_wc__prop_path (&local_prop_tmp_path, full_path, 1, pool));
+  SVN_ERR (svn_wc__prop_path (&local_prop_tmp_path, full_path, adm_access, TRUE,
+                              pool));
   
   /* Write the merged local prop hash to path/.svn/tmp/props/name or
      path/.svn/tmp/dir-props */
@@ -682,8 +686,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   /* Repeat the above steps for the base properties if required */
   if (base_merge)
     {
-      SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1,
-                                       pool));
+      SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path,
+                                       adm_access, TRUE, pool));
       SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool));
 
       tmp_prop_base = apr_pstrdup (pool,
@@ -818,6 +822,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 static svn_error_t *
 wcprop_list (apr_hash_t **props,
              const char *path,
+             svn_wc_adm_access_t *adm_access,
              apr_pool_t *pool)
 {
   svn_node_kind_t kind, pkind;
@@ -841,7 +846,7 @@ wcprop_list (apr_hash_t **props,
 #endif
 
   /* Construct a path to the relevant property file */
-  SVN_ERR( svn_wc__wcprop_path (&prop_path, path, 0, pool) );
+  SVN_ERR( svn_wc__wcprop_path (&prop_path, path, adm_access, FALSE, pool) );
 
   /* Does the property file exist? */
   SVN_ERR( svn_io_check_path (prop_path, &pkind, pool) );
@@ -862,12 +867,13 @@ svn_error_t *
 svn_wc__wcprop_get (const svn_string_t **value,
                     const char *name,
                     const char *path,
+                    svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *prophash;
 
-  err = wcprop_list (&prophash, path, pool);
+  err = wcprop_list (&prophash, path, adm_access, pool);
   if (err)
     return
       svn_error_quick_wrap
@@ -882,6 +888,7 @@ svn_error_t *
 svn_wc__wcprop_set (const char *name,
                     const svn_string_t *value,
                     const char *path,
+                    svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -889,7 +896,7 @@ svn_wc__wcprop_set (const char *name,
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
 
-  err = wcprop_list (&prophash, path, pool);
+  err = wcprop_list (&prophash, path, adm_access, pool);
   if (err)
     return
       svn_error_quick_wrap
@@ -910,7 +917,7 @@ svn_wc__wcprop_set (const char *name,
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
-                              "can't write prop hash for %s", path);
+                              "can't write prop hash for '%s'", path);
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
@@ -931,6 +938,7 @@ svn_wc__wcprop_set (const char *name,
 svn_error_t *
 svn_wc_prop_list (apr_hash_t **props,
                   const char *path,
+                  svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool)
 {
   svn_node_kind_t pkind;
@@ -939,7 +947,7 @@ svn_wc_prop_list (apr_hash_t **props,
   *props = apr_hash_make (pool);
 
   /* Construct a path to the relevant property file */
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
 
   /* Does the property file exist? */
   SVN_ERR (svn_io_check_path (prop_path, &pkind, pool));
@@ -963,6 +971,7 @@ svn_error_t *
 svn_wc_prop_get (const svn_string_t **value,
                  const char *name,
                  const char *path,
+                 svn_wc_adm_access_t *adm_access,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -972,7 +981,7 @@ svn_wc_prop_get (const svn_string_t **value,
 
   if (kind == svn_prop_wc_kind)
     {
-      return svn_wc__wcprop_get (value, name, path, pool);
+      return svn_wc__wcprop_get (value, name, path, adm_access, pool);
     }
   if (kind == svn_prop_entry_kind)
     {
@@ -982,7 +991,7 @@ svn_wc_prop_get (const svn_string_t **value,
     }
   else  /* regular prop */
     {
-      err = svn_wc_prop_list (&prophash, path, pool);
+      err = svn_wc_prop_list (&prophash, path, adm_access, pool);
       if (err)
         return
           svn_error_quick_wrap
@@ -1028,7 +1037,7 @@ validate_prop_against_node_kind (const char *name,
       break;
     default:
       return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                "%s is not a file or directory", path);
+                                "'%s' is not a file or directory", path);
     }
 
   while (*node_kind_prohibit)
@@ -1043,6 +1052,7 @@ validate_prop_against_node_kind (const char *name,
 
 static svn_error_t *
 validate_eol_prop_against_file (const char *path, 
+                                svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
   apr_file_t *fp;
@@ -1051,7 +1061,8 @@ validate_eol_prop_against_file (const char *path,
   const svn_string_t *mime_type;
 
   /* See if this file has been determined to be binary. */
-  SVN_ERR (svn_wc_prop_get (&mime_type, SVN_PROP_MIME_TYPE, path, pool));
+  SVN_ERR (svn_wc_prop_get (&mime_type, SVN_PROP_MIME_TYPE, path, adm_access,
+                            pool));
   if (mime_type && svn_mime_type_is_binary (mime_type->data))
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
                               "File '%s' has binary mimetype property", path);
@@ -1098,7 +1109,7 @@ svn_wc_prop_set (const char *name,
   SVN_ERR (svn_io_check_path (path, &kind, pool));
 
   if (prop_kind == svn_prop_wc_kind)
-    return svn_wc__wcprop_set (name, value, path, pool);
+    return svn_wc__wcprop_set (name, value, path, adm_access, pool);
   else if (prop_kind == svn_prop_entry_kind)
     return svn_error_createf   /* we don't do entry properties here */
       (SVN_ERR_BAD_PROP_KIND, NULL,
@@ -1113,7 +1124,7 @@ svn_wc_prop_set (const char *name,
     {
       SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
       if (strcmp (name, SVN_PROP_EOL_STYLE) == 0)
-        SVN_ERR (validate_eol_prop_against_file (path, pool));
+        SVN_ERR (validate_eol_prop_against_file (path, adm_access, pool));
     }
 
   if (kind == svn_node_file && strcmp (name, SVN_PROP_EXECUTABLE) == 0)
@@ -1131,7 +1142,7 @@ svn_wc_prop_set (const char *name,
       SVN_ERR (svn_mime_type_validate (value->data, pool));
     }
 
-  err = svn_wc_prop_list (&prophash, path, pool);
+  err = svn_wc_prop_list (&prophash, path, adm_access, pool);
   if (err)
     return
       svn_error_quick_wrap
@@ -1164,7 +1175,7 @@ svn_wc_prop_set (const char *name,
   apr_err = svn_hash_write (prophash, fp, pool);
   if (apr_err)
     return svn_error_createf (apr_err, NULL,
-                              "can't write prop hash for %s", path);
+                              "can't write prop hash for '%s'", path);
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 0,
@@ -1269,12 +1280,13 @@ empty_props_p (svn_boolean_t *empty_p,
 svn_error_t *
 svn_wc__has_props (svn_boolean_t *has_props,
                    const char *path,
+                   svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
 {
   svn_boolean_t is_empty;
   const char *prop_path;
 
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
   SVN_ERR (empty_props_p (&is_empty, prop_path, pool));
 
   if (is_empty)
@@ -1300,8 +1312,9 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* First, get the paths of the working and 'base' prop files. */
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, subpool));
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, subpool));
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, subpool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, adm_access, FALSE,
+                                   subpool));
 
   /* Decide if either path is "empty" of properties. */
   SVN_ERR (empty_props_p (&wempty, prop_path, subpool));
@@ -1426,6 +1439,7 @@ svn_error_t *
 svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
                        apr_hash_t **original_props,
                        const char *path,
+                       svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
   const char *prop_path, *prop_base_path;
@@ -1434,8 +1448,9 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
   apr_hash_t *baseprops = apr_hash_make (pool);
 
 
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, pool));
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, adm_access, FALSE,
+                                   pool));
 
   SVN_ERR (svn_wc__load_prop_file (prop_path, localprops, pool));
   SVN_ERR (svn_wc__load_prop_file (prop_base_path, baseprops, pool));

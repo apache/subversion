@@ -556,6 +556,8 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           svn_boolean_t descend,
                           apr_hash_t *statushash,
                           svn_revnum_t *youngest,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -602,8 +604,13 @@ svn_wc_get_status_editor (const svn_delta_editor_t **editor,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
-  *edit_baton = eb;
-  *editor = tree_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,
+                                              cancel_baton,
+                                              tree_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
 
   return SVN_NO_ERROR;
 }

@@ -43,20 +43,41 @@ MKDIR="$INSTALL -d"
 AC_SUBST(MKDIR)
 
 dnl Grab our own macros
-sinclude(ac-helpers/berkeley-db.m4)
-sinclude(ac-helpers/svn-apache.m4)
-sinclude(ac-helpers/svn-macros.m4)
-sinclude(ac-helpers/neon.m4)
-sinclude(ac-helpers/find_apr.m4)
-sinclude(ac-helpers/apr.m4)
-sinclude(ac-helpers/find_apu.m4)
-sinclude(ac-helpers/aprutil.m4)
-sinclude(ac-helpers/java.m4)
-sinclude(ac-helpers/swig.m4)
-sinclude(ac-helpers/gnu-diff.m4)
+sinclude(build/ac-macros/berkeley-db.m4)
+sinclude(build/ac-macros/svn-apache.m4)
+sinclude(build/ac-macros/svn-macros.m4)
+sinclude(build/ac-macros/neon.m4)
+sinclude(build/ac-macros/find_apr.m4)
+sinclude(build/ac-macros/apr.m4)
+sinclude(build/ac-macros/find_apu.m4)
+sinclude(build/ac-macros/aprutil.m4)
+sinclude(build/ac-macros/java.m4)
+sinclude(build/ac-macros/swig.m4)
+
+sinclude(build/ac-diff-test/gnu-diff.m4)
 
 dnl Grab the libtool macros
 sinclude(ac-helpers/libtool.m4)
+
+
+dnl Create SVN_BINDIR for proper substitution
+if test "${bindir}" = '${exec_prefix}/bin'; then
+        if test "${exec_prefix}" = "NONE"; then
+                if test "${prefix}" = "NONE"; then
+                        SVN_BINDIR="${ac_default_prefix}/bin"
+                else
+                        SVN_BINDIR="${prefix}/bin"
+                fi
+        else
+                SVN_BINDIR="${exec_prefix}/bin"
+        fi
+else
+        SVN_BINDIR="${bindir}"
+fi
+
+eval  SVN_BINDIR=${SVN_BINDIR}
+AC_SUBST(SVN_BINDIR)
+
 
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
@@ -253,6 +274,22 @@ AC_HELP_STRING([--enable-debug],
     fi
 ])
 
+AC_ARG_WITH(editor,
+AC_HELP_STRING([--with-editor=PATH],
+               [Specify a default editor for the subversion client.]),
+[
+
+    if test "$withval" = "yes" ; then
+      AC_MSG_ERROR([--with-editor requires an argument.])
+    else
+      SVN_CLIENT_EDITOR=$withval
+      AC_DEFINE_UNQUOTED(SVN_CLIENT_EDITOR, "$SVN_CLIENT_EDITOR",
+                         [The path of a default editor for the client.])
+
+    fi
+
+])
+    
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
 AC_HELP_STRING([--disable-mod-activation],
@@ -302,7 +339,7 @@ else
 fi
 
 dnl Find suitable diff utilities
-SVN_LIB_DIFFUTILS(${abs_srcdir}/ac-helpers)
+SVN_LIB_DIFFUTILS(${abs_srcdir}/build/ac-diff-test)
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
@@ -402,8 +439,15 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 dnl Final step:  create the Makefile ----------------------------
 
-AC_CONFIG_FILES([Makefile svn-config])
-AC_CONFIG_COMMANDS([default], [chmod +x svn-config])
+AC_CONFIG_FILES([Makefile])
+
+SVN_CONFIG_SCRIPT(svn-config)
+SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
+SVN_CONFIG_SCRIPT(tools/client-side/svn_load_dirs.pl)
+SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
+SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-email.pl)
+SVN_CONFIG_SCRIPT(tools/hook-scripts/propchange-email.pl)
+
 AC_OUTPUT
 
 
@@ -427,7 +471,7 @@ Berkeley DB version $db_version or newer, which you don't seem to have
 installed.  We have created makefiles which will build the Subversion
 client code only, and skip the server.  You can find latest version of
 Berkeley DB at http://www.sleepycat.com/.  You can find the latest
-version of Berkeley DB here: http://www.sleepycat.com/download.html
+version of Berkeley DB here: http://www.sleepycat.com/download/index.shtml
 
 As an option, you may build Berkeley DB directly within the Subversion
 source tree. Download and extract the Berkeley distribution, then

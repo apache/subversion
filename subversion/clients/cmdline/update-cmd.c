@@ -39,22 +39,17 @@ svn_cl__update (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   int i;
-  svn_client_auth_baton_t *auth_baton;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
                                          FALSE, pool));
-
-  /* Build an authentication baton to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -65,19 +60,18 @@ svn_cl__update (apr_getopt_t *os,
                                          pool));
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
 
       SVN_ERR (svn_client_update
-               (auth_baton,
-                target,
+               (target,
                 &(opt_state->start_revision),
                 opt_state->nonrecursive ? FALSE : TRUE,
-                notify_func, notify_baton,
+                ctx,
                 pool));
     }
 

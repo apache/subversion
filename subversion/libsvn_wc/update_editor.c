@@ -110,16 +110,12 @@ struct dir_baton
      directory. */
   struct dir_baton *parent_baton;
 
-  /* Gets set iff there's a change to this directory's properties, to
-     guide us when syncing adm files later. */
-  svn_boolean_t prop_changed;
-
   /* Gets set iff this is a new directory that is not yet versioned and not
      yet in the parent's list of entries */
   svn_boolean_t added;
 
   /* An array of svn_prop_t structures, representing all the property
-     changes to be applied to this file. */
+     changes to be applied to this directory. */
   apr_array_header_t *propchanges;
 
   /* The bump information for this directory. */
@@ -514,6 +510,75 @@ prep_directory (struct dir_baton *db,
 }
 
 
+/* Accumulate tags in LOG_ACCUM to set ENTRY_PROPS for BASE_NAME.
+   ENTRY_PROPS is an array of svn_prop_t* entry props. */
+static void
+accumulate_entry_props (svn_stringbuf_t *log_accum,
+                        const char *base_name,
+                        apr_array_header_t *entry_props,
+                        apr_pool_t *pool)
+{
+  int i;
+
+  for (i = 0; i < entry_props->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
+      const char *entry_field = NULL;
+
+      /* A prop value of NULL means the information was not
+         available.  We don't remove this field from the entries
+         file; we have convention just leave it empty.  So let's
+         just skip those entry props that have no values. */
+      if (! prop->value)
+        continue;
+
+      if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
+        entry_field = SVN_WC__ENTRY_ATTR_CMT_AUTHOR;
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
+        entry_field = SVN_WC__ENTRY_ATTR_CMT_REV;
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
+        entry_field = SVN_WC__ENTRY_ATTR_CMT_DATE;
+      else if (! strcmp (prop->name, SVN_PROP_ENTRY_UUID))
+        entry_field = SVN_WC__ENTRY_ATTR_UUID;
+      else
+        continue;
+
+      svn_xml_make_open_tag (&log_accum, pool, svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
+                             entry_field, prop->value->data,
+                             NULL);         
+    }
+}
+
+
+/* Accumulate tags in LOG_ACCUM to set WCPROPS for BASE_NAME.  WCPROPS is
+   an array of svn_prop_t* wc props. */
+static void
+accumulate_wcprops (svn_stringbuf_t *log_accum,
+                    const char *base_name,
+                    apr_array_header_t *wcprops,
+                    apr_pool_t *pool)
+{
+  int i;
+
+  /* ### The log file will rewrite the props file for each property :( It
+     ### would be better if all the changes could be combined into one
+     ### write. */
+  for (i = 0; i < wcprops->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX (wcprops, i, svn_prop_t);
+
+      svn_xml_make_open_tag (&log_accum, pool, svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_WCPROP,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
+                             SVN_WC__LOG_ATTR_PROPNAME, prop->name,
+                             prop->value ? SVN_WC__LOG_ATTR_PROPVAL : NULL,
+                             prop->value ? prop->value->data : NULL,
+                             NULL);
+    }
+}
+      
 
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
@@ -588,7 +653,7 @@ delete_entry (const char *path,
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
-                                "delete error writing %s's log file",
+                                "delete error writing log file for '%s'.",
                                 pb->path);
     }
 
@@ -753,59 +818,9 @@ change_dir_prop (void *dir_baton,
   svn_prop_t *propchange;
   struct dir_baton *db = dir_baton;
 
-  /* If this is a 'wc' prop, store it in the administrative area and
-     get on with life.  It's not a regular versioned property. */
-  if (svn_wc_is_wc_prop (name))
-    return svn_wc__wcprop_set (name, value, db->path, pool);
-  
-  /* If this is an 'entry' prop, store it in the entries file and get
-     on with life.  It's not a regular user property. */
-  else if (svn_wc_is_entry_prop (name))
-    {
-      svn_wc_entry_t entry;
-      apr_uint32_t modify_flags = 0;
-
-      entry.kind = svn_node_dir;
-
-      /* a NULL-valued entry prop means the information was not
-         available.  We don't remove this field from the entries file;
-         we have convention just leave it empty. */
-      if ((! strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV)) && value)
-        {
-          entry.cmt_rev = SVN_STR_TO_REV (value->data);
-          modify_flags = SVN_WC__ENTRY_MODIFY_CMT_REV;
-        }
-      else if ((! strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE)) && value)
-        {
-          SVN_ERR (svn_time_from_cstring (&entry.cmt_date, value->data, pool));
-          modify_flags = SVN_WC__ENTRY_MODIFY_CMT_DATE;
-        }
-      else if ((! strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR)) && value)
-        {
-          entry.cmt_author = apr_pstrdup (pool, value->data);
-          modify_flags = SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
-        }
-
-      if (modify_flags)
-        {
-          svn_wc_adm_access_t *adm_access;
-          SVN_ERR (svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
-                                        db->path, pool));
-          return svn_wc__entry_modify (adm_access, NULL, &entry,
-                                       modify_flags, TRUE, pool);
-        }
-    }
-
-  /* Else, it's a real ("normal") property... */
-
-  /* Push a new propchange to the directory baton's array of propchanges */
   propchange = apr_array_push (db->propchanges);
   propchange->name = apr_pstrdup (db->pool, name);
   propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
-
-  /* Let close_dir() know that propchanges are waiting to be
-     applied. */
-  db->prop_changed = 1;
 
   return SVN_NO_ERROR;
 }
@@ -831,23 +846,25 @@ externals_prop_changed (apr_array_header_t *propchanges)
   return NULL;
 }
 
-
 static svn_error_t *
 close_directory (void *dir_baton,
                  apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  apr_array_header_t *entry_props, *wc_props, *regular_props;
+
+  SVN_ERR (svn_categorize_props (db->propchanges, &entry_props, &wc_props,
+                                 &regular_props, pool));
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
-  if (db->prop_changed)
+  if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      svn_boolean_t prop_modified;
-      apr_status_t apr_err;
       char *revision_str;
       svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
+      apr_status_t apr_err;
 
       /* to hold log messages: */
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
@@ -862,67 +879,99 @@ close_directory (void *dir_baton,
                                       (APR_WRITE | APR_CREATE), /* not excl */
                                       db->pool));
 
-      /* If recording traversal info, then see if the
-         SVN_PROP_EXTERNALS property on this directory changed,
-         and record before and after for the change. */
-      if (db->edit_baton->traversal_info)
-      {
-        svn_wc_traversal_info_t *ti = db->edit_baton->traversal_info;
-        const svn_prop_t *change = externals_prop_changed (db->propchanges);
+      if (regular_props->nelts)
+        {
+          svn_boolean_t prop_modified;
 
-        if (change)
-          {
-            const svn_string_t *new_val_s = change->value;
-            const svn_string_t *old_val_s;
+          /* If recording traversal info, then see if the
+             SVN_PROP_EXTERNALS property on this directory changed,
+             and record before and after for the change. */
+          if (db->edit_baton->traversal_info)
+            {
+              svn_wc_traversal_info_t *ti = db->edit_baton->traversal_info;
+              const svn_prop_t *change = externals_prop_changed (regular_props);
 
-            SVN_ERR (svn_wc_prop_get
-                     (&old_val_s, SVN_PROP_EXTERNALS,
-                      db->path, db->pool));
+              if (change)
+                {
+                  const svn_string_t *new_val_s = change->value;
+                  const svn_string_t *old_val_s;
 
-            if ((new_val_s == NULL) && (old_val_s == NULL))
-              ; /* No value before, no value after... so do nothing. */
-            else if (new_val_s && old_val_s
-                     && (svn_string_compare (old_val_s, new_val_s)))
-              ; /* Value did not change... so do nothing. */
-            else  /* something changed, record the change */
-              {
-                /* We can't assume that ti came pre-loaded with the
-                   old values of the svn:externals property.  Yes,
-                   most callers will have already initialized ti by
-                   sending it through svn_wc_crawl_revisions, but we
-                   shouldn't count on that here -- so we set both the
-                   old and new values again. */
+                  SVN_ERR (svn_wc_prop_get
+                           (&old_val_s, SVN_PROP_EXTERNALS,
+                            db->path, adm_access, db->pool));
 
-                if (old_val_s)
-                    apr_hash_set (ti->externals_old,
-                                  apr_pstrdup (ti->pool, db->path),
-                                  APR_HASH_KEY_STRING,
-                                  apr_pstrmemdup (ti->pool, old_val_s->data,
-                                                  old_val_s->len));
+                  if ((new_val_s == NULL) && (old_val_s == NULL))
+                    ; /* No value before, no value after... so do nothing. */
+                  else if (new_val_s && old_val_s
+                           && (svn_string_compare (old_val_s, new_val_s)))
+                    ; /* Value did not change... so do nothing. */
+                  else  /* something changed, record the change */
+                    {
+                      /* We can't assume that ti came pre-loaded with the
+                         old values of the svn:externals property.  Yes,
+                         most callers will have already initialized ti by
+                         sending it through svn_wc_crawl_revisions, but we
+                         shouldn't count on that here -- so we set both the
+                         old and new values again. */
 
-                if (new_val_s)
-                  apr_hash_set (ti->externals_new,
-                                apr_pstrdup (ti->pool, db->path),
-                                APR_HASH_KEY_STRING,
-                                apr_pstrmemdup (ti->pool, new_val_s->data,
-                                                new_val_s->len));
-              }
-          }
-      }
+                      if (old_val_s)
+                        apr_hash_set (ti->externals_old,
+                                      apr_pstrdup (ti->pool, db->path),
+                                      APR_HASH_KEY_STRING,
+                                      apr_pstrmemdup (ti->pool, old_val_s->data,
+                                                      old_val_s->len));
 
-      /* Merge pending properties into temporary files (ignoring conflicts). */
-      SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state,
-                                           adm_access, NULL,
-                                           db->propchanges, TRUE, FALSE,
-                                           db->pool, &entry_accum),
-                 "close_dir: couldn't do prop merge.");
+                      if (new_val_s)
+                        apr_hash_set (ti->externals_new,
+                                      apr_pstrdup (ti->pool, db->path),
+                                      APR_HASH_KEY_STRING,
+                                      apr_pstrmemdup (ti->pool, new_val_s->data,
+                                                      new_val_s->len));
+                    }
+                }
+            }
 
-      /* Set revision. */
+          /* Merge pending properties into temporary files (ignoring
+             conflicts). */
+          SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state,
+                                               adm_access, NULL,
+                                               regular_props, TRUE, FALSE,
+                                               db->pool, &entry_accum),
+                     "couldn't do prop merge.");
+
+          /* Are the directory's props locally modified? */
+          SVN_ERR (svn_wc_props_modified_p (&prop_modified,
+                                            db->path, adm_access,
+                                            db->pool));
+
+          /* Log entry which sets a new property timestamp, but *only* if
+             there are no local changes to the props. */
+          if (! prop_modified)
+            svn_xml_make_open_tag (&entry_accum,
+                                   db->pool,
+                                   svn_xml_self_closing,
+                                   SVN_WC__LOG_MODIFY_ENTRY,
+                                   SVN_WC__LOG_ATTR_NAME,
+                                   SVN_WC_ENTRY_THIS_DIR,
+                                   SVN_WC__ENTRY_ATTR_PROP_TIME,
+                                   /* use wfile time */
+                                   SVN_WC_TIMESTAMP_WC,
+                                   NULL);
+        }
+
+      /* ### This isn't correct with postfix text deltas!  Changing the
+         ### revision here is correct in so far as it makes the revision
+         ### consistent with the updated properties.  Changing the revision
+         ### here may be wrong if postfix text deltas are being used as any
+         ### new files will not yet have been added to the entries file.
+         ### This only becomes a real problem if the client is interrupted
+         ### between this revision change and the postfix close_file that
+         ### adds the new entry.  It's a theoretical problem since we don't
+         ### currently use postfix text deltas. */
       revision_str = apr_psprintf (db->pool,
                                    "%" SVN_REVNUM_T_FMT,
                                    db->edit_baton->target_revision);
-      
-      /* Write a log entry to bump the directory's revision. */
+
       svn_xml_make_open_tag (&entry_accum,
                              db->pool,
                              svn_xml_self_closing,
@@ -933,27 +982,11 @@ close_directory (void *dir_baton,
                              revision_str,
                              NULL);
 
+      accumulate_entry_props (entry_accum, SVN_WC_ENTRY_THIS_DIR, entry_props,
+                              pool);
 
-      /* Are the directory's props locally modified? */
-      SVN_ERR (svn_wc_props_modified_p (&prop_modified,
-                                        db->path, adm_access,
-                                        db->pool));
+      accumulate_wcprops (entry_accum, SVN_WC_ENTRY_THIS_DIR, wc_props, pool);
 
-      /* Log entry which sets a new property timestamp, but *only* if
-         there are no local changes to the props. */
-      if (! prop_modified)
-        svn_xml_make_open_tag (&entry_accum,
-                               db->pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_MODIFY_ENTRY,
-                               SVN_WC__LOG_ATTR_NAME,
-                               SVN_WC_ENTRY_THIS_DIR,
-                               SVN_WC__ENTRY_ATTR_PROP_TIME,
-                               /* use wfile time */
-                               SVN_WC_TIMESTAMP_WC,
-                               NULL);
-
-      
       /* Write our accumulation of log entries into a log file */
       apr_err = apr_file_write_full (log_fp, entry_accum->data,
                                      entry_accum->len, NULL);
@@ -961,10 +994,10 @@ close_directory (void *dir_baton,
         {
           apr_file_close (log_fp);
           return svn_error_createf (apr_err, NULL,
-                                    "close_dir: error writing %s's log file",
+                                    "error writing %s's log file",
                                     db->path);
         }
-      
+
       /* The log is ready to run, close it. */
       SVN_ERR (svn_wc__close_adm_file (log_fp,
                                        db->path,
@@ -975,7 +1008,6 @@ close_directory (void *dir_baton,
       /* Run the log. */
       SVN_ERR (svn_wc__run_log (adm_access, db->pool));
     }
-
 
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
@@ -1080,7 +1112,7 @@ add_or_open_file (const char *path,
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "trying to open non-versioned file "
-                              "%s in directory %s",
+                              "'%s' in directory '%s'",
                               fb->name, pb->path);
   
         
@@ -1090,7 +1122,7 @@ add_or_open_file (const char *path,
   if (! is_wc)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "add_or_open_file: %s is not a working copy directory",
+       "add_or_open_file: '%s' is not a working copy directory",
        pb->path);
 
   /* ### todo:  right now the incoming copyfrom* args are being
@@ -1425,7 +1457,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           
           /* Get the current pristine props. */
           SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                           file_path, 0, pool));
+                                           file_path, adm_access, FALSE, pool));
           SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                            old_pristine_props, pool));
           
@@ -1484,55 +1516,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
      versioned, so the value of IS_FULL_PROPLIST is irrelevant -- if
      the property is present, we overwrite the value. */  
   if (entry_props)
-    {
-      int i;
-      
-      /* foreach entry prop... */
-      for (i = 0; i < entry_props->nelts; i++)
-        {
-          const svn_prop_t *prop;
-          const char *propval;
-          enum svn_prop_kind kind;
-          const char *entry_field = NULL;
-
-          prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
-          kind = svn_property_kind (NULL, prop->name);
-
-          /* A prop value of NULL means the information was not
-             available.  We don't remove this field from the entries
-             file; we have convention just leave it empty.  So let's
-             just skip those entry props that have no values.
-          */
-          if (! prop->value)
-            continue;
-
-          if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
-            entry_field = SVN_WC__ENTRY_ATTR_CMT_AUTHOR;
-          else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
-            entry_field = SVN_WC__ENTRY_ATTR_CMT_REV;
-          else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
-            entry_field = SVN_WC__ENTRY_ATTR_CMT_DATE;
-          else
-            continue;
-
-          if (prop->value)
-            propval = prop->value->data;
-          else
-            propval = "";
-          
-          /* append a command to the log which will write the
-             property as a entry attribute on the file. */
-          svn_xml_make_open_tag (&log_accum,
-                                 pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_MODIFY_ENTRY,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 base_name,
-                                 entry_field,
-                                 propval,
-                                 NULL);         
-        }
-    }
+    accumulate_entry_props (log_accum, base_name, entry_props, pool);
 
   /* Has the user made local mods to the working file?  */
   SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
@@ -1780,6 +1764,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
       }
     }
 
+  if (wc_props)
+    accumulate_wcprops (log_accum, base_name, wc_props, pool);
+  
   /* Write our accumulation of log entries into a log file */
   apr_err = apr_file_write_full (log_fp, log_accum->data, 
                                  log_accum->len, NULL);
@@ -1787,7 +1774,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     {
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
-                                "svn_wc_install_file: error writing %s's log",
+                                "error writing log for '%s'.",
                                 file_path);
     }
 
@@ -1795,22 +1782,6 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
                                    TRUE, /* sync */ pool));
   SVN_ERR (svn_wc__run_log (adm_access, pool));
-
-  /* Now that the file's text, props, and entries are fully installed,
-     we dump any "wc" props.  ### This should be done *loggily*, see
-     issue #628.  */
-  if (wc_props)
-    {
-      int i;
-      for (i = 0; i < wc_props->nelts; i++)
-        {
-          const svn_prop_t *prop;
-
-          prop = &APR_ARRAY_IDX(wc_props, i, svn_prop_t);
-          SVN_ERR (svn_wc__wcprop_set (prop->name, prop->value,
-                                       file_path, pool));
-        }
-    }
 
   if (content_state)
     {
@@ -1972,7 +1943,7 @@ close_edit (void *edit_baton,
 
 /*** Returning editors. ***/
 
-/* Helper for the two public editor-supplying functions. */
+/* Helper for the three public editor-supplying functions. */
 static svn_error_t *
 make_editor (svn_wc_adm_access_t *adm_access,
              const char *anchor,
@@ -1984,6 +1955,8 @@ make_editor (svn_wc_adm_access_t *adm_access,
              svn_boolean_t recurse,
              svn_wc_notify_func_t notify_func,
              void *notify_baton,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              const svn_delta_editor_t **editor,
              void **edit_baton,
              svn_wc_traversal_info_t *traversal_info,
@@ -2026,8 +1999,13 @@ make_editor (svn_wc_adm_access_t *adm_access,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
-  *edit_baton = eb;
-  *editor = tree_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,
+                                              cancel_baton,
+                                              tree_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
 
   return SVN_NO_ERROR;
 }
@@ -2040,6 +2018,8 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2049,6 +2029,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision, 
                       FALSE, NULL, NULL,
                       recurse, notify_func, notify_baton,
+                      cancel_func, cancel_baton,
                       editor, edit_baton, traversal_info, pool);
 }
 
@@ -2060,6 +2041,8 @@ svn_wc_get_checkout_editor (const char *dest,
                             svn_boolean_t recurse,
                             svn_wc_notify_func_t notify_func,
                             void *notify_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
                             svn_wc_traversal_info_t *traversal_info,
@@ -2068,6 +2051,7 @@ svn_wc_get_checkout_editor (const char *dest,
   return make_editor (NULL, dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
                       recurse, notify_func, notify_baton,
+                      cancel_func, cancel_baton,
                       editor, edit_baton,
                       traversal_info, pool);
 }
@@ -2081,6 +2065,8 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2092,6 +2078,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision,
                       FALSE, NULL, switch_url,
                       recurse, notify_func, notify_baton,
+                      cancel_func, cancel_baton,
                       editor, edit_baton,
                       traversal_info, pool);
 }
@@ -2239,7 +2226,7 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "svn_wc_is_wc_root: %s is not a versioned resource", path);
+       "svn_wc_is_wc_root: '%s' is not a versioned resource", path);
   if (kind)
     *kind = entry->kind;
 
@@ -2267,7 +2254,7 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! p_entry->url)
     return svn_error_createf 
       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "svn_wc_is_wc_root: %s has no ancestry information.", 
+       "svn_wc_is_wc_root: '%s' has no ancestry information.", 
        parent);
 
   /* If PATH's parent in the WC is not its parent in the repository,

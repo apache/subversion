@@ -30,6 +30,7 @@
 #include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -62,6 +63,9 @@ typedef struct {
   /* are we doing a resource walk? */
   svn_boolean_t resource_walk;
 
+  /* True iff we've already sent the open tag for the update. */
+  svn_boolean_t started_update;
+
 } update_ctx_t;
 
 typedef struct {
@@ -80,6 +84,7 @@ typedef struct {
   const char *committed_rev;
   const char *committed_date;
   const char *last_author;
+  const char *uuid;
 
 } item_baton_t;
 
@@ -402,6 +407,10 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     if (baton->last_author)
       send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
                baton->last_author);
+
+    if (baton->uuid)
+      send_xml(baton->uc, "<S2:repository-uuid>%s</S2:repository-uuid>",
+               baton->uuid);
     
     send_xml(baton->uc, "</S:prop>\n");
   }
@@ -419,12 +428,17 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   update_ctx_t *uc = edit_baton;
 
   if (! uc->resource_walk)
-    send_xml(uc,
-             DAV_XML_HEADER DEBUG_CR
-             "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-             "xmlns:D=\"DAV:\">" DEBUG_CR
-             "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-             target_revision);
+    {
+      send_xml(uc,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:D=\"DAV:\" " DEBUG_CR
+               "xmlns:S2=\"" SVN_DAV_PROP_NS_DAV "\">" DEBUG_CR
+               "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
+               target_revision);
+
+      uc->started_update = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -523,6 +537,8 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
         b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
       else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
         b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
+      else if (! strcmp(name, SVN_PROP_ENTRY_UUID))
+        b->uuid = value ? apr_pstrdup(b->pool, value->data) : NULL;
       
       return SVN_NO_ERROR;
     }
@@ -924,8 +940,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         }
     }
 
-  /* Now close the report body completely. */
-  send_xml(&uc, "</S:update-report>" DEBUG_CR);
+  /* Close the report body, unless some error prevented it from being
+     started in the first place. */
+  if (uc.started_update)
+    send_xml(&uc, "</S:update-report>" DEBUG_CR);
 
   /* flush the contents of the brigade */
   ap_fflush(output, uc.bb);

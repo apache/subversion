@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "cl.h"
 
 
@@ -39,14 +40,13 @@ svn_cl__status (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_hash_t *statushash;
   apr_array_header_t *targets;
+  apr_pool_t * subpool;
   int i;
-  svn_client_auth_baton_t *auth_baton;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -54,14 +54,14 @@ svn_cl__status (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
-
   /* The notification callback. */
-  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE, pool);
+  svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE, 
+                        FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  subpool = svn_pool_create (pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -73,13 +73,12 @@ svn_cl__status (apr_getopt_t *os,
          svn_client_status directly understands the three commandline
          switches (-n, -u, -[vV]) : */
 
-      SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
+      SVN_ERR (svn_client_status (&statushash, &youngest, target,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
-                                  notify_func, notify_baton,
-                                  pool));
+                                  ctx, subpool));
 
       /* Now print the structures to the screen.
          The flag we pass indicates whether to use the 'detailed'
@@ -89,8 +88,11 @@ svn_cl__status (apr_getopt_t *os,
                                  (opt_state->verbose || opt_state->update),
                                  opt_state->verbose,
                                  opt_state->quiet,
-                                 pool);
+                                 subpool);
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
+  
   return SVN_NO_ERROR;
 }

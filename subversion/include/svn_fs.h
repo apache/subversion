@@ -44,17 +44,28 @@ extern "C" {
 typedef struct svn_fs_t svn_fs_t;
 
 
-/** Create a new filesystem object.
+/** Filesystem configuration options. */
+#define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
+#define SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN        14
+
+
+/** Create a new filesystem object in @a pool.
  *
- * Create a new filesystem object in @a pool.  It doesn't refer to any
- * actual repository yet; you need to invoke @c svn_fs_open_* or
- * @c svn_fs_create_* on it for that to happen.  
+ * It doesn't refer to any actual repository yet; you need to invoke
+ * @c svn_fs_open_* or @c svn_fs_create_* on it for that to happen. If
+ * @a fs_config is not @c NULL, the options it contains modify the
+ * behaviour of the filesystem. The interpretation of @a fs_config is
+ * specific to the filesystem back-end.
  *
- * NOTE: you probably don't want to use this directly, especially not
+ * @note The lifetime of @a fs_config must not be shorter than @a
+ * pool's. It's a good idea to allocate @ fs_config from @a pool or
+ * one of its ancestors.
+ *
+ * @note You probably don't want to use this directly, especially not
  * if it's followed immediately by a call to @c svn_fs_open_berkeley().
  * Take a look at @c svn_repos_open() instead.
  */
-svn_fs_t *svn_fs_new (apr_pool_t *pool);
+svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
 
 
 /** The type of a warning callback function.
@@ -399,7 +410,8 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of
- * the conflict in @a txn.  Otherwise, set @a *conflict_p to null.
+ * the conflict in @a txn, with the same lifetime as @a txn;
+ * otherwise, set @a *conflict_p to null.
  *
  * If the commit succeeds, it frees @a txn, and any temporary resources
  * it holds.  Any root objects (see below) referring to the root
@@ -1427,7 +1439,25 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
                               apr_pool_t *pool);
 
 
+
+/* UUID manipulation. */
 
+/** Populate @a *uuid with the UUID associated with @a fs.
+ */
+
+svn_error_t *
+svn_fs_get_uuid(svn_fs_t *fs,
+                const char **uuid,
+                apr_pool_t *pool);
+
+
+/** Associate @a *uuid with @a fs.
+ */
+
+svn_error_t *
+svn_fs_set_uuid(svn_fs_t *fs,
+                const char *uuid,
+                apr_pool_t *pool);
 
 
 /* Non-historical properties.  */

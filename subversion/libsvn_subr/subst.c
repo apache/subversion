@@ -741,7 +741,6 @@ svn_subst_copy_and_translate (const char *src,
                               svn_boolean_t expand,
                               apr_pool_t *pool)
 {
-  const char *src_native, *dst_native;
   const char *dst_tmp;
   apr_status_t apr_err;
   svn_stream_t *src_stream, *dst_stream;
@@ -755,14 +754,11 @@ svn_subst_copy_and_translate (const char *src,
   /* Else, translate.  For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
-
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst_native,
+  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
                                     ".tmp", FALSE, pool));
 
   /* Open source file. */
-  SVN_ERR (svn_io_file_open (&s, src_native, APR_READ | APR_BUFFERED,
+  SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
 
   /* Now convert our two open files into streams. */
@@ -789,7 +785,7 @@ svn_subst_copy_and_translate (const char *src,
       return 
         svn_error_createf (err->apr_err, err,
                            "file translation failed when copying '%s' to '%s'",
-                           src_native, dst_native);
+                           src, dst);
     }
 
   /* clean up nicely. */
@@ -798,16 +794,14 @@ svn_subst_copy_and_translate (const char *src,
 
   apr_err = apr_file_close(s);
   if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "error closing %s", src_native);
+    return svn_error_createf (apr_err, NULL, "error closing '%s'", src);
 
   apr_err = apr_file_close(d);
   if (apr_err)
-    return svn_error_createf (apr_err, NULL,
-                              "error closing %s", dst_native);
+    return svn_error_createf (apr_err, NULL, "error closing '%s'", dst);
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR (svn_io_file_rename (dst_tmp, dst_native, pool));
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
 
   return SVN_NO_ERROR;
 }

@@ -51,6 +51,7 @@
 ;; u     - svn-status-unset-user-mark
 ;; DEL   - svn-status-unset-user-mark-backwards
 ;; .     - svn-status-goto-root-or-return
+;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
 ;; P l   - svn-status-property-list
 ;; P s   - svn-status-property-set
@@ -126,11 +127,17 @@
 (defvar svn-status-hide-unmodified nil "Hide unmodified files in *cvs-status* buffer.")
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
 
-(require 'overlay nil t)
+(eval-and-compile
+  (defconst svn-xemacsp (featurep 'xemacs))
+  (if svn-xemacsp
+      (require 'overlay)
+    (require 'overlay nil t)))
 
 ;; internal variables
 (defvar svn-process-cmd nil)
 (defvar svn-status-info nil)
+(defvar svn-status-base-info nil)
+(defvar svn-status-initial-window-configuration nil)
 (defvar svn-status-default-column 23)
 (defvar svn-status-files-to-commit nil)
 (defvar svn-status-pre-commit-window-configuration nil)
@@ -150,7 +157,6 @@
    (when (boundp 'temp-directory) temp-directory)                     ;xemacs
    "/tmp/"))
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg"))
-(defconst svn-xemacsp (featurep 'xemacs))
 
 ;; faces
 (defface svn-status-marked-face
@@ -182,12 +188,15 @@
 (unless (fboundp 'point-at-eol) (defalias 'point-at-eol 'line-end-position))
 (unless (fboundp 'point-at-bol) (defalias 'point-at-bol 'line-beginning-position))
 
-
+;;;###autoload
 (defun svn-status (dir &optional arg)
   (interactive (list (read-file-name "SVN status directory: "
                                      nil default-directory nil)))
   (setq svn-status-directory-history (delete dir svn-status-directory-history))
   (add-to-list 'svn-status-directory-history dir)
+  (unless (string= (buffer-name) "*svn-status*")
+    (message "psvn: Saving initial window configuration")
+    (setq svn-status-initial-window-configuration (current-window-configuration)))
   (let* ((status-buf (get-buffer-create "*svn-status*"))
          (proc-buf (get-buffer-create "*svn-process*")))
     (save-excursion
@@ -247,6 +256,7 @@
 (defun svn-process-sentinel (process event)
   ;(princ (format "Process: %s had the event `%s'" process event)))
   ;(save-excursion
+  (let ((act-buf (current-buffer)))
     (set-buffer (process-buffer process))
     (setq svn-status-mode-line-process-status "")
     (svn-status-update-mode-line)
@@ -255,6 +265,7 @@
           (cond ((eq svn-process-cmd 'status)
                  ;;(message "svn status finished")
                  (svn-parse-status-result)
+                 (set-buffer act-buf)
                  (svn-status-update-buffer))
                 ((eq svn-process-cmd 'log)
                  (svn-status-show-process-buffer-internal t)
@@ -262,6 +273,8 @@
                 ((eq svn-process-cmd 'info)
                  (svn-status-show-process-buffer-internal t)
                  (message "svn info finished"))
+                ((eq svn-process-cmd 'parse-info)
+                 (svn-status-parse-info-result))
 ;;                ((eq svn-process-cmd 'diff)
 ;;                 (svn-status-show-process-buffer-internal t)
 ;;                 (save-excursion
@@ -296,9 +309,10 @@
                 ((eq svn-process-cmd 'propset)
                  (svn-status-update))
                 ((eq svn-process-cmd 'propdel)
-                 (svn-status-update))))
+                 (svn-status-update)))
+          (message "svn-process had event: %s" event))
       ;;(message (format "SVN Error: :%s:" event))
-      (svn-status-show-process-buffer-internal t)))
+      (svn-status-show-process-buffer-internal t))))
 
 (defun svn-parse-status-result ()
   (setq svn-status-head-revision nil)
@@ -366,7 +380,8 @@
           (next-line 1)))))
 
 (condition-case nil
-    (easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
+    ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
+    (easy-menu-add-item nil '("tools") ["SVN Status" svn-status t])
   (error (message "psvn: could not install menu")))
 
 (defvar svn-status-mode-map () "Keymap used in svn-status-mode buffers.")
@@ -377,6 +392,7 @@
   (setq svn-status-mode-map (make-sparse-keymap))
   (define-key svn-status-mode-map [return] 'svn-status-select-line)
   (define-key svn-status-mode-map [?s] 'svn-status-show-process-buffer)
+  (define-key svn-status-mode-map [?f] 'svn-status-find-file)
   (define-key svn-status-mode-map [?o] 'svn-status-find-file-other-window)
   (define-key svn-status-mode-map [?e] 'svn-status-toggle-edit-cmd-flag)
   (define-key svn-status-mode-map [?g] 'svn-status-update)
@@ -472,6 +488,7 @@
   u     - svn-status-unset-user-mark
   DEL   - svn-status-unset-user-mark-backwards
   .     - svn-status-goto-root-or-return
+  f     - svn-status-find-file
   o     - svn-status-find-file-other-window
   P l   - svn-status-property-list
   P s   - svn-status-property-set
@@ -499,7 +516,14 @@
 
 (defun svn-status-bury-buffer ()
   (interactive)
-  (bury-buffer))
+  ;(bury-buffer)
+  (when svn-status-initial-window-configuration
+    (set-window-configuration svn-status-initial-window-configuration)))
+
+(defun svn-status-find-file ()
+  (interactive)
+  (find-file (svn-status-line-info->filename
+      (svn-status-get-line-information))))
 
 (defun svn-status-find-file-other-window ()
   (interactive)
@@ -563,8 +587,12 @@
 
 (defun svn-status-update-buffer ()
   (interactive)
-  (delete-other-windows)
-  (pop-to-buffer "*svn-status*")
+  ;(message (format "buffer-name: %s" (buffer-name)))
+  (unless (string= (buffer-name) "*svn-status*")
+    ;;(message "delete-other-windows")
+    (delete-other-windows)
+    (split-window-vertically)
+    (switch-to-buffer "*svn-status*"))
   (svn-status-mode)
   (let ((st-info svn-status-info)
         (buffer-read-only nil)
@@ -594,6 +622,8 @@
                     (if svn-status-head-revision (format " (head revision: %s)"
                                                          svn-status-head-revision)
                       "")))
+    (when svn-status-base-info
+      (insert (concat "Repository: " (svn-status-base-info->url) "\n")))
     (when svn-status-hide-unknown
       (insert
        (format "%d Unknown files are hidden - press ? to toggle hiding\n"
@@ -607,6 +637,24 @@
           (svn-status-goto-file-name fname)
           (goto-char (+ column (point-at-bol))))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
+
+(defun svn-status-parse-info ()
+  (svn-run-svn t t 'parse-info "info" "."))
+
+(defun svn-status-parse-info-result ()
+  (let ((url))
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (goto-char (point-min))
+      (search-forward "Url: ")
+      (setq url (buffer-substring-no-properties (point) (point-at-eol))))
+    (setq svn-status-base-info `((url ,url))))
+  (message "%S" (svn-status-base-info->url)))
+
+(defun svn-status-base-info->url ()
+  (if svn-status-base-info
+      (cadr (assoc 'url svn-status-base-info))
+    ""))
 
 (defun svn-status-toggle-edit-cmd-flag (&optional reset)
   (interactive)
@@ -639,7 +687,6 @@
 
 (defun svn-status-update (&optional arg)
   (interactive "P")
-  (pop-to-buffer "*svn-status*")
   (svn-status default-directory arg))
 
 (defun svn-status-get-line-information ()

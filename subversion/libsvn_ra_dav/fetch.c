@@ -46,7 +46,6 @@
 #include "svn_xml.h"
 #include "svn_dav.h"
 #include "svn_time.h"
-#include "svn_config.h"
 
 #include "ra_dav.h"
 
@@ -150,6 +149,19 @@ typedef struct {
 
   const char *current_wcprop_path;
   svn_boolean_t is_switch;
+
+  /* Named target, or NULL if none.  For example, in 'svn up wc/foo',
+     this is "wc/foo", but in 'svn up' it is NULL.  
+
+     The target helps us determine whether a response received from
+     the server should be acted on.  Take 'svn up wc/foo': the server
+     may send back a new vsn-rsrc-url wcprop for 'wc' (because the
+     report had to be anchored there just in case the update deletes
+     wc/foo).  While this is correct behavior for the server, the
+     client should ignore the new wcprop, because the client knows
+     it's not really updating the top level directory. */
+  const char *target;
+
   svn_error_t *err;
 
 } report_baton_t;
@@ -178,6 +190,8 @@ static const struct ne_xml_elm report_elements[] =
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
   { SVN_XML_NAMESPACE, "prop", ELEM_prop, 0 },
+  { SVN_DAV_PROP_NS_DAV, "repository-uuid",
+    ELEM_repository_uuid, NE_XML_CDATA },
 
   { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum, NE_XML_CDATA },
 
@@ -268,6 +282,11 @@ static svn_error_t *set_special_wc_prop (const char *key,
   else if (strcmp(key, SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME) == 0)
     {
       SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_LAST_AUTHOR,
+                         svn_string_create(val, pool), pool) );
+    }
+  else if (strcmp(key, SVN_RA_DAV__PROP_REPOSITORY_UUID) == 0)
+    {
+      SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_UUID,
                          svn_string_create(val, pool), pool) );
     }
 
@@ -456,23 +475,16 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
+                                       svn_boolean_t compression,
                                        apr_pool_t *pool)
 {
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
-  const char *do_compression;
   ne_request *req;
   ne_decompress *decompress;
   svn_error_t *err;
-  svn_config_t *cfg;
   int code;
   int decompress_rv;
-  int decompress_on;
-
-  SVN_ERR( svn_config_read_config(&cfg, pool) );
-
-  svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
-  decompress_on = (strcasecmp(do_compression, "yes") == 0);
   
   /* See if we can get a version URL for this resource. This will refer to
      what we already have in the working copy, thus we can get a diff against
@@ -483,7 +495,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a GET request for %s",
+                               "Could not create a GET request for '%s'",
                                url);
     }
 
@@ -506,7 +518,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  if (decompress_on) {
+  if (compression) {
     decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
   }
   else {
@@ -656,6 +668,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       const char *url,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
+                                      svn_boolean_t compression,
                                       void *file_baton,
                                       const char *base_checksum,
                                       const char *result_checksum,
@@ -688,7 +701,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   SVN_ERR( custom_get_request(sess, url, relpath,
                               fetch_file_reader, &frc,
-                              get_wc_prop, cb_baton, pool) );
+                              get_wc_prop, cb_baton, compression, pool) );
 
   /* close the handler, since the file reading completed successfully. */
   SVN_ERR( (*frc.handler)(NULL, frc.handler_baton) );
@@ -701,6 +714,7 @@ static svn_error_t *fetch_file(ne_session *sess,
                                void *dir_baton,
                                const svn_delta_editor_t *editor,
                                const char *edit_path,
+                               svn_boolean_t compression,
                                apr_pool_t *pool)
 {
   const char *bc_url = rsrc->url;    /* url in the Baseline Collection */
@@ -719,9 +733,8 @@ static svn_error_t *fetch_file(ne_session *sess,
   /* fetch_file() is only used for checkout, so we just pass NULL for the
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
-  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, 
-                          NULL, checksum,
-                          editor, NULL, NULL, pool);
+  err = simple_fetch_file(sess, bc_url, NULL, TRUE, compression, file_baton, 
+                          NULL, checksum, editor, NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -997,7 +1010,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       /* ### temporary hack for 0.17. if the server doesn't have the prop,
          ### then __get_one_prop returns an empty string. deal with it.  */
       if ((err && (err->apr_err == SVN_ERR_RA_DAV_PROPS_NOT_FOUND))
-          || *expected_checksum->data == '\0')
+          || (expected_checksum && (*expected_checksum->data == '\0')))
         {
           fwc.do_checksum = FALSE;
           svn_error_clear(err);
@@ -1016,7 +1029,8 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       SVN_ERR( custom_get_request(ras->sess, final_url, path,
                                   get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
-                                  ras->callback_baton, ras->pool) );
+                                  ras->callback_baton,
+                                  ras->compression, ras->pool) );
 
       if (fwc.do_checksum)
         {
@@ -1357,8 +1371,9 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           svn_path_add_component(edit_path, comp);
 
           /* ### should we close the dir batons first? */
-          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, editor,
-                                edit_path->data, subpool),
+          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton,
+                                editor, edit_path->data, 
+                                ras->compression, subpool),
                      "could not checkout a file");
           svn_stringbuf_chop(edit_path, edit_path->len - edit_len);
 
@@ -1462,7 +1477,7 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                       svn_time_to_cstring(timestamp, ras->pool));
 
   *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, -1,
+  err = svn_ra_dav__parsed_request(ras, "REPORT", ras->root.path, body, NULL,
                                    drev_report_elements,
                                    drev_validate_element,
                                    drev_start_element, drev_end_element,
@@ -1486,6 +1501,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           const char *name,
                                           const svn_string_t *value)
 {
+  const char *val = NULL;
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   svn_boolean_t is_svn_prop;
@@ -1535,9 +1551,16 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   propname_struct.name = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) 
                                      : name;
 
+  if (value)
+    {
+      svn_stringbuf_t *valstr = NULL;
+      svn_xml_escape_cdata_cstring(&valstr, value->data, ras->pool);
+      val = valstr->data;
+    }
+
   po[0].name = &propname_struct;
   po[0].type = value ? ne_propset : ne_propremove;
-  po[0].value = value? value->data : NULL; /* ### ESCAPE binary value!! */
+  po[0].value = val;
   
   rv = ne_proppatch(ras->sess, baseline->url, po);
   if (rv != NE_OK)
@@ -1727,6 +1750,7 @@ static int validate_element(void *userdata,
           || child == ELEM_creationdate
           || child == ELEM_creator_displayname
           || child == ELEM_md5_checksum
+          || child == ELEM_repository_uuid
           || child == ELEM_remove_prop)
         return NE_XML_VALID;
       else
@@ -1987,9 +2011,11 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       base_checksum = get_attr(atts, "base-checksum");
       result_checksum = get_attr(atts, "result-checksum");
       /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
+      CHKERR( simple_fetch_file(rb->ras->sess2, 
+                                rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
+                                rb->ras->compression,
                                 rb->file_baton,
                                 base_checksum,
                                 result_checksum,
@@ -2087,8 +2113,11 @@ static int end_element(void *userdata,
 
     case ELEM_add_directory:
     case ELEM_open_directory:
-      /* fetch node props as necessary. */
-      CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
+
+      /* fetch node props, unless this is the top dir and the real
+         target of the operation is not the top dir. */
+      if (! ((rb->dirs->nelts == 1) && rb->target))
+        CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
          destroy the subpool used exclusive by this directory and its
@@ -2114,9 +2143,11 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
+      CHKERR( simple_fetch_file(rb->ras->sess2,
+                                rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
+                                rb->ras->compression,
                                 rb->file_baton,
                                 NULL,  /* no base checksum in an add */
                                 rb->result_checksum,
@@ -2179,15 +2210,22 @@ static int end_element(void *userdata,
       /* else we're setting a wcprop in the context of an editor drive. */
       else if (rb->file_baton == NULL)
         {
-          CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
-                                       rb->editor->change_dir_prop,
-                                       TOP_DIR(rb).pool) );
-
-          /* save away the URL in case a fetch-props arrives after all of
-             the subdir processing. we will need this copy of the URL to
-             fetch the properties (i.e. rb->href will be toast by then). */
-          TOP_DIR(rb).vsn_url = apr_pmemdup(TOP_DIR(rb).pool,
-                                            rb->href->data, rb->href->len + 1);
+          /* Update the wcprop here, unless this is the top directory
+             and the real target of this operation is something other
+             than the top directory. */
+          if (! ((rb->dirs->nelts == 1) && rb->target))
+            {
+              CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
+                                           rb->editor->change_dir_prop,
+                                           TOP_DIR(rb).pool) );
+              
+              /* save away the URL in case a fetch-props arrives after all of
+                 the subdir processing. we will need this copy of the URL to
+                 fetch the properties (i.e. rb->href will be toast by then). */
+              TOP_DIR(rb).vsn_url = apr_pmemdup(TOP_DIR(rb).pool,
+                                                rb->href->data,
+                                                rb->href->len + 1);
+            }
         }
       else
         {
@@ -2231,7 +2269,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_cstring (&qpath, path, pool);
+  svn_xml_escape_cdata_cstring (&qpath, path, pool);
   entry = apr_psprintf(pool,
                        "<S:entry rev=\"%"
                        SVN_REVNUM_T_FMT
@@ -2272,8 +2310,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                          pool));
   
   
-  svn_xml_escape_cstring (&qpath, path, pool);
-  svn_xml_escape_cstring (&qlinkpath, bc_relative.data, pool);
+  svn_xml_escape_cdata_cstring (&qpath, path, pool);
+  svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
   entry = apr_psprintf(pool,
                        "<S:entry rev=\"%" SVN_REVNUM_T_FMT
                        "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
@@ -2301,7 +2339,7 @@ static svn_error_t * reporter_delete_path(void *report_baton,
   const char *s;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_cstring (&qpath, path, pool);
+  svn_xml_escape_cdata_cstring (&qpath, path, pool);
   s = apr_psprintf(pool,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
                    qpath->data);
@@ -2333,9 +2371,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
-  int fdesc;
   svn_error_t *err;
-  apr_off_t offset = 0;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
@@ -2353,25 +2389,8 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  /* Rewind the tmpfile. */
-  status = apr_file_seek(rb->tmpfile, APR_SET, &offset);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Couldn't rewind tmpfile.");
-    }
-  /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
-  status = svn_io_fd_from_file(&fdesc, rb->tmpfile);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Couldn't get file-descriptor of tmpfile.");
-    }
-
   err = svn_ra_dav__parsed_request(rb->ras, "REPORT", rb->ras->root.path,
-                                   NULL, fdesc,
+                                   NULL, rb->tmpfile,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    NULL, rb->ras->pool);
@@ -2438,6 +2457,7 @@ make_reporter (void *session_baton,
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
   rb->is_switch = dst_path ? TRUE : FALSE;
+  rb->target = target;
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
@@ -2503,7 +2523,7 @@ make_reporter (void *session_baton,
   if (dst_path)
     {
       svn_stringbuf_t *dst_path_str = NULL;
-      svn_xml_escape_cstring (&dst_path_str, dst_path, ras->pool);
+      svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, ras->pool);
 
       s = apr_psprintf(ras->pool, "<S:dst-path>%s</S:dst-path>",
                        dst_path_str->data);

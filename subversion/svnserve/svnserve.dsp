@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386
 # ADD LINK32 ..\libsvn_client\Release\libsvn_client.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_subr\Release\libsvn_subr.lib ..\libsvn_wc\Release\libsvn_wc.lib ..\..\apr\LibR\apr.lib ..\..\apr-iconv\LibR\apriconv.lib ..\..\apr-util\LibR\aprutil.lib ..\..\apr-util\xml\expat\lib\LibR\xml.lib ..\..\neon\libneon.lib ..\..\db4-win32\lib\libdb40.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386 /out:"Release/svnserve.exe"
 # SUBTRACT LINK32 /pdb:none
 
@@ -76,7 +76,7 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 ..\libsvn_client\Debug\libsvn_client.lib ..\libsvn_delta\Debug\libsvn_delta.lib ..\libsvn_subr\Debug\libsvn_subr.lib ..\libsvn_wc\Debug\libsvn_wc.lib ..\..\apr\LibD\apr.lib ..\..\apr-iconv\LibD\apriconv.lib ..\..\apr-util\LibD\aprutil.lib ..\..\apr-util\xml\expat\lib\LibD\xml.lib ..\..\neon\libneonD.lib ..\..\db4-win32\lib\libdb40d.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/svnserve.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 

@@ -25,8 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
-#include "svn_wc.h"
-#include "svn_client.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +62,13 @@ extern "C" {
  * behaviors (by changing registration order), and very easily write
  * new authentication providers.
  *
+ * An auth_baton also contains an internal hashtable of run-time
+ * parameters; any provider or library layer can set these run-time
+ * parameters at any time, so that the provider has access to the
+ * data.  (For example, certain run-time data may not be available
+ * until an authentication challenge is made.)  Each provider must
+ * document run-time parameters it requires.
+ *
  * @defgroup auth_fns authentication functions
  * @{
  */
@@ -87,11 +93,13 @@ typedef struct
    * credentials are available.  Set @a *iter_baton to context that
    * allows a subsequent call to @c next_credentials, in case the
    * first credentials fail to authenticate.  @a provider_baton is
-   * general context for the vtable.
+   * general context for the vtable, and @a parameters contains any
+   * run-time data that the provider may need.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
                                       void *provider_baton,
+                                      apr_hash_t *parameters,
                                       apr_pool_t *pool);
 
   /** Get a different set of credentials.
@@ -100,27 +108,42 @@ typedef struct
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
    * @a **credenitals to NULL.  If the provider only has one set of
-   * credentials, this function pointer should simply be NULL.
+   * credentials, this function pointer should simply be NULL.  @a
+   * parameters contains any run-time data that the provider may need.
    */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
+                                     apr_hash_t *parameters,
                                      apr_pool_t *pool);
   
   /** Save credentials.
    *
    * Store @a credentials for future use.  @a provider_baton is
-   * general context for the vtable.  Set @a *saved to true if the
-   * save happened, or false if not.  The provider is not required to
-   * save; if it refuses or is unable to save for non-fatal reasons,
-   * return false.  If the provider never saves data, then this
-   * function pointer should simply be NULL.
+   * general context for the vtable, and @a parameters contains any
+   * run-time data the provider may need.  Set @a *saved to true if
+   * the save happened, or false if not.  The provider is not required
+   * to save; if it refuses or is unable to save for non-fatal
+   * reasons, return false.  If the provider never saves data, then
+   * this function pointer should simply be NULL.
    */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
                                      void *provider_baton,
+                                     apr_hash_t *parameters,
                                      apr_pool_t *pool);
   
 } svn_auth_provider_t;
+
+
+/** A provider object, ready to be put into an array and given to
+    @c svn_auth_open. */
+typedef struct
+{
+  const svn_auth_provider_t *vtable;
+  void *provider_baton;
+
+} svn_auth_provider_object_t;
+
 
 
 /** Specific types of credentials **/
@@ -149,23 +172,60 @@ typedef struct
  *
  * Return an authentication object in @a *auth_baton (allocated in @a
  * pool) that represents a particular instance of the svn
- * authentication system.  @a *auth_baton will remember @a pool, and
- * use it to store registered providers.
+ * authentication system.  @a providers is an array of @c
+ * svn_auth_provider_object_t pointers, already allocated in @a pool
+ * and intentionally ordered.  These pointers will be stored within @a
+ * *auth_baton, grouped by credential type, and searched in this exact
+ * order.
  */
-svn_error_t * svn_auth_open(svn_auth_baton_t **auth_baton,
-                            apr_pool_t *pool);
+void svn_auth_open(svn_auth_baton_t **auth_baton,
+                   apr_array_header_t *providers,
+                   apr_pool_t *pool);
 
-/** Register an authentication provider.
+/** Set an authentication run-time parameter.
  *
- * Register an authentication provider (defined by @a vtable and @a
- * provider_baton) with @a auth_baton, in the order specified by
- * @a order.  Use @a pool for any temporary allocation.
+ * Store @a name / @a value pair as a run-time parameter in @a
+ * auth_baton, making the data accessible to all providers.  @a name
+ * and @a value will be NOT be duplicated into the auth_baton's
+ * pool. To delete a run-time parameter, pass NULL for @a value.
  */
-svn_error_t * svn_auth_register_provider(svn_auth_baton_t *auth_baton,
-                                         int order,
-                                         const svn_auth_provider_t *vtable,
-                                         void *provider_baton,
-                                         apr_pool_t *pool);
+void svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
+                            const char *name,
+                            const void *value);
+
+/** Get an authentication run-time parameter.
+ *
+ * Return a value for run-time parameter @a name from @a auth_baton.
+ * Return NULL if the parameter doesn't exist.
+ */
+const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
+                                    const char *name);
+
+/** Universal run-time parameters, made available to all providers.
+
+    If you are writing a new provider, then to be a "good citizen",
+    you should notice these global parameters!  Note that these
+    run-time params should be treated as read-only by providers; the
+    application is responsible for placing them into the auth_baton
+    hash. */
+
+/** The auth-hash prefix indicating that the parameter is global */
+#define SVN_AUTH_PARAM_PREFIX "svn:auth:"
+
+/** Any 'default' credentials that came in through the application
+    itself, (e.g. --username and --password options).  Property values
+    are const char *.  */
+#define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
+#define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
+
+/** The application doesn't want any providers to prompt users.
+    Property value is irrelevant; only property's existence matters. */
+#define SVN_AUTH_PARAM_NON_INTERACTIVE  SVN_AUTH_PARAM_PREFIX "non-interactive"
+
+/** The application doesn't want any providers to save credentials to disk.
+    Property value is irrelevant; only property's existence matters. */
+#define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
+
 
 /** Get an initial set of credentials.
  *
@@ -208,45 +268,15 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
 
 /** Save a set of credentials.
  *
- * Ask @a auth_baton to store @a credentials (of type @a cred_kind)
- * for future use.  Presumably these credentials authenticated
- * successfully.  Use @a pool for temporary allocation.  If no
- * provider is able to store the credentials, return error.
+ * Ask @a state to store the most recently returned credentials,
+ * presumably because they successfully authenticated.  Use @a pool
+ * for temporary allocation.  If no credentials were ever returned, do
+ * nothing.
  */
-svn_error_t * svn_auth_save_credentials(const char *cred_kind,
-                                        void *credentials,
-                                        svn_auth_baton_t *auth_baton,
+svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
                                         apr_pool_t *pool);
 
 /** @} */
-
-
-/** General authentication providers */
-
-/** Set @a *provider and @ *provider_baton to an authentication
-    provider of type @c svn_auth_cred_simple_t that gets/sets
-    information from a working copy directory @a wc_dir.  If an access
-    baton for @a wc_dir is already open and available, pass it in @a
-    wc_dir_access, else pass NULL. */
-void svn_auth_get_simple_wc_provider (const svn_auth_provider_t **provider,
-                                      void **provider_baton,
-                                      const char *wc_dir,
-                                      svn_wc_adm_access_t *wc_dir_access,
-                                      apr_pool_t *pool);
-
-/** Set @a *provider and @ *provider_baton to an authentication
-    provider of type @c svn_auth_cred_simple_t that gets information
-    by prompting the user with @a prompt_func and @a prompt_baton. If
-    either @a default_username or @a default_password is non-NULL, the
-    argument will be returned when @c svn_auth_first_credentials is
-    called. */
-void svn_auth_get_simple_prompt_provider (const svn_auth_provider_t **provider,
-                                          void **provider_baton,
-                                          svn_client_prompt_t prompt_func,
-                                          void *prompt_baton,
-                                          const char *default_username,
-                                          const char *default_password,
-                                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

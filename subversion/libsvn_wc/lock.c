@@ -56,6 +56,9 @@ struct svn_wc_adm_access_t
   /* SET_OWNER is TRUE if SET is allocated from this access baton */
   svn_boolean_t set_owner;
 
+  /* The working copy format version number for the directory */
+  int wc_format;
+
   /* SET is a hash of svn_wc_adm_access_t* keyed on char* representing the
      path to directories that are open. */
   apr_hash_t *set;
@@ -173,6 +176,7 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   lock->type = type;
   lock->entries = NULL;
   lock->entries_deleted = NULL;
+  lock->wc_format = 0;
   lock->set = NULL;
   lock->lock_exists = FALSE;
   lock->set_owner = FALSE;
@@ -197,17 +201,19 @@ adm_ensure_set (svn_wc_adm_access_t *adm_access)
 static svn_error_t *
 probe (const char **dir,
        const char *path,
+       int *wc_format,
        apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  int wc_format_version;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
-    SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
+    SVN_ERR (svn_wc_check_wc (path, wc_format, pool));
+  else
+    *wc_format = 0;
 
   /* a "version" of 0 means a non-wc directory */
-  if (kind != svn_node_dir || wc_format_version == 0)
+  if (kind != svn_node_dir || *wc_format == 0)
     *dir = svn_path_dirname (path, pool);
   else
     *dir = path;
@@ -256,6 +262,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                  apr_pool_t *pool)
 {
   svn_wc_adm_access_t *lock;
+  svn_node_kind_t kind;
 
   if (associated)
     {
@@ -283,16 +290,14 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
     {
       /* Since no physical lock gets created we must check PATH is not a
          file. */
-      svn_node_kind_t node_kind;
-      SVN_ERR (svn_io_check_path (path, &node_kind, pool));
-      if (node_kind != svn_node_dir)
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+      if (kind != svn_node_dir)
         return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, NULL,
-                                  "lock path is not a directory (%s)",
+                                  "lock path is not a directory: '%s'",
                                   path);
 
       lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
     }
-
 
   if (tree_lock)
     {
@@ -300,11 +305,9 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
 
-      /* We ask for the deleted entries if there is a write lock on the
-         basis that we will eventually need these when we come to write.
-         Getting them now avoids a second file parse.  However if we don't
-         ever write it does use more memory. */
-      SVN_ERR (svn_wc_entries_read (&entries, lock, write_lock, subpool));
+      /* Ask for the deleted entries because most operations request them
+         at some stage, getting them now avoids a second file parse. */
+      SVN_ERR (svn_wc_entries_read (&entries, lock, TRUE, subpool));
 
       /* Use a temporary hash until all children have been opened. */
       if (associated)
@@ -318,7 +321,6 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
           svn_wc_adm_access_t *entry_access;
           const char *entry_path;
           svn_error_t *svn_err;
-          svn_node_kind_t kind;
 
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
@@ -333,6 +335,13 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
           SVN_ERR (svn_io_check_path (entry_path, &kind, pool));
           if (kind != svn_node_dir)
             continue;
+
+          /* ### it would be nice to refactor this. calling self will
+             ### do a bunch of work, yet we already know the answer and/or
+             ### we can skip a number of tests/checks. in particular,
+             ### we just verified that entry_path is a directory. we should
+             ### not test it *again* when we recurse.
+          */
 
           /* Don't use the subpool pool here, the lock needs to persist */
           svn_err = svn_wc_adm_open (&entry_access, lock, entry_path,
@@ -398,10 +407,21 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                        apr_pool_t *pool)
 {
   const char *dir;
+  int wc_format;
 
-  SVN_ERR (probe (&dir, path, pool));
+  SVN_ERR (probe (&dir, path, &wc_format, pool));
+
+  /* If we moved up a directory, then the path is not a directory, or it
+     is not under version control. In either case, the notion of a tree_lock
+     does not apply to the provided path. Disable it so that we don't end
+     up trying to lock more than we need.  */
+  if (dir != path)
+    tree_lock = FALSE;
+
   SVN_ERR (svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
                             pool));
+  if (wc_format && ! (*adm_access)->wc_format)
+    (*adm_access)->wc_format = wc_format;
 
   return SVN_NO_ERROR;
 }
@@ -434,9 +454,13 @@ svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
                            apr_pool_t *pool)
 {
   const char *dir;
+  int wc_format;
 
-  SVN_ERR (probe (&dir, path, pool));
+  SVN_ERR (probe (&dir, path, &wc_format, pool));
   SVN_ERR (svn_wc_adm_retrieve (adm_access, associated, dir, pool));
+
+  if (wc_format && ! (*adm_access)->wc_format)
+    (*adm_access)->wc_format = wc_format;
 
   return SVN_NO_ERROR;
 }
@@ -684,4 +708,18 @@ svn_wc__adm_access_entries (svn_wc_adm_access_t *adm_access,
     }
   else
     return adm_access->entries_deleted;
+}
+
+
+svn_error_t *
+svn_wc_adm_wc_format (svn_wc_adm_access_t *adm_access,
+                      int *wc_format)
+{
+  if (! adm_access->wc_format)
+    SVN_ERR (svn_wc_check_wc (adm_access->path, &adm_access->wc_format,
+                              adm_access->pool));
+
+  *wc_format = adm_access->wc_format;
+
+  return SVN_NO_ERROR;
 }

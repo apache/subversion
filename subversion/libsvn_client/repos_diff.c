@@ -153,7 +153,7 @@ struct file_baton {
 /* Data used by the apr pool temp file cleanup handler */
 struct temp_file_cleanup_s {
   /* The path to the file to be deleted.  NOTE: this path is
-     native-encoded, _not_ utf8-encoded! */
+     APR-encoded, _not_ utf8-encoded! */
   const char *path;
   /* The pool to which the deletion of the file is linked. */
   apr_pool_t *pool;
@@ -218,7 +218,7 @@ temp_file_plain_cleanup_handler (void *arg)
   struct temp_file_cleanup_s *s = arg;
 
   /* Note to UTF-8 watchers: this is ok because the path is already in
-     native encoding. */ 
+     APR internal encoding. */ 
   return apr_file_remove (s->path, s->pool);
 }
 
@@ -252,7 +252,7 @@ temp_file_cleanup_register (const char *path,
                             apr_pool_t *pool)
 {
   struct temp_file_cleanup_s *s = apr_palloc (pool, sizeof (*s));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&(s->path), path, pool));
+  SVN_ERR (svn_path_cstring_from_utf8 (&(s->path), path, pool));
   s->pool = pool;
   apr_pool_cleanup_register (s->pool, s, temp_file_plain_cleanup_handler,
                              temp_file_child_cleanup_handler);
@@ -835,6 +835,8 @@ svn_client__get_diff_editor (const char *target,
                              svn_revnum_t revision,
                              svn_wc_notify_func_t notify_func,
                              void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool)
@@ -871,8 +873,13 @@ svn_client__get_diff_editor (const char *target,
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_edit = close_edit;
 
-  *edit_baton = eb;
-  *editor = tree_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,
+                                              cancel_baton,
+                                              tree_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
 
   return SVN_NO_ERROR;
 }

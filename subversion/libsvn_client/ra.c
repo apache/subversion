@@ -90,7 +90,8 @@ get_wc_prop (void *baton,
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
           if (! strcmp (relpath, 
                         svn_path_uri_decode (item->url, pool)))
-            return svn_wc_prop_get (value, name, item->path, pool);
+            return svn_wc_prop_get (value, name, item->path, cb->base_access,
+                                    pool);
         }
 
       return SVN_NO_ERROR;
@@ -102,7 +103,7 @@ get_wc_prop (void *baton,
 
   return svn_wc_prop_get (value, name,
                           svn_path_join (cb->base_dir, relpath, pool),
-                          pool);
+                          cb->base_access, pool);
 }
 
 /* This implements the `svn_ra_push_wc_prop_func_t' interface. */
@@ -233,30 +234,50 @@ svn_client__open_ra_session (void **session_baton,
                              const char *base_dir,
                              svn_wc_adm_access_t *base_access,
                              apr_array_header_t *commit_items,
-                             svn_boolean_t do_store,
                              svn_boolean_t use_admin,
                              svn_boolean_t read_only_wc,
-                             svn_client_auth_baton_t *auth_baton,
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
-
+  
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
-  cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
+  cbtable->auth_baton = ctx->auth_baton; /* new-style */
 
-  cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;
   cb->base_access = base_access;
-  cb->do_store = do_store;
   cb->pool = pool;
   cb->commit_items = commit_items;
+  cb->config = ctx->config;
 
-  SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, pool));
+  /* If we have a base_dir, then we need to let the wc-auth-provider
+     know about it.  It needs it as a runtime parameter. */
+  if (base_dir)
+    {
+      svn_auth_set_parameter(ctx->auth_baton,
+                             SVN_AUTH_PARAM_SIMPLE_WC_WCDIR, base_dir);
+      if (base_access)
+        svn_auth_set_parameter(ctx->auth_baton,
+                               SVN_AUTH_PARAM_SIMPLE_WC_ACCESS, base_access);
+    }
+
+  /* Decide if the user passed new auth info into the system by
+     examining the auth_baton's runtime params. */
+  {
+    const char *uname, *passwd;
+    uname = svn_auth_get_parameter (ctx->auth_baton,
+                                    SVN_AUTH_PARAM_DEFAULT_USERNAME);
+    passwd = svn_auth_get_parameter (ctx->auth_baton,
+                                     SVN_AUTH_PARAM_DEFAULT_PASSWORD);
+  }
+
+  SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,
+                         pool));
 
   return SVN_NO_ERROR;
 }

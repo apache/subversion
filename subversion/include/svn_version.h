@@ -51,7 +51,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      17
+#define SVN_VER_MINOR      18
 
 /** Patch number.
  *
@@ -83,11 +83,23 @@ extern "C" {
  * This tag is used to generate a version number string to identify
  * the client and server in HTTP requests, for example. It must not
  * contain any spaces. This value remains "+" in the
- * repository. During the distribution process, we automatically
- * replace it with "" to indicate a baselined version.
+ * repository.
+ *
+ * During the distribution process, we automatically replace this text
+ * with "" to indicate a baselined version.
  */
 #define SVN_VER_NUMTAG     "+"
 
+
+/** Revision number: The repository revision number of this release.
+ *
+ * This constant is used to generate the build number part of the Windows
+ * file version. Its value remains 0 in the repository.
+ *
+ * During the distribution process, we automatically replace it with
+ * what we gues to be the correct revision number.
+ */
+#define SVN_VER_REVISION   0
 
 
 /* Version strings composed from the above definitions. */

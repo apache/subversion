@@ -1402,6 +1402,27 @@ def basic_cat(sbox):
 
 
 #----------------------------------------------------------------------
+
+def basic_ls(sbox):
+  "basic ls of files"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  output, errput = svntest.main.run_svn(None, 'ls',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        mu_path)
+  if errput or output != ["mu\n"]:
+    print output
+    return 1
+
+
+#----------------------------------------------------------------------
 def nonexistent_repository(sbox):
   "'svn log file:///nonexistent_path' should fail"
 
@@ -1481,6 +1502,126 @@ def basic_auth_cache(sbox):
                                         os.path.join(wc_dir, 'A', 'D', 'G'))
   if errput: return 1
 
+
+#----------------------------------------------------------------------
+def basic_add_ignores(sbox):
+  'ignored files in the added directory should not be added'
+
+  # The bug was that
+  #
+  #   $ svn add dir
+  #
+  # where dir contains some items that match the ignore list and some
+  # do not would add all items, ignored or not.
+  #
+  # This has been fixed, by testing each item with the new
+  # svn_wc_is_ignored function.
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+
+  (output, errput) = svntest.main.run_svn (None, 'add', dir_path)
+
+  if not output:
+    return 1
+
+  for line in output:
+    # If we see foo.o in the add output, fail the test.
+    if re.match(r'^A\s+.*foo.o$', line):
+      return 1
+
+  # Else never matched the unwanted output, so the test passed.
+  return 0
+
+
+#----------------------------------------------------------------------
+def basic_import_ignores(sbox):
+  'ignored files in the imported directory should not be imported'
+
+  # The bug was that
+  #
+  #   $ svn import dir
+  #
+  # where dir contains some items that match the ignore list and some
+  # do not would add all items, ignored or not.
+  #
+  # This has been fixed by testing each item with the new
+  # svn_wc_is_ignored function.
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+
+  # import new dir into repository
+  url = svntest.main.current_repo_url
+  output, errput = svntest.main.run_svn(None, 'import',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        '-m', 'Log message for new import',
+                                        url, dir_path, 'dir')
+
+  # check output from import
+  if len(errput):
+    return 1
+  lastline = string.strip(output.pop())
+  cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+  match = cm.search (lastline)
+  if not match:
+    return 1
+
+  # remove (uncontrolled) local dir
+  shutil.rmtree(dir_path)
+
+  # Create expected disk tree for the update (disregarding props)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'dir/foo.c' : Item(''),
+    })
+
+  # Create expected status tree for the update (disregarding props).
+  # Newly imported file should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'dir' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'dir/foo.c' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  # Create expected output tree for the update.
+  expected_output = svntest.wc.State(wc_dir, {
+    'dir' : Item(status='A '),
+    'dir/foo.c' : Item(status='A '),
+  })
+
+  # do update and check three ways
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
+                                               None, None, None,
+                                               None, None, 1)
+
+
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -1504,9 +1645,12 @@ test_list = [ None,
               basic_node_kind_change,
               basic_import,
               basic_cat,
+              basic_ls,
               Skip(basic_import_executable, (os.name != 'posix')),
               nonexistent_repository,
               basic_auth_cache,
+              basic_add_ignores,
+              basic_import_ignores,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

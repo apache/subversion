@@ -1040,14 +1040,17 @@ def commit_uri_unsafe(sbox):
   if svntest.main.windows:
     angle_name = '$angle$'
     nasty_name = '#![]{}()$$%'
+    tab_name   = 'tab-path'
   else:
     angle_name = '<angle>'
     nasty_name = '#![]{}()<>%'
-
+    tab_name   = "tab\tpath"
+  
   # Make some convenient paths.
   hash_dir = os.path.join(wc_dir, '#hash#')
   nasty_dir = os.path.join(wc_dir, nasty_name)
   space_path = os.path.join(wc_dir, 'A', 'D', 'space path')
+  tab_path = os.path.join(wc_dir, 'A', 'D', 'G', tab_name)
   bang_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bang!')
   bracket_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra[ket')
   brace_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra{e')
@@ -1059,6 +1062,7 @@ def commit_uri_unsafe(sbox):
   os.mkdir(hash_dir)
   os.mkdir(nasty_dir)
   svntest.main.file_append(space_path, "This path has a space in it.")
+  svntest.main.file_append(tab_path, "This path has a tab in it.")
   svntest.main.file_append(bang_path, "This path has a bang in it.")
   svntest.main.file_append(bracket_path, "This path has a bracket in it.")
   svntest.main.file_append(brace_path, "This path has a brace in it.")
@@ -1070,6 +1074,7 @@ def commit_uri_unsafe(sbox):
   add_list = [hash_dir,
               nasty_dir, # not xml-safe
               space_path,
+              tab_path,
               bang_path,
               bracket_path,
               brace_path,
@@ -1085,6 +1090,7 @@ def commit_uri_unsafe(sbox):
     '#hash#' : Item(verb='Adding'),
     nasty_name : Item(verb='Adding'),
     'A/D/space path' : Item(verb='Adding'),
+    'A/D/G/' + tab_name : Item(verb='Adding'),
     'A/D/H/bang!' : Item(verb='Adding'),
     'A/D/H/bra[ket' : Item(verb='Adding'),
     'A/D/H/bra{e' : Item(verb='Adding'),
@@ -1595,6 +1601,34 @@ def commit_out_of_date_deletions(sbox):
   return 0
 
 
+def commit_with_bad_log_message(sbox):
+  "commit with a log message containing bad data."
+
+  if sbox.build():
+    return 1
+  
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  log_msg_path = os.path.join(wc_dir, 'log-message') 
+
+  # Make a random change, so there's something to commit.
+  svntest.main.file_append(iota_path, 'fish')
+  
+  # Create a log message containing a zero-byte.
+  svntest.main.file_append(log_msg_path, '\x00')
+
+  # Commit and expect an error.
+  if svntest.actions.run_and_verify_commit(wc_dir,
+                                           None, None,
+                                           "contains a zero byte",
+                                           None, None,
+                                           None, None,
+                                           '-F', log_msg_path,
+                                           iota_path):
+    return 1
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1628,6 +1662,7 @@ test_list = [ None,
               XFail(failed_commit),
               Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,
+              commit_with_bad_log_message,
              ]
 
 if __name__ == '__main__':

@@ -24,6 +24,12 @@ Package=<4>
     Project_Dep_Name apriconv
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name apriconv_ccs_modules
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv_ces_modules
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
@@ -78,6 +84,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_delta_diff3
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_delta_diff_diff3
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_fs_skel
     End Project Dependency
     Begin Project Dependency
@@ -100,6 +109,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_path
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_stream
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_string
@@ -153,6 +165,42 @@ Package=<4>
 
 ###############################################################################
 
+Project: "apriconv_ccs_modules"=".\apr-iconv\ccs\apriconv_ccs_modules.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "apriconv_ces_modules"=".\apr-iconv\ces\apriconv_ces_modules.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "aprutil"=".\apr-util\aprutil.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -190,6 +238,21 @@ Package=<4>
 ###############################################################################
 
 Project: "libsvn_client"=.\subversion\libsvn_client\libsvn_client.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "libsvn_auth"=.\subversion\libsvn_auth\libsvn_auth.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -408,6 +471,9 @@ Package=<4>
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name libsvn_auth
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name libsvn_client
     End Project Dependency
     Begin Project Dependency
@@ -460,6 +526,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_auth
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
@@ -523,6 +592,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_auth
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_client
@@ -610,6 +682,18 @@ Package=<4>
 ###############################################################################
 
 Project: "tests_libsvn_delta_diff3"=.\subversion\tests\libsvn_delta\diff3_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_delta_diff_diff3"=.\subversion\tests\libsvn_delta\diff_diff3_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -847,6 +931,27 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_stream"=.\subversion\tests\libsvn_subr\stream_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
     End Project Dependency
 }}}
 

@@ -28,12 +28,6 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
-#ifdef SVN_HAVE_OLD_EXPAT
-#include "xmlparse.h"
-#else
-#include "expat.h"
-#endif
-
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -61,61 +55,53 @@ enum svn_xml_open_tag_style {
 /** Create or append in @a *outstr an xml-escaped version of @a string.
  *
  * Create or append in @a *outstr an xml-escaped version of @a string,
- * suitable for output as character data or as an attribute value.
+ * suitable for output as character data.
  * If @a *outstr is @c NULL, store a new stringbuf, else append to the
  * existing stringbuf there.
  */
-void svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
-                               const svn_stringbuf_t *string,
-                               apr_pool_t *pool);
+void svn_xml_escape_cdata_stringbuf (svn_stringbuf_t **outstr,
+                                     const svn_stringbuf_t *string,
+                                     apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_stringbuf, but @a string is an @c svn_string_t.
- */
-void svn_xml_escape_string (svn_stringbuf_t **outstr,
-                            const svn_string_t *string,
-                            apr_pool_t *pool);
-
-/** Same as @c svn_xml_escape_stringbuf, but @a string is a null-terminated
- * C string.
- */
-void svn_xml_escape_cstring (svn_stringbuf_t **outstr,
-                             const char *string,
-                             apr_pool_t *pool);
-
-
-/** Create or append in @a *outstr the unescaped version of the
- * xml-escaped string @a string.
- *
- * Create or append in @a *outstr the unescaped version of the
- * xml-escaped string @a string.  If @a *outstr is @c NULL, store 
- * a new stringbuf, else append to the existing stringbuf there.
- *
- * NOTE:  This function recognizes only the following XML escapes:
- *
- *    - \&amp;    - \&
- *    - \&apos;   - '
- *    - \&gt;     - \>
- *    - \&lt;     - \<
- *    - \&quot;   - "
- */
-void svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
-                                 const svn_stringbuf_t *string,
-                                 apr_pool_t *pool);
-
-/** Same as @c svn_xml_unescape_stringbuf', but @a string is an 
+/** Same as @c svn_xml_escape_cdata_stringbuf, but @a string is an
  * @c svn_string_t.
  */
-void svn_xml_unescape_string (svn_stringbuf_t **outstr,
-                              const svn_string_t *string,
-                              apr_pool_t *pool);
+void svn_xml_escape_cdata_string (svn_stringbuf_t **outstr,
+                                  const svn_string_t *string,
+                                  apr_pool_t *pool);
 
-/** Same as @c svn_xml_unescape_stringbuf, but @a string is a
+/** Same as @c svn_xml_escape_cdata_stringbuf, but @a string is a
  * null-terminated C string.
  */
-void svn_xml_unescape_cstring (svn_stringbuf_t **outstr,
-                               const char *string,
-                               apr_pool_t *pool);
+void svn_xml_escape_cdata_cstring (svn_stringbuf_t **outstr,
+                                   const char *string,
+                                   apr_pool_t *pool);
 
+
+/** Create or append in @a *outstr an xml-escaped version of @a string.
+ *
+ * Create or append in @a *outstr an xml-escaped version of @a string,
+ * suitable for output as an attribute value.
+ * If @a *outstr is @c NULL, store a new stringbuf, else append to the
+ * existing stringbuf there.
+ */
+void svn_xml_escape_attr_stringbuf (svn_stringbuf_t **outstr,
+                                    const svn_stringbuf_t *string,
+                                    apr_pool_t *pool);
+
+/** Same as @c svn_xml_escape_attr_stringbuf, but @a string is an
+ * @c svn_string_t.
+ */
+void svn_xml_escape_attr_string (svn_stringbuf_t **outstr,
+                                 const svn_string_t *string,
+                                 apr_pool_t *pool);
+
+/** Same as @c svn_xml_escape_attr_stringbuf, but @a string is a
+ * null-terminated C string.
+ */
+void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
+                                  const char *string,
+                                  apr_pool_t *pool);
 
 
 /*---------------------------------------------------------------*/
@@ -123,25 +109,25 @@ void svn_xml_unescape_cstring (svn_stringbuf_t **outstr,
 /* Generalized Subversion XML Parsing */
 
 /** A generalized Subversion XML parser object */
-typedef struct svn_xml_parser_t
-{
-  /** the expat parser */
-  XML_Parser parser;
+typedef struct svn_xml_parser_t svn_xml_parser_t;
 
-  /** if non-@c NULL, an error happened while parsing */
-  svn_error_t *error;
+typedef void (*svn_xml_start_elem)(void *baton,
+                                   const char *name,
+                                   const char **atts);
 
-  /** where this object is allocated, so we can free it easily */
-  apr_pool_t *pool;
+typedef void (*svn_xml_end_elem)(void *baton, const char *name);
 
-} svn_xml_parser_t;
+/* data is not NUL-terminated. */
+typedef void (*svn_xml_char_data)(void *baton,
+                                  const char *data,
+                                  apr_size_t len);
 
 
 /** Create a general Subversion XML parser */
-svn_xml_parser_t *svn_xml_make_parser (void *userData,
-                                       XML_StartElementHandler  start_handler,
-                                       XML_EndElementHandler    end_handler,
-                                       XML_CharacterDataHandler data_handler,
+svn_xml_parser_t *svn_xml_make_parser (void *baton,
+                                       svn_xml_start_elem start_handler,
+                                       svn_xml_end_elem end_handler,
+                                       svn_xml_char_data data_handler,
                                        apr_pool_t *pool);
 
 

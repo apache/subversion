@@ -236,7 +236,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
 
   *position_list = position;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -515,7 +515,7 @@ svn_diff(svn_diff_t **diff,
   /* Get rid of all the data we don't have a use for anymore */
   svn_pool_destroy(subpool);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -588,13 +588,39 @@ svn_diff3(svn_diff_t **diff,
     svn_boolean_t is_modified;
     svn_boolean_t is_latest;
     svn_diff__type_e type;
+    svn_diff__position_t sentinel_position[2];
 
     /* Point the position lists to the start of the list
      * so that common_diff/conflict detection actually is
-     * able to work
+     * able to work.
      */
-    position_list[1] = position_list[1]->next;
-    position_list[2] = position_list[2]->next;
+    if (position_list[1])
+      {
+        sentinel_position[0].next = position_list[1]->next;
+        sentinel_position[0].offset = position_list[1]->offset + 1;
+        position_list[1]->next = &sentinel_position[0];
+        position_list[1] = sentinel_position[0].next;
+      }
+    else
+      {
+        sentinel_position[0].offset = 1;
+        sentinel_position[0].next = NULL;
+        position_list[1] = &sentinel_position[0];
+      }
+
+    if (position_list[2])
+      {
+        sentinel_position[1].next = position_list[2]->next;
+        sentinel_position[1].offset = position_list[2]->offset + 1;
+        position_list[2]->next = &sentinel_position[1];
+        position_list[2] = sentinel_position[1].next;
+      }
+    else
+      {
+        sentinel_position[1].offset = 1;
+        sentinel_position[1].next = NULL;
+        position_list[2] = &sentinel_position[1];
+      }
 
     while (1)
       {
@@ -609,6 +635,16 @@ svn_diff3(svn_diff_t **diff,
                        < original_sync)
                   lcs_ol = lcs_ol->next;
 
+                /* If the sync point is the EOF, and our current lcs segment
+                 * doesn't reach as far as EOF, we need to skip this segment.
+                 */
+                if (lcs_om->length == 0 && lcs_ol->length > 0
+                    && lcs_ol->position[0]->offset + lcs_ol->length
+                       == original_sync
+                    && lcs_ol->position[1]->offset + lcs_ol->length
+                       != lcs_ol->next->position[1]->offset)
+                  lcs_ol = lcs_ol->next;
+
                 if (lcs_ol->position[0]->offset <= original_sync)
                     break;
               }
@@ -618,6 +654,16 @@ svn_diff3(svn_diff_t **diff,
 
                 while (lcs_om->position[0]->offset + lcs_om->length
                        < original_sync)
+                  lcs_om = lcs_om->next;
+
+                /* If the sync point is the EOF, and our current lcs segment
+                 * doesn't reach as far as EOF, we need to skip this segment.
+                 */
+                if (lcs_ol->length == 0 && lcs_om->length > 0
+                    && lcs_om->position[0]->offset + lcs_om->length
+                       == original_sync
+                    && lcs_om->position[1]->offset + lcs_om->length
+                       != lcs_om->next->position[1]->offset)
                   lcs_om = lcs_om->next;
 
                 if (lcs_om->position[0]->offset <= original_sync)
@@ -773,6 +819,12 @@ svn_diff3(svn_diff_t **diff,
                     *lcs_ref = svn_diff__lcs(position[0], position[1],
                                              1, 2,
                                              subpool2);
+
+                    if (position[0])
+                      position[0]->next = position_list[1];
+
+                    if (position[1])
+                      position[1]->next = position_list[2];
 
                     /* Fix up the EOF lcs element in case one of
                      * the two sequences was NULL.
@@ -933,7 +985,7 @@ svn_diff3(svn_diff_t **diff,
 
   svn_pool_destroy(subpool);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1027,5 +1079,5 @@ svn_diff_output(svn_diff_t *diff,
       diff = diff->next;
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }

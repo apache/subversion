@@ -30,6 +30,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_io.h"
+#include "svn_config.h"
 
 #include "wc.h"
 #include "log.h"
@@ -106,7 +107,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         /* Note that this action takes properties from dest, not source. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, adm_access,
                                        NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path, pool));
+        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path,
+                                        adm_access, pool));
 
         SVN_ERR (svn_subst_copy_and_translate (full_from_path,
                                                full_dest_path,
@@ -117,7 +119,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                                                pool));
 
         /* After copying, set the file executable if props dictate. */
-        return svn_wc__maybe_set_executable (NULL, full_dest_path, pool);
+        return svn_wc__maybe_set_executable (NULL, full_dest_path, adm_access,
+                                             pool);
       }
 
     case svn_wc__xfer_cp_and_detranslate:
@@ -128,7 +131,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         /* Note that this action takes properties from source, not dest. */
         SVN_ERR (svn_wc__get_keywords (&keywords, full_from_path, adm_access,
                                        NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_from_path, pool));
+        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_from_path,
+                                        adm_access, pool));
 
         /* If any specific eol style was indicated, then detranslate
            back to repository normal form ("\n"), repairingly.  But if
@@ -220,7 +224,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
    */
 
   /* start off getting the latest translation prop values. */
-  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, pool));
+  SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, adm_access, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, filepath, adm_access, NULL, pool));
 
   svn_path_split (filepath, &pdir, &bname, pool);
@@ -233,7 +237,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   if (apr_err)
     return svn_error_createf
       (apr_err, NULL,
-       "install_committed_file: error closing %s", tmp_wfile);
+       "install_committed_file: error closing '%s'", tmp_wfile);
 
   /* Is there a tmp_text_base that needs to be installed?  */
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
@@ -267,7 +271,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
   /* Set the working file's execute bit if props dictate. */
-  SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, pool));
+  SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
   if (did_set)
     /* okay, so we didn't -overwrite- the working file, but we changed
        its timestamp, which is the point of returning this flag. :-) */
@@ -287,7 +291,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
   svn_xml_signal_bailout
     (svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
                         err,
-                        "in directory %s",
+                        "in directory '%s'",
                         svn_wc_adm_access_path (loggy->adm_access)),
      loggy->parser);
 }
@@ -301,7 +305,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 static svn_error_t *
 log_do_run_cmd (struct log_runner *loggy,
                 const char *name,
-                const XML_Char **atts)
+                const char **atts)
 {
   svn_error_t *err;
   const char
@@ -376,7 +380,7 @@ log_do_run_cmd (struct log_runner *loggy,
                         infile, outfile, errfile, loggy->pool);
   if (err)
      return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                               "error running %s in %s",
+                               "error running '%s' in '%s'",
                                name,
                                svn_wc_adm_access_path (loggy->adm_access));
 
@@ -389,23 +393,24 @@ log_do_run_cmd (struct log_runner *loggy,
 static svn_error_t *
 log_do_merge (struct log_runner *loggy,
               const char *name,
-              const XML_Char **atts)
+              const char **atts)
 {
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
   enum svn_wc_merge_outcome_t merge_outcome;
   apr_pool_t *subpool = svn_pool_create (loggy->pool);
+  apr_hash_t *config;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
   left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
   if (! left)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing 'left' attr in %s",
+                              "missing 'left' attr in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
   right = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_2, atts);
   if (! right)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing 'right' attr in %s",
+                              "missing 'right' attr in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
 
   /* Grab all three labels too.  If non-existent, we'll end up passing
@@ -422,11 +427,14 @@ log_do_merge (struct log_runner *loggy,
                          subpool);
   name = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
                         subpool);
-  
+
+  /* Read the configuration. */
+  SVN_ERR (svn_config_get_config (&config, loggy->pool));
+
   /* Now do the merge with our full paths. */
   SVN_ERR (svn_wc_merge (left, right, name, loggy->adm_access,
                          left_label, right_label, target_label,
-                         FALSE, &merge_outcome, subpool));
+                         FALSE, &merge_outcome, config, subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -437,7 +445,7 @@ static svn_error_t *
 log_do_file_xfer (struct log_runner *loggy,
                   const char *name,
                   enum svn_wc__xfer_action action,
-                  const XML_Char **atts)
+                  const char **atts)
 {
   svn_error_t *err;
   const char *dest = NULL;
@@ -446,7 +454,7 @@ log_do_file_xfer (struct log_runner *loggy,
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
   if (! dest)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing dest attr in %s",
+                              "missing dest attr in '%s'",
                               svn_wc_adm_access_path (loggy->adm_access));
 
   err = file_xfer_under_path (loggy->adm_access, name, dest, action,
@@ -462,7 +470,7 @@ static svn_error_t *
 log_do_file_readonly (struct log_runner *loggy,
                       const char *name,
                       enum svn_wc__xfer_action action,
-                      const XML_Char **atts)
+                      const char **atts)
 {
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
@@ -492,7 +500,7 @@ log_do_rm (struct log_runner *loggy, const char *name)
 static svn_error_t *
 log_do_modify_entry (struct log_runner *loggy,
                      const char *name,
-                     const XML_Char **atts)
+                     const char **atts)
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
@@ -549,7 +557,8 @@ log_do_modify_entry (struct log_runner *loggy,
       svn_node_kind_t pfile_kind;
       apr_time_t prop_time;
 
-      err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
+      err = svn_wc__prop_path (&pfile, tfile, loggy->adm_access, FALSE,
+                               loggy->pool);
       if (err)
         signal_error (loggy, err);
       
@@ -635,7 +644,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 static svn_error_t *
 log_do_committed (struct log_runner *loggy,
                   const char *name,
-                  const XML_Char **atts)
+                  const char **atts)
 {
   svn_error_t *err;
   apr_pool_t *pool = loggy->pool; 
@@ -664,7 +673,7 @@ log_do_committed (struct log_runner *loggy,
   /* If no new post-commit revision was given us, bail with an error. */
   if (! rev)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-                              "missing revision attr for %s", name);
+                              "missing revision attr for '%s'", name);
       
   /* Read the entry for the affected item.  If we can't find the
      entry, or if the entry states that our item is not either "this
@@ -881,12 +890,12 @@ log_do_committed (struct log_runner *loggy,
              (&wf,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              0, pool));
+              loggy->adm_access, FALSE, pool));
     SVN_ERR (svn_wc__prop_base_path
              (&basef,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              0, pool));
+              loggy->adm_access, FALSE, pool));
     
     /* If this file was replaced in the commit, then we definitely
        need to begin by removing any old residual prop-base file.  */
@@ -902,7 +911,7 @@ log_do_committed (struct log_runner *loggy,
              (&tmpf,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              1, pool));
+              loggy->adm_access, TRUE, pool));
     if ((err = svn_io_check_path (tmpf, &kind, pool)))
       return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
                                 "error checking existence: %s", name);
@@ -937,7 +946,8 @@ log_do_committed (struct log_runner *loggy,
             int i;
             apr_array_header_t *propchanges;
             SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL,
-                                            full_path, pool));
+                                            full_path, loggy->adm_access,
+                                            pool));
             for (i = 0; i < propchanges->nelts; i++)
               {
                 svn_prop_t *propchange
@@ -1078,7 +1088,7 @@ log_do_committed (struct log_runner *loggy,
                                         | SVN_WC__ENTRY_MODIFY_FORCE),
                                        TRUE, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                                  "error merge_syncing %s", name);
+                                  "error merge_syncing '%s'", name);
     }
 
   return SVN_NO_ERROR;
@@ -1089,7 +1099,7 @@ log_do_committed (struct log_runner *loggy,
 static svn_error_t *
 log_do_modify_wcprop (struct log_runner *loggy,
                       const char *name,
-                      const XML_Char **atts)
+                      const char **atts)
 {
   svn_string_t value;
   const char *propname, *propval, *path; 
@@ -1110,12 +1120,12 @@ log_do_modify_wcprop (struct log_runner *loggy,
     }
 
   return svn_wc__wcprop_set (propname, propval ? &value : NULL,
-                             path, loggy->pool);
+                             path, loggy->adm_access, loggy->pool);
 }
 
 
 static void
-start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
+start_handler (void *userData, const char *eltname, const char **atts)
 {
   svn_error_t *err = SVN_NO_ERROR;
   struct log_runner *loggy = userData;
@@ -1190,7 +1200,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
     signal_error
       (loggy, svn_error_createf
        (SVN_ERR_WC_BAD_ADM_LOG, err,
-        "start_handler: error processing command '%s' in %s",
+        "start_handler: error processing command '%s' in '%s'",
         eltname, svn_wc_adm_access_path (loggy->adm_access)));
   
   return;
@@ -1222,7 +1232,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   loggy->pool = pool;
   loggy->parser = parser;
   loggy->entries_modified = FALSE;
-  
+
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
   SVN_ERR (svn_xml_parse (parser, log_start, strlen (log_start), 0));
@@ -1241,7 +1251,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       {
         apr_file_close (f);
         return svn_error_createf (apr_err, NULL,
-                                 "error reading adm log file in %s",
+                                 "error reading adm log file in '%s'",
                                   svn_wc_adm_access_path (adm_access));
       }
 
@@ -1347,7 +1357,7 @@ svn_wc_cleanup (const char *path,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       "svn_wc_cleanup: %s is not a working copy directory", path);
+       "svn_wc_cleanup: '%s' is not a working copy directory", path);
 
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 

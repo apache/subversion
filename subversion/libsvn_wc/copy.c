@@ -51,7 +51,7 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   /* Remove this_dir's wcprops */
   SVN_ERR (svn_wc__wcprop_path (&wcprop_path,
                                 svn_wc_adm_access_path (adm_access),
-                                0, subpool));
+                                adm_access, FALSE, subpool));
   err = svn_io_remove_file (wcprop_path, subpool);
   if (err)
     svn_error_clear (err);
@@ -79,7 +79,8 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       /* If a file, remove it from wcprops. */
       if (current_entry->kind == svn_node_file)
         {
-          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, 0, subpool));
+          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, adm_access,
+                                        FALSE, subpool));
           err = svn_io_remove_file (wcprop_path, subpool);
           if (err)
             svn_error_clear (err);
@@ -209,10 +210,12 @@ copy_file_administratively (const char *src_path,
     const char *dst_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
 
     /* Discover the paths to the four prop files */
-    SVN_ERR (svn_wc__prop_path (&src_wprop, src_path, 0, pool));
-    SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path, 0, pool));
-    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path, 0, pool));
-    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, 0, pool));
+    SVN_ERR (svn_wc__prop_path (&src_wprop, src_path, src_access, FALSE, pool));
+    SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path, src_access, FALSE,
+                                     pool));
+    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path, dst_parent, FALSE, pool));
+    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, dst_parent, FALSE,
+                                     pool));
 
     /* Copy the text-base over unconditionally. */
     SVN_ERR (svn_io_copy_file (src_txtb, dst_txtb, TRUE, pool));

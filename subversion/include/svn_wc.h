@@ -40,6 +40,7 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
+#include "svn_auth.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */
@@ -169,6 +170,11 @@ apr_pool_t *svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access);
  * @c SVN_ERR_WC_NOT_LOCKED if this is not the case.
  */
 svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
+
+/** Set @a *wc_format to the working copy format version number for
+ * @a adm_access. */
+svn_error_t *svn_wc_adm_wc_format (svn_wc_adm_access_t *adm_access,
+                                   int *wc_format);
 
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
@@ -430,10 +436,10 @@ typedef struct svn_wc_diff_callbacks_t
 
 /* Asking questions about a working copy. */
 
-/** Set @a *is_wc to @a path's working copy format version number if 
+/** Set @a *wc_format to @a path's working copy format version number if 
  * @a path is a valid working copy directory, else set it to 0.
  *
- * Set @a *is_wc to @a path's working copy format version number if 
+ * Set @a *wc_format to @a path's working copy format version number if 
  * @a path is a valid working copy directory, else set it to 0.  
  * Return error @c APR_ENOENT if @a path does not exist at all.
  */
@@ -444,9 +450,11 @@ svn_error_t *svn_wc_check_wc (const char *path,
 
 /** Set @a *has_binary_prop to @c TRUE iff @a path has been marked 
  * with a property indicating that it is non-text (in other words, binary).
+ * @a adm_access is an access baton set that contains @path.
  */
 svn_error_t *svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                                      const char *path,
+                                     svn_wc_adm_access_t *adm_access,
                                      apr_pool_t *pool);
 
 
@@ -525,6 +533,9 @@ typedef enum svn_wc_schedule_t
  */
 typedef struct svn_wc_entry_t
 {
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
+     if you need to extend that as well. */
+
   /* General Attributes */
 
   /** entry's name */
@@ -538,6 +549,9 @@ typedef struct svn_wc_entry_t
 
   /** canonical repository url */
   const char *repos;
+
+  /** repository uuid */
+  const char *uuid;
 
   /** node kind (file, dir, ...) */
   svn_node_kind_t kind;
@@ -593,7 +607,9 @@ typedef struct svn_wc_entry_t
 
   /** last commit author of this item */
   const char *cmt_author;
-  
+
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
+     if you need to extend that as well. */
 } svn_wc_entry_t;
 
 
@@ -928,6 +944,11 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * and its entries.  Else if @a descend is true, @a statushash will contain
  * statuses for @a path and everything below it, including
  * subdirectories.  In other words, a full recursion.
+ *
+ * If @a cancel_func is non-null, call it with @a cancel_baton while building 
+ * the @a statushash to determine if the client has cancelled the operation.
+ *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               const char *path,
@@ -937,6 +958,9 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_boolean_t no_ignore,
                               svn_wc_notify_func_t notify_func,
                               void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_hash_t *config,
                               apr_pool_t *pool);
 
 
@@ -954,6 +978,9 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
  * done, otherwise @a adm_access should be part of an access baton set
  * for the @a path hierarchy.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton periodically 
+ * during the editor's drive to see if the drive should continue.
+ *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  */
@@ -964,6 +991,8 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        svn_boolean_t descend,
                                        apr_hash_t *statushash,
                                        svn_revnum_t *youngest,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
                                        apr_pool_t *pool);
 
 /** @} */
@@ -1325,6 +1354,9 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * The editor invokes @a notify_func with @a notify_baton as the update
  * progresses, if @a notify_func is non-null.
  *
+ * If @a cancel_func is non-null, the editor will invoke @a cancel_func with 
+ * @a cancel_baton as the update progresses to see if it should continue.
+ *
  * @a target_revision is the repository revision that results from this set
  * of changes.
  */
@@ -1334,6 +1366,8 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -1357,6 +1391,9 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
  * The editor invokes @a notify_func with @a notify_baton as the checkout
  * progresses, if @a notify_func is non-null.
  *
+ * If @a cancel_func is non-null, it gets called, with @a cancel_baton as 
+ * the checkout progresses, to determine if it should continue.
+ *
  * @a ancestor_url is the repository string to be recorded in this
  * working copy.
  */
@@ -1366,6 +1403,8 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
                                          svn_boolean_t recurse,
                                          svn_wc_notify_func_t notify_func,
                                          void *notify_baton,
+                                         svn_cancel_func_t cancel_func,
+                                         void *cancel_baton,
                                          const svn_delta_editor_t **editor,
                                          void **edit_baton,
                                          svn_wc_traversal_info_t *ti,
@@ -1394,6 +1433,9 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * The editor invokes @a notify_func with @a notify_baton as the switch
  * progresses, if @a notify_func is non-null.
  *
+ * If @a cancel_func is non-null, it will be called with @a cancel_baton as 
+ * the switch progresses to determine if it should continue.
+ *
  * @a target_revision is the repository revision that results from this set
  * of changes.
  */
@@ -1404,6 +1446,8 @@ svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -1498,10 +1542,12 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
  * Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of 
  * @a path.  Allocate the table, names, and values in @a POOL.  If 
- * the node has no properties, an empty hash is returned.
+ * the node has no properties, an empty hash is returned.  @a adm_access
+ * is an access baton set that contains @a path.
  */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                const char *path,
+                               svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
 
@@ -1510,11 +1556,13 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
  * Set @a *value to the value of property @a name for @a path, allocating
  * @a *value in @a pool.  If no such prop, set @a *value to @c NULL.  
  * @a name may be a regular or wc property; if it is an entry property, 
- * return the error @c SVN_ERR_BAD_PROP_KIND.
+ * return the error @c SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
+ * baton set that contains @a path.
  */
 svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               const char *name,
                               const char *path,
+                              svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
 /** Set property @a name to @a value for @a path.
@@ -1580,12 +1628,17 @@ svn_boolean_t svn_wc_is_entry_prop (const char *name);
  * @a recurse determines whether to descend into subdirectories when @a target
  * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
  * an access baton set for the @a target hierarchy.
+ *
+ * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
+ * to periodically check if the client has canceled the operation.
  */
 svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                                      const char *target,
                                      const svn_wc_diff_callbacks_t *callbacks,
                                      void *callback_baton,
                                      svn_boolean_t recurse,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
                                      const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      apr_pool_t *pool);
@@ -1615,7 +1668,7 @@ svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
  *
  * Given a @a path to a file or directory under version control, discover
  * any local changes made to properties and/or the set of 'pristine'
- * properties.
+ * properties.  @a adm_access is an access baton set for @a path.
  *
  * If @a propchanges is non-@c NULL, return these changes as an array of
  * @c svn_prop_t structures stored in @a *propchanges.  The structures and
@@ -1631,6 +1684,7 @@ svn_error_t *svn_wc_diff (svn_wc_adm_access_t *anchor,
 svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
                                     apr_hash_t **original_props,
                                     const char *path,
+                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
 
 
@@ -1705,6 +1759,8 @@ typedef enum svn_wc_merge_outcome_t
  * is @c TRUE the merge will be carried out to determine the result but
  * @a merge_target will not be modified.
  *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
+ *
  * The outcome of the merge is returned in @a *merge_outcome. If there is
  * a conflict and @a dry_run is @c FALSE, then
  *
@@ -1740,6 +1796,7 @@ svn_error_t *svn_wc_merge (const char *left,
                            const char *target_label,
                            svn_boolean_t dry_run,
                            enum svn_wc_merge_outcome_t *merge_outcome,
+                           apr_hash_t *config,
                            apr_pool_t *pool);
 
 
@@ -1868,6 +1925,60 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool);
 
 
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider of type @c svn_auth_cred_simple_t that gets/sets
+ *  information from a working copy directory. 
+ *  
+ *   This provider requires certain run-time parameters be present in
+ *   the auth_baton:
+ *
+ *    - a working copy directory to read/write to.
+ *             (@c SVN_AUTH_PARAM_SIMPLE_WC_WCDIR)
+ *
+ *    - if available, an access baton for the directory.
+ *             (@c SVN_AUTH_PARAM_SIMPLE_WC_ACCESS)
+ *
+ *  Additionally, if a default username or password is available, this
+ *  provider will honor them as well, and return them when @c
+ *  svn_auth_first_credentials is called.  (see @c
+ *  SVN_AUTH_PARAM_DEFAULT_USERNAME and @c SVN_AUTH_PARAM_DEFAULT_PASSWORD).
+ */
+void 
+svn_wc_get_simple_provider (const svn_auth_provider_t **provider,
+                            void **provider_baton,
+                            apr_pool_t *pool);
+
+
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider of type @c svn_auth_cred_username_t that gets/sets
+ *  information from a working copy directory. 
+ *  
+ *   This provider requires certain run-time parameters be present in
+ *   the auth_baton:
+ *
+ *    - a working copy directory to read/write to.
+ *             (@c SVN_AUTH_PARAM_SIMPLE_WC_WCDIR)
+ *
+ *    - if available, an access baton for the directory.
+ *             (@c SVN_AUTH_PARAM_SIMPLE_WC_ACCESS)
+ *
+ *  Additionally, if a default username is available, this provider
+ *  will honor it, and return it when @c svn_auth_first_credentials is
+ *  called.  (see @c SVN_AUTH_PARAM_DEFAULT_USERNAME). 
+ */
+void 
+svn_wc_get_username_provider (const svn_auth_provider_t **provider,
+                              void **provider_baton,
+                              apr_pool_t *pool);
+
+
+/** The specialized runtime parameters required by the simple wc
+    provider; see svn_auth.h for more explanation. */
+#define SVN_AUTH_SIMPLE_WC_PARAM_PREFIX SVN_AUTH_PARAM_PREFIX "wc:"
+#define SVN_AUTH_PARAM_SIMPLE_WC_WCDIR SVN_AUTH_SIMPLE_WC_PARAM_PREFIX "wcdir"
+#define SVN_AUTH_PARAM_SIMPLE_WC_ACCESS SVN_AUTH_SIMPLE_WC_PARAM_PREFIX "access"
+
+
 
 /* Tmp files */
 
@@ -1971,7 +2082,8 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
 
 /** Given a @a path with its accompanying @a entry, transmit all local 
  * property modifications using the appropriate @a editor method (in 
- * conjunction with @a baton).
+ * conjunction with @a baton). @a adm_access is an access baton set
+ * that contains @a path.
  *
  * Given a @a path with its accompanying @a entry, transmit all local 
  * property modifications using the appropriate @a editor method (in 
@@ -1982,11 +2094,21 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
  * clean this up if it wishes to do so).
  */
 svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
+                                          svn_wc_adm_access_t *adm_access,
                                           const svn_wc_entry_t *entry,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
                                           const char **tempfile,
                                           apr_pool_t *pool);
+
+
+/** Get the run-time configured list of ignore patterns from the 
+ * @c svn_config_t's in the @a config hash, and store them in @a *patterns.
+ * Allocate @a *patterns and its contents in @a pool.
+ */
+svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
+                                         apr_hash_t *config,
+                                         apr_pool_t *pool);
 
 
 

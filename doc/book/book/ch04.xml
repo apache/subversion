@@ -740,6 +740,11 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
       The server sends only the minimal set of changes necessary to
       make your working copy reflect the branch.</para>
 
+    <para>Of course, <command>svn switch</command> also takes a
+      <option>--revision</option> (<option>-r</option>) option, so you
+      need not always move your working copy to the <quote>tip</quote>
+      of the branch.</para>
+
     <para>Of course, most projects are more complicated than our
       <filename>calc</filename> example.  Users often create a branch
       of a project's subdirectory, and then use <command>svn
@@ -759,11 +764,11 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
       as appropriate.  When you commit, your local changes will still
       be applied as a single, atomic change to the repository.</para>
 
-    <para>A final note:  while it's okay for your working copy to
-      reflect a mixture of repository locations, these locations
-      must all be within the <emphasis>same</emphasis> repository.
-      Subversion repositories aren't yet able to communicate with one
-      another;  that's a feature planned beyond Subversion 1.0.</para>
+    <para>Note that while it's okay for your working copy to reflect a
+      mixture of repository locations, these locations must all be
+      within the <emphasis>same</emphasis> repository.  Subversion
+      repositories aren't yet able to communicate with one another;
+      that's a feature planned beyond Subversion 1.0.</para>
     
     <sidebar>
       <title>Switches and updates</title>
@@ -795,6 +800,20 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
         time.  A switch moves your working copy through time
         <emphasis>and</emphasis> space.</para>
     </sidebar>
+
+    <para>Because <command>svn switch</command> is essentially a
+      variant of <command>svn update</command>, it shares the same
+      behaviors; any local modifications in your working copy are
+      preserved when new data arrives from the repository.  This
+      allows you to perform all sorts of clever tricks.</para>
+
+    <para>For example, suppose you have a working copy of
+      <filename>/trunk</filename> and make a number of changes to it.
+      Then you suddenly realize that you meant to make the changes to
+      a branch instead.  No problem!  When you <command>svn
+      switch</command> your working copy to the branch, the local
+      changes will remain.  You can then test and commit them to the
+      branch.</para>
 
   </sect1>
 
@@ -990,7 +1009,7 @@ Committed revision 352.
         your team.  Remember that whatever you choose, it's not a
         permanent commitment.  You can reorganize your repository at any
         time.  Because branches and tags are ordinary directories, the
-        <command>svn mv</command> command can move or rename them
+        <command>svn move</command> command can move or rename them
         however you wish.  Switching from one layout to another is just
         a matter of issuing a series of server-side moves; if you don't
         like the way things are organized in the repository, just juggle
@@ -1011,7 +1030,7 @@ Committed revision 352.
         anymore:</para>
 
 <screen>
-$ svn remove http://svn.example.com/repos/branches/calc/my-calc-branch \
+$ svn delete http://svn.example.com/repos/branches/calc/my-calc-branch \
              -m "Removing obsolete branch of calc project."
 
 Committed revision 375.
@@ -1052,7 +1071,7 @@ Committed revision 376.
         of the software that won't change much:</para>
 
 <screen>
-$ svn cp http://svn.example.com/repos/trunk/calc \
+$ svn copy http://svn.example.com/repos/trunk/calc \
          http://svn.example.com/branches/calc/stable-1.0
          -m "Creating stable branch of calc project."
 

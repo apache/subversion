@@ -32,7 +32,7 @@ test_path_is_child (const char **msg,
                     apr_pool_t *pool)
 {
   int i, j;
-#define NUM_TEST_PATHS 8
+#define NUM_TEST_PATHS 9
 
   static const char * const paths[NUM_TEST_PATHS] = { 
     "/foo/bar",
@@ -42,18 +42,21 @@ test_path_is_child (const char **msg,
     "/foo/bar/baz/bing/boom",
     SVN_EMPTY_PATH,
     "foo",
-    ".foo"
+    ".foo",
+    "/"
     };
   
   static const char * const remainders[NUM_TEST_PATHS][NUM_TEST_PATHS] = {
-    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, "bing/boom", 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, "foo", ".foo" },
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0 }
+    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
+      "foo/bar/baz/bing/boom", 0, 0, 0, 0 }
   };
   
   *msg = "test svn_path_is_child";

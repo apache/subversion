@@ -200,27 +200,41 @@ svn_ra_local__open (void **session_baton,
                     const char *repos_URL,
                     const svn_ra_callbacks_t *callbacks,
                     void *callback_baton,
+                    apr_hash_t *config,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *session;
-  void *a, *auth_baton;
-  svn_ra_username_authenticator_t *authenticator;
-
+  svn_auth_cred_username_t *creds;
+  svn_auth_iterstate_t *iterstate;
+  
   /* Allocate and stash the session_baton args we have already. */
   session = apr_pcalloc (pool, sizeof(*session));
   session->pool = pool;
   session->repository_URL = repos_URL;
   
-  /* Get the username by "pulling" it from the callbacks. */
-  SVN_ERR (callbacks->get_authenticator (&a,
-                                         &auth_baton, 
-                                         svn_ra_auth_username, 
-                                         callback_baton, pool));
+  /* Get a username somehow, so we have some svn:author property to
+     attach to a commit. */
+  if (! callbacks->auth_baton)
+    {
+      session->username = "";
+    }
+  else
+    {
+      SVN_ERR (svn_auth_first_credentials ((void **) &creds, &iterstate, 
+                                           SVN_AUTH_CRED_USERNAME,
+                                           callbacks->auth_baton,
+                                           pool));
 
-  authenticator = (svn_ra_username_authenticator_t *) a;
-
-  SVN_ERR (authenticator->get_username (&(session->username),
-                                        auth_baton, FALSE, pool));
+      /* No point in calling next_creds(), since that assumes that the
+         first_creds() somehow failed to authenticate.  But there's no
+         challenge going on, so we use whatever creds we get back on
+         the first try. */
+      if (creds == NULL
+          || (creds->username == NULL))
+        session->username = "";
+      else
+        session->username = apr_pstrdup (pool, creds->username);
+    }
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
@@ -236,19 +250,12 @@ svn_ra_local__open (void **session_baton,
      convenience. */
   session->fs = svn_repos_fs (session->repos);
 
+  /* Cache the repository UUID as well */
+  SVN_ERR (svn_fs_get_uuid (session->fs, &session->uuid, session->pool));
+
   /* Stuff the callbacks/baton here. */
   session->callbacks = callbacks;
   session->callback_baton = callback_baton;
-
-  /* ### ra_local is not going to bother to store the username in the
-     working copy.  This means that the username will always be
-     fetched from getuid() or from a commandline arg, which is fine.
-
-     The reason for this decision is that in ra_local, authentication
-     and authorization are blurred; we'd have to use authorization as
-     a *test* to decide if the authentication was valid.  And we
-     certainly don't want to track every subsequent svn_fs_* call's
-     error, just to decide if it's legitmate to store a username! */
 
   *session_baton = session;
   return SVN_NO_ERROR;
@@ -316,6 +323,18 @@ svn_ra_local__change_rev_prop (void *session_baton,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_local__get_uuid (void *session_baton,
+                        const char **uuid)
+{
+  svn_ra_local__session_baton_t *baton = 
+    (svn_ra_local__session_baton_t *) session_baton;
+
+  *uuid = baton->uuid;
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 svn_ra_local__rev_proplist (void *session_baton,
@@ -757,6 +776,10 @@ svn_ra_local__get_file (void *session_baton,
       apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
                     APR_HASH_KEY_STRING, value);
             
+      value = svn_string_create (sbaton->uuid, sbaton->pool); 
+      apr_hash_set (*props, SVN_PROP_ENTRY_UUID,
+                    APR_HASH_KEY_STRING, value);
+
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
 
@@ -902,6 +925,10 @@ svn_ra_local__get_dir (void *session_baton,
 
       apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
                     APR_HASH_KEY_STRING, value);
+      
+      value = svn_string_create (sbaton->uuid, pool); 
+      apr_hash_set (*props, SVN_PROP_ENTRY_UUID,
+                    APR_HASH_KEY_STRING, value);
             
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
@@ -935,7 +962,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__do_status,
   svn_ra_local__do_diff,
   svn_ra_local__get_log,
-  svn_ra_local__do_check_path
+  svn_ra_local__do_check_path,
+  svn_ra_local__get_uuid
 };
 
 

@@ -24,12 +24,14 @@
 #include <apr_file_io.h>
 #include <apr_file_info.h>
 #include <apr_time.h>
+#include <apr_mmap.h>
 
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_io.h"
+#include "svn_pools.h"
 
 
 typedef struct svn_diff__file_token_t
@@ -96,12 +98,38 @@ svn_diff__file_datasource_open(void *baton,
                                file_baton->path[idx]);
     }
 
-  file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size + 1);
-  rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
-  if (rv != APR_SUCCESS)
+  if (finfo.size == 0)
     {
-      return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
-                               file_baton->path[idx]);
+      file_baton->buffer[idx] = NULL;
+    }
+
+#if APR_HAS_MMAP
+  else
+    {
+      apr_mmap_t *mm;
+
+      rv = apr_mmap_create(&mm, file,
+                           0, finfo.size, APR_MMAP_READ,
+                           file_baton->pool);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "Failed to mmap file '%s'.",
+                                   file_baton->path[idx]);
+        }
+
+      file_baton->buffer[idx] = mm->mm;
+    }
+
+#else /* APR_HAS_MMAP */
+  else
+    {
+      file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size);
+      rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
+                                   file_baton->path[idx]);
+        }
     }
 
   rv = apr_file_close(file);
@@ -110,12 +138,12 @@ svn_diff__file_datasource_open(void *baton,
       return svn_error_createf(rv, NULL, "failed to close file '%s'.",
                                file_baton->path[idx]);
     }
+#endif /* APR_HAS_MMAP */
 
   file_baton->curp[idx] = file_baton->buffer[idx];
   file_baton->endp[idx] = file_baton->buffer[idx] + finfo.size;
-  *file_baton->endp[idx] = '\n';
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -123,7 +151,7 @@ svn_error_t *
 svn_diff__file_datasource_close(void *baton,
                                 svn_diff_datasource_e datasource)
 {
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -147,7 +175,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   if (curp == endp)
     {
-      return NULL;
+      return SVN_NO_ERROR;
     }
 
   if (!file_baton->reuse_token)
@@ -163,8 +191,10 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   file_token->length = 0;
 
-  eol = strchr(curp, '\n');
-  if (eol != endp)
+  eol = memchr(curp, '\n', endp - curp);
+  if (!eol)
+    eol = endp;
+  else
     eol++;
 
   file_token->line = curp;
@@ -173,7 +203,7 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
   file_baton->curp[idx] = eol;
   *token = file_token;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -204,6 +234,16 @@ svn_diff__file_token_discard(void *baton,
   file_baton->reuse_token = file_baton->token == token;
 }
 
+static
+void
+svn_diff__file_token_discard_all(void *baton)
+{
+  svn_diff__file_baton_t *file_baton = baton;
+
+  /* This will also close any open files and destroy mmap segments */
+  svn_pool_clear(file_baton->pool);
+}
+
 static const svn_diff_fns_t svn_diff__file_vtable =
 {
   svn_diff__file_datasource_open,
@@ -211,7 +251,7 @@ static const svn_diff_fns_t svn_diff__file_vtable =
   svn_diff__file_datasource_get_next_token,
   svn_diff__file_token_compare,
   svn_diff__file_token_discard,
-  NULL
+  svn_diff__file_token_discard_all
 };
 
 svn_error_t *
@@ -225,9 +265,12 @@ svn_diff_file(svn_diff_t **diff,
   memset(&baton, 0, sizeof(baton));
   baton.path[0] = original;
   baton.path[1] = modified;
-  baton.pool = pool;
+  baton.pool = svn_pool_create(pool);
 
-  return svn_diff(diff, &baton, &svn_diff__file_vtable, pool);
+  SVN_ERR(svn_diff(diff, &baton, &svn_diff__file_vtable, pool));
+
+  svn_pool_destroy(baton.pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -243,9 +286,12 @@ svn_diff3_file(svn_diff_t **diff,
   baton.path[0] = original;
   baton.path[1] = modified;
   baton.path[2] = latest;
-  baton.pool = pool;
+  baton.pool = svn_pool_create(pool);
 
-  return svn_diff3(diff, &baton, &svn_diff__file_vtable, pool);
+  SVN_ERR(svn_diff3(diff, &baton, &svn_diff__file_vtable, pool));
+
+  svn_pool_destroy(baton.pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -304,7 +350,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
   
   if (length == 0 && apr_file_eof(baton->file[idx]))
     {
-      return NULL;
+      return SVN_NO_ERROR;
     }
   
   do
@@ -391,7 +437,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       baton->length[idx] = 0;
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -402,10 +448,11 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   apr_size_t hunk_len;
   apr_status_t rv;
   int i;
-  
+
   if (svn_stringbuf_isempty(baton->hunk))
     {
-      return NULL;
+      /* Nothing to flush */
+      return SVN_NO_ERROR;
     }
 
   target_line = baton->hunk_start[0] + baton->hunk_length[0]
@@ -461,7 +508,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   baton->hunk_length[1] = 0;
   svn_stringbuf_setempty(baton->hunk);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -479,10 +526,14 @@ svn_diff__file_output_unified_diff_modified(void *baton,
                    ? original_start - SVN_DIFF__UNIFIED_CONTEXT_SIZE : 0;
   target_line[1] = modified_start;
 
-  /* If the changed ranges are far enough apart (no overlapping context),
-     flush the current hunk. */
-  if (output_baton->hunk_start[0] + output_baton->hunk_length[0] 
-      + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0])
+  /* If the changed ranges are far enough apart (no overlapping or connecting
+     context), flush the current hunk, initialize the next hunk and skip the
+     lines not in context.  Also do this when this is the first hunk.
+   */
+  if (output_baton->current_line[0] < target_line[0]
+      && (output_baton->hunk_start[0] + output_baton->hunk_length[0]
+          + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0]
+          || output_baton->hunk_length[0] == 0))
     {
       SVN_ERR(svn_diff__file_output_unified_flush_hunk(output_baton));
 
@@ -527,7 +578,7 @@ svn_diff__file_output_unified_diff_modified(void *baton,
         }
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -618,7 +669,7 @@ svn_diff_file_output_unified(apr_file_t *output_file,
         }
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -629,17 +680,16 @@ typedef struct svn_diff3__file_output_baton_t
   apr_file_t *output_file;
 
   const char *path[3];
-  apr_file_t *file[3];
 
   apr_off_t   current_line[3];
 
-  char        buffer[3][4096];
-  apr_size_t  length[3];
+  char       *buffer[3];
+  char       *endp[3];
   char       *curp[3];
 
   const char *conflict_modified;
   const char *conflict_original;
-  const char *conflict_seperator;
+  const char *conflict_separator;
   const char *conflict_latest;
 
   svn_boolean_t display_original_in_conflict;
@@ -651,7 +701,7 @@ typedef struct svn_diff3__file_output_baton_t
 typedef enum svn_diff3__file_output_type_e
 {
   svn_diff3__file_output_skip,
-  svn_diff3__file_output_normal,
+  svn_diff3__file_output_normal
 } svn_diff3__file_output_type_e;
 
 
@@ -662,86 +712,41 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
                             int idx)
 {
   char *curp;
+  char *endp;
   char *eol;
-  apr_size_t length;
   apr_size_t len;
   apr_status_t rv;
-  svn_boolean_t bytes_processed = FALSE;
 
-  length = baton->length[idx];
   curp = baton->curp[idx];
+  endp = baton->endp[idx];
 
   /* Lazily update the current line even if we're at EOF.
    */
   baton->current_line[idx]++;
 
-  if (length == 0 && apr_file_eof(baton->file[idx]))
-    {
-      return NULL;
-    }
+  if (curp == endp)
+    return SVN_NO_ERROR;
 
-  do
+  eol = memchr(curp, '\n', endp - curp);
+  if (!eol)
+    eol = endp;
+  else
+    eol++;
+
+  if (type != svn_diff3__file_output_skip)
     {
-      if (length > 0)
+      len = eol - curp;
+      rv = apr_file_write(baton->output_file, curp, &len);
+      if (rv != APR_SUCCESS)
         {
-          eol = memchr(curp, '\n', length);
-
-          if (eol != NULL)
-            {
-              eol++;
-              len = (apr_size_t)(eol - curp);
-              length -= len;
-
-              if (type != svn_diff3__file_output_skip)
-                {
-                  rv = apr_file_write(baton->output_file, curp, &len);
-                  if (rv != APR_SUCCESS)
-                    {
-                       return svn_error_create(rv, NULL,
-                         "svn_diff3_file_output: error writing file.");
-                    }
-                }
-
-              baton->curp[idx] = eol;
-              baton->length[idx] = length;
-
-              rv = APR_SUCCESS;
-
-              break;
-            }
-
-          if (type != svn_diff3__file_output_skip)
-            {
-              rv = apr_file_write(baton->output_file, curp, &len);
-              if (rv != APR_SUCCESS)
-                {
-                  return svn_error_create(rv, NULL,
-                    "svn_diff3_file_output: error writing file.");
-                }
-            }
-
-          bytes_processed = TRUE;
+          return svn_error_create(rv, NULL,
+            "svn_diff3_file_output: error writing file.");
         }
-
-      curp = baton->buffer[idx];
-      length = sizeof(baton->buffer[idx]);
-
-      rv = apr_file_read(baton->file[idx], curp, &length);
-    }
-  while (rv == APR_SUCCESS);
-
-  if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
-    {
-      return svn_error_createf(rv, NULL, "error reading from '%s'.",
-                               baton->path[idx]);
     }
 
-  if (APR_STATUS_IS_EOF(rv))
-    {
-      baton->length[idx] = 0;
-    }
+  baton->curp[idx] = eol;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -767,7 +772,7 @@ svn_diff3__file_output_hunk(void *baton,
                 svn_diff3__file_output_normal, idx));
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static
@@ -844,6 +849,8 @@ svn_diff3__file_output_conflict(void *baton,
         "svn_diff3_file_output: error writing file.");
     }
 
+  apr_file_putc('\n', file_baton->output_file);
+
   SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
             modified_start, modified_length));
 
@@ -856,16 +863,20 @@ svn_diff3__file_output_conflict(void *baton,
             "svn_diff3_file_output: error writing file.");
         }
 
+      apr_file_putc('\n', file_baton->output_file);
+  
       SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
               original_start, original_length));
     }
 
-  rv = apr_file_puts(file_baton->conflict_seperator, file_baton->output_file);
+  rv = apr_file_puts(file_baton->conflict_separator, file_baton->output_file);
   if (rv != APR_SUCCESS)
     {
       return svn_error_create(rv, NULL,
         "svn_diff3_file_output: error writing file.");
     }
+
+  apr_file_putc('\n', file_baton->output_file);
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
             latest_start, latest_length));
@@ -877,7 +888,9 @@ svn_diff3__file_output_conflict(void *baton,
         "svn_diff3_file_output: error writing file.");
     }
 
-  return NULL;
+  apr_file_putc('\n', file_baton->output_file);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -886,16 +899,22 @@ svn_diff3_file_output(apr_file_t *output_file,
                       const char *original_path,
                       const char *modified_path,
                       const char *latest_path,
-                      const char *conflict_modified,
                       const char *conflict_original,
-                      const char *conflict_seperator,
+                      const char *conflict_modified,
                       const char *conflict_latest,
+                      const char *conflict_separator,
                       svn_boolean_t display_original_in_conflict,
                       svn_boolean_t display_resolved_conflicts,
                       apr_pool_t *pool)
 {
   svn_diff3__file_output_baton_t baton;
-  int i;
+  apr_file_t *file[3];
+  apr_finfo_t finfo;
+  apr_status_t rv;
+  int idx;
+#if APR_HAS_MMAP
+  apr_mmap_t *mm[3] = { 0 };
+#endif
 
   memset(&baton, 0, sizeof(baton));
   baton.output_file = output_file;
@@ -904,37 +923,100 @@ svn_diff3_file_output(apr_file_t *output_file,
   baton.path[1] = modified_path;
   baton.path[2] = latest_path;
   baton.conflict_modified = conflict_modified ? conflict_modified
-                            : apr_psprintf(pool, "<<<<<<< %s\n", modified_path);
+                            : apr_psprintf(pool, "<<<<<<< %s", modified_path);
   baton.conflict_original = conflict_original ? conflict_original
-                            : apr_psprintf(pool, "||||||| %s\n", original_path);
-  baton.conflict_seperator = conflict_seperator ? conflict_seperator
-                             : "=======\n";
+                            : apr_psprintf(pool, "||||||| %s", original_path);
+  baton.conflict_separator = conflict_separator ? conflict_separator
+                             : "=======";
   baton.conflict_latest = conflict_latest ? conflict_latest 
-                          : apr_psprintf(pool, ">>>>>>> %s\n", latest_path);
+                          : apr_psprintf(pool, ">>>>>>> %s", latest_path);
 
   baton.display_original_in_conflict = display_original_in_conflict;
   baton.display_resolved_conflicts = display_resolved_conflicts &&
                                      !display_original_in_conflict;
 
-  for (i = 0; i < 3; i++)
+  for (idx = 0; idx < 3; idx++)
     {
-      SVN_ERR(svn_io_file_open(&baton.file[i], baton.path[i],
-                               APR_READ, APR_OS_DEFAULT, pool));
+      SVN_ERR(svn_io_file_open(&file[idx], baton.path[idx],
+                               APR_READ, APR_OS_DEFAULT, baton.pool));
+
+      rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, file[idx]);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "Failed to get file info '%s'.",
+                                   baton.path[idx]);
+        }
+
+      if (finfo.size == 0)
+        {
+	  baton.buffer[idx] = NULL;
+	}
+
+#if APR_HAS_MMAP
+      else
+        {
+          rv = apr_mmap_create(&mm[idx], file[idx],
+                           0, finfo.size, APR_MMAP_READ,
+                           baton.pool);
+          if (rv != APR_SUCCESS)
+            {
+              return svn_error_createf(rv, NULL, "Failed to mmap file '%s'.",
+                                       baton.path[idx]);
+            }
+
+          baton.buffer[idx] = mm[idx]->mm;
+	}
+
+#else
+      else
+        {
+          baton.buffer[idx] = apr_palloc(baton.pool, finfo.size);
+
+          rv = apr_file_read_full(file[idx], baton.buffer[idx], finfo.size,
+                                  NULL);
+          if (rv != APR_SUCCESS)
+            {
+              return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
+                                       baton.path[idx]);
+            }
+	}
+
+      rv = apr_file_close(file[idx]);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "failed to close file '%s'.",
+                                   baton.path[idx]);
+        }
+#endif
+
+      baton.curp[idx] = baton.buffer[idx];
+      baton.endp[idx] = baton.buffer[idx] + finfo.size;
     }
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));
 
-  for (i = 0; i < 3; i++)
+#if APR_HAS_MMAP
+  for (idx = 0; idx < 3; idx++)
     {
-      apr_status_t rv = apr_file_close(baton.file[i]);
+      if (mm[idx])
+        {
+          rv = apr_mmap_delete(mm[idx]);
+          if (rv != APR_SUCCESS)
+            {
+              return svn_error_createf(rv, NULL, "failed to delete mmap '%s'.",
+                                       baton.path[idx]);
+            }
+        }
+
+      rv = apr_file_close(file[idx]);
       if (rv != APR_SUCCESS)
         {
-          return svn_error_createf(rv, NULL,
-                                   "failed to close file '%s'.",
-                                   baton.path[i]);
+          return svn_error_createf(rv, NULL, "failed to close file '%s'.",
+                                   baton.path[idx]);
         }
     }
+#endif
 
-  return NULL;
+  return SVN_NO_ERROR;
 }

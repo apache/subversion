@@ -56,9 +56,13 @@ CAT="$BIN/cat"
 CP="$BIN/cp"
 CP_F="$BIN/cp -f"
 CUT="$BIN/cut"
+GREP="$BIN/grep"
+ID_UN="$BIN/id -un"
+KILL="$BIN/kill"
 MAKE="$LOCALBIN/make"
 MKDIR="$BIN/mkdir"
 NICE="$BIN/nice"
+PS_U="$TOPBIN/ps -u"
 RM="$BIN/rm"
 RM_F="$BIN/rm -f"
 RM_RF="$BIN/rm -rf"
@@ -79,6 +83,7 @@ START() {
 # Test failed
 FAIL() {
     echo "FAIL: $TST" >> $LOG_FILE
+    test -n "$1" && eval "$1"   # Run cleanup code
     exit 1
 }
 

@@ -40,15 +40,13 @@ svn_cl__switch (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *target = NULL, *switch_url = NULL;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  svn_client_auth_baton_t *auth_baton;
   const char *parent_dir, *base_tgt;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -92,9 +90,6 @@ svn_cl__switch (apr_getopt_t *os,
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
        "`%s' does not appear to be a working copy path", target);
   
-  /* Build an authentication baton to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
-
   /* We want the switch to print the same letters as a regular update. */
   if (entry->kind == svn_node_file)
     SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &base_tgt, pool));
@@ -102,17 +97,16 @@ svn_cl__switch (apr_getopt_t *os,
     parent_dir = target;
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch
-           (auth_baton,
-            target,
+           (target,
             switch_url,
             &(opt_state->start_revision),
             opt_state->nonrecursive ? FALSE : TRUE,
-            notify_func, notify_baton,
+            ctx,
             pool));
 
   return SVN_NO_ERROR;

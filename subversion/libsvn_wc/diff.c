@@ -376,7 +376,7 @@ file_diff (struct dir_baton *dir_baton,
           apr_hash_t *baseprops;
 
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
-                                          pool));
+                                          adm_access, pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
                    (NULL, NULL,
@@ -429,7 +429,7 @@ file_diff (struct dir_baton *dir_baton,
           apr_hash_t *baseprops;
 
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
-                                          pool));
+                                          adm_access, pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
                    (NULL, NULL,
@@ -493,7 +493,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
           apr_hash_t *baseprops;
 
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops,
-                                          dir_baton->path,
+                                          dir_baton->path, adm_access,
                                           dir_baton->pool));
               
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
@@ -1009,7 +1009,8 @@ change_file_prop (void *file_baton,
       /* also notice we're ignoring error here;  there's a chance that
          this path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
-      svn_error_t *err = svn_wc_prop_list (&(b->baseprops), b->path, b->pool);
+      svn_error_t *err = svn_wc_prop_list (&(b->baseprops), b->path,
+                                           b->edit_baton->anchor, b->pool);
       if (err)
         svn_error_clear (err);
       b->fetched_baseprops = TRUE;
@@ -1044,7 +1045,7 @@ change_dir_prop (void *dir_baton,
          this path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
       svn_error_t *err = svn_wc_prop_list (&(db->baseprops), db->path,
-                                           db->pool);
+                                           db->edit_baton->anchor, db->pool);
       if (err)
         svn_error_clear (err);
       db->fetched_baseprops = TRUE;
@@ -1089,6 +1090,8 @@ svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                         const svn_wc_diff_callbacks_t *callbacks,
                         void *callback_baton,
                         svn_boolean_t recurse,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool)
@@ -1114,8 +1117,13 @@ svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
-  *edit_baton = eb;
-  *editor = tree_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,
+                                              cancel_baton,
+                                              tree_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
 
   return SVN_NO_ERROR;
 }

@@ -51,57 +51,55 @@
 int
 main(int argc, char *argv[])
 {
-  apr_status_t apr_err;
-  int err2;
   const char *wc_path;
   apr_pool_t *pool;
-  svn_error_t *err;
   apr_hash_t *status_hash;
   apr_hash_index_t *hi;
   svn_revnum_t youngest;
   svn_boolean_t switched = FALSE, modified = FALSE;
   svn_revnum_t min_revnum = SVN_INVALID_REVNUM, max_revnum = SVN_INVALID_REVNUM;
   const svn_wc_status_t *status;
+  int wc_format;
+  svn_client_ctx_t ctx = { 0 };
 
   if (argc != 2 && argc != 3)
     {
       fprintf(stderr, "usage: svnversion wc_path [trail_url]\n");
       return EXIT_FAILURE;
     }
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
 
+  /* Initialize the app. */
+  if (svn_cmdline_init ("svnversion", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
+  ctx.config = apr_hash_make (pool);
+
   SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
-  wc_path = svn_path_canonicalize (wc_path, pool);
-  err = svn_client_status (&status_hash, &youngest, wc_path, NULL,
-                           TRUE, TRUE, FALSE, FALSE, NULL, NULL, pool);
-  if (err)
+  wc_path = svn_path_internal_style (wc_path, pool);
+  SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
+  if (! wc_format)
     {
       svn_node_kind_t kind;
-      svn_error_t *err3 = svn_io_check_path (wc_path, &kind, pool);
-      if (! err3 && kind == svn_node_dir)
+      SVN_INT_ERR(svn_io_check_path (wc_path, &kind, pool));
+      if (kind == svn_node_dir)
         {
           printf ("exported\n");
           svn_pool_destroy (pool);
           return EXIT_SUCCESS;
         }
-      svn_handle_error (err, stderr, 0);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
+      else
+        {
+          fprintf (stderr, "'%s' not versioned, and not exported\n", wc_path);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
     }
 
+  SVN_INT_ERR (svn_client_status (&status_hash, &youngest, wc_path, TRUE, TRUE,
+                                  FALSE, FALSE, &ctx, pool));
   for (hi = apr_hash_first (pool, status_hash); hi; hi = apr_hash_next (hi))
     {
       void *val;
@@ -141,7 +139,7 @@ main(int argc, char *argv[])
       status = apr_hash_get (status_hash, wc_path, APR_HASH_KEY_STRING);
       if (! status)
         switched = TRUE;
-      else
+      else if (status->entry)
         {
           apr_size_t len1 = strlen (trail_url);
           apr_size_t len2 = strlen (status->entry->url);

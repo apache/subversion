@@ -591,7 +591,7 @@ SVN_ERROR_START
        /* this error can be used when an auth provider doesn't have
           the creds, but no other "real" error occurred. */
   SVN_ERRDEF (SVN_ERR_AUTH_CREDS_UNAVAILABLE,
-              SVN_ERR_AUTH_CATEGORY_START + 1,
+              SVN_ERR_AUTH_CATEGORY_START + 0,
               "Credential data unavailable")
 
   SVN_ERRDEF (SVN_ERR_AUTH_NO_PROVIDER,
@@ -602,6 +602,9 @@ SVN_ERROR_START
               SVN_ERR_AUTH_CATEGORY_START + 2,
               "All authentication providers exhausted")
 
+  SVN_ERRDEF (SVN_ERR_AUTH_CREDS_NOT_SAVED,
+              SVN_ERR_AUTH_CATEGORY_START + 3,
+              "All authentication providers exhausted")
 
   /* svndiff errors */
 
@@ -743,6 +746,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 14,
               "A checksum mismatch occurred")
 
+  SVN_ERRDEF (SVN_ERR_CANCELLED,
+              SVN_ERR_MISC_CATEGORY_START + 15,
+              "The operation was canceled")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -776,6 +783,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_NO_EXTERNAL_EDITOR,
               SVN_ERR_CL_CATEGORY_START + 7,
               "No external editor available")
+
+  SVN_ERRDEF (SVN_ERR_CL_BAD_LOG_MESSAGE,
+              SVN_ERR_CL_CATEGORY_START + 8,
+              "Something is wrong with the log message's contents.")
 
 SVN_ERROR_END
 

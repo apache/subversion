@@ -70,10 +70,10 @@ get_dir_contents (apr_hash_t *dirents,
 
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
-               const char *url,
+               const char *path_or_url,
                svn_opt_revision_t *revision,
-               svn_client_auth_baton_t *auth_baton,
                svn_boolean_t recurse,               
+               svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
@@ -81,6 +81,12 @@ svn_client_ls (apr_hash_t **dirents,
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *auth_dir;
+  const char *url;
+
+  SVN_ERR (svn_client_url_from_path (&url, path_or_url, pool));
+  if (! url)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              "'%s' has no URL", path_or_url);
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -91,8 +97,8 @@ svn_client_ls (apr_hash_t **dirents,
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
                                         auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, NULL, FALSE, TRUE, 
+                                        ctx, pool));
 
   /* Resolve REVISION into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
@@ -123,8 +129,8 @@ svn_client_ls (apr_hash_t **dirents,
       SVN_ERR (ra_lib->close (session));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             auth_dir,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            NULL, NULL, FALSE, TRUE, 
+                                            ctx, pool));
 
       /* Get all parent's entries, no props. */
       if (ra_lib->get_dir)

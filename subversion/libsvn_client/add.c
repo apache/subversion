@@ -39,8 +39,7 @@
 static svn_error_t *
 add_dir_recursive (const char *dirname,
                    svn_wc_adm_access_t *adm_access,
-                   svn_wc_notify_func_t notify_added,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   apr_dir_t *dir;
@@ -49,13 +48,16 @@ add_dir_recursive (const char *dirname,
   apr_pool_t *subpool;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   svn_wc_adm_access_t *dir_access;
+  apr_array_header_t *ignores;
 
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (dirname, adm_access,
                        NULL, SVN_INVALID_REVNUM,
-                       notify_added, notify_baton, pool));
+                       ctx->notify_func, ctx->notify_baton, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
+
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
   /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create (pool);
@@ -79,18 +81,19 @@ add_dir_recursive (const char *dirname,
               || (this_entry.name[1] == '.' && this_entry.name[2] == '\0')))
         continue;
 
+      if (svn_cstring_match_glob_list (this_entry.name, ignores))
+        continue;
+
       /* Construct the full path of the entry. */
       fullpath = svn_path_join (dirname, this_entry.name, subpool);
 
       if (this_entry.filetype == APR_DIR)
         /* Recurse. */
-        SVN_ERR (add_dir_recursive (fullpath, dir_access,
-                                    notify_added, notify_baton,
-                                    subpool));
+        SVN_ERR (add_dir_recursive (fullpath, dir_access, ctx, subpool));
 
       else if (this_entry.filetype == APR_REG)
         SVN_ERR (svn_wc_add (fullpath, dir_access, NULL, SVN_INVALID_REVNUM,
-                             notify_added, notify_baton, subpool));
+                             ctx->notify_func, ctx->notify_baton, subpool));
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -124,8 +127,7 @@ add_dir_recursive (const char *dirname,
 svn_error_t *
 svn_client_add (const char *path, 
                 svn_boolean_t recursive,
-                svn_wc_notify_func_t notify_func,
-                void *notify_baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -137,11 +139,10 @@ svn_client_add (const char *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
-    err = add_dir_recursive (path, adm_access,
-                             notify_func, notify_baton, pool);
+    err = add_dir_recursive (path, adm_access, ctx, pool);
   else
     err = svn_wc_add (path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      notify_func, notify_baton, pool);
+                      ctx->notify_func, ctx->notify_baton, pool);
 
   err2 = svn_wc_adm_close (adm_access);
   if (err2)
@@ -158,11 +159,7 @@ svn_client_add (const char *path,
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   const char *path,
-                  svn_client_auth_baton_t *auth_baton,
-                  svn_client_get_commit_log_t log_msg_func,
-                  void *log_msg_baton,
-                  svn_wc_notify_func_t notify_func,
-                  void *notify_baton,
+                  svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -186,7 +183,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       *commit_info = NULL;
 
       /* Create a new commit item and add it to the array. */
-      if (log_msg_func)
+      if (ctx->log_msg_func)
         {
           svn_client_commit_item_t *item;
           const char *tmp_file;
@@ -199,8 +196,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
           (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
             = item;
           
-          SVN_ERR ((*log_msg_func) (&message, &tmp_file, commit_items, 
-                                    log_msg_baton, pool));
+          SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
+                                         ctx->log_msg_baton, pool));
           if (! message)
             return SVN_NO_ERROR;
         }
@@ -219,8 +216,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
          base directory, do not want to store auth data, and do not
          (necessarily) have an admin area for temp files. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            NULL, NULL, FALSE, TRUE, 
+                                            ctx, pool));
 
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
@@ -253,7 +250,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
   /* This is a regular "mkdir" + "svn add" */
   SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   
-  err = svn_client_add (path, FALSE, notify_func, notify_baton, pool);
+  err = svn_client_add (path, FALSE, ctx, pool);
 
   /* Trying to add a directory with the same name as a file that is
      scheduled for deletion is not supported.  Leaving an unversioned

@@ -45,24 +45,18 @@ svn_cl__commit (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   const char *base_dir;
-  svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
-  void *log_msg_baton;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
                                          FALSE, pool));
-
-  /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -84,20 +78,23 @@ svn_cl__commit (apr_getopt_t *os,
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
+
+  /* We're creating a new log message baton because we can use our base_dir 
+     to store the temp file, instead of the current working directory.  The 
+     client might not have write access to their working directory, but they 
+     better have write access to the directory they're committing.  */
+  ctx->log_msg_baton = svn_cl__make_log_msg_baton (opt_state, base_dir, 
+                                                   ctx->config, pool);
 
   /* Commit. */
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, base_dir, pool);
   SVN_ERR (svn_cl__cleanup_log_msg
-           (log_msg_baton, svn_client_commit (&commit_info,
-                                              notify_func, notify_baton,
-                                              auth_baton,
-                                              targets,
-                                              svn_cl__get_log_message,
-                                              log_msg_baton,
-                                              opt_state->nonrecursive,
-                                              pool)));
+           (ctx->log_msg_baton, svn_client_commit (&commit_info,
+                                                   targets,
+                                                   opt_state->nonrecursive,
+                                                   ctx,
+                                                   pool)));
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);
 

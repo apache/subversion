@@ -17,8 +17,6 @@
  */
 
 
-#include <locale.h>
-
 #include <apr_file_io.h>
 
 #include "svn_error.h"
@@ -26,6 +24,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_path.h"
+#include "svn_config.h"
 
 #include "svnadmin.h"
 
@@ -82,7 +81,10 @@ enum
     svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__follow_copies,
     svnadmin__on_disk_template,
-    svnadmin__in_repos_template
+    svnadmin__in_repos_template,
+    svnadmin__ignore_uuid,
+    svnadmin__force_uuid,
+    svnadmin__bdb_txn_nosync
   };
 
 /* Option codes and descriptions.
@@ -115,6 +117,18 @@ static const apr_getopt_option_t options_table[] =
     {"in-repos-template", svnadmin__in_repos_template, 1,
      "specify template for the repository structure"},
 
+    {"quiet",           'q', 0,
+     "no progress (only errors) to stderr"},
+
+    {"ignore-uuid", svnadmin__ignore_uuid, 0,
+     "ignore any repos UUID found in the stream."},
+
+    {"force-uuid", svnadmin__force_uuid, 0,
+     "set repos UUID to that found in stream, if any."},
+
+    {SVN_FS_CONFIG_BDB_TXN_NOSYNC, svnadmin__bdb_txn_nosync, 0,
+     "disable fsync at database transaction commit [Berkeley DB]."},
+
     {NULL}
   };
 
@@ -127,7 +141,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
-     {svnadmin__on_disk_template, svnadmin__in_repos_template} },
+     {svnadmin__on_disk_template, svnadmin__in_repos_template,
+      svnadmin__bdb_txn_nosync} },
     
     {"createtxn", subcommand_createtxn, {0},
      "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
@@ -142,7 +157,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "revision trees.  If only LOWER is given, dump that one revision tree.\n"
      "If --incremental is passed, then the first revision dumped will be\n"
      "a diff against the previous revision, instead of the usual fulltext.\n",
-     {'r', svnadmin__incremental} },
+     {'r', svnadmin__incremental, 'q'} },
 
     {"help", subcommand_help, {"?", "h"},
      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
@@ -152,9 +167,10 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"load", subcommand_load, {0},
      "usage: svnadmin load REPOS_PATH\n\n"
      "Read a 'dumpfile'-formatted stream from stdin, committing\n"
-     "new revisions into the repository's filesystem.\n"
-     "Send progress feedback to stdout.\n",
-     {0} },
+     "new revisions into the repository's filesystem.  If the repository\n"
+     "was previously empty, its UUID will, by default, be changed to the\n"
+     "one specified in the stream.  Progress feedback is sent to stdout.\n",
+     {svnadmin__ignore_uuid, svnadmin__force_uuid} },
 
     {"lscr", subcommand_lscr, {0},
      "usage: svnadmin lscr REPOS_PATH PATH [--copies]\n\n"
@@ -204,6 +220,10 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
+  svn_boolean_t quiet;                              /* --quiet */
+  svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
+  enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
+                                                       --force-uuid */
   const char *on_disk;
   const char *in_repos;
 };
@@ -214,9 +234,20 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
+  apr_hash_t *config;
+  apr_hash_t *fs_config = NULL;
 
+  if (opt_state->bdb_txn_nosync)
+    {
+      fs_config = apr_hash_make (pool);
+      apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                    SVN_FS_CONFIG_BDB_TXN_NOSYNC_LEN, "1");
+    }
+
+  SVN_ERR (svn_config_get_config (&config, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
-                             opt_state->on_disk, opt_state->in_repos, pool));
+                             opt_state->on_disk, opt_state->in_repos, 
+                             config, fs_config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -255,7 +286,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_stream_t *stdout_stream, *stderr_stream;
+  svn_stream_t *stdout_stream, *stderr_stream = NULL;
   svn_revnum_t
     lower = SVN_INVALID_REVNUM,
     upper = SVN_INVALID_REVNUM;
@@ -289,11 +320,17 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
        "first revision cannot be higher than second");
 
   /* Run the dump to STDOUT.  Let the user redirect output into
-     a file if they want.  :-)  Progress feedback goes to stderr. */
+     a file if they want.  :-)  */
   SVN_ERR (create_stdio_stream (&stdout_stream,
                                 apr_file_open_stdout, pool));
-  SVN_ERR (create_stdio_stream (&stderr_stream,
-                                apr_file_open_stderr, pool));
+
+  /* Progress feedback goes to stderr, unless they asked to suppress
+     it. */
+  if (!opt_state->quiet)
+    {
+      SVN_ERR (create_stdio_stream (&stderr_stream,
+                                    apr_file_open_stderr, pool));
+    }
 
   SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
                               lower, upper, opt_state->incremental, pool));
@@ -338,7 +375,8 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (create_stdio_stream (&stdout_stream,
                                 apr_file_open_stdout, pool));
   
-  SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream, pool));
+  SVN_ERR (svn_repos_load_fs (repos, stdin_stream, stdout_stream,
+                              opt_state->uuid_action, pool));
 
   return SVN_NO_ERROR;
 }
@@ -354,6 +392,7 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_root_t *rev_root;
   svn_revnum_t youngest_rev;
   apr_array_header_t *revs, *args, *paths;
+  const char *path_utf8;
   int i;
 
   SVN_ERR (svn_opt_parse_all_args (&args, os, pool));
@@ -363,9 +402,11 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                               "exactly one path argument required");
 
   paths = apr_array_make (pool, 1, sizeof (const char *));
-  SVN_ERR (svn_utf_cstring_to_utf8 ((const char **)apr_array_push(paths),
+  SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
+  *(const char **)apr_array_push(paths) =
+    svn_path_internal_style (path_utf8, pool);
   
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
@@ -496,6 +537,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
+  filename_utf8 = svn_path_internal_style (filename_utf8, pool);
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
 
   log_contents->data = file_contents->data;
@@ -525,7 +567,6 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  int err2;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -535,21 +576,11 @@ main (int argc, const char * const *argv)
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
 
-  setlocale (LC_CTYPE, "");
+  /* Initialize the app. */
+  if (svn_cmdline_init ("svnadmin", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
-
+  /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   if (argc <= 1)
@@ -620,6 +651,9 @@ main (int argc, const char * const *argv)
             }
         }
         break;
+      case 'q':
+        opt_state.quiet = TRUE;
+        break;
       case 'h':
       case '?':
         opt_state.help = TRUE;
@@ -631,7 +665,8 @@ main (int argc, const char * const *argv)
         opt_state.follow_copies = TRUE;
         break;
       case svnadmin__on_disk_template:
-        err = svn_path_cstring_to_utf8 (&opt_state.on_disk, opt_arg, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.on_disk, opt_arg,
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
@@ -640,13 +675,23 @@ main (int argc, const char * const *argv)
           }
         break;
       case svnadmin__in_repos_template:
-        err = svn_path_cstring_to_utf8 (&opt_state.in_repos, opt_arg, pool);
+        err = svn_utf_cstring_to_utf8 (&opt_state.in_repos, opt_arg,
+                                       NULL, pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        break;
+      case svnadmin__ignore_uuid:
+        opt_state.uuid_action = svn_repos_load_uuid_ignore;
+        break;
+      case svnadmin__force_uuid:
+        opt_state.uuid_action = svn_repos_load_uuid_force;
+        break;
+      case svnadmin__bdb_txn_nosync:
+        opt_state.bdb_txn_nosync = TRUE;
         break;
       default:
         {
@@ -704,7 +749,7 @@ main (int argc, const char * const *argv)
                                                 opt_state.repository_path,
                                                 NULL, pool));
           repos_path 
-            = svn_path_canonicalize (opt_state.repository_path, pool);
+            = svn_path_internal_style (opt_state.repository_path, pool);
         }
 
       if (repos_path == NULL)

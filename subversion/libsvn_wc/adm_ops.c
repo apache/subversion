@@ -212,14 +212,31 @@ svn_wc_process_committed (const char *path,
   if (base_name)
     {
       /* PATH must be some sort of file */
-      const char *tmp_text_base;
+      const char *latest_base;
       svn_node_kind_t kind;
 
       /* There may be a new text base is sitting in the adm tmp area by
          now, because the commit succeeded.  A file that is copied, but not
-         otherwise modified, doesn't have a new text base. */
-      tmp_text_base = svn_wc__text_base_path (path, TRUE, pool);
-      SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
+         otherwise modified, doesn't have a new text base, so we use
+         the unmodified text base.
+
+         ### Does this mean that a file committed with only prop mods
+         ### will still get its text base checksum recomputed?  Yes it
+         ### does, sadly.  But it's not enough to just check for that
+         ### condition, because in the case of an added file, there
+         ### may not be a pre-existing checksum in the entry.
+         ### Probably the best solution is to compute (or copy) the
+         ### checksum at 'svn add' (or 'svn cp') time, instead of
+         ### waiting until commit time.
+      */
+      latest_base = svn_wc__text_base_path (path, TRUE, pool);
+      SVN_ERR (svn_io_check_path (latest_base, &kind, pool));
+      if (kind == svn_node_none)
+        {
+          latest_base = svn_wc__text_base_path (path, FALSE, pool);
+          SVN_ERR (svn_io_check_path (latest_base, &kind, pool));
+        }
+
       if (kind == svn_node_file)
         {
           /* It would be more efficient to compute the checksum as part of
@@ -233,7 +250,7 @@ svn_wc_process_committed (const char *path,
 
              So instead we just do the checksum from scratch.  Ick. */
           unsigned char digest[MD5_DIGESTSIZE];
-          SVN_ERR (svn_io_file_checksum (digest, tmp_text_base, pool));
+          SVN_ERR (svn_io_file_checksum (digest, latest_base, pool));
           hex_digest = svn_md5_digest_to_cstring (digest, pool);
         }
 
@@ -320,7 +337,7 @@ svn_wc_process_committed (const char *path,
       apr_file_close (log_fp);
       return svn_error_createf (apr_err, NULL,
                                 "process_committed: "
-                                "error writing %s's log file", 
+                                "error writing log file for '%s'", 
                                 path);
     }
       
@@ -893,7 +910,7 @@ svn_wc_add (const char *path,
   if (orig_entry)
     {
       const char *prop_path;
-      SVN_ERR (svn_wc__prop_path (&prop_path, path, FALSE, pool));
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
       SVN_ERR (remove_file_if_present (prop_path, pool));
     }
 
@@ -984,10 +1001,8 @@ svn_wc_add (const char *path,
              this model someday. */
 
           /* Figure out what the new url should be. */
-          const char *new_url 
-            = svn_path_join (parent_entry->url, 
-                             svn_path_uri_encode (base_name, pool),
-                             pool);
+          const char *new_url = 
+            svn_path_url_add_component (parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR (svn_wc__do_update_cleanup (path, adm_access, TRUE, new_url, 
@@ -1110,8 +1125,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     {
       svn_node_kind_t working_props_kind;
 
-      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
-      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
+                                       pool));
 
       /* There may be a base props file but no working props file, if
          the mod was that the working file was `R'eplaced by a new
@@ -1156,8 +1172,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
          working props.  It's *still* possible that the base-props
          exist, however, from the original replaced file.  If they do,
          then we need to restore them. */
-      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
-      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, 0, pool));
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
+                                       pool));
       SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
 
       if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
@@ -1183,7 +1200,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
           const char *eol;
           base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
-          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, pool));
+          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, adm_access,
+                                          pool));
           SVN_ERR (svn_wc__get_keywords (&keywords, fullpath, adm_access, NULL,
                                          pool));
 
@@ -1201,7 +1219,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
             return revert_error (err, fullpath, "restoring text", pool);
 
           /* If necessary, tweak the new working file's executable bit. */
-          SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, pool));
+          SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
+                                                 pool));
 
           /* Modify our entry structure. */
           SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));
@@ -1372,7 +1391,7 @@ svn_wc_revert (const char *path,
       else  /* Else it's `none', or something exotic like a symlink... */
         return svn_error_createf
           (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-           "Unknown or unexpected kind for path %s", path);
+           "Unknown or unexpected kind for path '%s'", path);
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control, 
          and we've definitely reverted PATH at this point. */
@@ -1565,15 +1584,18 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* Working prop file. */
-        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, adm_access, FALSE,
+                                    subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* Prop base file. */
-        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, adm_access,
+                                         FALSE, subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
 
         /* wc-prop file. */
-        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, adm_access, FALSE,
+                                      subpool));
         SVN_ERR (remove_file_if_present (svn_thang, subpool));
       }
 

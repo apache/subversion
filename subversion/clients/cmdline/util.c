@@ -44,6 +44,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
+#include "svn_private_config.h"
 #include "cl.h"
 
 
@@ -67,13 +68,15 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                          const char *base_dir /* UTF-8! */,
                          const char *contents /* UTF-8! */,
                          const char *prefix,
+                         apr_hash_t *config,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
   const char *cmd;
   apr_file_t *tmp_file;
   const char *tmpfile_name;
-  const char *contents_native, *tmpfile_native, *base_dir_native;
+  const char *contents_native, *tmpfile_native;
+  const char *tmpfile_apr, *base_dir_apr;
   apr_status_t apr_err, apr_err2;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
@@ -95,19 +98,26 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     editor = getenv ("VISUAL");
   if (! editor)
     editor = getenv ("EDITOR");
-  
+
+#ifdef SVN_CLIENT_EDITOR
+  if (! editor)
+    editor = SVN_CLIENT_EDITOR;
+#endif
+
   /* Now, override this editor choice with a selection from our config
      file (using what we have found thus far as the default in case no
      config option exists). */
-  SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &editor, "helpers", "editor-cmd", editor);
+  cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG, 
+                               APR_HASH_KEY_STRING) : NULL;
+  svn_config_get (cfg, &editor, SVN_CONFIG_SECTION_HELPERS, 
+                  SVN_CONFIG_OPTION_EDITOR_CMD, editor);
 
   /* Abort if there is no editor specified */
   if (! editor)
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       "None of the environment variables "
-       "SVN_EDITOR, VISUAL or EDITOR is set.");
+       "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
+       "set, and no 'editor-cmd' run-time configuration option was found.");
 
   /* Convert file contents from UTF-8 */
   SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
@@ -120,12 +130,13 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       return svn_error_create
         (apr_err, NULL, "failed to get current working directory");
     }
-  SVN_ERR (svn_utf_cstring_from_utf8 (&base_dir_native, base_dir, pool));
 
   /* APR doesn't like "" directories */
-  if (base_dir_native[0] == '\0')
-    base_dir_native = ".";
-  apr_err = apr_filepath_set (base_dir_native, pool);
+  if (base_dir[0] == '\0')
+    base_dir_apr = ".";
+  else
+    SVN_ERR (svn_path_cstring_from_utf8 (&base_dir_apr, base_dir, pool));
+  apr_err = apr_filepath_set (base_dir_apr, pool);
   if (apr_err)
     {
       return svn_error_createf
@@ -162,13 +173,13 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  err = svn_utf_cstring_from_utf8 (&tmpfile_native, tmpfile_name, pool);
+  err = svn_path_cstring_from_utf8 (&tmpfile_apr, tmpfile_name, pool);
   if (err)
     goto cleanup;
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_err = apr_stat (&finfo_before, tmpfile_native, 
+  apr_err = apr_stat (&finfo_before, tmpfile_apr,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -178,6 +189,9 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     }
 
   /* Now, run the editor command line.  */
+  err = svn_utf_cstring_from_utf8 (&tmpfile_native, tmpfile_name, pool);
+  if (err)
+    goto cleanup;
   cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_native);
   sys_err = system (cmd);
   if (sys_err != 0)
@@ -190,7 +204,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     }
   
   /* Get information about the temporary file after the assumed editing. */
-  apr_err = apr_stat (&finfo_after, tmpfile_native, 
+  apr_err = apr_stat (&finfo_after, tmpfile_apr,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -257,6 +271,7 @@ struct log_msg_baton
   const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
+  apr_hash_t *config; /* client configuration hash */
   apr_pool_t *pool; /* a pool. */
 };
 
@@ -264,6 +279,7 @@ struct log_msg_baton
 void *
 svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
                             const char *base_dir /* UTF-8! */,
+                            apr_hash_t *config,
                             apr_pool_t *pool)
 {
   struct log_msg_baton *baton = apr_palloc (pool, sizeof (*baton));
@@ -275,6 +291,7 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
   baton->message_encoding = opt_state->encoding;
   baton->base_dir = base_dir ? base_dir : "";
   baton->tmpfile_left = NULL;
+  baton->config = config;
   baton->pool = pool;
   return baton;
 }
@@ -285,8 +302,6 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
                          svn_error_t *commit_err)
 {
   struct log_msg_baton *lmb = log_msg_baton;
-  const char *native;
-  svn_error_t *conv_err;
 
   /* If there was no tmpfile left, or there is no log message baton,
      return COMMIT_ERR. */
@@ -302,12 +317,12 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
      chain.  Then return COMMIT_ERR.  If the conversion from UTF-8 to
      native encoding fails, we have to compose that error with the
      commit error chain, too. */
-  conv_err = svn_utf_cstring_from_utf8 (&native, lmb->tmpfile_left, lmb->pool);
-  svn_error_compose (commit_err, svn_error_createf 
-                     (commit_err->apr_err, conv_err,
-                      "Your commit message was left in a temporary file:\n"
-                      "   %s", 
-                      conv_err ? "(see the following error)" : native));
+  svn_error_compose
+    (commit_err,
+     svn_error_create (commit_err->apr_err,
+                       svn_error_createf (commit_err->apr_err, NULL,
+                                          "   '%s'", lmb->tmpfile_left),
+                       "Your commit message was left in a temporary file:"));
   return commit_err;
 }
 
@@ -368,7 +383,8 @@ svn_cl__get_log_message (const char **log_msg,
                          void *baton,
                          apr_pool_t *pool)
 {
-  const char *default_msg = "\n" EDITOR_EOF_PREFIX "\n\n";
+  const char *default_msg =
+    APR_EOL_STR EDITOR_EOF_PREFIX APR_EOL_STR APR_EOL_STR;
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
   
@@ -437,13 +453,13 @@ svn_cl__get_log_message (const char **log_msg,
           svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
           svn_stringbuf_appendcstr (tmp_message, "   ");
           svn_stringbuf_appendcstr (tmp_message, path);
-          svn_stringbuf_appendcstr (tmp_message, "\n");
+          svn_stringbuf_appendcstr (tmp_message, APR_EOL_STR);
         }
 
       /* Use the external edit to get a log message. */
       err = svn_cl__edit_externally (&msg2, &lmb->tmpfile_left,
                                      lmb->base_dir, tmp_message->data, 
-                                     "svn-commit", pool);
+                                     "svn-commit", lmb->config, pool);
 
       /* Clean up the log message into UTF8/LF before giving it to
          libsvn_client. */
@@ -499,7 +515,7 @@ svn_cl__get_log_message (const char **log_msg,
 
       if (! message)
         {
-          char *reply;
+          const char *reply;
           svn_cl__prompt_user (&reply,
                                "\nLog message unchanged or not specified\n"
                                "a)bort, c)ontinue, e)dit\n",
@@ -536,32 +552,6 @@ svn_cl__get_log_message (const char **log_msg,
     }
   
   *log_msg = message ? message->data : NULL;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_cl__get_url_from_target (const char **URL,
-                             const char *target,
-                             apr_pool_t *pool)
-{
-  svn_wc_adm_access_t *adm_access;          
-  const svn_wc_entry_t *entry;  
-  svn_boolean_t is_url = svn_path_is_url (target);
-  
-  if (is_url)
-    *URL = target;
-
-  else
-    {
-      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
-                                      FALSE, FALSE, pool));
-      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
-      SVN_ERR (svn_wc_adm_close (adm_access));
-      
-      *URL = entry ? entry->url : NULL;
-    }
-
   return SVN_NO_ERROR;
 }
 

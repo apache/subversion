@@ -389,7 +389,10 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
 
         case '#':               /* Comment */
           if (count == 0)
-            ch = skip_to_eoln(fd);
+            {
+              ch = skip_to_eoln(fd);
+              ++ctx.line;
+            }
           else
             {
               ch = EOF;
@@ -561,10 +564,15 @@ svn_config_ensure (apr_pool_t *pool)
    "\n"
    "   HKLM for HKEY_LOCAL_MACHINE\n"
    "   HKCU for HKEY_CURRENT_USER\n"
+#if 0   /* expansion not implemented yet */
    "\n"
    "The values in config-key represent the options in the [DEFAULT] section."
    "\n"
    "The keys below config-key represent other sections, and their values\n"
+#else
+   "\n"
+   "The keys below config-key represent the sections, and their values\n"
+#endif /* 0 */
    "represent the options. Only values of type REG_SZ whose name doesn't\n"
    "start with a '#' will be used; other values, as well as the keys'\n"
    "default values, will be ignored.\n"
@@ -616,7 +624,7 @@ svn_config_ensure (apr_pool_t *pool)
 
   /** Ensure that the `servers' file exists. **/
   SVN_ERR (svn_config__user_config_path
-           (&path, SVN_CONFIG__USR_SERVERS_FILE, pool));
+           (&path, SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -640,6 +648,7 @@ svn_config_ensure (apr_pool_t *pool)
         "###   http-proxy-username  Username for auth to proxy service\n"
         "###   http-proxy-password  Password for auth to proxy service\n"
         "###   http-timeout         Timeout (in seconds) for HTTP requests\n"
+        "###   http-compression     Whether or not to compress HTTP requests\n"
         "###   neon-debug-mask      Debug mask for Neon HTTP library\n"
         "###   svn-tunnel-agent     Program to connect to svn server\n"
         "###\n"
@@ -678,29 +687,26 @@ svn_config_ensure (apr_pool_t *pool)
         "# [thirdgroup]\n"
         "# svn-tunnel-agent = ssh\n"
         "\n"
-        "### You can set default HTTP parameters in the 'defaults' section.\n"
+        "### You can set default parameters in the 'defaults' section.\n"
         "### These parameters apply if no corresponding parameter is set in\n"
         "### a specifically matched group as shown above.  Thus, if you go\n"
         "### through the same proxy server to reach every site on the\n"
         "### Internet, you probably just want to put that server's\n"
         "### information in the 'default' section and not bother with\n"
         "### 'groups' or any other sections.\n"
-        "### \n"
+        "###\n"
         "### If you go through a proxy for all but a few sites, you can\n"
         "### list those exceptions under 'http-proxy-exceptions'.  This only\n"
         "### overrides defaults, not explicitly matched server names.\n"
-        "# [default]\n"
+        "# [global]\n"
         "# http-proxy-exceptions = *.exception.com, www.internal-site.org\n"
         "# http-proxy-host = defaultproxy.whatever.com\n"
         "# http-proxy-port = 7000\n"
         "# http-proxy-username = defaultusername\n"
         "# http-proxy-password = defaultpassword\n"
+        "# http-compression = yes\n"
         "# No http-timeout, so just use the builtin default.\n"
-        "# No neon-debug-mask, so neon debugging is disabled.\n"
-        "# ssl-authorities-file = /path/to/CAcerts.pem\n"
-        "# ignore-ssl-unknown-ca isn't set; the CA must be known and valid.\n"
-        "# ignore-ssl-host-mismatch isn't set; the cert hostname must match.\n"
-        "# ignore-ssl-invalid-date isn't set; the date range is validated.\n";
+        "# No neon-debug-mask, so neon debugging is disabled.\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -723,7 +729,7 @@ svn_config_ensure (apr_pool_t *pool)
 
   /** Ensure that the `config' file exists. **/
   SVN_ERR (svn_config__user_config_path
-           (&path, SVN_CONFIG__USR_CONFIG_FILE, pool));
+           (&path, SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -776,9 +782,6 @@ svn_config_ensure (apr_pool_t *pool)
         "###   which Subversion will ignore in its `status' output.\n"
         "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
         "\n"
-        "### Set compression to 'no' to avoid compressing requests\n"
-        "###   to a DAV-enabled Subversion server.  It defaults to 'yes'.\n"   
-        "# compression = yes\n"
         "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
         "### for what else will soon be customized in this file.\n";
         

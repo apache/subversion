@@ -52,16 +52,16 @@ svn_stream_t *svn_base64_decode (svn_stream_t *output, apr_pool_t *pool);
  * A simple interface for encoding base64 data assuming we have all of 
  * it present at once.  The returned string will be allocated from @c pool.
  */
-svn_stringbuf_t *svn_base64_encode_string (svn_stringbuf_t *str,
-                                           apr_pool_t *pool);
+const svn_string_t *svn_base64_encode_string (const svn_string_t *str,
+                                              apr_pool_t *pool);
 
 /** Decode an @c svn_stringbuf_t from base64.
  *
  * A simple interface for decoding base64 data assuming we have all of 
  * it present at once.  The returned string will be allocated from @c pool.
  */
-svn_stringbuf_t *svn_base64_decode_string (svn_stringbuf_t *str,
-                                           apr_pool_t *pool);
+const svn_string_t *svn_base64_decode_string (const svn_string_t *str,
+                                              apr_pool_t *pool);
 
 
 /** Return a base64-encoded checksum for finalized @c digest.

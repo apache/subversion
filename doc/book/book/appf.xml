@@ -3,12 +3,73 @@
 
   <simplesect>
 
-    <para>
-      ### TODO Write this
+    <para>Subversion's modular design (covered in <xref
+      linkend="svn-ch-7-sect-1" />) and the availability of language
+      bindings (as described in <xref linkend="svn-ch-7-sect-2.3" />)
+      make Subversion a likely candidate for use as an extension or
+      backend to other pieces of software.  In this appendix, we'll
+      introduce you to some of the third-party tools which are using
+      Subversion.  We will not cover actual Subversion
+      clients&mdash;see <xref linkend="svn-ap-e" /> for those.
     </para>
 
   </simplesect>
 
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 1:  VIEWCVS                                         *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-f-sect-1">
+    <title>ViewCVS</title>
+
+    <para>Perhaps the first&mdash;and definitely the most
+      popular&mdash;utility to take advantage of Subversion's public
+      API is ViewCVS.  ViewCVS is essentially a CGI script which
+      enables browsing of the files and directories of a version
+      control system.  Originally designed as a Python-based
+      replacement for the popular cvsweb utility,
+      <footnote>
+        <para>CVSWeb was written in Perl.</para>
+      </footnote>
+      ViewCVS provides a full-featured Web-based interface to CVS
+      repositories, allowing folks to see the version control history
+      of the files in those repositories and to perform such nifty
+      tasks as generating differences between arbitrary versions of
+      those files.</para>
+
+    <para>In the early part of 2002, the repository accessing portion
+      of ViewCVS was modularized into a semi-generic interface, and a
+      pair of modules were grown to provide that functionality for CVS
+      repositories.  Later that year, Subversion's Python language
+      bindings sufficiently matured, and a Subversion repository
+      module was written for the ViewCVS interface.  Now, ViewCVS is
+      able to browse Subversion repositories, providing essentially
+      the same history and differencing mechanisms for those
+      repositories as are available for CVS ones.</para>
+
+    <para>For more information on ViewCVS, see the project's website at
+      <systemitem class="url">http://viewcvs.sf.net/</systemitem>.</para>
+
+  </sect1>
+
+  <!-- ******************************************************************* -->
+  <!-- *** SECTION 2:  SUBWIKI                                         *** -->
+  <!-- ******************************************************************* -->
+  <sect1 id="svn-ap-f-sect-2">
+    <title>SubWiki</title>
+
+    <para>SubWiki is a Subversion-backed Wiki program.  Wikis have
+      sprung up on the World Wide Web as unique publishing and
+      community tools&mdash;essentially, web-based interfaces for
+      editing web pages.  SubWiki takes the Wiki concept one step
+      further by using a version control system for its backend
+      storage mechanism.  The result is a CGI program which allows web
+      pages to be essentially edited in-place, yet never loses old
+      versions of those web pages.</para>
+
+    <para>To learn more about SubWiki, visit that project's website at
+      <systemitem class="url">http://subwiki.tigris.org/</systemitem>.</para>
+
+  </sect1>
 </appendix>
 
 <!--

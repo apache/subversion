@@ -44,6 +44,7 @@ my $g_PathDocDest="$g_PathMiscIn\\doc";
 my %g_FilesToCpAndConv=
     (
         'COPYING', 'subversion\SubversionLicense.txt',
+        'README', 'Readme.dist',
         'doc\user\lj_article.txt', 'doc\lj_article.txt',
         'doc\programmer\WritingChangeLogs.txt', 'doc\WritingChangeLogs.txt', 
     );

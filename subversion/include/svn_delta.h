@@ -615,8 +615,8 @@ typedef struct
    * identified by @a parent_baton). The subdirectory is specified by
    * @a path. The callback must store a value in @a *child_baton that 
    * should be used as the @a parent_baton for subsequent changes in this
-   * subdirectory.  If set, @a base_revision is the current revision of
-   * the subdirectory.
+   * subdirectory.  If a valid revnum, @a base_revision is the current
+   * revision of the subdirectory.
    *
    * Allocations for the returned @a child_baton should be performed in
    * @a dir_pool. It is also typical to (possibly) save this pool for later
@@ -658,8 +658,7 @@ typedef struct
    *
    * We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
-   * it stores there should be passed through to @c apply_textdelta
-   * and/or @c apply_propdelta.
+   * it stores there should be passed through to @c apply_textdelta.
    *
    * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
    * copy), and the origin of the copy may be recorded as
@@ -683,8 +682,8 @@ typedef struct
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
-   * apply_textdelta and/or apply_propdelta.  If set, @a base_revision is
-   * the current revision of the file.
+   * apply_textdelta.  If a valid revnum, @a base_revision is the
+   * current revision of the file.
    *
    * Allocations for the returned @a file_baton should be performed in
    * @a file_pool. It is also typical to save this pool for later usage
@@ -723,10 +722,6 @@ typedef struct
    * if not null, it must match the checksum of the result; if it
    * does not, then the @a *handler call which detects the mismatch
    * will return the error SVN_ERR_CHECKSUM_MISMATCH.
-   *
-   * (### Or anyway that's the plan.  The checksums are still being
-   * implemented for issue #689, as of 13 Jan 2003, so they are
-   * always ignored right now.)
    *
    * If @a *handler is set to @c NULL, then the editor is indicating to 
    * the driver that it is not interested in receiving information about
@@ -799,6 +794,24 @@ typedef struct
  * safely do nothing of consequence.
  */
 svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
+
+/** Return a cancellation editor that wraps @a wrapped_editor.
+ *
+ * The @a editor will call @a cancel_func with @a cancel_baton when each of 
+ * it's functions are called, continuing on to call the corresponding wrapped 
+ * function if it returns @c SVN_NO_ERROR.
+ *
+ * If @a cancel_func is @c NULL, @a *editor is set to @a wrapped_editor and 
+ * @a *edit_baton is set to @a wrapped_baton.
+ */
+svn_error_t *
+svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   const svn_delta_editor_t *wrapped_editor,
+                                   void *wrapped_baton,
+                                   const svn_delta_editor_t **editor,
+                                   void **edit_baton,
+                                   apr_pool_t *pool);
 
 /** @} */
 

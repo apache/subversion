@@ -61,7 +61,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                 svn_revnum_t *youngest,
                                 const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_client_auth_baton_t *auth_baton,
+                                svn_client_ctx_t *ctx,
                                 svn_boolean_t descend,
                                 apr_pool_t *pool)
 {
@@ -90,7 +90,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       "add_update_info_to_status_hash: %s is not under revision control",
+       "add_update_info_to_status_hash: '%s' is not under revision control",
        anchor);
   if (! entry->url)
     return svn_error_createf
@@ -104,14 +104,15 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                        anchor_access, NULL, TRUE, TRUE, TRUE, 
-                                        auth_baton, pool));
+                                        anchor_access, NULL, TRUE, TRUE, 
+                                        ctx, pool));
 
   /* Tell RA to drive a status-editor; this will fill in the
      repos_status_* fields in each status struct. */
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &status_edit_baton,
                                      path, adm_access, descend, statushash,
-                                     youngest, pool));
+                                     youngest, ctx->cancel_func, 
+                                     ctx->cancel_baton, pool));
 
   SVN_ERR (ra_lib->do_status (session,
                               &reporter, &report_baton,
@@ -145,13 +146,11 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_revnum_t *youngest,
                    const char *path,
-                   svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -166,15 +165,18 @@ svn_client_status (apr_hash_t **statushash,
      working copy. */
   SVN_ERR (svn_wc_statuses (hash, path, adm_access,
                             descend, get_all, no_ignore,
-                            notify_func, notify_baton, pool));
+                            ctx->notify_func, ctx->notify_baton,
+                            ctx->cancel_func, ctx->cancel_baton,
+                            ctx->config, pool));
 
   if (update)    
     {
       /* Add "dry-run" update information to our existing structures.
          (Pass the DESCEND flag here, since we may want to ignore update
          info that is below PATH.)  */
-      SVN_ERR (add_update_info_to_status_hash (hash, youngest, path, adm_access,
-                                               auth_baton, descend, pool));
+      SVN_ERR (add_update_info_to_status_hash (hash, youngest, path,
+                                               adm_access, ctx,
+                                               descend, pool));
     }
 
   SVN_ERR (svn_wc_adm_close (adm_access));

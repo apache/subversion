@@ -326,6 +326,12 @@ svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
 
 
 
+/** A user defined callback that subversion will call with a user defined 
+ * baton to see if the current operation should be continued.  If the operation 
+ * should continue, the function should return @c SVN_NO_ERROR, if not, it 
+ * should return @c SVN_ERR_CANCELLED.
+ */
+typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
 
 #ifdef __cplusplus
 }

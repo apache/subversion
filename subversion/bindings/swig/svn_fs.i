@@ -40,9 +40,11 @@
     svn_fs_txn_t **,
     void **,
     svn_fs_id_t **,
-    const char **,
     svn_stream_t **
 };
+
+/* and this is always an OUT param */
+%apply const char **OUTPUT { const char ** };
 
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
@@ -103,7 +105,7 @@ apr_array_header_t **revs {
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
 */
 
-%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(python,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
@@ -115,11 +117,27 @@ apr_array_header_t **revs {
    structures
 */
 
-%typemap(in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(python, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t));
+}
+
+/* -----------------------------------------------------------------------
+   Fix the return value for svn_fs_commit_txn(). If the conflict result is
+   NULL, then t_output_helper() is passed Py_None, but that goofs up
+   because that is *also* the marker for "I haven't started assembling a
+   multi-valued return yet" which means the second return value (new_rev)
+   will not cause a 2-tuple to be manufactured.
+
+   The answer is to explicitly create a 2-tuple return value.
+*/
+%typemap(python, argout) (const char **conflict_p, svn_revnum_t *new_rev) {
+    /* this is always Py_None */
+    Py_DECREF($result);
+    /* build the result tuple */
+    $result = Py_BuildValue("zi", *$1, (long)*$2);
 }
 
 /* ----------------------------------------------------------------------- */

@@ -29,8 +29,9 @@ Blanket commit access:
            naked   Nuutti Kotivuori <naked@iki.fi>
          dwhedon   David Kimdon <David_Kimdon@alumni.hmc.edu>
              dlr   Daniel Rall <dlr@finemaltcoding.com>
-           kraai   Matt Kraai <kraai@ftbfs.org>
+           kraai   Matt Kraai <kraai@alumni.cmu.edu>
              mbk   Mark Benedetto King <mbk@boredom.org>
+             epg   Eric Gillespie <epg@pretzelnet.org>
 
 Commit access for specific areas:
 
@@ -49,3 +50,6 @@ Commit access for specific areas:
           zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
           mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
             mass   David Waite <mass@akuma.org>                (certs branch)
+        jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
+          knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
+          mprice   Michael Price <mprice@atl.lmco.com>         (releases)

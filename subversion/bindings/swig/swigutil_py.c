@@ -809,29 +809,29 @@ static svn_error_t * thunk_abort_edit(void *edit_baton,
   return close_baton(edit_baton, "abort_edit");
 }
 
-static const svn_delta_editor_t thunk_editor = {
-  thunk_set_target_revision,
-  thunk_open_root,
-  thunk_delete_entry,
-  thunk_add_directory,
-  thunk_open_directory,
-  thunk_change_dir_prop,
-  thunk_close_directory,
-  thunk_add_file,
-  thunk_open_file,
-  thunk_apply_textdelta,
-  thunk_change_file_prop,
-  thunk_close_file,
-  thunk_close_edit,
-  thunk_abort_edit
-};
-
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              PyObject *py_editor,
                              apr_pool_t *pool)
 {
-  *editor = &thunk_editor;
+  svn_delta_editor_t *thunk_editor = svn_delta_default_editor (pool);
+  
+  thunk_editor->set_target_revision = thunk_set_target_revision;
+  thunk_editor->open_root = thunk_open_root;
+  thunk_editor->delete_entry = thunk_delete_entry;
+  thunk_editor->add_directory = thunk_add_directory;
+  thunk_editor->open_directory = thunk_open_directory;
+  thunk_editor->change_dir_prop = thunk_change_dir_prop;
+  thunk_editor->close_directory = thunk_close_directory;
+  thunk_editor->add_file = thunk_add_file;
+  thunk_editor->open_file = thunk_open_file;
+  thunk_editor->apply_textdelta = thunk_apply_textdelta;
+  thunk_editor->change_file_prop = thunk_change_file_prop;
+  thunk_editor->close_file = thunk_close_file;
+  thunk_editor->close_edit = thunk_close_edit;
+  thunk_editor->abort_edit = thunk_abort_edit;
+
+  *editor = thunk_editor;
   *edit_baton = make_baton(pool, py_editor, NULL);
 }
 

@@ -195,14 +195,64 @@ static int end_err_element(void *userdata, const struct ne_xml_elm *elm,
   return 0;
 }
 
+
+/* A body provider for ne_set_request_body_provider that pulls data
+ * from an APR file. See ne_request.h for a description of the
+ * interface.
+ */
+static ssize_t ra_dav_body_provider (void *userdata,
+                                     char *buffer,
+                                     size_t buflen)
+{
+  apr_file_t *body_file = userdata;
+  apr_status_t status;
+
+  if (buflen == 0)
+    {
+      /* This is the beginning of a new body pull. Rewind the file. */
+      apr_off_t offset = 0;
+      status = apr_file_seek(body_file, APR_SET, &offset);
+      return (status ? -1 : 0);
+    }
+  else
+    {
+      apr_size_t nbytes = buflen;
+      status = apr_file_read(body_file, buffer, &nbytes);
+      if (status)
+        return (APR_STATUS_IS_EOF(status) ? 0 : -1);
+      else
+        return nbytes;
+    }
+}
+
+
+svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+                                                apr_file_t *body_file)
+{
+  apr_status_t status;
+  apr_finfo_t finfo;
+
+  /* ### APR bug? apr_file_info_get won't always return the correct
+         size for buffered files. */
+  status = apr_file_flush(body_file);
+  if (!status)
+    status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
+  if (status)
+    return svn_error_create(status, NULL,
+                            "Could not calculate the request body size");
+
+  ne_set_request_body_provider(req, (size_t) finfo.size,
+                               ra_dav_body_provider, body_file);
+  return SVN_NO_ERROR;
+}
+
 
 
-
 svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
                                         const char *url,
                                         const char *body,
-                                        int fd,
+                                        apr_file_t *body_file,
                                         const struct ne_xml_elm *elements, 
                                         ne_xml_validate_cb validate_cb,
                                         ne_xml_startelm_cb startelm_cb, 
@@ -218,17 +268,10 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   ne_xml_parser *error_parser;
   int rv;
   int decompress_rv;
-  int decompress_on;
+  int decompress_on = ras->compression;
   int code;
   const char *msg;
-  const char *do_compression;
-  svn_config_t *cfg;
   svn_error_t *err = SVN_NO_ERROR;
-
-  SVN_ERR( svn_config_read_config(&cfg, pool) );
-
-  svn_config_get(cfg, &do_compression, "miscellany", "compression", "yes");
-  decompress_on = (strcasecmp(do_compression, "yes") == 0);
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url);
@@ -236,7 +279,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));
   else
-    ne_set_request_body_fd(req, fd);
+    SVN_ERR(svn_ra_dav__set_neon_body_provider(req, body_file));
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "text/xml");
@@ -356,19 +399,13 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info(svn_ra_session_t *ras)
 {
-  void *a, *auth_baton;
-  svn_ra_simple_password_authenticator_t *authenticator;
-  
-  SVN_ERR (ras->callbacks->get_authenticator (&a, &auth_baton, 
-                                              svn_ra_auth_simple_password, 
-                                              ras->callback_baton,
-                                              ras->pool));
-  authenticator = (svn_ra_simple_password_authenticator_t *) a;      
-  
-  /* If we have a auth-info storage callback, use it. */
-  if (authenticator->store_user_and_pass)
-    /* Storage will only happen if AUTH_BATON is already caching auth info. */
-    SVN_ERR (authenticator->store_user_and_pass (auth_baton));
+  /* No auth_baton?  Never mind. */
+  if (! ras->callbacks->auth_baton)
+    return SVN_NO_ERROR;
+
+  /* If we ever got credentials, ask the iter_baton to save them.  */
+  SVN_ERR (svn_auth_save_credentials(ras->auth_iterstate,
+                                     ras->pool));
   
   return SVN_NO_ERROR;
 }

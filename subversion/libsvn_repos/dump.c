@@ -459,7 +459,7 @@ dump_node (struct edit_baton *eb,
                  should never happen. */
               return 
                 svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                   "Error dumping textual contents of %s.",
+                                   "Error dumping textual contents of '%s'.",
                                    path);
             }
         
@@ -830,6 +830,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
   svn_fs_t *fs = svn_repos_fs (repos);
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_revnum_t youngest;
+  const char *uuid;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR (svn_fs_youngest_rev (&youngest, fs, pool));
@@ -857,7 +858,12 @@ svn_repos_dump_fs (svn_repos_t *repos,
   /* Write out "general" metadata for the dumpfile.  In this case, a
      magic header followed by a dumpfile format version. */
   SVN_ERR (svn_stream_printf (stream, pool, SVN_REPOS_DUMPFILE_MAGIC_HEADER
-                              ": %d\n", SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+                              ": %d\n\n", SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+  /* Write out the UUID. */
+  SVN_ERR (svn_fs_get_uuid(fs, &uuid, pool));
+
+  SVN_ERR (svn_stream_printf (stream, pool, SVN_REPOS_DUMPFILE_UUID
+                              ": %s\n\n", uuid));
                    
   /* Main loop:  we're going to dump revision i.  */
   for (i = start_rev; i <= end_rev; i++)

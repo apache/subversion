@@ -28,7 +28,7 @@
     <para>Subversion is a centralized system for sharing information.
       At its core is a <firstterm>repository</firstterm>, which is a
       central store of data.  The repository stores information in the
-      form of a <firstterm>filesystem tree</firstterm> -- a typical
+      form of a <firstterm>filesystem tree</firstterm>&mdash;a typical
       hierarchy of files and directories.  Any number of
       <firstterm>clients</firstterm> connect to the repository, and
       then read or write to these files.  By writing data, a client
@@ -79,18 +79,18 @@
         repository.</para>
 
       <para>Consider this scenario: suppose we have two co-workers,
-        Jane and Joe.  They each decide to edit the same repository
-        file at the same time.  If Joe saves his changes to the
+        Harry and Sally.  They each decide to edit the same repository
+        file at the same time.  If Harry saves his changes to the
         repository first, then it's possible that (a few moments
-        later) Jane could accidentally overwrite them with her own new
-        version of the file.  While Joe's version of the file won't be
-        lost forever (because the system remembers every change), any
-        changes Joe made <emphasis>won't</emphasis> be present in
-        Jane's newer version of the file, because she never saw Joe's
-        changes to begin with.  Joe's work is still effectively
-        lost&mdash;or at least missing from the latest version of the
-        file&mdash;and probably by accident.  This is definitely a
-        situation we want to avoid!</para>
+        later) Sally could accidentally overwrite them with her own
+        new version of the file.  While Harry's version of the file
+        won't be lost forever (because the system remembers every
+        change), any changes Harry made <emphasis>won't</emphasis> be
+        present in Sally's newer version of the file, because she
+        never saw Harry's changes to begin with.  Harry's work is
+        still effectively lost&mdash;or at least missing from the
+        latest version of the file&mdash;and probably by accident.
+        This is definitely a situation we want to avoid!</para>
 
       <figure id="svn-ch2-dia2">
         <title>The problem to avoid</title>
@@ -106,14 +106,14 @@
         <firstterm>lock-modify-unlock</firstterm> model to address
         this problem, which is a very simple solution.  In such a
         system, the repository allows only one person to change a file
-        at a time.  First Joe must "lock" the file before he can begin
+        at a time.  First Harry must "lock" the file before he can begin
         making changes to it.  Locking a file is a lot like borrowing
-        a book from the library; if Joe has locked a file, then Jane
+        a book from the library; if Harry has locked a file, then Sally
         cannot make any changes to it.  If she tries to lock the file,
         the repository will deny the request.  All she can do is read
-        the file, and wait for Joe to finish his changes and release
-        his lock.  After Joe unlocks the file, his turn is over, and
-        now Jane can take her turn by locking and editing.</para>
+        the file, and wait for Harry to finish his changes and release
+        his lock.  After Harry unlocks the file, his turn is over, and
+        now Sally can take her turn by locking and editing.</para>
       
       <figure id="svn-ch2-dia3">
         <title>The lock-modify-unlock solution</title>
@@ -125,29 +125,41 @@
         users:</para>
 
       <itemizedlist>
-        <listitem><para>Sometimes Joe will lock a file and then forget
-            about it.  Meanwhile, because Jane is still waiting to
-            edit the file, her hands are tied.  And then Joe goes on
-            vacation.  Now Jane has to get an administrator to release
-            Joe's lock.  The situation ends up causing a lot of
-            unnecessary delay and wasted time.</para></listitem>
+        <listitem><para>
+            <emphasis>Locking may cause administrative problems.</emphasis>
+
+            Sometimes Harry will lock a file and then forget about it.
+            Meanwhile, because Sally is still waiting to edit the file,
+            her hands are tied.  And then Harry goes on vacation.  Now
+            Sally has to get an administrator to release Harry's lock.
+            The situation ends up causing a lot of unnecessary delay
+            and wasted time.</para></listitem>
         
-        <listitem><para>What if Joe is editing the beginning of a text
-            file, and Jane simply wants to edit the end of the same
-            file?  These changes don't overlap at all.  They could
-            easily edit the file simultaneously, and no great harm
-            would come, assuming the changes were properly merged
-            together.  There's no need for them to take turns in this
+        <listitem><para>
+            <emphasis>Locking may cause unnecessary serialization.</emphasis>
+
+            What if Harry is editing the beginning of a text file,
+            and Sally simply wants to edit the end of the same file?
+            These changes don't overlap at all.  They could easily
+            edit the file simultaneously, and no great harm would
+            come, assuming the changes were properly merged together.
+            There's no need for them to take turns in this
             situation.</para></listitem>
     
-        <listitem><para>Pretend that Joe locks and edits file A, while
-            Jane simultaneously locks and edits file B.  But suppose
+        <listitem><para>
+            <emphasis>Locking may create a false sense of security.</emphasis>
+
+            Pretend that Harry locks and edits file A, while
+            Sally simultaneously locks and edits file B.  But suppose
             that A and B depend on one another, and the changes made
             to each are semantically incompatible.  Suddenly A and B
-            don't work together anymore, and the locking system was
-            powerless to prevent it&mdash;yet the locking system somehow
-            provided a sense of false security, when it shouldn't
-            have.</para></listitem>
+            don't work together anymore. The locking system was
+            powerless to prevent the problem&mdash;yet it somehow
+            provided a sense of false security.  It's easy for Harry and
+            Sally to imagine that by locking files, each is beginning a
+            safe, insulated task, and thus inhibits them from
+            discussing their incompatible changes early
+            on.</para></listitem>
       </itemizedlist>
 
       </sect2>
@@ -166,17 +178,17 @@
         ultimately a human being is responsible for making it happen
         correctly.</para>
       
-      <para>Here's an example.  Say that Joe and Jane each create
+      <para>Here's an example.  Say that Harry and Sally each create
         working copies of the same project, copied from the
         repository.  They work concurrently, and make changes to the
-        same file "A" within their copies.  Jane saves her changes to
-        the repository first.  When Joe attempts to save his changes
+        same file "A" within their copies.  Sally saves her changes to
+        the repository first.  When Harry attempts to save his changes
         later, the repository informs him that his file A is
         <firstterm>out-of-date</firstterm>.  In other words, that file
         A in the repository has somehow changed since he last copied
-        it.  So Joe asks his client to <firstterm>merge</firstterm>
+        it.  So Harry asks his client to <firstterm>merge</firstterm>
         any new changes from the repository into his working copy of
-        file A.  Chances are that Jane's changes don't overlap with
+        file A.  Chances are that Sally's changes don't overlap with
         his own; so once he has both sets of changes integrated, he
         saves his working copy back to the repository.</para>
 
@@ -190,19 +202,19 @@
         <graphic fileref="images/ch02dia5.png"/>
       </figure>
 
-      <para>But what if Jane's changes <emphasis>do</emphasis> overlap
-        with Joe's changes?  What then?  This situation is called a
+      <para>But what if Sally's changes <emphasis>do</emphasis> overlap
+        with Harry's changes?  What then?  This situation is called a
         <firstterm>conflict</firstterm>, and it's usually not much of
-        a problem.  When Joe asks his client to merge the latest
+        a problem.  When Harry asks his client to merge the latest
         repository changes into his working copy, his copy of file A
         is somehow flagged as being in a state of conflict: he'll be
         able to see both sets of conflicting changes, and manually
         choose between them.  Note that software can't automatically
         resolve conflicts; only humans are capable of understanding
-        and making intelligent choices.  Once Joe has manually
-        resolved the overlapping changes (perhaps by discussing the
-        conflict with Jane!), he can safely save the hand-merged file
-        back to the repository.</para>
+        and making the necessary intelligent choices.  Once Harry has
+        manually resolved the overlapping changes (perhaps by
+        discussing the conflict with Sally!), he can safely save the
+        merged file back to the repository.</para>
 
       <para>The copy-modify-merge model may sound a bit chaotic, but
         in practice, it runs extremely smoothly.  Users can work in
@@ -301,19 +313,97 @@ $ ls -a calc
 Makefile  integer.c  button.c  .svn/
 </screen>
 
-      <para>Your working copy is a personal copy of the repository's
-        <filename>/calc</filename> directory, with one additional
+      <para>The list of letter A's indicates that Subversion is adding
+        a number of items to your working copy.  You now have a
+        personal copy of the repository's <filename>/calc</filename>
+        directory, with one additional
         entry&mdash;<filename>.svn</filename>&mdash;which holds the
         extra information needed by Subversion, as mentioned
         earlier.</para>
-      
+
+      <sidebar>
+        <title>Repository URLs</title>
+
+        <para>Subversion repositories can be accessed through many
+          different methods&mdash;on local disk, or through various
+          network protocols.  A repository location, however, is
+          always a URL.  The URL schema indicates the access
+          method:</para>
+
+        <table id="svn-ch-02-table-1">
+          <title>Repository Access URLs</title>
+          <tgroup cols="2">
+            <thead>
+              <row>
+                <entry>Schema</entry>
+                <entry>Access Method</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry><literal>file://</literal></entry>
+                <entry>direct repository access (on local disk)</entry>
+              </row>
+              <row>
+                <entry><literal>http://</literal></entry>
+                <entry>access via WebDAV protocol to Subversion-aware
+                  Apache server</entry>
+              </row>
+              <row>
+                <entry><literal>https://</literal></entry>
+                <entry>same as <literal>http://</literal>, but with
+                  SSL encryption.</entry>
+              </row>
+              <row>
+                <entry><literal>svn://</literal></entry>
+                <entry>access via custom TCP/IP protocol to an
+                  <literal>svnserve</literal> server</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+ 
+        <para>For the most part, Subversion's URLs use the standard
+          syntax, allowing for server names and port numbers to be
+          specified as part of the URL.  There are a couple of
+          interesting digressions from the standard though.  First,
+          <literal>file:</literal> access method is valid only for
+          locations on the same server as the client&mdash;in fact,
+          the server name portion of the URL is required to be either
+          absent or <literal>localhost</literal>:</para>
+ 
+        <screen>
+$ svn checkout file:///path/to/repos
+&hellip;
+$ svn checkout file://localhost/path/to/repos
+&hellip;
+</screen>
+
+        <para>Also, users of the <literal>file:</literal> scheme on
+          Windows platforms will need to use an unofficially
+          <quote>standard</quote> syntax for accessing repositories
+          that are on the same machine, but on a different drive, than
+          the client's current working drive.  Either of the two
+          following URL path syntaxes will work where
+          <literal>X</literal> is the drive on which the repository
+          resides:</para>
+
+        <screen>
+$ svn checkout file:///X:/path/to/repos
+&hellip;
+$ svn checkout file:///X|/path/to/repos
+&hellip;
+</screen>
+ 
+      </sidebar>
+
       <para>Suppose you make changes to <filename>button.c</filename>.
         Since the <filename>.svn</filename> directory remembers the
         file's modification date and original contents, Subversion can
         tell that you've changed the file.  However, Subversion does
         not make your changes public until you explicitly tell it to.
         The act of publishing your changes is more commonly known as
-        <firstterm>committing</firstterm> or (<firstterm>checking
+        <firstterm>committing</firstterm> (or <firstterm>checking
         in</firstterm>) changes to the repository.</para>
 
       <para>To publish your changes to others, you can use
@@ -335,7 +425,7 @@ Committed revision 57.
         working copy of <filename>/calc</filename> at the same time
         you did.  When you commit your change to
         <filename>button.c</filename>, Sally's working copy is left
-        unchanged; Subversion only modifies working directories at the
+        unchanged; Subversion only modifies working copies at the
         user's request.</para>
 
       <para>To bring her project up to date, Sally can ask
@@ -553,9 +643,56 @@ calc/Makefile:6
      
     </sect2>
     
+    <sect2 id="svn-ch-2-sect-3.4">
+      <title>The limitations of mixed revisions</title>
+
+      <para>As a general principle, Subversion tries to be as flexible
+        as possible.  One special kind of flexibility is the ability
+        to have a working copy containing mixed revision
+        numbers.</para>
+
+      <para>At first, it may not be entirely clear why this sort of
+        flexibliity is considered a feature, and not a liability.
+        After completing a commit to the repository, the freshly
+        committed files and directories are at more recent working
+        revision than the rest of the working copy.  It looks like a
+        bit of a mess.  As demonstrated earlier, the working copy can
+        always be brought to a single working revision by running
+        <command>svn update</command>.  Why would someone
+        <emphasis>deliberately</emphasis> want a mixture of working
+        revisions?</para>
+
+      <para>Assuming your project is sufficiently complex, you'll
+        discover that it's sometimes nice to forcibly
+        <quote>backdate</quote> portions of your working copy to an
+        earlier revision; you'll learn how to do that in Chapter 3.
+        Perhaps you'd like to test an earlier version of a sub-module,
+        contained in a subdirectory, or perhaps you'd like to examine
+        a number of previous versions of a file in the context of the
+        latest tree.</para>
+        
+      <para>However you make use of mixed-revisions in your working
+        copy, there are limitations to this flexibility.</para>
+
+      <para>First, you cannot commit the deletion of a file or
+        directory which isn't fully up-to-date.  If a newer version of
+        the item exists in the repository, your attempt to delete will
+        be rejected, to prevent you from accidentally
+        destroying changes you've not yet seen.</para>
+
+      <para>Second, you cannot commit a metadata change to a directory
+        unless it's fully up-to-date.  You'll learn about attaching
+        <quote>properties</quote> to items in Chapter 6.  A
+        directory's working revision defines a specific set of entries
+        and properties, and thus committing a property change to an
+        out-of-date directory may destroy properties you've not yet
+        seen.</para>
+
+    </sect2>
+
   </sect1>
 
-  <sect1 id="svn-ch-2-sect-">
+  <sect1 id="svn-ch-2-sect-4">
     <title>Summary</title>
     
     <para>We've covered a number of fundamental Subversion concepts in

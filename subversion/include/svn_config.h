@@ -47,51 +47,52 @@ extern "C" {
 /** Opaque structure describing a set of configuration options. */
 typedef struct svn_config_t svn_config_t;
 
+
+/*** Configuration Defines ***/
 
-/** Read configuration information from all available sources and merge it 
- * into one @c svn_config_t object.
+#define SVN_CONFIG_CATEGORY_SERVERS        "servers"
+#define SVN_CONFIG_SECTION_GROUPS               "groups"
+#define SVN_CONFIG_SECTION_GLOBAL               "global"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_HOST           "http-proxy-host"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_PORT           "http-proxy-port"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME       "http-proxy-username"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD       "http-proxy-password"
+#define SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS     "http-proxy-exceptions"
+#define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
+#define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
+#define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
+#define SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT          "svn-tunnel-agent"
+
+#define SVN_CONFIG_CATEGORY_CONFIG          "config"
+#define SVN_CONFIG_SECTION_AUTH                 "auth"
+#define SVN_CONFIG_OPTION_STORE_PASSWORD            "store-password"
+#define SVN_CONFIG_SECTION_HELPERS              "helpers"
+#define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
+#define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
+#define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
+#define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
+#define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
+#define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
+#define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
+
+
+/** Read configuration information from the standard sources and
+ * return it in the hash @a *cfg_hash.
  *
- * Merge configuration information from all available sources and
- * store it in @a *cfgp, which is allocated in @a pool.  That is, first 
- * read any system-wide configurations (from a file or from the
- * registry), then merge in personal configurations (again from
- * file or registry).
+ * Read configuration information from the standard sources and merge
+ * it into the hash @a *cfg_hash.  That is, first read any system-wide
+ * configurations (from a file or from the registry), then merge in
+ * personal configurations (again from file or registry).  The hash
+ * and all its data are allocated in @a pool.
  *
- * ###
- * ### Currently only reads from ~/.subversion/config.
- * ### See http://subversion.tigris.org/issues/show_bug.cgi?id=579.  
- * ###
- *
- * If no config information is available, return an empty @a *cfgp.
+ * @a *cfg_hash is a hash whose keys are @c const char * configuration
+ * categories (SVN_CONFIG_CATEGORY_SERVERS,
+ * SVN_CONFIG_CATEGORY_CONFIG, etc.) and whose values are the @c
+ * svn_config_t * items representing the configuration values for that
+ * category.  
  */
-svn_error_t *svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool);
-
-
-/** Read server config information from all sources and merge it into one
- * @c svn_config_t object.
- *
- * Merge server configuration information from all available sources
- * and store it in @a *cfgp, which is allocated in @a pool.  That is, 
- * first read any system-wide server configurations (from a file or from 
- * the registry), then merge in personal server configurations (again 
- * from file or registry).
- *
- * Under Unix, or a Unix emulator such as Cygwin, personal config is
- * always located in .subversion/proxies in the user's home
- * directory.  Under Windows it may be there, or in the registry; if
- * both are present, the registry is read first and then the file info
- * is merged in.  System config information under Windows is found
- * only in the registry.
- *
- * If no server config information is available, return an empty @a *cfgp.  
- *
- * ### Notes: This function, and future ones like it, rather obviates
- * the need for @c svn_config_read and @c svn_config_merge as public
- * interfaces.  However, I'm leaving them public for now, until it's
- * clear they can be de-exported.  Hmm, funny how in this context, the
- * opposite of "exported" is not "imported", eh?
- */
-svn_error_t *svn_config_read_servers (svn_config_t **cfgp, apr_pool_t *pool);
+svn_error_t *svn_config_get_config (apr_hash_t **cfg_hash, 
+                                    apr_pool_t *pool);
 
 
 /** Read configuration data from a @a file.
@@ -124,6 +125,8 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  *
  * Find the value of a (@a section, @a option) pair in @a cfg, set @a 
  * *valuep to the value.
+ *
+ * If @a cfg is @c NULL, just sets @a *valuep to @a default_value.
  *
  * If the value does not exist, return @a default_value.  Otherwise, the
  * value returned in @a valuep remains valid at least until the next

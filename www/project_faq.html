@@ -42,8 +42,8 @@
 <li><a href="#paranoid">My admins don't want me to have a HTTP server for
     Subversion.  What can I do if I still want remote usage?</a></li> 
 <li><a href="#multi-proj">How do I manage several different projects
-    under Subversion?</li></a>
-<li><a href="#multi-merge">How do I merge two completely separate repositories?</li></a>
+    under Subversion?</a></li>
+<li><a href="#multi-merge">How do I merge two completely separate repositories?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <p>
 <strong>Troubleshooting:</strong>
@@ -507,7 +507,7 @@ Ben Collins-Sussman &lt;sussman@collab.net&gt;):
     <pre>
      The second case might be easier to secure; it's easier to insulate
      projects from each other (in terms of users and permissions)
-     using Apache's access control.  In the 2nd case, you'll need a
+     using Apache's access control.  In the 1st case, you'll need a
      fancy hook script in the repository that distinguishes projects
      ("is this user allowed to commit to this particular subdir?")  Of
      course, we already have such a script, ready for you to use.
@@ -670,13 +670,14 @@ svn cleanup working-copy
 Subversion, I get an error about an "Unrecognized URL scheme."  What's up
 with<a name="unrecognized-url-error"> that?</a></h3>
 
-<p>Subversion uses a plugin system to allow access to repositories.  Currently
-there are two of these plugins: ra_local allows access to a local
-repository, and ra_dav which allows access to a repository via WebDAV
-When you attempt to perform an operation in subversion, the program tries
-to dynamically load a plugin based on the URL scheme.  A `file://' URL
-will try to load ra_local, and an `http://' URL will try to load
-ra_dav.</p>
+<p>Subversion uses a plugin system to allow access to repositories.
+Currently there are three of these plugins: ra_local allows access to
+a local repository, ra_dav which allows access to a repository via
+WebDAV, and ra_svn allows local or remote access via the svnserve
+server.  When you attempt to perform an operation in subversion, the
+program tries to dynamically load a plugin based on the URL scheme.  A
+`file://' URL will try to load ra_local, and an `http://' URL will try
+to load ra_dav.</p>
 
 <p>The error you are seeing means that the dynamic linker/loader can't find
 the plugins to load.  This normally happens when you build subversion with
@@ -781,36 +782,13 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
     out corrupted data. <a name="windows-xp-server"> Can this really
     be happening?</a></h3>
 
-<p>Yes, it seems so.  We <i>think</i> this may be due to a bug in the
-XP network code, that Apache has already run into: see</p>
+<p>You need to install Window XP Service Pack 1.  You can get all
+sorts of information about that Service Pack here:</p>
 
-    <ul>
-    <a href="http://www.apache.org/dist/httpd/binaries/win32/#xpbug"
-    >http://www.apache.org/dist/httpd/binaries/win32/#xpbug</a>
-    </ul>
-<p>
-and 
-<p>
     <ul>
     <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
     >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
     </ul>
-
-</p>
-
-<p>for details, and also see the thread "Question about propset" on
-the Subversion dev list.  Here's one message from late in that thread:</p>
-
-<p>
-    <ul>
-<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=185063"
-  >http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=185063</a>
-    </ul>
-</p>
-
-<p>For now, our only advice is "Don't run a Subversion server from
-Windows XP."</p>
-
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -845,7 +823,7 @@ the 0.16 tarball) you may set the <tt>http-debug</tt> parameter in the
 <tt>servers</tt> configuration file to cause neon's debugging output
 to appear when you run the <tt>svn</tt> client.  The numeric value of
 <tt>neon-debug</tt> is a combination of the <tt>NE_DBG_...</tt> values
-in the header file <tt>ne_utils.h</tt>.  For neon 0.23.5 setting
+in the header file <tt>ne_utils.h</tt>.  For neon 0.23.7 setting
 <tt>http-debug</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
 will cause the HTTP data to be shown.</p>
 

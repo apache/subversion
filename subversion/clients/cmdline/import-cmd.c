@@ -39,19 +39,13 @@ svn_cl__import (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *path;
   const char *url;
   const char *new_entry;
-  svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
-  void *log_msg_baton;
-
-  /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Import takes up to three arguments, for example
    *
@@ -115,21 +109,17 @@ svn_cl__import (apr_getopt_t *os,
        "too many arguments to import command");
   
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton,
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,
                           FALSE, FALSE, FALSE, pool);
 
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   SVN_ERR (svn_cl__cleanup_log_msg 
-           (log_msg_baton, svn_client_import (&commit_info,
-                                              notify_func, notify_baton,
-                                              auth_baton,
-                                              path,
-                                              url,
-                                              new_entry,
-                                              &svn_cl__get_log_message,
-                                              log_msg_baton,
-                                              opt_state->nonrecursive,
-                                              pool)));
+           (ctx->log_msg_baton, svn_client_import (&commit_info,
+                                                   path,
+                                                   url,
+                                                   new_entry,
+                                                   opt_state->nonrecursive,
+                                                   ctx,
+                                                   pool)));
 
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);

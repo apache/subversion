@@ -186,12 +186,11 @@ struct handle_external_item_change_baton
   const char *parent_dir;
 
   /* Passed through to svn_client_checkout(). */
-  svn_wc_notify_func_t notify_func;
-  void *notify_baton;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx;
 
   /* If set, then run update on items that didn't change. */
   svn_boolean_t update_unchanged;
+  svn_boolean_t *timestamp_sleep;
 
   apr_pool_t *pool;
 };
@@ -358,22 +357,23 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          rename the external subdirectory. */
 
       /* First notify that we're about to handle an external. */
-      (*ib->notify_func) (ib->notify_baton,
-                          path,
-                          svn_wc_notify_update_external,
-                          svn_node_unknown,
-                          NULL,
-                          svn_wc_notify_state_unknown,
-                          svn_wc_notify_state_unknown,
-                          SVN_INVALID_REVNUM);
+      if (ib->ctx->notify_func)
+        (*ib->ctx->notify_func) (ib->ctx->notify_baton,
+                                 path,
+                                 svn_wc_notify_update_external,
+                                 svn_node_unknown,
+                                 NULL,
+                                 svn_wc_notify_state_unknown,
+                                 svn_wc_notify_state_unknown,
+                                 SVN_INVALID_REVNUM);
 
-      SVN_ERR (svn_client_checkout
-               (ib->notify_func, ib->notify_baton,
-                ib->auth_baton,
-                new_item->url,
+      SVN_ERR (svn_client__checkout_internal
+               (new_item->url,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
+                ib->timestamp_sleep,
+                ib->ctx,
                 ib->pool));
     }
   else if (! new_item)
@@ -415,22 +415,23 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       SVN_ERR (relegate_external (path, ib->pool));
       
       /* First notify that we're about to handle an external. */
-      (*ib->notify_func) (ib->notify_baton,
-                          path,
-                          svn_wc_notify_update_external,
-                          svn_node_unknown,
-                          NULL,
-                          svn_wc_notify_state_unknown,
-                          svn_wc_notify_state_unknown,
-                          SVN_INVALID_REVNUM);
+      if (ib->ctx->notify_func)
+        (*ib->ctx->notify_func) (ib->ctx->notify_baton,
+                                 path,
+                                 svn_wc_notify_update_external,
+                                 svn_node_unknown,
+                                 NULL,
+                                 svn_wc_notify_state_unknown,
+                                 svn_wc_notify_state_unknown,
+                                 SVN_INVALID_REVNUM);
 
-      SVN_ERR (svn_client_checkout
-               (ib->notify_func, ib->notify_baton,
-                ib->auth_baton,
-                new_item->url,
+      SVN_ERR (svn_client__checkout_internal
+               (new_item->url,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
+                ib->timestamp_sleep,
+                ib->ctx,
                 ib->pool));
     }
   else if (ib->update_unchanged)
@@ -441,22 +442,23 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       svn_error_t *err;
 
       /* First notify that we're about to handle an external. */
-      (*ib->notify_func) (ib->notify_baton,
-                          path,
-                          svn_wc_notify_update_external,
-                          svn_node_unknown,
-                          NULL,
-                          svn_wc_notify_state_unknown,
-                          svn_wc_notify_state_unknown,
-                          SVN_INVALID_REVNUM);
+      if (ib->ctx->notify_func)
+        (*ib->ctx->notify_func) (ib->ctx->notify_baton,
+                                 path,
+                                 svn_wc_notify_update_external,
+                                 svn_node_unknown,
+                                 NULL,
+                                 svn_wc_notify_state_unknown,
+                                 svn_wc_notify_state_unknown,
+                                 SVN_INVALID_REVNUM);
 
       /* Try an update, but if no such dir, then check out instead. */
-      err = svn_client_update (ib->auth_baton,
-                               path,
-                               &(new_item->revision),
-                               TRUE, /* recurse */
-                               ib->notify_func, ib->notify_baton,
-                               ib->pool);
+      err = svn_client__update_internal (path,
+                                         &(new_item->revision),
+                                         TRUE, /* recurse */
+                                         ib->timestamp_sleep,
+                                         ib->ctx,
+                                         ib->pool);
 
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
         {
@@ -474,13 +476,13 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
             SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
           }
           
-          SVN_ERR (svn_client_checkout
-                   (ib->notify_func, ib->notify_baton,
-                    ib->auth_baton,
-                    new_item->url,
+          SVN_ERR (svn_client__checkout_internal
+                   (new_item->url,
                     path,
                     &(new_item->revision),
                     TRUE, /* recurse */
+                    ib->timestamp_sleep,
+                    ib->ctx,
                     ib->pool));
         }
       else if (err)
@@ -499,10 +501,9 @@ struct handle_externals_desc_change_baton
   apr_hash_t *externals_old;
 
   /* Passed through to handle_external_item_change_baton. */
-  svn_wc_notify_func_t notify_func;
-  void *notify_baton;
-  svn_client_auth_baton_t *auth_baton;
+  svn_client_ctx_t *ctx;
   svn_boolean_t update_unchanged;
+  svn_boolean_t *timestamp_sleep;
 
   apr_pool_t *pool;
 };
@@ -536,10 +537,9 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.old_desc          = old_desc;
   ib.new_desc          = new_desc;
   ib.parent_dir        = (const char *) key;
-  ib.notify_func       = cb->notify_func;
-  ib.notify_baton      = cb->notify_baton;
-  ib.auth_baton        = cb->auth_baton;
+  ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
+  ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = cb->pool;
 
   SVN_ERR (svn_hash_diff (old_desc, new_desc,
@@ -551,10 +551,9 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
 
 svn_error_t *
 svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
-                              svn_wc_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_client_auth_baton_t *auth_baton,
                               svn_boolean_t update_unchanged,
+                              svn_boolean_t *timestamp_sleep,
+                              svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new;
@@ -564,10 +563,9 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
 
   cb.externals_new     = externals_new;
   cb.externals_old     = externals_old;
-  cb.notify_func       = notify_func;
-  cb.notify_baton      = notify_baton;
-  cb.auth_baton        = auth_baton;
+  cb.ctx               = ctx;
   cb.update_unchanged  = update_unchanged;
+  cb.timestamp_sleep   = timestamp_sleep;
   cb.pool              = pool;
 
   SVN_ERR (svn_hash_diff (externals_old, externals_new,

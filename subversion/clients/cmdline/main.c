@@ -24,12 +24,12 @@
 
 #include <string.h>
 #include <assert.h>
-#include <locale.h>
 
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <apr_signal.h>
 
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -43,6 +43,7 @@
 #include "svn_opt.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_auth.h"
 #include "cl.h"
 
 
@@ -98,6 +99,10 @@ const apr_getopt_option_t svn_cl__options[] =
                       "try operation but make no changes"},
     {"no-diff-deleted", svn_cl__no_diff_deleted, 0,
                        "do not print differences for deleted files"},
+    {"diff-cmd",      svn_cl__diff_cmd_opt, 1,
+                      "Use \"ARG\" as diff command"},
+    {"diff3-cmd",     svn_cl__merge_cmd_opt, 1,
+                      "Use \"ARG\" as merge command"},
 
     /* ### Perhaps the option should be named "--rev-prop" instead?
            Generally, we do include the hyphen; the only reason not to
@@ -209,6 +214,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'x', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__diff_cmd_opt,
      svn_cl__no_diff_deleted} },
 
   { "export", svn_cl__export, {0},
@@ -236,9 +242,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "import", svn_cl__import, {0},
     "Commit an unversioned file or tree into the repository.\n"
-    "usage: import URL [PATH] [NEW_ENTRY_IN_REPOS]\n\n"
+    "usage: import URL [PATH [NEW_ENTRY_IN_REPOS]]\n\n"
     "  Recursively commit a copy of PATH to URL.\n"
-    "  If no 3rd arg, copy top-level contents of PATH into URL\n"
+    "  If no third arg, copy top-level contents of PATH into URL\n"
     "  directly.  Otherwise, create NEW_ENTRY underneath URL and\n"
     "  begin copy there.\n",
     {'m', 'F', 'q', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
@@ -296,7 +302,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If omitted, a default value of '.' is assumed.\n\n",
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
+     svn_cl__merge_cmd_opt } },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -474,7 +481,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'N', 'q', svn_cl__auth_username_opt,
       svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-      svn_cl__non_interactive_opt } },
+      svn_cl__non_interactive_opt, svn_cl__merge_cmd_opt } },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -495,11 +502,33 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  while updates to the file's props are shown in the second column.\n",
     {'r', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__non_interactive_opt } },
+     svn_cl__non_interactive_opt, svn_cl__merge_cmd_opt } },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
 
+
+#if 0  /* ### See also #if 0 below in main() */
+/* A flag to see if we've been cancelled by the client or not. */
+static volatile sig_atomic_t cancelled = FALSE;
+
+/* A signal handler to support cancellation. */
+static void
+sig_int (int unused)
+{
+  cancelled = TRUE;
+}
+
+/* Our cancellation callback. */
+static svn_error_t *
+check_cancel (void *baton)
+{
+  if (cancelled)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, "caught SIGINT");
+  else
+    return SVN_NO_ERROR;
+}
+#endif /* 0 */
 
 
 /*** Main. ***/
@@ -509,44 +538,31 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_pool_t *pool;
-  int opt_id, err2;
+  int opt_id;
   apr_getopt_t *os;  
-  svn_cl__opt_state_t opt_state;
+  svn_cl__opt_state_t opt_state = { { 0 } };
+  svn_client_ctx_t ctx = { 0 };
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
   svn_boolean_t log_under_version_control = FALSE;
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
+  svn_cl__cmd_baton_t command_baton;
+  svn_auth_baton_t *ab;
+  svn_config_t *cfg;
 
-  /* C programs default to the "C" locale by default.  But because svn
-     is supposed to be i18n-aware, it should inherit the default
-     locale of its environment.  */
-  setlocale (LC_ALL, "");
-
-  /* Initialize the APR subsystem, and register an atexit() function
-     to Uninitialize that subsystem at program exit. */
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
+  /* Initialize the app. */
+  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
   /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   /* Begin processing arguments. */
-  memset (&opt_state, 0, sizeof (opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  
+ 
   /* No args?  Show usage. */
   if (argc <= 1)
     {
@@ -589,6 +605,10 @@ main (int argc, const char * const *argv)
               log_is_pathname = TRUE;
             }
         }
+
+        /* Note that there's no way here to detect if the log message
+           contains a zero byte -- if it does, then opt_arg will just
+           be shorter than the user intended.  Oh well. */
         opt_state.message = apr_pstrdup (pool, opt_arg);
         break;
       case 'r':
@@ -646,6 +666,19 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        else if (strlen (opt_state.filedata->data) < opt_state.filedata->len)
+          {
+            /* The data contains a zero byte, and therefore can't be
+               represented as a C string.  Punt now; it's probably not
+               a deliberate encoding, and even if it is, we still
+               can't handle it. */
+            err = svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
+                                    "Log message contains a zero byte.");
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
+        
         /* Find out if log message file is under revision control. */
         {
           svn_wc_adm_access_t *adm_access;
@@ -754,6 +787,12 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
         break;
+      case svn_cl__diff_cmd_opt:
+        opt_state.diff_cmd = apr_pstrdup (pool, opt_arg);
+	break;
+      case svn_cl__merge_cmd_opt:
+        opt_state.merge_cmd = apr_pstrdup (pool, opt_arg);
+	break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -875,7 +914,134 @@ main (int argc, const char * const *argv)
         }
     }
 
-  err = (*subcommand->cmd_func) (os, &opt_state, pool);
+  /* Create a client context object. */
+  command_baton.opt_state = &opt_state;
+  command_baton.ctx = &ctx;
+
+  ctx.prompt_func = svn_cl__prompt_user; 
+  ctx.prompt_baton = NULL;
+
+  if ((err = svn_config_get_config (&(ctx.config), pool)))
+    {
+      svn_handle_error (err, stderr, 0);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
+  cfg = apr_hash_get (ctx.config, SVN_CONFIG_CATEGORY_CONFIG,
+                      APR_HASH_KEY_STRING);
+  
+  /* Update the options in the config */
+  /* XXX: Only diff_cmd for now, overlay rest later and stop passing
+     opt_state altogether? */
+  if (opt_state.diff_cmd)
+    svn_config_set (cfg, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff_cmd);
+  if (opt_state.merge_cmd)
+    svn_config_set (cfg, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+
+  ctx.log_msg_func = svn_cl__get_log_message;
+  ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
+                                                  ctx.config, pool);
+
+  /* Authentication set-up. */
+  {
+    const char *store_password_val = NULL;
+
+    /* The whole list of registered providers */
+    apr_array_header_t *providers
+      = apr_array_make (pool, 1, sizeof (svn_auth_provider_object_t *));
+
+    /* The main disk-caching auth providers, for both
+       'username/password' creds and 'username' creds.  */
+    svn_auth_provider_object_t *simple_wc_provider 
+      = apr_pcalloc (pool, sizeof(*simple_wc_provider));
+
+    svn_auth_provider_object_t *username_wc_provider 
+      = apr_pcalloc (pool, sizeof(*username_wc_provider));
+
+    svn_wc_get_simple_provider (&(simple_wc_provider->vtable),
+                                &(simple_wc_provider->provider_baton), pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers) 
+      = simple_wc_provider;
+
+    svn_wc_get_username_provider 
+      (&(username_wc_provider->vtable),
+       &(username_wc_provider->provider_baton), pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers) 
+      = username_wc_provider;
+
+    if (opt_state.non_interactive == FALSE)
+      {
+        /* Two prompting providers, one for username/password, one for
+           just username. */
+        svn_auth_provider_object_t *simple_prompt_provider 
+          = apr_pcalloc (pool, sizeof(*simple_prompt_provider));
+
+        svn_auth_provider_object_t *username_prompt_provider 
+          = apr_pcalloc (pool, sizeof(*username_prompt_provider));
+
+        svn_client_get_simple_prompt_provider 
+          (&(simple_prompt_provider->vtable),
+           &(simple_prompt_provider->provider_baton),
+           svn_cl__prompt_user, NULL,
+           2, /* retry limit */ pool);
+
+        svn_client_get_username_prompt_provider 
+          (&(username_prompt_provider->vtable),
+           &(username_prompt_provider->provider_baton),
+           svn_cl__prompt_user, NULL,
+           2, /* retry limit */ pool);
+
+        *(svn_auth_provider_object_t **)apr_array_push (providers) 
+          = simple_prompt_provider;
+
+        *(svn_auth_provider_object_t **)apr_array_push (providers) 
+          = username_prompt_provider;       
+      }
+
+    /* Build an authentication baton to give to libsvn_client. */
+    svn_auth_open (&ab, providers, pool);
+    ctx.auth_baton = ab;
+
+#if 0  /* ### See also #if 0 above at declaration of `cancelled'. */
+    /* Set up our cancellation support.
+     *
+     * This is temporarily #if 0'd out while the cancellation support is 
+     * being pushed through the client code,
+     */
+    apr_signal (SIGINT, sig_int);
+    ctx.cancel_func = check_cancel;
+#endif
+
+    /* Place any default --username or --password credentials into the
+       auth_baton's run-time parameter hash. */
+    if (opt_state.auth_username)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                             opt_state.auth_username);
+    if (opt_state.auth_password)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                             opt_state.auth_password);
+
+    /* Same with the --non-interactive option. */
+    if (opt_state.non_interactive)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NON_INTERACTIVE,
+                             (void *) "");
+
+    /* There are two different ways the user can disable disk caching
+       of credentials:  either via --no-auth-cache, or in the config
+       file ('store-password = no'). */
+    svn_config_get (cfg, &store_password_val,
+                    SVN_CONFIG_SECTION_AUTH, SVN_CONFIG_OPTION_STORE_PASSWORD,
+                    NULL);
+    if (opt_state.no_auth_cache || store_password_val)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                             (void *) "");
+  }
+
+  /* And now we finally run the subcommand. */
+  err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)
     {
       svn_error_t *tmp_err;

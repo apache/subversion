@@ -31,29 +31,13 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_delta.h"
+#include "svn_wc.h"
 
+#include "swigutil_java_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-
-/* If this file is being included outside of a wrapper file, then need to
-   create stubs for some of the SWIG types. */
-
-/* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
-   the prototypes and type definitions. */
-#ifndef SWIGEXPORT
-#define SVN_NEED_SWIG_TYPES
-#endif
-
-#ifdef SVN_NEED_SWIG_TYPES
-
-typedef struct _unnamed swig_type_info;
-jobject *SWIG_NewPointerObj(JNIEnv *jenv, void *, swig_type_info *, int own);
-swig_type_info *SWIG_TypeQuery(JNIEnv *jenv, const char *name);
-
-#endif /* SVN_NEED_SWIG_TYPES */
 
 
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
@@ -61,8 +45,14 @@ swig_type_info *SWIG_TypeQuery(JNIEnv *jenv, const char *name);
 jobject svn_swig_java_prophash_to_dict(JNIEnv *jenv, apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Java Map */
-jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash,
-                                   swig_type_info *type);
+jobject svn_swig_java_convert_hash(JNIEnv *jenv, apr_hash_t *hash);
+
+/* add all the elements from an array to an existing java.util.List */
+void svn_swig_java_add_to_list(JNIEnv* jenv, apr_array_header_t *array,
+                               jobject list);
+
+/* add all the elements from a hash to an existing java.util.Map */
+void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map);
 
 /* helper function to convert a 'char **' into a Java List of String
    objects */
@@ -88,6 +78,43 @@ void svn_swig_java_make_editor(JNIEnv *jenv,
                                void **edit_baton,
                                jobject java_editor,
                                apr_pool_t *pool);
+
+/* a notify function that executes a Java method on an object which is
+   passed in via the baton argument */
+void svn_swig_java_notify_func(void *baton,
+                               const char *path,
+                               svn_wc_notify_action_t action,
+                               svn_node_kind_t kind,
+                               const char *mime_type,
+                               svn_wc_notify_state_t content_state,
+                               svn_wc_notify_state_t prop_state,
+                               svn_revnum_t revision);
+
+/* thunked commit log fetcher */
+svn_error_t *svn_swig_java_get_commit_log_func(const char **log_msg,
+                                              const char **tmp_file,
+                                              apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool);
+
+/* log messages are returned in this */
+svn_error_t *svn_swig_java_log_message_receiver(void *baton,
+      apr_hash_t *changed_paths,
+      svn_revnum_t revision,
+      const char *author,
+      const char *date,  /* use svn_time_from_string() if need apr_time_t */
+      const char *message,
+      apr_pool_t *pool);
+
+/* Create write-only svn_stream_t from java.io.OutputStream */
+svn_stream_t *svn_swig_java_outputstream_to_stream(JNIEnv *jenv, 
+                                                   jobject outputstream, 
+                                                   apr_pool_t *pool);
+
+/* Create read-only svn_stream_t from java.io.InputStream */
+svn_stream_t *svn_swig_java_inputstream_to_stream(JNIEnv *jenv,
+                                                  jobject inputstream,
+                                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

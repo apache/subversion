@@ -44,15 +44,20 @@ extern "C" {
 typedef struct {
   apr_pool_t *pool;
 
-  const char *url;              /* original, unparsed url for this session */
-  ne_uri root;                  /* parsed version of above */
+  const char *url;                      /* original, unparsed session url */
+  ne_uri root;                          /* parsed version of above */
 
-  ne_session *sess;           /* HTTP session to server */
+  ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
   
   const svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
   void *callback_baton;
 
+  svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
+
+  svn_boolean_t compression;            /* should we use http compression? */
+
+  const char *uuid;                     /* repository UUID */
 } svn_ra_session_t;
 
 
@@ -220,6 +225,8 @@ svn_error_t *svn_ra_dav__do_check_path(
 
 #define SVN_RA_DAV__PROP_MD5_CHECKSUM SVN_DAV_PROP_NS_DAV "md5-checksum"
 
+#define SVN_RA_DAV__PROP_REPOSITORY_UUID SVN_DAV_PROP_NS_DAV "repository-uuid"
+
 
 typedef struct {
   /* what is the URL for this resource */
@@ -343,9 +350,17 @@ svn_error_t * svn_ra_dav__get_activity_collection(
   apr_pool_t *pool);
 
 
+/* Call ne_set_request_body_pdovider on REQ with a provider function
+ * that pulls data from BODY_FILE.
+ */
+svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+                                                apr_file_t *body_file);
+
+
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session RAS, and parse the response.  If BODY is non-null, it is
- * the body of the request, else use the contents of file FD as the body.
+ * the body of the request, else use the contents of file BODY_FILE
+ * as the body.
  *
  * ELEMENTS is the set of xml elements to recognize in the response.
  *
@@ -362,7 +377,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
                                         const char *url,
                                         const char *body,
-                                        int fd,
+                                        apr_file_t *body_file,
                                         const struct ne_xml_elm *elements, 
                                         ne_xml_validate_cb validate_cb,
                                         ne_xml_startelm_cb startelm_cb, 
@@ -425,7 +440,8 @@ enum {
   ELEM_name_creationdate,
   ELEM_name_creator_displayname,
   ELEM_svn_error,
-  ELEM_human_readable
+  ELEM_human_readable,
+  ELEM_repository_uuid
 };
 
 /* ### docco */

@@ -29,57 +29,19 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "cl.h"
 
 
-
-/*** Build an authentication object from commandline args. ***/
-
-svn_client_auth_baton_t *
-svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
-                         apr_pool_t *pool)
-{
-  svn_client_auth_baton_t *auth_obj;
-  auth_obj = apr_pcalloc (pool, sizeof(*auth_obj));
-
-  if (! opt_state->non_interactive)
-    auth_obj->prompt_callback = svn_cl__prompt_user;
-
-  /* The prompt baton is currently unused. */
-  auth_obj->prompt_baton = NULL;
-
-  if (opt_state->no_auth_cache)
-    auth_obj->store_auth_info = FALSE;
-  else
-    auth_obj->store_auth_info = TRUE;
-
-  if (opt_state->auth_username)
-    {
-      auth_obj->username = opt_state->auth_username;
-      auth_obj->got_new_auth_info = TRUE;
-    }
-  if (opt_state->auth_password)
-    {
-      auth_obj->password = opt_state->auth_password;
-      auth_obj->got_new_auth_info = TRUE;
-    }
-
-  /* Add more authentication args here as necessary... */
-
-  return auth_obj;
-}
-
 
 
-/*** Our implementation of the 'auth info callback' routine, 
-     as defined in svn_client.h.   This callback is passed to any
-     libsvn_client routine that needs to authenticate against a
-     repository. ***/
+/*** Our implementation of the 'prompt callback' routine, as defined
+     in svn_auth.h.  (See svn_client_prompt_t.)  */
 
 svn_error_t *
-svn_cl__prompt_user (char **result,
+svn_cl__prompt_user (const char **result,
                      const char *prompt,
                      svn_boolean_t hide,
                      void *baton,
@@ -103,12 +65,10 @@ svn_cl__prompt_user (char **result,
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&prompt_native, prompt, pool));
 
-  /* ### implement the HIDE flag later using apr_getpassword or
-     something. */
   if (! hide)
     {
-      printf (prompt_native);
-      fflush (stdout);
+      fprintf (stderr, "%s", prompt_native);
+      fflush (stderr);
 
       while (1)
         {

@@ -41,16 +41,12 @@ svn_cl__merge (apr_getopt_t *os,
                void *baton,
                apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton;
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton;
-
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
@@ -96,7 +92,7 @@ svn_cl__merge (apr_getopt_t *os,
 
       /* the first path becomes both of the 'sources' */
       source = ((const char **)(targets->elts))[0];
-      SVN_ERR (svn_cl__get_url_from_target(&url, source, pool));
+      SVN_ERR (svn_client_url_from_path(&url, source, pool));
       if (! url)
         return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                                   "'%s' has no URL", source);
@@ -148,12 +144,10 @@ svn_cl__merge (apr_getopt_t *os,
   */
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
-  err = svn_client_merge (notify_func, notify_baton,
-                          auth_baton,
-                          sourcepath1,
+  err = svn_client_merge (sourcepath1,
                           &(opt_state->start_revision),
                           sourcepath2,
                           &(opt_state->end_revision),
@@ -161,6 +155,7 @@ svn_cl__merge (apr_getopt_t *os,
                           opt_state->nonrecursive ? FALSE : TRUE,
                           opt_state->force,
                           opt_state->dry_run,
+                          ctx,
                           pool); 
   if (err)
      return svn_cl__may_need_force (err);

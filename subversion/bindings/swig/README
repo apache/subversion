@@ -43,6 +43,9 @@ n/a		  _util
 
 (1) it is assumed that the binding languages will provide this
     functionality separately.
+    ### HELP: Java does not provide base-64 natively.  Should we wrap
+    ### SVN's with SWIG, or include a stand-alone ASF implementation
+    ### (such as from Jakarta Commons Codec)?
 (2) no significant/interesting functionality to export
 (3) only the types are exported; a SWIG interface file is present
 (4) limited symbols/functionality exported via the _util module
@@ -57,8 +60,10 @@ versions of SWIG will simply *not* work.
 SWIG MODULES
 ------------
 
-We will produce a number of modules, expecting the binding languages
-to organize these into a package.
+We will produce a number of modules/classes, expecting the binding
+languages to organize these into a package, and present the Subversion
+libraries' API in a manner familiar to programmers of a given
+language.  For instance, the Python bindings are handled as follows:
 
 svn.client
 svn.delta
@@ -67,3 +72,16 @@ svn.fs
 svn.io
 svn.ra
 svn.wc
+
+
+
+
+THUNK EDITORS
+-------------
+
+"Thunk" is Windows programming term describing a "go between."  Our
+SWIG bindings generally implement editors in C which delegate to the
+language-specific extension API (e.g. its C API for Python, JNI for
+Java, etc.).  This transitional object implements a Subversion editor
+interface, allowing it to be passed between its native library code
+and the runtime of the language which the bindings were written for.

@@ -131,6 +131,10 @@ SOURCE=.\props.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\providers.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\questions.c
 # End Source File
 # Begin Source File

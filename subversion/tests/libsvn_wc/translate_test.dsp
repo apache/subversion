@@ -50,8 +50,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\\Release\libsvn_tests_main.lib ..\..\libsvn_wc\Release\libsvn_wc.lib ..\..\libsvn_delta\Release\libsvn_delta.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\apr-util\LibR\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibR\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/translate-test.exe"
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386
+# ADD LINK32 ..\\Release\libsvn_tests_main.lib ..\..\libsvn_wc\Release\libsvn_wc.lib ..\..\libsvn_delta\Release\libsvn_delta.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\apr-util\LibR\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibR\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /machine:I386 /out:"Release/translate-test.exe"
 
 !ELSEIF  "$(CFG)" == "tests_libsvn_wc_translate - Win32 Debug"
 
@@ -75,8 +75,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ..\Debug\libsvn_tests_main.lib ..\..\libsvn_wc\Debug\libsvn_wc.lib ..\..\libsvn_delta\Debug\libsvn_delta.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\apr-util\LibD\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibD\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/translate-test.exe" /pdbtype:sept
+# ADD BASE LINK32 kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 ..\Debug\libsvn_tests_main.lib ..\..\libsvn_wc\Debug\libsvn_wc.lib ..\..\libsvn_delta\Debug\libsvn_delta.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\apr-util\LibD\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibD\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib rpcrt4.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/translate-test.exe" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no
 
 !ENDIF 

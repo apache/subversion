@@ -38,6 +38,7 @@
 svn_error_t *
 svn_client__can_delete (const char *path,
                         svn_wc_adm_access_t *adm_access,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -52,7 +53,8 @@ svn_client__can_delete (const char *path,
     dir_access = adm_access;
 
   SVN_ERR (svn_wc_statuses (hash, path, dir_access, TRUE, FALSE, FALSE,
-                            NULL, NULL, pool));
+                            NULL, NULL, ctx->cancel_func, ctx->cancel_baton,
+                            ctx->config, pool));
   for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -101,11 +103,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    const char *path,
                    svn_wc_adm_access_t *optional_adm_access,
                    svn_boolean_t force, 
-                   svn_client_auth_baton_t *auth_baton,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -127,7 +125,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *auth_dir;
 
       /* Create a new commit item and add it to the array. */
-      if (log_msg_func)
+      if (ctx->log_msg_func)
         {
           svn_client_commit_item_t *item;
           const char *tmp_file;
@@ -140,8 +138,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
           (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
             = item;
           
-          SVN_ERR ((*log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                    log_msg_baton, pool));
+          SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                         ctx->log_msg_baton, pool));
           if (! log_msg)
             return SVN_NO_ERROR;
         }
@@ -161,8 +159,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
          current directory. */
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, auth_dir,
-                                            NULL, NULL, FALSE, FALSE, TRUE,
-                                            auth_baton, pool));
+                                            NULL, NULL, FALSE, TRUE,
+                                            ctx, pool));
 
       /* Verify that the thing to be deleted actually exists. */
       SVN_ERR (ra_lib->check_path (&kind, session, target, 
@@ -213,11 +211,12 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
   if (!force)
     {
       /* Verify that there are no "awkward" files */
-      SVN_ERR (svn_client__can_delete (path, adm_access, pool));
+      SVN_ERR (svn_client__can_delete (path, adm_access, ctx, pool));
     }
 
   /* Mark the entry for commit deletion and perform wc deletion */
-  SVN_ERR (svn_wc_delete (path, adm_access, notify_func, notify_baton, pool));
+  SVN_ERR (svn_wc_delete (path, adm_access, ctx->notify_func,
+                          ctx->notify_baton, pool));
 
   if (! optional_adm_access)
     SVN_ERR (svn_wc_adm_close (adm_access));

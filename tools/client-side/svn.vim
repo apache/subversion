@@ -20,11 +20,12 @@ elseif exists("b:current_syntax")
 	finish
 endif
 
-syn cluster svnChange contains=svnAdd,svnDel,svnMod
+syn cluster svnChange contains=svnAdd,svnDel,svnMod,svnProp
 syn match svnLine /^--This line, and those below, will be ignored--$/ skipwhite skipnl skipempty nextgroup=@svnChange
-syn match svnAdd /^A    .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
-syn match svnDel /^D    .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
-syn match svnMod /^M    .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+syn match svnAdd /^A[M ]   .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+syn match svnDel /^D[M ]   .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+syn match svnMod /^M[M ]   .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
+syn match svnProp /^_[M ]   .*$/ contained skipwhite skipnl skipempty nextgroup=@svnChange 
 
 "The following is the old SVN template format markings
 "
@@ -47,6 +48,7 @@ if version >= 508 || !exists("did_svn_syn_inits")
 	HiLink svnAdd		Structure
 	HiLink svnDel		SpecialChar
 	HiLink svnMod		PreProc
+	HiLink svnProp		Keyword
 	HiLink svnLine		Comment
 
 	delcommand HiLink

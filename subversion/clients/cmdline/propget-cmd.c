@@ -41,10 +41,10 @@ svn_cl__propget (apr_getopt_t *os,
                  void *baton,
                  apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  svn_client_auth_baton_t *auth_baton;
   int i;
 
   /* PNAME is first argument (and PNAME_UTF8 will be a UTF-8 version
@@ -59,8 +59,6 @@ svn_cl__propget (apr_getopt_t *os,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
                                          FALSE, pool));
-
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
@@ -84,7 +82,7 @@ svn_cl__propget (apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
                                 "No URL target available.");
       target = ((const char **) (targets->elts))[0];
-      SVN_ERR (svn_cl__get_url_from_target (&URL, target, pool));  
+      SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
         return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                 "Either a URL or versioned item is required.");
@@ -92,7 +90,7 @@ svn_cl__propget (apr_getopt_t *os,
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,
                                        URL, &(opt_state->start_revision),
-                                       auth_baton, &rev, pool));
+                                       &rev, ctx, pool));
 
       if (propval != NULL)
         {
@@ -119,8 +117,7 @@ svn_cl__propget (apr_getopt_t *os,
           
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        &(opt_state->start_revision),
-                                       auth_baton,
-                                       opt_state->recursive, pool));
+                                       opt_state->recursive, ctx, pool));
           
           print_filenames = (opt_state->recursive || targets->nelts > 1
                              || apr_hash_count (props) > 1);

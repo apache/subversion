@@ -162,7 +162,7 @@ svn_io_open_unique_file (apr_file_t **f,
           *unique_name_p = NULL;
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_open_unique_file: error attempting %s", unique_name);
+             "svn_io_open_unique_file: error openning '%s'", unique_name);
         }
       else
         {
@@ -176,7 +176,7 @@ svn_io_open_unique_file (apr_file_t **f,
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
                             "svn_io_open_unique_file: unable to make name for "
-                            "%s", path);
+                            "'%s'", path);
 }
 
 
@@ -207,13 +207,13 @@ svn_io_copy_file (const char *src,
     {
       return svn_error_createf
         (apr_err, NULL,
-         "svn_io_copy_file: error closing %s", dst_tmp);
+         "svn_io_copy_file: error closing '%s'", dst_tmp);
     }
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf
-      (apr_err, NULL, "svn_io_copy_file: error copying %s to %s",
+      (apr_err, NULL, "svn_io_copy_file: error copying '%s' to '%s'",
        src, dst_tmp);
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
@@ -233,7 +233,7 @@ svn_io_copy_file (const char *src,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_io_copy_file: opening %s for perms", src);
+           "svn_io_copy_file: opening '%s' for perms", src);
 
       apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
       if (apr_err)
@@ -241,14 +241,14 @@ svn_io_copy_file (const char *src,
           apr_file_close (s);  /* toss any error */
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_copy_file: getting perm info for %s", src);
+             "svn_io_copy_file: getting perm info for '%s'", src);
         }
 
       apr_err = apr_file_close (s);
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_io_copy_file: closing %s after reading perms", src);
+           "svn_io_copy_file: closing '%s' after reading perms", src);
 
       apr_err = apr_file_perms_set (dst_tmp_apr, finfo.protection);
 
@@ -263,7 +263,7 @@ svn_io_copy_file (const char *src,
         {
           return svn_error_createf
             (apr_err, NULL,
-             "svn_io_copy_file: setting perms on %s", dst_tmp);
+             "svn_io_copy_file: setting perms on '%s'", dst_tmp);
         }
     }
 #endif /* ! SVN_WIN32 */
@@ -413,7 +413,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   if (apr_err)
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_make_dir_recursively: error making directory %s", path);
+       "svn_io_make_dir_recursively: error making directory '%s'", path);
 
   return SVN_NO_ERROR;
 #else
@@ -439,7 +439,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
           if (apr_err)
             svn_err = svn_error_createf
               (apr_err, NULL,
-               "svn_io_make_dir_recursively: error creating directory %s",
+               "svn_io_make_dir_recursively: error creating directory '%s'",
                path);
         }
 
@@ -449,7 +449,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   /* If we get here, there must be an apr_err. */
   return svn_error_createf
     (apr_err, NULL,
-     "svn_io_make_dir_recursively: error making %s", path);
+     "svn_io_make_dir_recursively: error making '%s'", path);
 #endif
 }
 
@@ -983,7 +983,7 @@ svn_io_run_cmd (const char *path,
   if (apr_err)
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_run_cmd: error creating %s process attributes",
+       "svn_io_run_cmd: error creating '%s' process attributes",
        cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
@@ -993,7 +993,7 @@ svn_io_run_cmd (const char *path,
   if (apr_err)
     return svn_error_createf 
       (apr_err, NULL,
-       "svn_io_run_cmd: error setting %s process cmdtype",
+       "svn_io_run_cmd: error setting '%s' process cmdtype",
        cmd);
 
   /* Set the process's working directory. */
@@ -1008,7 +1008,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process directory",
+           "svn_io_run_cmd: error setting '%s' process directory",
            cmd);
     }
 
@@ -1023,7 +1023,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process child input",
+           "svn_io_run_cmd: error setting '%s' process child input",
            cmd);
     }
   if (outfile)
@@ -1032,7 +1032,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process child outfile",
+           "svn_io_run_cmd: error setting '%s' process child outfile",
            cmd);
     }
   if (errfile)
@@ -1041,7 +1041,7 @@ svn_io_run_cmd (const char *path,
       if (apr_err)
         return svn_error_createf 
           (apr_err, NULL,
-           "svn_io_run_cmd: error setting %s process child errfile",
+           "svn_io_run_cmd: error setting '%s' process child errfile",
            cmd);
     }
 
@@ -1053,16 +1053,12 @@ svn_io_run_cmd (const char *path,
   args_native[num_args] = NULL;
   while (num_args--)
     {
-      /* ### Whups, this one almost slipped through the cracks. The
-         arguments to an external program must _not_ remain in UTF-8
-         on Windows, regardless of what APR's internal encoding
-         is. And anyway, this is probably wrong, because there's no
-         guarantee that we'll only have filename arguments. I suspect
-         that the *caller* of svn_io_run_cmd should be responsible for
-         recoding the arguments. Urgh, blech. */
-      SVN_ERR (svn_utf_cstring_from_utf8 (&args_native[num_args],
-                                          args[num_args],
-                                          pool));
+      /* ### Well, it turns out that on APR on Windows expects all
+             program args to be in UTF-8. Callers of svn_io_run_cmd
+             should be aware of that. */
+      SVN_ERR (svn_path_cstring_from_utf8 (&args_native[num_args],
+                                           args[num_args],
+                                           pool));
     }
 
 
@@ -1072,7 +1068,7 @@ svn_io_run_cmd (const char *path,
   if (apr_err)
     return svn_error_createf 
       (apr_err, NULL,
-       "svn_io_run_cmd: error starting %s process",
+       "svn_io_run_cmd: error starting '%s' process",
        cmd);
 
   /* The Win32 apr_proc_wait doesn't set this... */
@@ -1083,7 +1079,7 @@ svn_io_run_cmd (const char *path,
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, NULL,
-       "svn_io_run_cmd: error waiting for %s process",
+       "svn_io_run_cmd: error waiting for '%s' process",
        cmd);
 
   if (exitwhy)
@@ -1091,7 +1087,7 @@ svn_io_run_cmd (const char *path,
   else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "svn_io_run_cmd: error exitwhy %d for process %s",
+       "svn_io_run_cmd: error exitwhy %d for process '%s'",
        exitwhy_val, cmd);
 
   if (exitcode)
@@ -1099,7 +1095,7 @@ svn_io_run_cmd (const char *path,
   else if (exitcode_val != 0)
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "svn_io_run_cmd: error exitcode %d for process %s",
+       "svn_io_run_cmd: error exitcode %d for process '%s'",
        exitcode_val, cmd);
 
   return SVN_NO_ERROR;
@@ -1117,20 +1113,23 @@ svn_io_run_diff (const char *dir,
                  int *pexitcode, 
                  apr_file_t *outfile, 
                  apr_file_t *errfile, 
+                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   const char **args;
   int i; 
   int exitcode;
   int nargs = 4; /* the diff command itself, two paths, plus a trailing NULL */
-  const char *diff_utf8;
-
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  svn_config_t *cfg;
   const char *diff_cmd;
-  SVN_ERR (svn_config_read_config (&cfg, subpool));
-  svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", SVN_CLIENT_DIFF);
+  const char *diff_utf8;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_config_t *cfg = config ? apr_hash_get (config, 
+                                             SVN_CONFIG_CATEGORY_CONFIG,
+                                             APR_HASH_KEY_STRING) : NULL;
+  
+  svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS, 
+                  SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
+  SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
     pexitcode = &exitcode;
@@ -1148,7 +1147,7 @@ svn_io_run_diff (const char *dir,
   args = apr_palloc (subpool, nargs * sizeof(char *));
 
   i = 0;
-  args[i++] = diff_cmd;
+  args[i++] = diff_utf8;
 
   if (user_args != NULL)
     {
@@ -1176,8 +1175,6 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
-  
   SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
                            NULL, outfile, errfile, subpool));
 
@@ -1193,7 +1190,7 @@ svn_io_run_diff (const char *dir,
    */
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "%s returned %d", diff_cmd, *pexitcode);
+                              "%s returned %d", diff_utf8, *pexitcode);
 
   svn_pool_destroy (subpool);
 
@@ -1212,16 +1209,20 @@ svn_io_run_diff3 (const char *dir,
                   const char *yours_label,
                   apr_file_t *merged,
                   int *exitcode,
+                  apr_hash_t *config,
                   apr_pool_t *pool)
 {
   const char *args[14];
   const char *diff3_utf8;
   int nargs = 13, i = 0;
-
-  svn_config_t *cfg;
   const char *diff3_cmd;
-  SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &diff3_cmd, "helpers", "diff3-cmd", SVN_CLIENT_DIFF3);
+  svn_config_t *cfg = config ? apr_hash_get (config, 
+                                             SVN_CONFIG_CATEGORY_CONFIG,
+                                             APR_HASH_KEY_STRING) : NULL;
+
+  svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS, 
+                  SVN_CONFIG_OPTION_DIFF3_CMD, SVN_CLIENT_DIFF3);
+  SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -1232,7 +1233,7 @@ svn_io_run_diff3 (const char *dir,
     yours_label = ".new";
   
   /* Set up diff3 command line. */
-  args[i++] = diff3_cmd;
+  args[i++] = diff3_utf8;
   args[i++] = "-E";             /* We tried "-A" here, but that caused
                                    overlapping identical changes to
                                    conflict.  See issue #682. */
@@ -1248,14 +1249,16 @@ svn_io_run_diff3 (const char *dir,
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   {
     const char *has_arg;
-    svn_config_get (cfg, &has_arg, "helpers", "diff3-has-program-arg", "yes");
+    svn_config_get (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
+                    SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, "yes");
     if (0 == strcasecmp(has_arg, "yes")
         || 0 == strcasecmp(has_arg, "true"))
       {
-        const char *diff_cmd;
-        svn_config_get (cfg, &diff_cmd,
-                        "helpers", "diff-cmd", SVN_CLIENT_DIFF);
-        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_cmd, NULL);
+        const char *diff_cmd, *diff_utf8;
+        svn_config_get (cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
+                        SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
+        SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
+        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8, NULL);
         ++nargs;
       }
   }
@@ -1265,8 +1268,6 @@ svn_io_run_diff3 (const char *dir,
   args[i++] = yours;
   args[i++] = NULL;
   assert (i == nargs);
-
-  SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, diff3_utf8, args, 
@@ -1283,7 +1284,7 @@ svn_io_run_diff3 (const char *dir,
                               "svn_io_run_diff3: "
                               "Error running %s:  exitcode was %d, args were:"
                               "\nin directory %s, basenames:\n%s\n%s\n%s",
-                              diff3_cmd, *exitcode,
+                              diff3_utf8, *exitcode,
                               dir, mine, older, yours);
 
   return SVN_NO_ERROR;
@@ -1644,60 +1645,9 @@ svn_io_file_printf (apr_file_t *fptr, const char *format, ...)
   else
     return SVN_NO_ERROR;
 }
- 
 
 
 
-/* FIXME: Dirty, ugly, abominable, but works. Beauty comes second for now. */
-#include "svn_private_config.h"
-#ifdef SVN_WIN32
-#include <io.h>
-
-static apr_status_t
-close_file_descriptor (void *baton)
-{
-  int fd = (int) baton;
-  _close (fd);
-  /* Ignore errors from close, because we can't do anything about them. */
-  return APR_SUCCESS;
-}
-#endif
-
-apr_status_t
-svn_io_fd_from_file (int *fd_p, apr_file_t *file)
-{
-  apr_os_file_t fd;
-  apr_status_t status = apr_os_file_get (&fd, file);
-
-  if (status == APR_SUCCESS)
-    {
-#ifndef SVN_WIN32
-      *fd_p = fd;
-#else
-      *fd_p = _open_osfhandle ((long) fd, _O_RDWR);
-
-      /* We must close the file descriptor when the apr_file_t is
-         closed, otherwise we'll run out of them. What happens if the
-         underlyig file handle is closed first is anyone's guess, so
-         the pool cleanup just ignores errors from the close. I hope
-         the RTL frees the FD slot before closing the handle ... */
-      if (*fd_p < 0)
-        status = APR_EBADF;
-      else
-        {
-          /* FIXME: This bit of code assumes that the first element of
-             an apr_file_t on Win32 is a pool. It also assumes an int
-             will fit into a void*. Please, let's get rid of this ASAP! */
-          apr_pool_t *cntxt = *(apr_pool_t**) file;
-          apr_pool_cleanup_register (cntxt, (void*) *fd_p,
-                                     close_file_descriptor, NULL);
-        }
-#endif
-    }
-  return status;
-}
-
-
 /**
  * Determine if a directory is empty or not.
  * @param Return APR_SUCCESS if the dir is empty, else APR_ENOTEMPTY if not.
@@ -1743,7 +1693,7 @@ apr_dir_is_empty (const char *dir, apr_pool_t *pool)
     }
 
   /* Make sure we broke out of the loop for the right reason. */
-  if (! APR_STATUS_IS_ENOENT (apr_err))
+  if (apr_err && ! APR_STATUS_IS_ENOENT (apr_err))
     return apr_err;
 
   apr_err = apr_dir_close (dir_handle);
@@ -1841,7 +1791,7 @@ svn_io_read_version_file (int *version,
 
   /* Check that the first line contains only digits. */
   {
-    int i;
+    apr_size_t i;
 
     for (i = 0; i < len; ++i)
       {

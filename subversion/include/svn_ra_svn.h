@@ -47,7 +47,7 @@ extern "C" {
     svn_error_t *svn_err__temp = (expr);                      \
     if (svn_err__temp)                                        \
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,         \
-			      svn_err__temp, NULL);           \
+                              svn_err__temp, NULL);           \
   } while (0)
 
 /** an ra_svn connection. */
@@ -145,7 +145,8 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  *
  * The format string @a fmt may contain:
  *
- *<pre>   Spec  Argument type         Item type
+ *<pre>
+ *   Spec  Argument type         Item type
  *   ----  --------------------  ---------
  *   n     apr_uint64_t          Number
  *   r     svn_revnum_t          Number
@@ -155,13 +156,14 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  *   b     svn_boolean_t         Word ("true" or "false")
  *   (                           Begin tuple
  *   )                           End tuple
- *   [                           Begin optional tuple
- *   ]                           End optional tuple</pre>
+ *   ?                           Remaining elements optional
+ * </pre>
  *
- * Inside an optional tuple, 'r' values may be @c SVN_INVALID_REVNUM and
- * 's', 'c', and 'w' values may be @c NULL; in these cases no data will
- * be written.  Either all or none of the optional tuple values should
- * be valid.  Optional tuples may not be nested.
+ * Inside the optional part of a tuple, 'r' values may be @c
+ * SVN_INVALID_REVNUM and 's', 'c', and 'w' values may be @c NULL; in
+ * these cases no data will be written.  'n', 'b', and '(' may not
+ * appear in the optional part of a tuple.  Either all or none of the
+ * optional values should be valid.
  */
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
@@ -173,7 +175,8 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 /** Parse an array of @c svn_item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
  *
- *<pre>   Spec  Argument type          Item type
+ *<pre>
+ *   Spec  Argument type          Item type
  *   ----  --------------------   ---------
  *   n     apr_uint64_t *         Number
  *   r     svn_revnum_t *         Number
@@ -182,13 +185,19 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  *   w     const char **          Word
  *   b     svn_boolean_t *        Word ("true" or "false")
  *   l     apr_array_header_t **  List
- *   [                            Begin optional tuple
- *   ]                            End optional tuple</pre>
+ *   (                            Begin tuple
+ *   )                            End tuple
+ *   ?                            Tuple is allowed to end here
+ *</pre>
  *
- * If an optional tuple contains no data, 'r' values will be set to
- * @c SVN_INVALID_REVNUM and 's', 'c', 'w', and 'l' values will be set to
- * @c NULL.  'n' and 'b' may not appear inside an optional tuple
- * specification.  Optional tuples may not be nested.
+ * Note that a tuple is only allowed to end precisely at a '?', or at
+ * the end of the specification, of course.  So if @a fmt is "c?cc"
+ * and @a list contains two elements, an error will result.
+ *
+ * If an optional part of a tuple contains no data, 'r' values will be
+ * set to @c SVN_INVALID_REVNUM and 's', 'c', 'w', and 'l' values will
+ * be set to @c NULL.  'n' and 'b' may not appear inside an optional
+ * tuple specification.
  */
 svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     apr_pool_t *pool,
@@ -223,7 +232,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
  */
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        svn_ra_svn_cmd_entry_t *commands,
+                                        const svn_ra_svn_cmd_entry_t *commands,
                                         void *baton,
                                         svn_boolean_t pass_through_errors);
 

@@ -311,27 +311,18 @@ svn_wc__text_base_path (const char *path,
 static svn_error_t *
 prop_path_internal (const char **prop_path,
                     const char *path,
+                    svn_wc_adm_access_t *adm_access,
                     svn_boolean_t base,
                     svn_boolean_t wcprop,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  int wc_format_version = 0;
+  const svn_wc_entry_t *entry;
   const char *entry_name;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
 
-  /* kff todo: some factorization can be done on most callers of
-     svn_wc_check_wc()? */
-
-  entry_name = NULL;
-  if (kind == svn_node_dir)
-    {
-      SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
-    }
-  
-  if (wc_format_version)  /* It's not only a dir, it's a working copy dir */
+  if (entry && entry->kind == svn_node_dir)  /* It's a working copy dir */
     {
       *prop_path = extend_with_adm_name
         (path,
@@ -344,16 +335,12 @@ prop_path_internal (const char **prop_path,
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
+      int wc_format;
+
+      SVN_ERR (svn_wc_adm_wc_format (adm_access, &wc_format));
       svn_path_split (path, prop_path, &entry_name, pool);
 
-      SVN_ERR (svn_wc_check_wc (*prop_path, &wc_format_version, pool));
-      if (wc_format_version == 0)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           "prop_path_internal: %s is not a working copy directory",
-           *prop_path);
-
-      if (wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION)
+      if (wc_format <= SVN_WC__OLD_PROPNAMES_VERSION)
         {
           *prop_path = extend_with_adm_name
             (*prop_path,
@@ -388,10 +375,12 @@ prop_path_internal (const char **prop_path,
 svn_error_t *
 svn_wc__wcprop_path (const char **wcprop_path,
                      const char *path,
+                     svn_wc_adm_access_t *adm_access,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  return prop_path_internal (wcprop_path, path, FALSE, TRUE, tmp, pool);
+  return prop_path_internal (wcprop_path, path, adm_access, FALSE, TRUE, tmp,
+                             pool);
 }
 
 
@@ -400,20 +389,24 @@ svn_wc__wcprop_path (const char **wcprop_path,
 svn_error_t *
 svn_wc__prop_path (const char **prop_path,
                    const char *path,
+                   svn_wc_adm_access_t *adm_access,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, FALSE, FALSE, tmp, pool);
+  return prop_path_internal (prop_path, path, adm_access, FALSE, FALSE, tmp,
+                             pool);
 }
 
 
 svn_error_t *
 svn_wc__prop_base_path (const char **prop_path,
                         const char *path,
+                        svn_wc_adm_access_t *adm_access,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, TRUE, FALSE, tmp, pool);
+  return prop_path_internal (prop_path, path, adm_access, TRUE, FALSE, tmp,
+                             pool);
 }
 
 
@@ -674,22 +667,11 @@ svn_wc__open_props (apr_file_t **handle,
   svn_node_kind_t kind;
   int wc_format_version;
 
-  /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind == svn_node_none)
-    {
-      /* Something changed, yet we can't find the local working directory
-         to put the change in place. */
-      /* ### we probably need to record a "missing" entry */
-      return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                "open_props: path '%s' not found", path);
-    }
-
-  /* If file, split the path. */
-  if (kind == svn_node_file)
-    svn_path_split (path, &parent_dir, &base_name, pool);
-  else    
+  if (kind == svn_node_dir)
     parent_dir = path;
+  else
+    svn_path_split (path, &parent_dir, &base_name, pool);
   
   /* At this point, we know we need to open a file in the admin area
      of parent_dir.  First check that parent_dir is a working copy: */
@@ -697,7 +679,7 @@ svn_wc__open_props (apr_file_t **handle,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_wc__open_props: %s is not a working copy directory", parent_dir);
+       "svn_wc__open_props: '%s' is not a working copy directory", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
@@ -759,14 +741,11 @@ svn_wc__close_props (apr_file_t *fp,
   svn_node_kind_t kind;
   int wc_format_version;
 
-  /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
-
-  /* If file, split the path. */
-  if (kind == svn_node_file)
-    svn_path_split (path, &parent_dir, &base_name, pool);
-  else    
+  if (kind == svn_node_dir)
     parent_dir = path;
+  else    
+    svn_path_split (path, &parent_dir, &base_name, pool);
   
   /* At this point, we know we need to open a file in the admin area
      of parent_dir.  First check that parent_dir is a working copy: */
@@ -774,7 +753,7 @@ svn_wc__close_props (apr_file_t *fp,
   if (wc_format_version == 0)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_wc__close_props: %s is not a working copy directory", parent_dir);
+       "svn_wc__close_props: '%s' is not a working copy directory", parent_dir);
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 

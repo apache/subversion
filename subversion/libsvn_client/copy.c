@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_time.h"
 
 #include "client.h"
 
@@ -70,8 +71,7 @@ wc_to_wc_copy (const char *src_path,
                svn_wc_adm_access_t *optional_adm_access,
                svn_boolean_t is_move,
                svn_boolean_t force,
-               svn_wc_notify_func_t notify_func,
-               void *notify_baton,
+               svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
   svn_node_kind_t src_kind, dst_kind;
@@ -119,18 +119,32 @@ wc_to_wc_copy (const char *src_path,
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
       if (strcmp (src_parent, dst_parent) == 0)
-        adm_access = src_access;
-      else if (src_kind == svn_node_dir
-               && svn_path_is_child (src_parent, dst_parent, pool))
-        SVN_ERR (svn_wc_adm_retrieve (&adm_access, src_access, dst_parent,
-                                      pool));
-      else
-        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
-                                  pool));
+        {
+          adm_access = src_access;
+        }
+      else 
+        {
+          const char *src_parent_abs, *dst_parent_abs;
+
+          SVN_ERR (svn_path_get_absolute (&src_parent_abs, src_parent, pool));
+          SVN_ERR (svn_path_get_absolute (&dst_parent_abs, dst_parent, pool));
+
+          if ((src_kind == svn_node_dir)
+              && (svn_path_is_child (src_parent_abs, dst_parent_abs, pool)))
+            {
+              SVN_ERR (svn_wc_adm_retrieve (&adm_access, src_access,
+                                            dst_parent, pool));
+            }
+          else
+            {
+              SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent,
+                                        TRUE, FALSE, pool));
+            }
+        }
 
       if (!force)
         /* Ensure there are no "awkward" files. */
-        SVN_ERR_W (svn_client__can_delete (src_path, src_access, pool),
+        SVN_ERR_W (svn_client__can_delete (src_path, src_access, ctx, pool),
                    "Pass --force to override this restriction");
     }
   else if (! optional_adm_access)
@@ -146,13 +160,13 @@ wc_to_wc_copy (const char *src_path,
      ### requires cleanup should we abort the copy? */
 
   SVN_ERR (svn_wc_copy (src_path, adm_access, base_name,
-                        notify_func, notify_baton, pool));
+                        ctx->notify_func, ctx->notify_baton, pool));
 
 
   if (is_move)
     {
       SVN_ERR (svn_wc_delete (src_path, src_access,
-                              notify_func, notify_baton, pool));
+                              ctx->notify_func, ctx->notify_baton, pool));
 
       if (adm_access != src_access)
         SVN_ERR (svn_wc_adm_close (adm_access));
@@ -170,7 +184,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      const char *src_url, 
                      const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
-                     svn_client_auth_baton_t *auth_baton,
+                     svn_client_ctx_t *ctx,
                      const char *message,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
@@ -228,6 +242,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
           (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "error decomposing relative path `%s'", src_rel);
     }
+  else
+    src_rel = "";
 
   dst_rel = svn_path_is_child (top_url, dst_url, pool);
   if (dst_rel)
@@ -239,6 +255,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
           (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
            "error decomposing relative path `%s'", dst_rel);
     }
+  else
+    dst_rel = "";
 
   /* Allocate room for the root baton, the pieces of the
      source's or destination's path, and the destination itself. */
@@ -261,8 +279,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url,
                                         auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, NULL, FALSE, TRUE, 
+                                        ctx, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */
@@ -314,7 +332,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   else
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                                "unrecognized node kind of %s.", dst_url);
+                                "unrecognized node kind of '%s'.", dst_url);
     }
 
   /* Fetch RA commit editor. */
@@ -511,10 +529,8 @@ static svn_error_t *
 wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   const char *src_path, 
                   const char *dst_url, 
-                  svn_client_auth_baton_t *auth_baton,
+                  svn_client_ctx_t *ctx,
                   const char *message,
-                  svn_wc_notify_func_t notify_func,
-                  void *notify_baton,
                   apr_pool_t *pool)
 {
   const char *anchor, *target, *parent, *base_name;
@@ -554,8 +570,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
-                                        adm_access, NULL, TRUE, TRUE, TRUE, 
-                                        auth_baton, pool));
+                                        adm_access, NULL, TRUE, TRUE, 
+                                        ctx, pool));
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, session, 
@@ -598,6 +614,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                                     base_url,
                                                     base_path,
                                                     dir_access,
+                                                    ctx,
                                                     pool)))
     goto cleanup;
 
@@ -621,8 +638,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, base_path, pool));
   if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url,
                                               auth_dir, NULL, commit_items,
-                                              FALSE, FALSE, FALSE,
-                                              auth_baton, pool)))
+                                              FALSE, FALSE,
+                                              ctx, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -637,14 +654,13 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, adm_access,
                                    editor, edit_baton, 
-                                   notify_func, notify_baton,
                                    0, /* ### any notify_path_offset needed? */
-                                   &tempfiles, pool);
+                                   &tempfiles, ctx, pool);
 
   commit_in_progress = FALSE;
 
-  /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (apr_time_from_sec(1));
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps ();
 
  cleanup:
   /* Abort the commit if it is still in progress. */
@@ -681,9 +697,7 @@ repos_to_wc_copy (const char *src_url,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path, 
                   svn_wc_adm_access_t *optional_adm_access,
-                  svn_client_auth_baton_t *auth_baton,
-                  svn_wc_notify_func_t notify_func,
-                  void *notify_baton,
+                  svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
   void *ra_baton, *sess;
@@ -706,8 +720,8 @@ repos_to_wc_copy (const char *src_url,
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, auth_dir,
-                                        NULL, NULL, TRUE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        NULL, NULL, FALSE, TRUE, 
+                                        ctx, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */
@@ -786,7 +800,8 @@ repos_to_wc_copy (const char *src_url,
 
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
-                                           notify_func, notify_baton,
+                                           ctx->notify_func, ctx->notify_baton,
+                                           ctx->cancel_func, ctx->cancel_baton,
                                            &editor, &edit_baton,
                                            NULL, pool));
       
@@ -870,7 +885,7 @@ repos_to_wc_copy (const char *src_url,
      See comment in svn_wc_add()'s doc about whether svn_wc_add is the
      appropriate place for this. */
   SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
-                       notify_func, notify_baton, pool));
+                       ctx->notify_func, ctx->notify_baton, pool));
 
   /* If any properties were fetched (in the file case), apply those
      changes now. */
@@ -912,13 +927,9 @@ setup_copy (svn_client_commit_info_t **commit_info,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
             svn_wc_adm_access_t *optional_adm_access,
-            svn_client_auth_baton_t *auth_baton,
-            svn_client_get_commit_log_t log_msg_func,
-            void *log_msg_baton,
             svn_boolean_t is_move,
             svn_boolean_t force,
-            svn_wc_notify_func_t notify_func,
-            void *notify_baton,
+            svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
   svn_boolean_t src_is_url, dst_is_url;
@@ -990,7 +1001,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (dst_is_url && log_msg_func)
+  if (dst_is_url && ctx->log_msg_func)
     {
       svn_client_commit_item_t *item;
       const char *tmp_file;
@@ -1003,8 +1014,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
       
-      SVN_ERR ((*log_msg_func) (&message, &tmp_file, commit_items, 
-                                log_msg_baton, pool));
+      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
       if (! message)
         return SVN_NO_ERROR;
     }
@@ -1015,25 +1026,27 @@ setup_copy (svn_client_commit_info_t **commit_info,
   if ((! src_is_url) && (! dst_is_url))
     SVN_ERR (wc_to_wc_copy (src_path, dst_path, optional_adm_access,
                             is_move, force,
-                            notify_func, notify_baton,
+                            ctx,
                             pool));
 
   else if ((! src_is_url) && (dst_is_url))
-    SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
-                               auth_baton, message, 
-                               notify_func, notify_baton,
-                               pool));
-
+    {
+      SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
+                                 ctx, message, 
+                                 pool));
+    }
   else if ((src_is_url) && (! dst_is_url))
-    SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
-                               dst_path, optional_adm_access, auth_baton,
-                               notify_func, notify_baton,
-                               pool));
-
+    {
+      SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
+                                 dst_path, optional_adm_access, ctx,
+                                 pool));
+    }
   else
-    SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
-                                  dst_path, auth_baton, message, is_move,
-                                  pool));
+    {
+      SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
+                                    dst_path, ctx, message, is_move,
+                                    pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1053,20 +1066,14 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_wc_adm_access_t *optional_adm_access,
-                 svn_client_auth_baton_t *auth_baton,
-                 svn_client_get_commit_log_t log_msg_func,
-                 void *log_msg_baton,
-                 svn_wc_notify_func_t notify_func,
-                 void *notify_baton,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
                      src_path, src_revision, dst_path, optional_adm_access,
-                     auth_baton, 
-                     log_msg_func, log_msg_baton,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
-                     notify_func, notify_baton,
+                     ctx,
                      pool);
 }
 
@@ -1077,18 +1084,13 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_boolean_t force,
-                 svn_client_auth_baton_t *auth_baton,
-                 svn_client_get_commit_log_t log_msg_func,
-                 void *log_msg_baton,
-                 svn_wc_notify_func_t notify_func,
-                 void *notify_baton,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
-                     src_path, src_revision, dst_path, NULL, auth_baton,
-                     log_msg_func, log_msg_baton,
+                     src_path, src_revision, dst_path, NULL,
                      TRUE /* is_move */,
                      force,
-                     notify_func, notify_baton,
+                     ctx,
                      pool);
 }

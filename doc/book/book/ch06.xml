@@ -27,7 +27,7 @@
       Subversion's property (or <quote>metadata</quote>) support, and
       how to modify Subversion's default behaviors by tweaking its
       run-time configuration area.  We will describe how you can use
-      module definitions to instruct Subversion to pull data from
+      externals definitions to instruct Subversion to pull data from
       multiple repositories.  We'll cover in detail some of the
       additional client- and server-side tools that are part of the
       Subversion distribution.</para>
@@ -35,8 +35,8 @@
     <para>Before reading this chapter, you should be familiar with the
       basic file and directory versioning capabilities of Subversion.
       If you haven't already read about those, or if you need a
-      refresher, we crecommend that you check out <xref
-      linkend="svn-ch-1" /> and <xref linkend="svn-ch-2" />.  Once
+      refresher, we recommend that you check out <xref
+      linkend="svn-ch-2" /> and <xref linkend="svn-ch-3" />.  Once
       you've mastered the basics and consumed this chapter, you'll be
       a Subversion power-user&mdash;or we'll refund your money!
       <footnote>
@@ -62,7 +62,7 @@
       segregated into a Subversion configuration area.</para>
 
     <para>The Subversion <firstterm>configuration area</firstterm> is
-      a two-tiered heirarchy of option names and their values.
+      a two-tiered hierarchy of option names and their values.
       Usually, this boils down to a special directory which contains
       <firstterm>configuration files</firstterm> (the first tier),
       which are just text files in standard INI format (with
@@ -134,7 +134,7 @@
         Subversion clients running on Windows platforms may also use
         the Windows registry to hold the configuration data.  The
         option names and their values are the same as in the INI
-        files.  The <quote>file/section</quote> heirarchy is
+        files.  The <quote>file/section</quote> hierarchy is
         preserved as well, though addressed in a slightly different
         fashion&mdash;in this schema, files and sections are just
         levels in the registry key tree.</para>
@@ -142,10 +142,10 @@
       <para>Subversion looks for system-wide configuration values
         under the
         <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>
-        key.  For example, the <literal>compression</literal> option,
+        key.  For example, the <literal>global-ignores</literal> option,
         which is in the <literal>miscellany</literal> section of the
         <filename>config</filename> file, would be found at
-        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\compression</literal>.
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\global-ignores</literal>.
         Per-user configuration values should be stored under
         <literal>HKEY_CURRENT_USER\Software\Tigris.org\Subversion</literal>.
       </para>
@@ -203,6 +203,7 @@ REGEDIT4
 "#http-proxy-username"=""
 "#http-proxy-password"=""
 "#http-proxy-timeout"="0"
+"#http-compression"="yes"
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auth]
 "#store-password"="no"
@@ -212,7 +213,6 @@ REGEDIT4
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\miscellany]
 "#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
-"#compression"="yes"
 </programlisting>
       </example>
 
@@ -231,10 +231,11 @@ REGEDIT4
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.3">
-      <title>The Configuration Options</title>
+      <title>Configuration Options</title>
       
-      <para>In this section, we will discuss the currently supported
-        run-time configuration options.</para>
+      <para>In this section, we will discuss the specific
+        run-time configuration options which are currently supported
+        by Subversion.</para>
 
       <sect3 id="svn-ch-6-sect-1.3.1">
         <title>Servers</title>
@@ -244,9 +245,11 @@ REGEDIT4
           layers.  There are two special section names in this
           file&mdash;<literal>groups</literal> and
           <literal>default</literal>.  The <literal>groups</literal>
-          section is cross-reference table of sort.  The keys in this
-          section are the names of other sections in the file; their
-          values are globs which are compared against the hostnames of
+          section is essentially a cross-reference table.  The keys in
+          this section are the names of other sections in the file;
+          their values are <firstterm>globs</firstterm>&mdash;textual
+          tokens which possibly contain wildcard
+          characters&mdash;which are compared against the hostnames of
           the machine to which Subversion requests are sent.</para>
 
         <programlisting>
@@ -272,7 +275,7 @@ collabnet = svn.collab.net
         <para>The <literal>default</literal> section contains the
           settings which are meant for all of the servers not matched
           by one of the globs under the <literal>groups</literal>
-          section.  The available options under this section are
+          section.  The options available in this section are
           exactly the same as those valid for the other server
           sections in the file (except, of course, the special
           <literal>groups</literal> section), and are as
@@ -325,16 +328,28 @@ collabnet = svn.collab.net
             </listitem>
           </varlistentry>
           <varlistentry>
+            <term><literal>http-compression</literal></term>
+            <listitem>
+              <para>This specifies whether or not Subversion should
+                attempt to compress network requests made to DAV-ready
+                servers.  The default value is <literal>yes</literal>
+                (though compression will only occur if that capability
+                is compiled into the network layer).  Set this to
+                <literal>no</literal> to disable compression, such as
+                when debugging network transmissions.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
             <term><literal>neon-debug-mask</literal></term>
             <listitem>
               <para>This is an integer mask which the underlying HTTP
                 library, Neon, uses for choosing what type of
                 debugging output to yield.  The default value is
                 <literal>0</literal>, which will silence all debugging
-                output.</para>
+                output.  For more information about how Subversion
+                makes use of Neon, see <xref linkend="svn-ch-7" />.</para>
             </listitem>
           </varlistentry>
-          <!--
           <varlistentry>
             <term><literal>svn-tunnel-agent</literal></term>
             <listitem>
@@ -342,7 +357,6 @@ collabnet = svn.collab.net
                 which to tunnel SVN protocol requests.</para>
             </listitem>
           </varlistentry>
-          -->
         </variablelist>
 
       </sect3>
@@ -352,7 +366,7 @@ collabnet = svn.collab.net
         <para>The <filename>config</filename> file contains the rest
           of the currently available Subversion run-time options,
           those not related to networking.  There are only a few
-          options in use at this time, but they are again group into
+          options in use at this time, but they are again grouped into
           sections in expectation of future additions.</para>
 
         <para>The <literal>auth</literal> section contains settings
@@ -385,15 +399,19 @@ collabnet = svn.collab.net
             <term><literal>editor-cmd</literal></term>
             <listitem>
               <para>This specifies the program Subversion will use to
-                query the user for a commit log.  This program is also
-                used with the <command>svn propedit</command>
-                command&mdash;a temporary file is populated with the
-                current value of the property the user wishes to edit,
-                and the edits take places right in the editor program
-                (see <xref linkend="svn-ch-6-sect-2" />).  This
-                option's default value is empty.  If the option is not
-                set, Subversion will fall back to checking the
-                environment variables <literal>SVN_EDITOR</literal>,
+                query the user for a log message during a commit
+                operation, such as when using <command>svn
+                commit</command> without either the <option>--message
+                (-m)</option> or <option>--file (-F)</option> options.
+                This program is also used with the <command>svn
+                propedit</command> command&mdash;a temporary file is
+                populated with the current value of the property the
+                user wishes to edit, and the edits take places right
+                in the editor program (see <xref
+                linkend="svn-ch-6-sect-2" />).  This option's default
+                value is empty.  If the option is not set, Subversion
+                will fall back to checking the environment variables
+                <literal>SVN_EDITOR</literal>,
                 <literal>VISUAL</literal>, and
                 <literal>EDITOR</literal> (in that order) for an
                 editor command.</para>
@@ -461,22 +479,14 @@ collabnet = svn.collab.net
                 files and directories that Subversion should not
                 display unless they are versioned.  The default value
                 is <literal>*.o *.lo *.la #*# .*.rej *.rej .*~ *~
-                .#*</literal>.  You can override this option for a
-                single instance of the <command>svn status</command>
-                command by using the <option>--no-ignores</option>
-                command-line flag.</para>
-            </listitem>
-          </varlistentry>
-          <varlistentry>
-            <term><literal>compression</literal></term>
-            <listitem>
-              <para>This specifies whether or not Subversion should
-                attempt to compress network requests made to DAV-ready
-                servers.  The default value is 'yes' (though
-                compression will only occur if that capability is
-                compiled into the network layer).  Set this to 'no' to
-                disable compression, such as when debugging network
-                transmissions.</para>
+                .#*</literal>.</para>
+
+              <para>You can override this option for a single instance
+                of the <command>svn status</command> command by using
+                the <option>--no-ignore</option> command-line flag.
+                For information on more fine-grained control of
+                ignored items, see <xref linkend="svn-ch-6-sect-2.3.3"
+                />.</para>
             </listitem>
           </varlistentry>
         </variablelist>
@@ -493,9 +503,9 @@ collabnet = svn.collab.net
     <para>We've already covered in detail how Subversion stores and
       retrieves various versions of files and directories in its
       repository.  Whole chapters have been devoted to this most
-      foundational piece of functionality provided by the tool.  And
+      fundamental piece of functionality provided by the tool.  And
       if the versioning support stopped there, Subversion would still
-      be complete from version control perspective.  But it
+      be complete from a version control perspective.  But it
       doesn't stop there.</para>
 
     <para>In addition to versioning your directories and files,
@@ -669,14 +679,6 @@ $
         paths) and a property name, print the value of the property to
         the standard output stream.</para>
 
-      <para>You can add file or directory properties with the
-        <command>svn propset</command> command.  provides a To set or
-        get a property on a file or directory, use the <command>svn
-        propset</command> and <command>svn propget</command> commands.
-        To list all properties attached to an item, use <command>svn
-        proplist</command>.  To delete a property, use <command>svn
-        propdel</command>.</para>
-
       <screen>
 $ svn proplist calc/button.c
 Properties on 'calc/button.c':
@@ -751,27 +753,35 @@ $
         <title>Modifying Revision Properties</title>
 
         <para>Remember those unversioned revision properties?  You can
-          modify those with the <command>svn</command> program, too.
+          modify those, too, with the <command>svn</command> program.
           Simply add the <option>--revprop</option> command-line
           parameter, and specify the revision whose property you wish
           to modify.  Since revisions are global, you don't need to
           specify a path in this case as long as you are positioned in
           the working copy of the repository whose revision property
-          you wish to modify.</para>
+          you wish to modify.  For example, you might want to replace
+          the commit log message of an existing revision.
+          <footnote>
+            <para>Fixing spelling errors, grammatical gotchas, and
+              <quote>just-plain-wrongness</quote> in commit log
+              messages is perhaps the most common use-case for the
+              <option>--revprop</option> option.</para>
+          </footnote></para>
 
         <screen>
-$ svn pset status 'compiles, but does not work' -r11 --revprop
+$ svn propset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
 property `status' set on repository revision '11'
 $
 </screen>
 
         <para>Note that the ability to modify these unversioned
           properties must be explicitly added by the repository
-          administrator.  Since the properties aren't versioned, you
-          run the risk of losing information if you aren't careful
-          with your edits.  The repository administrator can setup
-          methods to protect against this lossage, but by default,
-          modification of unversioned properties is disabled.</para>
+          administrator (see <xref linkend="svn-ch-5-sect-2.1" />).
+          Since the properties aren't versioned, you run the risk of
+          losing information if you aren't careful with your edits.
+          The repository administrator can setup methods to protect
+          against this lossage, but by default, modification of
+          unversioned properties is disabled.</para>
 
       </sidebar>
 
@@ -804,11 +814,52 @@ $
         <filename>calc/button.c</filename>, but not modified its
         textual contents.  Had we changed both, we would have seen
         <literal>M</literal> in the first column, too (see <xref
-        linkend="svn-ch-3-sect-4.3.1" />).  As as with file contents,
-        if someone else makes property changes that clash with your
-        own, you will see a <literal>C</literal> in that second
-        column, denoting a conflicted state which will need to be
-        resolved before committing.</para>
+        linkend="svn-ch-3-sect-4.3.1" />).</para>
+
+      <sidebar>
+        <title>Property Conflicts</title>
+
+        <para>As with file contents, local property modifications can
+          conflict with changes committed by someone else.  If you
+          update your working copy directory and receive property
+          changes on a versioned resource that clash with your own,
+          Subversion will report that the resource is in a conflicted
+          state.</para>
+ 
+        <screen>
+% svn update calc
+M  calc/Makefile.in
+ C calc/button.c
+Updated to revision 143.
+$ 
+</screen>
+         
+        <para>Subversion will also create, in the same directory as
+          the conflicted resource, a file with a
+          <filename>.prej</filename> extension which contains the
+          details of the conflict.  You should examine the contents of
+          this file so you can decide how to resolve the conflict.
+          Until the conflict is resolved, you will see a
+          <literal>C</literal> in the second column of <command>svn
+          status</command> output for that resource, and attempts to
+          commit your local modifications will fail.</para>
+
+        <screen>
+$ svn status calc
+ C     calc/button.c
+?      calc/button.c.prej
+$ cat calc/button.c.prej 
+prop `linecount': user set to '1256', but update set to '1301'.
+$
+</screen>
+ 
+        <para>To resolve property conflicts, simply ensure that the
+          conflicting properties contain the values that they should,
+          and then use the <command>svn resolve</command> command to
+          alert Subversion that you have manually resolved the
+          problem.</para>
+
+      </sidebar>
 
       <para>You might also have noticed the non-standard way that
         Subversion currently displays property differences.  You can
@@ -818,8 +869,7 @@ $
         ignores any noise it can't understand.  This does
         unfortunately mean that to fully apply a patch generated by
         <command>svn diff</command>, any property modifications will
-        need to be applied by hand.  Improvements in this area will be
-        addressed in a future release of Subversion.</para>
+        need to be applied by hand.</para>
 
       <para>As you can see, the presence of property modifications has
         no outstanding effect on the typical Subversion workflow.
@@ -857,7 +907,7 @@ $
           no defined values&mdash;its mere presence indicates a desire
           the execute permission bit to be kept enabled by Subversion.
           Removing this property will restore full control of the
-          execute bit back to the operation system.</para>
+          execute bit back to the operating system.</para>
 
         <para>On many operating systems, the ability to execute a file
           as a command is governed by the presence of an execute
@@ -913,24 +963,23 @@ $
           the benefits that Subversion typically provides is
           contextual, line-based merging of changes received from the
           server during an update into your working file.  But for
-          files that are believe to contain binary data, there is no
-          concept of <quote>line</quote> of data.  So, for those
-          files, Subversion does not attempt to perform contextual
-          merges during updates.  Instead, any time you have locally
-          modified a binary working copy file that is also being
-          updated, your file is renamed with a
-          <filename>.orig</filename> extension, and then Subversion
-          stores a new working copy file that contains the changes
-          received during the update, but not your own local
-          modifications, at the original filename.  This behavior is
-          really for the protection of the user against failed
-          attempts at performing contextual merges on files that
-          simply cannot be contextually merged.</para>
+          files believed to contain binary data, there is no concept
+          of a <quote>line</quote>.  So, for those files, Subversion
+          does not attempt to perform contextual merges during
+          updates.  Instead, any time you have locally modified a
+          binary working copy file that is also being updated, your
+          file is renamed with a <filename>.orig</filename> extension,
+          and then Subversion stores a new working copy file that
+          contains the changes received during the update, but not
+          your own local modifications, at the original filename.
+          This behavior is really for the protection of the user
+          against failed attempts at performing contextual merges on
+          files that simply cannot be contextually merged.</para>
 
         <para>Subversion assists users by running a binary-detection
           algorithm in the <command>svn import</command> and
           <command>svn add</command> subcommands.  These subcommands
-          make a heuristical guess at a file's
+          use a heuristic to guess at a file's
           <quote>binary-ness</quote>, and then set the
           <literal>svn:mime-type</literal> property to
           <literal>application/octet-stream</literal> (the generic
@@ -1005,24 +1054,29 @@ $
         
           <para>The Subversion <literal>svn:ignore</literal> property
             is very similar in syntax and function to the CVS
-            <filename>.cvsignore</filename> file.  The two systems use
-            the ignore patterns at some different times, and there are
-            slight discrepencies in what the ignore patterns apply to.
-            Also, Subversion does not recognize the use of the
-            <literal>!</literal> pattern as a reset back to having no
-            ignore patterns at all.  But the most common uses of the
-            <filename>.cvsignore</filename> are quite functional in
-            Subversion.  In fact, if you are migrating a CVS working
-            copy to Subversion, you can directly migrate the ignore
-            patterns by the <filename>.cvsignore</filename> file as
-            input file to the <command>svn propset</command>
-            command:</para>
+            <filename>.cvsignore</filename> file.  In fact, if you are
+            migrating a CVS working copy to Subversion, you can
+            directly migrate the ignore patterns by the
+            <filename>.cvsignore</filename> file as input file to the
+            <command>svn propset</command> command:</para>
        
           <screen>
-$ svn pset svn:ignore -F .cvsignore .
+$ svn propset svn:ignore -F .cvsignore .
 property `svn:ignore' set on '.'
 $
 </screen>        
+
+          <para>There are, however, some differences in the ways that
+            CVS and Subversion handle ignore patters.  The two systems
+            use the ignore patterns at some different times, and there
+            are slight discrepencies in what the ignore patterns apply
+            to.  Also, Subversion does not recognize the use of the
+            <literal>!</literal> pattern as a reset back to having no
+            ignore patterns at all.  Finally, while the
+            <filename>.cvsignore</filename> patterns apply recursively
+            from the directory in which they reside, Subversion's
+            <literal>svn:ignore</literal> property applies only to the
+            directory on which it is set.</para>
 
         </sidebar>
 
@@ -1073,7 +1127,7 @@ $ svn status calc
           <literal>svn:ignore</literal> property:</para>
 
         <programlisting>
-calc
+calculator
 debug_log*
 </programlisting>
 
@@ -1104,220 +1158,417 @@ $ svn status
       <sect3 id="svn-ch-6-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
 
-        <para>Subversion has the ability to substitute useful strings
-          into special <firstterm>keywords</firstterm> within text
-          files.  For example, if I placed this text into a
-          file:</para>
+        <para>Subversion has the ability to substitute
+          <firstterm>keywords</firstterm>&mdash;pieces of useful,
+          dynamic information about a versioned file&mdash;into the
+          contents of the file itself.  Keywords generally describe
+          information about the last time the file was known to be
+          modified.  Because this information changes each time the
+          file changes, and more importantly, just
+          <emphasis>after</emphasis> the file changes, it is a hassle
+          for any process except the version control system to keep
+          the data completely up-to-date.  Left to human authors, the
+          information would inevitably grow stale.</para>
 
-        <screen>
+        <para>For example, say you have a document in which you would
+          like to display the last date on which it was modified.  You
+          could burden every author of that document to, just before
+          committing their changes, also tweak the part of the
+          document that describes when it was last changed.  But
+          sooner or later, someone would forget to do that.  Instead
+          simply ask Subversion to perform keyword substitution on the
+          <literal>LastChangedDate</literal> keyword.  You control
+          where the keyword is inserted into your document by placing
+          a <firstterm>keyword anchor</firstterm> at the desired
+          location in the file.  This anchor is just a string of text
+          formatted as
+          <literal>$</literal><replaceable>KeywordName</replaceable><literal>$</literal></para>
+
+        <para>Subversion defines the list of keywords available for
+          substitution.  That list contains the following five
+          keywords, some of which have shorter aliases that you can
+          also use:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>LastChangedDate</literal></term>
+            <listitem>
+              <para>This keyword describes the last time the file was
+                known to have been changed in the repository, and
+                looks something like <literal>$LastChangedDate:
+                2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002)
+                $</literal>.  It may be abbreviated as
+                <literal>Date</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>LastChangedRevision</literal></term>
+            <listitem>
+              <para>This keyword describes the last known revision in
+                which this file changed in the repository, and looks
+                something like <literal>$LastChangedRevision: 144
+                $</literal>.  It may be abbreviated as
+                <literal>Rev</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>LastChangedBy</literal></term>
+            <listitem>
+              <para>This keyword describes the last known user to
+                change this file in the repository, and looks
+                something like <literal>$LastChangedBy: harry
+                $</literal>.  It may be abbreviated as
+                <literal>Author</literal></para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>HeadURL</literal></term>
+            <listitem>
+              <para>This keyword describes the full URL to the latest
+                version of the file in the repository, and looks
+                something like <literal>$HeadURL:
+                http://svn.collab.net/repos/trunk/README $</literal>.
+                It may be abbreviated as
+                <literal>URL</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>Id</literal></term>
+            <listitem>
+              <para>This keyword is compressed combination of the
+                other keywords.  Its substitution looks something like
+                <literal>$Id: calc.c 148 2002-07-28 21:30:43Z sally
+                $</literal>, and is interpreted to mean that the file
+                <filename>calc.c</filename> was last changed in revision
+                148 on the evening of July 28, 2002 by the user
+                <literal>sally</literal>.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+
+        <para>Simply adding keyword anchor text to your file does
+          nothing special.  Subversion will never attempt to perform
+          textual substitutions on your file contents unless
+          explicitly asked to do so.  After all, you might be writing
+          a document
+          <footnote>
+            <para>&hellip; or maybe even a section of a book &hellip;</para>
+          </footnote> 
+          about how to use keywords, and you don't want Subversion to
+          substitute your beautiful examples of un-substited keyword
+          anchors!</para>
+
+        <para>To tell Subversion whether or not to substitute keywords
+          on a particular file, we again turn to the property-related
+          subcommands.  The <literal>svn:keywords</literal> property,
+          when set on a versioned file, controls which keywords will
+          be substituted on that file.  The value is a space-delimited
+          list of the keyword names or aliases found in the previous
+          table.</para>
+
+        <para>For example, say you have a versioned file named
+          <filename>weather.txt</filename> that looks like
+          this:</para>
+
+        <programlisting>
 Here is the latest report from the front lines.
 $LastChangedDate$
+$Rev$
 Cumulus clouds are appearing more frequently as summer approaches.
-        </screen>
+</programlisting>
         
-        <para>Subversion is able substitute the
-          <literal>$LastChangedDate$</literal> string with the actual
-          date in which this file last changed.  The keyword string is
-          not removed in the replacement, just the specific
-          information is placed after the keyword string:</para>
+        <para>With no <literal>svn:keywords</literal> property set on
+          that file, Subversion will do nothing special.  Now, let's
+          enable substitution of the
+          <literal>LastChangedDate</literal> keyword.</para>
+
+        <screen>
+$ svn propset svn:keywords "LastChangedDate Author" weather.txt
+property `svn:keywords' set on 'weather.txt'
+$
+</screen>        
+
+        <para>Now you have made a local property modification on the
+          <filename>weather.txt</filename> file.  You will see no
+          changes to the file's contents (unless you made some of your
+          own prior to setting the property).  Notice that the file
+          contained a keyword anchor for the <literal>Rev</literal>
+          keyword, yet we did not include that keyword in the property
+          value we set.  Subversion will happily ignore requests to
+          substitute keywords that are not present in the file, and
+          will not substitute keywords that are not present in the
+          <literal>svn:keywords</literal> property value.</para>
+
+        <sidebar>
+          <title>Keywords and Spurious Differences</title>
+
+          <para>The user-visible result of keyword substitution might
+            lead you to think that every version of a file with that
+            feature in use differs from the previous version in at
+            least the area where the keyword anchor was placed.
+            However, this is actually not the case.  While checking
+            for local modifications during <command>svn
+            diff</command>, and before transmitting those local
+            modifications during <command>svn commit</command>,
+            Subversion <quote>un-substitutes</quote> any keywords that
+            it previously substituted.  The result is that the
+            versions of the file that are stored in the repository
+            contain only the real modifications that users make to the
+            file.</para>
+
+        </sidebar>
+
+        <para>Immediately after you commit this property change,
+          Subversion will update your working file with the new
+          substitute text.  Instead of seeing your keyword anchor
+          <literal>$LastChangedDate$</literal>, you'll see its
+          substituted result.  That result also contains the name of
+          the keyword, and continues to be bounded by the dollar sign
+          (<literal>$</literal>) characters.  And as we predicted, the
+          <literal>Rev</literal> keyword was not substituted because
+          we didn't ask for it to be.</para>
 
         <screen>
 Here is the latest report from the front lines.
 $LastChangedDate: 2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002) $
+$Rev$
 Cumulus clouds are appearing more frequently as summer approaches.
-        </screen>
-
-        <variablelist>
-          <title>Subversion substitutes five keywords</title>
-
-          <varlistentry>
-            <term>LastChangedDate</term>
-            <listitem>
-              <para>The last time this file changed.  Can also be
-                abbreviated as <literal>Date</literal>.  The keyword
-                substitution of <literal>$LastChangedDate$</literal>
-                will look something like <literal>$LastChangedDate:
-                2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002)
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>LastChangedRevision</term>
-            <listitem>
-              <para>The last revision in which this file changed.  Can
-                be abbreviated as <literal>Rev</literal>.  The keyword
-                substitution of
-                <literal>$LastChangedRevision</literal> will look
-                something like <literal>$LastChangedRevision: 144
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>LastChangedBy</term>
-            <listitem>
-              <para>The last user to change this file.  Can be
-                abbreviated as <literal>Author</literal>.  The keyword
-                substitution of <literal>$LastChangedBy$</literal>
-                will look something like <literal>$LastChangedBy: joe
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>HeadURL</term>
-            <listitem>
-              <para>A full URL to the latest version of the file in
-                the repository.  Can be abbreviated as
-                <literal>URL</literal>.  The keyword substitution of
-                <literal>$HeadURL$</literal> will look something like
-                <literal>$HeadURL:
-                http://svn.collab.net/repos/trunk/README
-                $</literal>.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
-            <term>Id</term>
-            <listitem>
-              <para>A compressed summary of the other keywords, for
-                example: <literal>$Id: bar 148 2002-07-28 21:30:43 epg
-                $</literal>.  This means the file
-                <literal>bar</literal> was last changed in revision
-                148 by committer <literal>epg</literal>, at 2002-07-28
-                21:30:43.</para>
-            </listitem>
-          </varlistentry>
-
-        </variablelist>
+</screen>
         
-        <para>To activate a keyword, or set of keywords, you merely
-          need to set the <literal>svn:keywords</literal> property to
-          a list of keywords you want replaced.  Keywords not listed
-          in <literal>svn:keywords</literal> will not be
-          replaced.</para>
-
-        <screen>
-$ svn propset svn:keywords "Date Author" foo.c
-property `svn:keywords' set on 'foo.c'
-        </screen>
-        
-        <para>And when you commit this property change, you'll
-          discover that all occurrences of <literal>$Date$</literal>,
-          <literal>$LastChangedDate$</literal>,
-          <literal>$Author$</literal>, and
-          <literal>$LastChangedBy$</literal> will have substituted
-          values within <filename>foo.c</filename>.</para>
+        <para>If someone else now commits a change to
+          <filename>weather.txt</filename>, your copy of that file
+          will continue to display the same substituted keyword value
+          as before&mdash;until you update your working copy.  At that
+          time the keywords in your <filename>weather.txt</filename>
+          file will be re-substituted again with information that
+          reflects the most recent known commit to that file.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.5">
         <title><literal>svn:eol-style</literal></title>
 
-        <para>By default, Subversion doesn't pay any attention to line
-          endings.  If a text file has either LF, CR, or CRLF endings,
-          then those are the line endings that will exist on the file
-          in both the repository and working copy.</para>
+        <para>Unless otherwise noted using a versioned file's
+          <literal>svn:mime-type</literal> property, Subversion
+          assumes that file contains human-readable data.  Generally
+          speaking, Subversion only uses this knowledge to determine
+          if contextual differences reports for that file are
+          possible.  Otherwise, to Subversion, bytes are bytes.</para>
         
-        <para>But if developers are working on different platforms,
-          line endings can sometimes become troublesome.  For example,
-          if a Win32 developer and Unix developer took turns modifying
-          a file, its line endings might flip-flop back and forth from
-          revision to revision in the repository.  This makes
-          examining or merging differences very difficult, as
-          <emphasis>every</emphasis> line appears to be changed in
-          each version of the file.</para>
+        <para>This means that by default, Subversion doesn't pay any
+          attention to the type of <firstterm>end-of-line (EOL)
+          markers</firstterm> used in your files.  Unfortunately,
+          different operating system use different tokens to represent
+          the end of a line of text in a file.  For example, the usual
+          line ending token used by software on the Windows platform
+          is a pair of ASCII control characters&mdash;carriage return
+          (<literal>CR</literal>) and line feed
+          (<literal>LF</literal>).  Unix software, however, just uses
+          the <literal>LF</literal> character to denote the end of a
+          line.</para>
 
-        <para>The solution here is to set the
-          <literal>svn:eol-style</literal> property to ``native''.
-          This makes the file always appear with the
-          <quote>native</quote> line endings of each developer's
-          operating system.  Note, however, that the file will always
-          contain LF endings in the repository.  This prevents the
-          line-ending <quote>churn</quote> from revision to
-          revision.</para>
+        <para>Not all of the various tools on these operating systems
+          are prepared to understand files that contain line endings
+          in a format that differs from the <firstterm>native line
+          ending style</firstterm> of the operating system on which
+          they are running.  Common results are that Unix programs
+          treat the <literal>CR</literal> character present in Windows
+          files as a regular character (usually rendered as
+          <literal>^M</literal>), and that Windows programs combine
+          all of the lines of a Unix file into one giant line because
+          no carriage return-linefeed (or <literal>CRLF</literal>)
+          character combination was found to denote the end of
+          line.</para>
 
-        <para>Alternately, you can force files to always retain a
-          fixed, specific line ending: set a file's
-          <literal>svn:eol-style</literal> property to one of
-          <literal>LF</literal>, <literal>CR</literal> or
-          <literal>CRLF</literal>.  A Win32 <filename>.dsp</filename>
-          file, for example, which is used by Microsoft development
-          tools, should always have CRLF endings.</para>
+        <para>This sensitivity to foreign EOL markers can become
+          frustrating for folks who share a file across different
+          operating systems.  For example, consider a source code
+          file, and developers that edit this file on both Windows and
+          Unix systems.  If all the developers always use tools which
+          preserve the line ending style of the file, no problems
+          occur.</para>
 
+        <para>But in practice, many common tools either fail to
+          properly read a file with foreign EOL markers, or they
+          convert the file's line endings to the native style when the
+          file is saved.  If the former is true for a developer, he
+          has to use an external conversion utility (such as
+          <command>dos2unix</command> or its companion,
+          <command>unix2dos</command>) to prepare the file for
+          editing.  The latter case requires no extra preparation.
+          But both cases result in a file that differs from the
+          original quite literally on every line!  Prior to committing
+          his changes, the user has two choices.  Either he can use a
+          conversion utility to restore the modified file to the same
+          line ending style that it was in before his edits were made.
+          Or, he can simply commit the file&mdash;new EOL markers and
+          all.</para>
+
+        <para>The result of scenarios like these include wasted time
+          and unnecessary modifications to committed files.  Wasted
+          time is painful enough.  But when commits change every line
+          in a file, this complicates the job of determining which of
+          those lines were changed in a non-trivial way.  Where was
+          that bug really fixed?  On what line was a syntax error
+          introduced?</para>
+
+        <para>The solution this problem is the
+          <literal>svn:eol-style</literal> property.  When this
+          property is set to a valid value, Subversion uses it to
+          determine what special processing to perform on the file so
+          that the file's line ending style isn't flip-flopping with
+          every commit that comes from a different operating
+          system.  The valid values are:</para>
+
+        <variablelist>
+          <varlistentry>
+            <term><literal>native</literal></term>
+            <listitem>
+              <para>This causes the file to contain the EOL markers
+                that are native to the operating system on which
+                Subversion was run.  In other words, if a user on a
+                Windows machine checks out a working copy that
+                contains a file with a
+                <literal>svn:eol-style</literal> property set to
+                <literal>native</literal>, that file will contain
+                <literal>CRLF</literal> EOL markers.  A unix user
+                checking out a working copy which contains the same
+                file will see <literal>LF</literal> EOL markers in his
+                copy of the file.</para>
+
+              <para>Note that Subversion will actually store the file
+                in the repository using normalized
+                <literal>LF</literal> EOL markers regardless of the
+                operating system.  This is basically transparent to
+                the user, though.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>CRLF</literal></term>
+            <listitem>
+              <para>This causes the file to contain
+                <literal>CRLF</literal> sequences for EOL markers,
+                regardless of the operating system in use.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>LF</literal></term>
+            <listitem>
+              <para>This causes the file to contain
+                <literal>LF</literal> characters for EOL markers.
+                regardless of the operating system in use.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>CR</literal></term>
+            <listitem>
+              <para>This causes the file to contain
+                <literal>CR</literal> characters for EOL markers,
+                regardless of the operating system in use.  This line
+                ending style is not very common.  It was used on older
+                Macintosh platforms (on which Subversion doesn't even
+                run).</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+        
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.6">
         <title><literal>svn:externals</literal></title>
 
-        <para>See <xref linkend="svn-ch-6-sect-3"/>.</para>
+        <para>The <literal>svn:externals</literal> property contains
+          instructions for Subversion to populate a versioned
+          directory with one or more other checked-out Subversion
+          working copies.  For more information on this keyword and
+          its use, see <xref linkend="svn-ch-6-sect-3"/>.</para>
 
       </sect3>
     </sect2>
   </sect1>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 3:  MODULES                                         *** -->
+  <!-- *** SECTION 3:  EXTERNALS DEFINITIONS                           *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-6-sect-3">
-    <title>Modules</title>
+    <title>Externals Definitions</title>
     
-    <para>Sometimes it's useful to construct a working copy that is
+    <para>Sometimes it is useful to construct a working copy that is
       made out of a number of different checkouts.  For example, you
-      may want different sub-directories to come from different
-      locations in a repository.</para>
+      may want different subdirectories to come from different
+      locations in a repository, or perhaps from different
+      repositories altogether.  You could certainly setup such a
+      scenario by hand&mdash;using <command>svn checkout</command> to
+      create the sort of nested working copy structure you are trying
+      to achieve.  But if this layout is important for everyone who
+      uses your repository, every other user will need to perform the
+      same checkout operations that you did.</para>
 
-    <para>On the one hand, you could begin by checking out a working
-      copy, and then run <command>svn switch</command> on various
-      subdirectories.  But this is a bit of work.  Wouldn't it be nice
-      to define&mdash;in a single place&mdash;exactly how you want the
-      final working copy to be?</para>
-
-    <para>This is known as a <firstterm>module</firstterm>.  You can
-      define a module by attaching another special
-      <quote>magic</quote> <literal>svn:</literal> property to a
-      directory: the <literal>svn:externals</literal> property.</para>
-
-    <para>The value of this property is a list of subdirectories and
-      their corresponding URLs:</para>
-
-    <screen>
-$ svn propget svn:externals projectdir
-subdir1/foo       http://url.for.external.source/foo
-subdir1/bar       http://blah.blah.blah/repositories/theirproj
-subdir1/bar/baz   http://blorg.blorg.blorg/basement/code
-    </screen>
-
-    <para>Assuming that this property is attached to the directory
-      <filename>projectdir</filename>, then when we check it out,
-      we'll get everything else defined by the property.</para>
+    <para>Fortunately, Subversion provides support for
+      <firstterm>externals definitions</firstterm>.  An externals
+      definition is a mapping of a local directory to the URL of a
+      versioned resource.  In Subversion, you declare externals
+      definitions in groups using the <literal>svn:externals</literal>
+      property.  This property is set on a versioned directory, and
+      its value is a multi-line table of subdirectories (relative to
+      the versioned directory on which the property is set) and
+      Subversion repository URLs.</para>
 
     <screen>
-$ svn checkout http://foo.com/repos/projectdir
-A  projectdir/blah.c
-A  projectdir/gloo.c
-A  projectdir/trout.h
-Checked out revision 128.
+$ svn propget svn:externals calc
+third-party/sounds          http://sounds.red-bean.com/repos
+third-party/skins           http://skins.red-bean.com/repositories/skinproj
+third-party/skins/toolkit   http://svn.red-bean.com/repos/skin-maker
+</screen>
 
-Fetching external item into projectdir/subdir1/foo
-A  projectdir/subdir1/foo/rho.txt
-A  projectdir/subdir1/foo/pi.txt
-A  projectdir/subdir1/foo/tau.doc
-Checked out revision 128.
+    <para>The convenience of the <literal>svn:externals</literal>
+      property is that once it is set on a versioned directory,
+      everyone who checks out a working copy with that directory also
+      gets the benefit of the externals definition.  In other words,
+      once one person has made the effort to define those nested
+      working copy checkouts, no one else has to
+      bother&mdash;Subversion will, upon checkout of the original
+      working copy, also checkout the external working copies.</para>
+
+    <para>Note the previous externals definition example.  When
+      someone checks out a working copy of the
+      <filename>calc</filename> directory, Subversion also continues
+      to checkout the items found in its externals definition.</para>
+
+    <screen>
+$ svn checkout http://svn.example.com/repos/calc
+A  calc
+A  calc/Makefile
+A  calc/integer.c
+A  calc/button.c
+Checked out revision 148.
+
+Fetching external item into calc/third-party/sounds
+A  calc/third-party/sounds/ding.ogg
+A  calc/third-party/sounds/dong.ogg
+A  calc/third-party/sounds/clang.ogg
 &hellip;
-    </screen>
+A  calc/third-party/sounds/bang.ogg
+A  calc/third-party/sounds/twang.ogg
+Checked out revision 14.
 
-    <para>By tweaking the value of the
-      <literal>svn:externals</literal> property, the definition of the
-      module can change over time, and subsequent calls to
-      <command>svn update</command> will update working copies
-      appropriately.</para>
+Fetching external item into calc/third-party/skins
+&hellip;
+</screen>
 
-    <!-- ###TODO Anything else to add here?  I'm suspicious that this
-    feature doesn't work as I expect just yet; when I run 'svn up' at the
-    top of the wc, nothing happens in the external directory at all,
-    because (I guess) it's not linked to the parent. -Ben -->
+    <para>If you need to change the externals definition, you can do
+      so using the regular property modification subcommands.  When
+      you commit a change to the <literal>svn:externals</literal>
+      property, Subversion will syncronize the checked-out items
+      against the changed externals definition when you next run
+      <command>svn update</command>.  The same thing will happen when
+      others update their working copies and receive your changes to
+      the externals definition.</para>
+
+    <!-- ### TECH-CHECK: Does this stuff really work?  Ben had a
+         comment here that was more than a little doubtful.  We *do*
+         have externals tests in place.  Perhaps Ben's update did nothing
+         because his directory was already up-to-date?  -->
     
   </sect1>
 
@@ -1327,300 +1578,320 @@ Checked out revision 128.
   <sect1 id="svn-ch-6-sect-4">
     <title>Vendor branches</title>
 
-    <para>Sometimes you want to manage modified third-party source
-      code inside your Subversion repository, while still tracking
-      upstream releases.  In CVS this would have been called a
-      <quote>vendor branch</quote>.  Subversion doesn't have a formal
-      <quote>vendor branch</quote>, but it is sufficiently flexible
-      that you can still do much the same thing.</para>
+    <para>As is especially the case when developing software, the data
+      that you maintain under version control is often closely related
+      to, or perhaps dependent upon, someone else's data.  Generally,
+      the needs of your project will dictate that you stay as
+      up-to-date as possible with the data provided by that external
+      entity without sacrificing the stability of your own project.
+      This scenario plays itself out all the time&mdash;anywhere that
+      the information generated by one group of people has a direct
+      effect on that which is generated by another group.</para>
+ 
+    <para>For example, software developers might be working on an
+      application which makes use of a third-party library.
+      Subversion has just such a relationship with the Apache Portable
+      Runtime library (see <xref linkend="svn-ch-7-sect-2.1" />).  The
+      Subversion source code depends on the APR library for all its
+      portability needs.  In earlier stages of Subversion's
+      development, the project closely tracked APR's changing API,
+      always sticking to the <quote>bleeding edge</quote> of the
+      library's code churn.  Now that both APR and Subversion have
+      matured, Subversion attempts to syncronize with APR's library
+      API only at well-tested, stable release points.</para>
+
+    <para>Now, if your project depends on someone else's information,
+      there are several ways that you could attempt to syncronize that
+      information with your own.  Most painfully, you could issue oral
+      or written instructions to all the contributors of your project,
+      telling them to make sure that they have the specific versions
+      of that third-party information that your project needs.  If the
+      third-party information is maintained in a Subversion
+      repository, you could also use Subversion's externals
+      definitions to effectively <quote>pin down</quote> specific
+      versions of that information to some location in your own
+      working copy directory (see <xref linkend="svn-ch-6-sect-3" />).</para>
+
+    <para>But sometimes you want to maintain custom modifications to
+      third-party data in your own version control system.  Returning
+      to the software development example, programmers might need to
+      make modifications to that third-party library for their own
+      purposes.  These modifications might include new functionality
+      or bug fixes, maintained internally only until they become part
+      of an official release of the third-party library.  Or the
+      changes might never be relayed back to the library maintainers,
+      existing solely as custom tweaks to make the library further
+      suit the needs of the software developers.</para>
+
+    <para>Now you face an interesting situation.  Your project could
+      house its custom modifications to the third-party data in some
+      disjointed fashion, such as using patch files or full-fledged
+      alternate versions of files and directories.  But these quickly
+      become maintenance headaches, requiring some mechanism by which
+      to apply your custom changes to the third-party data, and
+      necessitating regeneration of those changes with each successive
+      version of the third-party data that you track.</para>
+
+    <para>The solution to this problem is to use <firstterm>vendor
+      branches</firstterm>.  A vendor branch is a directory tree in
+      your own version control system which contains information
+      provided by a third-party entity, or vendor.  Each version of
+      the vendor's data that you decide to absorb into your project is
+      called a <firstterm>vendor drop</firstterm>.</para> 
+
+    <para>Vendor branches provide two key benefits.  First, by storing
+      the currently supported vendor drop in your own version control
+      system, the members of your project never need to question
+      whether they have the right version of the vendor's data.  They
+      simply receive that correct version as part of their regular
+      working copy updates.  Secondly, because the data lives in your
+      own Subversion repository, you can store your custom changes to
+      it in-place&mdash;you have no more need of an automated (or
+      worse, manual) method for swapping in your customizations.</para>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-6-sect-4.1">
+      <title>General Vendor Branch Management Procedure</title>
+
+      <para>Managing vendor branches generally works like this.  You
+        create a top-level directory (such as
+        <filename>/vendor</filename>) to hold the vendor branches.
+        Then you import the third party code into a subdirectory of
+        that top-level directory.  You then copy that subdirectory
+        into your main development branch (for example,
+        <filename>/trunk</filename>) at the appropriate location.  You
+        always make your local changes in the main development branch.
+        With each new release of the code you are tracking you bring
+        it into the vendor branch and merge the changes into
+        <filename>/trunk</filename>, resolving whatever conflicts
+        occur between your local changes and the upstream
+        changes.</para>
+
+      <para>Perhaps an example will help to clarify this algorithm.
+        We'll use a scenario where your development team is creating a
+        calculator program that links against a third-party complex
+        number arithmetic library, libcomplex.  We'll begin with the
+        initial creation of the vendor branch, and the import of the
+        first vendor drop.</para>
+
+      <screen>
+$ svn mkdir http://svn.example.com/repos/calc/vendor/libcomplex  \
+            -m 'creating vendor branch area'
+
+&hellip;
+$ svn import http://svn.example.com/repos/calc/vendor/libcomplex \
+             /path/to/libcomplex-1.0                             \
+             current                                             \
+             -m 'importing initial 1.0 vendor drop'
+&hellip;
+</screen>
     
-    <para>The general procedure goes like this.  You create a top
-      level directory (we'll use <filename>/vendor</filename>) to hold
-      the vendor branches.  Then you import the third party code into
-      a subdirectory of <filename>/vendor</filename>, and copy it into
-      <filename>/trunk</filename> where you make your local changes.
-      With each new release of the code you are tracking you bring it
-      into the vendor branch and merge the changes into
-      <filename>/trunk</filename>, resolving whatever conflicts occur
-      between your local changes and the upstream changes.</para>
-
-    <para>Let's try and make this a bit clearer with an
-      example.</para>
-
-    <para>First, the initial import.</para>
+      <para>We now have the current version of the libcomplex source
+        code in <filename>/vendor/libcomplex/current</filename>.  Now,
+        we tag that version (see <xref linkend="svn-ch-4-sect-6" />)
+        and then copy it into the main development branch so we can
+        make our customizations to it.</para>
     
-    <screen>
-      $ svn mkdir http://svnhost/repos/vendor/foobar
-      $ svn import http://svnhost/repos/vendor/foobar ~/foobar-1.0 current
-    </screen>
-    
-    <para>Now we've got the current version of the foobar project in
-      <filename>/vendor/foobar/current</filename>.  We make another
-      copy of it so we can always refer to that version, and then copy
-      it into the trunk so you can work on it.</para>
-    
-    <screen>
-      $ svn copy http://svnhost/repos/vendor/foobar/current    \
-                 http://svnhost/repos/vendor/foobar/foobar-1.0 \
-                 -m `tagging foobar-1.0'
-      $ svn copy http://svnhost/repos/vendor/foobar/foobar-1.0 \
-                 http://svnhost/repos/trunk/foobar             \
-                 -m `bringing foobar-1.0 into trunk'
-    </screen>
+      <screen>
+$ svn copy http://svn.example.com/repos/calc/vendor/libcomplex/current  \
+           http://svn.example.com/repos/calc/vendor/libcomplex/1.0      \
+           -m 'tagging libcomplex-1.0'
+&hellip;
+$ svn copy http://svn.example.com/repos/vendor/libcomplex/1.0  \
+           http://svn.example.com/repos/calc/libcomplex        \
+           -m 'bringing libcomplex-1.0 into the main branch'
+&hellip;
+</screen>
 
-    <para>Now you just check out a copy of
-    <filename>/trunk/foobar</filename> and get to work!</para>
+      <para>We check out our project's main branch&mdash;which now
+        includes a copy of the first vendor drop&mdash;and we get to
+        work customizing the libcomplex code.  Before we know it, our
+        modified version of libcomplex is now completely integrated
+        into our calculator program.
+        <footnote>
+          <para>And entirely bug-free, of course!</para>
+        </footnote>
+      </para>
 
-    <para>Later on, the developers at FooBar Widgets, Inc release a
-      new version of their code, so you want to update the version of
-      the code you're using.  First, you check out the
-      <filename>/vendor/foobar/current</filename> directory, then copy
-      the new release over that working copy, handle any renames,
-      additions or removals manually, and then commit.</para>
+      <para>A few weeks later, the developers of libcomplex release a
+        new version of their library&mdash;version 1.1&mdash;which
+        contains some features and functionality that we really want.
+        But we'd like to upgrade to this new version without losing
+        our customizations to the existing version.  As you might have
+        guessed, what we essentially would like to do is to replace
+        our current baseline version of libcomplex 1.0 with a copy of
+        libcomplex 1.1, and then re-apply the custom modifications we
+        previously made to that library to the new version.</para>
+      
+      <para>To perform this upgrade, we checkout a copy of our vendor
+        branch, and replace the <literal>current</literal> version
+        with the new libcomplex 1.1 source code.  After committing
+        this change, our <literal>current</literal> branch now
+        contains the new vendor drop.  We tag the new version, and
+        then merge the differences between the tag of the previous
+        version and the new current version into our main development
+        branch.</para>
 
-    <screen>
-      $ svn checkout http://svnhost/repos/vendor/foobar/current ~/current
-      $ cd ~/foobar-1.1
-      $ tar -cf - . | (cd ~/current ; tar -xf -)
-      $ cd ~/current
-      $ mv foobar.c main.c
-      $ svn move main.c foobar.c
-      $ svn delete dead.c
-      $ svn add doc
-      $ svn add doc/*
-      $ svn commit -m `importing foobar 1.1 on vendor branch'
-    </screen>
+      <screen>
+$ cd working-copies/calc
+$ svn merge http://svn.example.com/repos/vendor/libcomplex/1.0      \
+            http://svn.example.com/repos/vendor/libcomplex/current  \
+            http://svn.example.com/repos/calc/libcomplex
+&hellip; # resolve all the conflicts between their changes and our changes
+$ svn commit -m 'merging libcomplex-1.1 into the main branch'
+&hellip;
+</screen>
 
-    <para>Whoa, that was complicated. Don't worry, most cases are far
-      simpler. </para>
+      <para>In the trivial use-case, the new version of our
+        third-party tool would look, from a files-and-directories
+        point of view, just like the previous version.  In other
+        words, none of the libcomplex source files would have been
+        deleted, renamed or moved to different locations&mdash;in
+        short, in a perfect world, our modifications would apply
+        cleanly to the new version of the library, with absolutely no
+        complications or conflicts.</para>
 
-    <para>What happened? foobar 1.0 had a file called
-      <filename>main.c</filename>.  This file was renamed to
-      <filename>foobar.c</filename> in 1.1.  So your working-copy had
-      the old <filename>main.c</filename> which Subversion knew about, 
-      and the new <filename>foobar.c</filename> which Subversion did 
-      not know about.  You rename <filename>foobar.c</filename> to 
-      <filename>main.c</filename> and <command>svn mv</command> it 
-      back to the new name.  This way, Subversion will know that 
-      <filename>foobar.c</filename> is a descendant of 
-      <filename>main.c</filename>.  <filename>dead.c</filename> has 
-      been removed in 1.1, and they have finally written some 
-      documentation, so you add that.</para>
+     <para>But things aren't always that simple, and in fact it is
+       quite common for source files to get moved around between
+       releases of software.  This complicates the process of ensuring
+       that our modifications are still valid for the new version of
+       code, and can quickly degrade into a situation where we have to
+       manually recreate our customizations in the new version.  Once
+       Subversion knows about the history of a given source
+       file&mdash;including all its previous locations&mdash;the
+       process of merging in the new version of the library is pretty
+       simple.  But we are responsible for telling Subversion how the
+       source file layout changed from vendor drop to vendor
+       drop.</para>
 
-    <para>Next you copy <filename>/vendor/foobar/current</filename> to
-      <filename>/vendor/foobar/foobar-1.1</filename> so you can always
-      refer back to version 1.1, like this.</para>
+    </sect2>
 
-    <screen>
-      $ svn copy http://svnhost/repos/vendor/foobar/current    \
-                 http://svnhost/repos/vendor/foobar/foobar-1.1 \
-                 -m `tagging foobar-1.1'
-    </screen>
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-6-sect-4.2">
+      <title><command>svn-load-dirs.pl</command></title>
 
-    <para>Now that you have a pristine copy of foobar 1.1 in
-      <filename>/vendor</filename>, you just have to merge their
-      changes into <filename>/trunk</filename> and you're done.  That
-      looks like this.</para>
+      <para>Vendor drops that contain more than a few deletes,
+        additions and moves complicate the process of upgrading to
+        each successive version of the third-party data.  So
+        Subversion supplies the <command>svn_load_dirs.pl</command>
+        script to assist with this process.  This script automates the
+        importing steps we mentioned in the general vendor branch
+        management procedure to make sure that mistakes are minimized.
+        You will still be responsible for using the merge commands to
+        merge the new versions of the third-party data into your main
+        development branch, but <command>svn_load_dirs.pl</command>
+        can help you more quickly and easily arrive at that
+        stage.</para>
 
-    <screen>
-      $ svn checkout http://svnhost/repos/trunk/foobar ~/foobar
-      $ cd ~/foobar
-      $ svn merge http://svnhost/repos/vendor/foobar/foobar-1.0 \
-                  http://svnhost/repos/vendor/foobar/foobar-1.1
-      $
-      &hellip; # resolve all the conflicts between their changes and your changes
-      $ svn commit -m `merging foobar 1.1 into trunk'
-    </screen>
-    
-    <para>There, you're done.  You now have a copy of foobar 1.1 with
-      all your local changes merged into it in your tree.</para>
+      <para>In short, <command>svn_load_dirs.pl</command> is an
+        enhancement to <command>svn import</command> that has several
+        important characteristics:</para>
 
-    <para>Vendor branches that have more than several deletes,
-      additions and moves can use the
-      <command>svn_load_dirs.pl</command> script that comes with the
-      Subversion distribution.  This script automates the above
-      importing steps to make sure that mistakes are minimized.  You
-      still need to use the merge commands to merge the new versions
-      of foobar into your own local copy containing your local
-      modifications.</para>
+      <itemizedlist>
+        <listitem>
+          <para>It can be run at any point in time to bring an existing
+            directory in the repository to exactly match an external
+            directory, performing all the necessary adds and deletes,
+            and optionally performing moves, too.</para>
+        </listitem>
+        <listitem>
+          <para>It takes care of complicated series of operations between
+            which Subversion requires a intermediate commit&mdash;such
+            as before renaming a file or directory twice.</para>
+        </listitem>
+        <listitem>
+          <para>It will optionally tag the newly imported directory.</para>
+        </listitem>
+        <listitem>
+          <para>It will optionally add arbitrary properties to files and
+            directories that match a regular expression.</para>
+        </listitem>
+      </itemizedlist>
 
-    <para>This script has the following enhancements over <command>svn
-    import</command>:</para>
+      <para><command>svn_load_dirs.pl</command> takes three mandatory
+        arguments.  The first argument is the URL to the base
+        Subversion directory to work in.  This argument is followed by
+        the URL&mdash;relative the first argument&mdash;into which the
+        current vendor drop will be imported.  Finally, the third
+        argument is the local directory to import.  Using our previous
+        example, a typical run of <command>svn_load_dirs.pl</command>
+        might look like:</para>
 
-    <itemizedlist>
-      <listitem>
-        <para>Can be run at any point in time to bring an existing
-          directory in the repository to exactly match an external
-          directory.  This script runs all the <command>svn
-          add</command>, <command>svn rm</command> and optionally any
-          <command>svn mv</command> commands as necessary.</para>
-      </listitem>
+      <screen>
+$ svn_load_dirs.pl http://svn.example.com/repos/calc/vendor/libcomplex \
+                   current                                             \
+                   /path/to/libcomplex-1.1
+&hellip;
+</screen>
 
-      <listitem>
-        <para>Optionally tag the newly imported directory.</para>
-      </listitem>
+      <para>You can indicate that you'd like
+        <command>svn_load_dirs.pl</command> to tag the new vendor drop
+        by passing the <option>-t</option> command-line option and
+        specifying a tag name.  This tag is another URL relative to
+        the first program argument.</para>
 
-      <listitem>
-        <para>Optionally add arbitrary properties to files and
-          directories that match a regular expression.</para>
-      </listitem>
+      <screen>
+$ svn_load_dirs.pl -t libcomplex-1.1                                   \
+                   http://svn.example.com/repos/calc/vendor/libcomplex \
+                   current                                             \
+                   /path/to/libcomplex-1.1
+&hellip;
+</screen>
 
-    </itemizedlist>
+      <para>When you run <command>svn_load_dirs.pl</command>, it
+        examines the contents of your existing <quote>current</quote>
+        vendor drop, and compares them with the proposed new vendor
+        drop.  In the trivial case, there will be no files that are in
+        one version and not the other, and the script will perform the
+        new import without incident.  If, however, there are
+        discrepencies in the file layouts between versions,
+        <command>svn_load_dirs.pl</command> will prompt you for how
+        you would like to resolve those differences.  For example, you
+        will have the opportunity to tell the script that you know
+        that the file <filename>math.c</filename> in version 1.0 of
+        libcomplex was renamed to <filename>arithmetic.c</filename> in
+        libcomplex 1.1.  Any discrepencies not explained by moves
+        are treated as regular additions and deletions.</para>
 
-    <para>This script takes care of complications where Subversion
-      requires a commit before renaming a file or directory twice,
-      such as if you had a vendor branch that renamed
-      <filename>foobar-1.1/docs/doc.ps</filename> to
-      <filename>foobar-1.2/documents/doc-1.2.ps</filename>.  Here, you
-      would rename <filename>docs</filename> to
-      <filename>documents</filename>, perform a commit, then rename
-      <filename>doc.ps</filename> to <filename>doc-1.2.ps</filename>.
-      You could not do the two renames without the commit, because
-      <filename>doc.ps</filename> was already moved once from
-      <filename>docs/doc.ps</filename> to
-      <filename>documents/doc.ps</filename>.</para>
+      <para>The script also accepts a separate configuration file for
+        setting properties on files and directories matching a regular
+        expression that are <emphasis>added</emphasis> to the
+        repository.  This configuration file is specified to
+        <command>svn_load_dirs.pl</command> using the
+        <option>-p</option> command-line option.  Each line of the
+        configuration files is a whitespace-delimited set of two or
+        four values: a Perl-style regular expression to match the
+        added path against, a control keyword (either
+        <literal>break</literal> or <literal>cont</literal>), and then
+        optionally a property name and value.</para>
 
-    <para>This script always compares the directory being imported to
-      what currently exists in the Subversion repository and takes the
-      necessary steps to add, delete and rename files and directories
-      to make the subversion repository match the imported directory.
-      As such, it can be used on an empty subversion directory for the
-      first import or for any following imports to upgrade a vendor
-      branch.</para>
+      <screen>
+\.png$              break   svn:mime-type   image/png
+\.jpe?g$            break   svn:mime-type   image/jpeg
+\.m3u$              cont    svn:mime-type   audio/x-mpegurl
+\.m3u$              break   svn:eol-style   LF
+.*                  break   svn:eol-style   native
+</screen>
 
-    <para>For the first foobar-1.0 release located in
-      <filename>~/foobar-1.0</filename>:</para>
+      <para>For each added path, the configured property changes whose
+        regular expression matches the path are applied in order,
+        unless the control specification is <literal>break</literal>
+        (which means that no more property changes should be applied
+        to that path).  If the control specification is
+        <literal>cont</literal>&mdash;an abbreviation for
+        <literal>continue</literal>&mdash;then matching will continue
+        with the next line of the configuration file.</para>
 
-    <screen>
-      $ svn_load_dirs.pl -t foobar-1.0                      \
-                         http://svnhost/repos/vendor/foobar \
-                         current                            \
-                         ~/foobar-1.0
-    </screen>
+      <para>Any whitespace in the regular expression, property name,
+        or property value must be surrounded by either single or
+        double quote characters.  You can escape quote characters that
+        are not used for wrapping whitespace by preceding them with a
+        backslash (<literal>\</literal>) character.  The backslash
+        escapes only quotes when parsing the configuration file, so do
+        not protect any other characters beyond what is necessary for
+        the regular expression.</para>
 
-    <para><command>svn_load_dirs.pl</command> takes three mandatory
-      arguments.  The first argument, <systemitem
-      class="url">http://svnhost/repos/vendor/foobar</systemitem>, is
-      the URL to the base Subversion directory to work in.  In this
-      case, we're working in the <filename>vendor/foobar</filename>
-      part of the Subversion repository.  The next argument,
-      <filename>current</filename>, is relative to the first and is
-      the directory where the current import will take place, in this
-      case <systemitem
-      class="url">http://svnhost/repos/vendor/foobar/current</systemitem>.
-      The last argument, <filename>~/foobar-1.0</filename>, is the
-      directory to import.  Finally, the optional
-      <option>-t</option> command line option is also relative
-      to <systemitem
-      class="url">http://svnhost/repos/vendor/foobar</systemitem> and
-      tells <command>svn_load_dirs.pl</command> to create a tag of the
-      imported directory in <systemitem
-      class="url">http://svnhost/repos/vendor/foobar/foobar-1.0</systemitem>.</para>
-
-    <para>The import of foobar-1.1 would be taken care of in the same
-      way:</para>
-
-    <screen>
-      $ svn_load_dirs.pl -t foobar-1.1                      \
-                         http://svnhost/repos/vendor/foobar \
-                         current                            \
-                         ~/foobar-1.1
-    </screen>
-
-    <para>The script looks in your current <systemitem
-      class="url">http://svnhost/repos/vendor/foobar/current</systemitem>
-      directory and sees what changes need to take place for it to
-      match <filename>~/foobar-1.1</filename>.  The script is kind
-      enough to notice that there are files and directories that exist
-      in 1.0 and not in 1.1 and asks if you want to perform any
-      renames.  At this point, you can indicate that
-      <filename>main.c</filename> was renamed to
-      <filename>foobar.c</filename> and then indicate that no further
-      renames have taken place.</para>
-
-    <para>The script will then delete <filename>dead.c</filename> and
-      add <filename>doc</filename> and <filename>doc/*</filename> to
-      the Subversion repository and finally create a tag foobar-1.1 in
-      <systemitem
-      class="url">http://svnhost/repos/vendor/foobar/foobar-1.1</systemitem>.</para>
-
-    <para>The script also accepts a separate configuration file for
-      applying properties to specific files and directories matching a
-      regular expression that are <emphasis>added</emphasis> to the repository.
-      This script will not modify properties of already existing files
-      or directories in the repository.  This configuration file is
-      specified to <command>svn_load_dirs.pl</command> using the
-      <option>-p</option> command line option.  The format of
-      the file is either two or four columns.</para>
-
-    <para><literal>regular_expression control property_name
-        property_value</literal></para>
-
-    <para>The <literal>regular_expression</literal> is a Perl style
-      regular expression.  The <literal>control</literal> column must
-      either be set to <literal>break</literal> or
-      <command>cont</command>.  It is used to tell
-      <command>svn_load_dirs.pl</command> if the following lines in
-      the configuration file should be examined for a match or if all
-      matching should stop.  If <literal>control</literal> is set to
-      <command>break</command>, then no more lines from the
-      configuration file will be matched.  If
-      <literal>control</literal> is set to <command>cont</command>,
-      which is short for continue, then more comparisons will be made.
-      Multiple properties can be set for one file or directory this
-      way.  The last two columns, <literal>property_name</literal> and
-      <literal>property_value</literal> are optional and are applied
-      to matching files and directories.</para>
-
-    <para>If you have whitespace in any of the
-      <literal>regular_expression</literal>,
-      <literal>property_name</literal> or
-      <literal>property_value</literal> columns, you must surround the
-      value with either a single or double quote.  You can protect
-      single or double quotes with a \ character.  The \ character is
-      removed by this script <emphasis>only</emphasis> for whitespace or quote
-      characters, so you do not need to protect any other characters,
-      beyond what you would normally protect for the regular
-      expression.</para>
-
-    <para>This sample configuration file was used to load on a Unix
-      box a number of Zip files containing Windows files with
-      <literal>CRLF</literal> end of lines.</para>
-
-    <screen>
-      \.doc$              break   svn:mime-type   application/msword
-      \.ds(p|w)$          break   svn:eol-style   CRLF
-      \.ilk$              break   svn:eol-style   CRLF
-      \.ncb$              break   svn:eol-style   CRLF
-      \.opt$              break   svn:eol-style   CRLF
-      \.exe$              break   svn:mime-type   application/octet-stream
-      dos2unix-eol\.sh$   break
-      .*                  break   svn:eol-style   native
-    </screen>
-
-    <para>In this example, all the files should be converted to the
-      native end of line style, which the last line of the
-      configuration handles.  The exception is
-      <command>dos2unix-eol.sh</command>, which contains embedded
-      <literal>CR</literal>'s used to find and replace Windows
-      <literal>CRLF</literal> end of line characters with Unix's
-      <literal>LF</literal> characters.  Since <command>svn</command>
-      and <command>svn_load_dirs.pl</command> convert all
-      <literal>CR</literal>, <literal>CRLF</literal> and
-      <literal>LF</literal>'s to the native end of line style when
-      <literal>svn:eol-style</literal> is set to
-      <literal>native</literal>, this file should be left untouched.
-      Hence, the <command>break</command> with no property
-      settings.</para>
-
-    <para>The Windows Visual C++ and Visual Studio files
-      (<filename>*.dsp</filename>, <filename>*.dsw</filename>, etc.)
-      should retain their <literal>CRLF</literal> line endings on any
-      operating system and any <filename>*.doc</filename> files are
-      always treated as binary files, hence the
-      <literal>svn:mime-type</literal> setting of
-      <literal>application/msword</literal>.</para>
-
+    </sect2>
   </sect1>
 
 </chapter>

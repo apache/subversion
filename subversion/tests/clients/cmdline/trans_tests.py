@@ -459,6 +459,51 @@ def eol_change_is_text_mod(sbox):
   
   return 0
 
+#----------------------------------------------------------------------
+# Regression test for issue #1151.  A single file in a directory
+# didn't get keywords expanded on checkout.
+
+def keyword_expanded_on_checkout(sbox):
+  "keyword expanded on checkout for only file in a directory"
+
+  if sbox.build(): return 1
+  wc_dir = sbox.wc_dir
+
+  # The bug didn't occur if there were multiple files in the
+  # directory, so setup an empty directory.
+  Z_path = os.path.join(wc_dir, 'Z')
+  output, errput = svntest.main.run_svn (None, 'mkdir', Z_path)
+  if errput: return 1
+  
+  # Add the file that has the keyword to be expanded
+  url_path = os.path.join(Z_path, 'url')
+  svntest.main.file_append (url_path, "$URL$")
+  output, errput = svntest.main.run_svn (None, 'add', url_path)
+  if errput: return 1
+  keywords_on(url_path)
+
+  output, errput = svntest.main.run_svn (None, 'commit', wc_dir)
+  if errput: return 1
+
+  other_wc_dir = wc_dir + ".other"
+  other_url_path = os.path.join(other_wc_dir, 'Z', 'url')
+  svntest.main.remove_wc(other_wc_dir)
+  output, errput = svntest.main.run_svn (None, 'checkout',
+                                         '--username', svntest.main.wc_author,
+                                         '--password', svntest.main.wc_passwd,
+                                         svntest.main.current_repo_url,
+                                         other_wc_dir)
+  if errput: return 1
+
+  # Check keyword got expanded (and thus the mkdir, add, ps, commit etc. worked)
+  fp = open(other_url_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$URL: (http://|file://|svn://)", lines[0]))):
+    print "URL expansion failed for", other_url_path
+    return 1
+  fp.close()
+
 ########################################################################
 # Run the tests
 
@@ -471,6 +516,7 @@ test_list = [ None,
               XFail(disable_translation),
               update_modified_with_translation,
               eol_change_is_text_mod,
+              keyword_expanded_on_checkout,
              ]
 
 if __name__ == '__main__':

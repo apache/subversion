@@ -36,6 +36,7 @@
 #include "svn_path.h"
 #include "svn_test.h"
 #include "svn_io.h"
+#include "svn_time.h"
 
 #include "client.h"
 
@@ -92,7 +93,7 @@ send_file_contents (const char *path,
  * Accumulate file paths and their batons in FILES, which must be
  * non-null.  (These are used to send postfix textdeltas later).
  *
- * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
+ * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
  * file.  ### add mime-type (or at least binary) indicator to
  *            notify_func ###
  *
@@ -100,12 +101,11 @@ send_file_contents (const char *path,
  */
 static svn_error_t *
 import_file (apr_hash_t *files,
-             svn_wc_notify_func_t notify_func,
-             void *notify_baton,
              const svn_delta_editor_t *editor,
              void *dir_baton,
              const char *path,
              const char *edit_path,
+             svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
   void *file_baton;
@@ -135,15 +135,15 @@ import_file (apr_hash_t *files,
                                        svn_string_create ("", pool), 
                                        pool));
   
-  if (notify_func)
-    (*notify_func) (notify_baton,
-                    path,
-                    svn_wc_notify_commit_added,
-                    svn_node_file,
-                    mimetype,
-                    svn_wc_notify_state_inapplicable,
-                    svn_wc_notify_state_inapplicable,
-                    SVN_INVALID_REVNUM);
+  if (ctx->notify_func)
+    (*ctx->notify_func) (ctx->notify_baton,
+                         path,
+                         svn_wc_notify_commit_added,
+                         svn_node_file,
+                         mimetype,
+                         svn_wc_notify_state_inapplicable,
+                         svn_wc_notify_state_inapplicable,
+                         SVN_INVALID_REVNUM);
 
   /* Finally, add the file's path and baton to the FILES hash. */
   value->subpool = subpool;
@@ -170,14 +170,13 @@ import_file (apr_hash_t *files,
  * Use POOL for any temporary allocation.  */
 static svn_error_t *
 import_dir (apr_hash_t *files,
-            svn_wc_notify_func_t notify_func,
-            void *notify_baton,
             const svn_delta_editor_t *editor, 
             void *dir_baton,
             const char *path,
             const char *edit_path,
             svn_boolean_t nonrecursive,
             apr_hash_t *excludes,
+            svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
@@ -186,8 +185,11 @@ import_dir (apr_hash_t *files,
   apr_status_t apr_err;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   svn_error_t *err;
+  apr_array_header_t *ignores;
 
   SVN_ERR (svn_io_dir_open (&dir, path, pool));
+
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
   for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
        err == SVN_NO_ERROR;
@@ -216,15 +218,15 @@ import_dir (apr_hash_t *files,
              with that name, something is bound to blow up when they
              checkout what they've imported.  So, just skip items with
              that name.  */
-          if (notify_func)
-            (*notify_func) (notify_baton,
-                            svn_path_join (path, finfo.name, subpool),
-                            svn_wc_notify_skip,
-                            svn_node_dir,
-                            NULL,
-                            svn_wc_notify_state_inapplicable,
-                            svn_wc_notify_state_inapplicable,
-                            SVN_INVALID_REVNUM);
+          if (ctx->notify_func)
+            (*ctx->notify_func) (ctx->notify_baton,
+                                 svn_path_join (path, finfo.name, subpool),
+                                 svn_wc_notify_skip,
+                                 svn_node_dir,
+                                 NULL,
+                                 svn_wc_notify_state_inapplicable,
+                                 svn_wc_notify_state_inapplicable,
+                                 SVN_INVALID_REVNUM);
           continue;
         }
 
@@ -255,33 +257,34 @@ import_dir (apr_hash_t *files,
              a directory add before displaying adds underneath the
              directory.  To do it the other way around, just move this
              after the recursive call. */
-          if (notify_func)
-            (*notify_func) (notify_baton,
-                            this_path,
-                            svn_wc_notify_commit_added,
-                            svn_node_dir,
-                            NULL,
-                            svn_wc_notify_state_inapplicable,
-                            svn_wc_notify_state_inapplicable,
-                            SVN_INVALID_REVNUM);
+          if (ctx->notify_func)
+            (*ctx->notify_func) (ctx->notify_baton,
+                                 this_path,
+                                 svn_wc_notify_commit_added,
+                                 svn_node_dir,
+                                 NULL,
+                                 svn_wc_notify_state_inapplicable,
+                                 svn_wc_notify_state_inapplicable,
+                                 SVN_INVALID_REVNUM);
 
           /* Recurse. */
           SVN_ERR (import_dir (files,
-                               notify_func, notify_baton,
                                editor, this_dir_baton, 
                                this_path, this_edit_path, 
-                               FALSE, excludes, subpool));
+                               FALSE, excludes, ctx, subpool));
 
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton, subpool));
         }
       else if (finfo.filetype == APR_REG)
         {
+          if (svn_cstring_match_glob_list (finfo.name, ignores))
+            continue;
+
           /* Import a file. */
           SVN_ERR (import_file (files,
-                                notify_func, notify_baton,
                                 editor, dir_baton, 
-                                this_path, this_edit_path, subpool));
+                                this_path, this_edit_path, ctx, subpool));
         }
       /* We're silently ignoring things that aren't files or
          directories.  If we stop doing that, here is the place to
@@ -316,8 +319,8 @@ import_dir (apr_hash_t *files,
  * 
  * NEW_ENTRY can never be the empty string.
  * 
- * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
- * imported path, passing the actions svn_wc_notify_commit_added or
+ * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for 
+ * each imported path, passing the actions svn_wc_notify_commit_added or
  * svn_wc_notify_commit_postfix_txdelta.
  *
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
@@ -333,18 +336,18 @@ import_dir (apr_hash_t *files,
 static svn_error_t *
 import (const char *path,
         const char *new_entry,
-        svn_wc_notify_func_t notify_func,
-        void *notify_baton,
         const svn_delta_editor_t *editor,
         void *edit_baton,
         svn_boolean_t nonrecursive,
         apr_hash_t *excludes,
+        svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
   void *root_baton;
   svn_node_kind_t kind;
   apr_hash_t *files = apr_hash_make (pool);
   apr_hash_index_t *hi;
+  apr_array_header_t *ignores;
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
@@ -364,15 +367,18 @@ import (const char *path,
 
   if (kind == svn_node_file)
     {
-      if (! new_entry)
-        return svn_error_create
-          (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-           "new entry name required when importing a file");
+      SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
+      if (!svn_cstring_match_glob_list (path, ignores))
+        {
+          if (! new_entry)
+            return svn_error_create
+                (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                 "new entry name required when importing a file");
 
-      SVN_ERR (import_file (files,
-                            notify_func, notify_baton,
-                            editor, root_baton, 
-                            path, new_entry, pool));
+          SVN_ERR (import_file (files,
+                                editor, root_baton,
+                                path, new_entry, ctx, pool));
+        }
     }
   else if (kind == svn_node_dir)
     {
@@ -405,23 +411,22 @@ import (const char *path,
        * handling things underneath foo and requiring its caller
        * (i.e., this code right here) to notify for foo itself.
        */
-      if (notify_func)
-        (*notify_func) (notify_baton,
-                        path,
-                        svn_wc_notify_commit_added,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_inapplicable,
-                        svn_wc_notify_state_inapplicable,
-                        SVN_INVALID_REVNUM);
+      if (ctx->notify_func)
+        (*ctx->notify_func) (ctx->notify_baton,
+                             path,
+                             svn_wc_notify_commit_added,
+                             svn_node_dir,
+                             NULL,
+                             svn_wc_notify_state_inapplicable,
+                             svn_wc_notify_state_inapplicable,
+                             SVN_INVALID_REVNUM);
 #endif /* 0 */
 
       SVN_ERR (import_dir 
                (files,
-                notify_func, notify_baton,
                 editor, new_dir_baton ? new_dir_baton : root_baton, 
                 path, new_entry ? new_entry : "",
-                nonrecursive, excludes, pool));
+                nonrecursive, excludes, ctx, pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -452,15 +457,15 @@ import (const char *path,
 
       /* ### full_path is wrong, should be remainder when path is
          subtracted */
-      if (notify_func)
-        (*notify_func) (notify_baton,
-                        full_path,
-                        svn_wc_notify_commit_postfix_txdelta,
-                        svn_node_file,
-                        NULL,
-                        svn_wc_notify_state_inapplicable,
-                        svn_wc_notify_state_inapplicable,
-                        SVN_INVALID_REVNUM);
+      if (ctx->notify_func)
+        (*ctx->notify_func) (ctx->notify_baton,
+                             full_path,
+                             svn_wc_notify_commit_postfix_txdelta,
+                             svn_node_file,
+                             NULL,
+                             svn_wc_notify_state_inapplicable,
+                             svn_wc_notify_state_inapplicable,
+                             SVN_INVALID_REVNUM);
 
       SVN_ERR (editor->close_file (value->file_baton, value->subpool));
       svn_pool_destroy (value->subpool);
@@ -479,7 +484,7 @@ get_ra_editor (void **ra_baton,
                svn_revnum_t *latest_rev,
                const svn_delta_editor_t **editor,
                void **edit_baton,
-               svn_client_auth_baton_t *auth_baton,
+               svn_client_ctx_t *ctx,
                const char *base_url,
                const char *base_dir,
                svn_wc_adm_access_t *base_access,
@@ -499,9 +504,9 @@ get_ra_editor (void **ra_baton,
   /* Open an RA session to URL. */
   SVN_ERR (svn_client__open_ra_session (session, *ra_lib,
                                         base_url, base_dir, base_access,
-                                        commit_items, is_commit,
+                                        commit_items,
                                         is_commit, !is_commit,
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Fetch the latest revision if requested. */
   if (latest_rev)
@@ -518,15 +523,11 @@ get_ra_editor (void **ra_baton,
 
 svn_error_t *
 svn_client_import (svn_client_commit_info_t **commit_info,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
-                   svn_client_auth_baton_t *auth_baton,
                    const char *path,
                    const char *url,
                    const char *new_entry,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_boolean_t nonrecursive,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -554,7 +555,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
        SVN_WC_ADM_DIR_NAME);
 
   /* Create a new commit item and add it to the array. */
-  if (log_msg_func)
+  if (ctx->log_msg_func)
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
@@ -570,8 +571,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
         = item;
       
-      SVN_ERR ((*log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                log_msg_baton, pool));
+      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool));
       if (! log_msg)
         return SVN_NO_ERROR;
       if (tmp_file)
@@ -592,8 +593,9 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
         svn_path_split (path, &base_dir, NULL, pool);
+
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                              &editor, &edit_baton, auth_baton, url, base_dir,
+                              &editor, &edit_baton, ctx, url, base_dir,
                               NULL, log_msg, NULL, &committed_rev,
                               &committed_date, &committed_author, 
                               FALSE, pool));
@@ -602,8 +604,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import (path, new_entry,
-                     notify_func, notify_baton,
-                     editor, edit_baton, nonrecursive, excludes, pool)))
+                     editor, edit_baton, nonrecursive, excludes, ctx, pool)))
     {
       editor->abort_edit (edit_baton, pool);
       return err;
@@ -735,13 +736,9 @@ have_processed_parent (apr_array_header_t *commit_items,
 
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
-                   svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
-                   svn_client_get_commit_log_t log_msg_func,
-                   void *log_msg_baton,
                    svn_boolean_t nonrecursive,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor;
@@ -766,6 +763,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets, pool));
+
+  /* No targets means nothing to commit, so just return. */
+  if (! base_dir)
+    return SVN_NO_ERROR;
 
   /* If we calculated only a base_dir and no relative targets, this
      must mean that we are being asked to commit a single directory.
@@ -816,6 +817,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                    base_dir_access,
                                                    rel_targets, 
                                                    nonrecursive,
+                                                   ctx,
                                                    pool)))
     goto cleanup;
 
@@ -832,11 +834,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (log_msg_func)
+  if (ctx->log_msg_func)
     {
       const char *tmp_file;
-      cmt_err = (*log_msg_func)(&log_msg, &tmp_file, commit_items, 
-                                log_msg_baton, pool);
+      cmt_err = (*ctx->log_msg_func)(&log_msg, &tmp_file, commit_items, 
+                                     ctx->log_msg_baton, pool);
       if (cmt_err || (! log_msg))
         goto cleanup;
     }
@@ -850,7 +852,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                                &editor, &edit_baton, auth_baton,
+                                &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
                                 log_msg, commit_items, &committed_rev, 
                                 &committed_date, &committed_author, 
@@ -869,9 +871,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, base_dir_access,
                                    editor, edit_baton, 
-                                   notify_func, notify_baton,
                                    display_dir,
-                                   &tempfiles, pool);
+                                   &tempfiles, ctx, pool);
 
   /* Make a note that our commit is finished. */
   commit_in_progress = FALSE;
@@ -967,8 +968,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if ((cleanup_err = ra_lib->close (session)))
     goto cleanup;
 
-  /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (apr_time_from_sec(1));
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps ();
 
  cleanup:
   /* Abort the commit if it is still in progress. */

@@ -88,6 +88,8 @@ svn_boolean_t
 svn_client__revision_is_local (const svn_opt_revision_t *revision);
 
 
+
+
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/
@@ -97,25 +99,19 @@ svn_client__revision_is_local (const svn_opt_revision_t *revision);
    the callback table we provide to RA. */
 typedef struct
 {
-  /* This is provided by the calling application for handling authentication
-     information for this session. */
-  svn_client_auth_baton_t *auth_baton;
-
   /* Holds the directory that corresponds to the REPOS_URL at RA->open()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
 
-  /* Record whether we should attempt store the user/pass into the WC.
-     If true, then store the username, and consult the run-time config
-     option `store_password' to decide whether or not to store the
-     password. */
-  svn_boolean_t do_store;
-
   /* An array of svn_client_commit_item_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
+
+  /* A hash of svn_config_t's, keyed off file name (i.e. the contents of 
+     ~/.subversion/config end up keyed off of 'config'). */
+  apr_hash_t *config;
 
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
@@ -134,12 +130,6 @@ typedef struct
       - COMMIT_ITEMS is an array of svn_client_commit_item_t *
         structures, present only for working copy commits, NULL otherwise.
 
-      - DO_STORE indicates whether the RA layer should attempt to
-        store authentication info.  If DO_STORE is set, then store the
-        username, and consult the run-time config option
-        `store_password' to determine whether or not to store the
-        password.
-
       - USE_ADMIN indicates that the RA layer should create tempfiles
         in the administrative area instead of in the working copy itself.
 
@@ -147,10 +137,10 @@ typedef struct
         modify the WC props directly.
 
    BASE_DIR may be NULL if the RA operation does not correspond to a
-   working copy (in which case, DO_STORE and USE_ADMIN should both
-   be FALSE, and BASE_ACCESS should be null).
+   working copy (in which case, USE_ADMIN should be FALSE, and
+   BASE_ACCESS should be null).
 
-   The calling application's authentication baton is provided in AUTH_BATON,
+   The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.  */
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
@@ -158,20 +148,11 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const char *base_dir,
                                            svn_wc_adm_access_t *base_access,
                                            apr_array_header_t *commit_items,
-                                           svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
                                            svn_boolean_t read_only_wc,
-                                           svn_client_auth_baton_t *auth_baton,
+                                           svn_client_ctx_t *ctx,
                                            apr_pool_t *pool);
 
-
-/* Retrieve an AUTHENTICATOR/AUTH_BATON pair from the client,
-   which represents the protocol METHOD.  */
-svn_error_t * svn_client__get_authenticator (void **authenticator,
-                                             void **auth_baton,
-                                             enum svn_ra_auth_method method,
-                                             void *callback_baton,
-                                             apr_pool_t *pool);
 
 /* Set *DIR_P to DIR if DIR is a working copy directory, else set to NULL.
  * DIR may not be a file.  Use POOL only for temporary allocation.
@@ -219,39 +200,46 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 
 /* Verify that the path can be deleted without losing stuff, i.e. ensure
    that there are no modified or unversioned resources under PATH.  This is
-   similar to checking the output of the status command. */
+   similar to checking the output of the status command.  ADM_ACCESS should 
+   be for the directory PATH is in, or for PATH if it is a directory.  CTX 
+   is used for the client's config options.  POOL is used for all temporary 
+   allocations. */
 svn_error_t * svn_client__can_delete (const char *path,
                                       svn_wc_adm_access_t *adm_access,
+                                      svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
 /*** Checkout and update ***/
 
+/* Update a working copy PATH to REVISION.  If TIMESTAMP_SLEEP is NULL this
+   function will sleep before returning to ensure timestamp integrity.  If
+   TIMESTAMP_SLEEP is not NULL then the function will not sleep but will
+   set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required. */
 svn_error_t *
-svn_client__checkout_internal (const svn_delta_editor_t *before_editor,
-                               void *before_edit_baton,
-                               const svn_delta_editor_t *after_editor,
-                               void *after_edit_baton,
-                               const char *path,
-                               const char *xml_src,
-                               const char *ancestor_path,
-                               svn_revnum_t ancestor_revision,
-                               svn_boolean_t recurse,
-                               apr_pool_t *pool);
-
-
-svn_error_t *
-svn_client__update_internal (const svn_delta_editor_t *before_editor,
-                             void *before_edit_baton,
-                             const svn_delta_editor_t *after_editor,
-                             void *after_edit_baton,
-                             const char *path,
-                             const char *xml_src,
-                             svn_revnum_t ancestor_revision,
+svn_client__update_internal (const char *path,
+                             const svn_opt_revision_t *revision,
                              svn_boolean_t recurse,
+                             svn_boolean_t *timestamp_sleep,
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
+/* Checkout into PATH a working copy of URL at REVISION.  If
+   TIMESTAMP_SLEEP is NULL this function will sleep before returning to
+   ensure timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
+   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a sleep
+   is required, and will not change *TIMESTAMP_SLEEP if no sleep is
+   required. */
+svn_error_t *
+svn_client__checkout_internal (const char *URL,
+                               const char *path,
+                               const svn_opt_revision_t *revision,
+                               svn_boolean_t recurse,
+                               svn_boolean_t *timestamp_sleep,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -297,6 +285,8 @@ svn_client__get_diff_editor (const char *target,
                              svn_revnum_t revision,
                              svn_wc_notify_func_t notify_func,
                              void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool);
@@ -385,12 +375,17 @@ svn_client__get_diff_editor (const char *target,
    These will need to be unlocked again post-commit.
 
    If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications.  */
+   found in TARGETS will not be crawled for modifications. 
+
+   If CTX->CANCEL_FUNC is non-null, it will be called with 
+   CTX->CANCEL_BATON while harvesting to determine if the client has 
+   cancelled the operation.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
 
@@ -399,12 +394,17 @@ svn_client__harvest_committables (apr_hash_t **committables,
    svn_client__harvest_committables for what that really means, and
    for the relevance of LOCKED_DIRS) as if every entry at or below
    TARGET was to be committed as a set of adds (mostly with history)
-   to a new repository URL (NEW_URL). */
+   to a new repository URL (NEW_URL).
+
+   If CTX->CANCEL_FUNC is non-null, it will be called with 
+   CTX->CANCEL_BATON while harvesting to determine if the client has 
+   cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
                                    const char *new_url,
                                    const char *target,
                                    svn_wc_adm_access_t *adm_access,
+                                   svn_client_ctx_t *ctx,
                                    apr_pool_t *pool);
                
 
@@ -435,8 +435,8 @@ svn_client__condense_commit_items (const char **base_url,
    directories are "up-to-date" when a dir-propchange is discovered.
    We don't expect it to be here forever.  :-) 
 
-   NOTIFY_FUNC/BATON will be called as the commit progresses, as a way
-   of describing actions to the application layer (if non NULL).
+   CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as 
+   a way of describing actions to the application layer (if non NULL).
 
    NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
    notify_func (it's a prefix that will be subtracted from the front
@@ -451,10 +451,9 @@ svn_client__do_commit (const char *base_url,
                        svn_wc_adm_access_t *adm_access,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
-                       svn_wc_notify_func_t notify_func,
-                       void *notify_baton,
                        const char *notify_path_prefix,
                        apr_hash_t **tempfiles,
+                       svn_client_ctx_t *ctx,
                        apr_pool_t *pool);
 
 
@@ -480,13 +479,16 @@ svn_client__do_commit (const char *base_url,
    items that are the same in both the before and after traversal
    info.
 
+   *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
+   timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
+   is required.
+
    Use POOL for temporary allocation. */
 svn_error_t *svn_client__handle_externals
    (svn_wc_traversal_info_t *traversal_info,
-    svn_wc_notify_func_t notify_func,
-    void *notify_baton,
-    svn_client_auth_baton_t *auth_baton,
     svn_boolean_t update_unchanged,
+    svn_boolean_t *timestamp_sleep,
+    svn_client_ctx_t *ctx,
     apr_pool_t *pool);
 
 

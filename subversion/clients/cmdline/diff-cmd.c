@@ -41,15 +41,14 @@ svn_cl__diff (apr_getopt_t *os,
               void *baton,
               apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *options;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton;
   apr_file_t *outfile, *errfile;
   apr_status_t status;
   int i;
 
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
   options = svn_cstring_split (opt_state->extensions, " \t\n\r", TRUE, pool);
 
   /* Get an apr_file_t representing stdout and stderr, which is where
@@ -98,7 +97,6 @@ svn_cl__diff (apr_getopt_t *os,
           /* Notice that we're passing DIFFERENT paths to
              svn_client_diff.  This is the only use-case which does so! */
           SVN_ERR (svn_client_diff (options,
-                                    auth_baton,
                                     target1,
                                     &(opt_state->start_revision),
                                     target2,
@@ -107,6 +105,7 @@ svn_cl__diff (apr_getopt_t *os,
                                     opt_state->no_diff_deleted,
                                     outfile,
                                     errfile,
+                                    ctx,
                                     pool));
         }
       else
@@ -124,7 +123,6 @@ svn_cl__diff (apr_getopt_t *os,
                  notice that we pass TARGET twice, since we're always
                  comparing it to itself.  */
               SVN_ERR (svn_client_diff (options,
-                                        auth_baton,
                                         target,
                                         &(opt_state->start_revision),
                                         target,
@@ -133,6 +131,7 @@ svn_cl__diff (apr_getopt_t *os,
                                         opt_state->no_diff_deleted,
                                         outfile,
                                         errfile,
+                                        ctx,
                                         pool));
             }
         }      
@@ -165,7 +164,7 @@ svn_cl__diff (apr_getopt_t *os,
               if (svn_path_is_url (target))
                 return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
                                           NULL, "You passed only one "
-                                          "revision, but %s is a URL. "
+                                          "revision, but '%s' is a URL. "
                                           "URLs require two revisions.",
                                           target);
 
@@ -179,7 +178,6 @@ svn_cl__diff (apr_getopt_t *os,
              notice that we pass TARGET twice, since we're always
              comparing it to itself.  */
           SVN_ERR (svn_client_diff (options,
-                                    auth_baton,
                                     target,
                                     &(opt_state->start_revision),
                                     target,
@@ -188,6 +186,7 @@ svn_cl__diff (apr_getopt_t *os,
                                     opt_state->no_diff_deleted,
                                     outfile,
                                     errfile,
+                                    ctx,
                                     pool));
         }
     }

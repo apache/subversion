@@ -52,4 +52,5 @@ Valid options:
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
+  --diff3-cmd arg          : Use "ARG" as merge command
 

@@ -109,7 +109,7 @@ check_prop_mods (svn_boolean_t *props_changed,
   SVN_ERR (svn_wc_props_modified_p (props_changed, path, adm_access, pool));
   if (! props_changed)
     return SVN_NO_ERROR;
-  SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, pool));
+  SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, adm_access, pool));
   for (i = 0; i < prop_mods->nelts; i++)
     {
       svn_prop_t *prop_mod = &APR_ARRAY_IDX (prop_mods, i, svn_prop_t);
@@ -128,7 +128,10 @@ check_prop_mods (svn_boolean_t *props_changed,
    directory.
 
    If in COPY_MODE, the entry is treated as if it is destined to be
-   added with history as URL.  */
+   added with history as URL.
+
+   If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
+   if the user has cancelled the operation.  */
 static svn_error_t *
 harvest_committables (apr_hash_t *committables,
                       const char *path,
@@ -140,6 +143,7 @@ harvest_committables (apr_hash_t *committables,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
                       svn_boolean_t nonrecursive,
+                      svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
   apr_hash_t *entries = NULL;
@@ -153,6 +157,9 @@ harvest_committables (apr_hash_t *committables,
 
   assert (entry);
   assert (url);
+
+  if (ctx->cancel_func)
+    SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
   /* Make P_PATH the parent dir. */
   p_path = svn_path_dirname (path, pool);
@@ -470,6 +477,7 @@ harvest_committables (apr_hash_t *committables,
                     adds_only,
                     copy_mode,
                     FALSE,
+                    ctx,
                     loop_pool));
 
           svn_pool_clear (loop_pool);
@@ -487,6 +495,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
   int i = 0;
@@ -590,7 +599,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                     subpool));
       SVN_ERR (harvest_committables (*committables, target, dir_access,
                                      url, NULL, entry, NULL, FALSE, FALSE, 
-                                     nonrecursive, subpool));
+                                     nonrecursive, ctx, subpool));
 
       i++;
       svn_pool_clear (subpool);
@@ -608,6 +617,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
                                    const char *new_url,
                                    const char *target,
                                    svn_wc_adm_access_t *adm_access,
+                                   svn_client_ctx_t *ctx,
                                    apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
@@ -624,7 +634,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   /* Handle our TARGET. */
   SVN_ERR (harvest_committables (*committables, target, adm_access,
                                  new_url, entry->url, entry, NULL,
-                                 FALSE, TRUE, FALSE, pool));
+                                 FALSE, TRUE, FALSE, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -860,9 +870,8 @@ do_item_commit (const char *url,
                 int *stack_ptr,
                 apr_hash_t *file_mods,
                 apr_hash_t *tempfiles,
-                svn_wc_notify_func_t notify_func,
-                void *notify_baton,
                 const char *notify_path_prefix,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind = item->kind;
@@ -874,6 +883,9 @@ do_item_commit (const char *url,
                            ? svn_pool_create (apr_hash_pool_get (file_mods))
                            : NULL);
   const char *url_decoded = svn_path_uri_decode (url, pool);
+
+  if (ctx->cancel_func)
+    SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
   /* Validation. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
@@ -893,7 +905,7 @@ do_item_commit (const char *url,
 
   /* If a feedback table was supplied by the application layer,
      describe what we're about to do to this item.  */
-  if (notify_func)
+  if (ctx->notify_func)
     {
       /* Convert an absolute path into a relative one (if possible.) */
       const char *path = NULL;
@@ -914,21 +926,23 @@ do_item_commit (const char *url,
           /* We don't print the "(bin)" notice for binary files when
              replacing, only when adding.  So we don't bother to get
              the mime-type here. */
-          (*notify_func) (notify_baton, path, svn_wc_notify_commit_replaced,
-                          item->kind,
-                          NULL,
-                          svn_wc_notify_state_unknown,
-                          svn_wc_notify_state_unknown,
-                          SVN_INVALID_REVNUM);
+          (*ctx->notify_func) (ctx->notify_baton, path,
+                               svn_wc_notify_commit_replaced,
+                               item->kind,
+                               NULL,
+                               svn_wc_notify_state_unknown,
+                               svn_wc_notify_state_unknown,
+                               SVN_INVALID_REVNUM);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
-          (*notify_func) (notify_baton, path, svn_wc_notify_commit_deleted,
-                          item->kind,
-                          NULL,
-                          svn_wc_notify_state_unknown,
-                          svn_wc_notify_state_unknown,
-                          SVN_INVALID_REVNUM);
+          (*ctx->notify_func) (ctx->notify_baton, path,
+                               svn_wc_notify_commit_deleted,
+                               item->kind,
+                               NULL,
+                               svn_wc_notify_state_unknown,
+                               svn_wc_notify_state_unknown,
+                               SVN_INVALID_REVNUM);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         {
@@ -936,14 +950,16 @@ do_item_commit (const char *url,
 
           if (item->kind == svn_node_file)
             SVN_ERR (svn_wc_prop_get
-                     (&propval, SVN_PROP_MIME_TYPE, item->path, pool));
+                     (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
+                      pool));
 
-          (*notify_func) (notify_baton, path, svn_wc_notify_commit_added,
-                          item->kind,
-                          propval ? propval->data : NULL,
-                          svn_wc_notify_state_unknown,
-                          svn_wc_notify_state_unknown,
-                          SVN_INVALID_REVNUM);
+          (*ctx->notify_func) (ctx->notify_baton, path,
+                               svn_wc_notify_commit_added,
+                               item->kind,
+                               propval ? propval->data : NULL,
+                               svn_wc_notify_state_unknown,
+                               svn_wc_notify_state_unknown,
+                               SVN_INVALID_REVNUM);
         }
 
       else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
@@ -954,14 +970,15 @@ do_item_commit (const char *url,
           svn_boolean_t pmod
             = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS);
 
-          (*notify_func) (notify_baton, path, svn_wc_notify_commit_modified,
-                          item->kind,
-                          NULL,
-                          (tmod ? svn_wc_notify_state_changed
-                                : svn_wc_notify_state_unchanged),
-                          (pmod ? svn_wc_notify_state_changed
-                                : svn_wc_notify_state_unchanged),
-                          SVN_INVALID_REVNUM);
+          (*ctx->notify_func) (ctx->notify_baton, path,
+                               svn_wc_notify_commit_modified,
+                               item->kind,
+                               NULL,
+                               (tmod ? svn_wc_notify_state_changed
+                                     : svn_wc_notify_state_unchanged),
+                               (pmod ? svn_wc_notify_state_changed
+                                     : svn_wc_notify_state_unchanged),
+                               SVN_INVALID_REVNUM);
         }
     }
 
@@ -1016,7 +1033,7 @@ do_item_commit (const char *url,
 
       SVN_ERR (svn_wc_entry (&tmp_entry, item->path, adm_access, TRUE, pool));
       SVN_ERR (svn_wc_transmit_prop_deltas 
-               (item->path, tmp_entry, editor,
+               (item->path, adm_access, tmp_entry, editor,
                 (kind == svn_node_dir) ? dir_baton : file_baton, 
                 &tempfile, pool));
       if (tempfile && tempfiles)
@@ -1072,10 +1089,9 @@ svn_client__do_commit (const char *base_url,
                        svn_wc_adm_access_t *adm_access,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
-                       svn_wc_notify_func_t notify_func,
-                       void *notify_baton,
                        const char *notify_path_prefix,
                        apr_hash_t **tempfiles,
+                       svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
   apr_array_header_t *db_stack;
@@ -1182,8 +1198,7 @@ svn_client__do_commit (const char *base_url,
                                           pool));
       SVN_ERR (do_item_commit (item_url, item, item_access, editor,
                                db_stack, &stack_ptr, file_mods, *tempfiles,
-                               notify_func, notify_baton, notify_path_prefix,
-                               pool));
+                               notify_path_prefix, ctx, pool));
 
       /* Save our state for the next iteration. */
       if ((item->kind == svn_node_dir)
@@ -1221,14 +1236,17 @@ svn_client__do_commit (const char *base_url,
       item = mod->item;
       file_baton = mod->file_baton;
 
-      if (notify_func)
-        (*notify_func) (notify_baton, item->path,
-                        svn_wc_notify_commit_postfix_txdelta, 
-                        svn_node_file,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
+      if (ctx->notify_func)
+        (*ctx->notify_func) (ctx->notify_baton, item->path,
+                             svn_wc_notify_commit_postfix_txdelta, 
+                             svn_node_file,
+                             NULL,
+                             svn_wc_notify_state_unknown,
+                             svn_wc_notify_state_unknown,
+                             SVN_INVALID_REVNUM);
 
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;

@@ -16,7 +16,6 @@
  * ====================================================================
  */
 
-#include <locale.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -39,6 +38,7 @@
 #include "svn_subst.h"
 #include "svn_opt.h"
 #include "svn_props.h"
+#include "svn_config.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -62,6 +62,7 @@ static svn_opt_subcommand_t
   subcommand_info,
   subcommand_log,
   subcommand_tree,
+  subcommand_uuid,
   subcommand_youngest;
 
 /* Option codes and descriptions. */
@@ -152,6 +153,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "Print the tree, optionally showing node revision ids.\n",
      {'r', 't', svnlook__show_ids} },
 
+    {"uuid", subcommand_uuid, {0},
+     "usage: svnlook uuid REPOS_PATH\n\n"
+     "Print the repository's UUID.\n",
+     {0} },
+
     {"youngest", subcommand_youngest, {0},
      "usage: svnlook youngest REPOS_PATH\n\n"
      "Print the youngest revision number.\n",
@@ -190,7 +196,7 @@ typedef struct svnlook_ctxt_t
 
 /*** Helper functions. ***/
 static svn_error_t *
-get_property (svn_string_t **prop_value,
+get_property (svn_string_t **prop_value /* native */,
               svnlook_ctxt_t *c, 
               const char *prop_name /* UTF-8! */,
               apr_pool_t *pool)
@@ -439,7 +445,7 @@ open_writable_binary_file (apr_file_t **fh,
      it as best as we care to try above. */
   if (svn_path_is_empty (dir))
     return svn_error_createf (err->apr_err, err,
-                              "Error opening writable file %s", path);
+                              "Error opening writable file '%s'", path);
 
   path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
@@ -462,7 +468,7 @@ open_writable_binary_file (apr_file_t **fh,
         {
           if (err)
             return svn_error_createf (err->apr_err, err,
-                                      "Error creating dir %s (path exists)", 
+                                      "Error creating dir '%s' (path exists)", 
                                       full_path);
         }
     }
@@ -474,7 +480,7 @@ open_writable_binary_file (apr_file_t **fh,
                           APR_OS_DEFAULT, pool);
   if (err)
     return svn_error_createf (err->apr_err, err,
-                              "Error opening writable file %s", path);
+                              "Error opening writable file '%s'", path);
     
   return SVN_NO_ERROR;
 }
@@ -504,7 +510,7 @@ dump_contents (apr_file_t *fh,
       if ((apr_err) || (len2 != len))
         return svn_error_createf 
           (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, NULL,
-           "Error writing contents of %s", path);
+           "Error writing contents of '%s'", path);
       if (len != sizeof (buffer))
         break;
     }
@@ -524,6 +530,7 @@ print_diff_tree (svn_fs_root_t *root,
                  const char *path /* UTF-8! */,
                  const char *base_path /* UTF-8! */,
                  svn_boolean_t no_diff_deleted,
+                 apr_hash_t *config,
                  apr_pool_t *pool)
 {
   const char *orig_path = NULL, *new_path = NULL;
@@ -661,7 +668,8 @@ print_diff_tree (svn_fs_root_t *root,
           SVN_ERR (svn_path_get_absolute (&abs_path, orig_path, pool));
           SVN_ERR (svn_io_run_diff (SVNLOOK_TMPDIR, NULL, 0, label, NULL,
                                     abs_path, path, 
-                                    &exitcode, outhandle, NULL, pool));
+                                    &exitcode, outhandle, NULL, config,
+                                    pool));
 
           /* TODO: Handle exit code == 2 (i.e. diff error) here. */
         }
@@ -694,7 +702,7 @@ print_diff_tree (svn_fs_root_t *root,
              (root, base_root, node,
               svn_path_join (path, node->name, subpool),
               svn_path_join (base_path, node->name, subpool),
-              no_diff_deleted,
+              no_diff_deleted, config,
               subpool));
 
     /* Recurse across siblings. */
@@ -706,7 +714,7 @@ print_diff_tree (svn_fs_root_t *root,
                  (root, base_root, node,
                   svn_path_join (path, node->name, subpool),
                   svn_path_join (base_path, node->name, subpool),
-                  no_diff_deleted,
+                  no_diff_deleted, config,
                   pool));
       }
     
@@ -797,7 +805,6 @@ static svn_error_t *
 do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
-  const char *log_native;
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
   if (! (prop_value && prop_value->data))
@@ -809,8 +816,7 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
   if (print_size)
     printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, prop_value->data, pool));
-  printf ("%s\n", log_native);
+  printf ("%s\n", prop_value->data);
   return SVN_NO_ERROR;
 }
 
@@ -846,11 +852,7 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_AUTHOR, pool));
   if (prop_value && prop_value->data) 
-    {
-      const char *native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, prop_value->data, pool));
-      printf ("%s", native);
-    }
+    printf ("%s", prop_value->data);
   
   printf ("\n");
   return SVN_NO_ERROR;
@@ -942,9 +944,12 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (tree)
     {
       svn_node_kind_t kind;
+      apr_hash_t *config;
+
+      SVN_ERR (svn_config_get_config (&config, pool));
       SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
       SVN_ERR (print_diff_tree (root, base_root, tree, "", "",
-                                c->no_diff_deleted, pool));
+                                c->no_diff_deleted, config, pool));
       SVN_ERR (svn_io_check_path (SVNLOOK_TMPDIR, &kind, pool));
       if (kind == svn_node_dir)
         SVN_ERR (svn_io_remove_dir (SVNLOOK_TMPDIR, pool));
@@ -1122,6 +1127,21 @@ subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_uuid (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+  const char *uuid;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (svn_fs_get_uuid (c->fs, &uuid, pool));
+  printf ("%s\n", uuid);
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Main. ***/
 
@@ -1130,7 +1150,6 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  int err2;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -1140,21 +1159,11 @@ main (int argc, const char * const *argv)
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
 
-  setlocale (LC_CTYPE, "");
+  /* Initialize the app. */
+  if (svn_cmdline_init ("svnlook", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
-
+  /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   if (argc <= 1)
@@ -1276,7 +1285,7 @@ main (int argc, const char * const *argv)
           SVN_INT_ERR (svn_utf_cstring_to_utf8 (&repos_path,
                                                 os->argv[os->ind++],
                                                 NULL, pool));
-          repos_path = svn_path_canonicalize (repos_path, pool);
+          repos_path = svn_path_internal_style (repos_path, pool);
         }
 
       if (repos_path == NULL)

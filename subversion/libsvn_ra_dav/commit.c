@@ -515,7 +515,7 @@ static void record_prop_change(apr_pool_t *pool,
       if (r->prop_changes == NULL)
         r->prop_changes = apr_table_make(pool, 5);
 
-      svn_xml_escape_string(&escaped, value, pool);
+      svn_xml_escape_cdata_string(&escaped, value, pool);
       apr_table_set(r->prop_changes, name, escaped->data);
     }
   else
@@ -1063,12 +1063,9 @@ static svn_error_t * commit_stream_close(void *baton)
   commit_ctx_t *cc = pb->file->cc;
   const char *url = pb->file->rsrc->wr_url;
   ne_request *req;
-  int fdesc;
   int code;
-  apr_status_t status;
   svn_error_t *err;
-  apr_off_t offset = 0;
-  
+
   /* create/prep the request */
   req = ne_request_create(cc->ras->sess, "PUT", url);
   if (req == NULL)
@@ -1088,24 +1085,13 @@ static svn_error_t * commit_stream_close(void *baton)
     ne_add_request_header
       (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, pb->result_checksum);
 
-  /* Rewind the tmpfile. */
-  status = apr_file_seek(pb->tmpfile, APR_SET, &offset);
-  if (status)
+  /* Give the file to neon. The provider will rewind the file. */
+  err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
+  if (err)
     {
-      (void) apr_file_close(pb->tmpfile);
-      return svn_error_create(status, NULL, "Couldn't rewind tmpfile.");
+      apr_file_close(pb->tmpfile);
+      return err;
     }
-  /* Convert the (apr_file_t *)tmpfile into a file descriptor for neon. */
-  status = svn_io_fd_from_file(&fdesc, pb->tmpfile);
-  if (status)
-    {
-      (void) apr_file_close(pb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Couldn't get file-descriptor of tmpfile.");
-    }
-
-  /* Give the filedescriptor to neon. */
-  ne_set_request_body_fd(req, fdesc);
 
   /* run the request and get the resulting status code (and svn_error_t) */
   err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
@@ -1257,7 +1243,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
   /* XML-Escape the log message. */
   xml_data = NULL;           /* Required by svn_xml_escape_*. */
-  svn_xml_escape_cstring(&xml_data, log_msg, cc->ras->pool);
+  svn_xml_escape_cdata_cstring(&xml_data, log_msg, cc->ras->pool);
 
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;

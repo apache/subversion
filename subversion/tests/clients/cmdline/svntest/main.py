@@ -23,6 +23,7 @@ import re
 import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
+import time    # for time()
 
 from svntest import testcase
 from svntest import wc
@@ -109,6 +110,9 @@ svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 # Username and password used by the working copies
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
+
+# Global variable indicating if we want 'quiet' output.
+quiet_mode = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
@@ -202,15 +206,22 @@ def _run_command(command, error_expected, *varargs):
     args = args + ' "' + str(arg) + '"'
 
   # Log the command line
-  print 'CMD:', os.path.basename(command) + args
+  if not quiet_mode:
+    print 'CMD:', os.path.basename(command) + args,
 
+  start = time.time()
   infile, outfile, errfile = os.popen3(command + args)
+
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
 
   outfile.close()
   infile.close()
   errfile.close()
+
+  if not quiet_mode:
+    stop = time.time()
+    print '<TIME = %.6f>' % (stop - start)
 
   if (not error_expected) and (stderr_lines):
     map(sys.stdout.write, stderr_lines)
@@ -271,7 +282,7 @@ def create_repos(path):
 
   if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
-  run_svnadmin("create", path)
+  run_svnadmin("create", path, "--bdb-txn-nosync")
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
@@ -286,11 +297,16 @@ def copy_repos(src_path, dst_path, head_revision):
   create_repos(dst_path)
   dump_args = ' dump "' + src_path + '"'
   load_args = ' load "' + dst_path + '"'
-  print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-        '|', os.path.basename(svnadmin_binary) + load_args
+  if not quiet_mode:
+    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+          '|', os.path.basename(svnadmin_binary) + load_args,
+  start = time.time()
   dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
   load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-
+  stop = time.time()
+  if not quiet_mode:
+    print '<TIME = %.6f>' % (stop - start)
+  
   while 1:
     data = dump_out.read(1024*1024)  # Arbitrary buffer size
     if data == "":
@@ -420,6 +436,7 @@ def run_tests(test_list):
   """
 
   global test_area_url
+  global quiet_mode
   testnum = None
 
   url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
@@ -440,6 +457,9 @@ def run_tests(test_list):
     elif arg == "--url":
       index = sys.argv.index(arg)
       test_area_url = sys.argv[index + 1]
+
+    elif arg == "-q":
+      quiet_mode = 1
 
     else:
       match = url_re.search(arg)

@@ -141,8 +141,8 @@ svn_client_revprop_set (const char *propname,
                         const svn_string_t *propval,
                         const char *URL,
                         const svn_opt_revision_t *revision,
-                        svn_client_auth_baton_t *auth_baton,
                         svn_revnum_t *set_rev,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   void *ra_baton, *session;
@@ -156,8 +156,8 @@ svn_client_revprop_set (const char *propname,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        NULL, NULL, FALSE, TRUE,
+                                        ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -184,13 +184,14 @@ svn_client_revprop_set (const char *propname,
 static svn_error_t *
 pristine_or_working_props (apr_hash_t **props,
                            const char *path,
+                           svn_wc_adm_access_t *adm_access,
                            svn_boolean_t pristine,
                            apr_pool_t *pool)
 {
   if (pristine)
-    SVN_ERR (svn_wc_get_prop_diffs (NULL, props, path, pool));
+    SVN_ERR (svn_wc_get_prop_diffs (NULL, props, path, adm_access, pool));
   else
-    SVN_ERR (svn_wc_prop_list (props, path, pool));
+    SVN_ERR (svn_wc_prop_list (props, path, adm_access, pool));
   
   return SVN_NO_ERROR;
 }
@@ -204,6 +205,7 @@ static svn_error_t *
 pristine_or_working_propval (const svn_string_t **propval,
                              const char *propname,
                              const char *path,
+                             svn_wc_adm_access_t *adm_access,
                              svn_boolean_t pristine,
                              apr_pool_t *pool)
 {
@@ -211,12 +213,13 @@ pristine_or_working_propval (const svn_string_t **propval,
     {
       apr_hash_t *pristine_props;
       
-      SVN_ERR (svn_wc_get_prop_diffs (NULL, &pristine_props, path, pool));
+      SVN_ERR (svn_wc_get_prop_diffs (NULL, &pristine_props, path, adm_access,
+                                      pool));
       *propval = apr_hash_get (pristine_props, propname, APR_HASH_KEY_STRING);
     }
   else  /* get the working revision */
     {
-      SVN_ERR (svn_wc_prop_get (propval, propname, path, pool));
+      SVN_ERR (svn_wc_prop_get (propval, propname, path, adm_access, pool));
     }
   
   return SVN_NO_ERROR;
@@ -286,6 +289,7 @@ recursive_propget (apr_hash_t *props,
 
               SVN_ERR (pristine_or_working_propval (&propval, propname,
                                                     full_entry_path,
+                                                    adm_access,
                                                     pristine, pool));
               if (propval)
                 apr_hash_set (props, full_entry_path,
@@ -441,8 +445,8 @@ svn_client_propget (apr_hash_t **props,
                     const char *propname,
                     const char *target,
                     const svn_opt_revision_t *revision,
-                    svn_client_auth_baton_t *auth_baton,
                     svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -466,8 +470,8 @@ svn_client_propget (apr_hash_t **props,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            auth_dir, NULL, NULL, TRUE,
-                                            FALSE, FALSE, auth_baton, pool));
+                                            auth_dir, NULL, NULL,
+                                            FALSE, FALSE, ctx, pool));
 
       *props = apr_hash_make (pool);
 
@@ -561,8 +565,8 @@ svn_client_propget (apr_hash_t **props,
         {
           const svn_string_t *propval;
           
-          SVN_ERR (pristine_or_working_propval (&propval, propname,
-                                                target, pristine, pool));
+          SVN_ERR (pristine_or_working_propval (&propval, propname, target,
+                                                adm_access, pristine, pool));
 
           apr_hash_set (prop_hash, target, APR_HASH_KEY_STRING, propval);
         }
@@ -581,8 +585,8 @@ svn_client_revprop_get (const char *propname,
                         svn_string_t **propval,
                         const char *URL,
                         const svn_opt_revision_t *revision,
-                        svn_client_auth_baton_t *auth_baton,
                         svn_revnum_t *set_rev,
+                        svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
   void *ra_baton, *session;
@@ -595,8 +599,8 @@ svn_client_revprop_get (const char *propname,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        NULL, NULL, FALSE, TRUE,
+                                        ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -752,12 +756,14 @@ remote_proplist (apr_array_header_t *proplist,
 static svn_error_t *
 add_to_proplist (apr_array_header_t *prop_list,
                  const char *node_name,
+                 svn_wc_adm_access_t *adm_access,
                  svn_boolean_t pristine,
                  apr_pool_t *pool)
 {
   apr_hash_t *hash;
 
-  SVN_ERR (pristine_or_working_props (&hash, node_name, pristine, pool));
+  SVN_ERR (pristine_or_working_props (&hash, node_name, adm_access, pristine,
+                                      pool));
   push_props_on_list (prop_list, hash, node_name, pool);
 
   return SVN_NO_ERROR;
@@ -820,7 +826,8 @@ recursive_proplist (apr_array_header_t *props,
               SVN_ERR (recursive_proplist (props, dir_access, pristine, pool));
             }
           else
-            SVN_ERR (add_to_proplist (props, full_entry_path, pristine, pool));
+            SVN_ERR (add_to_proplist (props, full_entry_path, adm_access,
+                                      pristine, pool));
         }
     }
   return SVN_NO_ERROR;
@@ -830,8 +837,8 @@ svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
                      const svn_opt_revision_t *revision,
-                     svn_client_auth_baton_t *auth_baton,
                      svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
   apr_array_header_t *prop_list
@@ -853,8 +860,8 @@ svn_client_proplist (apr_array_header_t **props,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            NULL, NULL, NULL, TRUE,
-                                            FALSE, FALSE, auth_baton, pool));
+                                            NULL, NULL, NULL,
+                                            FALSE, FALSE, ctx, pool));
 
       /* Default to HEAD. */
       if (revision->kind == svn_opt_revision_unspecified)
@@ -935,7 +942,8 @@ svn_client_proplist (apr_array_header_t **props,
       if (recurse && entry->kind == svn_node_dir)
         SVN_ERR (recursive_proplist (prop_list, adm_access, pristine, pool));
       else 
-        SVN_ERR (add_to_proplist (prop_list, target, pristine, pool));
+        SVN_ERR (add_to_proplist (prop_list, target, adm_access, pristine,
+                                  pool));
       
       SVN_ERR (svn_wc_adm_close (adm_access));
     }
@@ -950,8 +958,8 @@ svn_error_t *
 svn_client_revprop_list (apr_hash_t **props,
                          const char *URL,
                          const svn_opt_revision_t *revision,
-                         svn_client_auth_baton_t *auth_baton,
                          svn_revnum_t *set_rev,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
   void *ra_baton, *session;
@@ -964,8 +972,8 @@ svn_client_revprop_list (apr_hash_t **props,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        NULL, NULL, FALSE, TRUE,
+                                        ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */

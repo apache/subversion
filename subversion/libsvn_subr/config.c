@@ -183,26 +183,26 @@ read_all (svn_config_t **cfgp,
 }
 
 
-svn_error_t *
-svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool)
+static svn_error_t *
+get_category_config (svn_config_t **cfg,
+                     const char *category,
+                     apr_pool_t *pool)
 {
   const char *usr_reg_path = NULL, *sys_reg_path = NULL;
   const char *usr_cfg_path, *sys_cfg_path;
+  
+  *cfg = NULL;
 
 #ifdef SVN_WIN32
-  sys_reg_path = SVN_REGISTRY_SYS_CONFIG_CONFIG_PATH;
-  usr_reg_path = SVN_REGISTRY_USR_CONFIG_CONFIG_PATH;
+  sys_reg_path = apr_pstrcat (pool, SVN_REGISTRY_SYS_CONFIG_PATH,
+                              category, NULL);
+  usr_reg_path = apr_pstrcat (pool, SVN_REGISTRY_USR_CONFIG_PATH,
+                              category, NULL);
 #endif /* SVN_WIN32 */
 
-  SVN_ERR (svn_config__sys_config_path (&sys_cfg_path,
-                                        SVN_CONFIG__USR_CONFIG_FILE,
-                                        pool));
-
-  SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
-                                         SVN_CONFIG__USR_CONFIG_FILE,
-                                         pool));
-
-  SVN_ERR (read_all (cfgp,
+  SVN_ERR (svn_config__sys_config_path (&sys_cfg_path, category, pool));
+  SVN_ERR (svn_config__user_config_path (&usr_cfg_path, category, pool));
+  SVN_ERR (read_all (cfg,
                      sys_reg_path, usr_reg_path,
                      sys_cfg_path, usr_cfg_path,
                      pool));
@@ -212,30 +212,23 @@ svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_config_read_servers (svn_config_t **cfgp, apr_pool_t *pool)
+svn_config_get_config (apr_hash_t **cfg_hash,
+                       apr_pool_t *pool)
 {
-  const char *usr_reg_path, *sys_reg_path;
-  const char *usr_cfg_path, *sys_cfg_path;
+  svn_config_t *cfg;
+  *cfg_hash = apr_hash_make (pool);
+  
+#define CATLEN (sizeof (SVN_CONFIG_CATEGORY_SERVERS) - 1)
+  SVN_ERR (get_category_config (&cfg, SVN_CONFIG_CATEGORY_SERVERS, pool));
+  if (cfg)
+    apr_hash_set (*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, CATLEN, cfg);
+#undef CATLEN
 
-#ifdef SVN_WIN32
-  sys_reg_path = SVN_REGISTRY_SYS_CONFIG_SERVERS_PATH;
-  usr_reg_path = SVN_REGISTRY_USR_CONFIG_SERVERS_PATH;
-#else  /* SVN_WIN32 */
-  sys_reg_path = usr_reg_path = NULL;
-#endif /* SVN_WIN32 */
-
-  SVN_ERR (svn_config__sys_config_path (&sys_cfg_path,
-                                        SVN_CONFIG__USR_SERVERS_FILE,
-                                        pool));
-
-  SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
-                                         SVN_CONFIG__USR_SERVERS_FILE,
-                                         pool));
-
-  SVN_ERR (read_all (cfgp,
-                     sys_reg_path, usr_reg_path,
-                     sys_cfg_path, usr_cfg_path,
-                     pool));
+#define CATLEN (sizeof (SVN_CONFIG_CATEGORY_CONFIG) - 1)
+  SVN_ERR (get_category_config (&cfg, SVN_CONFIG_CATEGORY_CONFIG, pool));
+  if (cfg)
+    apr_hash_set (*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, CATLEN, cfg);
+#undef CATLEN
 
   return SVN_NO_ERROR;
 }
@@ -406,11 +399,16 @@ svn_config_get (svn_config_t *cfg, const char **valuep,
                 const char *section, const char *option,
                 const char *default_value)
 {
-  cfg_option_t *opt = find_option (cfg, section, option, NULL);
-  if (opt != NULL)
-    make_string_from_option (valuep, cfg, opt);
+  if (cfg)
+    {
+      cfg_option_t *opt = find_option (cfg, section, option, NULL);
+      if (opt != NULL)
+        make_string_from_option (valuep, cfg, opt);
+      else
+        *valuep = default_value;   /* ### TODO: Expand default_value */
+    }
   else
-    *valuep = default_value;   /* ### TODO: Expand default_value */
+    *valuep = default_value;
 }
 
 
@@ -510,8 +508,10 @@ static svn_boolean_t search_groups (const char *name,
                                     void *baton)
 {
   struct search_groups_baton *b = baton;
+  apr_array_header_t *list;
 
-  if (svn_cstring_match_glob_list (b->key, value, b->pool))
+  list = svn_cstring_split (value, ",", TRUE, b->pool);
+  if (svn_cstring_match_glob_list (b->key, list))
     {
       /* Fill in the match and return false, to stop enumerating. */
       b->match = apr_pstrdup (b->pool, name);

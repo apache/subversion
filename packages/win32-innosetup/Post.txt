@@ -8,10 +8,20 @@ Some tips to get you started:
   http://subversion.tigris.org/ and look for documentation.
 * You can use the mod_dav_svn.so apache module found in the distro's
   apache2\modules folder if you want to use Subversion as a server.
+  You should also read the Readme.txt file (see below).
+* Take a look in the Readme.txt file found in the Subversion folder and
+  the start menu. It may save you some time if you get into trouble.
 
 Notes for Windows 9x and Millenium users:
 -----------------------------------------
-Please, remember to restart your machine if your path has changed.
+Add this line to your Autoexec.bat file (adjust the path so it fits your
+system) if it's not there:
+
+  SET APR_ICONV_PATH="C:\Program Files\Subversion\iconv"
+
+Restart your machine if your Autoexec.bat file are changed.
+
+-----------------------------------------
 
 Thanks for using Subversion!
 

@@ -16,11 +16,13 @@
  * ====================================================================
  */
 
-#include <stdio.h>
+#define APR_WANT_STDIO
+#include <apr_want.h>
 #include <apr_general.h>
 
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 
 int main(int argc, char **argv)
 {
@@ -37,13 +39,24 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  apr_initialize();
+  /* Initialize the app. */
+  if (svn_cmdline_init("target-test", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool. */
   pool = svn_pool_create(NULL);
 
   /* Create the target array */
   targets = apr_array_make(pool, argc - 1, sizeof(const char *));
   for (i = 1; i < argc; i++)
-    *((const char **)apr_array_push(targets)) = argv[i];
+    {
+      const char *path_utf8;
+      err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], NULL, pool);
+      if (err != SVN_NO_ERROR)
+        svn_handle_error(err, stderr, 1);
+      *((const char **)apr_array_push(targets)) = 
+        svn_path_internal_style(path_utf8, pool);
+    }
 
 
   /* Call the function */
@@ -53,12 +66,24 @@ int main(int argc, char **argv)
     svn_handle_error(err, stderr, 1);
 
   /* Display the results */
-  printf("%s: ", common_path);
+  {
+    const char *common_path_native;
+    err = svn_utf_cstring_from_utf8(&common_path_native, common_path, pool);
+    if (err != SVN_NO_ERROR)
+      svn_handle_error(err, stderr, 1);
+    printf("%s: ", common_path_native);
+  }
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char * target = ((const char**)condensed_targets->elts)[i];
       if (target)
-        printf("%s, ", target);
+        {
+          const char *target_native;
+          err = svn_utf_cstring_from_utf8(&target_native, target, pool);
+          if (err != SVN_NO_ERROR)
+            svn_handle_error(err, stderr, 1);
+          printf("%s, ", target_native);
+        }
       else
         printf("NULL, "); 
     }

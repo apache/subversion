@@ -131,6 +131,11 @@ convert_to_stringbuf (apr_xlate_t *convset,
   *dest = svn_stringbuf_create ("", pool);
   destbuf = (*dest)->data;
 
+  /* Not only does it not make sense to convert an empty string, but
+     apr-iconv is quite unreasonable about not allowing that. */
+  if (src_length == 0)
+    return SVN_NO_ERROR;
+
   do 
     {
       /* A 1:2 ratio of input characters to output characters should
@@ -161,7 +166,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
          churned out so far from this loop. */
       (*dest)->len += ((buflen - (*dest)->len) - destlen);
 
-    } while ((! apr_err) && srclen);
+    } while ((! apr_err || apr_err == APR_INCOMPLETE) && srclen);
 
   /* If we exited the loop with an error, return the error. */
   if (apr_err)
@@ -392,7 +397,7 @@ svn_utf_cstring_from_utf8_fuzzy (const char *src,
                                  apr_pool_t *pool)
 {
   const char *src_orig = src;
-  apr_off_t new_len = 0;
+  apr_size_t new_len = 0;
   char *new;
   const char *new_orig;
   svn_error_t *err;

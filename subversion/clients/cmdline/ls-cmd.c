@@ -116,13 +116,11 @@ svn_cl__ls (apr_getopt_t *os,
             void *baton,
             apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   int i;
-  svn_client_auth_baton_t *auth_baton;
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  apr_pool_t *subpool = svn_pool_create (pool); 
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -140,17 +138,8 @@ svn_cl__ls (apr_getopt_t *os,
       apr_hash_t *dirents;
       const char *target = ((const char **) (targets->elts))[i];
      
-      if (! svn_path_is_url (target))
-        {
-          const char *target_native;
-
-          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
-          printf ("Invalid URL: %s\n", target_native);
-          continue;
-        }
-      
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
-                              auth_baton, opt_state->recursive, subpool));
+                              opt_state->recursive, ctx, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
 

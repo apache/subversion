@@ -51,13 +51,10 @@
           </row>
         </thead>
         <tbody>
-          <!--
           <row>
-          <entry>libsvn_auth</entry> 
-          <entry>Authentication and
-          authorization functionality (in progress)</entry>
+            <entry>libsvn_auth</entry> 
+            <entry>Authentication functionality</entry>
           </row>
-          -->
           <row>
             <entry>libsvn_client</entry> 
             <entry>Primary interface for client programs</entry>
@@ -82,13 +79,10 @@
             <entry>libsvn_ra_local</entry>
             <entry>The local Repository Access module</entry>
           </row>
-          <!--
           <row>
-          <entry>libsvn_ra_pipe</entry>
-          <entry>A proprietary protocal Repository Access module (in
-          progress)</entry>
+            <entry>libsvn_ra_svn</entry>
+            <entry>A proprietary protocol Repository Access module</entry>
           </row>
-          -->
           <row>
             <entry>libsvn_repos</entry>
             <entry>Repository interface</entry>
@@ -141,11 +135,11 @@
     <para>Another benefit of modularity is the ability to replace a
       given module with a whole new library that implements the same
       API without affecting the rest of the code base.  In some sense,
-      this happens within Subversion already.  The libsvn_ra_dav and
-      libsvn_ra_local libraries both implement the same interface, and
-      both communicate with the Repository Layer, except that the
-      former uses a network to talk to that layer, and the latter
-      talks to it directly.</para>
+      this happens within Subversion already.  The libsvn_ra_dav,
+      libsvn_ra_local, and libsvn_ra_svn all implement the same
+      interface.  And all three communicate with the Repository
+      Layer&mdash; libsvn_ra_dav and libsvn_ra_svn do so across a
+      network, and libsvn_ra_local connects to it directly.</para>
 
     <para>The client itself also highlights modularity in the
       Subversion design.  While Subversion currently comes with only a
@@ -320,7 +314,7 @@
       <!-- Perhaps dig into the DAG/tree layers a bit here, talking
            about the hard-link design and how that affords such
            pleasures as cheap copies.  If "bubble-up" isn't covered
-           twelve other times in the book, maybe give it go here. -->
+           twelve other times in the book, maybe give it a go here. -->
 
       <para>As we mentioned earlier, the libsvn_fs API looks and feels
         like any other filesystem, except that it has this wonderful
@@ -449,9 +443,9 @@ make_new_directory (const char *repos_path,
 </programlisting>
       </example>
 
-      <para>As you can see in the previous code segment, calls were made
-        to both the repository and filesystem interfaces.  Note that
-        we could just as easily have committed the transaction using
+      <para>In the previous code segment, calls were made to both the
+        repository and filesystem interfaces.  We could just as easily
+        have committed the transaction using
         <function>svn_fs_commit_txn</function>.  But the filesystem
         API knows nothing about the repository library's hook
         mechanism.  If you want your Subversion repository to
@@ -465,7 +459,9 @@ make_new_directory (const char *repos_path,
         script if one exists, then commit the transaction, and finally
         will run a "post-commit" hook script.  The hooks provide a
         special kind of reporting mechanism that does not really
-        belong in the core filesystem library itself.</para>
+        belong in the core filesystem library itself.  (For more
+        information regarding Subversion's repository hooks, see <xref
+        linkend="svn-ch-5-sect-2.1" />.)</para>
       
       <para>The hook mechanism requirement is but one of the reasons
         for the abstraction of a separate repository library from the
@@ -514,29 +510,28 @@ make_new_directory (const char *repos_path,
         Charged with marshalling data between the client libraries and
         the repository, this layer includes the libsvn_ra module
         loader library, the RA modules themselves (which currently
-        includes libsvn_ra_local and libsvn_ra_dav), and any
-        additional libraries needed by one or more of those RA
+        includes libsvn_ra_dav, libsvn_ra_local, and libsvn_ra_svn),
+        and any additional libraries needed by one or more of those RA
         modules, such as the mod_dav_svn Apache module with which
-        libsvn_ra_dav communicates.</para>
+        libsvn_ra_dav communicates or libsvn_ra_svn's server,
+        <command>svnserve</command>.</para>
 
       <para>Since Subversion uses URLs to identify its repository
         resources, the protocol portion of the URL schema (usually
-        <literal>http:</literal>, <literal>https:</literal>, or
-        <literal>file:</literal>) is used to determine which RA module
-        will handle the communications.  Each module registers a list
-        of the protocols it knows how to "speak" so that the RA loader
-        can, at runtime, determine which module to use for the task at
-        hand.  You can determine which RA modules are available to the
-        Subversion command-line client, and what protocols they claim
-        to support, by running <command>svn --version</command>.  In
-        the following example, both of the RA modules that are
-        included with Subversion have been successfully located by the
-        client program.</para>
+        <literal>file:</literal>, <literal>http:</literal>,
+        <literal>https:</literal>, or <literal>svn:</literal>) is used
+        to determine which RA module will handle the communications.
+        Each module registers a list of the protocols it knows how to
+        "speak" so that the RA loader can, at runtime, determine which
+        module to use for the task at hand.  You can determine which
+        RA modules are available to the Subversion command-line
+        client, and what protocols they claim to support, by running
+        <command>svn --version</command>:</para>
      
       <screen>
 $ svn --version
-svn, version 0.16.0
-   compiled Jan  3 2003, 16:43:58
+svn, version 0.17.1 (dev build)
+   compiled Feb 13 2003, 21:30:46
 
 Copyright (C) 2000-2003 CollabNet.
 Subversion is open source software, see http://subversion.tigris.org/
@@ -545,136 +540,185 @@ The following repository access (RA) modules are available:
 
 * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
   - handles 'http' schema
-  - handles 'https' schema
 * ra_local : Module for accessing a repository on local disk.
   - handles 'file' schema
+* ra_svn : Module for accessing a repository using the svn network protocol.
+  - handles 'svn' schema
 </screen>
     
-      <!-- Perhaps an example of the RA vtable interface in action
-           showing how easy it is to, say, suck a file:rev combo right
-           down off of a Subversion repository and onto your
-           drive. -->
+      <sect3 id="svn-ch-7-sect-1.2.1">
+        <title>RA-DAV (Repository Access Using HTTP/DAV)</title>
 
-      <para>For the majority of this section we will be highlighting
-        libsvn_ra_dav, which is the most commonly used RA module for
-        real-world repository communications.  Unlike libsvn_ra_local,
-        which offers no networking capabilities at all, libsvn_ra_dav
-        is designed for use by clients that are being run on different
-        machines than the servers with which they communicating,
-        specifically machines reached using URLs that contain the
-        <literal>http:</literal> or <literal>https:</literal> protocol
-        portions.  To understand how this module works, we should
-        first mention a couple of other key components in this
-        particular configuration of the Repository Access
-        Layer&mdash;the powerful Apache HTTP Server, and the Neon
-        HTTP/WebDAV client library.</para>
+        <para>The libsvn_ra_dav library is designed for use by clients
+          that are being run on different machines than the servers
+          with which they communicating, specifically machines reached
+          using URLs that contain the <literal>http:</literal> or
+          <literal>https:</literal> protocol portions.  To understand
+          how this module works, we should first mention a couple of
+          other key components in this particular configuration of the
+          Repository Access Layer&mdash;the powerful Apache HTTP
+          Server, and the Neon HTTP/WebDAV client library.</para>
+  
+        <para>Subversion's primary network server is the Apache HTTP
+          Server.  Apache is a time-tested, extensible open-source
+          server process that is ready for serious use.  It can
+          sustain a high network load and runs on many platforms.  The
+          Apache server supports a number of different standard
+          authentication protocols, and can be extended through the
+          use of modules to support many others.  It also supports
+          optimizations like network pipelining and caching.  By using
+          Apache as a server, Subversion gets all of these features
+          for free.  And since most firewalls already allow HTTP
+          traffic to pass through, sysadmins typically don't even have
+          to change their firewall configurations to allow Subversion
+          to work.</para>
+  
+        <para>Subversion uses HTTP and WebDAV (with DeltaV) to
+          communicate with an Apache server.  You can read more about
+          this in the WebDAV section of this chapter, but in short,
+          WebDAV and DeltaV are extensions to the standard HTTP 1.1
+          protocol that enable sharing and versioning of files over
+          the web.  Apache 2.0 comes with mod_dav, an Apache module
+          that understands the DAV extensions to HTTP.  Subversion
+          itself supplies mod_dav_svn, though, which is another Apache
+          module that works in conjunction with (really, as a back-end
+          to) mod_dav to provide Subversion's specific implementations
+          of WebDAV and DeltaV.</para>
 
-      <para>Subversion's official server is the Apache HTTP Server.
-        Apache is a time-tested, extensible open-source server process
-        that is ready for serious use.  It can sustain a high network
-        load and runs on many platforms.  The Apache server supports a
-        number of different standard authentication protocols, and can
-        be extended through the use of modules to support many others.
-        It also supports optimizations like network pipelining and
-        caching.  By using Apache as a server, Subversion gets all of
-        these features for free.  And since most firewalls already
-        allow HTTP traffic to pass through, sysadmins typically don't
-        even have to change their firewall configurations to allow
-        Subversion to work.</para>
+        <para>When communicating with a repository over HTTP, the RA
+          loader library chooses libsvn_ra_dav as the proper access
+          module.  The Subversion client makes calls into the generic
+          RA interface, and libsvn_ra_dav maps those calls (which
+          embody rather large-scale Subversion actions) to a set of
+          HTTP/WebDAV requests.  Using the Neon library, libsvn_ra_dav
+          transmits those requests to the Apache server.  Apache
+          receives these requests (exactly as it does generic HTTP
+          requests that your web browser might make), notices that the
+          requests are directed at a URL that is configured as a DAV
+          location (using the <sgmltag>Location</sgmltag> directive in
+          <filename>httpd.conf</filename>), and hands the request off
+          to its own mod_dav module.  When properly configured,
+          mod_dav knows to use Subversion's mod_dav_svn for any
+          filesystem-related needs, as opposed to the generic
+          mod_dav_fs that comes with Apache.  So ultimately, the
+          client is communicating with mod_dav_svn, which binds
+          directly to the Subversion Repository Layer.</para>
+  
+        <para>That was a simplified description of the actual
+          exchanges taking place, though.  For example, the Subversion
+          repository might be protected by Apache's authorization
+          directives.  This could result in initial attempts to
+          communicate with the repository being rejected by Apache on
+          authorization grounds.  At this point, libsvn_ra_dav gets
+          back the notice from Apache that insufficient identification
+          was supplied, and calls back into the Client Layer to get
+          some updated authentication data.  If the data is supplied
+          correctly, and the user has the permissions that Apache
+          seeks, libsvn_ra_dav's next automatic attempt at performing
+          the original operation will be granted, and all will be
+          well.  If sufficient authentication information cannot be
+          supplied, the request will ultimately fail, and the client
+          will report the failure to the user.</para>
+  
+        <!-- A diagram here? -->
+  
+        <para>By using Neon and Apache, Subversion gets free
+          functionality in several other complex areas, too.  For
+          example, if Neon finds the OpenSSL libraries, it allows the
+          Subversion client to attempt to use SSL-encrypted
+          communications with the Apache server (whose own mod_ssl can
+          "speak the language").  Also, both Neon itself and Apache's
+          mod_deflate can understand the "deflate" algorithm (the same
+          used by the PKZIP and gzip programs), so requests can be
+          sent in smaller, compressed chunks across the wire.  Other
+          complex features that Subversion hopes to support in the
+          future include the ability to automatically handle
+          server-specified redirects (for example, when a repository
+          has been moved to a new canonical URL) and taking advantage
+          of HTTP pipelining.</para>
+  
+        <!-- Talk about another difference between CVS and Subversion.
+             CVS users had to specify which auth mechanism to use
+             (with :ext: vs. :pserver:) and whether or not to use
+             compressed communications (with the -z option).  In
+             Subversion, Apache takes some of that responsibility.
+             The server will tell the client whether it can understand
+             compression, and ... hmm.  Is this really true? -->
 
-      <para>Subversion uses WebDAV (with DeltaV) as its network
-        protocol.  You can read more about this in the WebDAV section
-        of this chapter, but in short, WebDAV and DeltaV are
-        extensions to the standard HTTP 1.1 protocol that enable
-        sharing and versioning of files over the web.  Apache 2.0
-        comes with mod_dav, an Apache module that understands the DAV
-        extensions to HTTP.  Subversion itself supplies mod_dav_svn,
-        though, which is another Apache module that works in
-        conjunction with (really, as a back-end to) mod_dav to provide
-        Subversion's specific implementations of WebDAV and
-        DeltaV.</para>
+      </sect3>
 
-      <para>When communicating with a repository over HTTP, the RA
-        loader library chooses libsvn_ra_dav as the proper access
-        module.  The Subversion client makes calls into the generic RA
-        interface, and libsvn_ra_dav maps those calls (which embody
-        rather large-scale Subversion actions) to a set of HTTP/WebDAV
-        requests.  Using the Neon library, libsvn_ra_dav transmits
-        those requests to the Apache server.  Apache receives these
-        requests (exactly as it does generic HTTP requests that your
-        web browser might make), notices that the requests are
-        directed at a URL that is configured as a DAV location (using
-        the <sgmltag>Location</sgmltag> directive in
-        <filename>httpd.conf</filename>), and hands the request off to
-        its own mod_dav module.  When properly configured, mod_dav
-        knows to use Subversion's mod_dav_svn for any
-        filesystem-related needs, as opposed to the generic mod_dav_fs
-        that comes with Apache.  So ultimately, the client is
-        communicating with mod_dav_svn, which binds directly to the
-        Subversion Repository Layer.</para>
+      <sect3 id="svn-ch-7-sect-1.2.2">
+        <title>RA-SVN (Proprietary Protocol Repository Access)</title>
 
-      <para>That was a simplified description of the actual exchanges
-        taking place, though.  For example, the Subversion repository
-        might be protected by Apache's authorization directives.  This
-        could result in initial attempts to communicate with the
-        repository being rejected by Apache on authorization grounds.
-        At this point, libsvn_ra_dav gets back the notice from Apache
-        that insufficient identification was supplied, and calls back
-        into the Client Layer to get some updated authentication data.
-        If the data is supplied correctly, and the user has the
-        permissions that Apache seeks, libsvn_ra_dav's next automatic
-        attempt at performing the original operation will be granted,
-        and all will be well.  If sufficient authentication
-        information cannot be supplied, the request will ultimately
-        fail, and the client will report the failure to the
-        user.</para>
+        <para>In addition to the standard HTTP/WebDAV protocol,
+          Subversion also provides an RA implementation that uses a
+          proprietary protocol.  The libsvn_ra_svn module implements
+          its own network socket connectivity, and communicates with a
+          stand-alone server&mdash;the <filename>svnserve</filename>
+          program&mdash;on the machine that hosts the
+          repository.  Clients access the repository using the
+          <literal>svn://</literal> schema.</para>
 
-      <!-- A diagram here? -->
+        <para>This RA implementation lacks most of the advantages of
+          Apache mentioned in the previous section; however, it may be
+          appealing to some sysadmins nonetheless.  It is dramatically
+          easier to configure and run; setting up an
+          <filename>svnserve</filename> process is nearly instantaneous.
+          Furthermore, some sysadmins may already have an SSH security
+          infrastructure in place, and want Subversion to use it.
+          Clients using ra_svn can easily tunnel the protocol over
+          SSH.</para>
 
-     <para>By using Neon and Apache, Subversion gets free
-        functionality in several other complex areas, too.  For
-        example, if Neon finds the OpenSSL libraries, it allows the
-        Subversion client to attempt to use SSL-encrypted
-        communications with the Apache server (whose own mod_ssl can
-        "speak the language").  Also, both Neon itself and Apache's
-        mod_deflate can understand the "deflate" algorithm (the same
-        used by the PKZIP and gzip programs), so requests can be sent
-        in smaller, compressed chunks across the wire.  Other complex
-        features that Subversion hopes to support in the future
-        include the ability to automatically handle server-specified
-        redirects (for example, when a repository has been moved to a
-        new canonical URL) and taking advantage of HTTP
-        pipelining.</para>
+      </sect3>
 
-      <!-- Talk about another difference between CVS and Subversion.
-           CVS users had to specify which auth mechanism to use (with
-           :ext: vs. :pserver:) and whether or not to use compressed
-           communications (with the -z option).  In Subversion, Apache
-           takes some of that responsibility.  The server will tell
-           the client whether it can understand compression, and
-           ... hmm.  Is this really true?-->
+      <sect3 id="svn-ch-7-sect-1.2.3">
+        <title>RA-Local (Direct Repository Access)</title>
 
-      <para>Of course, not all communications with a Subversion
-        repository require a powerhouse server process and a network
-        layer.  For users who simply wish to access the repositories
-        on their local disk, they may do so using
-        <literal>file:</literal> URLs and the functionality provided
-        by libsvn_ra_local.  This RA module binds directly with the
-        repository and filesystem libraries, so no network
-        communication is required at all.</para>
+        <para>Not all communications with a Subversion repository
+          require a powerhouse server process and a network layer.
+          For users who simply wish to access the repositories on
+          their local disk, they may do so using
+          <literal>file:</literal> URLs and the functionality provided
+          by libsvn_ra_local.  This RA module binds directly with the
+          repository and filesystem libraries, so no network
+          communication is required at all.</para>
 
-      <para>And for those who wish to access a Subversion repository
-        using still another protocol&mdash;well, that is precisely why
-        the Repository Access Layer is modularized!  Developers can
-        simply write a new library that implements the RA interface on
-        one side and communicates with the repository on the other.
-        Your new protocol could use straight socket connections
-        (bypassing the likes of Apache), or inter-process
-        communication (IPC) calls, or&mdash;let's get crazy, shall
-        we?&mdash;you could even implement an email-based protocol.
-        Subversion supplies the APIs; you supply the
-        creativity.</para>
+        <para>Subversion requires the server name included as part of
+          the <literal>file:</literal> URL be either
+          <literal>localhost</literal> or empty, and that there be no
+          port specification.  In other words, your URLs should look
+          like either
+          <literal>file://localhost/path/to/repos</literal> or
+          <literal>file:///path/to/repos</literal>.</para>
 
+        <para>Also, be aware that Subversion's
+          <literal>file:</literal> URLs can not be used in a regular
+          web browser the way typical <literal>file:</literal> URLs
+          can.  When you attempt to view a <literal>file:</literal>
+          URL in a regular web browser, it reads and displays the
+          contents of the file at that location by examining the
+          filesystem directly.  However, Subversion's resources exist
+          in a virtual filesystem (see <xref
+          linkend="svn-ch-7-sect-1.1" />), and your browser wil not
+          understand how to read that filesystem.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-7-sect-1.2.4">
+        <title>Your RA Library Here</title>
+
+        <para>For those who wish to access a Subversion repository
+          using still another protocol, that is precisely why the
+          Repository Access Layer is modularized!  Developers can
+          simply write a new library that implements the RA interface
+          on one side and communicates with the repository on the
+          other.  Your new library can use existing network protocols,
+          or you can invent your own.  You could use inter-process
+          communication (IPC) calls, or&mdash;let's get crazy, shall
+          we?&mdash;you could even implement an email-based protocol.
+          Subversion supplies the APIs; you supply the creativity.</para>
+
+      </sect3>
     </sect2>
 
     <!-- ***************************************************************** -->
@@ -1096,7 +1140,7 @@ if __name__ == '__main__':
    committed-rev="1"
    name="svn:this_dir"
    committed-date="2002-09-24T17:12:44.064475Z"
-   url="file:///home/cmpilato/tests/.greek-repo/A/D"
+   url="http://svn.red-bean.com/tests/.greek-repo/A/D"
    kind="dir"
    revision="1"/&gt;
 &lt;entry
@@ -1113,7 +1157,7 @@ if __name__ == '__main__':
    schedule="add"
    revision="0"/&gt;
 &lt;entry
-   url="file:///home/cmpilato/tests/.greek-repo/A/B/delta"
+   url="http://svn.red-bean.com/tests/.greek-repo/A/B/delta"
    name="delta"
    kind="file"
    schedule="add"
@@ -1240,87 +1284,38 @@ if __name__ == '__main__':
     <para>WebDAV ("Web-based Distributed Authoring and Versioning") is
       an extension of the standard HTTP protocol designed to make the
       web into a read/write medium, instead of the basically read-only
-      medium that exists today.  The theory is that directories
-      and files can be shared&mdash;as both readable and writable
-      objects&mdash;over the web.  RFC 2518 describes the WebDAV
-      extensions to HTTP, and is available (along with a lot of other
-      useful information) at <systemitem
+      medium that exists today.  The theory is that directories and
+      files can be shared&mdash;as both readable and writable
+      objects&mdash;over the web.  RFCs 2518 and 3256 describe the
+      WebDAV/DeltaV extensions to HTTP, and are available (along with
+      a lot of other useful information) at <systemitem
       class="url">http://www.webdav.org/</systemitem>.</para>
 
     <para>A number of operating system file browsers are already able
       to mount networked directories using WebDAV.  On Win32, the
       Windows Explorer can browse what it calls "WebFolders" (which
       are just WebDAV-ready network locations) as if they were regular
-      folders on the local machine.  Mac OS X also has this
-      capability, as do the Nautilus and Konqueror browsers (under
-      GNOME and KDE, respectively).</para>
+      shared folders.  Mac OS X also has this capability, as do the
+      Nautilus and Konqueror browsers (under GNOME and KDE,
+      respectively).</para>
 
-    <sidebar>
-      <title>Browsing WebDAV locations using a standard file
-        browser</title>
-      
-      <para>WebDAV-enabled servers publish their resources as
-        collections and the files (and other collections) within them.
-        Today's operation systems are becoming extremely Web-aware,
-        and this concept maps so easily to the notion of directories
-        and files that many operation systems have built-in support
-        for viewing those locations as regular folders.  And these
-        folders can be browsed just like system folders&mdash;you can
-        open and copy files from the WebDAV folders as if they were
-        sitting on your local drive.</para>
+    <para>How does all of this apply to Subversion?  The mod_dav_svn
+      Apache module uses HTTP, extended by WebDAV and DeltaV, as its
+      primary network protocol.  Rather than implementing a new
+      proprietary protocol, the original Subversion designers decided
+      to simply map the versioning concepts and actions used by
+      Subversion onto the concepts exposed by RFCs 2518 and 3253.
+      <footnote>
+        <para>As it turns out, Subversion has more recently evolved a
+          proprietary protocol anyway, implemented by the libsvn_ra_svn
+          module.</para>
+      </footnote>
+    </para>
 
-      <para>For example, on recent versions of Windows, one of the
-        items that appears when you open <literal>My
-        Computer</literal> is <literal>Web Folders</literal>.
-        Opening that icon will show you list of registered WebDAV
-        locations that you can browse further into, as well as an icon
-        for adding a new Web Folder.  In fact, if you'd like to see
-        how this works, open the <literal>Add Web Folder</literal>
-        icon, and register the URL <systemitem
-        class="url">http://svn.collab.net/repos/svn/trunk</systemitem>.
-        When you've finished, you'll have an icon in your Web Folders
-        window that, if opened, will connect you directly to the head
-        of Subversion's own development tree.  Imagine
-        that&mdash;bleeding edge Subversion code that you can copy and
-        paste right off the server and onto your local drive!</para>
-
-      <!-- Examples from other operating systems here, please -->
-
-    </sidebar>
-
-    <para>However, RFC 2518 doesn't fully implement the "versioning"
-      aspect of WebDAV.  A separate committee has created RFC 3253,
-      known as the DeltaV extensions to WebDAV, available at
-      <systemitem class="url">http://www.webdav.org/deltav/</systemitem>.  
-      These extensions add version-control concepts to WebDAV, and
-      ultimately to HTTP.</para>
-
-    <para>So how does all of this apply to Subversion?  Subversion
-      uses HTTP, extended by WebDAV and DeltaV, as its primary network
-      protocol.  Rather than implementing a new proprietary protocol,
-      the Subversion developers decided to simply map the versioning
-      concepts and actions used by Subversion onto the concepts
-      exposed by RFCs 2518 and 3253.</para>
-
-    <para>It is important to understand that while Subversion uses
-      DeltaV for communication, the Subversion client is
-      <emphasis>not</emphasis> a general-purpose DeltaV client.  In
-      fact, it expects some custom features from the server.  Further,
-      the Subversion server is not a general-purpose DeltaV server.
-      It only implements a strict subset of the DeltaV specification.
-      A WebDAV or DeltaV client may very well be able to interoperate
-      with it, but only if that client operates within the narrow
-      confines of those features that the server has implemented.
-      Future versions of Subversion will more completely address WebDAV
-      interoperability.</para>
-
-    <para>At the moment, most DAV browsers and clients do not yet
-      support DeltaV; this means that a Subversion repository can be
-      viewed or mounted only as a read-only resource.  And on the flip
-      side, a Subversion client cannot checkout a working copy from a
-      generic WebDAV server; it expects a specific subset of DeltaV
-      features.</para>
-
+    <para>For a more thorough discussion of WebDAV, how it works, and
+      how Subversion uses it, see <xref linkend="svn-ap-d"/>.  That
+      appendix also discusses the degree to which generic WebDAV
+      clients operate against mod_dav_svn.</para>
   </sect1>
 
   <!-- ******************************************************************* -->
@@ -1454,7 +1449,7 @@ crawl_dir (apr_array_header_t *files,
       else if (finfo.filetype == APR_REG)
         {
           /* Copy the file's path into the FILES array's pool.  */
-          child_path = apr_pstrdup (hashpool, child_path);
+          child_path = apr_pstrdup (hash_pool, child_path);
 
           /* Add the path to the array.  */
           (*((const char **) apr_array_push (files))) = child_path;
@@ -1497,7 +1492,7 @@ crawl_dir (apr_array_header_t *files,
     
     <para>Pools might not be ideal for every application, but they are
       extremely useful in Subversion.  As a Subversion developer,
-      you'll need to grow comfortable with pools and how to weild them
+      you'll need to grow comfortable with pools and how to wield them
       correctly.  Memory usage bugs and bloating can be difficult to
       diagnose and fix regardless of the API, but the pool construct
       provided by APR has proven a tremendously convenient,
@@ -1566,7 +1561,7 @@ crawl_dir (apr_array_header_t *files,
         Subversion's source code is versioned using Subversion itself,
         you actually need to "bootstrap" by getting a working
         Subversion client via some other method.  The most common
-        methods inclue downloading the latest binary distribution (if
+        methods include downloading the latest binary distribution (if
         such is available for your platform), or downloading the
         latest source tarball and building your own Subversion client.
         If you build from source, make sure read the INSTALL file in

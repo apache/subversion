@@ -57,14 +57,12 @@ svn_cl__delete (apr_getopt_t *os,
                 void *baton,
                 apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton = NULL;
   int i;
   svn_client_commit_info_t *commit_info = NULL;
   apr_pool_t *subpool;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -76,31 +74,23 @@ svn_cl__delete (apr_getopt_t *os,
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
-
-  /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; i++)
     {
       svn_error_t *err;
       const char *target = ((const char **) (targets->elts))[i];
-      void *log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, 
-                                                        subpool);
 
       commit_info = NULL;
       err = svn_client_delete
         (&commit_info, target, NULL, opt_state->force, 
-         auth_baton, 
-         &svn_cl__get_log_message,
-         log_msg_baton,
-         notify_func, notify_baton, subpool);
+         ctx, subpool);
 
       if (err)
         err = svn_cl__may_need_force (err);
-      SVN_ERR (svn_cl__cleanup_log_msg (log_msg_baton, err));
+      SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));
 
       if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);

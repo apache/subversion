@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "client.h"
 
 
@@ -37,8 +38,7 @@
 svn_error_t *
 svn_client_revert (const char *path,
                    svn_boolean_t recursive,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -76,13 +76,13 @@ svn_client_revert (const char *path,
     }
 
   err = svn_wc_revert (path, adm_access, recursive,
-                       notify_func, notify_baton,
+                       ctx->notify_func, ctx->notify_baton,
                        pool);
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
-  /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (apr_time_from_sec(1));
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps ();
 
   return err;
 }

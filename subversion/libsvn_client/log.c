@@ -46,14 +46,14 @@
 
 
 svn_error_t *
-svn_client_log (svn_client_auth_baton_t *auth_baton,
-                const apr_array_header_t *targets,
+svn_client_log (const apr_array_header_t *targets,
                 const svn_opt_revision_t *start,
                 const svn_opt_revision_t *end,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_log_message_receiver_t receiver,
                 void *receiver_baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
@@ -126,7 +126,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-          "svn_client_log: %s is not under revision control", base_name);
+          "svn_client_log: '%s' is not under revision control", base_name);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
@@ -147,15 +147,15 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
      the working copy. */
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
-                                          NULL, NULL, TRUE, TRUE, TRUE, 
-                                          auth_baton, pool));
+                                          NULL, NULL, TRUE, TRUE, 
+                                          ctx, pool));
   else
     {
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
                                             auth_dir,
-                                            NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            NULL, NULL, FALSE, TRUE, 
+                                            ctx, pool));
     }
 
   /* It's a bit complex to correctly handle the special revision words

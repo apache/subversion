@@ -63,14 +63,12 @@ svn_cl__checkout (apr_getopt_t *os,
                   void *baton,
                   apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_pool_t *subpool;
-  svn_client_auth_baton_t *auth_baton;
   apr_array_header_t *targets;
   const char *local_dir;
   const char *repos_url;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
   int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -90,16 +88,21 @@ svn_cl__checkout (apr_getopt_t *os,
   if (svn_path_is_url (local_dir))
     {
       if (targets->nelts == 1)
-        local_dir = svn_path_basename (((const char **) (targets->elts))[0],
-                                       pool);
+        {
+          local_dir = svn_path_basename (((const char **) (targets->elts))[0],
+                                         pool);
+          local_dir = svn_path_uri_decode (local_dir, pool);
+        }
       else
-        local_dir = "";
+        {
+          local_dir = "";
+        }
       (*((const char **) apr_array_push (targets))) = local_dir;
     }
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, TRUE, FALSE,
+                          FALSE, pool);
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts - 1; ++i)
@@ -117,26 +120,21 @@ svn_cl__checkout (apr_getopt_t *os,
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)
-        target_dir = local_dir;
+        {
+          target_dir = local_dir;
+        }
       else
-        target_dir = svn_path_join (local_dir,
-                                    svn_path_basename (repos_url, subpool),
-                                    subpool);
+        {
+          target_dir = svn_path_basename (repos_url, subpool);
+          target_dir = svn_path_uri_decode (target_dir, subpool);
+          target_dir = svn_path_join (local_dir, target_dir, subpool);
+        }
 
-      /* ### BUG?  Need a new auth_baton each time, allocating once from
-         ### pool doesn't work. Even when allocated from pool the
-         ### auth_baton appears to allocate username and password from the
-         ### subpool, so when the subpool is cleared nasty things
-         ### happen. */
-      auth_baton = svn_cl__make_auth_baton (opt_state, subpool);
-
-      SVN_ERR (svn_client_checkout (notify_func,
-                                    notify_baton,
-                                    auth_baton,
-                                    repos_url,
+      SVN_ERR (svn_client_checkout (repos_url,
                                     target_dir,
                                     &(opt_state->start_revision),
                                     opt_state->nonrecursive ? FALSE : TRUE,
+                                    ctx,
                                     subpool));
       svn_pool_clear (subpool);
     }

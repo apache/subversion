@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
+#include "svn_time.h"
 #include "client.h"
 
 
@@ -37,13 +38,12 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_update (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
-                   apr_pool_t *pool)
+svn_client__update_internal (const char *path,
+                             const svn_opt_revision_t *revision,
+                             svn_boolean_t recurse,
+                             svn_boolean_t *timestamp_sleep,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
@@ -55,6 +55,8 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   svn_wc_adm_access_t *adm_access;
+  svn_boolean_t sleep_here = FALSE;
+  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path);
@@ -88,7 +90,8 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                      target,
                                      revnum,
                                      recurse,
-                                     notify_func, notify_baton,
+                                     ctx->notify_func, ctx->notify_baton,
+                                     ctx->cancel_func, ctx->cancel_baton,
                                      &update_editor, &update_edit_baton,
                                      traversal_info,
                                      pool));
@@ -105,8 +108,9 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
 
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            adm_access, NULL, TRUE, TRUE, TRUE, 
-                                            auth_baton, pool));
+                                            adm_access, NULL,
+                                            TRUE, TRUE, 
+                                            ctx, pool));
 
       /* ### todo: shouldn't svn_client__get_revision_number be able
          to take a url as easily as a local path?  */
@@ -134,14 +138,17 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
          update_editor will be driven by svn_repos_dir_delta. */
       err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
                                     TRUE, recurse,
-                                    notify_func, notify_baton,
+                                    ctx->notify_func, ctx->notify_baton,
                                     traversal_info, pool);
       
-      /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (apr_time_from_sec(1));
-
       if (err)
-        return err;
+        {
+          /* Don't rely on the error handling to handle the sleep later, do
+             it now */
+          svn_sleep_for_timestamps ();
+          return err;
+        }
+      *use_sleep = TRUE;
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
@@ -152,12 +159,25 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
      the primary operation.  */
   if (recurse)
     SVN_ERR (svn_client__handle_externals (traversal_info,
-                                           notify_func, notify_baton,
-                                           auth_baton,
                                            TRUE, /* update unchanged ones */
+                                           use_sleep,
+                                           ctx,
                                            pool));
+
+  if (sleep_here)
+    svn_sleep_for_timestamps ();
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_update (const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client__update_internal (path, revision, recurse, NULL, ctx, pool);
 }

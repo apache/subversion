@@ -25,8 +25,9 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
+XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip
 
- 
 ######################################################################
 # Tests
 #
@@ -739,6 +740,201 @@ def simple_property_merges(sbox):
     return 1
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
+  
+  # issue 1109 : single file property merge.  This test performs a merge
+  # that should be a no-op (adding properties that are already present).
+  outlines, errlines = svntest.main.run_svn(None, 'revert', '--recursive',
+                                            wc_dir)
+  
+  A_url = os.path.join(svntest.main.current_repo_url, 'A')
+  A2_url = os.path.join(svntest.main.current_repo_url, 'A2')
+ 
+  # Copy to make revision 5
+  outlines,errlines = svntest.main.run_svn(None, 'copy', '-m', 'fumble',
+                                           '--username', svntest.main.wc_author,
+                                           '--password', svntest.main.wc_passwd,
+                                           A_url, A2_url)
+  if errlines:
+    return 1
+  
+  outlines, errlines = svntest.main.run_svn(None, 'switch', A2_url, wc_dir)
+  
+  A_url = os.path.join(svntest.main.current_repo_url, 'A', 'B', 'E', 'alpha')
+  alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
+  
+  outlines, errlines = svntest.main.run_svn(None, 'merge',
+                                          '-r', '3:4', A_url, alpha_path)
+  if errlines:
+    return 1
+  
+  outlines,errlines = svntest.main.run_svn(None, 'pl', alpha_path)
+  
+  if errlines:
+    return 1
+
+  saw_foo = 0
+  saw_bar = 0
+  for line in outlines:
+    if re.match("\\s*foo\\s*$", line):
+      saw_foo = 1
+    if re.match("\\s*bar\\s*$", line):
+      saw_bar = 1
+
+  if not saw_foo or not saw_bar:
+    return 1
+ 
+  return 0
+
+#----------------------------------------------------------------------
+def merge_one_file(sbox):
+  "merge one file, receive a specific error"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1150. ##
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  rho_rel_path = os.path.join('A', 'D', 'G', 'rho')
+  rho_path = os.path.join(wc_dir, rho_rel_path)
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_url = os.path.join(svntest.main.current_repo_url, rho_rel_path)
+  
+  # Change rho for revision 2
+  svntest.main.file_append(rho_path, '\nA new line in rho.\n')
+
+  expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak(rho_rel_path, wc_rev=2)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None, None, None,
+                                            wc_dir):
+    return 1
+  
+  # Backdate rho to revision 1, so we can merge in the rev 2 changes.
+  out, err = svntest.main.run_svn(0, 'up', '-r', '1', rho_path)
+  if err:
+    print err
+    return 1
+
+  # Try one merge with an explicit target; it should succeed.
+  # ### Yes, it would be nice to use run_and_verify_merge(), but it
+  # appears to be impossible to get the expected_foo trees working
+  # right.  I think something is still assuming a directory target.
+  out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2',
+                                  rho_url, rho_path)
+  if err:
+    print err
+    return 1
+
+  # Inspect rho, make sure it's right.
+  rho_text = svntest.tree.get_text(rho_path)
+  if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
+    print "Unexpected text in merged '" + rho_path + "'"
+    return 1
+
+  # Restore rho to pristine revision 1, for another merge.
+  out, err = svntest.main.run_svn(0, 'revert', rho_path)
+  if err:
+    print err
+    return 1
+
+  ### Okay, this is the part that issue #1150 is about.  This fails on
+  ### all RA layers right now, though I think for different reasons in
+  ### each one.  In ra_local it seems to have something to do with
+  ### delta_dirs; in ra_dav and ra_svn, something different may be
+  ### going on.
+
+  # Cd into the directory and run merge with no targets.
+  # Ideally, it would still merge into rho, since the diff applies
+  # only to rho... ### But it's broken right now :-).
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(G_path)
+    out, err = svntest.main.run_svn(0, 'merge', '-r', '1:2', rho_url)
+    if err:
+      print err
+      return 1
+
+    # Inspect rho, make sure it's right.
+    rho_text = svntest.tree.get_text('rho')
+    if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
+      print "Unexpected text merging to 'rho' in '" + G_path + "'"
+      return 1
+  finally:
+    os.chdir(saved_cwd)
+
+  return 0
+
+  # At one time (see revision 4622), the error over ra_dav looked like
+  # this:
+  #
+  #    $ cd subversion/tests/clients/cmdline/working_copies/merge_tests-5
+  #    $ svn merge -r1:2 http://localhost/repositories/merge_tests-5/A/D/G/rho
+  #    subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
+  #    svn: RA layer request failed
+  #    svn: REPORT request failed on /repositories/merge_tests-5/A/D/G/rho
+  #    subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
+  #    svn: The REPORT request returned invalid XML in the response: \
+  #    Unknown XML element `error (in DAV:)'. \
+  #    (/repositories/merge_tests-5/A/D/G/rho)
+  #    $
+  #
+  # For debugging, I suggest starting httpd -X, then ^C, then set a
+  # breakpoint in ap_process_request().  Here's the code from
+  # httpd-2.0.44/modules/http/http_request.c, minus a few comments
+  # that would only be distracting here:
+  # 
+  #    void ap_process_request(request_rec *r)
+  #    {
+  #        int access_status;
+  #    
+  #        /* (Long-ish comment ommitted) */
+  #        access_status = ap_run_quick_handler(r, 0);
+  #        if (access_status == DECLINED) {
+  #            access_status = ap_process_request_internal(r);
+  #            if (access_status == OK) {
+  #                access_status = ap_invoke_handler(r);
+  #            }
+  #        }
+  #    
+  #        if (access_status == DONE) {
+  #            /* e.g., something not in storage like TRACE */
+  #            access_status = OK;
+  #        }
+  #    
+  #        if (access_status == OK) {
+  #            ap_finalize_request_protocol(r);
+  #        }
+  #        else {
+  #            ap_die(access_status, r);
+  #        }
+  #
+  #      ...
+  #   }
+  #
+  # Step through from the top.  Every time access_status is set or
+  # compared, print out its value before and after the assignment or
+  # comparision.  I mean *every time*, even if you think it couldn't
+  # possibly have been affected :-).  You'll see some pretty weird
+  # stuff -- looks like there's a stack smasher somewhere that's
+  # affecting this variable.  But even that doesn't fully explain what
+  # Ben and I were seeing.  Will have to take a look again with fresh
+  # eyes.
+  #
+  # Anyway, the result is that access_status has the wrong value
+  # coming out, so the client receives a 200 OK response when it
+  # should have received an error.  Thus svn_ra_dav__parsed_request()
+  # in libsvn_ra_dav/util.c thinks it got a successful response, but
+  # when it goes to parse that response, the response body XML is that
+  # of an error.  The success-expecting parser is not prepared for
+  # that, and that's why we see that "Unknown XML element" error from
+  # the client.
+
 
 #----------------------------------------------------------------------
 
@@ -752,6 +948,7 @@ test_list = [ None,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
+              # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

@@ -30,6 +30,7 @@
 
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -173,119 +174,6 @@ typedef struct svn_ra_reporter_t
 } svn_ra_reporter_t;
 
 
-
-/** Authentication
- *
- * This is the 2nd draft of client-side authentication; in the first
- * draft, the client presumed to be in control of selecting auth
- * methods and then "pushing" data at the RA layer.  In this draft,
- * the RA layer is presumed to be in control; as server challenges are
- * made, it "pulls" data from the client via callbacks.
- *
- * Authenticators are small "protocol" vtables that are implemented by 
- * libsvn_client, but are driven by the RA layer.  
- *
- * (Because they're related to authentication, we define them here in
- * svn_ra.h)
- *
- * The RA layer is challenged by the server, and then fetches one of
- * these vtables in order to retrieve the necessary authentication
- * info from the client.
- *
- * @defgroup svn_ra_authentication RA client-side authentication.
- * @{
- */
-
-/** List all known authenticator objects (protocols) here. */
-enum svn_ra_auth_method
-{
-  svn_ra_auth_username,
-  svn_ra_auth_simple_password
-};
-/* ### someday add other protocols here: PRIVATE_KEY, CERT, etc. */
-  
-/** A protocol which only needs a username.
- *
- * A protocol which only needs a username.  (used by ra_local)
- * (matches type @c svn_ra_auth_username above.)
- */
-typedef struct svn_ra_username_authenticator_t
-{
-  /** Set @a *username to a username, allocated in @a pool, and cache it in
-   * @a auth_baton.
-   *
-   * Set @a *username to a username, allocated in @a pool, and cache it in
-   * @a auth_baton.  If @a force_prompt is set, then if possible prompt for
-   * the username (i.e., do not attempt to get the information any
-   * other way, such as from a file cache).  An implementation which
-   * is not able to prompt is not required to prompt.
-   *
-   * This routine always sets @a *username something (possibly just "")
-   * or returns error.
-   *  
-   * If this routine is @c NULL, that means the client is unable, or
-   * unwilling, to get the username.
-   */
-  svn_error_t *(*get_username) (char **username,
-                                void *auth_baton,
-                                svn_boolean_t force_prompt,
-                                apr_pool_t *pool);
-
-  /** Store @a username permanently (e.g., in the working copy).
-   *
-   * Store @a username permanently (e.g., in the working copy).
-   * If this routine is @c NULL, that means the client is unable, or
-   * unwilling, to store the username.
-   */
-  svn_error_t *(*store_username) (const char *username,
-                                  void *auth_baton);
-
-} svn_ra_username_authenticator_t;
-
-
-
-/** A protocol which needs a username and password.
- *
- * A protocol which needs a username and password (used by ra_dav)
- * (matches type @c svn_ra_auth_simple_password above.)
- */
-typedef struct svn_ra_simple_password_authenticator_t
-{
-  /** Return username and password in @a *username and @a *password, and
-   * cache them in @a auth_baton.
-   *
-   * Return username and password in @a *username and @a *password, and
-   * cache them in @a auth_baton.  If @a force_prompt is set, then if
-   * possible prompt the user for the information (i.e., do not
-   * attempt to get the information any other way, such as from a file
-   * cache).  An implementation which is not able to prompt is not
-   * required to prompt.
-   *
-   * This routine always sets @a *username and @a *password to something
-   * (possibly just ""), or returns error.
-   *
-   * If this routine is @c NULL, that means the client is unable, or
-   * unwilling, to get the username and password.
-   */
-  svn_error_t *(*get_user_and_pass) (char **username,
-                                     char **password,
-                                     void *auth_baton,
-                                     svn_boolean_t force_prompt,
-                                     apr_pool_t *pool);
-
-  /** If any authentication info is cached in @a auth_baton, store it
-   * permanently.
-   *
-   * If any authentication info is cached in @a auth_baton, store it
-   * permanently (e.g., in the working copy).
-   * If this routine is @c NULL, that means the client is unable, or
-   * unwilling, to store auth data.
-   */
-  svn_error_t *(*store_user_and_pass) (void *auth_baton);
-
-} svn_ra_simple_password_authenticator_t;
-
-/** @} */
 
 /** A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or 
@@ -309,14 +197,9 @@ typedef struct svn_ra_callbacks_t
   svn_error_t *(*open_tmp_file) (apr_file_t **fp,
                                  void *callback_baton);
   
-  /** Retrieve an @a authenticator/@a auth_baton pair from the client,
-   * which represents the protocol @a method.
-   */
-  svn_error_t *(*get_authenticator) (void **authenticator,
-                                     void **auth_baton,
-                                     enum svn_ra_auth_method method,
-                                     void *callback_baton,
-                                     apr_pool_t *pool);
+  /* An authentication baton, created by the application, which is
+     capable of retrieving all known types of credentials.  */
+  svn_auth_baton_t *auth_baton;
 
   /*** The following items may be set to NULL to disallow the RA layer
        to perform the respective operations of the vtable functions.
@@ -377,6 +260,10 @@ typedef struct svn_ra_plugin_t
    * @a callbacks/@a callback_baton is a table of callbacks provided by the
    * client; see @c svn_ra_callbacks_t above.
    *
+   * @a config is a hash mapping <tt>const char *</tt> keys to 
+   * @c svn_config_t * values.  For example, the @c svn_config_t for the 
+   * "~/.subversion/config" file is under the key "config".
+   *
    * All RA requests require a @a session_baton; they will continue to
    * use @a pool for memory allocation.
    */
@@ -384,6 +271,7 @@ typedef struct svn_ra_plugin_t
                         const char *repos_URL,
                         const svn_ra_callbacks_t *callbacks,
                         void *callback_baton,
+                        apr_hash_t *config,
                         apr_pool_t *pool);
 
   /** Close a repository session. 
@@ -777,6 +665,11 @@ typedef struct svn_ra_plugin_t
                               const char *path,
                               svn_revnum_t revision);
 
+  /** Set @a *uuid to the repository's UUID.  The UUID has the same lifetime
+   *  as the session_baton. 
+   */
+  svn_error_t *(*get_uuid) (void *session_baton,
+                            const char **uuid);
 
 } svn_ra_plugin_t;
 

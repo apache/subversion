@@ -30,7 +30,7 @@ TABLE OF CONTENTS
    * Filing bugs / issues
    * Commit access
    * The configuration/build system under unix
-   * How to create a distribution tarball
+   * How to release a distribution tarball
    * Release numbering
 
 
@@ -590,8 +590,8 @@ more crucial, so let's all get in the habit of using it early.
 
 
 
-Debugging the server
-====================
+Debugging the ra_dav server
+===========================
 
 'mod_dav_svn.so' contains the main Subversion server logic; it runs as
 a module within mod_dav, which runs as a module within httpd.  Since
@@ -618,6 +618,72 @@ You'll probably want to watch Apache's run-time logs
 
 to help determine what might be going wrong and where to set
 breakpoints.
+
+
+
+Debugging the ra_svn client and server, on Unix
+===============================================
+
+Bugs in ra_svn usually manifest themselves with one of the following
+cryptic error messages:
+
+  svn: Malformed network data
+  svn: Connection closed unexpectedly
+
+(The first message can also mean the data stream was corrupted in
+tunnel mode by user dotfiles or hook scripts; see issue 1145.)  The
+first message generally means you to have to debug the client; the
+second message generally means you have to debug the server.
+
+It is easiest to debug ra_svn using a build with --disable-shared
+--enable-maintainer-mode.  With the latter option, the error message
+will tell you exactly what line to set a breakpoint at; otherwise,
+look up the line number at the end of marshal.c:vparse_tuple() where
+it returns the "Malformed network data" error.
+
+To debug the client, simply pull it up in gdb, set a breakpoint, and
+run the offending commmand:
+
+  % gdb svn
+  (gdb) break marshal.c:NNN
+  (gdb) run ARGS
+  Breakpoint 1, vparse_tuple (list=___, pool=___, fmt=___, 
+    ap=___) at subversion/libsvn_ra_svn/marshal.c:NNN
+  NNN                                 "Malformed network data");
+
+There are several bits of useful information:
+
+  * A backtrace will tell you exactly what protocol exchange is
+    failing.
+
+  * "print *conn" will show you the connection buffer.  read_buf,
+    read_ptr, and read_end represent the read buffer, which can show
+    you the data the marshaller is looking at.  (Since read_buf isn't
+    generally 0-terminated at read_end, be careful of falsely assuming
+    that there's garbage data in the buffer.)
+
+  * The format string determines what the marshaller was expecting to
+    see.
+
+To debug the server in daemon mode, pull it up in gdb, set a
+breakpoint (usually a "Connection closed unexpectedly" error on the
+client indicates a "Malformed network data" error on the server,
+although it can also indicate a core dump), and run it with the "-X"
+option to serve a single connection:
+
+  % gdb svnserve
+  (gdb) break marshal.c:NNN
+  (gdb) run -X
+
+Then run the offending client command.  From there, it's just like
+debugging the client.
+
+There's no good way to debug the server in tunnel mode, so if you see
+a "Connection closed unexpectedly" in tunnel mode, and can't reproduce
+it in daemon mode, debug the client to figure out which protocol
+exchange is failing and then pore over the server code.  If necessary,
+add debugging statements to the server code which send output to
+stderr.
 
 
 
@@ -1057,37 +1123,10 @@ configuration/build system:
 
 
 
-How to create a distribution tarball
+How to release a distribution tarball
 ====================================
 
-Pretty simple -- do this under Unix:
-
-   1. Get a completely up-to-date working copy with no local mods.
-      Make sure that APR is also up-to-date and pristine.  Build
-      Subversion and run the test suite, just to be safe.
-
-   2. Run "make dist".  This invokes `dist.sh', which checks out
-      Subversion and APR from their master repositories, then runs the
-      pre-configuration steps, so that the user will be able to run
-      `configure' right after unpacking.  Watch dist.sh's output to
-      make sure everything goes smoothly.
-
-   3. When it's done, you'll have `subversion-rBLAH.tar.gz' in the top
-      level of your working copy (BLAH is a revision number).  That's
-      your distribution.  Unpack it on a clean machine, make sure it
-      works, and upload it to
-
-         http://subversion.tigris.org/servlets/ProjectDownloadList
-
-      If you're making a new distribution in a hurry because the
-      previous one is known to have problems, it's fine to upload
-      first and then test, because the chances of the dist behaving
-      differently from your working copy are very small -- it should
-      be exactly the same code.
-
-These guidelines may get stricter when we have a real user base; for
-now, a distribution is just a bootstrap mechanism to obtain a working
-copy.
+See notes/releases.txt.
 
 
 

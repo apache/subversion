@@ -1,37 +1,37 @@
 <preface id="svn-ch-0">
   <title>Preface</title>
-
+  
   <simplesect>
     
     <blockquote>
-      <!-- ### find a quote -->
-      <para>"Find a good opening quote."  --Anonymous</para>
+      <para><quote>If C gives you enough rope to hang yourself, think
+        of Subversion as a sort of rope storage facility.</quote>
+        &mdash;Brian Fitzpatrick</para>
     </blockquote>
 
     <para>
       In the world of open-source software, the Concurrent Versions
       System (CVS) has long been the tool of choice for version
       control.  And rightly so.  CVS itself is free software, and its
-      wonderful "non locking" development model &mdash; which allows
-      dozens of far-flung programmers to share their work &mdash; fits
-      the collaborative model of open-source world very well.  In
-      fact, one might argue that without CVS, it's doubtful whether
-      sites like Freshmeat or Sourceforge would ever have flourished
-      as they do now.  CVS and its semi-chaotic development model have
-      become cornerstones of open-source culture.
+      wonderful <quote>non-locking</quote> development
+      model&mdash;which allows dozens of far-flung programmers to
+      share their work&mdash;fits the collaborative model of the
+      open-source world very well.  CVS and its semi-chaotic
+      development model have become cornerstones of open-source
+      culture.
     </para>
 
     <para>
       But like many tools, CVS is starting to show its age.
       Subversion is a relatively new version control system designed
       to be the successor to CVS.  The designers set out to win the
-      hearts of CVS users in two ways; first, by creating a
-      open-source version control system with a similar design (and
-      "look and feel") as CVS, and second, by attempting to fix the
-      most noticeable flaws in CVS.  While the result isn't
-      necessarily the next great evolution in version control design,
-      Subversion <emphasis>is</emphasis> something that is very
-      powerful, very useable, and very flexible.
+      hearts of CVS users in two ways: by creating a open-source
+      version control system with a similar design (and "look and
+      feel") as CVS, and by attempting to fix most of CVS's noticeable
+      flaws.  While the result isn't necessarily the next great
+      evolution in version control design, Subversion
+      <emphasis>is</emphasis> very powerful, very useable, and very
+      flexible.
     </para>
 
   </simplesect>
@@ -57,7 +57,7 @@
       Subversion, and therefore it is the scenario underlying all of
       the book's examples.  But keep in mind that Subversion can be
       used to manage changes to any sort of information: images,
-      music, databases, literature, and so on.  To Subversion, all
+      music, databases, documentation, and so on.  To Subversion, all
       data is just data.</para>
     
     <para>While this book is written with the assumption that the
@@ -84,7 +84,7 @@
 
     <para>Chapters four, five, and six discuss the more complex topics
       of branching, repository administration, and other advanced
-      features such as properties, modules, and access control.
+      features such as properties, externals, and access control.
       Sysadmins and power-users will definitely want to read these
       chapters.</para>
 
@@ -111,9 +111,8 @@
     <para>Note that the source code examples are just
       that&mdash;examples. While they will compile with the proper
       compiler incantations, they are intended to illustrate the
-      problem at hand. So don't be surprised if an example is lacking
-      error checking code and other bits that you would expect from
-      production-quality code.</para>
+      problem at hand, not necessarily serve as examples of good
+      programming style.</para>
 
   </sect1>
 
@@ -139,10 +138,11 @@
       <listitem>
         <para>You can distribute and make changes to this book however
           you wish &mdash; it's under a free license.  Of course,
-          rather than fork the book, we'd much rather you send
-          feedback and patches to the Subversion developer community.
-          See <xref linkend="svn-ch-7-sect-6"/> to learn about joining
-          this community.</para>
+          rather than distribute your own private version of this
+          book, we'd much rather you send feedback and patches to the
+          Subversion developer community.  See <xref
+          linkend="svn-ch-7-sect-6"/> to learn about joining this
+          community.</para>
       </listitem>
     </itemizedlist>
     

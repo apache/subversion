@@ -28,7 +28,11 @@
          typemap will be applied onto a "real" type.
 */
 
-%typemap(in,numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
+%typemap(python, in, numinputs=0) SWIGTYPE **OUTPARAM ($*1_type temp) {
+    $1 = ($1_ltype)&temp;
+}
+
+%typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
@@ -40,6 +44,15 @@
    Create a typemap for specifying string args that may be NULL.
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
+
+%typemap(java, in) const char *MAY_BE_NULL { 
+  /* ### WHEN IS THIS USED? */
+  $1 = 0;
+  if ($input) {
+    $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
+    if (!$1) return $null;
+  }
+}
 
 /* -----------------------------------------------------------------------
    Define a more refined 'varin' typemap for 'const char *' members. This
@@ -60,7 +73,7 @@
    Specify how svn_error_t returns are turned into exceptions.
 */
 
-%typemap(python,out) svn_error_t * {
+%typemap(python, out) svn_error_t * {
     if ($1 != NULL) {
         if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
             PyErr_SetString(PyExc_RuntimeError,
@@ -70,6 +83,22 @@
     Py_INCREF(Py_None);
     $result = Py_None;
 }
+
+%typemap(java, out) svn_error_t * {
+    if ($1 != NULL) {
+        SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, $1->message);
+    }
+}
+%typemap(jni) svn_error_t * "int"
+%typemap(jtype) svn_error_t * "int"
+%typemap(jstype) svn_error_t * "int"
+%typemap(javain) svn_error_t * "@javainput"
+%typemap(javaout) svn_error_t * {
+	return $jnicall;
+}
+
+/* Make the proxy classes much more usable */
+%typemap(javaptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [] "public"
 
 /* -----------------------------------------------------------------------
    'svn_renum_t *' will always be an OUTPUT parameter
@@ -88,21 +117,65 @@
     $1 = PyString_AS_STRING($input);
     $2 = PyString_GET_SIZE($input);
 }
-%typemap(java, in) (const char *PTR, apr_size_t LEN) {
-    /* FIXME: This is just a stub -- implement JNI code! */
+
+%typemap(java, in) (const char *PTR, apr_size_t LEN) (char c) {
+    if ($input != NULL) {
+	    /* Do not use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical
+		* since the Subversion client might block the thread */
+
+       $1 = JCALL2(GetByteArrayElements, jenv, $input, NULL);
+	   $2 = JCALL1(GetArrayLength, jenv, $input);
+	}
+	else {
+       $1 = &c;
+	   $2 = 0;
+	}
 }
+
+%typemap(java, freearg) (const char *PTR, apr_size_t LEN) {
+	if ($input != NULL) {
+           JCALL3(ReleaseByteArrayElements, jenv, $input, $1, JNI_ABORT);
+        }
+	/* Since this buffer is used as input JNI_ABORT is safe as "mode" above*/
+}
+
+%typemap(jni) (const char *PTR, apr_size_t LEN) "jbyteArray"
+%typemap(jtype) (const char *PTR, apr_size_t LEN) "byte[]"
+%typemap(jstype) (const char *PTR, apr_size_t LEN) "byte[]"
+%typemap(javain) (const char *PTR, apr_size_t LEN) "$javainput"
+%typemap(javaout) (const char *PTR, apr_size_t LEN) {
+    return $jnicall;
+  }
 
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
 */
 
-%typemap(arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+%typemap(python, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
     /* Assume that the pool here is the last argument in the list */
     SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
                     (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
     _global_pool = $1;
 }
-%typemap(in) apr_pool_t *pool "";
+
+%typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
+    /* ### HACK: Get the input variable based on naming convention */
+	_global_pool = *(apr_pool_t **)&j$1;
+	$1 = 0;
+}
+
+/* -----------------------------------------------------------------------
+   Special boolean mapping for java.
+*/
+%typemap(java, jni) svn_boolean_t "jboolean";
+%typemap(java, jtype) svn_boolean_t "boolean";
+%typemap(java, jstype) svn_boolean_t "boolean";
+%typemap(java, in) svn_boolean_t %{
+    $1 = $input ? TRUE : FALSE;
+%}
+%typemap(java, out) svn_boolean_t %{
+    $result = $1 ? JNI_TRUE : JNI_FALSE;
+%}
 
 /* -----------------------------------------------------------------------
    Handle python thread locking.

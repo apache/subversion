@@ -11,8 +11,10 @@ Usage: python win-tests.py [option]
 tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/stringtest.exe',
          'subversion/tests/libsvn_subr/path-test.exe',
+         'subversion/tests/libsvn_subr/stream-test.exe',
          'subversion/tests/libsvn_subr/time-test.exe',
          'subversion/tests/libsvn_wc/translate-test.exe',
+         'subversion/tests/libsvn_delta/diff-diff3-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/libsvn_subr/target-test.py']
 
@@ -34,7 +36,8 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/stat_tests.py',
                 'subversion/tests/clients/cmdline/trans_tests.py',
                 'subversion/tests/clients/cmdline/svnadmin_tests.py',
-                'subversion/tests/clients/cmdline/svnlook_tests.py']
+                'subversion/tests/clients/cmdline/svnlook_tests.py',
+                'subversion/tests/clients/cmdline/svnversion_tests.py']
 
 
 import os, sys, string, shutil, traceback

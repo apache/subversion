@@ -345,7 +345,7 @@ log_message_receiver_xml (void *baton,
   /* <author>xxx</author> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
                          NULL);
-  svn_xml_escape_cstring (&sb, author, pool);
+  svn_xml_escape_cdata_cstring (&sb, author, pool);
   svn_xml_make_close_tag (&sb, pool, "author");
 
   if (date == NULL)
@@ -355,7 +355,7 @@ log_message_receiver_xml (void *baton,
   /* <date>xxx</date> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
                          NULL);
-  svn_xml_escape_cstring (&sb, date, pool);
+  svn_xml_escape_cdata_cstring (&sb, date, pool);
   svn_xml_make_close_tag (&sb, pool, "date");
 
   if (changed_paths)
@@ -385,7 +385,8 @@ log_message_receiver_xml (void *baton,
             {
               /* <path action="X" copyfrom-path="aaa" copyfrom-rev="> */
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
-              svn_xml_escape_cstring (&escpath, log_item->copyfrom_path, pool);
+              svn_xml_escape_attr_cstring (&escpath,
+                                           log_item->copyfrom_path, pool);
               revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
                                      log_item->copyfrom_rev);
               svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
@@ -400,7 +401,7 @@ log_message_receiver_xml (void *baton,
                                      "action", action, NULL);
             }
           /* xxx</path> */
-          svn_xml_escape_cstring (&sb, path, pool);
+          svn_xml_escape_cdata_cstring (&sb, path, pool);
           svn_xml_make_close_tag (&sb, pool, "path");
         }
 
@@ -419,7 +420,7 @@ log_message_receiver_xml (void *baton,
                                         NULL,        /* no keywords */
                                         FALSE,       /* no expansion */
                                         pool));
-  svn_xml_escape_cstring (&sb, msg_native_eol, pool);
+  svn_xml_escape_cdata_cstring (&sb, msg_native_eol, pool);
   svn_xml_make_close_tag (&sb, pool, "msg");
   
   /* </logentry> */
@@ -437,9 +438,9 @@ svn_cl__log (apr_getopt_t *os,
              void *baton,
              apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  svn_client_auth_baton_t *auth_baton;
   struct log_receiver_baton lb;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -447,9 +448,6 @@ svn_cl__log (apr_getopt_t *os,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
                                          FALSE, pool));
-
-  /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -505,14 +503,14 @@ svn_cl__log (apr_getopt_t *os,
           printf ("%s", sb->data);  
         }
       
-      SVN_ERR (svn_client_log (auth_baton,
-                               targets,
+      SVN_ERR (svn_client_log (targets,
                                &(opt_state->start_revision),
                                &(opt_state->end_revision),
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver_xml,
                                NULL,  /* no baton necessary */
+                               ctx,
                                pool));
       
       if (! opt_state->incremental)
@@ -536,14 +534,14 @@ svn_cl__log (apr_getopt_t *os,
        * is concerned, the result of 'svn log --quiet' is the same
        * either way.
        */
-      SVN_ERR (svn_client_log (auth_baton,
-                               targets,
+      SVN_ERR (svn_client_log (targets,
                                &(opt_state->start_revision),
                                &(opt_state->end_revision),
                                opt_state->verbose,
                                opt_state->strict,
                                log_message_receiver,
                                &lb,
+                               ctx,
                                pool));
 
       if (! opt_state->incremental)

@@ -107,6 +107,22 @@ apr_hash_sorted_keys (apr_hash_t *ht,
                       apr_pool_t *pool);
 #endif /* apr_hash_sorted_keys */
 
+#ifndef apr_array_prepend
+/** Add a new element to the head of an array.
+ * 
+ * Return a pointer to an empty slot at the head of array @a arr.
+ *
+ * Note that if your application does not strictly need the new
+ * element to be at the head of the array, consider using the much
+ * more efficient function, apr_array_push() (which will add your new
+ * element at the tail of the array).
+ *
+ * NOTE:
+ * This function should go over to APR. 
+ */
+void *apr_array_prepend (apr_array_header_t *arr);
+#endif /* apr_array_prepend */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -1,3 +1,21 @@
+#
+# Makefile.in:  template Makefile for Subversion
+#
+# ====================================================================
+# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+#
+
 top_builddir = .
 top_srcdir = @top_srcdir@
 abs_builddir = @abs_builddir@
@@ -14,12 +32,10 @@ MDOCS_DIR = ${BOOK_TOP}/misc-docs
 DOC_DIRS = $(DESIGN_DIR) $(BOOK_DIR) $(MDOCS_DIR) 
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
-SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
-SWIG_DIRS = subversion/bindings/swig            \
-            subversion/bindings/swig/python     \
-            subversion/bindings/swig/python/svn \
+
+### these should go away; gen-make should place this into BUILD_DIRS
+SWIG_DIRS = subversion/bindings/swig/python     \
             subversion/bindings/swig/java       \
-            subversion/bindings/swig/java/build \
             subversion/bindings/swig/java/org   \
             subversion/bindings/swig/java/org/tigris \
             subversion/bindings/swig/java/org/tigris/subversion \
@@ -46,10 +62,11 @@ mandir = @mandir@
 srcdir = @srcdir@
 infodir = @infodir@
 
+# where to install libsvn_swig_*
 swig_py_libdir= @libdir@
 swig_java_libdir= @libdir@
 
-### this isn't right
+### these possibly need further discussion
 swig_pydir = @libdir@/svn-python/svn
 swig_javadir = @libdir@/svn-java
 
@@ -82,8 +99,9 @@ SWIG_LDFLAGS = @SWIG_LDFLAGS@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
 SWIG_PY_LINK = @SWIG_PY_LINK@
-SWIG_PY_SETUP_LDFLAGS = @SWIG_PY_SETUP_LDFLAGS@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
+SWIG_JAVA_COMPILE = $(CC) -DNDEBUG -g -O3 -Wall -Wstrict-prototypes -fPIC
+SWIG_JAVA_LINK = $(CC) -shared
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
@@ -98,25 +116,30 @@ LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 
-COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
+# special compilation for files destined for mod_dav_svn
+COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c
 
-# special SWIG compilation
-COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c $<
-COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c $<
+# special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
+COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
+COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
+
+# special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module
 
-RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
-RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o $@ $<
+# these commands run SWIG to generate wrapper source files (*.c)
+### should we protect against swig not being available?
+RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@
+RUN_SWIG_JAVA = cd ${SWIG_SRC_DIR}/java/org/tigris/subversion/swig && $(SWIG) -c -java -noproxy -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o ${abs_builddir}/$@
 
-COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@ $<
-COMPILE_JAVA_WRAPPER = \
-  echo "ERROR: compilation of Java wrappers not yet supported" ; exit 1
+# Compilation of SWIG-generated C source code
+COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
+COMPILE_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_JAVA_COMPILE) -DSWIGJAVA $(SWIG_INCLUDES) $(SWIG_JAVA_INCLUDES) -prefer-pic -c -o $@
 
+# these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
-LINK_JAVA_WRAPPER = \
-  echo "ERROR: linking of Java wrappers not yet supported" ; exit 1
+LINK_JAVA_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_JAVA_LINK) $(SWIG_LDFLAGS) -rpath $(swig_javadir) -avoid-version -module
 
 
 INSTALL = @INSTALL@
@@ -136,28 +159,20 @@ INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA = $(INSTALL_LIB)
 INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 
+# additional installation rules for the SWIG wrappers
+INSTALL_EXTRA_SWIG_PY=$(top_srcdir)/build/copy-swig-py.sh "$(PYTHON)" "$(INSTALL_DATA)" "${SWIG_SRC_DIR}/python/svn" "$(DESTDIR)$(swig_pydir)"
+INSTALL_EXTRA_SWIG_JAVA=:
+
 APXS = @APXS@ 
 
 PYTHON = @PYTHON@
 
+JDK = @JDK@
+JAVAC = @JAVAC@
+
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
-PYTHON_DISTUTIL = $(SWIG_SRC_DIR)/python/setup.py                        \
-                  -I$(SWIG_SRC_DIR)                                      \
-                  -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-                  -S$(SWIG_SRC_DIR)                                      \
-                  -s"$(SWIG)"                                            \
-                  -L$(SVN_APR_PREFIX)/lib                                \
-                  -L$(abs_builddir)/subversion/libsvn_client/.libs       \
-                  -L$(abs_builddir)/subversion/libsvn_delta/.libs        \
-                  -L$(abs_builddir)/subversion/libsvn_fs/.libs           \
-                  -L$(abs_builddir)/subversion/libsvn_ra/.libs           \
-                  -L$(abs_builddir)/subversion/libsvn_repos/.libs        \
-                  -L$(abs_builddir)/subversion/libsvn_wc/.libs           \
-                  -L$(abs_builddir)/subversion/libsvn_subr/.libs         \
-                  -L$(abs_builddir)/subversion/bindings/swig/.libs       \
-                  $(SWIG_PY_SETUP_LDFLAGS)
 
 all: external-all local-all
 clean: external-clean local-clean
@@ -191,10 +206,10 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean swig-clean
+local-clean: fast-clean check-clean
 
 # clean everything, including test output.
-local-distclean: fast-distclean check-clean swig-clean
+local-distclean: fast-distclean check-clean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
@@ -215,8 +230,13 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
                   '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
                   $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
+# First, set up Apache as documented in
+# subversion/tests/clients/cmdline/README.
 davcheck: 
 	@make check BASE_URL=http://localhost
+
+# First, run:
+#   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline
 svncheck: 
 	@make check BASE_URL=svn://localhost
 
@@ -334,39 +354,9 @@ doc-clean:
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
 
-swig-assert-available:
-	@if test -z "$(SWIG)" || test "$(SWIG)" = "none"; then     \
-	    echo 'SWIG variable not defined; this rule is unavailable' >&2; \
-	    echo 'Re-run configure --with-swig' >&2;               \
-	    exit 1;                                                \
-	fi
+java-api:
+	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"
 
-swig-clean: swig-py-ext-clean swig-java-ext-clean
-
-swig-py-ext: swig-assert-available
-	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) build $(DISTUTIL_PARAM)
-
-install-swig-py-ext: swig-assert-available
-	cd $(SWIG_BUILD_DIR)/python; \
-        $(PYTHON) $(PYTHON_DISTUTIL) install $(DISTUTIL_PARAM) --prefix=$(DESTDIR)$(prefix)
-
-swig-py-ext-clean:
-	rm -rf $(SWIG_BUILD_DIR)/python/build
-
-swig-java-ext: swig-assert-available mkdir-init
-	cd $(SWIG_SRC_DIR)/java/org/tigris/subversion/swig; \
-        for source in $(SWIG_SRC_DIR)/*.i; do \
-            target="`echo -n $$source | sed 's!^.*/\(.*\)\.i$$!\1.c!'`"; \
-            $(SWIG) -c -java -noproxy -module 'Subversion' \
-                -package 'org.tigris.subversion.swig' \
-                -I$(SWIG_SRC_DIR) \
-                -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-                -o $(SWIG_SRC_DIR)/java/build/$$target $$source; \
-        done
-
-swig-java-ext-clean:
-	rm -rf $(SWIG_SRC_DIR)/java
 
 ### Build a tarball.
 dist: 

@@ -53,11 +53,15 @@ struct svn_fs_t
   DB *revisions;
   DB *strings;
   DB *transactions;
+  DB *uuids;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
   svn_fs_warning_callback_t warning;
   void *warning_baton;
+
+  /* The filesystem configuration. */
+  apr_hash_t *config;
 };
 
 

@@ -84,28 +84,14 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 #  define SVN_REGISTRY_HKCU_LEN ((sizeof (SVN_REGISTRY_HKCU)) - 1)
 #  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
 #  define SVN_REGISTRY_PATH_LEN ((sizeof (SVN_REGISTRY_PATH)) - 1)
-#  define SVN_REGISTRY_CONFIG_SERVERS_KEY "Servers"
-#  define SVN_REGISTRY_SYS_CONFIG_SERVERS_PATH \
+#  define SVN_REGISTRY_SYS_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKLM       \
-                               SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_SERVERS_KEY
-#  define SVN_REGISTRY_USR_CONFIG_SERVERS_PATH \
+                               SVN_REGISTRY_PATH
+#  define SVN_REGISTRY_USR_CONFIG_PATH \
                                SVN_REGISTRY_PREFIX     \
                                SVN_REGISTRY_HKCU       \
-                               SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_SERVERS_KEY
-#  define SVN_REGISTRY_CONFIG_CONFIG_KEY "Config"
-#  define SVN_REGISTRY_SYS_CONFIG_CONFIG_PATH \
-                               SVN_REGISTRY_PREFIX     \
-                               SVN_REGISTRY_HKLM       \
-                               SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_CONFIG_KEY
-#  define SVN_REGISTRY_USR_CONFIG_CONFIG_PATH \
-                               SVN_REGISTRY_PREFIX     \
-                               SVN_REGISTRY_HKCU       \
-                               SVN_REGISTRY_PATH       \
-                               SVN_REGISTRY_CONFIG_CONFIG_KEY
+                               SVN_REGISTRY_PATH
 #endif /* SVN_WIN32 */
 
 /* System-wide and configuration subdirectory names.
@@ -120,13 +106,6 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 
 /* The description/instructions file in the config directory. */
 #define SVN_CONFIG__USR_README_FILE    "README"
-
-/* The main configuration file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__USR_CONFIG_FILE    "config"
-
-/* The servers config file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__USR_SERVERS_FILE   "servers"
-
 
 /* Set *PATH_P to the path to config file FNAME in the system
    configuration area, allocated in POOL.  If FNAME is NULL, set

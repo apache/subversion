@@ -54,7 +54,7 @@
    handle the return value for svn_client_proplist()
 */
 
-%typemap(in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
+%typemap(python,in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
     $1 = &temp;
 }
 %typemap(python,argout,fragment="t_output_helper") apr_array_header_t ** {
@@ -85,12 +85,6 @@
     }
     $result = t_output_helper($result, list);
 }
-%typemap(java,argout) apr_hash_t **statushash {
-    /* FIXME: Use JNI equiv of Java type SWIGTYPE_p_svn_wc_status_t */
-    $result = t_output_helper(
-        $result,
-        svn_swig_java_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
-}
 
 /* -----------------------------------------------------------------------
    handle svn_wc_notify_func_t/baton pairs
@@ -101,6 +95,20 @@
   $1 = svn_swig_py_notify_func;
   $2 = $input; /* our function is the baton. */
 }
+
+%typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
+
+  $1 = svn_swig_java_notify_func;
+  $2 = (void*)$input; /* our function is the baton. */
+}
+
+%typemap(jni) svn_wc_notify_func_t "jobject"
+%typemap(jtype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
+%typemap(jstype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
+%typemap(javain) svn_wc_notify_func_t "$javainput"
+%typemap(javaout) svn_wc_notify_func_t {
+    return $jnicall;
+  }
 
 /* -----------------------------------------------------------------------
    handle svn_client_get_commit_log_t/baton pairs
@@ -113,10 +121,45 @@
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(java,in) (svn_client_get_commit_log_t log_msg_func, 
+                   void *log_msg_baton) {
+
+  $1 = svn_swig_java_get_commit_log_func;
+  $2 = (void*)$input; /* our function is the baton. */
+}
+
+%typemap(jni) svn_client_get_commit_log_t "jobject"
+%typemap(jtype) svn_client_get_commit_log_t "org.tigris.subversion.client.ClientPrompt"
+%typemap(jstype) svn_client_get_commit_log_t "org.tigris.subversion.client.ClientPrompt"
+%typemap(javain) svn_client_get_commit_log_t "$javainput"
+%typemap(javaout) svn_client_get_commit_log_t {
+    return $jnicall;
+  }
+
+
+/* -----------------------------------------------------------------------
+   handle svn_client_get_commit_log_t/baton pairs
+*/
+
+%typemap(java,in) (svn_log_message_receiver_t receiver,
+                void *receiver_baton) {
+
+  $1 = svn_swig_java_log_message_receiver;
+  $2 = (void*)$input; /* our function is the baton. */
+}
+
+%typemap(jni) svn_log_message_receiver_t "jobject"
+%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(javain) svn_log_message_receiver_t "$javainput"
+%typemap(javaout) svn_log_message_receiver_t {
+    return $jnicall;
+  }
+
 /* -----------------------------------------------------------------------
    handle the "statushash" OUTPUT param for svn_client_status()
 */
-%typemap(in,numinputs=0) apr_hash_t **statushash = apr_hash_t **OUTPUT;
+%typemap(python,in,numinputs=0) apr_hash_t **statushash = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **statushash {
     $result = t_output_helper(
         $result,
@@ -127,12 +170,24 @@
    fix up the return hash for svn_client_ls() 
 */
 
-%typemap(in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
+%typemap(python,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **dirents {
 	$result = t_output_helper(
 		$result,
 		svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_dirent_t));
 }
+
+/* -----------------------------------------------------------------------
+   handle the prompt_baton
+*/
+
+%typemap(jni) svn_log_message_receiver_t "jobject"
+%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(javain) svn_log_message_receiver_t "$javainput"
+%typemap(javaout) svn_log_message_receiver_t {
+    return $jnicall;
+  }
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
@@ -144,6 +199,17 @@
 /* We also need SWIG to wrap svn_dirent_t for us.  It doesn't appear in
    any API, but svn_client_ls returns a hash of pointers to dirents. */
 %types(svn_dirent_t *);
+
+/* ----------------------------------------------------------------------- */
+
+
+%typemap(java, in) svn_stream_t *out %{
+    $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);
+%}
+%typemap(java, jni) svn_stream_t * "jobject";
+%typemap(java, jtype) svn_stream_t * "java.io.OutputStream";
+%typemap(java, jstype) svn_stream_t * "java.io.OutputStream";
+%typemap(java, javain) svn_stream_t * "$javainput";
 
 /* ----------------------------------------------------------------------- */
 

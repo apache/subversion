@@ -5,7 +5,7 @@
 # set make_*_check to 0.
 %define make_ra_local_check 1
 %define make_ra_svn_check 1
-%define make_ra_dav_check 0
+%define make_ra_dav_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -13,10 +13,11 @@ Release: @RELEASE@
 Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
-Source0: subversion-%{version}-%{release}.tar.gz
-Source1: subversion.conf
-Source2: rcsparse.py
+SOURCE0: subversion-%{version}-%{release}.tar.gz
+SOURCE1: subversion.conf
+SOURCE2: httpd.davcheck.conf
 Patch0: install.patch
+Patch1: hang.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: httpd-apr >= %{apache_version}
@@ -27,7 +28,7 @@ Requires: neon >= %{neon_version}
 BuildPreReq: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
 BuildPreReq: httpd-apr-devel >= %{apache_version}
-BuildPreReq: autoconf253 >= 2.53
+BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
@@ -61,7 +62,6 @@ package.
 Group: Utilities/System
 Summary: Development package for Subversion developers.
 Requires: subversion = %{version}-%{release}
-Requires: httpd >= %{apache_version}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacting with the subversion package.
@@ -92,6 +92,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Mar 01 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5173
+- Enabled RA_DAV checking.
+  Now requires httpd package to build because of RA_DAV tests.
+
 * Sat Jan 18 2003 David Summers <david@summersoft.fay.ar.us> 0.16.1-4433
 - Created tools package to hold the tools.
 
@@ -203,6 +207,9 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
+# Fix subversion test hang during RA_SVN testing.
+%patch1 -p0
+
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
 export RELEASE_NAME
@@ -212,7 +219,6 @@ sed -e \
   < "$vsn_file" > "${vsn_file}.tmp"
 mv "${vsn_file}.tmp" "$vsn_file"
 
-%build
 LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
@@ -236,6 +242,7 @@ LDFLAGS="${LDFLAGS}" ./configure \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
+%build
 # Make svnadmin static.
 make subversion/svnadmin/svnadmin
 
@@ -243,6 +250,18 @@ make subversion/svnadmin/svnadmin
 cp subversion/svnadmin/svnadmin svnadmin.static
 
 # Configure shared.
+
+LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs"
+
 LDFLAGS="${LDFLAGS}" ./configure \
 	--prefix=/usr \
 	--with-swig \
@@ -256,7 +275,7 @@ make clean
 make
 
 # Build cvs2svn python bindings
-make swig-py-ext
+make swig-py
 
 %if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
@@ -267,6 +286,7 @@ echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %if %{make_ra_svn_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
+sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
 make svncheck
 killall lt-svnserve
@@ -275,7 +295,13 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-make davcheck
+killall httpd || true
+sleep 1
+sed -e "s;@SVNDIR@;`pwd`;" < %{SOURCE2} > httpd.conf
+/usr/sbin/httpd -f `pwd`/httpd.conf
+sleep 1
+make check BASE_URL='http://localhost:15835'
+killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
@@ -296,10 +322,13 @@ mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install cvs2svn and supporting files
-make install-swig-py-ext DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
+make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
 sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
-cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+cp tools/cvs2svn/rcsparse.py $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/svn $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static

@@ -117,7 +117,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
           && (err->apr_err != SVN_ERR_REPOS_UNSUPPORTED_VERSION))
         return svn_error_createf 
           (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
-           "Unable to open repository %s", URL);
+           "Unable to open repository '%s'", URL);
 
       /* It would be strange indeed if "/" were a repository, but hey,
          people do strange things sometimes.  Anyway, if "/" failed

@@ -151,7 +151,7 @@
    the second argument to svn_parse_date is unused: always pass NULL
 */
 
-%typemap(in,numinputs=0) struct getdate_time *now {
+%typemap(python,in,numinputs=0) struct getdate_time *now {
     $1 = NULL;
 }
 
@@ -203,4 +203,5 @@ void apr_pool_destroy(apr_pool_t *p);
 #ifdef SWIGJAVA
 #include "swigutil_java.h"
 #endif
+
 %}

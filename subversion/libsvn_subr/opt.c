@@ -531,30 +531,28 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
   apr_array_header_t *output_targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
 
-  /* Step 1:  create a master array of targets that are in -native-
+  /* Step 1:  create a master array of targets that are in UTF-8
      encoding, and come from concatenating the targets left by apr_getopt,
      plus any extra targets (e.g., from the --targets switch.) */
- 
+
   for (; os->ind < os->argc; os->ind++)
     {
       /* The apr_getopt targets are still in native encoding. */
       const char *raw_target = os->argv[os->ind];
-      (*((const char **) apr_array_push (input_targets))) = raw_target;
+      SVN_ERR (svn_utf_cstring_to_utf8
+               ((const char **) apr_array_push (input_targets),
+                raw_target, NULL, pool));
     }
-  
+
   if (known_targets)
     {
       for (i = 0; i < known_targets->nelts; i++)
         {
           /* The --targets array have already been converted to UTF-8,
              because we needed to split up the list with svn_cstring_split. */
-          const char *raw_target;
           const char *utf8_target = APR_ARRAY_IDX(known_targets,
                                                   i, const char *);
-          /* Convert each back to native encoding.  */
-          SVN_ERR (svn_utf_cstring_from_utf8 (&raw_target, utf8_target, pool));
-          
-          (*((const char **) apr_array_push (input_targets))) = raw_target;
+          (*((const char **) apr_array_push (input_targets))) = utf8_target;
         }
     }
 
@@ -562,48 +560,45 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
 
   for (i = 0; i < input_targets->nelts; i++)
     {
-      const char *raw_target = APR_ARRAY_IDX(input_targets, i, const char *);
+      const char *utf8_target = APR_ARRAY_IDX(input_targets, i, const char *);
       const char *target;      /* after all processing is finished */
 
       /* URLs and wc-paths get treated differently. */
-      if (svn_path_is_url (raw_target))
+      if (svn_path_is_url (utf8_target))
         {
           /* No need to canonicalize a URL's case or path separators. */
 
-          /* convert it to UTF-8 */
-          const char *utf8_url;
-          SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_url, raw_target,
-                                            NULL, pool));
-
           /* strip any trailing '/' */
-          target = svn_path_canonicalize (utf8_url, pool);
+          target = svn_path_canonicalize (utf8_target, pool);
         }
       else  /* not a url, so treat as a path */
         {
+          const char *apr_target;
           const char *base_name;
-          char *truenamed_target;
+          char *truenamed_target; /* APR-encoded */
           apr_status_t apr_err;
-          
+
           /* canonicalize case, and change all separators to '/'. */
-          apr_err = apr_filepath_merge (&truenamed_target, "", raw_target,
+          SVN_ERR (svn_path_cstring_from_utf8 (&apr_target, utf8_target,
+                                               pool));
+          apr_err = apr_filepath_merge (&truenamed_target, "", apr_target,
                                         APR_FILEPATH_TRUENAME, pool);
 
-          /* It's okay for the file to not exist, that just means we have
-             to accept the case given to the client. */
-          if (APR_STATUS_IS_ENOENT (apr_err))
-            /* ### Disagreeable to cast, but it's only a tmp var and we're
-               casting it back a bit later on. */
-            truenamed_target = (char *) raw_target;
-          else if (apr_err)
+          if (!apr_err)
+            /* We have a canonicalized APR-encoded target now. */
+            apr_target = truenamed_target;
+          else if (APR_STATUS_IS_ENOENT (apr_err))
+            /* It's okay for the file to not exist, that just means we
+               have to accept the case given to the client. We'll use
+               the original APR-encoded target. */
+            ;
+          else
             return svn_error_createf (apr_err, NULL,
-                                      "Error resolving case of %s.",
-                                      raw_target);
+                                      "Error resolving case of '%s'.",
+                                      utf8_target);
 
-          /* convert to UTF-8. */
-          SVN_ERR (svn_utf_cstring_to_utf8 (&target,
-                                            (const char *) truenamed_target,
-                                            NULL, pool));
-
+          /* convert back to UTF-8. */
+          SVN_ERR (svn_path_cstring_to_utf8 (&target, apr_target, pool));
           target = svn_path_canonicalize (target, pool);
 
           /* If this target is a Subversion administrative directory,

@@ -18,7 +18,6 @@
 
 
 
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -42,7 +41,7 @@ static void usage(const char *progname)
 {
   if (!progname)
     progname = "svn-server";
-  fprintf(stderr, "Usage: %s [-X|-d|-t] [-r root]\n", progname);
+  fprintf(stderr, "Usage: %s [-X|-d|-t|-R] [-r root]\n", progname);
   exit(1);
 }
 
@@ -54,6 +53,7 @@ static void sigchld_handler(int signo)
 int main(int argc, const char *const *argv)
 {
   svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
+  svn_boolean_t read_only = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
@@ -69,14 +69,18 @@ int main(int argc, const char *const *argv)
   apr_proc_t proc;
 #endif
 
-  apr_initialize();
-  atexit(apr_terminate);
+  /* Initialize the app. */
+  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool. */
   pool = svn_pool_create(NULL);
+
   apr_getopt_init(&os, pool, argc, argv);
 
   while (1)
     {
-      status = apr_getopt(os, "dtXr:", &opt, &arg);
+      status = apr_getopt(os, "dtXr:R", &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
@@ -97,7 +101,12 @@ int main(int argc, const char *const *argv)
 
         case 'r':
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
+          root = svn_path_internal_style(root, pool);
           SVN_INT_ERR(svn_path_get_absolute(&root, root, pool));
+          break;
+
+        case 'R':
+          read_only = TRUE;
           break;
         }
     }
@@ -109,7 +118,7 @@ int main(int argc, const char *const *argv)
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, root, tunnel_mode, pool));
+      svn_error_clear(serve(conn, root, tunnel_mode, read_only, pool));
       exit(0);
     }
 
@@ -169,7 +178,7 @@ int main(int argc, const char *const *argv)
 
       if (listen_once)
         {
-          err = serve(conn, root, FALSE, connection_pool);
+          err = serve(conn, root, FALSE, read_only, connection_pool);
 
           if (listen_once && err
               && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
@@ -189,7 +198,8 @@ int main(int argc, const char *const *argv)
       status = apr_proc_fork(&proc, connection_pool);
       if (status == APR_INCHILD)
         {
-          svn_error_clear(serve(conn, root, FALSE, connection_pool));
+          svn_error_clear(serve(conn, root, FALSE, read_only,
+                                connection_pool));
           apr_socket_close(usock);
           exit(0);
         }
@@ -204,7 +214,7 @@ int main(int argc, const char *const *argv)
         }
 #else
       /* Serve one connection at a time. */
-      svn_error_clear(serve(conn, root, FALSE, connection_pool));
+      svn_error_clear(serve(conn, root, FALSE, read_only, connection_pool));
 #endif
     }
 

@@ -42,7 +42,7 @@
 /* A callback of type svn_client_prompt_t, completely stolen from the
    svn commandline client application. */
 svn_error_t *
-prompt_user (char **result,
+prompt_user (const char **result,
              const char *prompt,
              svn_boolean_t hide,
              void *baton,
@@ -116,7 +116,7 @@ main (int argc, const char * const *argv)
   const char *wc_dir;
   const svn_auth_provider_t *wc_provider, *prompt_provider;
   void *wc_prov_baton, *prompt_prov_baton;
-  svn_client_prompt_t prompt_func;
+  svn_auth_prompt_t prompt_func;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
@@ -128,24 +128,22 @@ main (int argc, const char * const *argv)
 
   /* Get the two providers from libsvn_auth */
   wc_dir = "/home/sussman/projects/svn"; /* ### CHANGE ME TO EXPERIMENT */  
-  svn_auth_get_simple_wc_provider (&wc_provider, &wc_prov_baton,
-                                   wc_dir, NULL, pool);
+  svn_wc_get_simple_wc_provider (&wc_provider, &wc_prov_baton,
+                                 wc_dir, NULL,
+                                 NULL, NULL, /* default creds */
+                                 pool);
 
   svn_auth_get_simple_prompt_provider (&prompt_provider, &prompt_prov_baton,
-                                       &prompt_user, NULL,
+                                       &prompt_user, NULL, 2,
                                        "schmooey", "zoink", /* defaults */
                                        pool);
   
   /* Register the providers */
-  err = svn_auth_register_provider (auth_baton, 0 /* ignored */,
-                                    wc_provider, wc_prov_baton, pool);
-  if (err)
-    svn_handle_error (err, stderr, TRUE);
+  svn_auth_register_provider (auth_baton, FALSE /* append */,
+                              wc_provider, wc_prov_baton, pool);
 
-  err = svn_auth_register_provider (auth_baton, 0 /* ignored */,
-                                    prompt_provider, prompt_prov_baton, pool);
-  if (err)
-    svn_handle_error (err, stderr, TRUE);
+  svn_auth_register_provider (auth_baton, FALSE /* append */,
+                              prompt_provider, prompt_prov_baton, pool);
 
   
   /* Query the auth baton for "simple" creds. */

@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_time.h"
 #include "client.h"
 
 
@@ -49,13 +50,11 @@
 
 
 svn_error_t *
-svn_client_switch (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
+svn_client_switch (const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   const svn_ra_reporter_t *reporter;
@@ -85,7 +84,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-       "svn_client_switch: %s is not under revision control", path);
+       "svn_client_switch: '%s' is not under revision control", path);
 
   if (! entry->url)
     return svn_error_createf
@@ -101,7 +100,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       if (! session_entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-           "svn_client_switch: %s is not under revision control", anchor);
+           "svn_client_switch: '%s' is not under revision control", anchor);
 
       if (! session_entry->url)
         return svn_error_createf
@@ -133,9 +132,10 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
   /* Get the RA vtable that matches working copy's current URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-    
+
   if (entry->kind == svn_node_dir)
     {
+      svn_boolean_t timestamp_sleep = FALSE;
       const svn_delta_editor_t *switch_editor;
       void *switch_edit_baton;
       svn_wc_traversal_info_t *traversal_info
@@ -144,8 +144,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       /* Open an RA session to 'source' URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
                                             path, adm_access,
-                                            NULL, TRUE, TRUE, FALSE, 
-                                            auth_baton, pool));
+                                            NULL, TRUE, FALSE, 
+                                            ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
@@ -154,7 +154,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
          on. */
       SVN_ERR (svn_wc_get_switch_editor (adm_access, target,
                                          revnum, switch_url, recurse,
-                                         notify_func, notify_baton,
+                                         ctx->notify_func, ctx->notify_baton,
+                                         ctx->cancel_func, ctx->cancel_baton,
                                          &switch_editor, &switch_edit_baton,
                                          traversal_info, pool));
 
@@ -177,7 +178,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
          externals except the ones directly affected by the switch. */ 
       err = svn_wc_crawl_revisions (path, adm_access, reporter, report_baton,
                                     TRUE, recurse,
-                                    notify_func, notify_baton,
+                                    ctx->notify_func, ctx->notify_baton,
                                     NULL, /* no traversal info */
                                     pool);
 
@@ -187,11 +188,12 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
 
       /* We handle externals after the switch is complete, so that
          handling external items (and any errors therefrom) doesn't
-         delay the primary operation.  */
+         delay the primary operation.  We ignore the timestamp_sleep
+         value since there is an unconditional sleep later on. */
       SVN_ERR (svn_client__handle_externals (traversal_info,
-                                             notify_func, notify_baton,
-                                             auth_baton,
                                              FALSE,
+                                             &timestamp_sleep,
+                                             ctx,
                                              pool));
     }
   
@@ -228,8 +230,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
          WC, so that ra_dav's implementation of get_file() can use the
          svndiff data to construct a fulltext.  */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
-                                            NULL, NULL, TRUE, TRUE, TRUE,
-                                            auth_baton, pool));
+                                            NULL, NULL, TRUE, TRUE,
+                                            ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
@@ -274,18 +276,19 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                       switch_url, /* new url */
                                       pool));     
 
-        if (notify_func != NULL)
-          (*notify_func) (notify_baton, path, svn_wc_notify_update_update,
-                          svn_node_file,
-                          NULL,
-                          content_state,
-                          prop_state,
-                          SVN_INVALID_REVNUM);
+        if (ctx->notify_func != NULL)
+          (*ctx->notify_func) (ctx->notify_baton, path,
+                               svn_wc_notify_update_update,
+                               svn_node_file,
+                               NULL,
+                               content_state,
+                               prop_state,
+                               SVN_INVALID_REVNUM);
       }
     }
   
-  /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (apr_time_from_sec(1));
+  /* Sleep to ensure timestamp integrity. */
+  svn_sleep_for_timestamps ();
 
   if (err)
     return err;

@@ -584,15 +584,13 @@ svn_cstring_split (const char *input,
 
 
 svn_boolean_t svn_cstring_match_glob_list (const char *str,
-                                           const char *list,
-                                           apr_pool_t *pool)
+                                           apr_array_header_t *list)
 {
-  apr_array_header_t *subvals = svn_cstring_split (list, ",", TRUE, pool);
   int i;
 
-  for (i = 0; i < subvals->nelts; i++)
+  for (i = 0; i < list->nelts; i++)
     {
-      const char *this_pattern = APR_ARRAY_IDX (subvals, i, char *);
+      const char *this_pattern = APR_ARRAY_IDX (list, i, char *);
 
       if (apr_fnmatch (this_pattern, str, 0) == APR_SUCCESS)
         return TRUE;

@@ -40,15 +40,12 @@ svn_cl__copy (apr_getopt_t *os,
               void *baton,
               apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
-  svn_client_auth_baton_t *auth_baton = NULL;
   svn_boolean_t src_is_url, dst_is_url;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
-  void *log_msg_baton;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -57,9 +54,6 @@ svn_cl__copy (apr_getopt_t *os,
                                          FALSE, pool));
   if (targets->nelts != 2)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
-
-  /* Build an authentication object to give to libsvn_client. */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   src_path = ((const char **) (targets->elts))[0];
   dst_path = ((const char **) (targets->elts))[1];
@@ -96,23 +90,19 @@ svn_cl__copy (apr_getopt_t *os,
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
-        svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, FALSE,
-			      pool);
+        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, TRUE,
+                              FALSE, FALSE, pool);
     }
   else
     /* URL->URL : No notification needed. */
     ;
 
-  log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   SVN_ERR (svn_cl__cleanup_log_msg
-           (log_msg_baton, svn_client_copy (&commit_info,
-                                            src_path, 
-                                            &(opt_state->start_revision), 
-                                            dst_path, NULL, auth_baton, 
-                                            &svn_cl__get_log_message,
-                                            log_msg_baton,
-                                            notify_func, notify_baton,
-                                            pool)));
+           (ctx->log_msg_baton, svn_client_copy (&commit_info,
+                                                 src_path, 
+                                                 &(opt_state->start_revision), 
+                                                 dst_path, NULL, 
+                                                 ctx, pool)));
 
   if (commit_info && ! opt_state->quiet)
     svn_cl__print_commit_info (commit_info);
