@@ -691,10 +691,9 @@ hash_stash (void *baton,
 
 /* Look up the key PATH in STATUSHASH.  If the value doesn't yet
    exist, and the REPOS_TEXT_STATUS indicates that this is an
-   addition, create a new status struct using the hash's pool.  Set
-   the status structure's "network" fields to REPOS_TEXT_STATUS,
-   REPOS_PROP_STATUS.  If either of these fields is 0, it will be
-   ignored.  */
+   addition, create a new status struct using the hash's pool.  Merge
+   REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
+   "network" fields. */
 static svn_error_t *
 tweak_statushash (apr_hash_t *statushash,
                   svn_wc_adm_access_t *adm_access,
@@ -721,6 +720,11 @@ tweak_statushash (apr_hash_t *statushash,
       apr_hash_set (statushash, apr_pstrdup (pool, path), 
                     APR_HASH_KEY_STRING, statstruct);
     }
+
+  /* Merge a repos "delete" + "add" into a single "replace". */
+  if ((repos_text_status == svn_wc_status_added)
+      && (statstruct->repos_text_status == svn_wc_status_deleted))
+    repos_text_status = svn_wc_status_replaced;
 
   /* Tweak the structure's repos fields. */
   if (repos_text_status)
@@ -946,6 +950,8 @@ make_file_baton (struct dir_baton *parent_dir_baton,
 }
 
 
+/* Return a boolean answer to the question "Is STATUS something that
+   should be reported?".  EB is the edit baton. */
 static svn_boolean_t 
 is_sendable_status (svn_wc_status_t *status,
                     struct edit_baton *eb)
@@ -988,16 +994,58 @@ is_sendable_status (svn_wc_status_t *status,
 }
 
 
+/* Baton for mark_status. */
+struct status_baton
+{
+  svn_wc_status_func_t real_status_func;   /* real status function */
+  void *real_status_baton;                 /* real status baton */
+};
+
+/* A status callback function which wraps the *real* status
+   function/baton.   It simply sets the "repos_text_status" field of the
+   STATUS to svn_wc_status_deleted and passes it off to the real
+   status func/baton. */
+static void
+mark_deleted (void *baton,
+              const char *path,
+              svn_wc_status_t *status)
+{
+  struct status_baton *sb = baton;
+  status->repos_text_status = svn_wc_status_deleted;
+  sb->real_status_func (sb->real_status_baton, path, status);
+}
+
+
+/* Handle a directory's STATII hash.  EB is the edit baton.  DIR_PATH
+   and DIR_ENTRY are the on-disk path and entry, respectively, for the
+   directory itself.  If DESCEND is set, this function will recurse
+   into subdirectories.  Also, if DIR_WAS_DELETED is set, each status
+   that is reported through this function will have it's
+   repos_text_status field showing a deletion.  Use POOL for all
+   allocations. */
 static svn_error_t *
 handle_statii (struct edit_baton *eb,
                svn_wc_entry_t *dir_entry,
                const char *dir_path,
                apr_hash_t *statii,
+               svn_boolean_t dir_was_deleted,
                svn_boolean_t descend,
                apr_pool_t *pool)
 {
   apr_array_header_t *ignores = eb->ignores;
-  apr_hash_index_t *hi;
+  apr_hash_index_t *hi; 
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_wc_status_func_t status_func = eb->status_func;
+  void *status_baton = eb->status_baton;
+  struct status_baton sb;
+
+  if (dir_was_deleted)
+    {
+      sb.real_status_func = eb->status_func;
+      sb.real_status_baton = eb->status_baton;
+      status_func = mark_deleted;
+      status_baton = &sb;
+    }
 
   /* Loop over all the statuses still in our hash, handling each one. */
   for (hi = apr_hash_first (pool, statii); hi; hi = apr_hash_next (hi))
@@ -1008,22 +1056,32 @@ handle_statii (struct edit_baton *eb,
 
       apr_hash_this (hi, &key, NULL, &val);
       status = val;
+
+      /* Clear the subpool. */
+      svn_pool_clear (subpool);
+
+      /* Now, handle the status. */
       if (descend && status->entry && (status->entry->kind == svn_node_dir) )
         {
           svn_wc_adm_access_t *dir_access;
           SVN_ERR (svn_wc_adm_retrieve (&dir_access, eb->adm_access,
-                                        key, pool));
+                                        key, subpool));
           SVN_ERR (get_dir_status (dir_entry, dir_access, NULL,
                                    ignores, TRUE, eb->get_all, 
-                                   eb->no_ignore, TRUE, eb->status_func, 
-                                   eb->status_baton,
+                                   eb->no_ignore, TRUE, 
+                                   status_func, status_baton,
                                    eb->cancel_func, eb->cancel_baton, 
-                                   eb->traversal_info, pool));
+                                   eb->traversal_info, subpool));
         }
+      if (dir_was_deleted)
+        status->repos_text_status = svn_wc_status_deleted;
       if (is_sendable_status (status, eb))
         (eb->status_func)(eb->status_baton, key, status);
     }
     
+  /* Destroy the subpool. */
+  svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -1197,14 +1255,21 @@ close_directory (void *dir_baton,
                                    repos_prop_status));
     }
 
-
   /* Handle this directory's statuses, and then note in the parent
      that this has been done. */
   if (pb && eb->descend)
     {
+      svn_boolean_t was_deleted = FALSE;
+
+      /* See if the directory was deleted or replaced. */
       dir_status = apr_hash_get (pb->statii, db->path, APR_HASH_KEY_STRING);
+      if ((dir_status->repos_text_status == svn_wc_status_deleted)
+          || (dir_status->repos_text_status == svn_wc_status_replaced))
+        was_deleted = TRUE;
+
+      /* Now do the status reporting. */
       SVN_ERR (handle_statii (eb, dir_status ? dir_status->entry : NULL, 
-                              db->path, db->statii, TRUE, pool));
+                              db->path, db->statii, was_deleted, TRUE, pool));
       if (is_sendable_status (dir_status, eb))
         (eb->status_func) (eb->status_baton, db->path, dir_status);
       apr_hash_set (pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
@@ -1220,14 +1285,17 @@ close_directory (void *dir_baton,
           dir_status = eb->anchor_status;
           tgt_status = apr_hash_get (db->statii, path, APR_HASH_KEY_STRING);
           /* ### need to pay attention to target's kind here */
+          /* ### need to pay attention to if dir was deleted here */
           if (tgt_status)
             (eb->status_func) (eb->status_baton, path, tgt_status);
         }
-      /* Otherwise, we report on all our children and ourself. */
       else
         {
-          SVN_ERR (handle_statii (eb, eb->anchor_status->entry, 
-                                  db->path, db->statii, eb->descend, pool));
+          /* Otherwise, we report on all our children and ourself.
+             Note that our directory couldn't have been deleted,
+             because it is the root of the edit drive. */
+          SVN_ERR (handle_statii (eb, eb->anchor_status->entry, db->path, 
+                                  db->statii, FALSE, eb->descend, pool));
           if (is_sendable_status (eb->anchor_status, eb))
             (eb->status_func) (eb->status_baton, db->path, eb->anchor_status);
           eb->anchor_status = NULL;
