@@ -1132,23 +1132,8 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
       else
         *kind = svn_node_file;
     }
-  else  /* some error, read the comment below */
+  else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
     {
-      /* ### This is way too general.  We should only convert the
-       * error to `svn_node_none' if we're sure that's what the error
-       * means; for example, the test used to be this
-       *
-       *   (err && (err->apr_err == SVN_ERR_RA_DAV_PROPS_NOT_FOUND))
-       *
-       * which seemed reasonable...
-       *
-       * However, right now svn_ra_dav__get_props() returns a generic
-       * error when the entity doesn't exist.  It's APR_EGENERAL or
-       * something like that, and ne_get_status(req)->code == 500, not
-       * 404.  I don't know whether this is something that can be
-       * improved just in that function, or if the server will need to
-       * be more descriptive about the error.  Greg, thoughts?
-       */
 
       svn_error_clear (err);
       *kind = svn_node_none;
