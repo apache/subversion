@@ -237,6 +237,7 @@ static svn_error_t * upd_replace_root(void *edit_baton,
   *root_baton = b;
 
   send_xml(uc, "<S:replace-directory rev=\"%ld\">" DEBUG_CR, base_revision);
+  send_vsn_url(b);
 
   return NULL;
 }
