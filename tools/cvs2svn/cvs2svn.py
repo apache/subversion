@@ -40,6 +40,8 @@ SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 HEAD_MIRROR_FILE = 'cvs2svn-head-mirror.db'  # Mirror the head tree
+TAGS_DIR = "cvs2svn-tags"
+BRANCHES_DIR = "cvs2svn-branches"
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
@@ -47,6 +49,8 @@ RESYNC_SUFFIX = '.resync'
 
 SVNROOT = 'svnroot'
 ATTIC = os.sep + 'Attic'
+
+SVN_INVALID_REVNUM = -1
 
 COMMIT_THRESHOLD = 5 * 60	# flush a commit if a 5 minute gap occurs
 
@@ -445,7 +449,11 @@ class Dump:
                         '\n')
 
   def start_revision(self, props):
-    'Write a revision, with properties, to the dumpfile.'
+    """Write the next revision, with properties, to the dumpfile.
+    Return the newly started revision."""
+
+    self.revision = self.revision + 1
+
     # A revision typically looks like this:
     # 
     #   Revision-number: 1
@@ -505,10 +513,7 @@ class Dump:
     self.dumpfile.write('PROPS-END\n')
     self.dumpfile.write('\n')
 
-  def end_revision(self):
-    old_rev = self.revision
-    self.revision = self.revision + 1
-    return old_rev
+    return self.revision
 
   def add_dir(self, path):
     self.dumpfile.write("Node-path: %s\n" 
@@ -634,11 +639,47 @@ def format_date(date):
   return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(date))
 
 
+class SymbolicNameTracker:
+  """Track the Subversion path/revision ranges of CVS symbolic names.
+  This is done in .db files under DIR, where the name of the .db file
+  is based on the symbolic name being tracked.  The keys are svn
+  paths, and the values are revision range tuples like '(N M)'.
+
+  The svn path will most often be a trunk path, because the path/rev
+  range recorded here is that in which the given symbolic name could
+  be rooted, *not* the path/rev on which commits to that symbolic name
+  took place (which could only happen w/ branches anyway, of course)."""
+  def __init__(self, dir):
+    self.dir = dir
+    if not os.path.isdir(dir):
+      os.mkdir(dir)
+
+  def track_names(self, svn_path, svn_rev, names):
+    """### In progress ###
+    At SVN_REV, start tracking the symbolic names rooted in SVN_PATH."""
+    if not names: return  # early out
+    # ### todo: working here
+    # print "KFF: '%s' (%d):" % (svn_path, svn_rev)
+    # print "   KFF: rooted here:", names
+    
+
+class TagTracker(SymbolicNameTracker):
+  def __init__(self):
+    SymbolicNameTracker.__init__(self, TAGS_DIR)
+
+
+class BranchTracker(SymbolicNameTracker):
+  def __init__(self):
+    SymbolicNameTracker.__init__(self, BRANCHES_DIR)
+
+
 class Commit:
   def __init__(self):
     self.files = { }
     self.changes = [ ]
     self.deletes = [ ]
+    self.tag_tracker = TagTracker()
+    self.branch_tracker = BranchTracker()
     self.t_min = 1<<30
     self.t_max = 0
 
@@ -738,18 +779,19 @@ class Commit:
     ### don't handle the branch right now, and we special-case
     ### revision 1.1.
     ###
-    ### So this variable helps make sure we don't write a no-op
-    ### revision to the dumpfile.
-    started_revision = 0
+    ### So among other things, this variable tells us whether we
+    ### actually wrote anything to the dumpfile.
+    svn_rev = SVN_INVALID_REVNUM
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = make_path(ctx, cvs_path, br)
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
-      if not started_revision:
-        dump.start_revision(props)
-        started_revision = 1
+      if svn_rev == SVN_INVALID_REVNUM:
+        svn_rev = dump.start_revision(props)
+      self.tag_tracker.track_names(svn_path, svn_rev, tags)
+      self.branch_tracker.track_names(svn_path, svn_rev, branches)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
@@ -758,9 +800,8 @@ class Commit:
       svn_path = make_path(ctx, cvs_path, br)
       print '    deleting %s : %s' % (cvs_rev, svn_path)
       if cvs_rev != '1.1':
-        if not started_revision:
-          dump.start_revision(props)
-          started_revision = 1
+        if svn_rev == SVN_INVALID_REVNUM:
+          svn_rev = dump.start_revision(props)
         ### FIXME: this will return None if no path was deleted.  But
         ### we'll already have started the revision by then, so it's a
         ### bit late to use the knowledge!  Need to reorganize things
@@ -773,11 +814,12 @@ class Commit:
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
+        self.tag_tracker.track_names(svn_path, svn_rev, tags)
+        self.branch_tracker.track_names(svn_path, svn_rev, branches)
         dump.delete_path(svn_path, ctx.prune)
 
-    if started_revision:
-      previous_rev = dump.end_revision()
-      print '    new revision:', previous_rev
+    if svn_rev != SVN_INVALID_REVNUM:
+      print '    new revision:', svn_rev
     else:
       print '    no new revision created, as nothing to do'
 
