@@ -221,6 +221,7 @@ Possible values are: commit, revert.")
 (defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
 (defvar svn-status-options nil)
+(defvar svn-status-commit-rev-number nil)
 
 ;;; faces
 (defface svn-status-marked-face
@@ -438,10 +439,12 @@ for  example: '(\"revert\" \"file1\"\)"
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-status-remove-temp-file-maybe)
-                  (svn-status-show-process-buffer-internal t)
+                  ;;(svn-status-show-process-buffer-internal t)
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
-                  (svn-status-update)
+                  ;;(svn-status-update)
+                  ;;(svn-status-update), svn-status-show-process-buffer-internal should be no longer necessary!
+                  (svn-status-update-with-command-list (svn-status-parse-commit-output))
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-buffer-internal t)
@@ -924,6 +927,15 @@ Otherwise run `find-file'."
 (defun svn-status-line-info->set-filemark (line-info value)
   (setcar (nthcdr 1 line-info) value))
 
+(defun svn-status-line-info->set-propmark (line-info value)
+  (setcar (nthcdr 2 line-info) value))
+
+(defun svn-status-line-info->set-localrev (line-info value)
+  (setcar (nthcdr 4 line-info) value))
+
+(defun svn-status-line-info->set-lastchangerev (line-info value)
+  (setcar (nthcdr 5 line-info) value))
+
 (defun svn-status-toggle-elide ()
   (interactive)
   (let ((st-info svn-status-info)
@@ -952,6 +964,102 @@ Otherwise run `find-file'."
       (setq st-info (cdr st-info))))
   (svn-status-update-buffer))
 
+(defun svn-status-update-with-command-list (cmd-list)
+  (save-excursion
+    (set-buffer "*svn-status*")
+    (let ((st-info)
+          (found)
+          (action))
+      (setq cmd-list (sort cmd-list '(lambda (item1 item2) (string-lessp (car item1) (car item2)))))
+      (while cmd-list
+        (unless st-info (setq st-info svn-status-info))
+        ;;(message "%S" (caar cmd-list))
+        (setq found nil)
+        (while (and (not found) st-info)
+          (setq found (string= (caar cmd-list) (svn-status-line-info->filename (car st-info))))
+          ;;(message "found: %S" found)
+          (unless found (setq st-info (cdr st-info))))
+        (unless found
+          (message "continue to search for %s" (caar cmd-list))
+          (setq st-info svn-status-info)
+          (while (and (not found) st-info)
+            (setq found (string= (caar cmd-list) (svn-status-line-info->filename (car st-info))))
+            (unless found (setq st-info (cdr st-info)))))
+        (if found
+            ;;update the info line
+            (progn
+              (setq action (cadar cmd-list))
+              ;;(message "found %s, action: %S" (caar cmd-list) action)
+              (svn-status-annotate-status-buffer-entry action (car st-info)))
+          (message "did not find %s" (caar cmd-list)))
+        (setq cmd-list (cdr cmd-list))))))
+
+(defun svn-status-annotate-status-buffer-entry (action line-info)
+  (let ((tag-string))
+    (svn-status-goto-file-name (svn-status-line-info->filename line-info))
+    (cond ((equal action 'committed)
+           (when svn-status-commit-rev-number
+             (svn-status-line-info->set-localrev line-info svn-status-commit-rev-number))
+             (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number)
+             (setq tag-string " <committed>"))
+          ((equal action 'added)
+           (setq tag-string " <added>"))
+          ((equal action 'deleted)
+           (setq tag-string " <deleted>"))
+          (t
+           (message "Unknown action '%s for %s" action (svn-status-line-info->filename line-info))))
+    (when tag-string
+      (svn-status-line-info->set-filemark line-info ? )
+      (svn-status-line-info->set-propmark line-info ? )
+      (let ((buffer-read-only nil))
+        (delete-region (point-at-bol) (point-at-eol))
+        (svn-insert-line-in-status-buffer line-info)
+        (backward-char 1)
+        (insert tag-string)
+        (delete-char 1)))))
+
+
+
+;; (svn-status-update-with-command-list '(("++ideas" committed) ("a.txt" committed) ("alf")))
+;; (svn-status-update-with-command-list (svn-status-parse-commit-output))
+
+
+(defun svn-status-parse-commit-output ()
+  "Parse the output of svn commit.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((action)
+          (name)
+          (done)
+          (result))
+      (goto-char (point-min))
+      (setq svn-status-commit-rev-number nil)
+      (while (not done)
+        (cond ((looking-at "Sending")
+               (setq action 'committed))
+              ((looking-at "Adding")
+               (setq action 'added))
+              ((looking-at "Deleting")
+               (setq action 'deleted))
+              ((looking-at "Transmitting file data")
+               ;; perhaps parse next line also (Committed revision 96.)
+               (re-search-forward "Committed revision \\([0-9]+\\)")
+               (setq svn-status-commit-rev-number
+                     (string-to-number (match-string-no-properties 1)))
+               (setq done t))
+              (t
+               (setq action 'unknown)))
+        (unless done
+          (forward-char 15)
+          (setq name (buffer-substring-no-properties (point) (point-at-eol)))
+          ;;(message "%S %S" action name)
+          (setq result (cons (list name action)
+                             result))
+          (forward-line 1)
+          (goto-char (point-at-bol))))
+      result)))
+;; (svn-status-parse-commit-output)
 
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.
@@ -1329,13 +1437,25 @@ If the function is called with a prefix arg, unmark all these files."
 
 (defun svn-status-goto-file-name (name)
   ;; (message "svn-status-goto-file-name: %s %d" name (point))
-  (let ((start-pos (point)))
-    (goto-char (point-min))
-    (while (< (point) (point-max))
+  (let ((start-pos (point))
+        (found))
+    ;; performance optimization: search from point to end of buffer
+    (while (and (not found) (< (point) (point-max)))
       (goto-char (next-overlay-change (point)))
       (when (string= name (svn-status-line-info->filename
                            (svn-status-get-line-information)))
-        (setq start-pos (+ (point) svn-status-default-column))))
+        (setq start-pos (+ (point) svn-status-default-column))
+        (setq found t)))
+    ;; search from buffer start to point
+    (goto-char (point-min))
+    (while (and (not found) (< (point) start-pos))
+      (goto-char (next-overlay-change (point)))
+      (when (string= name (svn-status-line-info->filename
+                           (svn-status-get-line-information)))
+        (setq start-pos (+ (point) svn-status-default-column))
+        (setq found t)))
+    (unless found
+      (message "Warning: svn-status-goto-file-name: %s not found" name))
     (goto-char start-pos)))
 
 (defun svn-status-find-info-for-file-name (name)
