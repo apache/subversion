@@ -28,6 +28,7 @@ Blanket commit access:
          striker   Sander Striker <striker@apache.org>
            naked   Nuutti Kotivuori <naked@iki.fi>
          dwhedon   David Kimdon <David_Kimdon@alumni.hmc.edu>
+             dlr   Daniel Rall <dlr@finemaltcoding.com>
 
 Commit access for specific areas:
 
@@ -43,6 +44,5 @@ Commit access for specific areas:
         josander   Jostein Andersen <jostein@josander.net>     (innosetup)
         ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
         niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
-             dlr   Daniel Rall <dlr@finemaltcoding.com>        (bindings)
           morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
           zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
