@@ -207,6 +207,23 @@ SOURCE=..\libsvn_subr\config_win.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\libsvn_subr\error.c
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=..\libsvn_subr\getdate.c
 
 !IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
@@ -309,6 +326,23 @@ SOURCE=..\libsvn_subr\pipe.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\libsvn_subr\pool.c
+
+!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\libsvn_subr"
+# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=..\libsvn_subr\quoprint.c
 
 !IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
@@ -344,23 +378,6 @@ SOURCE=..\libsvn_subr\sorts.c
 # Begin Source File
 
 SOURCE=..\libsvn_subr\svn_base64.c
-
-!IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
-
-# PROP Intermediate_Dir "Release\obj\libsvn_subr"
-# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
-
-!ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
-
-# PROP Intermediate_Dir "Debug\obj\libsvn_subr"
-# ADD CPP /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\..\httpd-2.0\srclib\apr-util\xml\expat\lib" /I "..\include" /I "..\.."
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
-SOURCE=..\libsvn_subr\svn_error.c
 
 !IF  "$(CFG)" == "mod_dav_svn - Win32 Release"
 

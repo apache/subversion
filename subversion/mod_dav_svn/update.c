@@ -139,7 +139,8 @@ static const char *get_from_path_map(apr_hash_t *hash,
                              path + my_path->len + 1, NULL);
         }
     }
-  while (! svn_path_is_empty(my_path) && strcmp (my_path->data, "/") != 0);
+  while (! svn_path_is_empty(my_path->data)
+         && strcmp (my_path->data, "/") != 0);
   
   /* well, we simply never found anything worth mentioning the map.
      PATH is its own default finding, then. */
@@ -642,7 +643,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     {      
       if (target) /* if the src is split into anchor/target, so must
                      the telescoping dst_path be. */
-        uc.dst_path = svn_path_remove_component_nts(dst_path, resource->pool);
+        uc.dst_path = svn_path_dirname(dst_path, resource->pool);
       else
         uc.dst_path = dst_path;
     }

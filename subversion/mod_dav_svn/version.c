@@ -537,8 +537,8 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
           if (child->ns != ns || strcmp(child->name, "creationdate") != 0)
             continue;
           /* If this fails, we'll notice below. */
-          svn_time_from_nts(&tm, child->first_cdata.first->text,
-                            resource->pool);
+          svn_time_from_cstring(&tm, child->first_cdata.first->text,
+                                resource->pool);
         }
     }
 
@@ -641,6 +641,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   const char *conflict;
   svn_error_t *serr;
   svn_revnum_t new_rev;
+  svn_boolean_t disable_merge_response = FALSE;
 
   /* We'll use the target's pool for our operation. We happen to know that
      it matches the request pool, which (should) have the proper lifetime. */
@@ -693,9 +694,20 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
       return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
     }
 
+  /* Check the dav_resource->info area for information about the
+     special X-SVN-Options: header that may have come in the http
+     request.  If the header contains "no-merge-response", then pass
+     the correct boolean value to the routine below. */
+  if (source->info->svn_client_options != NULL)
+    {
+      if (NULL != (ap_strstr_c(source->info->svn_client_options,
+                               SVN_DAV_OPTION_NO_MERGE_RESPONSE)))
+        disable_merge_response = TRUE;
+    }
+
   /* process the response for the new revision. */
   return dav_svn__merge_response(output, source->info->repos, new_rev,
-                                 prop_elem, pool);
+                                 prop_elem, disable_merge_response, pool);
 }
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {
