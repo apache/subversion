@@ -339,9 +339,9 @@ do_apply_textdelta (svn_string_t *filename,
                                 
   /* Create a text-delta stream object that pulls data out of the two
      files. */
-  svn_txdelta (&txdelta_stream, 
-               svn_io_file_reader, textbasefile,
-               svn_io_file_reader, localfile,
+  svn_txdelta (&txdelta_stream,
+               svn_stream_from_aprfile (textbasefile, pool),
+               svn_stream_from_aprfile (localfile, pool),
                pool);
   
   /* Grab a window from the stream, "push" it at the consumer routine,

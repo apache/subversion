@@ -61,8 +61,8 @@ main (int argc, char **argv)
   target_file = fopen (argv[2], "rb");
 
   apr_initialize();
-  svn_txdelta (&stream, read_from_file, source_file,
-	       read_from_file, target_file, NULL);
+  svn_txdelta (&stream, svn_stream_from_stdio (source_file, NULL),
+	       svn_stream_from_stdio (target_file, NULL), NULL);
 
   svn_base64_encode (write_to_file, stdout, NULL,
                      &base64_handler, &base64_baton);

@@ -192,8 +192,8 @@ main (int argc, const char * const *argv)
                               &handler_baton);
 
       /* Make stage 1: create the text delta.  */
-      svn_txdelta (&stream, read_from_file, source, read_from_file, target,
-                   pool);
+      svn_txdelta (&stream, svn_stream_from_stdio (source, pool),
+                   svn_stream_from_stdio (target, pool), pool);
 
       while (err == SVN_NO_ERROR)
         {

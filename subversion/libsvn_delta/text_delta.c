@@ -28,10 +28,8 @@
 
 struct svn_txdelta_stream_t {
   /* These are copied from parameters passed to svn_txdelta. */
-  svn_read_fn_t *source_fn;
-  void *source_baton;
-  svn_read_fn_t *target_fn;
-  void *target_baton;
+  svn_stream_t *source;
+  svn_stream_t *target;
 
   /* Private data */
   apr_pool_t *pool;             /* Pool to allocate stream data from. */
@@ -146,20 +144,16 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
 
 void
 svn_txdelta (svn_txdelta_stream_t **stream,
-             svn_read_fn_t *source_fn,
-             void *source_baton,
-             svn_read_fn_t *target_fn,
-             void *target_baton,
+             svn_stream_t *source,
+             svn_stream_t *target,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   assert (subpool != NULL);
 
   *stream = apr_palloc (subpool, sizeof (**stream));
-  (*stream)->source_fn = source_fn; 
-  (*stream)->source_baton = source_baton;
-  (*stream)->target_fn = target_fn;
-  (*stream)->target_baton = target_baton;
+  (*stream)->source = source; 
+  (*stream)->target = target;
   (*stream)->pool = subpool;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
@@ -220,16 +214,15 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
         new_source_len += svn_txdelta__window_size / 2;
 
       /* Read the source stream. */
-      err = stream->source_fn (stream->source_baton,
-                               stream->buf + stream->saved_source_len,
-                               &new_source_len, stream->pool);
+      err = svn_stream_read (stream->source,
+                             stream->buf + stream->saved_source_len,
+                             &new_source_len);
       total_source_len = stream->saved_source_len + new_source_len;
 
       /* Read the target stream. */
       if (err == SVN_NO_ERROR)
-        err = stream->target_fn (stream->target_baton,
-                                 stream->buf + total_source_len,
-                                 &target_len, stream->pool);
+        err = svn_stream_read (stream->target, stream->buf + total_source_len,
+                               &target_len);
       if (err != SVN_NO_ERROR)
         return err;
       stream->pos += new_source_len;
