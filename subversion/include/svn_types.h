@@ -167,6 +167,20 @@ typdef struct svn_user_t
 } svn_user_t;
 
 
+/* YABT:  Yet Another Boolean Type */
+
+typedef int                           svn_boolean_t
+
+#ifndef TRUE
+#define TRUE 1
+#endif /* TRUE */
+
+#ifndef FALSE
+#define FALSE 0
+#endif /* FALSE */
+
+
+
 /* temporary placeholders, till we write the real thing!  */
 typedef unsigned long                 svn_token_t;
 typedef int                           svn_skelta_t;
