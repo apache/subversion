@@ -245,7 +245,7 @@ the section for unapproved changes.)
       +0: cmpilato
 
 
-   * Issue #1639 (r8014)
+   * r8014
      Rename 'store-password' option renamed to 'store-auth-creds'
      Justification: API stability; low risk;  more accurate name.
      Votes:
