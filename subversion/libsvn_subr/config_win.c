@@ -63,7 +63,15 @@ parse_section (svn_config_t *cfg, HKEY hkey, const char *section)
                                      APR_FROM_OS_ERROR(err), NULL, cfg->pool,
                                      "Can't read registry value data");
 
-          svn_config_set (cfg, section, option, value);
+          /* By ignoring empty values here, we allow people to keep
+             keys in their registry as reminders of what to tweak
+             later on.  This is sort of the registry equivalent of
+             commented-out lines in a ~/.subversion/foo file.
+
+             See http://subversion.tigris.org/issues/show_bug.cgi?id=671
+             for more on this. */
+          if ((value_len > 0) && (value[0] != '\0'))
+            svn_config_set (cfg, section, option, value);
         }
     }
 
