@@ -285,7 +285,8 @@ locale-gnu-po-update: locale-gnu-pot
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
             echo "Cleaning $$i ..." ;                                \
-            (cd $$i && rm -f *.o *.lo *.la *.la-a *.mo && rm -rf .libs) ; \
+            (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo && \
+             rm -rf .libs) ; \
         done
 	rm -f $(CLEAN_FILES)
 
@@ -494,7 +495,8 @@ doc-clean:
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf .po .mo
+.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf \
+           .po .spo .mo
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
@@ -524,7 +526,10 @@ doc-clean:
 .dvi.pdf:
 	$(DVIPDF) $< $@
 
-.po.mo:
+.po.spo:
+	sed '/^"Content-Type: text\/plain; charset=UTF-8\\n"$$/d' $< > $@
+
+.spo.mo:
 	$(MSGFMT) -o $@ $<
 
 install-docs: install-man @INSTALL_INFO@
