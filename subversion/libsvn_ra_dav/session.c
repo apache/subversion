@@ -68,7 +68,8 @@ static int request_auth(void *userdata, const char *realm, int attempt,
                                       ras->pool);
   else /* attempt > 0 */
     err = svn_auth_next_credentials ((void **) &creds,
-                                     ras->auth_iterstate);
+                                     ras->auth_iterstate,
+                                     ras->pool);
   if (err || ! creds)
     return -1;
   

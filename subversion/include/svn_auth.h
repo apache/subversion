@@ -34,7 +34,7 @@ extern "C" {
 /** Overview of the svn authentication system.
  *    
  * We define an authentication "provider" as a module that is able to
- * return a specific type of credentials. (e.g. username/password,
+ * return a specific set of credentials. (e.g. username/password,
  * certificate, etc.)  Each provider implements a vtable that
  *
  * - can fetch initial credentials
@@ -236,7 +236,11 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * of credentials fails to authenticate.
  *
  * Use @a pool to allocate @a *state, and for temporary allocation.
- * Note that @a *credentials will be allocated in @a auth_baton's pool.
+ * Note that there is no guarantee about where @a *credentials will be
+ * allocated: it might be in @a pool, or it might be in @a
+ * auth_baton->pool, depending on the provider.  So safe callers
+ * should duplicate the credentials to safe place if they plan to free
+ * @a pool.
  */
 svn_error_t * svn_auth_first_credentials(void **credentials,
                                          svn_auth_iterstate_t **state,
@@ -252,10 +256,15 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
  * svn_auth_next_credentials.  If no more credentials are available,
  * set @a *credentials to NULL.
  *
- * Note that @a *credentials will be allocated in @c auth_baton's pool.
+ * Use @a pool for temporary allocation.  Note that there is no
+ * guarantee about where @a *credentials will be allocated: it might
+ * be in @a pool, or it might be in @a auth_baton->pool, depending on
+ * the provider.  So safe callers should duplicate the credentials to
+ * safe place if they plan to free @a pool.
  */
 svn_error_t * svn_auth_next_credentials(void **credentials,
-                                        svn_auth_iterstate_t *state);
+                                        svn_auth_iterstate_t *state,
+                                        apr_pool_t *pool);
 
 /** Save a set of credentials.
  *
