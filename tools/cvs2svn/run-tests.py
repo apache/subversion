@@ -536,7 +536,7 @@ def mixed_commit():
     raise svntest.Failure
 
 
-def mixed_commit():
+def split_branch():
   "a branch created at different times in different places"
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
