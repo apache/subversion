@@ -1216,7 +1216,15 @@ def revision_kinds_local_source(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=rWC)
 
-  def cp_test(dst, from_rev, text, rev_arg=None):
+  # Test the various revision-kind keywords, and none.
+  sub_tests = [ ('file0', 2, rWC, None),
+                ('file1', 3, r3, '-rHEAD'),
+                # ('file2', 2, r2, '-rBASE'),
+                # ('file3', 2, r2, '-rCOMMITTED'),
+                # ('file4', 1, r1, '-rPREV'),
+              ]
+
+  for dst, from_rev, text, rev_arg in sub_tests:
     dst_path = os.path.join(wc_dir, dst) 
     if rev_arg is None:
       svntest.actions.run_and_verify_svn(None, None, [], "copy",
@@ -1234,13 +1242,6 @@ def revision_kinds_local_source(sbox):
     else:
       print dst, "should have been copied from revision", from_rev
       raise svntest.Failure
-
-  # Test the various revision-kind keywords, and none.
-  cp_test('a0', 2, rWC)
-  cp_test('a1', 3, r3, '-rHEAD')
-  # XFAIL: cp_test('a2', 2, r2, '-rBASE')
-  # XFAIL: cp_test('a3', 2, r2, '-rCOMMITTED')
-  # XFAIL: cp_test('a4', 1, r1, '-rPREV')
 
   # Check that the new files have the right contents
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir)
