@@ -8,6 +8,10 @@ Some ideas for the future.
   Because plaintext/outline is less of a barrier to adding new ideas
   than texinfo format; this should be a pretty informal file.
 
+* Write platform neutral parsing of diff output to fill in enough 
+  data structures in order to drive UI dependant rendering of a visual
+  diff very similar to xxdiff. 
+
 * shell-like interactive mode for client (like ftp)
 
   From: John P Cavanaugh <cavanaug@soco.agilent.com>
