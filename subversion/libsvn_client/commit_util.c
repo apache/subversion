@@ -1121,7 +1121,6 @@ svn_client__do_commit (const char *base_url,
           apr_hash_set (*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
       
-      SVN_ERR (editor->close_file (file_baton, mod->subpool));
       svn_pool_destroy (mod->subpool);
     }
 
