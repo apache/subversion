@@ -897,7 +897,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
 {
   *is_valid_p = TRUE;
 
-  /* Using strcasecmp() to accept downcased short versions of
+  /* Using apr_strnatcasecmp() to accept downcased short versions of
    * keywords.  Note that this doesn't apply to the strings being
    * expanded in the file -- rather, it's so users can do
    *
@@ -908,7 +908,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
    */
 
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
-      || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
+      || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
       if ((entry) && (entry->cmt_rev))
         keywords->revision = svn_string_createf (pool, "%ld", entry->cmt_rev);
@@ -919,7 +919,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->revision = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
-           || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
+           || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
       if (entry && (entry->cmt_date))
         keywords->date = svn_wc__friendly_date 
@@ -928,7 +928,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->date = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
-           || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+           || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
       if (entry && (entry->cmt_author))
         keywords->author = svn_string_create_from_buf (entry->cmt_author, pool);
@@ -936,7 +936,7 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->author = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
-           || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
+           || (! apr_strnatcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
     {
       if (entry && (entry->url))
         keywords->url = svn_string_create_from_buf (entry->url, pool);
