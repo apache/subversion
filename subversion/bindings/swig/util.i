@@ -34,7 +34,10 @@
 /* ### for now, let's not try to handle these structures. swig complains
    ### about setting the 'const char *' inside the struct might leak mem  */
 %ignore svn_log_changed_path_t;
-%ignore svn_dirent;
+
+/* ### We also get complaints about possible memory leakage for svn_dirent,
+   ### but we can live with it for now. */
+/* %ignore svn_dirent; */
 
 /* ### for now, let's ignore this thing. */
 %ignore svn_prop_t;
