@@ -63,7 +63,8 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   if (revision->kind == svn_opt_revision_number)
     *revnum = revision->value.number;
   else if (revision->kind == svn_opt_revision_date)
-    SVN_ERR (ra_lib->get_dated_revision (sess, revnum, revision->value.date));
+    SVN_ERR (ra_lib->get_dated_revision (sess, revnum, revision->value.date,
+                                         pool));
   else if (revision->kind == svn_opt_revision_head)
     SVN_ERR (ra_lib->get_latest_revnum (sess, revnum, pool));
   else if (revision->kind == svn_opt_revision_unspecified)
