@@ -28,10 +28,5 @@ DOC:
 TESTS:
 
    - we need MORE lock_tests.py test. more, more, more.
-
-      - how about test(s) that exercise 'svn st -u' 's new [KOBT]
-        description of lock break/steal/etc.  or the ability of 'svn
-        st -u' to see remote locks on paths that aren't in the wc?
-
    - continue testing various DAV clients against autoversioning.
 
