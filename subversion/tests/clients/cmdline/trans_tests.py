@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  trans_tests.py:  testing newline conversion and keyword substitution
+#  trans_tests.py:  testing eol conversion and keyword substitution
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -71,6 +71,26 @@ path_index = svntest.actions.path_index
 #    update files with newline conversion style changes
 #    (now throw local text mods into the picture)
 #    (now throw conflicting local property mods into the picture)
+#
+####
+
+########### THINGS THAT HAVE FAILED DURING HAND-TESTING ##############
+#
+# These have all been fixed, but we want regression tests for them.
+#
+#   1. Ben encountered this:
+#      Create a greek tree, commit a keyword into one file,
+#      then commit a keyword property (i.e., turn on keywords), then
+#      try to check out head somewhere else.  See seg fault.
+#    
+#   2. Mike encountered this:
+#      Add the keyword property to a file, svn revert the file, see
+#      error.
+#
+#   3. Another one from Ben:
+#      Keywords not expanded on checkout.
+#
+######################################################################
 
 
 def setup_working_copy(sbox):
@@ -83,32 +103,30 @@ def setup_working_copy(sbox):
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
-  ### Here are the new added files
-  key1_path = os.path.join(sbox, 'key1')
-  key2_path = os.path.join(sbox, 'key2')
-  key3_path = os.path.join(sbox, 'key3')
+  # Unexpanded, expanded, and bogus.
+  author_rev_unexp_path = os.path.join(sbox, 'author_rev_unexp')
+  author_rev_exp_path = os.path.join(sbox, 'author_rev_exp')
+  bogus_keywords_path = os.path.join(sbox, 'bogus_keywords')
 
-  # 'key1' has author and rev contracted keywords
-  svntest.main.file_append (key1_path, "$Author$\n$Rev$")
-
-  # 'key2' has author and rev expanded keywords
-  svntest.main.file_append (key2_path, "$Author: nobody $\n$Rev: 0 $")
-
-  # 'key3' has bogus keywords
-  svntest.main.file_append (key3_path, "$Arthur$\n$The Rev: 0$")
+  svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
+  svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
+  svntest.main.file_append (bogus_keywords_path, "$Arthur$\n$Rev0$")
       
   return 0
 
 
 ### Helper functions for setting/removing properties
 
-# Set property NAME to VALUE for versioned PATH in the working copy.
-def set_property(path, name, value):
-  svntest.main.run_svn(None, 'propset', name, value, path)
+# Set the property keyword for PATH.  Turn on all possible keywords.
+# ### todo: Later, take list of keywords to set.
+def keywords_on(path):
+  svntest.main.run_svn(None, 'propset',
+                       "svn:keywords", "Author Rev Date URL", path)
 
 # Delete property NAME from versioned PATH in the working copy.
-def del_property(path, name):
-  svntest.main.run_svn(None, 'propdel', name, path)
+# ### todo: Later, take list of keywords to remove from the propval?
+def keywords_off(path):
+  svntest.main.run_svn(None, 'propdel', "svn:keywords", path)
 
 
 ######################################################################
@@ -118,10 +136,24 @@ def del_property(path, name):
 
 #----------------------------------------------------------------------
 
+def keywords_from_birth():
+  "Create some files that have the `svn:keywords' property set from
+  the moment they're first committed.  Some of the files actually
+  contain keywords, others don't.  Make sure everything behaves
+  correctly."
+  
+  sbox = sandbox(keywords_from_birth)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  setup_working_copy ()
+  keywords_on (author_rev_exp_path)
+  ### working here ###
+
+
+
 def enable_translation():
   "enable translation, check status, commit"
 
-  sbox = sandbox(basic_commit)
+  sbox = sandbox(enable_translation)
   wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
   # TODO: Turn on newline conversion and/or keyword substition for all
@@ -157,6 +189,7 @@ def disable_translation():
 
 # list all tests here, starting with None:
 test_list = [ None,
+              keywords_from_birth,
               enable_translation,
               checkout_translated,
               disable_translation,
