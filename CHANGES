@@ -1,4 +1,4 @@
-Version 0.22.0 (released 7 May 2003, revision XXXX, branches/release-0.22)
+Version 0.22.0 (released 7 May 2003, revision 5842, branches/release-0.22)
 
  User-visible changes:
  * svn diff -r BASE:HEAD and other edge cases fixed (#977)
