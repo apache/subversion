@@ -10,7 +10,7 @@
 "
 " Then add the following lines to ~/.vimrc
 "
-" au BufNewFile,BufRead  svncommit.*.tmp setf svn
+" au BufNewFile,BufRead  svn-commit.*.tmp setf svn
 
 " For version 5.x: Clear all syntax items
 " For version 6.x: Quit when a syntax file was already loaded
