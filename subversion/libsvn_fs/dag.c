@@ -515,25 +515,35 @@ set_entry (dag_node_t *parent,
                           (SVN_FS__NR_DATA_KEY (parent_node_rev))->data,
                           (SVN_FS__NR_DATA_KEY (parent_node_rev))->len);
 
+  SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
+
   if (rep_key[0] == '\0')
     {
-      /* Create a rep skel like this: (('fulltext' 'mutable') '') .  */
+      /* The new representation inherited nothing, so fill it with a
+         skel representing an empty entries list. */
 
-      skel_t *header, *rep;
-      const char *string_key = NULL;
-      const char *empty = "()";  /* an initial entries list */
+      svn_stream_t *wstream;
+      svn_fs__rep_write_baton_t *wb;
+      skel_t *empty_list;
+      svn_stringbuf_t *empty;
+      apr_size_t len;
       
-      header = svn_fs__make_empty_list (trail->pool);
-      svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), header);
-      svn_fs__prepend (svn_fs__str_atom ("fulltext", trail->pool), header);
-      rep = svn_fs__make_empty_list (trail->pool);
-      svn_fs__string_append (fs, &string_key, strlen (empty), empty, trail);
-      svn_fs__prepend (svn_fs__str_atom (string_key, trail->pool), rep);
-      svn_fs__prepend (header, rep);
-      SVN_ERR (svn_fs__write_new_rep (&mutable_rep_key, fs, rep, trail));
+      empty_list = svn_fs__make_empty_list (trail->pool);
+      empty = svn_fs__unparse_skel (empty_list, trail->pool);
+
+      /* ### todo: baton & stream creation could all be abstracted into
+         one svn_fs__rep_write_stream() function that would have a
+         prototype just like get_baton()'s above.  Then these three
+         function calls could become one.  See similar note in
+         svn_fs__dag_get_contents().  */
+
+      wb = svn_fs__rep_write_get_baton (fs, mutable_rep_key,
+                                        trail, trail->pool);
+      wstream = svn_stream_create (wb, trail->pool);
+      svn_stream_set_write (wstream, svn_fs__rep_write_contents);
+      len = empty->len;
+      svn_stream_write (wstream, empty->data, &len);
     }
-  else
-    SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, rep_key, fs, trail));
   
   /* If the parent node already pointed at a mutable representation,
      we don't need to do anything.  But if it didn't, either because
@@ -1417,6 +1427,12 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
                                       0,
                                       NULL,
                                       trail->pool);
+
+  /* ### todo: baton & stream creation could all be abstracted into
+     one svn_fs__rep_read_stream() function that would have a
+     prototype just like get_baton()'s above.  Then these three
+     function calls could become one.  See similar note in
+     set_entry().  */
 
   /* Create a stream object in trail->pool, and make it use our read
      func and baton. */

@@ -84,7 +84,7 @@ svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
 
 
 
-/*** Stream-based reading. ***/
+/*** Stream-based reading and writing of rep/string contents. ***/
 
 /* A baton type for representation read streams.  */
 typedef struct svn_fs__rep_read_baton_t svn_fs__rep_read_baton_t;
@@ -110,19 +110,59 @@ svn_fs__rep_read_baton_t *svn_fs__rep_read_get_baton (svn_fs_t *fs,
 /* Stream read func (matches the `svn_read_func_t' type);
    BATON is an `svn_fs__rep_read_baton_t'.
 
-   Read LEN bytes into BUF starting at BATON->offset in the data
+   Read *LEN bytes into BUF starting at BATON->offset in the data
    represented by BATON->rep_key, in BATON->FS.  Set *LEN to the
    amount read and add that amount to BATON->offset.  
 
    If BATON->trail is non-null, then do the read as part of that
-   trail, and use the trail's pool for all allocations.  Otherwise,
-   do the read in its own internal trail, and use BATON->pool for all
-   allocations.  */
+   trail.  Use BATON->pool for all allocations; if BATON->trail is
+   present, BATON->pool may or may not be the same as
+   BATON->trail->pool.  */
 svn_error_t *
 svn_fs__rep_read_contents (void *baton, char *buf, apr_size_t *len);
 
 
+/* A baton type for representation write streams.  */
+typedef struct svn_fs__rep_write_baton_t svn_fs__rep_write_baton_t;
+
+
+/* Return a rep writing baton to use with the svn stream writing
+   function svn_fs__rep_write_contents().  The baton is allocated in
+   POOL.
+
+   The baton is for writing to representation REP_KEY's data starting
+   at OFFSET in FS, doing temporary allocations in POOL.  If TRAIL is
+   non-null, do the stream's writes as part of TRAIL; otherwise, each
+   write happens in an internal, one-off trail. 
+
+   POOL may be TRAIL->pool.  */
+svn_fs__rep_write_baton_t *svn_fs__rep_write_get_baton (svn_fs_t *fs,
+                                                        const char *rep_key,
+                                                        trail_t *trail,
+                                                        apr_pool_t *pool);
+
+
+/* Stream read func (matches the `svn_write_func_t' type);
+   BATON is an `svn_fs__rep_write_baton_t'.
+
+   Write *LEN bytes into BUF starting at BATON->offset in the data
+   represented by BATON->rep_key, in BATON->FS.
+
+   If BATON->trail is non-null, then do the write as part of that
+   trail.  Use BATON->pool for all allocations.  If BATON->trail is
+   present, BATON->pool may or may not be the same as
+   BATON->trail->pool.
+
+   If the representation is not mutable, return the error
+   SVN_FS_REP_NOT_MUTABLE.  */
+svn_error_t *
+svn_fs__rep_write_contents (void *baton, const char *buf, apr_size_t *len);
+
+
+
 /* stabilize_rep */
+/* ### todo: yes, precisely.  This should be here, instead of in
+   node-rev.c:deltify(). */
 
 #endif /* SVN_LIBSVN_FS_REPS_STRINGS_H */
 
