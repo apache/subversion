@@ -111,7 +111,8 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
      repos_status_* fields in each status struct. */
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &status_edit_baton,
                                      path, adm_access, descend, statushash,
-                                     youngest, pool));
+                                     youngest, ctx->cancel_func, 
+                                     ctx->cancel_baton, pool));
 
   SVN_ERR (ra_lib->do_status (session,
                               &reporter, &report_baton,
@@ -165,6 +166,7 @@ svn_client_status (apr_hash_t **statushash,
   SVN_ERR (svn_wc_statuses (hash, path, adm_access,
                             descend, get_all, no_ignore,
                             ctx->notify_func, ctx->notify_baton,
+                            ctx->cancel_func, ctx->cancel_baton,
                             ctx->config, pool));
 
   if (update)    

@@ -1943,7 +1943,7 @@ close_edit (void *edit_baton,
 
 /*** Returning editors. ***/
 
-/* Helper for the two public editor-supplying functions. */
+/* Helper for the three public editor-supplying functions. */
 static svn_error_t *
 make_editor (svn_wc_adm_access_t *adm_access,
              const char *anchor,
@@ -1955,6 +1955,8 @@ make_editor (svn_wc_adm_access_t *adm_access,
              svn_boolean_t recurse,
              svn_wc_notify_func_t notify_func,
              void *notify_baton,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
              const svn_delta_editor_t **editor,
              void **edit_baton,
              svn_wc_traversal_info_t *traversal_info,
@@ -1997,8 +1999,13 @@ make_editor (svn_wc_adm_access_t *adm_access,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
-  *edit_baton = eb;
-  *editor = tree_editor;
+  SVN_ERR (svn_delta_get_cancellation_editor (cancel_func,
+                                              cancel_baton,
+                                              tree_editor,
+                                              eb,
+                                              editor,
+                                              edit_baton,
+                                              pool));
 
   return SVN_NO_ERROR;
 }
@@ -2011,6 +2018,8 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2020,6 +2029,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision, 
                       FALSE, NULL, NULL,
                       recurse, notify_func, notify_baton,
+                      cancel_func, cancel_baton,
                       editor, edit_baton, traversal_info, pool);
 }
 
@@ -2031,6 +2041,8 @@ svn_wc_get_checkout_editor (const char *dest,
                             svn_boolean_t recurse,
                             svn_wc_notify_func_t notify_func,
                             void *notify_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
                             svn_wc_traversal_info_t *traversal_info,
@@ -2039,6 +2051,7 @@ svn_wc_get_checkout_editor (const char *dest,
   return make_editor (NULL, dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
                       recurse, notify_func, notify_baton,
+                      cancel_func, cancel_baton,
                       editor, edit_baton,
                       traversal_info, pool);
 }
@@ -2052,6 +2065,8 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_wc_traversal_info_t *traversal_info,
@@ -2063,6 +2078,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                       target, target_revision,
                       FALSE, NULL, switch_url,
                       recurse, notify_func, notify_baton,
+                      cancel_func, cancel_baton,
                       editor, edit_baton,
                       traversal_info, pool);
 }

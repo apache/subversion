@@ -53,7 +53,8 @@ svn_client__can_delete (const char *path,
     dir_access = adm_access;
 
   SVN_ERR (svn_wc_statuses (hash, path, dir_access, TRUE, FALSE, FALSE,
-                            NULL, NULL, ctx->config, pool));
+                            NULL, NULL, ctx->cancel_func, ctx->cancel_baton,
+                            ctx->config, pool));
   for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
     {
       const void *key;

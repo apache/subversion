@@ -29,6 +29,7 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <apr_signal.h>
 
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -506,6 +507,25 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { NULL, NULL, {0}, NULL, {0} }
 };
 
+/* A flag to see if we've been cancelled by the client or not. */
+static volatile sig_atomic_t cancelled = FALSE;
+
+/* A signal handler to support cancellation. */
+void
+sig_int (int unused)
+{
+  cancelled = TRUE;
+}
+
+/* Our cancellation callback. */
+svn_error_t *
+check_cancel (void *baton)
+{
+  if (cancelled)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, "caught SIGINT");
+  else
+    return SVN_NO_ERROR;
+}
 
 
 /*** Main. ***/
@@ -981,6 +1001,16 @@ main (int argc, const char * const *argv)
     /* Build an authentication baton to give to libsvn_client. */
     svn_auth_open (&ab, providers, pool);
     ctx.auth_baton = ab;
+
+#if 0
+    /* Set up our cancellation support.
+     *
+     * This is temporarily #if 0'd out while the cancellation support is 
+     * being pushed through the client code,
+     */
+    apr_signal (SIGINT, sig_int);
+    ctx.cancel_func = check_cancel;
+#endif
 
     /* Place any default --username or --password credentials into the
        auth_baton's run-time parameter hash. */

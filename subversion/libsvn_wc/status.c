@@ -535,11 +535,16 @@ get_dir_status (apr_hash_t *statushash,
                 svn_boolean_t no_ignore,
                 svn_wc_notify_func_t notify_func,
                 void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *dir_entry;
+
+  if (cancel_func)
+    SVN_ERR (cancel_func (cancel_baton));
 
   /* Load entries file for the directory into the requested pool. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
@@ -629,7 +634,8 @@ get_dir_status (apr_hash_t *statushash,
                   SVN_ERR (get_dir_status (statushash, dir_entry,
                                            dir_access, ignores, descend,
                                            get_all, no_ignore, notify_func,
-                                           notify_baton, pool));
+                                           notify_baton, cancel_func,
+                                           cancel_baton, pool));
                 }
             }
           else
@@ -655,6 +661,8 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_boolean_t no_ignore,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
                  apr_hash_t *config,
                  apr_pool_t *pool)
 {
@@ -725,6 +733,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       SVN_ERR (get_dir_status(statushash, parent_entry, adm_access,
                               ignores, descend, get_all, no_ignore,
                               notify_func, notify_baton,
+                              cancel_func, cancel_baton,
                               pool));
     }
 

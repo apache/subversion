@@ -941,6 +941,9 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * statuses for @a path and everything below it, including
  * subdirectories.  In other words, a full recursion.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton while building 
+ * the @a statushash to determine if the client has cancelled the operation.
+ *
  * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
@@ -951,6 +954,8 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_boolean_t no_ignore,
                               svn_wc_notify_func_t notify_func,
                               void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_hash_t *config,
                               apr_pool_t *pool);
 
@@ -969,6 +974,9 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
  * done, otherwise @a adm_access should be part of an access baton set
  * for the @a path hierarchy.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton periodically 
+ * during the editor's drive to see if the drive should continue.
+ *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  */
@@ -979,6 +987,8 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        svn_boolean_t descend,
                                        apr_hash_t *statushash,
                                        svn_revnum_t *youngest,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
                                        apr_pool_t *pool);
 
 /** @} */
@@ -1340,6 +1350,9 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * The editor invokes @a notify_func with @a notify_baton as the update
  * progresses, if @a notify_func is non-null.
  *
+ * If @a cancel_func is non-null, the editor will invoke @a cancel_func with 
+ * @a cancel_baton as the update progresses to see if it should continue.
+ *
  * @a target_revision is the repository revision that results from this set
  * of changes.
  */
@@ -1349,6 +1362,8 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
@@ -1372,6 +1387,9 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
  * The editor invokes @a notify_func with @a notify_baton as the checkout
  * progresses, if @a notify_func is non-null.
  *
+ * If @a cancel_func is non-null, it gets called, with @a cancel_baton as 
+ * the checkout progresses, to determine if it should continue.
+ *
  * @a ancestor_url is the repository string to be recorded in this
  * working copy.
  */
@@ -1381,6 +1399,8 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
                                          svn_boolean_t recurse,
                                          svn_wc_notify_func_t notify_func,
                                          void *notify_baton,
+                                         svn_cancel_func_t cancel_func,
+                                         void *cancel_baton,
                                          const svn_delta_editor_t **editor,
                                          void **edit_baton,
                                          svn_wc_traversal_info_t *ti,
@@ -1409,6 +1429,9 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * The editor invokes @a notify_func with @a notify_baton as the switch
  * progresses, if @a notify_func is non-null.
  *
+ * If @a cancel_func is non-null, it will be called with @a cancel_baton as 
+ * the switch progresses to determine if it should continue.
+ *
  * @a target_revision is the repository revision that results from this set
  * of changes.
  */
@@ -1419,6 +1442,8 @@ svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
                                        svn_wc_traversal_info_t *ti,
