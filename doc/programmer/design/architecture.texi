@@ -68,7 +68,7 @@ three libraries.
 The first library provides an API for managing the client's working copy
 of a project.  This includes operations like renaming or removal of
 files, patching files, extracting local diffs, and routines for
-maintaining administrative files in the @file{SVN/} directory.
+maintaining administrative files in the @file{.svn/} directory.
 
 The second library provides an API for exchanging information with a
 Subversion repository.  This includes the ability to read files, write

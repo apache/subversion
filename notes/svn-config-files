@@ -22,7 +22,7 @@ This format is currently used by:
      * `svn_security', a file which lives in each repository and
         defines ACLs for the plugin_security module
 
-     * all files within a working copy's SVN/ administrative directory
+     * all files within a working copy's .svn/ administrative directory
 
 
 This format is parsed by svn_parse(), located in svn_subr/svn_parse.c.

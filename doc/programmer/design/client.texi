@@ -45,7 +45,7 @@ This section gives an overview of how working copies are arranged
 physically, but is not a full specification of working copy layout.
 
 As with CVS, Subversion working copies are simply directory trees with
-special administrative subdirectories, in this case named "SVN" instead
+special administrative subdirectories, in this case named ".svn" instead
 of "CVS":
 
 @example
@@ -54,14 +54,14 @@ of "CVS":
                              / | \
                _____________/  |  \______________
               /                |                 \
-            SVN               src                doc
+           .svn               src                doc
         ___/ | \___           /|\             ___/ \___
        |     |     |         / | \           |         |
-      base  ...   ...       /  |  \     myproj.texi   SVN
+      base  ...   ...       /  |  \     myproj.texi  .svn
                            /   |   \              ___/ | \___
                       ____/    |    \____        |     |     |
                      |         |         |      base  ...   ...
-                    SVN      foo.c     bar.c     |
+                   .svn      foo.c     bar.c     |
                 ___/ | \___                      |
                |     |     |                     |
              base   ...   ...               myproj.texi
@@ -72,7 +72,7 @@ of "CVS":
 @end group
 @end example
 
-Each @file{dir/SVN/} directory records the files in @file{dir}, their
+Each @file{dir/.svn/} directory records the files in @file{dir}, their
 revision numbers and property lists, pristine revisions of all the files
 (for client-side delta generation), the repository from which @file{dir}
 came, and any local changes (such as uncommitted adds, deletes, and
@@ -91,7 +91,7 @@ committing new revisions for particular files, and it also makes it
 easier for the user to prune a big, complete tree into a small subtree
 and still have a valid working copy.
 
-The SVN subdir contains:
+The .svn subdir contains:
 
 @itemize @bullet
 

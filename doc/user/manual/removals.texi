@@ -94,8 +94,8 @@ that the working copy is out-of-date.
 
 After the items are removed from the repository, all tracking
 information about the items is removed from the working copy.  In the
-case of a file, its information is removed from @file{SVN/}.  In the
-case of a directory, the entire @file{SVN/} administrative area is
+case of a file, its information is removed from @file{.svn/}.  In the
+case of a directory, the entire @file{.svn/} administrative area is
 removed, as well as all the administrative areas of its subdirectories.
 
 Note that commit never removes any real working files or directories;
