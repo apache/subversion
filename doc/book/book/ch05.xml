@@ -1,7 +1,3 @@
-<!-- This chapter is slated for mass rewriting.  If you're adding
-     content or fixing things, please understand that your changes,
-     while certainly influencing the resultant chapter, might
-     themselves get lost in the mix. -->
 <chapter id="svn-ch-5">
 <title>Repository Administration</title>
 
@@ -18,10 +14,10 @@
 
     <itemizedlist>
       <listitem>
-        <para>creation and configuration of a repository.</para>
+        <para>repository creation and configuration.</para>
       </listitem>
       <listitem>
-        <para>networking of repositories.</para>
+        <para>repository networking.</para>
       </listitem>
       <listitem>
         <para>repository maintainance, including the use of the
@@ -29,8 +25,8 @@
           tools provided with Subversion.</para>
       </listitem>
       <listitem>
-        <para>suggestions for how to arrange the versioned data in
-          your repository.</para>
+        <para>repository layout: suggestions for how to arrange the
+          versioned data in your repository.</para>
       </listitem>
       <listitem>
         <para>common questions and mistakes regarding repositories.</para>
@@ -38,9 +34,10 @@
     </itemizedlist>
 
     <para>If you plan to access a Subversion repository only in the
-      role of a user whose data is under version control, you can skip
-      this chapter altogether.  However, if you are, or wish to
-      become, a Subversion repository administrator,
+      role of a user whose data is under version control (that is, via
+      a Subversion client), you can skip this chapter altogether.
+      However, if you are, or wish to become, a Subversion repository
+      administrator,
       <footnote>
         <para>This may sound really prestigious and lofty, but we're
           just talking about anyone who is interested in that
@@ -935,12 +932,12 @@ $
           special path components <literal>.</literal> and
           <literal>..</literal>.</para>
 
-        <para>You can use the <literal>youngest</literal> command to
-          display the youngest revision.  This is useful for
-          determining the range of valid revisions you can use as
-          arguments to the <literal>setrev</literal> command&mdash;you
-          can browse all the revisions (recalling that they are named
-          with integers) between 0 and the youngest, inclusively.
+        <para>The <literal>youngest</literal> command displays the
+          youngest revision.  This is useful for determining the range
+          of valid revisions you can use as arguments to the
+          <literal>setrev</literal> command&mdash;you are allowed to
+          browse all the revisions (recalling that they are named with
+          integers) between 0 and the youngest, inclusively.
           Determining the valid browsable transactions isn't quite as
           pretty.  Use the <command>lstxns</command> command to list
           the transactions that you are able to browse.  The list of
@@ -961,9 +958,6 @@ $
       <sect3 id="svn-ch-5-sect-2.2.4">
         <title>Berkeley DB Utilities</title>
 
-        <!-- ### todo: talk only about Berkeley's tools here.  Move
-             the svnadmin stuff out to another section.  -->
-            
         <para>Currently, the Subversion repository has only one
           database back-end&mdash;Berkeley DB.  All of your filesystem's
           structure and data live in a set of tables within the
@@ -1056,7 +1050,11 @@ $
           <para>removing dead transactions, and</para>
         </listitem>
         <listitem>
-          <para>optimizing the access time of popular revisions.</para>
+          <para>recovering <quote>wedged</quote> repositories.</para>
+        </listitem>
+        <listitem>
+          <para>migrating repository contents to a different
+            repository.</para>
         </listitem>
       </itemizedlist>
 
@@ -1362,23 +1360,25 @@ The latest repos revision is 19.
         repository revisions that are formatted using Subversion's
         custom filesystem dump format.  The dump format is printed to
         the standard output stream, while informative messages are
-        printed to the stardard error stream.  This allows you to
+        printed to the standard error stream.  This allows you to
         redirect the output stream to a file while watching the status
         output in your terminal window.  For example:</para>
 
       <screen>
+$ svnadmin youngest myrepos
+26
 $ svnadmin dump myrepos &gt; dumpfile
 * Dumped revision 0.
 * Dumped revision 1.
 * Dumped revision 2.
 &hellip;
+* Dumped revision 25.
+* Dumped revision 26.
 </screen>
 
       <para>At the end of the process, you will have a single file
         that contains all the data stored in your repository in the
         requested range of revisions.</para>
-
-<!-- ### TODO: describe the format here -->
 
       <para>The other subcommand in the pair, <command>svnadmin
         load</command>, parses the standard input stream as a
@@ -1401,6 +1401,17 @@ $ svnadmin load newrepos &lt; dumpfile
 
 ------- Committed new rev 2 (loaded from original rev 2) &gt;&gt;&gt;
 &hellip;
+&lt;&lt;&lt; Started new txn, based on original revision 25
+     * editing path : A/D/gamma ... done.
+
+------- Committed new rev 25 (loaded from original rev 25) &gt;&gt;&gt;
+
+&lt;&lt;&lt; Started new txn, based on original revision 26
+     * adding path : A/Z/zeta ... done.
+     * editing path : A/mu ... done.
+
+------- Committed new rev 26 (loaded from original rev 26) &gt;&gt;&gt;
+
 </screen>
 
       <para>Note that because <command>svnadmin</command> uses
@@ -1425,29 +1436,35 @@ $ svnadmin dump myrepos --revision 23 > rev-23.dumpfile
 $ svnadmin dump myrepos --revision 100:200 > revs-100-200.dumpfile
 </screen>
 
-<!-- ### TODO: de-gunkify this -->
+      <para>As Subversion dumps each new revision, it outputs only
+        enough information to allow a future loader to re-create that
+        revision based on the previous one.  In other words, for any
+        given revision in the dump file, only the items that were
+        changed in that revision will appear in the dump.  The only
+        exception to this rule is the first revision that is dumped
+        with the current <command>svnadmin dump</command> command.</para>
 
-      <para>Now, regardless of the range of revisions used when
-        dumping the repository, the default behavior is for the first
-        revision dumped to always be compared against revision 0,
-        which is just the empty root (<filename>/</filename>)
-        directory.  This means that the first revision in any dumpfile
-        will always look like a gigantic list of <quote>added</quote>
-        paths.  We do this so that a file like
-        <filename>revs-100-200.dumpfile</filename> can be directly
-        loaded into an empty repository without concern that something
-        in the dumped range of revisions (100-200 in this example) is
-        dependent on the existance of something not in the dumped
-        range (pre-100).</para>
+      <para>By default, Subversion will not express the first dumped
+        revision as merely differences to be applied to the previous
+        revision.  For one thing, there is not previous revision in
+        the dumpfile!  And secondly, Subversion cannot know the state
+        of the repository into which the dump data will be loaded (if
+        it ever is, indeed, loaded into another repository).  To
+        ensure that the output of each execution of <command>svnadmin
+        dump</command> is self-sufficient, the first dumped revision
+        is by default a full representation of every directory, file,
+        and property in that revision of the repository.</para>
 
-      <para>However, if you add the <option>--incremental</option>
-        option when you dump your repository, this tells
-        <command>svnadmin</command> to compare the first dumped
-        revision against the previous revision in the repository, the
-        same way it treats every other revision that gets dumped.  The
-        benefit of this is that you can create several small dumpfiles
-        that can be loaded in succession, instead of one large one,
-        like so:</para>
+      <para>However, you can change this default behavior.  If you add
+        the <option>--incremental</option> option when you dump your
+        repository, <command>svnadmin</command> will compare the first
+        dumped revision against the previous revision in the
+        repository, the same way it treats every other revision that
+        gets dumped, and will output only the changes that occured in
+        that first revision, exactly as it does the rest of the
+        revisions in the dump range.  The benefit of this is that you
+        can create several small dumpfiles that can be loaded in
+        succession, instead of one large one, like so:</para>
 
       <screen>
 $ svnadmin dump myrepos 0 1000 > dumpfile1
@@ -1475,7 +1492,7 @@ $ svnadmin load newrepos &lt; dumpfile3
         time the script ran.</para>
 
       <example id="svn-ch-5-sect-2.4-ex-1">
-        <title>Nightly repository incremental dumps</title>
+        <title>Using incremental repository dumps</title>
 
         <programlisting>
 #!/usr/bin/perl
@@ -1514,11 +1531,17 @@ close LASTDUMPED;
 </programlisting>
       </example>
 
-      <para>As you can see, the Subversion repository dumpfile format,
-        and specifically <command>svnadmin</command>'s use of that
-        format, can be a valuable means by which to backup changes to
-        your repository over time in case of a system crash or some
-        other catastrophic event.</para>
+      <para>In fact, if you know what you are doing, you can omit
+        (either at dump time, or by editing the dump files themselves)
+        repository changes, either to individual files or directories,
+        or entire revisions, as you migrate your repository.  You
+        should only attempt such things if you are fully versed in the
+        dump file format and how the <command>svnadmin load</command>
+        code works, though.  Dump file hackery or not, though,
+        <command>svnadmin</command>'s <literal>dump</literal> and
+        <literal>load</literal> commands can be a valuable means by
+        which to backup changes to your repository over time in case
+        of a system crash or some other catastrophic event.</para>
 
       <para>Finally, another possible use of the Subversion repository
         dump file format is conversion from a different storage
@@ -1619,10 +1642,11 @@ close LASTDUMPED;
       <para>You can accomplish the first two items either by compiling
         <command>httpd</command> and Subversion from source code, or
         by installing pre-built binary packages of them on your
-        system.</para>
-  
-<!-- ### TODO: Need lots more detail here.  This fuzzy hand-waving
-     ain't gonna cut it. -->
+        system.  For the most up-to-date information on how to compile
+        Subversion for use with Apache HTTP Server, as well as how to
+        compile and configure Apache itself for this purpose, see the
+        <filename>INSTALL</filename> file in the top level of the
+        Subversion source code tree.</para>
 
     </sect2>  
 
@@ -1913,8 +1937,51 @@ ServerName svn.red-bean.com
 
     </sect2> 
 
-<!-- ### TODO: talk about SSL, mod_deflate, using different ports, etc. -->
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-3.5">
+      <title>Miscellaneous Apache Features</title>
 
+      <para>Several of the features already provided by Apache in its
+        role as a robust Web server can be leveraged for increased
+        functionality or security in Subversion as well.  Subversion
+        communicates with Apache using Neon, which is a generic
+        HTTP/WebDAV library with support for such mechanisms as SSL
+        (the secure socket layer) and Deflate compression (the same
+        algorithm used by the <command>gzip</command> and
+        <command>PKZIP</command> programs to <quote>shrink</quote>
+        files into smaller chunks of data).</para>
+
+      <para>This means that SSL-enabled Subversion clients can access
+        SSL-enabled Apache servers and perform all communication using
+        an encrypted protocol.  Businesses that need to expose their
+        repositories for access outside the company firewall should be
+        conscious of the possibility that unauthorized parties could
+        be <quote>sniffing</quote> their network traffic.  SSL makes
+        that kind of unwanted attention less likely to result in
+        sensitive data leaks.  Apache can be configured such that only
+        SSL-enabled Subversion clients can communicate with the
+        repository.</para>
+
+      <para>Deflate compression places a small burden on the client
+        and server to compress and decompress network transmissions as
+        a way to minimize the size of the actual transmission.  In
+        cases where network bandwidth is in short supply, this kind of
+        compression can greatly increase the speed at which
+        communications between server and client can be sent.  In
+        extreme cases, this minimized network transmission could be
+        the difference between an operation timing out or completing
+        successfully.</para>
+
+      <para>Less interesting but equally important are other features
+        of the Apache and Subversion relationship, such as the ability
+        to specify a custom port (instead of the default HTTP port 80)
+        or a virtual domain name by which the Subversion repository
+        should be accessed.  These things are all supported by Neon,
+        along with comprehensive support for communication through a
+        proxy and other little goodies, so Subversion gets that
+        support for free.</para>
+
+    </sect2>
   </sect1>
 
   <!-- ******************************************************************* -->
@@ -1944,68 +2011,141 @@ ServerName svn.red-bean.com
         often and come to expect things to be at certain locations.
         Try to peer into the future a bit; plan ahead before placing
         your data under version control.  By <quote>laying out</quote>
-        the contents of your repository in an effective manner the
+        the contents of your repositories in an effective manner the
         first time, you can prevent a load of future headaches.</para>
 
-<!-- ### TODO: I mean it.  This section sucks.  Fix it! -->
+      <para>There are a few things to consider when setting up
+        Subversion repositories.  Let's assume that as repository
+        administrator, you will be responsible for the supporting the
+        version control system for several projects.  The first
+        decision is whether to use a single repository for multiple
+        projects, or to give each project its own repository, or some
+        compromise of these two.</para>
+
+     <para>There are benefits of using a single repository for
+       multiple projects, most obviously the lack of duplicated
+       maintainance.  A single repository means that there is one set
+       of hook scripts, one thing to routinely backup, one thing to
+       dump and load if Subversion releases an incompatible new
+       version, and so on.  Also, you can easily move data between
+       projects easily, and without losing any versioned
+       information.</para>
+
+     <para>The downside of using a single repository is that different
+       project may have different commit mailing lists or different
+       authentication and authorization requirements.  Also, remember
+       that Subversion uses repository global revision numbers.  Some
+       folks don't like the fact that even though no changes have been
+       made to their project lately, the youngest revision number for
+       the repository keeps climbing because other projects are
+       actively adding new revisions.</para>
+
+     <para>A middle-ground approach can be taken, too.  For example,
+       projects can be grouped by how well they relate to each other.
+       You might have a few repositories with a handful of projects in
+       each repository.  That way, projects that are likely to want to
+       share data can do so easily, and as new revisions are added to
+       the repository, at least the developers know that those new
+       revisions are at least remotely related to everyone who uses
+       that repository.</para>
+
+     <para>After deciding how to organize your projects with respect
+       to repositories, you'll probably want to think about directory
+       heirarchies in the repositories themselves.  Because Subversion
+       uses regular directory copies for branching and tagging (see
+       <xref linkend="svn-ch-4"/>), the Subversion community
+       recommends using one of two different approaches here.  Both
+       approaches employ the use of directories named
+       <filename>trunk</filename>, meaning the directory under which
+       the main project development occurs, and
+       <filename>branches</filename>, which is a directory in which to
+       created various named branches of the main development line.</para>
+
+     <para>The first is to place each project in a subdirectory of the
+       root filesystem directory, with <filename>trunk</filename> and
+       <filename>branches</filename> directories immediately under
+       each project directory, as demonstrated in Figure 5-1.</para>
+
+      <figure id="svn-ch5-sect4.1-dia1">
+        <title>One suggested repository layout.</title>
+        <graphic fileref="images/ch05dia1.png"/>
+      </figure>
+
+     <para>The second is do the reverse&mdash;to have the
+       <filename>trunk</filename> and <filename>branches</filename>
+       directories immediately in the top level of the filesystem,
+       each with subdirectories for all the projects in the
+       repository, as demonstrated in Figure 5-2.</para>
+
+      <figure id="svn-ch5-sect4.1-dia2">
+        <title>Another suggested repository layout.</title>
+        <graphic fileref="images/ch05dia2.png"/>
+      </figure>
+
+      <para>Lay out your repository in whatever way you see fit.
+        Subversion does not expect or enforce a layout schema&mdash;in
+        its eyes, a directory is a directory is a directory.
+        Ultimately, you should choose the repository arrangement that
+        meets your needs and those of the projects that live
+        there.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-4.2">
-      <title>Examples of 'svn import'</title>
+      <title>Creating the Layout, and Importing Initial Data</title>
           
-<!-- ### TODO: And fix this crap, too. -->
-
-      <para>You may want to give your repository an initial directory
-        structure that reflects the trunk, branches, and tags of your
-        project(s) (See <xref linkend="svn-ch-4"/>.)  You can do this
-        via <command>svn mkdir</command>:</para>
+      <para>After deciding how to arrange the projects in your
+        repository, you'll probably want to actually populate the
+        repository with that layout and with initial project data.
+        There are a couple of ways to do this in Subversion.  You
+        could use the <command>svn mkdir</command> command (see <xref
+        linkend="svn-ch-3-sect-7.6"/>) to create each directory in
+        your skeletal repository layout, one-by-one.  A quicker way to
+        accomplish the same task is to use the <command>svn
+        import</command> (see <xref linkend="svn-ch-3-sect-7.3"/>.  By
+        first creating the layout in a temporary location on your
+        drive, you can import the whole layout tree into the
+        repository in a single commit:</para>
             
       <screen>
-$ svnadmin create /path/to/repos
-$ svn mkdir file:///path/to/repos/projectA -m 'Base dir for A'
-Committed revision 1.
-            
-$ svn mkdir file:///path/to/repos/projectA/trunk -m 'Main dir for A'
-Committed revision 2.
-            
-$ svn mkdir file:///path/to/repos/projectA/branches -m 'Branches for A'
-Committed revision 3.
-            
-$ svn mkdir file:///path/to/repos/projectA/tags -m 'Tags for A'
-Committed revision 4.
-            
-$ svn co file:///path/to/repos/projectA/trunk projectA
-Checked out revision 4.
-             
-# ... now work on projectA ...
-</screen>
-          
-      <para>With <command>svn import</command>, you can create the
-        structure with a single commit:</para>
-            
-      <screen>
-$ svnadmin create /path/to/repos
+$ mkdir tmpdir
+$ cd tmpdir
 $ mkdir projectA
 $ mkdir projectA/trunk
 $ mkdir projectA/branches
-$ mkdir projectA/tags    
-$ svn import file:///path/to/repos projectA projectA -m 'Dir layout for A'
+$ mkdir projectB
+$ mkdir projectB/trunk
+$ mkdir projectB/branches
+&hellip;
+$ svn import file:///path/to/repos . --message 'Initial repository layout'
+Adding         projectA
 Adding         projectA/trunk
 Adding         projectA/branches
-Adding         projectA/tags
-Committed revision 1.
+Adding         projectB
+Adding         projectB/trunk
+Adding         projectB/branches
 
-$ rm -rf projectA/
-$ svn co file:///path/to/repos/projectA/trunk projectA
-Checked out revision 1.
-            
-#  ... now work on projectA ...
+Committed revision 1.
+$ cd ..
+$ rm -rf tmpdir
+$
 </screen>
 
-    </sect2>
+      <para>Once you have your skeletal layout in place, you can begin
+        importing actual project data into your repository, if any
+        such data exists yet.  Once again, there are several ways to
+        do this.  You could use the <command>svn import</command>
+        command.  You could checkout a working copy from your new
+        repository, move and arrange project data inside the working
+        copy, and use the <command>svn add</command> and <command>svn
+        commit</command> commands.  But once we start talking about
+        such things, we're no longer discussing repository
+        administration.  If you aren't already familiar with the
+        <command>svn</command> client program, see <xref
+        linkend="svn-ch-3"/>.</para>
 
+    </sect2>
   </sect1>
 </chapter>
 
