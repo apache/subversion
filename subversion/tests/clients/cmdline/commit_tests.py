@@ -1435,6 +1435,57 @@ def failed_commit(sbox):
     "Output of 'svnadmin lstxns' is unexpected.",
     'STDOUT', [], output)
 
+#----------------------------------------------------------------------
+
+# Commit from multiple working copies is not yet supported.  At
+# present an error is generated and none of the working copies change.
+# Related to issue 959, this test here doesn't use svn:external but the
+# behaviour needs to be considered.
+
+def commit_multiple_wc(sbox):
+  "attempted commit from multiple wc fails"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Checkout a second working copy
+  wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
+  url = svntest.main.current_repo_url
+  stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout', url,
+                                                     wc2_dir)
+  if len (stderr_lines) != 0:
+    return 1
+
+  # Modify both working copies
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, 'appended mu text')
+  lambda2_path = os.path.join(wc2_dir, 'A', 'B', 'lambda')
+  svntest.main.file_append(lambda2_path, 'appended lambda2 text')
+
+  # Verify modified status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='M ')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
+  expected_status2.tweak('A/B/lambda', status='M ')
+  if svntest.actions.run_and_verify_status(wc2_dir, expected_status2):
+    return 1
+
+  # Commit should fail, even though one target is a "child" of the other.
+  output, errput = svntest.main.run_svn("Not locked", 'commit', '-m', 'log',
+                                        wc_dir, wc2_dir)
+  if not errput:
+    return 1
+
+  # Verify status unchanged
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+  if svntest.actions.run_and_verify_status(wc2_dir, expected_status2):
+    return 1
+
 ########################################################################
 # Run the tests
 
@@ -1464,6 +1515,7 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
+              commit_multiple_wc,
               XFail(failed_commit),
              ]
 

@@ -755,6 +755,21 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
                             pool));
 
+  /* One day we might support committing from multiple working copies, but
+     we don't yet.  This check ensures that we don't silently commit a
+     subset of the targets */
+  for (i = 0; i < targets->nelts; ++i)
+    {
+      svn_wc_adm_access_t *adm_access;
+      const char *target;
+          SVN_ERR (svn_path_get_absolute (&target,
+                                          ((const char **)targets->elts)[i],
+                                          pool));
+      SVN_ERR_W (svn_wc_adm_probe_retrieve (&adm_access, base_dir_access,
+                                            target, pool),
+                 "Are all the targets part of the same working copy?");
+    }
+
   /* Crawl the working copy for commit items. */
   if ((cmt_err = svn_client__harvest_committables (&committables, 
                                                    base_dir_access,
