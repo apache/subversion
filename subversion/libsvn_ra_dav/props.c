@@ -32,6 +32,7 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_path.h"
+#include "svn_dav.h"
 
 #include "ra_dav.h"
 
@@ -61,6 +62,8 @@ static const elem_defn elem_definitions[] =
 
   /* SVN elements */
   { ELEM_baseline_relpath, SVN_RA_DAV__PROP_BASELINE_RELPATH, 1 },
+  /* ### REMOVE the old version of this someday: */
+  { ELEM_baseline_relpath_old, SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD, 1 },
 
   { 0 }
 };
@@ -78,7 +81,10 @@ static const struct ne_xml_elm neon_descriptions[] =
   { "DAV:", "getcontentlength", ELEM_get_content_length, NE_XML_CDATA },
 
   /* SVN elements */
-  { SVN_PROP_PREFIX, "baseline-relative-path", ELEM_baseline_relpath,
+  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path", ELEM_baseline_relpath,
+    NE_XML_CDATA },
+  /* ### REMOVE this someday: */
+  { SVN_PROP_PREFIX, "baseline-relative-path", ELEM_baseline_relpath_old,
     NE_XML_CDATA },
 
   { NULL }
@@ -101,6 +107,7 @@ static const ne_propname starting_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
   { SVN_PROP_PREFIX, "baseline-relative-path" },
+  { SVN_DAV_PROP_NS_DAV, "baseline-relative-path" },
   { "DAV:", "resourcetype" },
   { NULL }
 };
@@ -170,6 +177,12 @@ static int add_to_hash(void *userdata, const ne_propname *pname,
 {
   svn_ra_dav_resource_t *r = userdata;
   const char *name;
+
+  if (value == NULL)
+    /* According to neon's docstrings, this means that there was an
+       error fetching this property.  We don't care about the exact
+       error status code, though. */
+    return 0;
   
   name = apr_pstrcat(r->pool, pname->nspace, pname->name, NULL);
   value = apr_pstrdup(r->pool, value);
@@ -186,8 +199,7 @@ static void process_results(void *userdata, const char *uri,
   /*  prop_ctx_t *pc = userdata; */
   svn_ra_dav_resource_t *r = ne_propset_private(rset);
 
-  /* ### should use ne_propset_status(rset) to determine whether the
-   * ### PROPFIND failed for the properties we're interested in. */
+  /* Only call iterate() on the 200-status properties. */
   (void) ne_propset_iterate(rset, add_to_hash, r);
 }
 
@@ -200,6 +212,7 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
           {
           case ELEM_baseline_coll:
           case ELEM_baseline_relpath:
+          case ELEM_baseline_relpath_old: /* ### REMOVE ME someday */
           case ELEM_checked_in:
           case ELEM_resourcetype:
           case ELEM_vcc:
@@ -547,17 +560,46 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   my_bc_relative = "";
   {
     const char *relative_path;
+    const char *relative_path_old;
     
+    /* ### someday, we need to REMOVE the support for the old baseline
+       stuffs: */
+
     relative_path = apr_hash_get(rsrc->propset,
                                  SVN_RA_DAV__PROP_BASELINE_RELPATH,
                                  APR_HASH_KEY_STRING);
-    if (relative_path == NULL)
+    relative_path_old = apr_hash_get(rsrc->propset,
+                                     SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD,
+                                     APR_HASH_KEY_STRING);
+    if (relative_path_old == NULL)
       {
-        /* ### better error reporting... */        
-        /* ### need an SVN_ERR here */
-        return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                "The relative-path property was not "
-                                "found on the resource.");
+        if (relative_path == NULL)
+          {
+            /* ### better error reporting... */        
+            /* ### need an SVN_ERR here */
+            return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                    "The relative-path property was not "
+                                    "found on the resource.");
+          }
+        else
+          {
+            /* cool. keep the new relative_path. */
+          }
+      }
+    else
+      {
+        if ((relative_path == NULL) || (! *relative_path))
+          {
+            /* no relative path (or an empty one ### this is a hack
+               around a neon bug that keeps us from getting the status
+               code for our complex properties)?  fall back to old
+               relative path. */
+            relative_path = relative_path_old;
+          }
+        else
+          {
+            /* cool. keep the new relative_path. */
+          }
       }
     
     /* don't forget to tack on the parts we lopped off in order

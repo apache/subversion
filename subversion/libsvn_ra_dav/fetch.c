@@ -374,14 +374,46 @@ static void add_props(const svn_ra_dav_resource_t *r,
       char *val;
 
       apr_hash_this(hi, (const void **)&key, NULL, (void *)&val);
-      
+
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
+      if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
+        {
+          /* for props in the 'custom' namespace, we strip the
+             namespace and just use whatever name the user gave the
+             property. */
+
+          svn_stringbuf_set(skey, key + NSLEN);
+
+          /* ### urk. this value isn't binary-safe... */
+          svn_stringbuf_set(sval, val);
+
+          (*setter)(baton, skey, sval);
+          continue;
+        }
+#undef NSLEN
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
       if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
         {
-          /* for custom props, we strip the namespace, and just use whatever
-             name the user gave the property. */
-
+          /* ### Backwards compatibility: look for old 'svn:custom:'
+             namespace and strip it away, instead of the good URI
+             namespace.  REMOVE this block someday! */
           svn_stringbuf_set(skey, key + NSLEN);
+
+          /* ### urk. this value isn't binary-safe... */
+          svn_stringbuf_set(sval, val);
+
+          (*setter)(baton, skey, sval);
+          continue;
+        }
+#undef NSLEN
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
+      if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
+        {
+          /* This property is an 'svn:' prop, recognized by client, or
+             server, or both.  Convert the URI namespace into normal
+             'svn:' prefix again before pushing it at the wc.*/
+          svn_stringbuf_set(skey, "svn:");
+          svn_stringbuf_appendcstr (skey, key + NSLEN);
 
           /* ### urk. this value isn't binary-safe... */
           svn_stringbuf_set(sval, val);
@@ -392,11 +424,11 @@ static void add_props(const svn_ra_dav_resource_t *r,
 #define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
       else if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
         {
-          /* this is one of our properties. pass it straight through. */
-
-          /* ### oops. watch out for props that the server sets, which we
-             ### don't want reflected in the WC. we should put these into
-             ### a server-prop namespace. */
+          /* ### Backwards compatibility: if the property is already
+             in the deprecated 'svn:' namespace, pass it straight
+             through without change.  But filter out the
+             baseline-relative-path property.  REMOVE this block
+             someday.*/
           if (strcmp(key + NSLEN, "baseline-relative-path") == 0)
             continue;
 
@@ -411,11 +443,11 @@ static void add_props(const svn_ra_dav_resource_t *r,
       else
         {
           /* If we get here, then we have a property that is neither
-             in the 'svn:custom:' space, nor in the plain old 'svn:'
-             space.  There are a few properties like this.  Some of
-             them, like 'checked-in', 'version-controlled-configuration',
-             and 'getetag' seem to be handled in other places
-             (get_vsn_url()).  For all others, we filter them here. */
+             in the 'custom' space, nor in the 'svn' space.  So it
+             must be either in the 'network' space or 'DAV:' space.
+             The following routine converts a handful of DAV: props
+             into 'svn:wc:' or 'svn:entry:' props that libsvn_wc
+             wants. */
           set_special_wc_prop (key, val, setter, baton, pool);
         }
     }
@@ -919,14 +951,51 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 
           apr_hash_this(hi, &key, NULL, &val);
 
-          /* If the property starts with "svn:custom:", then it's a
+          /* If the property is in the 'custom' namespace, then it's a
              normal user-controlled property coming from the fs.  Just
              strip off this prefix and add to the hash. */
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
+          if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
+            apr_hash_set(*props, &((const char *)key)[NSLEN], 
+                         APR_HASH_KEY_STRING, 
+                         svn_string_create(val, ras->pool));    
+#undef NSLEN
+          /* ### Backwards compatibility: look for old 'svn:custom:'
+             namespace and strip it away, instead of the good URI
+             namespace.  REMOVE this block someday! */
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
           if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
             apr_hash_set(*props, &((const char *)key)[NSLEN], 
                          APR_HASH_KEY_STRING, 
                          svn_string_create(val, ras->pool));    
+#undef NSLEN
+
+          /* If the property is in the 'svn' namespace, then it's a
+             normal user-controlled property coming from the fs.  Just
+             strip off the URI prefix, add an 'svn:', and add to the hash. */
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
+          if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
+            {
+              const char *newkey = apr_pstrcat(ras->pool,
+                                               SVN_PROP_PREFIX,
+                                               (const char *)key + NSLEN);
+              apr_hash_set(*props, newkey, 
+                           APR_HASH_KEY_STRING, 
+                           svn_string_create(val, ras->pool));    
+            }
+#undef NSLEN
+          /* ### Backwards compatibility: look for old 'svn:' instead
+             of the good URI namespace.  Filter out
+             baseline-rel-path. REMOVE this block someday! */
+#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
+          if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
+            {
+              if (strcmp((const char *)key + NSLEN,
+                         "baseline-relative-path") != 0)
+                apr_hash_set(*props, key,
+                             APR_HASH_KEY_STRING, 
+                             svn_string_create(val, ras->pool));    
+            }
 #undef NSLEN
           
           else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
@@ -961,7 +1030,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
             }
           else
             /* If it's one of the 'entry' props, this func will
-               recognize the DAV name & add it to the hash mapped to a
+               recognize the DAV: name & add it to the hash mapped to a
                new name recognized by libsvn_wc. */
             SVN_ERR( set_special_wc_prop ((const char *) key,
                                           (const char *) val,
@@ -1062,18 +1131,32 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
       else
         entry->size = (apr_off_t) atol(propval); /* ### FIXME? */
 
-      /* does this resource contain any 'svn:custom:' properties, i.e.
-         ones actually created and set by the user? */
+      /* does this resource contain any 'svn' or 'custom' properties,
+         i.e.  ones actually created and set by the user? */
       for (h = apr_hash_first (ras->pool, resource->propset);
            h; h = apr_hash_next (h))
         {
           const void *kkey;
           void *vval;
           apr_hash_this (h, &kkey, NULL, &vval);
-
-          if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
-                      sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
+          
+          if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
+                      sizeof(SVN_DAV_PROP_NS_CUSTOM)) == 0)
             entry->has_props = TRUE;
+
+          else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
+                           sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
+            entry->has_props = TRUE;
+
+          else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
+                           sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
+            entry->has_props = TRUE;
+
+          else if (strncmp((const char *)kkey, SVN_PROP_PREFIX,
+                           sizeof(SVN_PROP_PREFIX)) == 0)
+            if (strcmp((const char *)kkey + sizeof(SVN_PROP_PREFIX),
+                       "baseline-relative-path") != 0)
+              entry->has_props = TRUE;          
         }
 
       /* created_rev & friends */
@@ -1116,14 +1199,51 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
 
           apr_hash_this(hi, &key, NULL, &val);
 
-          /* If the property starts with "svn:custom:", then it's a
+          /* If the property is in the 'custom' namespace, then it's a
              normal user-controlled property coming from the fs.  Just
              strip off this prefix and add to the hash. */
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
+          if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
+            apr_hash_set(*props, &((const char *)key)[NSLEN], 
+                         APR_HASH_KEY_STRING, 
+                         svn_string_create(val, ras->pool));    
+#undef NSLEN
+          /* ### Backwards compatibility: look for old 'svn:custom:'
+             namespace and strip it away, instead of the good URI
+             namespace.  REMOVE this block someday! */
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
           if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
             apr_hash_set(*props, &((const char *)key)[NSLEN], 
                          APR_HASH_KEY_STRING, 
                          svn_string_create(val, ras->pool));    
+#undef NSLEN
+
+          /* If the property is in the 'svn' namespace, then it's a
+             normal user-controlled property coming from the fs.  Just
+             strip off the URI prefix, add an 'svn:', and add to the hash. */
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
+          if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
+            {
+              const char *newkey = apr_pstrcat(ras->pool,
+                                               SVN_PROP_PREFIX,
+                                               (const char *)key + NSLEN);
+              apr_hash_set(*props, newkey, 
+                           APR_HASH_KEY_STRING, 
+                           svn_string_create(val, ras->pool));    
+            }
+#undef NSLEN
+          /* ### Backwards compatibility: look for old 'svn:' instead
+             of the good URI namespace.  Filter out
+             baseline-rel-path. REMOVE this block someday! */
+#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
+          if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
+            {
+              if (strcmp((const char *)key + NSLEN,
+                         "baseline-relative-path") != 0)
+                apr_hash_set(*props, key,
+                             APR_HASH_KEY_STRING, 
+                             svn_string_create(val, ras->pool));    
+            }
 #undef NSLEN
           
           else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
@@ -1158,7 +1278,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
             }
           else
             /* If it's one of the 'entry' props, this func will
-               recognize the DAV name & add it to the hash mapped to a
+               recognize the DAV: name & add it to the hash mapped to a
                new name recognized by libsvn_wc. */
             SVN_ERR( set_special_wc_prop ((const char *) key,
                                           (const char *) val,
