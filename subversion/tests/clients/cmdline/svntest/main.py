@@ -15,6 +15,15 @@
 # newer version instead, at your option.
 #
 ######################################################################
+
+import sys     # for argv[]
+import os      # for popen2()
+import shutil  # for rmtree()
+import re      # to parse version string
+import string  # for atof()
+import copy    # for deepcopy()
+
+######################################################################
 #
 #  HOW TO USE THIS MODULE:
 #
@@ -33,31 +42,34 @@
 #
 #  Also, your tests will probably want to use some of the common
 #  routines in the 'Utilities' section below.
-
+#
 #####################################################################
 # Global stuff
 
-import sys     # for argv[]
-import os      # for popen2()
-import shutil  # for rmtree()
-import re      # to parse version string
-import string  # for atof()
-import copy    # for deepcopy()
 
-
-# The minimum required version of Python needed to run these tests.
-python_required_version = 2.0
-
-# Global:  set this to the location of the svn binary
+# Global:  the locations of the svn and svnadmin binaries
 svn_binary = '../../../clients/cmdline/svn'
-# Global:  set this to the location of the svnadmin binary
 svnadmin_binary = '../../../svnadmin/svnadmin'
+
+# Where we want all the repositories and working copies to live.
+# Each test will have its own!
+general_repo_dir = "repositories"
+general_wc_dir = "working_copies"
+
+# temp directory in which we will create our 'pristine' local
+# repository and other scratch data.  This should be removed when we
+# quit and when we startup.
+temp_dir = 'local_tmp'
+
+# (derivatives of the tmp dir.)
+pristine_dir = os.path.join(temp_dir, "repos")
+greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 
 # Our pristine greek tree, used to assemble 'expected' trees.
 # This is in the form
 #
-#     [ ['path', 'contents', {props}], ...]
+#     [ ['path', 'contents', {props}, {atts}], ...]
 #
 #   Which is the format expected by svn_tree.build_generic_tree().
 #
@@ -230,6 +242,15 @@ def run_tests(test_list):
       got_error = run_one_test(n, test_list)
   return got_error
 
+
+######################################################################
+# Initialization
+
+# Cleanup: if a previous run crashed or interrupted the python
+# interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
+
+if os.path.exists(temp_dir):
+  shutil.rmtree(temp_dir)
 
 
 ### It would be nice to print a graceful error if an older python

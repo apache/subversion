@@ -61,12 +61,13 @@ Each node in our generic trees have these fields:
   - name :  the name of the node  (the basename of the path)
   - children:  list of child nodes (if the node is a dir)
   - contents:  textual contents (if the node is a file)
-  - properties:  a dictionary (hash) of attributes/metadata
+  - properties:  a hash to hold subversion props (on files or dirs)
+  - atts:        a hash of meta-information about tree nodes themselves
 
   * subcommand output
 
     svntest.tree.* provides functions to parse commandline output into
-    a tree.
+    a tree.  meta-information in stored in each treenode's `atts' hash:
 
          checkout/update:  a 'status' property is set to a two-character
                            value (from the set (A, D, G, U, C, _, ' '))
@@ -80,31 +81,21 @@ Each node in our generic trees have these fields:
    * disk verification
 
      svntest.tree.* also has routines that walk a regular working copy
-     and returns a tree representing disk contents
+     and returns a tree representing disk contents and props.
 
-   * `entries' files
+   * `entries' files:  ### TODO
 
        We need a function that can assemble all the 'entries' files
-       into a tree.  The 'contents' field can be ignored;  xml
-       attributes can be directly copied into our tree nodes'
-       'properties'. 
-
-       NOTE: Because directory entries are located in *two* places --
-       as the "" entry in its own entries file, and by its own name as
-       a 'subdir' entry in its parent -- we have to be careful to that
-       this information is preserved.  This can be done by cleverly
-       prefixing a directory's property keys with "THIS_DIR:" and
-       "subdir:".
-
-
+       into a tree.  The 'contents' and 'props' fields can be ignored;
+       xml attributes can be directly copied into our tree nodes'
+       `atts' hashes.
 
 ------------------------------------------------------------------
 
-The files in this directory:
+The contents of this directory:
 
 
-
-* local_tests.py:        tests: client operations using ra_local.
+* basic_tests.py:        tests: client operations using ra_local.
 
 * svntest/               subversion test framework, as a python package.
 
@@ -121,9 +112,10 @@ The files in this directory:
                              * routines to parse a working copy and
                                entries files into specific kinds of trees.
 
-    * entry.py               parse an `entries' file (not used yet)
+    * actions.py:            main API for driving subversion client and
+                             using trees to verify results.
+
+    * entry.py               parse an `entries' file (### not used yet)
 
 
 
- * example_tests1.py:     template test script.
-                          demonstrates how to write tests and then
