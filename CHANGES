@@ -1,14 +1,6 @@
-Version 1.0.0-beta1
-(Friday, 20th February 2004, from /branches/1.0.0-beta1)
-http://svn.collab.net/repos/svn/tags/1.0.0-beta1
-
-   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-   #                                                               #
-   #   Note: When 1.0.0 is released, we'll just change the date    #
-   #   and remove the "-beta1"s above.  In other words, this       #
-   #   change list is essentially the 0.37.0->1.0.0 change list.   #
-   #                                                               #
-   # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+Version 1.0.0
+(Monday, 23 February 2004, from /branches/1.0.0)
+http://svn.collab.net/repos/svn/tags/1.0.0
 
  User-visible changes:
  * book and other documentation files brought up-to-date from trunk
@@ -16,7 +8,7 @@ http://svn.collab.net/repos/svn/tags/1.0.0-beta1
  * tools/cvs2svn/ area brought up-to-date from trunk
  * www/ area brought up-to-date from trunk
  * improved 'svn help switch' text
- * many bindings fixes
+ * various bindings improvements
 
  Developer-visible changes:
  * various fixes to binary packaging and installer systems
