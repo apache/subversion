@@ -53,6 +53,13 @@ svn_ruby_protect_call3 (VALUE arg)
   return rb_funcall2 (args[0], rb_intern ((char *) args[1]), 3, args + 2);
 }
 
+VALUE
+svn_ruby_protect_call5 (VALUE arg)
+{
+  VALUE *args = (VALUE *) arg;
+  return rb_funcall2 (args[0], rb_intern ((char *) args[1]), 5, args + 2);
+}
+
 apr_status_t
 svn_ruby_set_refcount (apr_pool_t *pool, long count)
 {

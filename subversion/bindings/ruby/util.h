@@ -18,6 +18,7 @@ VALUE svn_ruby_protect_call0 (VALUE arg);
 VALUE svn_ruby_protect_call1 (VALUE arg);
 VALUE svn_ruby_protect_call2 (VALUE arg);
 VALUE svn_ruby_protect_call3 (VALUE arg);
+VALUE svn_ruby_protect_call5 (VALUE arg);
 apr_status_t svn_ruby_set_refcount (apr_pool_t *pool, long count);
 long svn_ruby_get_refcount (apr_pool_t *pool);
 
