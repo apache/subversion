@@ -236,7 +236,6 @@ attach_lock (const char **msg,
                         "This is a comment.  Yay comment!",
                         apr_time_from_sec(3),
                         SVN_INVALID_REVNUM, FALSE, pool));
-  mylock.xml_comment = 0;
 
   /* Can we look up the lock by path? */
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
