@@ -944,12 +944,21 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
 
+  /* Get a copy of the "this dir" entry for comparison purposes. */
+  this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
+                           APR_HASH_KEY_STRING);
+
+  /* If there is no "this dir" entry, we can only assume that this
+     directory is no longer under revision control.  We'll blow away
+     the administrative subdirectory altogether.  ### todo: this
+     should probably do a recursive cleanup of some sort.  */
+  if (! this_dir)
+    return svn_wc__adm_destroy (path, pool);
+
   /* Open entries file for writing. */
-  err = svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
-                               (APR_WRITE | APR_CREATE | APR_EXCL),
-                               pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
+                                  (APR_WRITE | APR_CREATE | APR_EXCL),
+                                  pool));
 
   svn_xml_make_header (&bigstr, pool);
   svn_xml_make_open_tag (&bigstr, pool, svn_xml_normal,
@@ -957,10 +966,6 @@ svn_wc__entries_write (apr_hash_t *entries,
                          "xmlns",
                          svn_stringbuf_create (SVN_XML_NAMESPACE, pool),
                          NULL);
-
-  /* Get a copy of the "this dir" entry for comparison purposes. */
-  this_dir = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
-                           APR_HASH_KEY_STRING);
 
   /* Write out "this dir" */
   SVN_ERR (write_entry (&bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, 
