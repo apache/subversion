@@ -59,8 +59,8 @@ run_cmd_with_output (const char *cmd,
       (apr_err, 0, NULL, pool,
        "run_cmd_with_output: can't open handle to stderr");
 
-  return svn_io_run_cmd (".", cmd, args, exitcode, exitwhy, NULL, outhandle,
-                         errhandle, pool);
+  return svn_io_run_cmd (".", cmd, args, exitcode, exitwhy, FALSE,
+                         NULL, outhandle, errhandle, pool);
 }
 
 
