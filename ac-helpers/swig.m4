@@ -113,6 +113,11 @@ AC_DEFUN(SVN_FIND_SWIG,
         ac_cv_python_compile="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --compile`"
       ])
       SWIG_PY_COMPILE="$ac_cv_python_compile"
+
+      AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
+        ac_cv_python_link="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --link`"
+      ])
+      SWIG_PY_LINK="$ac_cv_python_link"
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes"; then
@@ -126,6 +131,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_INSTALL_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)
+  AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_SETUP_LDFLAGS)
   AC_SUBST(SWIG_JAVA_INCLUDES)
   AC_SUBST(SWIG_LIBSWIG_DIR)

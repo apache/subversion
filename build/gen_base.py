@@ -74,11 +74,17 @@ class GeneratorBase:
       ### I don't feel like passing these to the constructor right now,
       ### and I'm not sure how to really pass this stuff along. we
       ### certainly don't want the targets looking at the parser...
-      target_ob.ldflags = parser.get(target, 'link-flags')
       target_ob.add_deps = parser.get(target, 'add-deps')
 
       # find all the sources involved in building this target
       target_ob.find_sources(parser.get(target, 'sources'))
+
+      ### another hack for now. tell a SWIG target what libraries should
+      ### be linked into each wrapper. this also depends on the fact that
+      ### the swig libraries occur *after* the other targets in build.conf
+      ### cuz of the test for "is this in self.targets?"
+      if type == 'swig':
+        target_ob.libs = self._find_libs(parser.get(target, 'libs'))
 
       # the target should add all relevant dependencies
       target_ob.add_dependencies(self.graph)
@@ -108,11 +114,8 @@ class GeneratorBase:
     # compute intra-library dependencies
     for name, target in self.targets.items():
       if isinstance(target, TargetLinked):
-        for libname in string.split(parser.get(name, 'libs')):
-          if self.targets.has_key(libname):
-            self.graph.add(DT_LINK, name, self.targets[libname])
-          else:
-            self.graph.add(DT_LINK, name, ExternalLibrary(libname))
+        for lib in self._find_libs(parser.get(name, 'libs')):
+          self.graph.add(DT_LINK, name, lib)
 
     # collect various files
     self.includes = _collect_paths(parser.get('options', 'includes'))
@@ -130,6 +133,15 @@ class GeneratorBase:
     for d in script_dirs:
       build_dirs[d] = None
     self.build_dirs = build_dirs.keys()
+
+  def _find_libs(self, libs_option):
+    libs = [ ]
+    for libname in string.split(libs_option):
+      if self.targets.has_key(libname):
+        libs.append(self.targets[libname])
+      else:
+        libs.append(ExternalLibrary(libname))
+    return libs
 
   def compute_hdr_deps(self):
     #
@@ -288,7 +300,7 @@ _custom_build = {
 
 class SWIGLibrary(DependencyNode):
   ### stupid Target vs DependencyNode
-  ldflags = add_deps = ''
+  add_deps = ''
 
   def __init__(self, fname, lang):
     DependencyNode.__init__(self, fname)
@@ -488,6 +500,8 @@ class TargetSWIG(Target):
       libname = '_' + iname[:-2] + self.libext
 
     for lang in self.cfg.swig_lang:
+      abbrev = lang_abbrev[lang]
+
       # the .c file depends upon the .i file
       cfile = os.path.join(dir, lang, cname)
       graph.add(DT_SWIG_C, SWIGObject(cfile, lang), ifile)
@@ -500,8 +514,20 @@ class TargetSWIG(Target):
       library = SWIGLibrary(os.path.join(dir, lang, libname), lang)
       graph.add(DT_LINK, library, ofile)
 
+      # add some more libraries
+      for lib in self.libs:
+        graph.add(DT_LINK, library, lib)
+
+      # add some language-specific libraries
+      ### fix this. get these from the .conf file
+      graph.add(DT_LINK, library, ExternalLibrary('-lswig' + abbrev))
+      ### fix this, too. find the right Target swigutil lib. we know there
+      ### will be only one.
+      util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
+      graph.add(DT_LINK, library, util)
+
       # the specified install area depends upon the library
-      graph.add(DT_INSTALL, self.install + '-' + lang_abbrev[lang], library)
+      graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
 
 _build_types = {
   'exe' : TargetExe,
@@ -521,7 +547,6 @@ class GenError(Exception):
 
 _cfg_defaults = {
   'sources' : '',
-  'link-flags' : '',
   'libs' : '',
   'manpages' : '',
   'infopages' : '',

@@ -77,7 +77,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
         '%s_DEPS = %s %s\n'
         '%s_OBJECTS = %s\n'
         '%s: $(%s_DEPS)\n'
-        '\tcd %s && %s -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
+        '\tcd %s && %s -o %s $(%s_OBJECTS) %s $(LIBS)\n\n'
         % (targ_varname, string.join(objects + deps), target_ob.add_deps,
 
            targ_varname, objnames,
@@ -85,7 +85,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
            target_ob.output, targ_varname,
 
            path, target_ob.link_cmd, os.path.basename(target_ob.output),
-           target_ob.ldflags, targ_varname, string.join(libs))
+           targ_varname, string.join(libs))
         )
 
     # for each install group, write a rule to install its outputs

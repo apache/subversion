@@ -47,6 +47,11 @@ srcdir = @srcdir@
 infodir = @infodir@
 
 swig_py_libdir= @libdir@
+swig_java_libdir= @libdir@
+
+### this isn't right
+swig_pydir = @libdir@/svn-python/svn
+swig_javadir = @libdir@/svn-java
 
 ### should search for these...
 MAKEINFO = @MAKEINFO@
@@ -73,8 +78,10 @@ SWIG = @SWIG@
 SWIG_INCLUDES = -I$(SWIG_SRC_DIR) \
                 -I$(abs_srcdir)/subversion/include \
                 $(SVN_APR_INCLUDES)
+SWIG_LDFLAGS = @SWIG_LDFLAGS@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
+SWIG_PY_LINK = @SWIG_PY_LINK@
 SWIG_PY_SETUP_LDFLAGS = @SWIG_PY_SETUP_LDFLAGS@
 SWIG_JAVA_INCLUDES = @SWIG_JAVA_INCLUDES@
 
@@ -98,7 +105,7 @@ COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGP
 COMPILE_SWIG_JAVA = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_JAVA_INCLUDES) $(INCLUDES) -o $@ -c $<
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
-LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR)
+LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module
 
 RUN_SWIG_PY = $(SWIG) -c -python -noproxy $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -o $@ $<
 RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tigris.subversion.swig' $(SWIG_INCLUDES) -o $@ $<
@@ -106,6 +113,10 @@ RUN_SWIG_JAVA = $(SWIG) -c -java -noproxy -module 'Subversion' -package 'org.tig
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@ $<
 COMPILE_JAVA_WRAPPER = \
   echo "ERROR: compilation of Java wrappers not yet supported" ; exit 1
+
+LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
+LINK_JAVA_WRAPPER = \
+  echo "ERROR: linking of Java wrappers not yet supported" ; exit 1
 
 
 INSTALL = @INSTALL@
@@ -119,7 +130,11 @@ INSTALL_MOD_SHARED = @APXS@ -i -S LIBEXECDIR="$(APACHE_LIBEXECDIR)" @MOD_ACTIVAT
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
 INSTALL_DATA = $(INSTALL) -m 644
 
+### this isn't correct yet
+INSTALL_SWIG_PY = $(INSTALL_LIB)
 INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
+INSTALL_SWIG_JAVA = $(INSTALL_LIB)
+INSTALL_SWIG_JAVA_LIB = $(INSTALL_LIB)
 
 APXS = @APXS@ 
 
