@@ -307,7 +307,7 @@ get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
     }
 
   svn_fs__track_dbt (&result, trail->pool);
-  *key = apr_pstrndup (trail->pool, result.data, result.size);
+  *key = apr_pstrmemdup (trail->pool, result.data, result.size);
 
   /* Bump to future key. */
   key_len = result.size;

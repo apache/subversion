@@ -84,7 +84,8 @@ typedef struct
   /* id of the root node. */
   svn_fs_id_t *id;
 
-  /* property list (const char * name, svn_string_t * value) */
+  /* property list (const char * name, svn_string_t * value) 
+     may be NULL if there are no properies.  */
   apr_hash_t *proplist; 
 
 } svn_fs__revision_t;
@@ -99,7 +100,8 @@ typedef struct
   /* id of the revision root node upon which this txn is base */
   svn_fs_id_t *base_root_id;
 
-  /* property list (const char * name, svn_string_t * value) */
+  /* property list (const char * name, svn_string_t * value).
+     may be NULL if there are no properties.  */
   apr_hash_t *proplist;
 
 } svn_fs__transaction_t;
@@ -119,14 +121,16 @@ typedef struct
   const char *ancestor_path;
   svn_revnum_t ancestor_rev;
 
-  /* representation key for this node's properties. */
+  /* representation key for this node's properties.  may be NULL if
+     there are no properties.  */
   const char *prop_key;
 
   /* representation key for this node's text data (files) or entries
-     list (dirs). */
+     list (dirs).  may be NULL if there are no contents.  */
   const char *data_key;
 
-  /* representation key for this node's text-data-in-progess (files only). */
+  /* representation key for this node's text-data-in-progess (files
+     only).  NULL if no edits are currently in-progress. */
   const char *edit_data_key;
 
 } svn_fs__node_revision_t;

@@ -55,7 +55,7 @@ svn_error_t *svn_fs__read_rep (svn_fs__representation_t **rep_p,
    TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
                                 const char *key,
-                                svn_fs__representation_t *rep,
+                                const svn_fs__representation_t *rep,
                                 trail_t *trail);
 
 
@@ -63,7 +63,7 @@ svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
    *KEY, as part of trail.  The new key is allocated in TRAIL->pool.  */
 svn_error_t *svn_fs__write_new_rep (const char **key,
                                     svn_fs_t *fs,
-                                    svn_fs__representation_t *rep,
+                                    const svn_fs__representation_t *rep,
                                     trail_t *trail);
 
 /* Delete representation KEY from FS, as part of TRAIL.

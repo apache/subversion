@@ -103,7 +103,7 @@ svn_fs__read_rep (svn_fs__representation_t **rep_p,
 svn_error_t *
 svn_fs__write_rep (svn_fs_t *fs,
                    const char *key,
-                   svn_fs__representation_t *rep,
+                   const svn_fs__representation_t *rep,
                    trail_t *trail)
 {
   DBT query, result;
@@ -126,7 +126,7 @@ svn_fs__write_rep (svn_fs_t *fs,
 svn_error_t *
 svn_fs__write_new_rep (const char **key,
                        svn_fs_t *fs,
-                       svn_fs__representation_t *rep,
+                       const svn_fs__representation_t *rep,
                        trail_t *trail)
 {
   DBT query, result;
@@ -159,7 +159,7 @@ svn_fs__write_new_rep (const char **key,
   svn_fs__track_dbt (&result, trail->pool);
 
   /* Store the new rep. */
-  *key = apr_pstrndup (trail->pool, result.data, result.size);
+  *key = apr_pstrmemdup (trail->pool, result.data, result.size);
   SVN_ERR (svn_fs__write_rep (fs, *key, rep, trail));
 
   /* Bump to future key. */

@@ -63,7 +63,7 @@ svn_fs__open_transactions_table (DB **transactions_p,
 /* Store TXN as a transaction named TXN_NAME in FS as part of TRAIL.  */
 static svn_error_t *
 put_txn (svn_fs_t *fs,
-         svn_fs__transaction_t *txn,
+         const svn_fs__transaction_t *txn,
          const char *txn_name,
          trail_t *trail)
 {
@@ -108,7 +108,7 @@ allocate_txn_id (char **id_p,
   svn_fs__track_dbt (&value, trail->pool);
 
   /* That's the value we want to return.  */
-  next_id_str = apr_pstrndup (trail->pool, value.data, value.size);
+  next_id_str = apr_pstrmemdup (trail->pool, value.data, value.size);
 
   /* Try to parse the value.  */
   {
@@ -146,11 +146,10 @@ svn_fs__create_txn (char **txn_name_p,
 {
   char *txn_name;
   svn_fs__transaction_t txn;
-  svn_fs_id_t *id_copy = svn_fs__id_copy (root_id, trail->pool);
 
   SVN_ERR (allocate_txn_id (&txn_name, fs, trail));
-  txn.root_id = id_copy;
-  txn.base_root_id = id_copy;
+  txn.root_id = (svn_fs_id_t *) root_id;
+  txn.base_root_id = (svn_fs_id_t *) root_id;
   txn.proplist = NULL;
   SVN_ERR (put_txn (fs, &txn, txn_name, trail));
 
@@ -198,7 +197,7 @@ svn_fs__get_txn (svn_fs__transaction_t **txn_p,
     return svn_fs__err_no_such_txn (fs, txn_name);
   SVN_ERR (DB_WRAP (fs, "reading transaction", db_err));
 
-  /* Unparse TRANSACTION skel */
+  /* Parse TRANSACTION skel */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
   if (! skel)
     return svn_fs__err_corrupt_txn (fs, txn_name);
@@ -237,7 +236,7 @@ svn_fs__set_txn_root (svn_fs_t *fs,
   SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
   if (! svn_fs__id_eq (txn->root_id, new_id))
     {
-      txn->root_id = svn_fs__id_copy (new_id, trail->pool);
+      txn->root_id = (svn_fs_id_t *) new_id;
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;
@@ -255,7 +254,7 @@ svn_fs__set_txn_base (svn_fs_t *fs,
   SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
   if (! svn_fs__id_eq (txn->base_root_id, new_id))
     {
-      txn->base_root_id = svn_fs__id_copy (new_id, trail->pool);
+      txn->base_root_id = (svn_fs_id_t *) new_id;
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;
@@ -314,7 +313,7 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
           names = tmp;
         }
 
-      names[names_count++] = apr_pstrndup(pool, key.data, key.size);
+      names[names_count++] = apr_pstrmemdup(pool, key.data, key.size);
     }
 
   names[names_count] = NULL;

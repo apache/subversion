@@ -102,21 +102,21 @@ svn_fs__unparse_proplist_skel (skel_t **skel_p,
    allocations.  */
 svn_error_t *
 svn_fs__unparse_revision_skel (skel_t **skel_p,
-                               svn_fs__revision_t *revision,
+                               const svn_fs__revision_t *revision,
                                apr_pool_t *pool);
 
 /* Unparse TRANSACTION into a `TRANSACTION' skel *SKEL_P.  Use POOL
    for all allocations.  */
 svn_error_t *
 svn_fs__unparse_transaction_skel (skel_t **skel_p,
-                                  svn_fs__transaction_t *transaction,
+                                  const svn_fs__transaction_t *transaction,
                                   apr_pool_t *pool);
 
 /* Unparse REP into a `REPRESENTATION' skel *SKEL_P.  Use POOL for all
    allocations.  */
 svn_error_t *
 svn_fs__unparse_representation_skel (skel_t **skel_p,
-                                     svn_fs__representation_t *rep,
+                                     const svn_fs__representation_t *rep,
                                      apr_pool_t *pool);
 
 
@@ -124,7 +124,7 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
    all allocations.  */
 svn_error_t *
 svn_fs__unparse_node_revision_skel (skel_t **skel_p,
-                                    svn_fs__node_revision_t *noderev,
+                                    const svn_fs__node_revision_t *noderev,
                                     apr_pool_t *pool);
 
 /* Unparse COPY into a `COPY' skel *SKEL_P.  Use POOL for all
