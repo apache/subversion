@@ -644,7 +644,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
     return err;
 
   /* (## Perhaps someday have the client print a warning that "locally
-     modified files were not deleted" ??) */    
+     modified files were not deleted" ?) */    
 
   return SVN_NO_ERROR;
 }
