@@ -1191,14 +1191,15 @@ $ svn status README
           access</emphasis>.  This cache (called the
           <quote>text-base</quote>) also allows Subversion to send the
           user's local modifications during a commit to the server as
-          a compressed delta against the pristine version.  Having
-          this cache is a tremendous benefit&mdash;even if you have a
-          fast net connection, it's much faster to send only a file's
-          changes rather than the whole file to the server.  At first
-          glance, this might not seem that important, but imagine the
-          repercussions if you try to commit a one line change to a
-          400MB file and have to send the whole file to the
-          server!</para>
+          a compressed <firstterm>delta</firstterm> (or
+          <quote>difference</quote>) against the pristine version.
+          Having this cache is a tremendous benefit&mdash;even if you
+          have a fast net connection, it's much faster to send only a
+          file's changes rather than the whole file to the server.  At
+          first glance, this might not seem that important, but
+          imagine the repercussions if you try to commit a one line
+          change to a 400MB file and have to send the whole file to
+          the server!</para>
     </sidebar>
 
     </sect2>
