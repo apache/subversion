@@ -62,6 +62,18 @@ class GeneratorBase:
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
     self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
 
+    # Visual C++ projects - contents are either TargetProject instances,
+    # or other targets with an external-project attribute.
+    self.projects = []
+
+    # Lists of pathnames of various kinds
+    self.test_deps = []      # Non-BDB dependent items to build for the tests
+    self.test_progs = []     # Subset of the above to actually execute
+    self.bdb_test_deps = []  # BDB-dependent items to build for the tests
+    self.bdb_test_progs = [] # Subset of the above to actually execute
+    self.target_dirs = []    # Directories in which files are built
+    self.manpages = []       # Manpages
+
     # Collect the build targets
     parser_sections = parser.sections()
     parser_sections.sort() # Have a reproducible ordering
@@ -111,7 +123,7 @@ class GeneratorBase:
 
   def compute_hdr_deps(self):
     all_includes = map(native_path, self.includes)
-    for d in unique(self.graph.get_sources(DT_LIST, LT_TARGET_DIRS)):
+    for d in unique(self.target_dirs):
       hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
       all_includes.extend(hdrs)
 
@@ -193,21 +205,10 @@ dep_types = [
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
-  'DT_LIST',     # arbitrary listS of values, see list_types below
-  ]
-
-list_types = [
-  'LT_PROJECT',        # Visual C++ projects (TargetSpecial instances)
-  'LT_TEST_DEPS',      # Test programs to build
-  'LT_TEST_PROGS',     # Test programs to run (subset of LT_TEST_DEPS)
-  'LT_BDB_TEST_DEPS',  # File system test programs to build
-  'LT_BDB_TEST_PROGS', # File system test programs to run
-  'LT_TARGET_DIRS',    # directories where files are built
-  'LT_MANPAGES',       # manpages
   ]
 
 # create some variables for these
-for _dt in dep_types + list_types:
+for _dt in dep_types:
   # e.g. DT_INSTALL = 'DT_INSTALL'
   globals()[_dt] = _dt
 
@@ -243,6 +244,7 @@ class SourceFile(DependencyNode):
   def __init__(self, filename, reldir):
     DependencyNode.__init__(self, filename)
     self.reldir = reldir
+
 class SWIGSource(SourceFile):
   def __init__(self, filename):
     SourceFile.__init__(self, filename, build_path_dirname(filename))
@@ -253,8 +255,6 @@ lang_abbrev = {
   'java' : 'java',
   'perl' : 'pl',
   'ruby' : 'rb',
-  'tcl' : 'tcl',
-  ### what others?
   }
 
 lang_full_name = {
@@ -262,8 +262,6 @@ lang_full_name = {
   'java' : 'Java',
   'perl' : 'Perl',
   'ruby' : 'Ruby',
-  'tcl' : 'TCL',
-  ### what others?
   }
 
 lang_utillib_suffix = {
@@ -271,8 +269,6 @@ lang_utillib_suffix = {
   'java' : 'java',
   'perl' : 'perl',
   'ruby' : 'ruby',
-  'tcl' : 'tcl',
-  ### what others?
   }
   
 class Target(DependencyNode):
@@ -336,7 +332,7 @@ class TargetLinked(Target):
   def add_dependencies(self):
     if self.external_lib or self.external_project:
       if self.external_project:
-        self.gen_obj.graph.add(DT_LIST, LT_PROJECT, self)
+        self.gen_obj.projects.append(self)
       return
 
     # the specified install area depends upon this target
@@ -364,12 +360,11 @@ class TargetLinked(Target):
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
+    self.gen_obj.target_dirs.append(self.path)
     for pattern in string.split(self.sources):
       dirname = build_path_dirname(pattern)
       if dirname:
-        self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, 
-                               build_path_join(self.path, dirname))
+        self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
 
 class TargetExe(TargetLinked):
   def __init__(self, name, options, gen_obj):
@@ -387,16 +382,15 @@ class TargetExe(TargetLinked):
 
     # collect test programs
     if self.install == 'test':
-      self.gen_obj.graph.add(DT_LIST, LT_TEST_DEPS, self.filename)
+      self.gen_obj.test_deps.append(self.filename)
       if self.testing != 'skip':
-        self.gen_obj.graph.add(DT_LIST, LT_TEST_PROGS, self.filename)
+        self.gen_obj.test_progs.append(self.filename)
     elif self.install == 'bdb-test':
-      self.gen_obj.graph.add(DT_LIST, LT_BDB_TEST_DEPS, self.filename)
+      self.gen_obj.bdb_test_deps.append(self.filename)
       if self.testing != 'skip':
-        self.gen_obj.graph.add(DT_LIST, LT_BDB_TEST_PROGS, self.filename)
+        self.gen_obj.bdb_test_progs.append(self.filename)
 
-    self.gen_obj.graph.bulk_add(DT_LIST, LT_MANPAGES,
-                                string.split(self.manpages))
+    self.gen_obj.manpages.extend(string.split(self.manpages))
 
 class TargetScript(Target):
   def add_dependencies(self):
@@ -410,12 +404,11 @@ class TargetLib(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
 
-    extmap = self.gen_obj._extension_map
-    self.objext = self.gen_obj._extension_map['lib', 'object']
+    extmap = gen_obj._extension_map
+    self.objext = extmap['lib', 'object']
 
     # the target file is the name, version, and appropriate extension
-    tfile = '%s-%s%s' % (name, gen_obj.version,
-                         gen_obj._extension_map['lib', 'target'])
+    tfile = '%s-%s%s' % (name, gen_obj.version, extmap['lib', 'target'])
     self.filename = build_path_join(self.path, tfile)
 
     # Is a library referencing symbols which are undefined at link time.
@@ -480,7 +473,7 @@ class TargetI18N(Target):
       self.gen_obj.graph.add(DT_NONLIB, self.name, ofile)
 
     # Add us to the list of target dirs, so we're created in mkdir-init.
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
+    self.gen_obj.target_dirs.append(self.path)
 
 class TargetSWIG(TargetLib):
   def __init__(self, name, options, gen_obj, lang):
@@ -583,7 +576,7 @@ class TargetProject(Target):
     self.filename = name
 
   def add_dependencies(self):
-    self.gen_obj.graph.add(DT_LIST, LT_PROJECT, self)
+    self.gen_obj.projects.append(self)
 
 class TargetSWIGProject(TargetProject):
   def __init__(self, name, options, gen_obj):
@@ -642,14 +635,13 @@ class TargetJavaHeaders(TargetJava):
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.headers)
+    self.gen_obj.target_dirs.append(self.path)
+    self.gen_obj.target_dirs.append(self.classes)
+    self.gen_obj.target_dirs.append(self.headers)
     for pattern in string.split(self.sources):
       dirname = build_path_dirname(pattern)
       if dirname:
-        self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS,
-                               build_path_join(self.path, dirname))
+        self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
 
     self.gen_obj.graph.add(DT_INSTALL, self.name, self)
 
@@ -701,13 +693,12 @@ class TargetJavaClasses(TargetJava):
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
-    self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS, self.classes)
+    self.gen_obj.target_dirs.append(self.path)
+    self.gen_obj.target_dirs.append(self.classes)
     for pattern in string.split(self.sources):
       dirname = build_path_dirname(pattern)
       if dirname:
-        self.gen_obj.graph.add(DT_LIST, LT_TARGET_DIRS,
-                               build_path_join(self.path, dirname))
+        self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
 
     self.gen_obj.graph.add(DT_INSTALL, self.name, self)
 
