@@ -2783,7 +2783,7 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
   /* Check the ID for each path */
   for (i = 0; i < args->ids->nelts; i++)
     {
-      svn_fs_id_t *tmp_id = APR_ARRAY_IDX(args->ids, i, svn_fs_id_t *);
+      svn_fs_id_t *tmp_id = APR_ARRAY_IDX (args->ids, i, svn_fs_id_t *);
 
       /* Loop, from ID, through its predecessors, until it ceases to
          exist.  */
@@ -2802,9 +2802,9 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
           (*((svn_revnum_t *) apr_array_push (array))) = revision;
 
           /* Hack up TMP_ID so that it represents its own predecessor.
-           * Node IDs come in pairs, terminated by a trailing -1. So we
-           * process a pair until the ID gets down to zero, then mock up
-           * the -1 so we'll process the previous one.  */
+             Node IDs come in pairs, terminated by a trailing -1. So
+             we process a pair until the ID gets down to zero, then
+             mock up the -1 so we'll process the previous one.  */
         tmp_id[len - 1]--;
         if (tmp_id[len - 1] == 0)
           tmp_id[len - 2] = -1;
@@ -2813,21 +2813,21 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
     }
 
   /* Now sort the array */
-  qsort(array->elts, array->nelts, array->elt_size,
-        svn_sort_compare_revisions);
+  qsort (array->elts, array->nelts, array->elt_size, 
+         svn_sort_compare_revisions);
 
   /* Now build the return array, removing duplicates along the way. */
   *(args->revs) = apr_array_make (args->pool, 4, sizeof (svn_revnum_t));
   prev_rev = SVN_INVALID_REVNUM;
   for (i = 0; i < array->nelts; i++)
     {
-      if (APR_ARRAY_IDX(array, i, svn_revnum_t) != prev_rev)
+      if (APR_ARRAY_IDX (array, i, svn_revnum_t) != prev_rev)
         (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
-            APR_ARRAY_IDX(array, i, svn_revnum_t);
-      prev_rev = APR_ARRAY_IDX(array, i, svn_revnum_t);
+            APR_ARRAY_IDX (array, i, svn_revnum_t);
+      prev_rev = APR_ARRAY_IDX (array, i, svn_revnum_t);
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
@@ -2843,7 +2843,7 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   int i;
   svn_fs_id_t *tmp_id;
   const char *this_path;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Populate the baton. */
   args.revs = revs;
@@ -2856,7 +2856,8 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
     {
       this_path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR (svn_fs_node_id (&tmp_id, root, this_path, subpool));
-      *((svn_fs_id_t **) apr_array_push (args.ids)) = svn_fs__id_copy(tmp_id, subpool);
+      *((svn_fs_id_t **) apr_array_push (args.ids)) 
+        = svn_fs__id_copy (tmp_id, subpool);
     }
 
   /* Call the real function under the umbrella of a trail. */
