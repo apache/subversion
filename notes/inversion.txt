@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.24 $ of this document.)
+              ($Revision: 1.25 $ of this document.)
 
 * Introduction
 
@@ -220,13 +220,13 @@ Let's see what this looks like as an abstract data structure in the
 repository, and how that structure works in various operations (such
 as update, commit, and branch).
 
-In the diagrams that follow, lines with arrowheads represent backward
-time-flow (that is, the regression of versions), and any other lines
-represent parent-to-child connections in a directory hierarchy.  Boxes
-are "nodes".  A node is either a file or a directory -- a letter in
-the upper left indicates which kind.  A node's name is stored in the
-node's parent, not in the node itself, for reasons that will become
-obvious.
+In the diagrams that follow, straight horizontal lines with arrowheads
+represent backwards time-flow (that is, the regression of versions),
+and any other kind of path represents a parent-to-child connection in
+a directory hierarchy.  Boxes are "nodes".  A node is either a file or
+a directory -- a letter in the upper left indicates which kind.  A
+node's name is stored in the node's parent, not in the node itself,
+for reasons that will become obvious.
 
 A file node has a byte-string for its content, whereas directory nodes
 have a list of dir_entries, eaching pointing to another node.
@@ -481,20 +481,20 @@ intermediate steps not being shown:
                         |  (2)--------->|        |
                         |        |      |  foo   |
                         |        |      |___/____|
-       ________         |        |         /
-      |F       |        |        |        /
-      |        |----------bar    |       /
-      |        |        |        |      /
-      |________|        | foo    |     /
-                        |___\____|    /
-                             \       /
-                              \     /
-                             __\___/_            ________
-                            |F       |          |F       |
-                            |        |          |        |
-                            |  (1)------------->|        |
-                            |        |          |        |
-                            | full   |          | diffy  |
+                        |        |         /
+                        |        |        /
+                        | bar    |       /
+                        /        |      /
+                       /| foo    |     /
+                      / |___\____|    /
+                     /       \       /
+                    /         \     /
+                   /         __\___/_            ________
+            ______/_        |F       |          |F       |
+           |F       |       |        |          |        |
+           |        |       |  (1)------------->|        |
+           |        |       |        |          |        |
+           |________|       | full   |          | diffy  |
                             |contents|          |contents|
                             |________|          |________|
 
@@ -540,16 +540,16 @@ README was added to the project's top level directory:
      |  /   |__|_________  /                        |
      | /  A    |         \/       _________         |
      |_|___\___|         /\      |F        |        |
-       |    \_______    /  \_____|         |        |
-       |            |  /         |         |        |
-       |            | /          |         |        |
-       |            |/           |_________|        |
-       |            /                               |
-       |           /|                               |
-       |   _______/ |                               |
-       |  |         |                               |
-       |  |         |                               |
-    ___|__|_       _|______                         |
+       |    \________   /  \_____|         |        |
+       |             | /         |         |        |
+       |             |/          |         |        |
+       |             /           |_________|        |
+       |            /|                              |
+       |           / |                              |
+       |   _______/  |                              |
+       |  |          |                              |
+       |  |          |                              |
+    ___|__|_       __|_____                         |
    |D       |     |D       |                        |
    |        |     |        |________________________|
    |        |     | subA   |
@@ -569,20 +569,20 @@ README was added to the project's top level directory:
                         |  (2)--------->|        |
                         |        |      |  foo   |
                         |        |      |___/____|
-       ________         |        |         /
-      |F       |        |        |        /
-      |        |----------bar    |       /
-      |        |        |        |      /
-      |________|        | foo    |     /
-                        |___\____|    /
-                             \       /
-                              \     /
-                             __\___/_            ________
-                            |F       |          |F       |
-                            |        |          |        |
-                            |  (1)------------->|        |
-                            |        |          |        |
-                            | full   |          | diffy  |
+                        |        |         /
+                        |        |        /
+                        | bar    |       /
+                        /        |      /
+                       /| foo    |     /
+                      / |___\____|    /
+                     /       \       /
+                    /         \     /
+                   /         __\___/_            ________
+            ______/_        |F       |          |F       |
+           |F       |       |        |          |        |
+           |        |       |  (1)------------->|        |
+           |        |       |        |          |        |
+           |________|       | full   |          | diffy  |
                             |contents|          |contents|
                             |________|          |________|
      
@@ -811,6 +811,32 @@ It might be good to have two plists, actually: `inv_props', and
 `user_props'.  Inversion only uses the ones in inv_props, and promises
 a "store-and-ignore" policy for user_props.  And users should never
 store anything in inv_props, only Inversion handles that.
+
+** A closer look at the `node' data structure
+
+   typedef struct node
+   {
+      int type;                      /* Regular file, directory, or...? */
+      struct node **parent_list;     /* Can have multiple parents. */
+      BOOL diffy;                    /* Holds full text or diff? */
+      plist *inv_props;              /* Properties managed by Inversion. */
+      plist *usr_props;              /* Properties ignored by Inversion. */
+      lock *lock;                    /* See section on locking above. */
+      union contents {
+        struct dir_entry **dir_entries;
+        char *data;
+      }
+   } node;
+
+None of this is set in stone, of course; the boolean `diffy' might
+instead be a string `diff_method', for which null means full contents
+at this node.  The contents might be a char array even when this node
+represents a directory -- a special line-by-line texty format would
+list its dir entries, and that could make it easier for us to store
+directory changes in a diffy way.
+
+I believe we will need to point back up to parents for foolproof
+locking, but am not sure yet.  More on this later.
 
 ** Other miscellaneous design goals
 
