@@ -664,7 +664,11 @@ svn_string_t *svn_fs_default_base;
    Every transaction is assigned a name.  You can open a transaction
    by name, and resume work on it, or find out the name of an existing
    transaction.  You can also list all the transactions currently
-   present in the database.  */
+   present in the database.
+
+   Transaction names are guaranteed to contain only letters (upper-
+   and lower-case), digits, `-', and `.', from the ASCII character
+   set.  */
 
 
 /* Set *NAME to the name of the transaction TXN.
