@@ -256,6 +256,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
                       + self.graph.get_all_sources(gen_base.DT_INSTALL)
 
+    # Don't create projects for scripts
+    install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
+                             install_targets)
+
     # sort these for output stability, to watch out for regressions.
     install_targets.sort()
     return install_targets
