@@ -123,6 +123,8 @@ svn_auth_register_provider (svn_auth_baton_t *auth_baton,
   if (! table)
     {
       table = apr_pcalloc (auth_baton->pool, sizeof(*table));
+      table->providers = apr_array_make (auth_baton->pool, 1,
+                                         sizeof (provider_t *));
       apr_hash_set (auth_baton->tables, vtable->cred_kind, APR_HASH_KEY_STRING,
                     table);
     }  
@@ -142,7 +144,6 @@ svn_auth_first_credentials (void **credentials,
                             apr_pool_t *pool)
 {
   int i;
-  svn_error_t *err_chain = NULL;
   provider_set_t *table;
   provider_t *provider = NULL;
   void *creds = NULL;
@@ -159,43 +160,30 @@ svn_auth_first_credentials (void **credentials,
   /* Find a provider that can give "first" credentials. */
   for (i = 0; i < table->providers->nelts; i++)
     {
-      svn_error_t *provider_err;
-
       provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
-      provider_err = provider->vtable->first_credentials 
-        (&creds, &iter_baton, provider->provider_baton, pool);
+      SVN_ERR (provider->vtable->first_credentials 
+               (&creds, &iter_baton, provider->provider_baton, pool));
 
-      /* A provider is supposed to either return creds or error. */
-      if (provider_err)
-        {
-          if (! err_chain)
-            err_chain = provider_err;
-          else            
-            svn_error_compose (err_chain, provider_err);
-
-          continue;             /* try the next provider */
-        }
-
-      else if (creds)           /* a provider finally worked */
+      if (! creds)
+        continue;             
+      else
         break;
     }
 
-  if (! creds)                  
-    /* all providers failed, but at least we have a stack of errors
-       describing why each one did. */    
-    return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, err_chain,
-                              "%d provider(s) failed to provide initial "
-                              "'%s' credentials.", i, cred_kind);
-
-  /* Build an abstract iteration state. */
-  iterstate = apr_pcalloc (pool, sizeof(*iterstate));
-  iterstate->cred_kind = apr_pstrdup (pool, cred_kind);
-  iterstate->table = table;
-  iterstate->provider_idx = i;
-  iterstate->provider_iter_baton = iter_baton;
+  if (! creds)
+    *state = NULL;
+  else
+    {
+      /* Build an abstract iteration state. */
+      iterstate = apr_pcalloc (pool, sizeof(*iterstate));
+      iterstate->cred_kind = apr_pstrdup (pool, cred_kind);
+      iterstate->table = table;
+      iterstate->provider_idx = i;
+      iterstate->provider_iter_baton = iter_baton;
+      *state = iterstate;
+    }
 
   *credentials = creds;
-  *state = iterstate;
 
   return SVN_NO_ERROR;
 }
@@ -206,7 +194,6 @@ svn_auth_next_credentials (void **credentials,
                            svn_auth_iterstate_t *state,
                            apr_pool_t *pool)
 {
-  svn_error_t *err_chain = NULL;
   provider_t *provider;
   provider_set_t *table = state->table;
   void *creds = NULL;
@@ -216,36 +203,17 @@ svn_auth_next_credentials (void **credentials,
        state->provider_idx < table->providers->nelts;
        state->provider_idx++)
     {
-      svn_error_t *provider_err;
-
       provider = APR_ARRAY_IDX(table->providers,
                                state->provider_idx,
                                provider_t *);
-      provider_err = provider->vtable->next_credentials 
-        (&creds, state->provider_iter_baton, pool);
+      SVN_ERR (provider->vtable->next_credentials 
+               (&creds, state->provider_iter_baton, pool));
 
-      /* A provider is supposed to either return creds or error. */
-      if (provider_err)
-        {
-          if (! err_chain)
-            err_chain = provider_err;
-          else            
-            svn_error_compose (err_chain, provider_err);
-
-          continue;             /* try the next provider */
-        }
-
-      else if (creds)           /* a provider finally worked */
+      if (! creds)
+        continue;             
+      else
         break;
     }
-
-  if (! creds)                  
-    /* all providers failed, but at least we have a stack of errors
-       describing why each one did. */    
-    return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, err_chain,
-                              "%d provider(s) failed to provide subsequent "
-                              "'%s' credentials.", state->provider_idx,
-                              state->cred_kind);
 
   *credentials = creds;
 
@@ -260,7 +228,6 @@ svn_auth_save_credentials (const char *cred_kind,
                            apr_pool_t *pool)
 {
   int i;
-  svn_error_t *err_chain = NULL;
   provider_set_t *table;
   provider_t *provider;
   svn_boolean_t save_succeeded = FALSE;
@@ -275,30 +242,19 @@ svn_auth_save_credentials (const char *cred_kind,
   /* Find a provider that can save the credentials. */
   for (i = 0; i < table->providers->nelts; i++)
     {
-      svn_error_t *provider_err;
-
       provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
-      provider_err = provider->vtable->save_credentials 
-        (credentials, provider->provider_baton, pool);
+      SVN_ERR (provider->vtable->save_credentials 
+               (&save_succeeded, credentials, provider->provider_baton, pool));
 
-      if (provider_err)
-        {
-          if (! err_chain)
-            err_chain = provider_err;
-          else            
-            svn_error_compose (err_chain, provider_err);
-
-          continue;             /* try the next provider */
-        }
-
-      save_succeeded = TRUE;
-      break;                    /* no error, so the save worked. */
+      if (! save_succeeded)
+        continue;
+      else
+        break;
     }
 
+  /* If all providers failed to save, throw an error. */
   if (! save_succeeded)                  
-    /* all providers failed, but at least we have a stack of errors
-       describing why each one did. */    
-    return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, err_chain,
+    return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, NULL,
                               "%d provider(s) failed to save "
                               "'%s' credentials.", i, cred_kind);
 
