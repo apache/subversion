@@ -117,6 +117,10 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj);
 SV *svn_swig_pl_from_stream (svn_stream_t *stream);
 
+/* apr_file_t * */
+apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
