@@ -43,7 +43,8 @@ int main(int argc, char **argv)
     }
 
   /* Call the function */
-  err = svn_path_condense_targets(&common_path, &condensed_targets, targets, pool);
+  err = svn_path_condense_targets(&common_path, &condensed_targets,
+                                  targets, pool);
   if (err != SVN_NO_ERROR)
     svn_handle_error(err, stderr, 1);
 
@@ -53,7 +54,8 @@ int main(int argc, char **argv)
     {
       svn_string_t * target = ((svn_string_t**)condensed_targets->elts)[i];
       if (target)
-        printf("%s, ", ((svn_string_t **)condensed_targets->elts)[i]->data);
+        printf("\"%s\", ",
+               ((svn_string_t **)condensed_targets->elts)[i]->data);
       else
         printf("NULL, "); 
     }
