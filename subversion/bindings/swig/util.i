@@ -36,6 +36,8 @@
 %ignore svn_log_changed_path_t;
 %ignore svn_dirent;
 
+/* ### for now, let's ignore this thing. */
+%ignore svn_prop_t;
 
 %include svn_types.h
 
