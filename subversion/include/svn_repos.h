@@ -50,7 +50,7 @@ typedef struct svn_repos_t svn_repos_t;
  *
  * If a repository was found, the path to the root of the repository
  * is returned, else @c NULL. The pointer to the returned path may be
- @ equal to @a path argument.
+ * equal to @a path argument.
  */
 const char *svn_repos_find_root_path (const char *path,
                                       apr_pool_t *pool);
