@@ -374,7 +374,8 @@ swig-java-ext: swig-assert-available mkdir-init java
         done
 
 swig-java-ext-clean:
-	rm -rf $(SWIG_SRC_DIR)/java
+	rm -rf $(SWIG_SRC_DIR)/java/build/
+	rm -rf $(SWIG_SRC_DIR)/java/org/
 
 java:
 	@$(MAKE) -C $(abs_srcdir)/subversion/bindings/java "JAVAC=$(JAVAC)"
