@@ -1716,7 +1716,7 @@ walker_helper (const char *dirpath,
                             APR_HASH_KEY_STRING);
   if (! dot_entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "Directory '%s' has no THIS_DIR entry!",
+                              "Directory '%s' has no THIS_DIR entry",
                               dirpath);
 
   SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton, pool));
@@ -1773,7 +1773,7 @@ svn_wc_walk_entries (const char *path,
 
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not under version control.", path);
+                              "'%s' is not under version control", path);
 
   if (entry->kind == svn_node_file)
     return walk_callbacks->found_entry (path, entry, walk_baton, pool);
@@ -1784,7 +1784,7 @@ svn_wc_walk_entries (const char *path,
 
   else
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              "'%s' has an unrecognized node kind.", path);
+                              "'%s' has an unrecognized node kind", path);
 }
 
 

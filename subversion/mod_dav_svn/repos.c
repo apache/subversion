@@ -1853,7 +1853,7 @@ static svn_error_t *dav_svn_write_to_filter(void *baton,
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
     return svn_error_create(status, NULL,
-                            "Could not write data to filter.");
+                            "Could not write data to filter");
   }
 
   return SVN_NO_ERROR;
@@ -1871,7 +1871,7 @@ static svn_error_t *dav_svn_close_filter(void *baton)
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS)
-    return svn_error_create(status, NULL, "Could not write EOS to filter.");
+    return svn_error_create(status, NULL, "Could not write EOS to filter");
 
   return SVN_NO_ERROR;
 }
@@ -2393,15 +2393,15 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                       resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not get created rev of resource.");
+                                   "Could not get created rev of resource");
 
       if (resource->info->version_name < created_rev)
         {
           serr = svn_error_createf (SVN_ERR_RA_OUT_OF_DATE, NULL,
-                                    "Item '%s' is out of date.", 
+                                    "Item '%s' is out of date", 
                                     resource->info->repos_path);
           return dav_svn_convert_err(serr, HTTP_CONFLICT,
-                                     "Can't DELETE out-of-date resource.");
+                                     "Can't DELETE out-of-date resource");
         }
     }
 
@@ -2411,7 +2411,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
     {
       /* ### need a better error */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not delete the resource.");
+                                 "Could not delete the resource");
     }
 
   /* Auto-versioning commit of the txn. */

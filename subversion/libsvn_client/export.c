@@ -84,8 +84,8 @@ copy_versioned_files (const char *from,
             return err;
           if (! force)
             SVN_ERR_W (err,
-                       "Destination directory exists.  Please remove the "
-                       "directory, or use --force to override this error.");
+                       "Destination directory exists. Please remove the "
+                       "directory or use --force to override this error");
           else
             svn_error_clear (err);
         }

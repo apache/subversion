@@ -85,12 +85,12 @@ svn_cl__propedit (apr_getopt_t *os,
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                "No URL target available.");
+                                "No URL target available");
       target = ((const char **) (targets->elts))[0];
       SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
         return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                "Either a URL or versioned item is required.");
+                                "Either a URL or versioned item is required");
 
       /* Fetch the current property. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,
@@ -122,7 +122,7 @@ svn_cl__propedit (apr_getopt_t *os,
             if (opt_state->encoding)
               return svn_error_create 
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 "Bad encoding option: prop's value isn't stored as UTF8.");
+                 "Bad encoding option: prop's value isn't stored as UTF8");
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
@@ -141,7 +141,7 @@ svn_cl__propedit (apr_getopt_t *os,
     {
       return svn_error_createf
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-         "Cannot specify revision for editing versioned property '%s'.",
+         "Cannot specify revision for editing versioned property '%s'",
          pname);
     }
   else  /* operate on a normal, versioned property (not a revprop) */
@@ -167,7 +167,7 @@ svn_cl__propedit (apr_getopt_t *os,
         {
           return svn_error_create
             (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-             "explicit target argument required.\n");
+             "Explicit target argument required");
         }
 
       /* For each target, edit the property PNAME. */
@@ -192,7 +192,7 @@ svn_cl__propedit (apr_getopt_t *os,
               return svn_error_createf
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                  "Editing property on non-local target '%s' "
-                 "not yet supported.", target);
+                 "not yet supported", target);
             }
 
           /* Fetch the current property. */
@@ -247,7 +247,7 @@ svn_cl__propedit (apr_getopt_t *os,
                 if (opt_state->encoding)
                   return svn_error_create 
                     (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                     "Bad encoding option: prop value not stored as UTF8.");
+                     "Bad encoding option: prop value not stored as UTF8");
               
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, subpool));

@@ -59,7 +59,7 @@ find_undeletables (void *baton,
   if (status->text_status == svn_wc_status_obstructed)
     sb->err = svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                  "'%s' is in the way of the resource "
-                                 "actually under version control.", path);
+                                 "actually under version control", path);
   else if (! status->entry)
     sb->err = svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                  "'%s' is not under version control", path);

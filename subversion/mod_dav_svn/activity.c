@@ -177,7 +177,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
       svn_error_t *serr = svn_error_wrap_apr(status, "Can't open activity db");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not open dbm files.");
+                                 "Could not open dbm files.");
     }
 
   key.dptr = (char *)activity_id;

@@ -441,7 +441,7 @@ new_node_record (void **node_baton,
                   /* bail out with an error */
                   return svn_error_createf
                     (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                     "Node with dropped parent sneaked in.");
+                     "Node with dropped parent sneaked in");
                 }
               SVN_ERR (svn_stream_printf
                        (header_stream, pool,

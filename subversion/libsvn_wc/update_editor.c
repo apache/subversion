@@ -1224,7 +1224,7 @@ close_directory (void *dir_baton,
                                                adm_access, NULL,
                                                regular_props, TRUE, FALSE,
                                                db->pool, &entry_accum),
-                     "couldn't do prop merge.");
+                     "Couldn't do property merge");
 
           /* Are the directory's props locally modified? */
           SVN_ERR (svn_wc_props_modified_p (&prop_modified,
@@ -1844,7 +1844,7 @@ install_file (svn_wc_notify_state_t *content_state,
         {
           SVN_ERR_W (svn_io_file_rename (new_text_path, final_location,
                                          pool),
-                     "install_file: move failed");
+                     "Move failed");
 
           new_text_path = final_location;
         }

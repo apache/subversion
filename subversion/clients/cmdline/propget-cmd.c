@@ -103,12 +103,12 @@ svn_cl__propget (apr_getopt_t *os,
          which needs to be converted to a URL. */
       if (targets->nelts <= 0)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                "No URL target available.");
+                                "No URL target available");
       target = ((const char **) (targets->elts))[0];
       SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
       if (URL == NULL)
         return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                "Either a URL or versioned item is required.");
+                                "Either a URL or versioned item is required");
       
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,

@@ -1117,7 +1117,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision.  How odd.",
+       "Transaction '%s' is not based on a revision; how odd",
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1147,10 +1147,10 @@ verify_path (svn_node_kind_t *kind,
       if (svn_path_is_url (path))  /* check for a common mistake. */
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
-           "'%s' is a URL, probably should be a path.", path);
+           "'%s' is a URL, probably should be a path", path);
       else
         return svn_error_createf 
-          (SVN_ERR_FS_NOT_FOUND, NULL, "Path '%s' does not exist.", path);
+          (SVN_ERR_FS_NOT_FOUND, NULL, "Path '%s' does not exist", path);
     }
 
   return SVN_NO_ERROR;
@@ -1174,7 +1174,7 @@ do_cat (svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
 
   if (kind != svn_node_file)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, NULL, "Path '%s' is not a file.", path);
+      (SVN_ERR_FS_NOT_FILE, NULL, "Path '%s' is not a file", path);
 
   /* Else. */
 
@@ -1207,7 +1207,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision.  How odd.",
+       "Transaction '%s' is not based on a revision; how odd",
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1236,7 +1236,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision.  How odd.",
+       "Transaction '%s' is not based on a revision; how odd",
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1351,7 +1351,7 @@ do_pget (svnlook_ctxt_t *c,
   if (prop == NULL)
     return svn_error_createf
       (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-       "Property '%s' not found on path '%s'.", propname, path);
+       "Property '%s' not found on path '%s'", propname, path);
 
   /* Else. */
 
@@ -1487,7 +1487,7 @@ subcommand_cat (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->arg1 == NULL)
     return svn_error_createf
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       "Missing repository path argument.");
+       "Missing repository path argument");
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_cat (c, opt_state->arg1, pool));
@@ -1618,13 +1618,13 @@ subcommand_pget (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-         "Missing propname and repository path arguments.");
+         "Missing propname and repository path arguments");
     }
   else if (opt_state->arg2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-         "Missing propname or repository path argument.");
+         "Missing propname or repository path argument");
     }
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
@@ -1642,7 +1642,7 @@ subcommand_plist (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->arg1 == NULL)
     return svn_error_createf
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       "Missing repository path argument.");
+       "Missing repository path argument");
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_plist (c, opt_state->arg1, opt_state->verbose, pool));
@@ -1762,7 +1762,7 @@ main (int argc, const char * const *argv)
           if (! SVN_IS_VALID_REVNUM (opt_state.rev))
             SVN_INT_ERR (svn_error_create
                          (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          "Invalid revision number supplied."));
+                          "Invalid revision number supplied"));
           break;
 
         case 't':
@@ -1804,7 +1804,7 @@ main (int argc, const char * const *argv)
     SVN_INT_ERR (svn_error_create 
                  (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                   "The '--transaction' (-t) and '--revision' (-r) arguments "
-                  "may no co-exist."));
+                  "can not co-exist"));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're

@@ -150,7 +150,7 @@ fold_change (apr_hash_t *changes,
       if ((! change->noderev_id) && (change->kind != svn_fs_path_change_reset))
         return svn_error_create 
           (SVN_ERR_FS_CORRUPT, NULL,
-           "Invalid change: missing required node revision ID");
+           "Missing required node revision ID");
         
       /* Sanity check:  we should be talking about the same node
          revision ID as our last change except where the last change
@@ -275,7 +275,7 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
       if (! result_skel)
         {
           err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
-                                   "error reading changes for key '%s'", key);
+                                   "Error reading changes for key '%s'", key);
           goto cleanup;
         }
       err = svn_fs__parse_change_skel (&change, result_skel, subpool);
@@ -364,7 +364,7 @@ svn_fs__bdb_changes_fetch_raw (apr_array_header_t **changes_p,
       if (! result_skel)
         {
           err = svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
-                                   "error reading changes for key '%s'", key);
+                                   "Error reading changes for key '%s'", key);
           goto cleanup;
         }
       err = svn_fs__parse_change_skel (&change, result_skel, trail->pool);

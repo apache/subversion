@@ -894,7 +894,7 @@ svn_wc_add (const char *path,
                               "'%s' not found", path);
   if (kind == svn_node_unknown)
     return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              "Unsupported node kind for path '%s'.", path);
+                              "Unsupported node kind for path '%s'", path);
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing).
@@ -1372,7 +1372,7 @@ svn_wc_revert (const char *path,
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       "Cannot revert '%s': not a versioned resource", path);
+       "Cannot revert: '%s' is not under version control", path);
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -1667,7 +1667,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                        FALSE, adm_access, pool));
       if (text_modified_p && instant_error)
         return svn_error_createf (SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
-                                  "File '%s' has local modifications.",
+                                  "File '%s' has local modifications",
                                   name);
 
       /* Remove NAME from PATH's entries file: */

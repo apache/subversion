@@ -486,7 +486,7 @@ dump_node (struct edit_baton *eb,
                      should never happen. */
                   return svn_error_createf 
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                     "Error dumping textual contents of '%s'.", path);
+                     "Error dumping textual contents of '%s'", path);
                 }
             }
         
@@ -877,13 +877,14 @@ svn_repos_dump_fs (svn_repos_t *repos,
   /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "start_rev %" SVN_REVNUM_T_FMT
-                              " is greater than end_rev %" SVN_REVNUM_T_FMT,
+                              "Start revision %" SVN_REVNUM_T_FMT
+                              " is greater than end revision %" 
+                              SVN_REVNUM_T_FMT,
                               start_rev, end_rev);
   if (end_rev > youngest)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "end_rev %" SVN_REVNUM_T_FMT " is invalid "
-                              "(youngest rev is %" SVN_REVNUM_T_FMT ")",
+                              "End revision %" SVN_REVNUM_T_FMT " is invalid "
+                              "(youngest revision is %" SVN_REVNUM_T_FMT ")",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)
     incremental = FALSE; /* revision 0 looks the same regardless of

@@ -223,7 +223,7 @@ svn_repos_set_path (void *report_baton,
   if (! SVN_IS_VALID_REVNUM (revision))
     return svn_error_create
       (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-       "svn_repos_set_path: invalid revision passed to report.");
+       "Invalid revision passed to report");
 
   if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
     { 
@@ -232,7 +232,7 @@ svn_repos_set_path (void *report_baton,
       if (! svn_path_is_empty (path))
         return svn_error_create
           (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-           "svn_repos_set_path: initial revision report was bogus.");
+           "Initial revision report was bogus");
 
       /* Barring previous problems, squirrel away our based-on revision. */
       rbaton->txn_base_rev = revision;
@@ -440,8 +440,8 @@ finish_report (void *report_baton,
   /* If nothing was described, then we have an error */
   if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
     return svn_error_create (SVN_ERR_REPOS_NO_DATA_FOR_REPORT, NULL,
-                             "svn_repos_finish_report: no transaction was "
-                             "present, meaning no data was provided.");
+                             "No transaction was "
+                             "present, meaning no data was provided");
 
   /* Use the first transaction as a source if we made one, else get
      the root of the revision we would have based a transaction on. */

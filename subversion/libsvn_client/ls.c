@@ -43,7 +43,7 @@ get_dir_contents (apr_hash_t *dirents,
                               NULL, NULL, pool));
   else
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                             "No get_dir() available for URL schema.");
+                             "No get_dir() available for URL schema");
 
   for (hi = apr_hash_first (pool, tmpdirents);
        hi;
@@ -135,20 +135,20 @@ svn_client_ls (apr_hash_t **dirents,
                                   NULL, NULL, pool));
       else
         return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                 "No get_dir() available for URL schema.");
+                                 "No get_dir() available for URL schema");
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);
       the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL non-existent in that revision.");
+                                 "URL non-existent in that revision");
         
       apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
     }
   else
     return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL,
-                             "URL non-existent in that revision.");
+                             "URL non-existent in that revision");
 
   return SVN_NO_ERROR;
 }

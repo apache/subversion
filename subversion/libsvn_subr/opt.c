@@ -412,7 +412,7 @@ svn_opt_parse_num_args (apr_array_header_t **args_p,
       if (os->ind >= os->argc)
         {
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
-                                   0, "too few arguments");
+                                   0, "Too few arguments");
         }
       array_push_str (args, os->argv[os->ind++], pool);
     }
@@ -479,7 +479,7 @@ parse_path (svn_opt_revision_t *rev,
                                       &end_revision,
                                       native_rev, subpool))
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      "Syntax error parsing revision \"%s\"",
+                                      "Syntax error parsing revision '%s'",
                                       path + i + 1);
 
           *truepath = apr_pstrndup (pool, path, i);
@@ -582,7 +582,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
             ;
           else
             return svn_error_createf (apr_err, NULL,
-                                      "Error resolving case of '%s'.",
+                                      "Error resolving case of '%s'",
                                       utf8_target);
 
           /* convert back to UTF-8. */

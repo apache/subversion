@@ -557,7 +557,7 @@ svn_ra_dav__open (void **session_baton,
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                              "network socket initialization failed");
+                              "Network socket initialization failed");
     }
 
   /* we want to know if the repository is actually somewhere else */

@@ -148,7 +148,7 @@ svn_client_propset (const char *propname,
          if it's ever to support setting properties remotely. */
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Setting property on non-local target '%s' not yet supported.",
+         "Setting property on non-local target '%s' not yet supported",
          target);
     }
 

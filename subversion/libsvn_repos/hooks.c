@@ -85,7 +85,7 @@ run_hook_cmd (const char *name,
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, err, "failed to run '%s' hook", cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, err, "Failed to run '%s' hook", cmd);
     }
 
   if (!err && check_exitcode)
@@ -258,7 +258,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
         svn_error_create 
         (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
          "Repository has not been enabled to accept revision propchanges;\n"
-         "ask the administrator to create a pre-revprop-change hook.");
+         "ask the administrator to create a pre-revprop-change hook");
     }
 
   return SVN_NO_ERROR;

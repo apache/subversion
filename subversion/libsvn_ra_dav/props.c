@@ -578,7 +578,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
     {
       /* ### hmmm, should have been in there... */
       return svn_error_createf(APR_EGENERAL, NULL,
-                               "failed to find label \"%s\" for URL \"%s\"",
+                               "Failed to find label '%s' for URL '%s'",
                                label ? label : "NULL", url_path);
     }
 
@@ -607,7 +607,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
     {
       /* ### need an SVN_ERR here */
       return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                               "'%s' was not present on the resource.", name);
+                               "'%s' was not present on the resource", name);
     }
 
   *propval = value;
@@ -680,7 +680,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
     {
       err = svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                                "No part of path '%s' was found in "
-                               "repository HEAD.", parsed_url.path);
+                               "repository HEAD", parsed_url.path);
       goto error;
     }
 
@@ -714,7 +714,7 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
   if (! vcc_s)
     return svn_error_create(APR_EGENERAL, NULL,
                              "The VCC property was not found on the "
-                             "resource.");
+                             "resource");
 
   *vcc = vcc_s->data;
   return SVN_NO_ERROR;
@@ -769,7 +769,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
       /* ### need an SVN_ERR here */
       return svn_error_create(APR_EGENERAL, NULL,
                               "The VCC property was not found on the "
-                              "resource.");
+                              "resource");
     }
 
   /* Allocate our own bc_relative path. */
@@ -782,7 +782,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
       /* ### need an SVN_ERR here */
       return svn_error_create(APR_EGENERAL, NULL,
                               "The relative-path property was not "
-                              "found on the resource.");
+                              "found on the resource");
     }
     
   /* don't forget to tack on the parts we lopped off in order
@@ -899,8 +899,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       /* ### better error reporting... */
       /* ### need an SVN_ERR here */
       return svn_error_create(APR_EGENERAL, NULL,
-                              "DAV:baseline-collection was not present "
-                              "on the baseline resource.");
+                              "'DAV:baseline-collection' was not present "
+                              "on the baseline resource");
     }
 
   /* maybe return bc_url to the caller */
@@ -918,8 +918,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
           /* ### need an SVN_ERR here */
           return svn_error_create(APR_EGENERAL, NULL,
-                                  "DAV:version-name was not present on the "
-                                  "baseline resource.");
+                                  "'DAV:version-name' was not present on the "
+                                  "baseline resource");
         }
       *latest_rev = SVN_STR_TO_REV(vsn_name->data);
     }
@@ -1071,7 +1071,7 @@ svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
          entire 'commit' is rejected.  */
       err = svn_error_create
         (SVN_ERR_RA_DAV_PROPPATCH_FAILED, NULL,
-         "At least one property change failed; repository is unchanged.");
+         "At least one property change failed; repository is unchanged");
     }
 
   ne_buffer_destroy(body);

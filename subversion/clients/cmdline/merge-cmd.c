@@ -58,7 +58,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   "Second revision required.");
+                                   "Second revision required");
         }
       using_alternate_syntax = TRUE;
     }
@@ -82,7 +82,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   "Wrong number of paths given.");
+                                   "Wrong number of paths given");
         }
 
       /* the first path becomes both of the 'sources' */
@@ -101,7 +101,7 @@ svn_cl__merge (apr_getopt_t *os,
           svn_opt_subcommand_help ("merge", svn_cl__cmd_table,
                                    svn_cl__options, pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                                   "Wrong number of paths given.");
+                                   "Wrong number of paths given");
         }
 
       /* the first two paths become the 'sources' */

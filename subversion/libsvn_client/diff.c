@@ -1433,7 +1433,7 @@ unsupported_diff_error (svn_error_t *child_err)
 {
   return svn_error_create (SVN_ERR_INCORRECT_PARAMS, child_err,
                            "Sorry, svn_client_diff was called in a way "
-                           "that is not yet supported.");
+                           "that is not yet supported");
 }
 
 

@@ -744,7 +744,7 @@ svn_ra_local__get_file (void *session_baton,
                  error was returned.  According to the docstring, this
                  should never happen. */
               return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Error writing to svn_stream.");
+                                       "Error writing to stream");
             }
           
           if (rlen != SVN_STREAM_CHUNK_SIZE)

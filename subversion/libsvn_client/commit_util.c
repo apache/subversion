@@ -267,7 +267,7 @@ harvest_committables (apr_hash_t *committables,
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc)
     return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                              "Aborting commit: '%s' remains in conflict.",
+                              "Aborting commit: '%s' remains in conflict",
                               path);
 
   /* If we have our own URL, and we're NOT in COPY_MODE, it wins over
@@ -683,7 +683,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
               (SVN_ERR_ILLEGAL_TARGET, NULL, 
                "'%s' is not under version control "
                "and is not part of the commit, "
-               "yet its child '%s' is part of the commit.",
+               "yet its child '%s' is part of the commit",
                dangling_parent, dangling_child);
           }
       }
@@ -761,7 +761,7 @@ svn_client__condense_commit_items (const char **base_url,
       if ((last_item) && (strcmp (last_item->url, url) == 0))
         return svn_error_createf 
           (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL, NULL,
-           "Cannot commit both '%s' and '%s' as they refer to the same URL.",
+           "Cannot commit both '%s' and '%s' as they refer to the same URL",
            item->path, last_item->path);
 
       /* In the first iteration, our BASE_URL is just our only

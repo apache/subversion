@@ -251,7 +251,7 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   /* store the version URL as a property */
   SVN_ERR_W( (*setter)(baton, SVN_RA_DAV__LP_VSN_URL, 
                        svn_string_create(vsn_url, pool), pool),
-             "could not save the URL of the version resource" );
+             "Could not save the URL of the version resource" );
 
   return NULL;
 }
@@ -555,7 +555,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 #if 0
       if (written != len && cgc->err == NULL)
         cgc->err = svn_error_createf(SVN_ERR_INCOMPLETE_DATA, NULL,
-                                     "unable to completely write the svndiff "
+                                     "Unable to completely write the svndiff "
                                      "data to the parser stream "
                                      "(wrote " APR_SIZE_T_FMT " "
                                      "of " APR_SIZE_T_FMT " bytes)",
@@ -582,7 +582,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                         pool,
                                         &frc.handler,
                                         &frc.handler_baton),
-             "could not save file");
+             "Could not save file");
 
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
@@ -631,7 +631,7 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
       /* Uh oh, didn't write as many bytes as neon gave us. */
       return 
         svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                         "Error writing to svn_stream: unexpected EOF");
+                         "Error writing to stream: unexpected EOF");
     }
 #endif
       
@@ -816,7 +816,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
           if (strcmp (hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "svn_ra_dav__get_file: checksum mismatch for '%s':\n"
+               "Checksum mismatch for '%s':\n"
                "   expected checksum:  %s\n"
                "   actual checksum:    %s\n",
                path, expected_checksum->data, hex_digest);
@@ -1078,13 +1078,13 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                           revision, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, "Server does not support date-based "
-                                "operations.");
+                                "operations");
   else if (err)
     return err;
 
   if (*revision == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
-                            "Invalid server response to dated-rev request.");
+                            "Invalid server response to dated-rev request");
 
   return SVN_NO_ERROR;
 }

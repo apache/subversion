@@ -765,7 +765,7 @@ svn_wc__wcprop_get (const svn_string_t **value,
   if (err)
     return
       svn_error_quick_wrap
-      (err, "Failed to load properties from disk.");
+      (err, "Failed to load properties from disk");
 
   *value = apr_hash_get (prophash, name, APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
@@ -787,7 +787,7 @@ svn_wc__wcprop_set (const char *name,
   if (err)
     return
       svn_error_quick_wrap
-      (err, "Failed to load properties from disk.");
+      (err, "Failed to load properties from disk");
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
@@ -1082,7 +1082,7 @@ svn_wc_prop_set (const char *name,
   if (err)
     return
       svn_error_quick_wrap
-      (err, "Failed to load properties from disk.");
+      (err, "Failed to load properties from disk");
 
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword

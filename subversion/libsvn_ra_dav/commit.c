@@ -245,7 +245,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
       return svn_error_create(APR_EGENERAL, NULL,
                               "Could not fetch the Version Resource URL "
                               "(needed during an import or when it is "
-                              "missing from the local, cached props).");
+                              "missing from the local, cached props)");
     }
 
   /* ensure we get the proper lifetime for this URL since it is going into
@@ -485,7 +485,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
-           "Your file or directory '%s' is probably out-of-date.",
+           "Your file or directory '%s' is probably out-of-date",
            rsrc->local_path);
       return err;
     }
@@ -494,7 +494,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   if (locn == NULL)
     return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                             "The CHECKOUT response did not contain a "
-                            "Location: header.");
+                            "'Location:' header");
 
   /* The location is an absolute URI. We want just the path portion. */
   /* ### what to do with the rest? what if it points somewhere other
@@ -864,7 +864,7 @@ static svn_error_t * commit_add_file(const char *path,
         {
           /* If the PROPFIND succeeds the file already exists */
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
-                                   "file '%s' already exists", file->rsrc->url);
+                                   "File '%s' already exists", file->rsrc->url);
         }
       else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
         {

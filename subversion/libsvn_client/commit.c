@@ -396,7 +396,7 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
-                                "'%s' does not exist.", path);  
+                                "'%s' does not exist", path);  
     }
 
   /* Close up shop; it's time to go home. */

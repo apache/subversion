@@ -181,7 +181,7 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   return svn_error_create(SVN_ERR_BAD_DATE, NULL,
-                          "Date conversion failed.");
+                          "Date conversion failed");
 
  fail:
   /* Try the compatibility option.  This does not need to be fast,
@@ -212,7 +212,7 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
       if(apr_err != APR_SUCCESS)
         {
           return svn_error_create (SVN_ERR_BAD_DATE, NULL,
-                                   "Date conversion failed.");
+                                   "Date conversion failed");
         }
 
       return SVN_NO_ERROR;
@@ -221,7 +221,7 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
   else
     {
       return svn_error_create (SVN_ERR_BAD_DATE, NULL,
-                               "Date parsing failed.");
+                               "Date parsing failed");
     }
 }
 

@@ -43,8 +43,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   if (strncmp (URL, "file://", 7) != 0)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "svn_ra_local__split_URL: URL does not contain 'file://' prefix\n"
-       "   (%s)", URL);
+       "Local URL '%s' does not contain 'file://' prefix", URL);
   
   /* Then, skip what's between the "file://" prefix and the next
      occurance of '/' -- this is the hostname, and we are considering
@@ -55,16 +54,14 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   if (! path)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "svn_ra_local__split_URL: URL contains only a hostname, no path\n"
-       "   (%s)", URL);
+       "Local URL '%s' contains only a hostname, no path", URL);
 
   /* Currently, the only hostnames we are allowing are the empty
      string and 'localhost' */
   if ((hostname != path) && (strncmp (hostname, "localhost/", 10) != 0))
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "svn_ra_local__split_URL: URL contains unsupported hostname\n"
-       "   (%s)", URL);
+       "Local URL '%s' contains unsupported hostname", URL);
 
 
   /* Duplicate the URL, starting at the top of the path */

@@ -159,7 +159,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       else
         {
           return svn_error_createf (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
-                                    "'%s' is already a file/something else.",
+                                    "'%s' is already a file/something else",
                                     path);
         }
 
