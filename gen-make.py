@@ -34,6 +34,8 @@ def main(fname, oname=None, skip_depends=0):
   fs_test_deps = [ ]
   file_deps = [ ]
   target_dirs = { }
+  manpages = [ ]
+  infopages = [ ]
 
   target_names = _filter_targets(parser.sections())
 
@@ -114,6 +116,12 @@ def main(fname, oname=None, skip_depends=0):
       else:
         # something we don't know, so just include it directly
         libs.append(lib)
+
+    for man in string.split(parser.get(target, 'manpages')):
+      manpages.append(man)
+
+    for info in string.split(parser.get(target, 'infopages')):
+      infopages.append(info)
 
     targ_varname = string.replace(target, '-', '_')
     ldflags = parser.get(target, 'link-flags')
@@ -249,6 +257,9 @@ def main(fname, oname=None, skip_depends=0):
   ofile.write('TEST_DEPS = %s\n\n' % string.join(test_deps + scripts))
   ofile.write('TEST_PROGRAMS = %s\n\n' % string.join(test_progs + scripts))
 
+  ofile.write('MANPAGES = %s\n\n' % string.join(manpages))
+  ofile.write('INFOPAGES = %s\n\n' % string.join(infopages))
+
   if not skip_depends:
     #
     # Find all the available headers and what they depend upon. the
@@ -316,6 +327,8 @@ _cfg_defaults = {
   'sources' : '',
   'link-flags' : '',
   'libs' : '',
+  'manpages' : '',
+  'infopages' : '',
   'custom' : '',
   'install' : '',
   'testing' : '',
