@@ -286,10 +286,10 @@ typedef struct svn_ra_plugin_t
                                      svn_ra_close_commit_func_t close_func,
                                      void *close_baton);
 
-  /* Feed the contents of URL at REVISION into STREAM as part of
-     session SESSION_BATON. */
+  /* Feed the contents of PATH at REVISION into STREAM; PATH is
+     interpreted relative to the url in SESSION_BATON. */
   svn_error_t *(*get_file) (void *session_baton,
-                            svn_stringbuf_t *url,
+                            svn_stringbuf_t *path,
                             svn_revnum_t revision,
                             svn_stream_t *stream);
 

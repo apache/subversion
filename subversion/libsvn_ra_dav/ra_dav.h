@@ -82,7 +82,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
 
 svn_error_t * svn_ra_dav__get_file(
   void *session_baton,
-  svn_stringbuf_t *url,
+  svn_stringbuf_t *path,
   svn_revnum_t revision,
   svn_stream_t *stream);
 
