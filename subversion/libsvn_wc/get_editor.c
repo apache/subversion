@@ -1124,6 +1124,76 @@ change_file_prop (void *file_baton,
 }
 
 
+/* Helper function for close_edit.
+
+   Create (or append to) *ENTRY_ACCUM an XML log message for log
+   command TAGNAME, with attributes NAME, DEST, EOL_STR, REPAIR,
+   KEYWORDS, and EXPAND. */
+static void
+make_translation_open_tag (svn_stringbuf_t **entry_accum,
+                           apr_pool_t *pool,
+                           enum svn_xml_open_tag_style style,
+                           const char *tagname,
+                           const svn_stringbuf_t *name,
+                           const svn_stringbuf_t *dest,
+                           const char *eol_str,
+                           svn_boolean_t repair,
+                           svn_io_keywords_t *keywords,
+                           svn_boolean_t expand)
+{
+  apr_hash_t *hash = apr_hash_make (pool);
+
+  /* Operative file. */
+  apr_hash_set (hash, SVN_WC__LOG_ATTR_NAME, APR_HASH_KEY_STRING, name);
+
+  /* Destination of copy. */
+  apr_hash_set (hash, SVN_WC__LOG_ATTR_DEST, APR_HASH_KEY_STRING, dest);
+
+  /* EOL string. */
+  if (eol_str)
+    apr_hash_set (hash, SVN_WC__LOG_ATTR_EOL_STR, APR_HASH_KEY_STRING, 
+                  svn_stringbuf_create (eol_str, pool));
+
+  /* Repair inconsitent EOLs? */
+  if (repair)
+    apr_hash_set (hash, SVN_WC__LOG_ATTR_REPAIR, APR_HASH_KEY_STRING, 
+                  svn_stringbuf_create ("true", pool));
+
+  /* Keyword substitution values. */
+  if (keywords)
+    {
+      if (keywords->revision)
+        apr_hash_set (hash, SVN_WC__LOG_ATTR_REVISION,
+                      APR_HASH_KEY_STRING, 
+                      svn_stringbuf_create_from_string (keywords->revision,
+                                                        pool));
+      if (keywords->date)
+        apr_hash_set (hash, SVN_WC__LOG_ATTR_DATE,
+                      APR_HASH_KEY_STRING,
+                      svn_stringbuf_create_from_string (keywords->date,
+                                                        pool));
+      if (keywords->author)
+        apr_hash_set (hash, SVN_WC__LOG_ATTR_AUTHOR,
+                      APR_HASH_KEY_STRING,
+                      svn_stringbuf_create_from_string (keywords->author,
+                                                        pool));
+      if (keywords->url)
+        apr_hash_set (hash, SVN_WC__LOG_ATTR_URL,
+                      APR_HASH_KEY_STRING,
+                      svn_stringbuf_create_from_string (keywords->url,
+                                                        pool));
+    }
+
+  /* Expanding keywords? (else, contracting) */
+  if (expand)
+    apr_hash_set (hash, SVN_WC__LOG_ATTR_EXPAND, APR_HASH_KEY_STRING, 
+                  svn_stringbuf_create ("true", pool));
+  
+  svn_xml_make_open_tag_hash (entry_accum, pool, style, tagname, hash);
+  return;
+}
+
+
 static svn_error_t *
 close_file (void *file_baton)
 {
@@ -1133,15 +1203,12 @@ close_file (void *file_baton)
   apr_status_t apr_err;
   char *revision_str = NULL;
   svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb, *tmp_loc;
-  svn_stringbuf_t *tmp_txtb_full_path, *txtb_full_path, *s_eol_str;
+  svn_stringbuf_t *tmp_txtb_full_path, *txtb_full_path;
   svn_boolean_t has_binary_prop, is_locally_modified;
   apr_hash_t *prop_conflicts;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
   svn_io_keywords_t *keywords = NULL;
-  svn_stringbuf_t *s_revision, *s_date, *s_author, *s_url, *s_true;
-
-  s_true = svn_stringbuf_create ("true", fb->pool);
 
   /* Lock the working directory while we change things. */
   SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
@@ -1316,9 +1383,6 @@ close_file (void *file_baton)
                           fb->new_value, fb->path, fb->pool));
               }
           }
-        
-        s_eol_str = 
-          eol_str ? svn_stringbuf_create (eol_str, fb->pool) : NULL;
       }
 
       /* Decide which value of 'svn:keywords' to use. */
@@ -1361,23 +1425,6 @@ close_file (void *file_baton)
                           fb->new_keywords_value, fb->path, fb->pool));
               }
           }
-
-        s_revision = s_date = s_author = s_url = NULL;
-        if (keywords)
-          {
-            if (keywords->revision)
-              s_revision = svn_stringbuf_create_from_string (keywords->revision,
-                                                             fb->pool);
-            if (keywords->author)
-              s_author = svn_stringbuf_create_from_string (keywords->author, 
-                                                           fb->pool);
-            if (keywords->date)
-              s_date = svn_stringbuf_create_from_string (keywords->date, 
-                                                         fb->pool);
-            if (keywords->url)
-              s_url = svn_stringbuf_create_from_string (keywords->url, 
-                                                        fb->pool);
-          }
       }
 
 
@@ -1404,30 +1451,16 @@ close_file (void *file_baton)
              Just overwrite any working file with the new one.  If
              newline conversion or keyword substitution is activated,
              this will happen as well during the copy. */
-          
-          /* ### use make_open_tag_hash once we have a keyword struct! */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_CP,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 txtb,
-                                 SVN_WC__LOG_ATTR_DEST,
-                                 fb->name,
-                                 SVN_WC__LOG_ATTR_EOL_STR,
-                                 s_eol_str,
-                                 SVN_WC__LOG_ATTR_REVISION,
-                                 s_revision,
-                                 SVN_WC__LOG_ATTR_DATE,
-                                 s_date,
-                                 SVN_WC__LOG_ATTR_AUTHOR,
-                                 s_author,
-                                 SVN_WC__LOG_ATTR_URL,
-                                 s_url,
-                                 SVN_WC__LOG_ATTR_EXPAND,
-                                 s_true,
-                                 /* no need for repair */
-                                 NULL);
+          make_translation_open_tag (&entry_accum,
+                                     fb->pool,
+                                     svn_xml_self_closing,
+                                     SVN_WC__LOG_CP,
+                                     txtb,
+                                     fb->name,
+                                     eol_str,
+                                     FALSE, /* repair */
+                                     keywords,
+                                     TRUE); /* expand */
         }
   
       else   /* file is locally modified, and this is an update. */
@@ -1446,31 +1479,16 @@ close_file (void *file_baton)
                 {
                   /* If the working file is missing, then just copy
                      the new base text to the working file. */
-
-                  /* ### use make_open_tag_hash once we have a keyword
-                         struct! */
-                  svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_CP,
-                                         SVN_WC__LOG_ATTR_NAME,
-                                         txtb,
-                                         SVN_WC__LOG_ATTR_DEST,
-                                         fb->name,
-                                         SVN_WC__LOG_ATTR_EOL_STR,
-                                         s_eol_str,
-                                         SVN_WC__LOG_ATTR_REVISION,
-                                         s_revision,
-                                         SVN_WC__LOG_ATTR_DATE,
-                                         s_date,
-                                         SVN_WC__LOG_ATTR_AUTHOR,
-                                         s_author,
-                                         SVN_WC__LOG_ATTR_URL,
-                                         s_url,
-                                         SVN_WC__LOG_ATTR_EXPAND,
-                                         s_true,
-                                         /* no need for repair */
-                                         NULL);
+                  make_translation_open_tag (&entry_accum,
+                                             fb->pool,
+                                             svn_xml_self_closing,
+                                             SVN_WC__LOG_CP,
+                                             txtb,
+                                             fb->name,
+                                             eol_str,
+                                             FALSE, /* repair */
+                                             keywords,
+                                             TRUE); /* expand */
                 }
               else  /* working file exists */
                 {                  
@@ -1661,31 +1679,16 @@ close_file (void *file_baton)
                          normalization, because the eol prop is set,
                          and an update is a 'checkpoint' just like a
                          commit. */
-
-                      /* ### use make_open_tag_hash here in future */
-                      svn_xml_make_open_tag (&entry_accum, fb->pool,
-                                             svn_xml_self_closing,
-                                             SVN_WC__LOG_CP,
-                                             SVN_WC__LOG_ATTR_NAME,
-                                             fb->name,
-                                             SVN_WC__LOG_ATTR_DEST,
-                                             tmp_working,
-                                             SVN_WC__LOG_ATTR_EOL_STR,
-                                             svn_stringbuf_create ("\n",
-                                                                   fb->pool),
-                                             SVN_WC__LOG_ATTR_REPAIR,
-                                             s_true,
-                                             SVN_WC__LOG_ATTR_REVISION,
-                                             s_revision,
-                                             SVN_WC__LOG_ATTR_DATE,
-                                             s_date,
-                                             SVN_WC__LOG_ATTR_AUTHOR,
-                                             s_author,
-                                             SVN_WC__LOG_ATTR_URL,
-                                             s_url,
-                                             /* no 'expand' implies
-                                                contraction. */
-                                             NULL);
+                      make_translation_open_tag (&entry_accum,
+                                                 fb->pool,
+                                                 svn_xml_self_closing,
+                                                 SVN_WC__LOG_CP,
+                                                 fb->name,
+                                                 tmp_working,
+                                                 "\n",
+                                                 TRUE, /* repair */
+                                                 keywords,
+                                                 FALSE); /* expand */
 
                       /* Now patch the tmp-working file. */
                       svn_xml_make_open_tag
@@ -1711,29 +1714,16 @@ close_file (void *file_baton)
                          already defined in eol_str.  Therefore, copy
                          the merged tmp_working back to working with
                          this style.  Also, re-expand keywords. */
-
-                      /* ## use make_open_tag_hash in future.  */
-                      svn_xml_make_open_tag (&entry_accum,
-                                             fb->pool,
-                                             svn_xml_self_closing,
-                                             SVN_WC__LOG_CP,
-                                             SVN_WC__LOG_ATTR_NAME,
-                                             tmp_working,
-                                             SVN_WC__LOG_ATTR_DEST,
-                                             fb->name,
-                                             SVN_WC__LOG_ATTR_EOL_STR,
-                                             s_eol_str,
-                                             SVN_WC__LOG_ATTR_REVISION,
-                                             s_revision,
-                                             SVN_WC__LOG_ATTR_DATE,
-                                             s_date,
-                                             SVN_WC__LOG_ATTR_AUTHOR,
-                                             s_author,
-                                             SVN_WC__LOG_ATTR_URL,
-                                             s_url,
-                                             SVN_WC__LOG_ATTR_EXPAND,
-                                             s_true,
-                                             NULL);
+                      make_translation_open_tag (&entry_accum,
+                                                 fb->pool,
+                                                 svn_xml_self_closing,
+                                                 SVN_WC__LOG_CP,
+                                                 tmp_working,
+                                                 fb->name,
+                                                 eol_str,
+                                                 FALSE, /* repair */
+                                                 keywords,
+                                                 TRUE); /* expand */
                       
                       /* Remove tmp_working. */
                       svn_xml_make_open_tag (&entry_accum,
@@ -1823,8 +1813,8 @@ close_file (void *file_baton)
 
   /* Set revision. */
   revision_str = apr_psprintf (fb->pool,
-                              "%ld",
-                              fb->dir_baton->edit_baton->target_revision);
+                               "%ld",
+                               fb->dir_baton->edit_baton->target_revision);
 
   /* Write log entry which will bump the revision number:  */
   svn_xml_make_open_tag (&entry_accum,
@@ -1835,7 +1825,7 @@ close_file (void *file_baton)
                          fb->name,
                          SVN_WC_ENTRY_ATTR_KIND,
                          svn_stringbuf_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
-                                            fb->pool),
+                                               fb->pool),
                          SVN_WC_ENTRY_ATTR_REVISION,
                          svn_stringbuf_create (revision_str, fb->pool),
                          NULL);
@@ -1854,7 +1844,7 @@ close_file (void *file_baton)
                                SVN_WC_ENTRY_ATTR_TEXT_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                  fb->pool),
+                                                     fb->pool),
                                NULL);
     }
 
@@ -1880,7 +1870,7 @@ close_file (void *file_baton)
                                SVN_WC_ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
                                svn_stringbuf_create (SVN_WC_TIMESTAMP_WC,
-                                                  fb->pool),
+                                                     fb->pool),
                                NULL);
     }
 
