@@ -219,7 +219,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       apr_status_t apr_err;
 
       apr_err = apr_md5_final (stream->digest, &(stream->context));
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_create 
           (apr_err, 0, NULL, pool,
            "svn_txdelta_next_window: MD5 finalization failed");

@@ -421,14 +421,14 @@ svn_io_file_checksum (svn_stringbuf_t **checksum_p,
 
     apr_err = apr_file_read (f, buf, &len);
 
-    if ((! (APR_STATUS_IS_SUCCESS (apr_err))) && (apr_err != APR_EOF))
+    if (apr_err && ! APR_STATUS_IS_EOF(apr_err))
       return svn_error_createf
         (apr_err, 0, NULL, pool,
          "svn_io_file_checksum: error reading from '%s'", file);
 
     apr_md5_update (&context, buf, len);
 
-  } while (apr_err != APR_EOF);
+  } while (! APR_STATUS_IS_EOF(apr_err));
 
   apr_err = apr_file_close (f);
   if (apr_err)
@@ -697,7 +697,7 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len)
   apr_status_t status;
 
   status = apr_file_read_full (btn->file, buffer, *len, len);
-  if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
+  if (status && ! APR_STATUS_IS_EOF(status))
     return svn_error_create (status, 0, NULL, btn->pool, "reading file");
   else
     return SVN_NO_ERROR;
@@ -711,7 +711,7 @@ write_handler_apr (void *baton, const char *data, apr_size_t *len)
   apr_status_t status;
 
   status = apr_file_write_full (btn->file, data, *len, len);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return svn_error_create (status, 0, NULL, btn->pool, "writing file");
   else
     return SVN_NO_ERROR;
@@ -842,7 +842,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
   /* XXX: We should check the incoming data for being of type binary. */
 
   apr_err = apr_file_name_get (&fname, file);
-  if (!APR_STATUS_IS_SUCCESS(apr_err))
+  if (apr_err)
     return svn_error_create
       (apr_err, 0, NULL, pool,
        "svn_string_from_aprfile: failed to get filename");
@@ -857,7 +857,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
    * is safe from missing read data.  */
   len = sizeof(buf);
   apr_err = apr_file_read (file, buf, &len);
-  while (APR_STATUS_IS_SUCCESS(apr_err))
+  while (! apr_err)
     {
       svn_stringbuf_appendbytes(res, buf, len);
       len = sizeof(buf);
@@ -891,7 +891,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
 
   apr_err = apr_file_remove (path, pool);
 
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool,
        "svn_io_remove_file: failed to remove file \"%s\"",
@@ -921,7 +921,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
     return svn_error_createf (status, 0, NULL, subpool, err_msg_fmt, path);
 
   for (status = apr_dir_read (&this_entry, flags, this_dir);
-       APR_STATUS_IS_SUCCESS (status);
+       status == APR_SUCCESS;
        status = apr_dir_read (&this_entry, flags, this_dir))
     {
       char *fullpath = apr_pstrcat (subpool, path, "/", this_entry.name, NULL);
@@ -990,7 +990,7 @@ svn_io_get_dirents (apr_hash_t **dirents,
                          path->data);
 
   for (status = apr_dir_read (&this_entry, flags, this_dir);
-       APR_STATUS_IS_SUCCESS (status);
+       status == APR_SUCCESS;
        status = apr_dir_read (&this_entry, flags, this_dir))
     {
       if ((strcmp (this_entry.name, "..") == 0)
@@ -1051,7 +1051,7 @@ svn_io_run_cmd (const char *path,
 
   /* Create the process attributes. */
   apr_err = apr_procattr_create (&cmdproc_attr, pool); 
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool,
        "svn_io_run_cmd: error creating %s process attributes",
@@ -1061,7 +1061,7 @@ svn_io_run_cmd (const char *path,
   apr_err = apr_procattr_cmdtype_set (cmdproc_attr,
                                       inherit?APR_PROGRAM_PATH:APR_PROGRAM);
 
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
        "svn_io_run_cmd: error setting %s process cmdtype",
@@ -1071,7 +1071,7 @@ svn_io_run_cmd (const char *path,
   if (path)
     {
       apr_err = apr_procattr_dir_set (cmdproc_attr, path);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
            "svn_io_run_cmd: error setting %s process directory",
@@ -1086,7 +1086,7 @@ svn_io_run_cmd (const char *path,
   if (infile)
     {
       apr_err = apr_procattr_child_in_set (cmdproc_attr, infile, NULL);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
            "svn_io_run_cmd: error setting %s process child input",
@@ -1095,7 +1095,7 @@ svn_io_run_cmd (const char *path,
   if (outfile)
     {
       apr_err = apr_procattr_child_out_set (cmdproc_attr, outfile, NULL);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
            "svn_io_run_cmd: error setting %s process child outfile",
@@ -1104,7 +1104,7 @@ svn_io_run_cmd (const char *path,
   if (errfile)
     {
       apr_err = apr_procattr_child_err_set (cmdproc_attr, errfile, NULL);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
            "svn_io_run_cmd: error setting %s process child errfile",
@@ -1113,7 +1113,7 @@ svn_io_run_cmd (const char *path,
 
   /* Start the cmd command. */ 
   apr_err = apr_proc_create (&cmd_proc, cmd, args, NULL, cmdproc_attr, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
        "svn_io_run_cmd: error starting %s process",
@@ -1318,7 +1318,7 @@ svn_io_detect_mimetype (const char **mimetype,
 
   /* Read a block of data from FILE. */
   apr_err = apr_file_read (fh, block, &amt_read);
-  if (apr_err && (apr_err != APR_EOF))
+  if (apr_err && ! APR_STATUS_IS_EOF(apr_err))
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "svn_io_detect_mimetype: error reading '%s'",
                               file);
@@ -1427,28 +1427,28 @@ apr_check_dir_empty (const char *path,
   apr_finfo_t finfo;
   
   apr_err = apr_dir_open (&dir, path, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return apr_err;
       
   /* All systems return "." and ".." as the first two files, so read
      past them unconditionally. */
   apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
+  if (apr_err) return apr_err;
   apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
+  if (apr_err) return apr_err;
 
   /* Now, there should be nothing left.  If there is something left,
      return EGENERAL. */
   apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
   if (APR_STATUS_IS_ENOENT (apr_err))
     retval = APR_SUCCESS;
-  else if (APR_STATUS_IS_SUCCESS (apr_err))
+  else if (! apr_err)
     retval = APR_EGENERAL;
   else
     retval = apr_err;
 
   apr_err = apr_dir_close (dir);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return apr_err;
 
   return retval;

@@ -406,7 +406,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
                                  contents->len, &written);
 
   apr_err2 = apr_file_close (tmp_file);
-  if (APR_STATUS_IS_SUCCESS(apr_err))
+  if (! apr_err)
     apr_err = apr_err2;
   
   /* Make sure the whole CONTENTS were written, else return an error. */
@@ -422,7 +422,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
      been allowed to edit its contents. */
   apr_err = apr_stat (&finfo_before, tmpfile_name->data, 
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (! APR_STATUS_IS_SUCCESS(apr_err))
+  if (apr_err)
     {
       err =  svn_error_createf (apr_err, 0, NULL, pool,
                                 "failed to stat '%s'", tmpfile_name->data);
@@ -444,7 +444,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   /* Get information about the temporary file after the assumed editing. */
   apr_err = apr_stat (&finfo_after, tmpfile_name->data, 
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (! APR_STATUS_IS_SUCCESS(apr_err))
+  if (apr_err)
     {
       err = svn_error_createf (apr_err, 0, NULL, pool,
                                "failed to stat '%s'", tmpfile_name->data);
@@ -470,7 +470,7 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   apr_err = apr_file_remove (tmpfile_name->data, pool);
 
   /* Only report remove error if there was no previous error. */
-  if (! err && ! APR_STATUS_IS_SUCCESS(apr_err))
+  if (! err && apr_err)
     err = svn_error_createf (apr_err, 0, NULL, pool,
                              "failed to remove '%s'", tmpfile_name->data);
 

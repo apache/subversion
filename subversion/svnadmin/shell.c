@@ -363,7 +363,7 @@ get_input (svn_stringbuf_t **input,
   while (1)
     {
       status = apr_file_getc (&c, fp);
-      if (status && (status != APR_EOF))
+      if (status && ! APR_STATUS_IS_EOF(status))
         return svn_error_create (status, 0, NULL, pool,
                                  "get_input(): error reading STDIN.");
       if ((c == '\n') || (c == '\r'))

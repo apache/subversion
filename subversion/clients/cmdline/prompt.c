@@ -101,7 +101,7 @@ svn_cl__prompt_user (char **result,
       while (1)
         {
           status = apr_file_getc (&c, fp);
-          if (status && (status != APR_EOF))
+          if (status && ! APR_STATUS_IS_EOF(status))
             return svn_error_create (status, 0, NULL, pool,
                                      "error reading stdin.");
           if ((c == '\n') || (c == '\r'))

@@ -64,7 +64,7 @@ send_file_contents (svn_stringbuf_t *path,
 
   /* Get an apr file for PATH. */
   apr_err = apr_file_open (&f, path->data, APR_READ, APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool, 
                               "error opening `%s' for reading", path->data);
   
@@ -79,7 +79,7 @@ send_file_contents (svn_stringbuf_t *path,
 
   /* Close the file. */
   apr_err = apr_file_close (f);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool, "error closing `%s'", path->data);
 
@@ -156,7 +156,7 @@ import_dir (apr_hash_t *files,
   this_edit_path = svn_stringbuf_dup (edit_path, pool);
 
   for (apr_err = apr_dir_read (&finfo, flags, dir);
-       APR_STATUS_IS_SUCCESS (apr_err);
+       apr_err == APR_SUCCESS;
        svn_pool_clear (subpool), apr_err = apr_dir_read (&finfo, flags, dir))
     {
       svn_stringbuf_t *name;

@@ -226,7 +226,7 @@ svn_hash_read (apr_hash_t *hash,
       apr_size_t len = sizeof(buf);
 
       err = svn_io_read_length_line (srcfile, buf, &len);
-      if ((err == APR_EOF) && first_time)
+      if (APR_STATUS_IS_EOF(err) && first_time)
         /* We got an EOF on our very first attempt to read, which
            means it's a zero-byte file.  No problem, just go home. */        
         return APR_SUCCESS;

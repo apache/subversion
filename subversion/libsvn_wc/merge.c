@@ -80,7 +80,7 @@ svn_wc_merge (const char *left,
                                             SVN_WC__TMP_EXT,
                                             FALSE, pool));
           apr_err = apr_file_close (tmp_f);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
+          if (apr_err)
             return svn_error_createf
               (apr_err, 0, NULL, pool,
                "svn_wc_merge: unable to close tmp file `%s'",
@@ -105,7 +105,7 @@ svn_wc_merge (const char *left,
                                         SVN_WC__TMP_EXT,
                                         FALSE, pool));
       apr_err = apr_file_close (tmp_f);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'",
@@ -116,7 +116,7 @@ svn_wc_merge (const char *left,
                                         SVN_WC__TMP_EXT,
                                         FALSE, pool));
       apr_err = apr_file_close (tmp_f);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'",
@@ -143,7 +143,7 @@ svn_wc_merge (const char *left,
   
       /* Close the output file */
       apr_err = apr_file_close (result_f);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'", result_target->data);
@@ -166,7 +166,7 @@ svn_wc_merge (const char *left,
                                             pool));
 
           apr_err = apr_file_close (lcopy_f);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
+          if (apr_err)
             return svn_error_createf
               (apr_err, 0, NULL, pool,
                "svn_wc_merge: unable to close tmp file `%s'", left_copy->data);
@@ -181,7 +181,7 @@ svn_wc_merge (const char *left,
                                             pool));
 
           apr_err = apr_file_close (rcopy_f);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
+          if (apr_err)
             return svn_error_createf
               (apr_err, 0, NULL, pool,
                "svn_wc_merge: unable to close tmp file `%s'",
@@ -200,7 +200,7 @@ svn_wc_merge (const char *left,
                                             pool));
 
           apr_err = apr_file_close (tcopy_f);
-          if (! APR_STATUS_IS_SUCCESS (apr_err))
+          if (apr_err)
             return svn_error_createf
               (apr_err, 0, NULL, pool,
                "svn_wc_merge: unable to close tmp file `%s'",
@@ -273,25 +273,25 @@ svn_wc_merge (const char *left,
       /* Don't forget to clean up tmp_target, result_target, tmp_left,
          tmp_right.  There are a lot of scratch files lying around. */
       apr_err = apr_file_remove (tmp_target->data, pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to delete tmp file `%s'",
            tmp_target->data);
       apr_err = apr_file_remove (result_target->data, pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to delete tmp file `%s'",
            result_target->data);
       apr_err = apr_file_remove (tmp_left->data, pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to delete tmp file `%s'",
            tmp_left->data);
       apr_err = apr_file_remove (tmp_right->data, pool);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to delete tmp file `%s'",
@@ -316,7 +316,7 @@ svn_wc_merge (const char *left,
                                         FALSE,
                                         pool));
       apr_err = apr_file_close (lcopy_f);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'", left_copy->data);
@@ -328,7 +328,7 @@ svn_wc_merge (const char *left,
                                         FALSE,
                                         pool));
       apr_err = apr_file_close (rcopy_f);
-      if (! APR_STATUS_IS_SUCCESS (apr_err))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'",

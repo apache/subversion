@@ -155,7 +155,7 @@ static svn_boolean_t match_in_list(const char *str,
   for (i = 0; i < subvals->nelts; i++)
     {
       const char *this_pattern = APR_ARRAY_IDX(subvals, i, char *);
-      if (APR_STATUS_IS_SUCCESS(apr_fnmatch(this_pattern, str, 0)))
+      if (apr_fnmatch(this_pattern, str, 0) == APR_SUCCESS)
         return TRUE;
     }
 

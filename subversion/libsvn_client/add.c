@@ -59,7 +59,7 @@ add_dir_recursive (const char *dirname,
      revision control. */
   apr_err = apr_dir_open (&dir, dirname, pool);
   for (apr_err = apr_dir_read (&this_entry, flags, dir);
-       APR_STATUS_IS_SUCCESS (apr_err);
+       apr_err == APR_SUCCESS;
        apr_err = apr_dir_read (&this_entry, flags, dir))
     {
       svn_stringbuf_t *fullpath;
@@ -106,7 +106,7 @@ add_dir_recursive (const char *dirname,
   else  /* Yes, it exited cleanly, so close the dir. */
     {
       apr_err = apr_dir_close (dir);
-      if (! (APR_STATUS_IS_SUCCESS (apr_err)))
+      if (apr_err)
         return svn_error_createf
           (apr_err, 0, NULL, subpool, "error closing dir `%s'", dirname);
     }

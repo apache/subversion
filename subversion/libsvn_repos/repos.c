@@ -126,7 +126,7 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
   /* Create the locks directory. */
   apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf (apr_err, 0, 0, pool,
                               "creating lock dir `%s'", path);
 
@@ -183,7 +183,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
 
   /* Create the hook directory. */
   apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf 
       (apr_err, 0, 0, pool, "creating hook directory `%s'", path);
 
@@ -502,12 +502,12 @@ clear_and_close (void *arg)
 
   /* Remove locks. */
   apr_err = apr_file_unlock (f);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return apr_err;
 
   /* Close the file. */
   apr_err = apr_file_close (f);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return apr_err;
 
   return 0;
@@ -542,12 +542,12 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
 
   /* Create the top-level repository directory. */
   apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     {
       if (APR_STATUS_IS_EEXIST (apr_err))
         {
           apr_status_t empty = apr_check_dir_empty (path, pool);
-          if (! APR_STATUS_IS_SUCCESS (empty))
+          if (empty)
             return svn_error_createf
               (apr_err, 0, 0, pool,
                "`%s' exists and is non-empty, repository creation failed",
@@ -573,13 +573,13 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
 
   /* Create the DAV sandbox directory.  */
   apr_err = apr_dir_make (repos->dav_path, APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf 
       (apr_err, 0, 0, pool, "creating DAV sandbox dir `%s'", repos->dav_path);
 
   /* Create the conf directory.  */
   apr_err = apr_dir_make (repos->conf_path, APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     return svn_error_createf 
       (apr_err, 0, 0, pool, "creating conf dir `%s'", repos->conf_path);
 
@@ -612,18 +612,18 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
     apr_err = apr_file_open (&readme_file, readme_file_name,
                              APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
                              pool);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
+    if (apr_err)
       return svn_error_createf (apr_err, 0, 0, pool,
                                 "opening `%s' for writing", readme_file_name);
 
     apr_err = apr_file_write_full (readme_file, readme_contents,
                                    strlen (readme_contents), NULL);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
+    if (apr_err)
       return svn_error_createf (apr_err, 0, 0, pool,
                                 "writing to `%s'", readme_file_name);
     
     apr_err = apr_file_close (readme_file);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
+    if (apr_err)
       return svn_error_createf (apr_err, 0, 0, pool,
                                 "closing `%s'", readme_file_name);
   }
@@ -663,14 +663,14 @@ svn_repos_open (svn_repos_t **repos_p,
     lockfile_path = svn_repos_db_lockfile (repos, pool);
     apr_err = apr_file_open (&lockfile_handle, lockfile_path,
                              APR_READ, APR_OS_DEFAULT, pool);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
+    if (apr_err)
       return svn_error_createf
         (apr_err, 0, NULL, pool,
          "svn_repos_open: error opening db lockfile `%s'", lockfile_path);
     
     /* Get shared lock on the filehandle. */
     apr_err = apr_file_lock (lockfile_handle, APR_FLOCK_SHARED);
-    if (! APR_STATUS_IS_SUCCESS (apr_err))
+    if (apr_err)
       return svn_error_createf
         (apr_err, 0, NULL, pool,
          "svn_repos_open: shared db lock on repository `%s' failed", path);

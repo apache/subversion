@@ -838,7 +838,7 @@ main (int argc, const char * const *argv)
       apr_err = apr_getopt_long (os, svn_cl__options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF (apr_err))
         break;
-      else if (! APR_STATUS_IS_SUCCESS (apr_err))
+      else if (apr_err)
         {
           svn_cl__help (NULL, NULL, pool);
           svn_pool_destroy (pool);
