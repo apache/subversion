@@ -116,6 +116,16 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   void **batons;
   int i = 0;
 
+  /* ### TODO:  Currently, this function will violate the depth-first
+     rule of editors when doing a move of something up into one of its
+     grandparent directories, such as:
+
+        svn mv http://server/repos/dir1/dir2/file http://server/repos/dir1
+
+     While it seems to work just fine, we might want to evaluate this
+     from a purely "correctness" standpoint.
+  */
+
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
      checks on both paths, and so we can operate on both paths in the
@@ -284,63 +294,67 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
                   svn_stringbuf_t *dst_url, 
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
+                  const svn_delta_edit_fns_t *before_editor,
+                  void *before_edit_baton,
+                  const svn_delta_edit_fns_t *after_editor,
+                  void *after_edit_baton,
                   apr_pool_t *pool)
 {
-#if 0
-  svn_stringbuf_t *anchor, *target, *src_url;
-  svn_wc_entry_t *entry = NULL;
+  svn_stringbuf_t *anchor, *target, *parent, *basename;
   void *ra_baton, *sess, *cb_baton;
   svn_ra_plugin_t *ra_lib;
   svn_ra_callbacks_t *ra_callbacks;
-  svn_revnum_t src_rev, youngest;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
   svn_node_kind_t src_kind, dst_kind;
 
-  /* Get SRC_PATH's entry (doubling as an existence check). */
-  SVN_ERR (svn_wc_entry (&entry, src_path, pool));
-  if (! entry)
-    return svn_error_create 
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, src_path->data);
-  if (! entry->url)
-    return svn_error_create 
-      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool, src_path->data);
+  /* Check the SRC_PATH. */
+  SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
 
-  /* Dup the URL and revision associated with SRC_PATH. */
-  src_url = svn_stringbuf_dup (entry->url, pool);
-  src_rev = entry->revision;
+  /* Split the SRC_PATH into a parent and basename. */
+  svn_path_split (src_path, &parent, &basename, svn_path_local_style, pool);
 
   /* Split the DST_URL into an anchor and target. */
   svn_path_split (dst_url, &anchor, &target, svn_path_url_style, pool);
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url->data, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor->data, pool));
 
   /* Get the client callbacks for auth stuffs. */
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
-                                         top_url, TRUE, TRUE, pool));
-  SVN_ERR (ra_lib->open (&sess, top_url, ra_callbacks, cb_baton, pool));
-  SVN_ERR (ra_lib->get_latest_revnum (sess, &youngest));
+                                         anchor, TRUE, TRUE, pool));
+  SVN_ERR (ra_lib->open (&sess, anchor, ra_callbacks, cb_baton, pool));
 
-  /* Use YOUNGEST for copyfrom args if not provided. */
-  if (! SVN_IS_VALID_REVNUM (src_rev))
-    src_rev = youngest;
-  
-  /* Check DST_PATH in the repository. */
-  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
-  if (dst_kind == svn_node_file)
-    return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-                              "file `%s' already exists.", dst_path->data);
+  /* Figure out the basename that will result from this operation. */
+  SVN_ERR (ra_lib->check_path (&dst_kind, sess, target->data,
+                               SVN_INVALID_REVNUM));
+  if (dst_kind == svn_node_none)
+    /* use target */;
+  else if (dst_kind == svn_node_dir)
+    target = svn_stringbuf_dup (basename, pool);
+  else
+    return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
+                              "file `%s' already exists.", dst_url->data);
 
-  /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR (ra_lib->check_path (&src_kind, sess,
-                               src_rel ? src_rel->data : NULL, src_rev));
-  if (src_kind == svn_node_none)
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-       "path `%s' does not exist in revision `%ld'", src_url->data, src_rev);
+  /* Fetch RA commit editor. */
+  SVN_ERR (ra_lib->get_commit_editor
+           (sess, &editor, &edit_baton, message, NULL, NULL, NULL, NULL));
 
-#endif /* 0 */
-  abort();
+  /* Co-mingle the before- and after-editors with the commit
+     editor. */
+  svn_delta_wrap_editor (&editor, &edit_baton,
+                         before_editor, before_edit_baton,
+                         editor, edit_baton,
+                         after_editor, after_edit_baton, pool);
+
+  /* Crawl the working copy, committing as if SRC_PATH was scheduled
+     for a copy. */
+  SVN_ERR (svn_wc_crawl_as_copy (parent, basename, target,
+                                 editor, edit_baton, pool));
+
+  /* Close the RA session. */
+  SVN_ERR (ra_lib->close (sess));
   return SVN_NO_ERROR;
 }
 
@@ -530,7 +544,10 @@ setup_copy (svn_stringbuf_t *src_path,
 
   else if ((! src_is_url) && (dst_is_url))
     SVN_ERR (wc_to_repos_copy (src_path, dst_path, 
-                               auth_baton, message, pool));
+                               auth_baton, message, 
+                               before_editor, before_edit_baton,
+                               after_editor, after_edit_baton,
+                               pool));
 
   else if ((src_is_url) && (! dst_is_url))
     SVN_ERR (repos_to_wc_copy (src_path, src_rev, dst_path, auth_baton,
