@@ -6,7 +6,7 @@
           <tree-delta>
             <add name="file1">
                <file>
-                  <text-delta> standard in-line data </text-delta>
+                  <text-delta>W3bOAAAAFyEZn0B1fGFwbGF0bCBrdk3ucY7nIGRjfGEi</text-delta>
                </file>
             </add>
             <add name="file2">
@@ -28,8 +28,8 @@
      </replace>
   </tree-delta>
 
-  <text-delta id="foo2"> some file2 data </text-delta>
+  <text-delta id="foo2">W3bOAAAAEQERmSB1d43nIGbrdGW0IGRjfGEi</text-delta>
 
-  <text-delta id="!@#$%"> some file3 data </text-delta>
+  <text-delta id="!@#$%">W3bOAAAAEQERmSB1d43nIGbrdGW1IGRjfGEi</text-delta>
 
 </delta-pkg>
