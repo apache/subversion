@@ -62,7 +62,7 @@ svn_client_switch (svn_revnum_t *result_rev,
 {
   const svn_ra_reporter_t *reporter;
   void *report_baton;
-  const svn_wc_entry_t *entry, *session_entry;
+  const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
@@ -93,56 +93,27 @@ svn_client_switch (svn_revnum_t *result_rev,
   assert (path);
   assert (switch_url && (switch_url[0] != '\0'));
 
+  /* Use PATH to get the update's anchor and targets and get a write lock */
+  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+
   /* ### Note: we don't pass the `recurse' flag as the tree_lock
      argument to probe_open below, only because the RA layer is
      planning to blindly invalidate all wcprops below path anyway, and
      it needs a full tree lock to do so.  If someday the RA layer gets
      smarter about this, then we can start passing `recurse' below
      again.  See issue #1000 and related commits for details. */
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE, -1,
-                                   pool));
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, anchor, TRUE, -1,
+                             pool));
+
+  SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
-    return svn_error_createf
-      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       _("'%s' is not under version control"), path);
-
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL, 
+                              _("'%s' is not under version control"), anchor);
   if (! entry->url)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       _("Entry '%s' has no URL"), path);
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              _("Directory '%s' has no URL"), anchor);
 
-  if (entry->kind == svn_node_file)
-    {
-      SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-      
-      /* get the parent entry */
-      SVN_ERR (svn_wc_entry (&session_entry, anchor, adm_access, FALSE, pool));
-      if (! session_entry)
-        return svn_error_createf
-          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"), anchor);
-
-      if (! session_entry->url)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_MISSING_URL, NULL,
-           _("Directory '%s' has no URL"), anchor);
-    }
-  else if (entry->kind == svn_node_dir)
-    {
-      /* Unlike 'svn up', we do *not* split the local path into an
-         anchor/target pair.  We do this because we know that the
-         target isn't going to be deleted, because we're doing a
-         switch.  This means the update editor gets anchored on PATH
-         itself, and thus PATH's name will never change, which is
-         exactly what we want. */
-      anchor = path;
-      target = "";
-      session_entry = entry;
-    }
-
-  URL = apr_pstrdup (pool, session_entry->url);
+  URL = apr_pstrdup (pool, entry->url);
 
   /* Get revnum set to something meaningful, so we can fetch the
      switch editor. */
