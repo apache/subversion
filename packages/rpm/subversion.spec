@@ -47,6 +47,7 @@ package.
 %package devel
 Group: Utilities/System
 Summary: Development package for Subversion developers.
+Requires: ${name} = %{version}-${release}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacing with the subversion package.
