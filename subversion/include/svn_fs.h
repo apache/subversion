@@ -79,7 +79,7 @@
 
 
 /* An object representing a Subversion filesystem.  */
-typedef struct svn_fs svn_fs_t;
+typedef struct svn_fs_t svn_fs_t;
 
 
 /* Create a new filesystem object in POOL.  It doesn't refer to any
@@ -172,7 +172,30 @@ svn_error_t *svn_fs_berkeleydb_recover (const char *path,
 
 /* Node and Node Version ID's  */
 
-/* Within the database, we refer to nodes and node versions using strings
+/* In a Subversion filesystem, a `node' corresponds roughly to an
+   `inode' in a Unix filesystem:
+   - A node is either a file or a directory.
+   - A node's contents change over time.
+   - When you change a node's contents, it's still the same node; it's
+     just been changed.  So a node's identity isn't bound to a specific
+     set of contents.
+   - If you rename a node, it's still the same node, just under a
+     different name.  So a node's identity isn't bound to a particular
+     filename.
+
+   A `node version' refers to a node's contents at a specific point in
+   time.  Changing a node's contents always creates a new version of that
+   node.  Once created, a node version's contents never change.
+
+   When we create a node, its initial contents are the initial version of
+   the node.  As users make changes to the node over time, we create new
+   versions of that same node.  When a user commits a change that deletes
+   a file from the filesystem, we don't delete the node, or any version
+   of it --- those stick around to allow us to recreate prior versions of
+   the filesystem.  Instead, we just remove the reference to the node
+   from the directory.
+
+   Within the database, we refer to nodes and node versions using strings
    of numbers separated by periods that look a lot like RCS revision
    numbers.
 
@@ -192,21 +215,45 @@ svn_error_t *svn_fs_berkeleydb_recover (const char *path,
    of node N.
 
    A directory entry identifies the file or subdirectory it refers to
-   using a node version number.  Changes to files far down in a
-   directory hierarchy require all the parents of the changed nodes to
-   be updated to hold the new node version ID.  This makes it easy to
-   find changes in large trees.
+   using a node version number --- not a node number.  This means that
+   a change to a file far down in a directory hierarchy requires the
+   parent directory of the changed node to be updated, to hold the new
+   node version ID.  Now, since that parent directory has changed, its
+   parent needs to be updated.
+
+   If a particular subtree was unaffected by a given commit, the node
+   version ID that appears in its parent will be unchanged.  When
+   doing an update, we can notice this, and ignore that entire
+   subtree.  This makes it efficient to find localized changes in
+   large trees.
 
    Note that the number specifying a particular version of a node is
    unrelated to the global filesystem version when that node version
    was created.  So 100.10 may have been created in filesystem version
    1218; 100.10.3.2 may have been created any time after 100.10; it
-   doesn't matter.  Since version numbers increase by one each time a
-   delta is added, we can compute how many deltas separate two related
-   node versions simply by comparing their ID's.  For example, the
-   distance between 100.10.3.2 and 100.12 is the distance from
-   100.10.3.2 to their common ancestor, 100.10 (two deltas), plus the
-   distance from 100.10 to 100.12 (two deltas).  */
+   doesn't matter.
+
+   Since version numbers increase by one each time a delta is added,
+   we can compute how many deltas separate two related node versions
+   simply by comparing their ID's.  For example, the distance between
+   100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
+   common ancestor, 100.10 (two deltas), plus the distance from 100.10
+   to 100.12 (two deltas).
+
+   However, this is kind of a kludge, since the number of deltas is
+   not necessarily an accurate indicator of how different two files
+   are --- a single delta could be a minor change, or a complete
+   replacement.  Furthermore, the filesystem may decide arbitrary to
+   store a given node version as a delta or as full text --- perhaps
+   depending on how recently the node was used --- so version id
+   distance isn't necessarily an accurate predictor of retrieval time.
+
+   If you have insights about how this stuff could work better, let me
+   know.  I've read some of Josh MacDonald's stuff on this; his
+   discussion seems to be mostly about how to retrieve things quickly,
+   which is important, but only part of the issue.  I'd like to find
+   better ways to recognize renames, and find appropriate ancestors in
+   a source tree for changed files.  */
 
 
 /* Within the code, we represent node and node version ID's as arrays

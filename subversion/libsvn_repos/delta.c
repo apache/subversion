@@ -573,7 +573,7 @@ add (struct context *c, void *dir_baton,
      svn_fs_dir_t *source, svn_string_t *source_path,
      svn_fs_dir_t *target, svn_string_t *name)
 {
-  /* ...; */
+  ...;
   return SVN_NO_ERROR;
 }
 
@@ -816,6 +816,6 @@ dir_from_scratch (struct context *c,
 		  void *dir_baton,
 		  svn_fs_dir_t *target)
 {
-  /* ...; */
+  ...;
   return SVN_NO_ERROR;
 }

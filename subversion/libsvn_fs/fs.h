@@ -50,7 +50,6 @@
 /* ==================================================================== */
 
 
-
 #ifndef SVN_LIBSVN_FS_FS_H
 #define SVN_LIBSVN_FS_FS_H
 
@@ -58,8 +57,10 @@
 #include "apr_pools.h"
 #include "svn_fs.h"
 
-/* A Subversion filesystem.  */
-struct svn_fs {
+
+/* The filesystem structure.  */
+
+struct svn_fs_t {
 
   /* A pool for allocations for this filesystem.  */
   apr_pool_t *pool;
