@@ -330,7 +330,6 @@ svn_client_uuid_from_path (const char **uuid,
 }
 
 
-
 svn_error_t *
 svn_client__prev_log_path (const char **prev_path_p,
                            char *action_p,
@@ -354,36 +353,37 @@ svn_client__prev_log_path (const char **prev_path_p,
   if (copyfrom_rev_p)
     *copyfrom_rev_p = SVN_INVALID_REVNUM;
 
-  /* If PATH was explicitly changed in this revision, that makes
-     things easy -- we keep the path (but check to see).  If so,
-     we'll either use the path, or, if was copied, use its
-     copyfrom_path. */
+  /* See if PATH was explicitly changed in this revision. */
   change = apr_hash_get (changed_paths, path, APR_HASH_KEY_STRING);
-
-  /* If PATH was not newly added in this revision, then it may or may
-     not have also been part of a moved subtree.  In this case, set a
-     default previous path, but still look through the parents of this
-     path for a possible copy event. */
-  if (change && change->action != 'A' && change->action != 'R')
-      prev_path = path;
-
-  if (change && (change->action == 'A' || change->action == 'R'))
+  if (change)
     {
-      /* PATH is new in this revision.  This means it cannot have been
-         part of a copied subtree. */
-      if (change->copyfrom_path)
-        prev_path = apr_pstrdup (pool, change->copyfrom_path);
+      /* If PATH was not newly added in this revision, then it may or may
+         not have also been part of a moved subtree.  In this case, set a
+         default previous path, but still look through the parents of this
+         path for a possible copy event. */
+      if (change->action != 'A' && change->action != 'R')
+        {
+          prev_path = path;
+        }
       else
-        prev_path = NULL;
-
-      *prev_path_p = prev_path;
-      if (action_p)
-        *action_p = change->action;
-      if (copyfrom_rev_p)
-        *copyfrom_rev_p = change->copyfrom_rev;
-      return SVN_NO_ERROR;
+        {
+          /* PATH is new in this revision.  This means it cannot have been
+             part of a copied subtree. */
+          if (change->copyfrom_path)
+            prev_path = apr_pstrdup (pool, change->copyfrom_path);
+          else
+            prev_path = NULL;
+          
+          *prev_path_p = prev_path;
+          if (action_p)
+            *action_p = change->action;
+          if (copyfrom_rev_p)
+            *copyfrom_rev_p = change->copyfrom_rev;
+          return SVN_NO_ERROR;
+        }
     }
-  else if (apr_hash_count (changed_paths))
+  
+  if (apr_hash_count (changed_paths))
     {
       /* The path was not explicitly changed in this revision.  The
          fact that we're hearing about this revision implies, then,
