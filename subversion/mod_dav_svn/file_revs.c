@@ -205,13 +205,13 @@ dav_svn__file_revs_report(const dav_resource *resource,
   dav_svn_authz_read_baton arb;
   const char *path = NULL;
   
-  /* Construct the authz read check baton. */
-  arb.r = resource->info->r;
-  arb.repos = resource->info->repos;
-
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;
   svn_revnum_t end = SVN_INVALID_REVNUM;
+
+  /* Construct the authz read check baton. */
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
 
   /* Sanity check. */
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
