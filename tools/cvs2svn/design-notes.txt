@@ -58,7 +58,7 @@ log messages and file contents.  For each revision, it invokes
 CollectData.set_revision_info(), which writes a new line to
 cvs2svn-data.revs, like this:
 
-   3dc32955 5afe9b4ba41843d8eb52ae7db47a43eaa9573254 C 1.2 * 0 0 foo/bar,v
+   3dc32955 5afe9b4ba41843d8eb52ae7db47a43eaa9573254 C 1.2 N * 0 0 foo/bar,v
 
 The fields are:
 
@@ -66,12 +66,13 @@ The fields are:
    2. a digest of the log message + author
    3. the type of change ("C"hange, or "D"elete)
    4. the revision number
-   5. the branch on which this commit happened, or "*" if not on a branch
-   6. the number of tags rooted at this revision (followed by their
+   5. "N" if this revision has non-empty deltatext, else "E" for empty
+   6. the branch on which this commit happened, or "*" if not on a branch
+   7. the number of tags rooted at this revision (followed by their
         names, space-delimited)  
-   7. the number of branches rooted at this revision (followed by
+   8. the number of branches rooted at this revision (followed by
         their names, space-delimited) 
-   8. the path of the RCS file in the repository
+   9. the path of the RCS file in the repository
 
 (Of course, in the above example, fields 6 and 7 are "0", so they have
 no additional data.)

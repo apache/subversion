@@ -68,10 +68,15 @@ SVN_INVALID_REVNUM = -1
 
 COMMIT_THRESHOLD = 5 * 60	# flush a commit if a 5 minute gap occurs
 
+# Things that can happen to a file.
 OP_NOOP   = '-'
 OP_ADD    = 'A'
 OP_DELETE = 'D'
 OP_CHANGE = 'C'
+
+# A deltatext either does or doesn't represent some change.
+DELTATEXT_NONEMPTY = 'N'
+DELTATEXT_EMPTY    = 'E'
 
 DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 
@@ -126,6 +131,10 @@ class CollectData(rcsparse.Sink):
     and that NAME sprouts from BRANCH_NUMBER .
     BRANCH_NUMBER is an RCS branch number with an odd number of components,
     for example '1.7.2' (never '1.7.0.2')."""
+    
+#    print "KFF: set_branch_name(): %s -> '%s' (in %s)" % \
+#          (branch_number, name, os.path.basename(self.fname))
+
     if not self.branch_names.has_key(branch_number):
       self.branch_names[branch_number] = name
       # The branchlist is keyed on the revision number from which the
@@ -212,6 +221,17 @@ class CollectData(rcsparse.Sink):
     for b in branches:
       self.prev[b] = revision
 
+    # Check for unlabeled branches, record them.  We tried to collect
+    # all branch names when we parsed the symbolic name header
+    # earlier, of course, but that doesn't catch unlabeled branches.
+    # If a branch is unlabeled, this is our first encounter with it,
+    # so we have to record its data now.
+    if not trunk_rev.match(revision):
+      branch_number = revision[:revision.rindex(".")]
+      branch_name = "unlabeled-" + branch_number
+      if not self.branch_names.has_key(branch_number):
+        self.set_branch_name(branch_number, branch_name)
+
   def tree_completed(self):
     "The revision tree has been parsed. Analyze it for consistency."
 
@@ -266,14 +286,21 @@ class CollectData(rcsparse.Sink):
       # resynchronization of other files's revisions that occurred
       # for this time and log message.
       self.resync.write('%08lx %s %08lx\n' % (old_ts, digest, timestamp))
-
     if self.default_branch:
-      default_branch_name = self.branch_names.get(self.default_branch)
-      # Name might be None, if it's an unlabeled branch.
-      # todo: kff fooo: issue #1510 working here
+      default_branch_name = self.branch_names[self.default_branch]
+      # print "KFF: %s: default branch: '%s'" % \
+      #   (os.path.basename(self.fname), default_branch_name)
+      ### todo: issue #1510, working here
 
-    write_revs_line(self.revs, timestamp, digest, op, revision, self.fname,
-                    self.rev_to_branch_name(revision), self.get_tags(revision),
+    if text:
+      deltatext_code = DELTATEXT_NONEMPTY
+    else:
+      deltatext_code = DELTATEXT_EMPTY
+
+    write_revs_line(self.revs, timestamp, digest, op, revision,
+                    deltatext_code, self.fname,
+                    self.rev_to_branch_name(revision),
+                    self.get_tags(revision),
                     self.get_branches(revision))
 
 
@@ -1978,22 +2005,17 @@ class Commit:
         ### constant time query.
         if not dumper.probe_path(svn_path):
           sym_tracker.fill_branch(dumper, ctx, br)
-      # The first revision on a vendor branch is always the same as
-      # the revision from which the branch sprouts, e.g., 1.1.1.1 is
-      # always the same as 1.1, so there's no need to further modify
-      # 1.1.1.1 from however it is in the copy from 1.1.
-      if not (br and is_vendor_first_revision(cvs_rev)):
-        print "    adding or changing %s : '%s'" % (cvs_rev, svn_path)
-        closed_tags, closed_branches = \
-                     dumper.add_or_change_path(cvs_path,
-                                               svn_path,
-                                               cvs_rev,
-                                               rcs_file,
-                                               tags,
-                                               branches,
-                                               ctx.cvs_revnums)
-        sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
-        sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
+      print "    adding or changing %s : '%s'" % (cvs_rev, svn_path)
+      closed_tags, closed_branches = \
+                   dumper.add_or_change_path(cvs_path,
+                                             svn_path,
+                                             cvs_rev,
+                                             rcs_file,
+                                             tags,
+                                             branches,
+                                             ctx.cvs_revnums)
+      sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
+      sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
@@ -2081,28 +2103,31 @@ def read_resync(fname):
 
 
 def parse_revs_line(line):
-  data = line.split(' ', 6)
+  data = line.split(' ', 7)
   timestamp = int(data[0], 16)
   id = data[1]
   op = data[2]
   rev = data[3]
-  branch_name = data[4]
+  deltatext_code = data[4]
+  branch_name = data[5]
   if branch_name == "*":
     branch_name = None
-  ntags = int(data[5])
-  tags = data[6].split(' ', ntags + 1)
+  ntags = int(data[6])
+  tags = data[7].split(' ', ntags + 1)
   nbranches = int(tags[ntags])
   branches = tags[ntags + 1].split(' ', nbranches)
   fname = branches[nbranches][:-1]  # strip \n
   tags = tags[:ntags]
   branches = branches[:nbranches]
 
-  return timestamp, id, op, rev, fname, branch_name, tags, branches
+  return timestamp, id, op, rev, deltatext_code, \
+         fname, branch_name, tags, branches
 
 
-def write_revs_line(output, timestamp, digest, op, revision, fname,
-                    branch_name, tags, branches):
-  output.write('%08lx %s %s %s ' % (timestamp, digest, op, revision))
+def write_revs_line(output, timestamp, digest, op, revision,
+                    deltatext_code, fname, branch_name, tags, branches):
+  output.write('%08lx %s %s %s %s ' % \
+               (timestamp, digest, op, revision, deltatext_code))
   if not branch_name:
     branch_name = "*"
   output.write('%s ' % branch_name)
@@ -2138,8 +2163,8 @@ def pass2(ctx):
 
   # process the revisions file, looking for items to clean up
   for line in fileinput.FileInput(ctx.log_fname_base + REVS_SUFFIX):
-    timestamp, digest, op, rev, fname, branch_name, tags, branches = \
-      parse_revs_line(line)
+    timestamp, digest, op, rev, deltatext_code, fname, \
+               branch_name, tags, branches = parse_revs_line(line)
     if not resync.has_key(digest):
       output.write(line)
       continue
@@ -2149,8 +2174,8 @@ def pass2(ctx):
     for record in resync[digest]:
       if record[0] <= timestamp <= record[1]:
         # bingo! remap the time on this (record[2] is the new time).
-        write_revs_line(output, record[2], digest, op, rev, fname,
-                        branch_name, tags, branches)
+        write_revs_line(output, record[2], digest, op, rev,
+                        deltatext_code, fname, branch_name, tags, branches)
 
         print "RESYNC: '%s' (%s) : old time='%s' new time='%s'" \
               % (relative_name(ctx.cvsroot, fname),
@@ -2197,8 +2222,8 @@ def pass4(ctx):
 
   # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
-    timestamp, id, op, rev, fname, branch_name, tags, branches = \
-      parse_revs_line(line)
+    timestamp, id, op, rev, deltatext_code, fname, \
+               branch_name, tags, branches = parse_revs_line(line)
 
     if ctx.trunk_only and not trunk_rev.match(rev):
       ### note this could/should have caused a flush, but the next item
