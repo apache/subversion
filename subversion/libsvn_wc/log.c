@@ -980,8 +980,11 @@ log_do_committed (struct log_runner *loggy,
              prop_time,
              NULL,
              loggy->pool,
+             /* Remove all attributes below this comment... */
              SVN_WC_ENTRY_ATTR_REJFILE,
              SVN_WC_ENTRY_ATTR_PREJFILE,
+             SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+             SVN_WC_ENTRY_ATTR_COPYFROM_REV,
              NULL);
           if (err)
             return svn_error_createf

@@ -39,6 +39,8 @@
 
 /* Public Interface */
 
+/* The main work of this function is to figure out exactly which
+   arguments need to be passed to svn_wc_copy(). */
 svn_error_t *
 svn_client_copy (svn_stringbuf_t *src_path,
                  svn_stringbuf_t *dst_path,

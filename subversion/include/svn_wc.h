@@ -92,15 +92,7 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
    it used to be that adm_files.c:adm_subdir() was the only function
    who knew the adm subdir's name).  However, import wants to protect
    against importing administrative subdirs, so now the name is a
-   matter of public record.
-
-   ### kff:
-   Note that the import issue throws a wrench in our tentative plans
-   to give client users optional control over the adm subdir name.
-   Sure, I can tell my client to override this constant, but all the
-   other people in the world importing trees don't know about my
-   choice.  What happens when I try to check out their tree?  Perhaps
-   a centralized decision is called for after all. */
+   matter of public record. */
 
 #define SVN_WC_ADM_DIR_NAME   ".svn"
 
@@ -166,6 +158,8 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_ATTR_ANCESTOR    "ancestor"
 #define SVN_WC_ENTRY_ATTR_REJFILE     "text-reject-file"
 #define SVN_WC_ENTRY_ATTR_PREJFILE    "prop-reject-file"
+#define SVN_WC_ENTRY_ATTR_COPYFROM_URL "copyfrom-url"
+#define SVN_WC_ENTRY_ATTR_COPYFROM_REV "copyfrom-rev"
 
 /* Attribute values */
 #define SVN_WC_ENTRY_VALUE_ADD        "add"
@@ -348,6 +342,17 @@ svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
  */
 
 
+/* Copy SRC to DST_BASENAME in DST_PARENT, and schedule DST_BASENAME
+   for addition to the repository, remembering the copy history.
+
+   SRC must be a file or directory under version control; DST_PARENT
+   must be a directory under version control in the same working copy;
+   DST_BASENAME will be the name of the copied item, and it must not
+   exist already.
+
+   Important: this is a variant of svn_wc_add.  No changes will happen
+   to the repository until a commit occurs.  This scheduling can be
+   removed with svn_client_revert.  */
 svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
                           svn_stringbuf_t *dst_parent,
                           svn_stringbuf_t *dst_basename,

@@ -75,7 +75,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "ci",         TRUE, NULL, NULL },
 
   { "copy",       FALSE, svn_cl__copy,
-    "Duplicate something in your working copy.\n"
+    "Duplicate something in your working copy, remembering history.\n"
     "usage: copy SRC_PATH DST_PATH.\n" },
   { "cp",         TRUE, NULL, NULL },
 
