@@ -56,13 +56,7 @@ struct dag_node_t
   /* The filesystem this dag node came from. */
   svn_fs_t *fs;
 
-  /* The pool in which this dag_node_t was allocated.  Unlike
-     filesystem and root pools, this is not a private pool for this
-     structure!  The caller may have allocated other objects of their
-     own in it.  */
-  apr_pool_t *pool;
-
-  /* The node revision ID for this dag node, allocated in POOL.  */
+  /* The node revision ID for this dag node. */
   svn_fs_id_t *id;
 
   /* The node's type (file, dir, etc.) */
@@ -153,31 +147,12 @@ cache_node_revision (dag_node_t *node,
                      node_revision_t *noderev,
                      trail_t *trail)
 {
-  /* ### todo: For now, we will always throw away the node revision at trail
-     completion.  We used to keep it around longer because we used to
-     be reading in the full file contents here, but that's no longer
-     the case.  */
-
-#if 0
-  if (node_rev_is_mutable (noderev))
-    {
-#endif /* 0 */
-
-      /* Mutable nodes might have other processes change their
-         contents, so we must throw away this node revision once the
-         trail is complete.  */
-      svn_fs_base__record_completion (trail, uncache_node_revision, node);
-      node->node_revision = noderev;
-
-#if 0
-    }
-  else
-    {
-      /* For immutable nodes, we can cache the contents permanently,
-         but we need to copy them over into the node's own pool.  */
-      node->node_revision = copy_node_revision (noderev, node->pool);
-    }
-#endif /* 0 */
+  /* Mutable nodes might have other processes change their contents,
+     so we must throw away this node revision once the trail is
+     complete.  Immutable nodes don't have this hangup -- but we
+     choose not to care, and will throw them away too. */
+  svn_fs_base__record_completion (trail, uncache_node_revision, node);
+  node->node_revision = noderev;
 }
 
 
@@ -255,7 +230,6 @@ svn_fs_base__dag_get_node (dag_node_t **node,
   new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
   new_node->fs = fs;
   new_node->id = svn_fs_base__id_copy (id, trail->pool);
-  new_node->pool = trail->pool;
 
   /* Grab the contents so we can inspect the node's kind and created path. */
   SVN_ERR (get_node_revision (&noderev, new_node, trail));
@@ -733,7 +707,7 @@ svn_fs_base__dag_set_proplist (dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_base__dag_check_mutable (node, txn_id))
     {
-      svn_string_t *idstr = svn_fs_base__id_unparse (node->id, node->pool);
+      svn_string_t *idstr = svn_fs_base__id_unparse (node->id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          _("Can't set proplist on *immutable* node-revision %s"), idstr->data);
@@ -1393,7 +1367,6 @@ svn_fs_base__dag_dup (dag_node_t *node,
   dag_node_t *new_node = apr_pcalloc (pool, sizeof (*new_node));
 
   new_node->fs = node->fs;
-  new_node->pool = pool;
   new_node->id = svn_fs_base__id_copy (node->id, pool);
   new_node->kind = node->kind;
   new_node->created_path = apr_pstrdup (pool, node->created_path);
