@@ -58,17 +58,36 @@
    be passed to *all* server routines!  */
 
 svn_svr_policies_t *
-svn_svr_init (svn_string_t *config_file)
+svn_svr_init (svn_string_t *config_file, ap_pool_t *pool)
 {
-  svn_svr_policies_t my_policies;
+  /* First, allocate a `policies' structure, and allocate all of its
+     internal lists */
 
-  /* read config_file and... */
+  svn_svr_policies_t *my_policies = 
+    (svn_svr_policies_t *) ap_palloc (pool, sizeof(svn_svr_policies_t));
+
+  my_policies->repos_aliases = ap_make_hash (pool);
+
+  my_policies->global_restrictions = ap_make_array (pool, 0,
+                                                    sizeof(svn_string_t));
+
+  my_policies->plugins = ap_make_array (pool, 0, sizeof(svn_svr_plugin_t));
+
+  if (ap_create_pool (& (my_policies->pool)) != APR_SUCCESS)
+    {
+      /* TODO: handle this error better! */
+      printf ("svn_svr_init(): ap_create_pool() failed for new policy struct\n");
+      exit (1);
+    }
+
+
+  /* PARSE config_file and... */
 
   /* builds a list of repository aliases, */
 
   /* builds a list of general security policies, */
 
-  /* use libltdl to load all server plugins, 
+  /* use apr's DSO routines to load all server plugins, 
      and call pluginname_init (&my_policies) in each one;
      the result is a list of plugins inside my_policies
   */
@@ -86,7 +105,10 @@ void
 svn_svr_register_plugin (svn_svr_policies_t *policy,
                          svn_svr_plugin_t *new_plugin)
 {
-  policy->plugin_len +=1
+  /* just need to push the new plugin structure onto the policy's
+     array of plugins.  */
+
+  *(svn_svr_plugin_t *) ap_push_array (policy->plugins) = new_plugin;
 
 }
 

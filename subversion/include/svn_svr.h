@@ -133,14 +133,17 @@ typedef struct svn_svr_policies_t
   svn_proplist_t *repos_aliases;    /* an array of props (key/value):
                                        stores aliases for repositories */
 
-  svn_string_t *global_restrictions; /* an array of strings describes
-                                        global security restrictions
-                                        (these are parsed individually) */
-  unsigned long restrict_len;        /* number of restrictions  */
+  ap_array_header_t *global_restrictions; /* an array of strings
+                                             describes global security
+                                             restrictions (type
+                                             svn_string_t) */
+  
+  ap_array_header_t *plugins;         /* an array of loaded plugin types,
+                                         (type svn_svr_plugin_t) */
 
-  svn_svr_plugin_t *plugins;         /* an array of loaded plugin types */
-  unsigned long plugin_len;          /* number of plugins  */
-
+  ap_pool_t *pool;                   /* a memory pool, in case a
+                                        server routine ever needs one */
+  
 } svn_svr_policies_t;
 
 
@@ -152,7 +155,7 @@ typedef struct svn_svr_policies_t
    Returns a svn_svr_policies_t to be used with all server routines. 
 */
 
-svn_svr_policies_t svn_svr_init (svn_string_t *config_file);
+svn_svr_policies_t svn_svr_init (svn_string_t *config_file, ap_pool_t *pool);
 
 
 /* Routine which each plugin's init() routine uses to register itself
