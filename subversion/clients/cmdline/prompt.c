@@ -186,59 +186,67 @@ svn_error_t *
 svn_cl__auth_ssl_server_trust_prompt (
   svn_auth_cred_ssl_server_trust_t **cred_p,
   void *baton,
+  const char *realm,
   int failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
   apr_pool_t *pool)
 {
   int allow_perm_accept = ! (failures & SVN_AUTH_SSL_OTHER);
   const char *choice;
-  svn_stringbuf_t *buf = svn_stringbuf_create
-    ("Error validating server certificate:\n", pool);
+  svn_stringbuf_t *msg;
+  svn_stringbuf_t *buf = svn_stringbuf_createf
+    (pool, "Error validating server certificate for '%s':\n", realm);
 
   if (failures & SVN_AUTH_SSL_UNKNOWNCA)
     {
-      svn_stringbuf_appendcstr (buf, " - Unknown certificate issuer\n");
-      svn_stringbuf_appendcstr (buf, "   Fingerprint: ");
-      svn_stringbuf_appendcstr (buf, cert_info->fingerprint);
-      svn_stringbuf_appendcstr (buf, "\n");
-      svn_stringbuf_appendcstr (buf, "   Distinguished name: ");
-      svn_stringbuf_appendcstr (buf, cert_info->issuer_dname);
-      svn_stringbuf_appendcstr (buf, "\n");
+      svn_stringbuf_appendcstr
+        (buf,
+         " - The certificate is not issued by a trusted authority. Use the\n"
+         "   fingerprint to validate the certificate manually!\n");
     }
 
   if (failures & SVN_AUTH_SSL_CNMISMATCH)
     {
-      svn_stringbuf_appendcstr (buf, " - Hostname mismatch (");
-      svn_stringbuf_appendcstr (buf, cert_info->hostname);
-      svn_stringbuf_appendcstr (buf, ")\n");
+      svn_stringbuf_appendcstr
+        (buf, " - The certificate hostname does not match.\n");
     } 
 
   if (failures & SVN_AUTH_SSL_NOTYETVALID)
     {
-      svn_stringbuf_appendcstr (buf, " - Certificate is not yet valid\n");
-      svn_stringbuf_appendcstr (buf, "   Valid from ");
-      svn_stringbuf_appendcstr (buf, cert_info->valid_from);
-      svn_stringbuf_appendcstr (buf, "\n");
+      svn_stringbuf_appendcstr
+        (buf, " - The certificate is not yet valid.\n");
     }
 
   if (failures & SVN_AUTH_SSL_EXPIRED)
     {
-      svn_stringbuf_appendcstr (buf, " - Certificate has expired\n");
-      svn_stringbuf_appendcstr (buf, "   Valid until ");
-      svn_stringbuf_appendcstr (buf, cert_info->valid_until);
-      svn_stringbuf_appendcstr (buf, "\n");
+      svn_stringbuf_appendcstr
+        (buf, " - The certificate has expired.\n");
     }
 
   if (failures & SVN_AUTH_SSL_OTHER)
     {
-      svn_stringbuf_appendcstr (buf, " - Unknown error\n");
+      svn_stringbuf_appendcstr
+        (buf, " - The certificate has an unknown error.\n");
     }
+
+  msg = svn_stringbuf_createf
+    (pool,
+     "Certificate information:\n"
+     " - Hostname: %s\n"
+     " - Valid: from %s until %s\n"
+     " - Issuer: %s\n"
+     " - Fingerprint: %s\n",
+     cert_info->hostname,
+     cert_info->valid_from,
+     cert_info->valid_until,
+     cert_info->issuer_dname,
+     cert_info->fingerprint);
+  svn_stringbuf_appendstr (buf, msg);
 
   if (allow_perm_accept)
     {
-      svn_stringbuf_appendcstr (buf,
-                                "(R)eject, accept (t)emporarily or accept "
-                                "(p)ermanently? ");
+      svn_stringbuf_appendcstr
+        (buf, "(R)eject, accept (t)emporarily or accept (p)ermanently? ");
     }
   else
     {
