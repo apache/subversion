@@ -658,7 +658,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
     if (err && !APR_STATUS_IS_EOF(err->apr_err))
       return err;
 
-    is_final = (svn_boolean_t) err; /* EOF is only possible error */
+    is_final = (err != NULL); /* EOF is only possible error */
     svn_error_clear (err);
     
     SVN_ERR_W (svn_xml_parse (svn_parser, buf, bytes_read, is_final),
