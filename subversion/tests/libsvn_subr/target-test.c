@@ -57,6 +57,7 @@ int main(int argc, char **argv)
       else
         printf("NULL, "); 
     }
+  printf ("\n");
 
   /* Now ensure it works without the pbasename */
   err = svn_path_condense_targets(&common_path2, NULL, targets, pool);
