@@ -2,6 +2,7 @@ Version 0.28.0 (in-progress)
 
  User-visible changes:
  * fs schema change, see issue #1003 **NOTE: repos dump/load cycle required!**
+ * svnadmin 'lsdblogs' is now two commands: 'list-dblogs', 'list-unused-dblogs'
 
  Developer-visible changes:
  * none
