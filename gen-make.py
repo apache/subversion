@@ -63,8 +63,11 @@ def _usage_exit():
   sys.exit(0)
 
 if __name__ == '__main__':
-  opts, args = getopt.getopt(sys.argv[1:], 'st:')
-  if len(args) > 1:
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'st:')
+    if len(args) > 1:
+      _usage_exit()
+  except getopt.GetoptError:
     _usage_exit()
 
   conf = 'build.conf'
