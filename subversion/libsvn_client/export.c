@@ -44,6 +44,7 @@
 static svn_error_t *
 copy_versioned_files (const char *from,
                       const char *to,
+                      svn_opt_revision_t *revision,
                       svn_boolean_t force,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
@@ -121,8 +122,8 @@ copy_versioned_files (const char *from,
                   const char *new_from = svn_path_join (from, key, subpool);
                   const char *new_to = svn_path_join (to, key, subpool);
 
-                  SVN_ERR (copy_versioned_files (new_from, new_to, force,
-                                                 ctx, subpool));
+                  SVN_ERR (copy_versioned_files (new_from, new_to, revision,
+                                                 force, ctx, subpool));
                 }
             }
           else if (*type == svn_node_file)
@@ -143,8 +144,95 @@ copy_versioned_files (const char *from,
               /* don't copy it if it isn't versioned. */
               if (entry)
                 {
-                  SVN_ERR (svn_io_copy_file (copy_from, copy_to, TRUE,
-                                             subpool));
+                  svn_subst_keywords_t kw = { 0 };
+                  svn_subst_eol_style_t style;
+                  apr_hash_t *props;
+                  const char *base;
+                  svn_string_t *eol_style;
+                  svn_string_t *keywords;
+                  svn_string_t *executable;
+                  svn_string_t *date;
+                  const char *eol = NULL;
+                  svn_boolean_t local_mod = FALSE;
+                  apr_time_t time;
+    
+                  if (revision->kind != svn_opt_revision_working)
+                    {
+                      SVN_ERR (svn_wc_get_pristine_copy_path 
+                               (copy_from, &base, subpool));
+                      SVN_ERR (svn_wc_get_prop_diffs
+                               (NULL, &props, copy_from, adm_access, subpool));
+                    }
+                  else
+                    {
+                      svn_wc_status_t *status;
+
+                      base = copy_from;
+                      SVN_ERR (svn_wc_prop_list (&props, copy_from,
+                                                 adm_access, subpool));
+                      SVN_ERR (svn_wc_status (&status, copy_from, adm_access, subpool));
+                      if (status->text_status != svn_wc_status_normal)
+                        local_mod = TRUE;
+                    }
+
+                  eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE,
+                                            APR_HASH_KEY_STRING);
+
+                  keywords = apr_hash_get (props, SVN_PROP_KEYWORDS,
+                                           APR_HASH_KEY_STRING);
+
+                  executable = apr_hash_get (props, SVN_PROP_EXECUTABLE,
+                                             APR_HASH_KEY_STRING);
+
+                  if (eol_style)
+                    svn_subst_eol_style_from_value (&style, &eol,
+                                                    eol_style->data);
+
+                  if (local_mod)
+                    /* Use the modified time from the working copy if the file */
+                    SVN_ERR (svn_io_file_affected_time (&time, copy_from, subpool));
+                  else
+                    time = entry->cmt_date;
+
+                  if (keywords)
+                    {
+                      const char *fmt;
+                      const char *author;
+
+                      if (local_mod)
+                        {
+                          /* For locally modified files, we'll append an 'M'
+                             to the revision number, and set the author to
+                             "(local)" since we can't always determine the
+                             current user's username */
+                          fmt = "%" SVN_REVNUM_T_FMT "M";
+                          author = "(local)";
+                        }
+                      else
+                        {
+                          fmt = "%" SVN_REVNUM_T_FMT;
+                          author = entry->cmt_author;
+                        }
+
+                      SVN_ERR (svn_subst_build_keywords 
+                               (&kw, keywords->data,
+                                apr_psprintf (pool, 
+                                              fmt,
+                                              entry->cmt_rev),
+                                entry->url,
+                                time,
+                                author,
+                                subpool));
+                    }
+
+                  SVN_ERR (svn_subst_copy_and_translate (base, copy_to,
+                                                         eol, FALSE,
+                                                         &kw, TRUE,
+                                                         subpool));
+                  if (executable)
+                    SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, FALSE, subpool));
+                
+                  SVN_ERR (svn_io_set_file_affected_time (time, copy_to, subpool));
                 }
             }
 
@@ -523,6 +611,20 @@ svn_client_export (svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
+  svn_boolean_t use_ra = FALSE;
+
+  if (! svn_path_is_url (from) &&
+      (revision->kind != svn_opt_revision_base) &&
+      (revision->kind != svn_opt_revision_committed) &&
+      (revision->kind != svn_opt_revision_working))
+    {
+      if (revision->kind == svn_opt_revision_unspecified)
+        /* Default to WORKING in the case that we have
+           been given a working copy path */
+        revision->kind = svn_opt_revision_working;
+      else
+        use_ra = TRUE;
+    }
 
   if (svn_path_is_url (from))
     {
@@ -609,7 +711,7 @@ svn_client_export (svn_revnum_t *result_rev,
   else
     {
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, force, ctx, pool));
+      SVN_ERR (copy_versioned_files (from, to, revision, force, ctx, pool));
     }
 
   if (ctx->notify_func)
