@@ -243,10 +243,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setPrompt
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    logMessages
- * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/Revision;)[Lorg/tigris/subversion/javahl/LogMessage;
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Lorg/tigris/subversion/javahl/Revision;Z)[Lorg/tigris/subversion/javahl/LogMessage;
  */
 JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMessages
-  (JNIEnv* env, jobject jthis, jstring jpath, jobject jrevisionStart, jobject jrevisionEnd)
+  (JNIEnv* env, jobject jthis, jstring jpath, jobject jrevisionStart, 
+   jobject jrevisionEnd, jboolean jstopOnCopy)
 {
 	JNIEntry(SVNClient, logMessages);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -270,7 +271,8 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMe
 	{
 		return NULL;
 	}
-	return cl->logMessages(path, revisionStart, revisionEnd);
+    return cl->logMessages(path, revisionStart, revisionEnd,
+                           jstopOnCopy ? true: false);
 }
 
 /*

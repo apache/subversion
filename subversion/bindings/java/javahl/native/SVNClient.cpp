@@ -387,7 +387,8 @@ void SVNClient::setPrompt(Prompter *prompter)
 	m_prompter = prompter;
 }
 
-jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, Revision &revisionEnd)
+jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, 
+                                    Revision &revisionEnd, bool stopOnCopy)
 {
 	std::vector<jobject> logs;
     Pool pool;
@@ -409,7 +410,7 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart, R
                         revisionStart.revision (),
                         revisionEnd.revision (),
                         0, // not reverse by default
-                        1, // strict by default (not showing cp info)
+                        stopOnCopy,
                         messageReceiver, &logs, ctx, pool.pool());
 	if(JNIUtil::isJavaExceptionThrown())
 	{

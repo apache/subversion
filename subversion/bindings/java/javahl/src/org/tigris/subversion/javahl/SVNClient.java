@@ -40,7 +40,14 @@ public class SVNClient implements SVNClientInterface
         }
         catch(UnsatisfiedLinkError ex)
         {
-            System.loadLibrary("svnjavahl");
+            try
+            {
+                System.loadLibrary("libsvnjavahl-1");
+            }
+            catch (UnsatisfiedLinkError e)
+            {
+                System.loadLibrary("svnjavahl");
+            }
         }
     }
 
@@ -139,7 +146,23 @@ public class SVNClient implements SVNClientInterface
      * @param revisionStart
      * @param revisionEnd
      */
-    public native LogMessage[] logMessages(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
+    public LogMessage[] logMessages(String path, Revision revisionStart, Revision revisionEnd) throws ClientException
+     {
+         return logMessages(path, revisionStart, revisionEnd, true);
+     }
+    /**
+    * Loads the log messages result set, clearing old result sets.
+    * This usually requires authentication.
+    * You can use the constants Revision::START and
+    * Revision::HEAD
+    *
+    * @param path
+    * @param revisionStart
+    * @param revisionEnd
+    * @param stopOnCopy 
+    */
+   public native LogMessage[] logMessages(String path, Revision revisionStart, Revision revisionEnd,
+                                          boolean stopOnCopy) throws ClientException;
     /**
      * Executes a revision checkout.
      * @param moduleName name of the module to checkout.
