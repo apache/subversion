@@ -50,25 +50,6 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_CONFIG_FSAP_NAME                 "fsap-name"
 
 
-/** Create a new filesystem object in @a pool.
- *
- * It doesn't refer to any actual repository yet; you need to invoke
- * @c svn_fs_open_* or @c svn_fs_create_* on it for that to happen. If
- * @a fs_config is not @c NULL, the options it contains modify the
- * behaviour of the filesystem. The interpretation of @a fs_config is
- * specific to the filesystem back-end.
- *
- * @note The lifetime of @a fs_config must not be shorter than @a
- * pool's. It's a good idea to allocate @a fs_config from @a pool or
- * one of its ancestors.
- *
- * @note You probably don't want to use this directly, especially not
- * if it's followed immediately by a call to @c svn_fs_open_berkeley().
- * Take a look at @c svn_repos_open() instead.
- */
-svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
-
-
 /** The type of a warning callback function.  @a baton is the value specified
  * in the call to @c svn_fs_set_warning_func; the filesystem passes it through
  * to the callback.  @a err contains the warning message.
@@ -96,14 +77,20 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 /** Create a new, empty Subversion filesystem, stored in the directory
- * @a path.  Make @a fs refer to this new filesystem.  @a path must
- * not currently exist, but its parent must exist.  Use @a pool only
- * for temporary allocations.
+ * @a path, and return a pointer to it in @a *fs_p.  @a path must not
+ * currently exist, but its parent must exist.  If @a fs_config is not
+ * @c NULL, the options it contains modify the behavior of the
+ * filesystem.  The interpretation of @a fs_config is specific to the
+ * filesystem back-end.  The new filesystem may be closed by
+ * destroying @a pool.
  *
- * If the @a fs_config parameter passed to @c svn_fs_new contains a
- * value for @c SVN_FS_CONFIG_FSAP_NAME, that value determines the
- * filesystem abstract provider used for the new filesystem.
- * Currently defined values are:
+ * @note The lifetime of @a fs_config must not be shorter than @a
+ * pool's. It's a good idea to allocate @a fs_config from @a pool or
+ * one of its ancestors.
+ *
+ * If @a fs_config contains a value for @c SVN_FS_CONFIG_FSAP_NAME,
+ * that value determines the filesystem abstract provider used for the
+ * new filesystem.  Currently defined values are:
  *
  *   "base"  Berkeley-DB implementation (perhaps other DBs later)
  *   "fsfs"  Native-filesystem implementation
@@ -112,20 +99,29 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
  * filesystem is created, its type will be recorded so that other
  * functions will know how to operate on it.
  */
-svn_error_t *svn_fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool);
+svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
+                            apr_hash_t *fs_config, apr_pool_t *pool);
 
-/** Make @a fs refer to the filesystem at @a path.  Use @a pool only
- * for temporary allocations.
+/** Open a Subversion filesystem located in the directory @a path, and
+ * return a pointer to it in @a *fs_p.  If @a fs_config is not @c
+ * NULL, the options it contains modify the behavior of the
+ * filesystem.  The interpretation of @a fs_config is specific to the
+ * filesystem back-end.  The opened filesystem may be closed by
+ * destroying @a pool.
+ *
+ * @note The lifetime of @a fs_config must not be shorter than @a
+ * pool's. It's a good idea to allocate @a fs_config from @a pool or
+ * one of its ancestors.
  *
  * Only one thread may operate on any given filesystem object at once.
  * Two threads may access the same filesystem simultaneously only if
  * they open separate filesystem objects.
  *
- * NOTE: you probably don't want to use this directly, especially not
- * if it's immediately preceded by a call to @c svn_fs_new().  Take a
- * look at @c svn_repos_open() instead.
+ * NOTE: you probably don't want to use this directly.  Take a look at
+ * @c svn_repos_open() instead.
  */
-svn_error_t *svn_fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool);
+svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
+                          apr_hash_t *config, apr_pool_t *pool);
 
 /** Return the path to @a fs's repository, allocated in @a pool.
  * Note: this is just what was passed to @c svn_fs_create() or
@@ -215,9 +211,10 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
                                        apr_pool_t *pool);
 
 
-/** The following functions are just like their generic counterparts,
+/** The following functions are similar to their generic counterparts,
   * but only work on Berkeley DB filesystems.  They are provided for
   * compatibility with the Subversion 1.0 API. */
+svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
 svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);

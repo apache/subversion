@@ -126,10 +126,9 @@ svn_fs_t *
 svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  apr_pool_t *subpool = svn_pool_create (pool);
 
-  fs = apr_palloc (subpool, sizeof (*fs));
-  fs->pool = subpool;
+  fs = apr_palloc (pool, sizeof (*fs));
+  fs->pool = pool;
   fs->path = NULL;
   fs->warning = default_warning_func;
   fs->warning_baton = NULL;
@@ -148,13 +147,14 @@ svn_fs_set_warning_func (svn_fs_t *fs, svn_fs_warning_callback_t warning,
 }
 
 svn_error_t *
-svn_fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+svn_fs_create (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
+               apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
-  const char *fsap_name;
+  const char *fsap_name = NULL;
 
-  if (fs->config)
-    fsap_name = apr_hash_get (fs->config, SVN_FS_CONFIG_FSAP_NAME,
+  if (fs_config)
+    fsap_name = apr_hash_get (fs_config, SVN_FS_CONFIG_FSAP_NAME,
                               APR_HASH_KEY_STRING);
   if (fsap_name == NULL)
     fsap_name = DEFAULT_FSAP_NAME;
@@ -165,16 +165,19 @@ svn_fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR (write_fsap_name (path, fsap_name, pool));
 
   /* Perform the actual creation. */
-  return vtable->create (fs, path, pool);
+  *fs_p = svn_fs_new (fs_config, pool);
+  return vtable->create (*fs_p, path, pool);
 }
 
 svn_error_t *
-svn_fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
+svn_fs_open (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
+             apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
   SVN_ERR (fs_library_vtable (&vtable, path, pool));
-  return vtable->open (fs, path, pool);
+  *fs_p = svn_fs_new (fs_config, pool);
+  return vtable->open (*fs_p, path, pool);
 }
 
 const char *
