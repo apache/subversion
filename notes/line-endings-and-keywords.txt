@@ -127,3 +127,81 @@ II.  KEYWORD EXPANSION
 
      - See DESIGN section; svn_wc_text_modified_p, diff, and patch all
        need to be aware of this process.
+
+  C. KEYWORDS
+
+       - $LastChangedRevision$
+
+           expands to the revision in which this file last changed.
+           (really, this is the 'created revision' in the node-rev-id)
+
+       - $LastChangedDate$
+
+           expands to the date when LastChangedRevision was created.
+
+       - $LastChangedBy$
+
+           expands to the author of the LastChangedRevision, i.e. the
+           last person to have committed this file.
+
+       - $HeadURL$
+
+           expands to a public URL that points to the 'latest' version
+           of this file.  (This is a nice side bonus of using DAV!)
+
+
+-------------------------------
+
+How Ben Will Implement Keyword Expansion
+
+
+Phase 1:  gathering the values of the keywords.
+
+  ** UPDATES:  This is when keywords get expanded.
+
+  - Ontology:   there are THREE kinds of props that a working copy can
+                receive during an update:
+
+                  - user props.  these are visible and meant to be
+                    tweaked by users.  (dav calls these 'dead' props).
+
+                  - ra props.  this is metadata that the working copy
+                    secretly caches on behalf of particular ra layers.
+                    invisible to users.  (renamed from "wcprops")
+
+                  - entry props.  this is metadata that needs to be
+                    stored, but is too specific to the update-use-case
+                    to be included as general arguments to Editor
+                    calls.  this metadata ends up in the entries file,
+                    also invisible to users.
+
+   - the update editor parses for these different types of props, and
+     routes their storage appropriately.
+
+   - the trace editor only asks the question:  is it a *user* prop?
+     otherwise the prop is ignored.
+
+   - the RA layer now needs to send 'entry' props when driving the
+     update editor.  Specifically, each file and directory will
+     receive three new entry attributes: lastchangedrevision,
+     lastchangeddate, lastchangedauthor.  (bikeshed these names
+     later.)
+
+   - do the keyword substitution if turned 'on' for the file. (details omitted)
+
+   - the entries file now has three new pieces of nifty information;
+     'svn st -v' might want to use them someday!
+
+
+  ** COMMITS:  expanded keywords need updating here too.
+
+   - when the commit is finished, the RA layer uses a 'bump_func'
+     callback to bump the committed targets with the newly created
+     revision.  The 'bump_func' prototype is going to need to expand,
+     so that can set a date and author as well.  Pretty simple.
+
+   - if a committed target has a relevant keyword, it should be
+     re-expanded in place (during the bumping)
+
+
+
