@@ -27,6 +27,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -47,23 +48,34 @@ print_entry (const char *target,
              apr_pool_t *pool)
 {
   svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
+  const char *native;
 
-  printf ("Path: %s\n", target);
+  /* Get a non-UTF8 version of the target. */
+  SVN_ERR (svn_utf_cstring_from_utf8 (target, &native, pool));
+  printf ("Path: %s\n", native);
 
   /* Note: we have to be paranoid about checking that these are
      valid, since svn_wc_entry() doesn't fill them in if they
      aren't in the entries file. */
 
-  if ((entry->name) 
-      && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
-    printf ("Name: %s\n", entry->name);
-      
-  if (entry->url)
-    printf ("Url: %s\n", entry->url);
-          
-  if (entry->repos)
-    printf ("Repository: %s\n", entry->repos);
-
+  if (entry->name && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->name, &native, pool));
+      printf ("Name: %s\n", native);
+    }
+ 
+  if (entry->url) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->url, &native, pool));
+      printf ("Url: %s\n", native);
+    }
+           
+  if (entry->repos) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->repos, &native, pool));
+      printf ("Repository: %s\n", native);
+    }
+ 
   if (SVN_IS_VALID_REVNUM (entry->revision))
     printf ("Revision: %" SVN_REVNUM_T_FMT "\n", entry->revision);
 
@@ -119,17 +131,24 @@ print_entry (const char *target,
 
   if (entry->copied)
     {
-      if (entry->copyfrom_url)
-        printf ("Copied From Url: %s\n", entry->copyfrom_url);
-
+      if (entry->copyfrom_url) 
+        {
+          SVN_ERR (svn_utf_cstring_from_utf8 (entry->copyfrom_url, 
+                                              &native, pool));
+          printf ("Copied From Url: %s\n", native);
+        }
+ 
       if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
-        printf ("Copied From Rev: %" SVN_REVNUM_T_FMT "\n",
+        printf ("Copied From Rev: %" SVN_REVNUM_T_FMT "\n", 
                 entry->copyfrom_rev);
     }
-
-  if (entry->cmt_author)
-    printf ("Last Changed Author: %s\n", entry->cmt_author);
-
+ 
+  if (entry->cmt_author) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->cmt_author, &native, pool));
+      printf ("Last Changed Author: %s\n", native);
+    }
+ 
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
     printf ("Last Changed Rev: %" SVN_REVNUM_T_FMT "\n", entry->cmt_rev);
 
@@ -140,25 +159,38 @@ print_entry (const char *target,
     svn_cl__info_print_time (entry->text_time, "Text Last Updated", pool);
 
   if (entry->prop_time)
-    svn_cl__info_print_time (entry->prop_time, "Properties Last Updated",
-                             pool);
-
-  if (entry->checksum)
-    printf ("Checksum: %s\n", entry->checksum);
-
-  if (text_conflict && entry->conflict_old)
-    printf ("Conflict Previous Base File: %s\n", entry->conflict_old);
-
-  if (text_conflict && entry->conflict_wrk)
-    printf ("Conflict Previous Working File: %s\n",
-            entry->conflict_wrk);
-
-  if (text_conflict && entry->conflict_new)
-    printf ("Conflict Current Base File: %s\n", entry->conflict_new);
-
-  if (props_conflict && entry->prejfile)
-    printf ("Conflict Properties File: %s\n", entry->prejfile);
-
+    svn_cl__info_print_time (entry->prop_time, "Properties Last Updated", pool);
+ 
+  if (entry->checksum) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->checksum, &native, pool));
+      printf ("Checksum: %s\n", native);
+    }
+ 
+  if (text_conflict && entry->conflict_old) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->conflict_old, &native, pool));
+      printf ("Conflict Previous Base File: %s\n", native);
+    }
+ 
+  if (text_conflict && entry->conflict_wrk) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->conflict_wrk, &native, pool));
+      printf ("Conflict Previous Working File: %s\n", native);
+    }
+ 
+  if (text_conflict && entry->conflict_new) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->conflict_new, &native, pool));
+      printf ("Conflict Current Base File: %s\n", native);
+    }
+ 
+  if (props_conflict && entry->prejfile) 
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 (entry->prejfile, &native, pool));
+      printf ("Conflict Properties File: %s\n", native);
+    }
+ 
   /* Print extra newline separator. */
   printf ("\n");
 

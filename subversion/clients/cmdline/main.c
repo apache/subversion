@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -824,7 +825,9 @@ main (int argc, const char * const *argv)
      (Actually, this is a no-op; according to the C standard, "C" is
      the default locale at program startup.) */
   setlocale (LC_ALL, "C");
-
+  /* For APR_LOCALE_CHARSET to do the right thing, we need to at least
+     let LC_CTYPE be set from the environment. */
+  setlocale (LC_CTYPE, "");
 
   apr_err = apr_initialize ();
   if (apr_err)
@@ -859,6 +862,7 @@ main (int argc, const char * const *argv)
     {
       const char *opt_arg;
       svn_boolean_t ret;
+      const char *utf8_opt_arg;
 
       /* Parse the next option. */
       apr_err = apr_getopt_long (os, svn_cl__options, &opt_id, &opt_arg);
@@ -892,12 +896,16 @@ main (int argc, const char * const *argv)
         ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
         if (ret)
           {
-            svn_handle_error (svn_error_createf
-                              (SVN_ERR_CL_ARG_PARSING_ERROR,
-                               0, NULL, pool,
-                               "Syntax error in revision argument \"%s\"",
-                               opt_arg),
-                              stderr, FALSE);
+            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+            if (err)
+              svn_handle_error (err, stderr, FALSE);
+            else
+              svn_handle_error (svn_error_createf
+                                (SVN_ERR_CL_ARG_PARSING_ERROR,
+                                 0, NULL, pool,
+                                 "Syntax error in revision argument \"%s\"",
+                                 utf8_opt_arg),
+                                stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -906,11 +914,15 @@ main (int argc, const char * const *argv)
         ret = parse_date (&opt_state, opt_arg, pool);
         if (ret)
           {
-            svn_handle_error (svn_error_createf
-                              (SVN_ERR_CL_ARG_PARSING_ERROR,
-                               0, NULL, pool,
-                               "Unable to parse \"%s\"", opt_arg),
-                              stderr, FALSE);
+            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+            if (err)
+              svn_handle_error (err, stderr, FALSE);
+            else
+              svn_handle_error (svn_error_createf
+                                (SVN_ERR_CL_ARG_PARSING_ERROR,
+                                 0, NULL, pool,
+                                 "Unable to parse \"%s\"", utf8_opt_arg),
+                                stderr, FALSE);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
@@ -932,13 +944,28 @@ main (int argc, const char * const *argv)
         opt_state.quiet = TRUE;
         break;
       case svn_cl__xml_file_opt:
-        opt_state.xml_file = apr_pstrdup (pool, opt_arg);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.xml_file, pool);
+        if (err)
+          {
+            svn_handle_error (err, stdout, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case 'd':
-        opt_state.target = apr_pstrdup (pool, opt_arg);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.target, pool);
+        if (err)
+          {
+            svn_handle_error (err, stdout, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case 'F':
-        err = svn_string_from_file (&(opt_state.filedata), opt_arg, pool);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+        if (!err)
+          err = svn_string_from_file (&(opt_state.filedata),
+                                      utf8_opt_arg, pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
@@ -949,22 +976,26 @@ main (int argc, const char * const *argv)
         {
           svn_wc_entry_t *e;
 
-          err = svn_wc_entry (&e, opt_arg, FALSE, pool);
+          err = svn_wc_entry (&e, utf8_opt_arg, FALSE, pool);
           if ((err == SVN_NO_ERROR) && e)
             log_under_version_control = TRUE;
         }
         break;
       case svn_cl__targets_opt:
 	{
-	  svn_stringbuf_t *buffer;
-	  err = svn_string_from_file (&buffer, opt_arg, pool);
-	  if (err)
-	    {
-	      svn_handle_error (err, stderr, FALSE);
-	      svn_pool_destroy (pool);
-	      return EXIT_FAILURE;
-	    }
-	  opt_state.targets = svn_cstring_split (buffer->data, "\n\r",
+ 	  svn_stringbuf_t *buffer, *buffer_utf8;
+          err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+          if (! err)
+            err = svn_string_from_file (&buffer, utf8_opt_arg, pool);
+          if (! err)
+            err = svn_utf_stringbuf_to_utf8 (buffer, &buffer_utf8, pool);
+  	  if (err)
+  	    {
+  	      svn_handle_error (err, stdout, FALSE);
+  	      svn_pool_destroy (pool);
+  	      return EXIT_FAILURE;
+  	    }
+	  opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
                                                  TRUE, pool);
 	}
         break;
@@ -982,10 +1013,26 @@ main (int argc, const char * const *argv)
         opt_state.help = TRUE;
         break;
       case svn_cl__auth_username_opt:
-        opt_state.auth_username = apr_pstrdup (pool, opt_arg);
+        err = svn_utf_cstring_to_utf8 (opt_arg,
+                                       &opt_state.auth_username,
+                                       pool);
+        if (err)
+          {
+            svn_handle_error (err, stdout, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case svn_cl__auth_password_opt:
-        opt_state.auth_password = apr_pstrdup (pool, opt_arg);
+        err = svn_utf_cstring_to_utf8 (opt_arg,
+                                       &opt_state.auth_password,
+                                       pool);
+        if (err)
+          {
+            svn_handle_error (err, stdout, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case svn_cl__locale_opt:
         /* The only locale name that ISO C defines is the "C" locale;
@@ -1001,10 +1048,15 @@ main (int argc, const char * const *argv)
         */
         if (NULL == setlocale (LC_ALL, opt_arg))
           {
-            err = svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
-                                     0, NULL, pool,
-                                     "The locale `%s' can not be set",
-                                     opt_arg);
+            err = svn_utf_cstring_to_utf8 (opt_arg, &utf8_opt_arg, pool);
+
+            if (err)
+              svn_handle_error (err, stderr, FALSE);
+            else
+              err = svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
+                                       0, NULL, pool,
+                                       "The locale `%s' can not be set",
+                                       utf8_opt_arg);
             svn_handle_error (err, stderr, FALSE);
           }
         break;
@@ -1015,7 +1067,12 @@ main (int argc, const char * const *argv)
         opt_state.strict = TRUE;
         break;
       case 'x':
-        opt_state.extensions = apr_pstrdup (pool, opt_arg);
+        err = svn_utf_cstring_to_utf8 (opt_arg, &opt_state.extensions, pool);
+        if (err) {
+          svn_handle_error (err, stderr, FALSE);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

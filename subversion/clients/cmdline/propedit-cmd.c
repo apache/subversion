@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -62,6 +63,7 @@ svn_cl__propedit (apr_getopt_t *os,
       svn_string_t *propval;
       const char *new_propval;
       const char *base_dir = target;
+      const char *propname_native, *target_native;
       svn_wc_entry_t *entry;
 
       /* Fetch the current property. */
@@ -90,6 +92,9 @@ svn_cl__propedit (apr_getopt_t *os,
                                         propval->data,
                                         pool));
 
+      SVN_ERR (svn_utf_cstring_from_utf8 (propname, &propname_native, pool));
+      SVN_ERR (svn_utf_cstring_from_utf8 (target, &target_native, pool));
+
       /* ...and re-set the property's value accordingly. */
       if (new_propval)
         {
@@ -101,12 +106,12 @@ svn_cl__propedit (apr_getopt_t *os,
                                        FALSE,
                                        pool));
           printf ("Set new value for property `%s' on `%s'\n",
-                  propname, target);
+                  propname_native, target_native);
         }
       else
         {
           printf ("No changes to property `%s' on `%s'\n",
-                  propname, target);
+                  propname_native, target_native);
         }
     }
 

@@ -26,6 +26,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_version.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -36,6 +37,7 @@ print_version_info (apr_pool_t *pool)
 {
   void *ra_baton;
   svn_stringbuf_t *descriptions;
+  const char *descriptions_native;
   static const char info[] =
     "Copyright (C) 2000-2002 CollabNet.\n"
     "Subversion is open source software, see http://subversion.tigris.org/\n";
@@ -52,7 +54,10 @@ print_version_info (apr_pool_t *pool)
   /* Get a descriptive list of them. */
   SVN_ERR (svn_ra_print_ra_libraries (&descriptions, ra_baton, pool));
 
-  printf ("%s\n", descriptions->data);
+  SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (descriptions,
+                                                &descriptions_native, pool));
+
+  printf ("%s\n", descriptions_native);
 
   return SVN_NO_ERROR;
 }
@@ -82,7 +87,11 @@ svn_cl__help (apr_getopt_t *os,
     for (i = 0; i < targets->nelts; i++)
       {
         const char *this = (((const char **) (targets)->elts))[i];
-        svn_cl__subcommand_help (this, pool);
+        const char *this_native;
+        /* This is a bit silly, but svn_cl__args_to_target_array()
+           converts the args to UTF-8, so we have to convert them back. */
+        SVN_ERR (svn_utf_cstring_from_utf8 (this, &this_native, pool));
+        svn_cl__subcommand_help (this_native, pool);
       }
   else if (opt_state && opt_state->version)  /* just -v or --version */
     SVN_ERR (print_version_info (pool));        

@@ -35,6 +35,7 @@
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_utf.h"
 
 #include "db.h"
 
@@ -63,7 +64,7 @@ typedef struct shcxt_t
   svn_fs_root_t *root;
 
   /* the current working directory */
-  svn_stringbuf_t *cwd;
+  svn_stringbuf_t *cwd; /* UTF-8! */
 
   /* top-level pool, where cwd is allocated */
   apr_pool_t *pool;

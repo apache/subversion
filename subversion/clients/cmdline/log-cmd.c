@@ -35,6 +35,7 @@
 #include "svn_sorts.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -115,6 +116,7 @@ log_message_receiver (void *baton,
                       apr_pool_t *pool)
 {
   struct log_message_receiver_baton *lb = baton;
+  const char *author_native, *date_native, *msg_native;
 
   /* Number of lines in the msg. */
   int lines;
@@ -127,6 +129,10 @@ log_message_receiver (void *baton,
       printf ("No commits in repository.\n");
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (author, &author_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (date, &date_native, pool));
+  SVN_ERR (svn_utf_cstring_from_utf8 (msg, &msg_native, pool));
 
   {
     /* Convert date to a format for humans. */
@@ -145,9 +151,9 @@ log_message_receiver (void *baton,
       lb->first_call = 0;
     }
 
-  lines = num_lines (msg);
+  lines = num_lines (msg_native);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
-          rev, author, dbuf, lines, (lines > 1) ? "s" : "");
+          rev, author_native, dbuf, lines, (lines > 1) ? "s" : "");
 
   if (changed_paths)
     {
@@ -174,14 +180,15 @@ log_message_receiver (void *baton,
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
-          const char *path = item->key;
+          const char *path_native, *path = item->key;
           char action = (char) ((int) apr_hash_get (changed_paths, 
                                                     item->key, item->klen));
-          printf ("   %c %s\n", (action == 'R' ? 'U' : action), path);
+          SVN_ERR (svn_utf_cstring_from_utf8 (path, &path_native, pool));
+          printf ("   %c %s\n", (action == 'R' ? 'U' : action), path_native);
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */
-  printf ("%s\n", msg);
+  printf ("%s\n", msg_native);
   printf (SEP_STRING);
 
   return SVN_NO_ERROR;

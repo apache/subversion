@@ -25,7 +25,7 @@
 /* Helper */
 static svn_error_t *
 path_stat (svn_boolean_t *exists,
-           svn_stringbuf_t *path,
+           svn_stringbuf_t *path /* UTF-8! */,
            shcxt_t *shcxt,
            apr_pool_t *pool)
 {
@@ -67,9 +67,9 @@ path_stat (svn_boolean_t *exists,
    Do a sanity check:  if the *NEW_PATH dosen't actually exist in the
    current filesytem revision, then set it to NULL! */
 static svn_error_t *
-compute_new_path (svn_stringbuf_t **new_path,
-                  svn_stringbuf_t *current_path,
-                  char *given_path,
+compute_new_path (svn_stringbuf_t **new_path /* UTF-8! */,
+                  svn_stringbuf_t *current_path /* UTF-8! */,
+                  const char *given_path /* UTF-8! */,
                   shcxt_t *shcxt,
                   apr_pool_t *pool)
 {
@@ -142,8 +142,11 @@ cd (char *path,
   else
     {
       svn_stringbuf_t *new_path;
+      const char *path_utf8;
 
-      SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path,
+      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, pool));
+
+      SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path_utf8,
                                  shcxt, shcxt->pool));
 
       if (new_path == NULL)
@@ -215,7 +218,7 @@ cr (svn_revnum_t rev,
 
 /* Helper:  print a single dirent nicely. */
 static svn_error_t *
-print_dirent (svn_stringbuf_t *abs_path,
+print_dirent (svn_stringbuf_t *abs_path /* UTF-8! */,
               svn_fs_dirent_t *entry,
               shcxt_t *shcxt,
               apr_pool_t *pool)
@@ -226,6 +229,7 @@ print_dirent (svn_stringbuf_t *abs_path,
   svn_string_t *id_str;
   svn_boolean_t has_props;
   apr_hash_t *props;
+  const char *name_native;
 
   /* directory or file? */
   SVN_ERR (svn_fs_is_dir (&is_dir, shcxt->root, abs_path->data, pool));
@@ -252,11 +256,12 @@ print_dirent (svn_stringbuf_t *abs_path,
   else
     has_props = FALSE;
 
+  SVN_ERR (svn_utf_cstring_from_utf8 (entry->name, &name_native, pool ));
 
   /* Now PRINT all this information. */
   printf ("  <%8s>  [%6ld]  %1d  %10ld",
           id_str->data, created_rev, has_props, (long int) size);
-  printf ("    %s", entry->name);
+  printf ("    %s", name_native);
   if (is_dir)
     printf ("/");
   printf ("\n");
@@ -282,8 +287,11 @@ ls (shcxt_t *shcxt,
     {
       /* we want to list some dir -other- than CWD */
       svn_stringbuf_t *new_path;
-      
-      SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path,
+      const char *path_utf8;
+
+      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, pool));
+
+      SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path_utf8,
                                  shcxt, pool));
       
       if (new_path == NULL)
@@ -327,14 +335,22 @@ ls (shcxt_t *shcxt,
 /** Main routines **/
 
 /* Print the SHCXT info in a prompt. */
-static void
+static svn_error_t *
 display_prompt (shcxt_t *shcxt)
 {
   /* this could be more sophisticated, or configurable, I suppose. */
 
+  apr_pool_t *subpool = svn_pool_create (shcxt->pool);
+  const char *cwd_native;
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (shcxt->cwd->data, &cwd_native, subpool));
+
   printf ("<%" SVN_REVNUM_T_FMT ": %s>$ ",
-          shcxt->current_rev, shcxt->cwd->data);
+          shcxt->current_rev, cwd_native);
   fflush (stdout);
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -445,7 +461,7 @@ svnadmin_run_shell (svn_fs_t *fs, apr_pool_t *pool)
       svn_stringbuf_t *input;
 
       /* display a prompt. */
-      display_prompt (shcxt);
+      SVN_ERR (display_prompt (shcxt));
 
       /* get input from user. */
       SVN_ERR (get_input (&input, subpool));

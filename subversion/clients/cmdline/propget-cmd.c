@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -70,13 +71,25 @@ svn_cl__propget (apr_getopt_t *os,
         {
           const char * filename; 
           const svn_string_t *propval;
+          const char *filename_native, *propval_native;
+
           apr_hash_this(hi, (const void **)&filename, NULL, (void **)&propval);
 
           /* ### this won't handle binary property values */
-          if (print_filenames)
-            printf ("%s - %s\n", filename, propval->data);
-          else
-            printf ("%s\n", propval->data);
+          if (print_filenames) {
+            SVN_ERR (svn_utf_cstring_from_utf8 (filename,
+                                                &filename_native,
+                                                pool));
+            SVN_ERR (svn_utf_cstring_from_utf8_string (propval,
+                                                       &propval_native,
+                                                       pool));
+            printf ("%s - %s\n", filename_native, propval_native);
+          } else {
+            SVN_ERR (svn_utf_cstring_from_utf8_string (propval,
+                                                       &propval_native,
+                                                       pool));
+            printf ("%s\n", propval_native);
+          }
         }
     }
 

@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "apr_lib.h"
@@ -79,6 +80,7 @@ svn_cl__prompt_user (char **result,
   apr_status_t status;
   apr_file_t *fp;
   char c;
+  const char *native_prompt;
 
   /* ### baton is NULL... the commandline client app doesn't need one,
    but a GUI app probably would. */
@@ -91,11 +93,13 @@ svn_cl__prompt_user (char **result,
       svn_error_create (status, 0, NULL, pool,
                         "svn_cl__prompt_user:  couldn't open stdin.");
 
+  SVN_ERR (svn_utf_cstring_from_utf8 (prompt, &native_prompt, pool));
+
   /* ### implement the HIDE flag later using apr_getpassword or
      something. */
   if (! hide)
     {
-      printf (prompt);
+      printf (native_prompt);
       fflush (stdout);
 
       while (1)
@@ -116,7 +120,7 @@ svn_cl__prompt_user (char **result,
       svn_stringbuf_ensure (strbuf, bufsize);
 
       /* Hopefully this won't echo to the screen. */
-      status = apr_password_get (prompt, strbuf->data, &bufsize);
+      status = apr_password_get (native_prompt, strbuf->data, &bufsize);
       if (status)
         return svn_error_create (status, 0, NULL, pool,
                                  "error from apr_password_get().");      
@@ -128,7 +132,8 @@ svn_cl__prompt_user (char **result,
       printf ("\n");
     }
 
-  *result = strbuf->data;
+  SVN_ERR (svn_utf_cstring_to_utf8 (strbuf->data, (const char **)result,
+                                    pool));
 
   return SVN_NO_ERROR;
 }
