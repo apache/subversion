@@ -862,7 +862,14 @@ main (int argc, const char * const *argv)
         }
     }
 
-  if (subcommand->cmd_func == svn_cl__commit)
+  /* if we're running a command that could result in a commit, verify that 
+     any log message we were given on the command line makes sense. */
+  if (subcommand->cmd_func == svn_cl__commit
+      || subcommand->cmd_func == svn_cl__copy
+      || subcommand->cmd_func == svn_cl__delete
+      || subcommand->cmd_func == svn_cl__import
+      || subcommand->cmd_func == svn_cl__mkdir
+      || subcommand->cmd_func == svn_cl__move)
     {
       /* If the log message file is under revision control, that's
          probably not what the user intended. */
