@@ -1,5 +1,6 @@
 /*
- * commit.c :  routines for committing changes to the server
+ * mod_dav_svn.c: an Apache mod_dav sub-module to provide a Subversion
+ *                repository.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -52,3 +53,72 @@
 
 
 
+
+#include <httpd.h>
+#include <http_config.h>
+
+#include <mod_dav.h>
+
+
+/* per-server configuration */
+typedef struct {
+    int not_yet_used;
+
+} dav_svn_server_conf;
+
+/* Note: the "dav_svn" prefix is mandatory */
+extern module MODULE_VAR_EXPORT dav_svn_module;
+
+
+static void *dav_svn_create_server_config(apr_pool_t *p, server_rec *s)
+{
+    return apr_pcalloc(p, sizeof(dav_svn_server_conf));
+}
+
+static void *dav_svn_merge_server_config(apr_pool_t *p,
+                                         void *base, void *overrides)
+{
+    dav_svn_server_conf *parent = base;
+    dav_svn_server_conf *child = overrides;
+    dav_svn_server_conf *newconf;
+
+    newconf = apr_pcalloc(p, sizeof(*newconf));
+
+    return newconf;
+}
+
+static const command_rec dav_svn_cmds[] =
+{
+    { NULL }
+};
+
+static void register_hooks(void)
+{
+#if 0
+    /* ### we don't have these yet */
+
+    ap_hook_get_resource(dav_fs_hook_get_resource, NULL, NULL, AP_HOOK_MIDDLE);
+    ap_hook_get_lock_hooks(dav_fs_get_lock_hooks, NULL, NULL, AP_HOOK_MIDDLE);
+    ap_hook_get_propdb_hooks(dav_fs_get_propdb_hooks, NULL, NULL,
+                             AP_HOOK_MIDDLE);
+    ap_hook_gather_propsets(dav_fs_gather_propsets, NULL, NULL,
+                            AP_HOOK_MIDDLE);
+    ap_hook_find_liveprop(dav_fs_find_liveprop, NULL, NULL, AP_HOOK_MIDDLE);
+    ap_hook_insert_all_liveprops(dav_fs_insert_all_liveprops, NULL, NULL,
+                                 AP_HOOK_MIDDLE);
+
+    dav_fs_register_uris(NULL /* ### pconf */);
+#endif
+}
+
+module MODULE_VAR_EXPORT dav_svn_module =
+{
+    STANDARD20_MODULE_STUFF,
+    NULL,			/* dir config creater */
+    NULL,			/* dir merger --- default is to override */
+    dav_svn_create_server_config,	/* server config */
+    dav_svn_merge_server_config,	/* merge server config */
+    dav_svn_cmds,		/* command table */
+    NULL,                       /* handlers */
+    register_hooks,             /* register hooks */
+};

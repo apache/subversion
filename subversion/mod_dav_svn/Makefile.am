@@ -9,6 +9,6 @@ lib_LTLIBRARIES = libmod_dav_svn.la
 
 libmod_dav_svn_la_SOURCES = mod_dav_svn.c
 
-INCLUDES = -I../include -I../../apr/include
+INCLUDES = -I../include $(APACHE_INCLUDES)
 
 SUBDIRS = . tests
