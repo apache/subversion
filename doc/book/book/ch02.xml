@@ -321,7 +321,7 @@ Makefile  integer.c  button.c  .svn/
         extra information needed by Subversion, as mentioned
         earlier.</para>
 
-      <sidebar>
+      <sidebar id="svn-ch-02-sidebar-1">
         <title>Repository URLs</title>
 
         <para>Subversion repositories can be accessed through many
@@ -395,12 +395,18 @@ $ svn checkout file://localhost/path/to/repos
           resides:</para>
 
         <screen>
-$ svn checkout file:///X:/path/to/repos
+C:\> svn checkout file:///X:/path/to/repos
 &hellip;
-$ svn checkout file:///X|/path/to/repos
+C:\> svn checkout "file:///X|/path/to/repos"
 &hellip;
 </screen>
  
+        <para>In the second syntax, you need to quote the URL so that
+          the vertical bar character is not interpreted as a pipe.</para>
+
+        <para>Note that a URL uses ordinary slashes even though the native
+          (non-URL) form of a path on Windows uses backslashes.</para>
+
       </sidebar>
 
       <para>Suppose you make changes to <filename>button.c</filename>.
