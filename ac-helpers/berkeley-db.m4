@@ -1,6 +1,5 @@
 dnl   SVN_LIB_BERKELEY_DB(major, minor, patch)
 dnl
-
 dnl   Search for a useable version of Berkeley DB in a number of
 dnl   common places.  The installed DB must be no older than the
 dnl   version given by MAJOR, MINOR, and PATCH.
@@ -81,7 +80,14 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   else
 
     if test "$places" = "search"; then
-      places="std /usr/local /usr/local/include/db3:/usr/local/lib/db3 /usr/local/BerkeleyDB.3.1"
+
+      # This is pretty messed up.  It seems that the FreeBSD port of Berkeley
+      # DB 3.1.14 puts the header file in /usr/local/include/db3, but the
+      # database library in /usr/local/lib, as libdb.a.  There is no
+      # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
+      # get the old header file from /usr/include, and the new library from
+      # /usr/local/lib --- disaster.  Check for that bogosity first.
+      places="std /usr/local/include/db3:/usr/local/lib /usr/local /usr/local/BerkeleyDB.3.1"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
     # search, no matter what flags the user passed.
