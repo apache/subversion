@@ -58,6 +58,7 @@
 
 
 
+#define SVN_WC__DIFF_EXT      ".diff"
 #define SVN_WC__TMP_EXT       ".tmp"
 #define SVN_WC__TEXT_REJ_EXT  ".rej"
 #define SVN_WC__PROP_REJ_EXT  ".prej"
