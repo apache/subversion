@@ -99,7 +99,24 @@ const char *lines[] =
     "Line 50: a series of dollar signs $$$$$$$$$$$$$$$$$$$$$$$$$$$$.",
     "Line 51: same, but with embedded keyword $$$$$$$$Date$$$$$$$$$$.",
     "Line 52: same, with expanded, empty keyword $$$$$$Date: $$$$$$.",
-    "Line 53: end of subst test data."
+    "", /* Lines 53-69 are blank to test consecutive newlines */
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Line 70: end of subst test data."
   };
 
 
@@ -108,8 +125,17 @@ static const char *
 random_eol_marker (void)
 {
   /* Select a random eol marker from this set. */
-  const char *eol_markers[] = { "\n", "\r\n", "\r" };
   static int seeded = 0;
+
+  /* ### todo: allowing '\r' to be in this list of possible random
+     eol_markers causes problems for the current testing framework
+     which expects a 1:1 ratio of input-line-count to output-line-count.  
+     Problems occur when there are two consecutive line ending markers
+     where the first is '\r' and the second is '\n' -- our
+     translation routine reads that as a single '\r\n' which throws
+     off the linecount on the output side, and fouls up substitute_and_verify.
+  */
+  const char *eol_markers[] = { "\n", "\r\n" };
 
   if (! seeded)
     {
