@@ -66,3 +66,11 @@ class Stream:
   def write(self, buf):
     ### what to do with the amount written? (the result value)
     svn_stream_write(self._stream, buf)
+
+def secs_from_timestr(svn_datetime, pool):
+  aprtime = svn_time_from_cstring(svn_datetime, pool)
+
+  # ### convert to a time_t; this requires intimate knowledge of
+  # ### the apr_time_t type
+  # ### aprtime is microseconds; turn it into seconds
+  return aprtime / 1000000
