@@ -161,6 +161,11 @@ if test "$enable_debugging" = "yes"; then
 fi
 
 
+dnl kff todo fooo
+dnl AC_DEFINE(SVN_CLIENT_DIFF, "@SVN_CLIENT_DIFF@", [Full path to local diff program.])
+dnl AC_PATH_PROG(SVN_CLIENT_DIFF, diff, diff)
+
+
 dnl Pass some config data ----------------------------
 
 AC_DEFINE_UNQUOTED(SVN_VERSION, "$VERSION", [Version number of Subversion])
