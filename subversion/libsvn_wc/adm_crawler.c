@@ -1131,7 +1131,7 @@ svn_wc_crawl_revisions (svn_string_t *path,
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
   SVN_ERR (reporter->set_path (report_baton,
-                               NULL,
+                               svn_string_create ("", pool),
                                base_rev));
 
   if (entry->kind == svn_node_dir)

@@ -89,7 +89,11 @@ svn_repos_begin_report (void **report_baton,
 /* Given a REPORT_BATON constructed by svn_repos_begin_report(), this routine
    will build REVISION:PATH into the current transaction.  This routine is
    called multiple times to create a transaction that is a "mirror" of a
-   working copy. */
+   working copy.
+
+   The first call should pass an empty PATH, allowing the reporter to
+   do any setup that depends on just the revision number (such as
+   creating a txn).  */
 svn_error_t *
 svn_repos_set_path (void *report_baton,
                     svn_string_t *path,
