@@ -381,22 +381,15 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
 static svn_error_t *
 remove_file_if_present (svn_stringbuf_t *file, apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  enum svn_node_kind kind;
-  
-  SVN_ERR (svn_io_check_path (file, &kind, pool));
+  svn_node_kind_t kind;
 
+  /* Does this file exist?  If not, get outta here. */
+  SVN_ERR (svn_io_check_path (file, &kind, pool));
   if (kind == svn_node_none)
     return SVN_NO_ERROR;
 
-  /* Else. */
-
-  apr_err = apr_file_remove (file->data, pool);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL, pool, "Unable to remove '%s'", file->data);
-
-  return SVN_NO_ERROR;
+  /* Else, remove the file. */
+  return svn_io_remove_file (file->data, pool);
 }
 
 
@@ -815,6 +808,25 @@ svn_wc_add (svn_stringbuf_t *path,
 
 */
 
+
+/* Return a new wrapping of error ERR regarding the revert subcommand,
+   while doing VERB on PATH.  Use POOL for allocations.
+*/
+static svn_error_t *
+revert_error (svn_error_t *err,
+              svn_stringbuf_t *path,
+              const char *verb,
+              apr_pool_t *pool)
+{
+  return svn_error_quick_wrap (err, 
+                               apr_psprintf (pool, 
+                                             "revert: error %s for `%s'", 
+                                             verb, 
+                                             path->data)
+                               );
+}
+
+
 /* Revert ENTRY in directory PARENT_DIR, trusting that it is of kind
    KIND, and using POOL for any necessary allocations.  Set REVERTED
    to TRUE if anything was modified, FALSE otherwise. */
@@ -825,42 +837,39 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
                      apr_uint64_t *modify_flags,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *full_path, *thing, *pristine_thing;
+  svn_stringbuf_t *fullpath, *thing, *pthing;
   enum svn_node_kind kind;
   svn_boolean_t modified_p;
   svn_error_t *err;
-  apr_status_t apr_err;
   apr_time_t tstamp;
 
-  full_path = svn_stringbuf_dup (parent_dir, pool);
+  /* Build the full path of the thing we're reverting. */
+  fullpath = svn_stringbuf_dup (parent_dir, pool);
   if (name && (strcmp (name->data, SVN_WC_ENTRY_THIS_DIR)))
-    svn_path_add_component (full_path, name, svn_path_local_style);
+    svn_path_add_component (fullpath, name, svn_path_local_style);
 
-  SVN_ERR (svn_wc_props_modified_p (&modified_p, full_path, pool));  
+  /* Check for prop changes. */
+  SVN_ERR (svn_wc_props_modified_p (&modified_p, fullpath, pool));  
   if (modified_p)
     {
-      SVN_ERR (svn_wc__prop_path (&thing, full_path, 0, pool)); 
-      SVN_ERR (svn_wc__prop_base_path (&pristine_thing, full_path, 0, pool));
-      svn_io_check_path (pristine_thing, &kind, pool);
+      SVN_ERR (svn_wc__prop_path (&thing, fullpath, 0, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&pthing, fullpath, 0, pool));
+
+      /* If there is a pristing property file, copy it out as the
+         working property file, else just remove the working property
+         file. */
+      SVN_ERR (svn_io_check_path (pthing, &kind, pool));
       if (kind == svn_node_file)
         {
-          err = svn_io_copy_file (pristine_thing->data, thing->data, pool);
-          if (err)
-            return svn_error_createf 
-              (err->apr_err, 0, NULL, pool,
-               "revert_admin_things:  Error restoring props for `%s'", 
-               full_path->data);
+          if ((err = svn_io_copy_file (pthing->data, thing->data, pool)))
+            return revert_error (err, fullpath, "restoring props", pool);
           SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
           entry->prop_time = tstamp;
         }
       else
         {
-          apr_err = apr_file_remove (thing->data, pool);
-          if (apr_err)
-            return svn_error_createf 
-              (apr_err, 0, NULL, pool,
-               "revert_admin_things:  Error removing props for `%s'", 
-               full_path->data);
+          if ((err = svn_io_remove_file (thing->data, pool)))
+            return revert_error (err, fullpath, "removing props", pool);
         }
 
       /* Modify our entry structure. */
@@ -869,8 +878,8 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
 
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
-      SVN_ERR (svn_wc_text_modified_p (&modified_p, full_path, pool));
+      SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, pool));
       if ((modified_p) || (kind == svn_node_none))
         {
           /* If there are textual mods (or if the working file is
@@ -880,31 +889,27 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
           svn_io_keywords_t *keywords;
           enum svn_wc__eol_style eol_style;
           const char *eol;
-          pristine_thing = svn_wc__text_base_path (full_path, 0, pool);
+          pthing = svn_wc__text_base_path (fullpath, 0, pool);
 
-          SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
-                                          full_path->data, pool));
-          SVN_ERR (svn_wc__get_keywords (&keywords,
-                                         full_path->data, NULL, pool));
+          SVN_ERR (svn_wc__get_eol_style 
+                   (&eol_style, &eol, fullpath->data, pool));
+          SVN_ERR (svn_wc__get_keywords 
+                   (&keywords, fullpath->data, NULL, pool));
 
           /* When copying the text-base out to the working copy, make
              sure to do any eol translations or keyword substitutions,
              as dictated by the property values.  If these properties
              are turned off, then this is just a normal copy. */
-          err = svn_io_copy_and_translate (pristine_thing->data,
-                                           full_path->data,
-                                           eol, FALSE, /* don't repair */
-                                           keywords,
-                                           TRUE, /* expand keywords */
-                                           pool);
-          if (err)
-            return svn_error_createf 
-              (err->apr_err, 0, NULL, pool,
-               "revert_admin_things:  Error restoring text for '%s'", 
-               full_path->data);
-          SVN_ERR (svn_io_file_affected_time (&tstamp, full_path, pool));
+          if ((err = svn_io_copy_and_translate (pthing->data,
+                                                fullpath->data,
+                                                eol, FALSE, /* don't repair */
+                                                keywords,
+                                                TRUE, /* expand keywords */
+                                                pool)))
+            return revert_error (err, fullpath, "restoring text", pool);
 
           /* Modify our entry structure. */
+          SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
           entry->text_time = tstamp;
         }
@@ -912,38 +917,27 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
 
   if (entry->conflicted)
     {
-      svn_stringbuf_t *rej_file = NULL, *prej_file = NULL, *rmfile;
+      svn_stringbuf_t *rej_file, *rmfile;
 
-      /* Get the names of the reject files. */
-      rej_file = apr_hash_get (entry->attributes, 
-                               SVN_WC_ENTRY_ATTR_REJFILE,
-                               APR_HASH_KEY_STRING);
-      prej_file = apr_hash_get (entry->attributes, 
-                                SVN_WC_ENTRY_ATTR_PREJFILE,
-                                APR_HASH_KEY_STRING);
-
-      /* Now blow them away. */
-      if (rej_file)
+      /* Remove the rej-file if the entry lists one (and it exists) */
+      if ((rej_file = apr_hash_get (entry->attributes, 
+                                    SVN_WC_ENTRY_ATTR_REJFILE,
+                                    APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
           svn_path_add_component (rmfile, rej_file, svn_path_local_style);
-          
-          apr_err = apr_file_remove (rmfile->data, pool);
-          if (apr_err)
-            return svn_error_createf
-              (apr_err, 0, NULL, pool, 
-               "Unable to remove '%s'", rmfile->data);
+          SVN_ERR (remove_file_if_present (rmfile, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
         }
-      if (prej_file)
+
+      /* Remove the prej-file if the entry lists one (and it exists) */
+      if ((rej_file = apr_hash_get (entry->attributes, 
+                                    SVN_WC_ENTRY_ATTR_PREJFILE,
+                                    APR_HASH_KEY_STRING)))
         {
           rmfile = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (rmfile, prej_file, svn_path_local_style);
-          apr_err = apr_file_remove (rmfile->data, pool);
-          if (apr_err)
-            return svn_error_createf
-              (apr_err, 0, NULL, pool, 
-               "Unable to remove '%s'", rmfile->data);
+          svn_path_add_component (rmfile, rej_file, svn_path_local_style);
+          SVN_ERR (remove_file_if_present (rmfile, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_ATTRIBUTES;
         }
 
