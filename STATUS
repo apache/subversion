@@ -26,16 +26,6 @@ Candidate changes:
       +1: ghudson, jerenkrantz
       Nominated by: David James <james82@gmail.com>
 
-  * r12327
-    Fix race condition in dump loader computing the next revision.
-    Justification:
-      Loads into an active repository will be corrupted.
-    Branch:
-      rs=http://svn.collab.net/repos/svn
-      svn merge -r12381:HEAD $rs/branches/1.1.x-r12327
-    Votes:
-      +1: jerenkrantz, maxb
-
   * r12397
     Properly invoke ra_callbacks->open_tmp_file in Perl with pool.
     Justification:
@@ -61,3 +51,12 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, jerenkrantz
 
+  * r12327
+    Fix race condition in dump loader computing the next revision.
+    Justification:
+      Loads into an active repository will be corrupted.
+    Branch:
+      rs=http://svn.collab.net/repos/svn
+      svn merge -r12381:HEAD $rs/branches/1.1.x-r12327
+    Votes:
+      +1: jerenkrantz, maxb, bliss
