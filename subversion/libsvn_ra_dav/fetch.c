@@ -59,7 +59,7 @@ typedef struct {
 
 typedef struct {
   apr_pool_t *pool;
-
+  svn_error_t *err;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
 
@@ -306,7 +306,18 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
   svn_stringbuf_t data = { (char *)buf, len, len, frc->pool };
-  svn_error_t *err;
+
+  if (frc->err)
+    {
+      /* We must have gotten an error during the last read... 
+
+         ### what we'd *really* like to do here (or actually, at the
+         bottom of this function) is to somehow abort the read
+         process...no sense on banging a server for 10 megs of data
+         when we've already established that we, for some reason,
+         can't handle that data. */
+      return;
+    }
 
   if (len == 0)
     {
@@ -325,11 +336,9 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
   window.new_data = &data;
   window.pool = frc->pool;
 
-  err = (*frc->handler)(&window, frc->handler_baton);
-  if (err)
-    {
-      /* ### how to abort the read loop? */
-    }
+  /* We can't really do anything useful if we get an error here.  Pass
+     it off to someone who can. */
+  frc->err = (*frc->handler)(&window, frc->handler_baton);
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
@@ -361,6 +370,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
       return SVN_NO_ERROR;
     }
 
+  frc.err = NULL;
   frc.pool = pool;
 
   rv = ne_read_file(sess, url_str->data, fetch_file_reader, &frc);
@@ -372,6 +382,9 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
       err = svn_error_create(APR_EGENERAL, 0, NULL, pool, ne_get_error(sess));
     }
   /* else: err == NULL */
+
+  if (frc.err)
+    return frc.err;
 
   /* close the handler, now that the file reading is complete. */
   err2 = (*frc.handler)(NULL, frc.handler_baton);
