@@ -50,6 +50,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: obscure update-deletion bug (r8976)
  * fixed: utf8 conversion 'hang' (r9233)
  * fixed: 'svn blame' now defaults to  rev (r9440)
+ * fixed: 'svn blame' closing files before deleting them (issue #1969)
  * fixed: 'svn diff' shows truncated paths (r9693)
  * fixed: 'svn diff --notice-ancestry' bug (r9699)
  * fixed: 'svn subcommand -r{DATE} URL' works if URL not in HEAD (issue #1840) 
