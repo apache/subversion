@@ -493,6 +493,11 @@ II.   INSTALLATION
           $ make check
           # make install
 
+      (The second option to configure inhibits the creation of shared
+      libraries; subversion commands will be statically linked to libsvn_*.  On
+      some systems the commands will still be dynamically linked to already
+      installed shared libraries.  For a completely static build see the
+      '--enable-all-static' option.)
 
   C.  Building under Unix in Different Directories
       --------------------------------------------
