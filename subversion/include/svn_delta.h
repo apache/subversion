@@ -216,7 +216,7 @@ extern void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 
 
-/* Producing and consuming VCDIFF-format text deltas.  */
+/*** Producing and consuming VCDIFF-format text deltas.  ***/
 
 /* Given a delta stream STREAM, set *READ_FN and *READ_BATON to a
    `read'-like function that will return a VCDIFF-format byte stream.
