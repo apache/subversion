@@ -1,6 +1,0 @@
-if [ $1 -eq 0 ] && [ $2 -ge 30 ] ;  then
-  echo 1
-fi
-if [ $1 -gt 0 ] ; then
-  echo 1
-fi
