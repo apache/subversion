@@ -122,19 +122,19 @@ typedef struct svn_parsed {
 
 /* Parse one object from STREAM, and set *OBJECT_P to an svn_parsed_t
    object, allocated from POOL.  If we reach EOF, set OBJECT to 0.  */
-extern svn_error_t *svn_parse (svn_parsed_t **object_p,
-                               FILE *stream,
-                               apr_pool_t *pool);
+svn_error_t *svn_parse (svn_parsed_t **object_p,
+                        FILE *stream,
+                        apr_pool_t *pool);
    
 /* Print the external representation of OBJECT on STREAM.  The resulting
    output could be parsed by `svn_parse'.  */
-extern svn_error_t *svn_parse_print (FILE *stream, svn_parsed_t *object);
+svn_error_t *svn_parse_print (FILE *stream, svn_parsed_t *object);
 
 /* Given OBJECT, which must be a list of lists, set *ELT_P the element
    of OBJECT whose first element is a symbol whose name is NAME.  */
-extern svn_error_t *svn_parse_ref (svn_parsed_t *elt_p,
-                                   svn_parsed_t *object,
-                                   char *name);
+svn_error_t *svn_parse_ref (svn_parsed_t *elt_p,
+                            svn_parsed_t *object,
+                            char *name);
 
 #endif /* SVN_PARSE_H */
 

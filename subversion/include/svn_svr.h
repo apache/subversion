@@ -223,9 +223,9 @@ svn_error_t * svn_svr_register_plugin (svn_svr_policies_t *policy,
 
 /* Set the warning callback function for use with policy.  */
 
-extern void svn_svr_warning_callback (svn_server_policies_t *policy,
-			              void (*warning) (void *, char *, ...),
-				      void *data);
+void svn_svr_warning_callback (svn_server_policies_t *policy,
+                               void (*warning) (void *, char *, ...),
+                               void *data);
 
 
 /* Loop through each plugin, calling each "authorization hook", if any
