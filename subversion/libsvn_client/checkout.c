@@ -79,8 +79,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
 
       /* Get the RA connection. */
       SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
-                                             &URL, url, peg_revision,
-                                             revision, ctx, pool));
+                                                 &URL, url, peg_revision,
+                                                 revision, ctx, pool));
       
       SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
       if (kind == svn_node_none)

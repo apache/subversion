@@ -86,8 +86,8 @@ svn_client_ls2 (apr_hash_t **dirents,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
-                                         &url, path_or_url, peg_revision,
-                                         revision, ctx, pool));
+                                             &url, path_or_url, peg_revision,
+                                             revision, ctx, pool));
 
   /* Decide if the URL is a file or directory. */
   SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));

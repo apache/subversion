@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,18 +20,19 @@
  * RA implementation libraries.
  */
 
-/* This file is a template for compatibility wrapper for an RA library.
- * It contains an svn_ra_plugin_t and wrappers for all of its functions
+/* This file is a template for a compatibility wrapper for an RA library.
+ * It contains an svn_ra_plugin_t and wrappers for all of its functions,
  * implemented in terms of svn_ra__vtable_t functions.  It also contains
- * the omplementations of an svn_ra_FOO_init for the FOO RA library.
+ * the implementations of an svn_ra_FOO_init for the FOO RA library.
  *
- * A file in the RA library includes this files providing the following macros
- * before inclusion:
- * NAME             The library name, i.e. "ra_local".
+ * A file in the RA library includes this file, providing the
+ * following macros before inclusion:
+ *
+ * NAME             The library name, e.g. "ra_local".
  * DESCRIPTION      The short library description as a string constant.
  * VTBL             The name of an svn_ra_vtable_t object for the library.
- * INITFUNC         The init function for the library, i.e. svn_ra_local__init.
- * COMPAT_INITFUNC  The compatibility init function, i.e. svn_ra_local_init.
+ * INITFUNC         The init function for the library, e.g. svn_ra_local__init.
+ * COMPAT_INITFUNC  The compatibility init function, e.g. svn_ra_local_init.
  */
 
 /* Check that all our "arguments" are defined. */
@@ -51,7 +52,7 @@ static svn_error_t *compat_open (void **session_baton,
   sess->vtable = &VTBL;
   sess->pool = pool;
   SVN_ERR (VTBL.open (sess, repos_URL, callbacks, callback_baton,
-                         config, pool));
+                      config, pool));
   *session_baton = sess;
   return SVN_NO_ERROR;
 }
@@ -175,9 +176,8 @@ static svn_error_t *compat_do_status (void *session_baton,
                                       void *status_baton,
                                       apr_pool_t *pool)
 {
-  return VTBL.do_status (session_baton, reporter, report_baton,
-                         status_target,
-                       revision, recurse, editor, status_baton, pool);
+  return VTBL.do_status (session_baton, reporter, report_baton, status_target,
+                         revision, recurse, editor, status_baton, pool);
 }
 
 static svn_error_t *compat_do_diff (void *session_baton,
@@ -285,7 +285,7 @@ static const svn_ra_plugin_t compat_plugin = {
   compat_get_repos_root,
   compat_get_locations,
   compat_get_file_revs,
-  compat_get_version,
+  compat_get_version
 };
 
 svn_error_t *
@@ -306,9 +306,6 @@ COMPAT_INITFUNC (int abi_version,
      do other initialization things.  We fake the loader version, since we
      rely on the ABI version check instead. */
   SVN_ERR (INITFUNC (VTBL.get_version(), &vtable));
-
-  /* Sanity check. */
-  assert (&VTBL == vtable);
 
   schemes = VTBL.get_schemes (pool);
 
