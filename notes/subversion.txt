@@ -2,7 +2,7 @@
 
      Subversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.48 $ of this document.)
+              ($Revision: 1.49 $ of this document.)
 
 * Introduction
 
@@ -853,30 +853,41 @@ unnecessarily, so our commit does not try to reserve any particular
 version number -- it just grabs the next available number at the time
 it finishes.
 
-Below, a "lock" is a cookie consisting of user:num, where num is the
-same for all locks in this commit, and different from any other
-current locks (even ones with the same user).  Locks persist through
-server crashes (todo: probably using lockfiles and syncfd?).
+Below, a lock is a single object, and a node gets locked by making
+reference to that object.  A lock's fields are `User:Num:Pending',
+where Num serves both as an identifier and a priority number, and
+Pending is a boolean that starts out true, and turns false once all
+the nodes involved in this commit have gotten locked.  Note that Num
+is different from any other lock's Num, even a lock for a different
+commit by the same user.  Locks persist through server crashes.
+
+todo: I think this could all be said better:
 
   1. Lock the nodes you're committing new versions for (though if
      you're adding a new file, there's no node to lock).  These
-     primary locks will last throughout the commit.  If you try to
-     lock a node that's already locked [todo: finish priority number
-     specification here, for avoiding the obvious race condition.]
+     primary locks will last throughout the commit.  
+
+     If you try to lock a node that's already locked, compare your Num
+     with the other lock's -- if that lock is still Pending and your
+     Num is lower, you get the lock (and the other commit immediately
+     fails and exits).  If the other lock is no longer Pending (i.e.,
+     it's managed to set all its locks), or its Num is lower, then you
+     immediately fail and exit, cleaning up after yourself of course.
 
   2. Create the new, unattached nodes that will hold the new versions.
      Fill them up with the new contents.  Create the back-links.
 
   3. Lock the parents of the nodes you're committing (call these
-     "secondary locks").  Again, block on all while block on any.
+     "secondary locks").  Use the same blocking scheme as in step 1.
 
   4. Set dir_entries in the locked parents to point at the newly
      created child nodes.  Although this cannot be atomic if there are
      multiple parents, it is safe because the server knows that a node
-     doesn't really exist if its parent is locked and the node doesn't
-     share the lock.  (Amend the node-finding algorithm given earlier
-     to always follow back-links from a node whose parent is locked,
-     until you find a node with the same lock as that parent).
+     might not really exist yet if its parent is locked and the child
+     doesn't share the lock.  (Amend the node-finding algorithm given
+     earlier to always first follow back-links from a node whose
+     parent is locked, trying to find a node with the same lock Num as
+     that parent).
 
   5. Now create the new version number; just take the next available
      number and hook it up to the root node, but put a special
@@ -884,12 +895,14 @@ server crashes (todo: probably using lockfiles and syncfd?).
 
      This "negative lock" has the same id number as all the other
      locks in this commit, but it is interpreted differently.  Its
-     point is to invalidate the other locks while they're being
-     removed -- the idea is that if you would block on a lock, first
-     check if there's a corresponding negative lock on a version
-     number somewhere.  If there is, then you don't have to block on
-     the original lock, because all the important parts of its commit
-     are complete, except for lock removal. 
+     point is to both reserve the version number and invalidate the
+     other locks while they're being removed -- the idea is that if
+     you would block on a lock, first check if there's a corresponding
+     negative lock on a version number somewhere.  If there is, then
+     you don't have to block on the original lock, because all the
+     important parts of its commit are complete, except for lock
+     removal.  (todo: this specification is not complete, though it
+     should be obvious what to do).
 
 Now, we could actually stop right there.  The commit is done; all the
 information is in the right place in the repository.  Removing the
@@ -1194,32 +1207,34 @@ never touch anything in svn_props, only Subversion does that.
 
 *** A closer look at the `node' data structure (and friends)
 
+These are for explanatory purposes only -- our header files might not
+end up looking like this at all:
+
    typedef struct version
    {
       unsigned int number;           /* Or maybe expressed by position? */
-      change_table *changes;         /* Cache. Table maps past version
-                                        numbers to lists of files
-                                        changed since that version, so
-                                        updates are efficient.  Also
-                                        may want to arrange
-                                        hierarchically so finding
-                                        changes for a particular
-                                        subdirectory is easy.  */
-                                        
-   } dir_entry;
+      change_list *changes;          /* Change cache.  Tells us what
+                                        files changed in this commit.
+                                        Should probably be arranged
+                                        hierarchically or as a hash of
+                                        parent->changed_children, so
+                                        it's easy to get the changes
+                                        for just a particular
+                                        directory. */ 
+   } version;
 
 
    typedef struct lock
    {
-      bool completed;                /* Set when this lock has
+      bool pending;                  /* Tweak after this lock has
                                         everyone it wants.  Once a
-                                        lock is completed it can't be
-                                        usurped, even by a lock with
-                                        otherwise dominant priority. */
+                                        lock is no longer pending, it
+                                        can't be usurped, even by a
+                                        lock with otherwise dominant
+                                        priority num. */ 
       int num;                       /* Identification and priority
                                         number. */
-   } dir_entry;
-
+   } lock;
 
 
    typedef struct dir_entry
@@ -1244,6 +1259,8 @@ never touch anything in svn_props, only Subversion does that.
 
       /* I think we might need parent pointers to do multiple hard
          links correctly; but there might be another way... */
+      /* todo: jimb was worried about some problem involving multiple
+         parents, remember to ask him about this. */
       struct node **parents;
 
       /* See notes about locking above.  This may be stored as
