@@ -103,6 +103,7 @@ section for approved changes.)
         turned on.  Which includes the command line client when
         --non-interactive is used.
       Votes:
+       +1: ghudson
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
