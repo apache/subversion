@@ -1610,6 +1610,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
                      const svn_revnum_t new_rev,
+                     svn_boolean_t *write_required,
                      apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
@@ -1619,13 +1620,21 @@ svn_wc__tweak_entry (apr_hash_t *entries,
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "No such entry: '%s'", name);
 
-  if (new_url != NULL)
-    entry->url = apr_pstrdup (pool, new_url);
+  if (new_url != NULL
+      && (! entry->url || strcmp (new_url, entry->url)))
+    {
+      *write_required = TRUE;
+      entry->url = apr_pstrdup (pool, new_url);
+    }
 
   if ((SVN_IS_VALID_REVNUM (new_rev))
       && (entry->schedule != svn_wc_schedule_add)
-      && (entry->schedule != svn_wc_schedule_replace))
-    entry->revision = new_rev;
+      && (entry->schedule != svn_wc_schedule_replace)
+      && (entry->revision != new_rev))
+    {
+      *write_required = TRUE;
+      entry->revision = new_rev;
+    }
 
   /* As long as this function is only called as a helper to
      svn_wc__do_update_cleanup, then it's okay to totally remove any
@@ -1634,7 +1643,10 @@ svn_wc__tweak_entry (apr_hash_t *entries,
      update, then it *must* have meant for the entry to be permanently
      gone in the parent dir's revision. */
   if (entry->deleted)
-    apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
+    {
+      *write_required = TRUE;
+      apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
+    }
 
   return SVN_NO_ERROR;
 }

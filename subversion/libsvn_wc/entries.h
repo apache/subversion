@@ -174,6 +174,10 @@ void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
  * make this the entry's new url.  If NEW_REV is valid, make this the
  * entry's working revision.  (This is purely an in-memory operation.)
  *
+ * *WRITE_REQUIRED will be set to TRUE if the tweaks make changes that
+ * require the entries to be written to disk, otherwise *WRITE_REQUIRED
+ * will not be altered.
+ *
  * (Intended as a helper to svn_wc__do_update_cleanup, which see.) 
  */
 svn_error_t *
@@ -181,6 +185,7 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
                      const svn_revnum_t new_rev,
+                     svn_boolean_t *write_required,
                      apr_pool_t *pool);
 
 
