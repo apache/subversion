@@ -134,6 +134,21 @@
     </p>
 
     <hr width="80&#37;">
+    <h2>Initial Checkout</h2>
+    <p>
+      When the user performs the initial checkout of a Subversion
+      project, the client will issue a series of <code>PROPFIND</code> 
+      and <code>GET</code> requests. These requests will traverse the
+      repository, pick up some necessary metadata, and then fetch the
+      latest revision.
+    </p>
+    <p class="comment">
+      Should probably describe the metadata we fetch, and how a
+      checkout of "not the latest" (e.g. by date or revision) will
+      work.
+    </p>
+
+    <hr width="80&#37;">
     <h2>Committing a Change Set</h2>
     <p>
       Change sets are modeled using the "activity" concept from
@@ -177,7 +192,7 @@
       </dd>
     </dl>
     <p>
-      The (advanced) <code>CHECKOUT</code> method has a way to specify 
+      The (optional) <code>CHECKOUT</code> method has a way to specify 
       an activity upon checkout. This feature will be used to
       associate all items with the newly-created activity.
     </p>
@@ -210,7 +225,7 @@
 	file is created within the resulting working collection with a
 	<code>PUT</code>, or a directory can be created there using a
 	<code>MKCOL</code> request. Properties will be applied using
-	<code>PROPFIND</code>
+	<code>PROPPATCH</code>.
 
 	<p></p>
       </dd>
@@ -231,28 +246,29 @@
 	  property referring to the ancestor's version resource.
 	</p>
 	<blockquote>
-	  <strong>Note:</strong> this might not be possible because it 
-	  would appear that VCRs are not allowed to be children of
-	  working collections.
-	  <br>
-	  <em>Investigating...</em>
+	  <strong>Note:</strong> it appears that we will use
+	  <code>COPY</code> to copy the appropriate resource into the
+	  working collection. This will create a new version history
+	  which is then placed into the working collection. The
+	  version history will use the <code>DAV:precursor-set</code>
+	  property to specify the version resource of the ancestor.
+
 	  <p>
-	    Hmm. We might actually need to use sub-baselines for each
-	    collection version. In DeltaV, collection versions refer
-	    to version histories. In SVN, our collections refer to
-	    specific version resources (and we bubble up). A set of
-	    references to version resources is a baseline. That might
-	    be our answer to the "collection versions refer to version
-	    resources" and the "VCR within a working collection"
-	    issues.
+	    Because a version resource does not specify the revision,
+	    it will not be possible to <code>COPY</code> a version
+	    resource into the working collection -- it will not tell
+	    us what revision was copied. Instead, we will most likely
+	    copy a version resource out of the appropriate
+	    baseline. This implies the client must be able to map from 
+	    a URL/revision pair to a baselined version resource URL.
 	  </p>
-	</blockquote>
-	<blockquote>
-	  <em>(obsolete text)</em>
-	  <br>
-	  The resource created by the <code>COPY</code> will
-	  become a new working resource, thus becoming a target for
-	  additional changes.
+	  <p>
+	    The second issue is whether/how we set the
+	    <code>DAV:precursor-set</code> property of the version
+	    history. Or, more precisely, how we synthesize the value
+	    from information stored in the repository. This is still
+	    under investigation.
+	  </p>
 	</blockquote>
       </dd>
 
@@ -313,6 +329,12 @@
       that the activity (created earlier) be checked in and the
       corresponding version-controlled resources be updated to refer
       to the new version resources.
+    </p>
+    <p>
+      The version-controlled resources are also baseline-controlled,
+      which means that updates to them will automatically create a new 
+      baseline. In essence, the commit will create a new baseline
+      corresponding to the new Subversion revision.
     </p>
 
     <h3>Example</h3>
@@ -375,7 +397,7 @@
 	</p>
 	<p>
 	  <code>COPY&nbsp;/dir1/dir3/</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../</code><br>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../</code><br>
 	  <code>Overwrite:&nbsp;T</code>
 	</p>
       </li>
@@ -387,14 +409,14 @@
 	resource:
 	<p>
 	  <code>COPY&nbsp;/dir1/dir2/file3</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../file3</code>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../file3</code>
 	</p>
       </li>
       <li>
 	<code>CHECKOUT&nbsp;/dir1/dir3/</code><br>
 	<i>(returns a working resource URL for the directory)</i>
 	<p>
-	  <code>DELETE&nbsp;/$svn/wr/.../</code>
+	  <code>DELETE&nbsp;/$svn/wrk/.../</code>
 	</p>
       </li>
       <li>
@@ -411,7 +433,7 @@
 	</p>
 	<p>
 	  <code>COPY&nbsp;/dir1/dir2/</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../dir4/</code>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../dir4/</code>
 	</p>
       </li>
       <li>
@@ -419,7 +441,7 @@
 	resources on the server, so we simply delete the part that we
 	don't want:
 	<p>
-	  <code>DELETE:&nbsp;/$svn/wr/.../dir4/file3</code>
+	  <code>DELETE:&nbsp;/$svn/wrk/.../dir4/file3</code>
 	</p>
       </li>
     </ol>
@@ -457,7 +479,8 @@
 	<code>MKACTIVITY</code> for that URL. The client will then use 
 	the activity in further interactions.
 	<p>
-	  No methods are allowed on the <code>$svn/act/</code> URL.
+	  No methods are allowed on the <code>$svn/act/</code>
+	  resource.
 	</p>
 	<blockquote>
 	  Note: actually, we may want to allow a <code>PROPFIND</code> 
@@ -467,7 +490,8 @@
 	<p>
 	  Only a subset of methods are allowed on the activities
 	  within the collection. They are: <code>PROPFIND</code>,
-	  <code>MERGE</code>, and <code>DELETE</code>.
+	  <code>MERGE</code> (commit the activity), and
+	  <code>DELETE</code> (abort the activity).
 	</p>
 	<p>
 	  Per the Delta-V specification, all activity resources will
@@ -483,7 +507,8 @@
 	completely server-defined. Clients will receive URLs into this 
 	collection (or a subcollection) from various responses.
 	<p>
-	  No methods are allowed on the <code>$svn/his/</code> URL.
+	  No methods are allowed on the <code>$svn/his/</code>
+	  resource.
 	</p>
 	<p>
 	  Internally, the URL namespace is laid out with URLs of the
@@ -504,56 +529,47 @@
 	  The <code>DAV:resourcetype</code> of the <var>node-id</var>
 	  collection is <code>DAV:version-history</code>.
 	</p>
+	<blockquote class="comment">
+	  <strong>Note:</strong> the above information is probably not 
+	  quite correct. The issue of linking one version history to
+	  another is still open. Further, I think that node 73 and
+	  node 73.4.1 are each version histories (where the latter is
+	  linked to the former). 73.x and 73.4.1.x are the versions
+	  within the version history.
+	</blockquote>
       </dd>
 
       <dt><code>$svn/ver/</code></dt>
       <dd>
-	<span class="comment">
-	  <strong>Warning:</strong> this section flat out wrong and is
-	  in flux. We will probably be using baselines to represent
-	  the project revisions. The individual version resources will
-	  appear under this namespace, but will most likely have a
-	  different construction than what is presented here.
-	</span>
+	This collection contains the version resources for the
+	project.
 
 	<p>
-	  This collection contains resources for each revision of a
-	  repository. This resource can then be used for storing and
-	  fetching information about a revision as a whole (rather than
-	  from a particular file or directory).
+	  No methods are allowed on the <code>/$svn/ver/</code>
+	  resource.
 	</p>
 	<p>
-	  No methods are allowed on the <code>/$svn/ver/</code> URL.
-	</p>
-	<p>
-	  The layout of this collection is internal to the server. For 
+	  The layout of this collection is internal to the server. For
 	  reference purposes here (and to describe the
 	  implementation), it is laid out as:
 	</p>
 	<blockquote>
-	  <code>$svn/ver/<var>project-id</var>/<var>revision</var></code>
+	  <code>$svn/ver/<var>node-id</var>/<var>path</var></code>
 	</blockquote>
 	<p>
-	  <code>PROPFIND</code> and <code>PROPPATCH</code> are allowed 
-	  against these URLs, but all other methods are illegal.
+	  Only read-only methods are allowed against these resources
+	  (e.g. <code>GET</code>, <code>PROPFIND</code>,
+	  <code>REPORT</code>); all other methods are illegal.
 	</p>
 	<p>
-	  All version resources (for the files and directories in a
-	  project) have a live property with a URL referring to the
-	  whole-project revision resource. This property is named
-	  <code>SVN:project-revision</code> (???, TBD) and is
-	  constructed according to:
-	</p>
-	<blockquote>
-	  <code>&lt;!ELEMENT project-revision (href)&gt;</code>
-	</blockquote>
-	<p>
-	  The <code>DAV:resourcetype</code> of the project revision
-	  resources is <code>SVN:project-revision</code> (???, TBD).
+	  The <code>DAV:resourcetype</code> of a version resource is
+	  simply the value of the resource at checkin time
+	  (e.g. &lt;D:resourcetype/&gt; or
+	  &lt;D:resourcetype&gt;&lt;D:collection/&gt;&lt;/D:resourcetype&gt;).
 	</p>
       </dd>
 
-      <dt><code>$svn/wr/</code></dt>
+      <dt><code>$svn/wrk/</code></dt>
       <dd>
 	This collection contains working resources for the resources
 	that have been checked out with the <code>CHECKOUT</code>
@@ -562,19 +578,20 @@
 	interact properly with collection versions that have been
 	checked out.
 	<p>
-	  No methods are allowed on the <code>$svn/wr/</code> URL.
+	  No methods are allowed on the <code>$svn/wrk/</code>
+	  resource.
 	</p>
 	<p>
 	  For reference purposes, the working resource URLs are
 	  constructed as:
 	</p>
 	<blockquote>
-	  <code>$svn/wr/<var>activity</var>/<var>revision</var>/<var>path</var></code>
+	  <code>$svn/wrk/<var>activity</var>/<var>path</var></code>
 	</blockquote>
-	<p>or possibly (<em>TBD</em>):</p>
-	<blockquote>
-	  <code>$svn/wr/<var>activity</var>/<var>node-revision-id</var>/<var>path</var></code>
-	</blockquote>
+	<p>
+	  Any method is allowed on the working resources, but no
+	  methods are allowed on any of its parents.
+	</p>
 	<p>
 	  The <code>DAV:resourcetype</code> of the working resources
 	  follows normal resource typing:
@@ -584,37 +601,82 @@
 	  for working collections.
 	</p>
       </dd>
+
+      <dt><code>$svn/bsel/</code></dt>
+      <dd>
+	<span class="comment">This section is not yet complete.</span>
+
+	<p>
+	  baseline selector...
+	</p>
+
+	<p>
+	  <code>$svn/bsel/root</code> as a singleton. will we need
+	  more for label operations?
+	</p>
+      </dd>
+
+      <dt><code>$svn/blin/</code></dt>
+      <dd>
+	<span class="comment">This section is not yet complete.</span>
+
+	<p>
+	  baselines...
+	</p>
+
+	<p>
+	  <code>$svn/blin/<var>rev</var>/</code>
+	</p>
+      </dd>
+
+      <dt><code>$svn/bhis/</code></dt>
+      <dd>
+	<span class="comment">This section is not yet complete.</span>
+
+	<p>
+	  baseline history...
+	</p>
+
+	<p>
+	  <code>$svn/bhis/root</code> as a singleton. will we need
+	  more for label operations?
+	</p>
+      </dd>
     </dl>
 
     <hr width="80&#37;">
     <h2>Property Management (and History/Log Reporting)</h2>
+    <p class="comment">
+      I'm not entirely sure how these values will be stored on the
+      server (per node or per revision), and how the FS API will let
+      us query the history of a resource. Based on the storage
+      mechanism, the exposure of these values might vary.
+    </p>
     <p>
       As mentioned before, Subversion properties map onto WebDAV
-      properties. There are particular properties that the WebDAV code 
-      wants to take particular care of:
+      properties. For history/log reporting, the following WebDAV
+      properties will be applied to each baseline (a Subversion
+      revision) and to each version resource created by the
+      revision. Since these resources are all version resources, the
+      properties below are read-only.
     </p>
     <dl>
       <dt><code>DAV:comment</code></dt>
       <dd>
 	This is the standard (dead) property for specifying a checkin
-	comment. This properties will be attached to the project
-	revision resources in <i class="comment">where??</i>
+	comment.
 	<p></p>
       </dd>
       <dt><code>DAV:creator-displayname</code></dt>
       <dd>
 	This is a (dead) property that is generated from Subversion's
-	concept of the "user" who made a particular change. It is a
-	read-only property since it is stored on (immutable) version
-	resources and version-controlled resources.
+	concept of the "user" who made a particular change.
 	<p></p>
       </dd>
       <dt><code>DAV:checkin-date</code></dt>
       <dd>
-	This is a read-only live property maintained by the server on
-	version resources. Strictly speaking, it is only maintained on 
-	the project-revision resources, but the Delta-V specification
-	states that it is exposed on every version resource.
+	This is a read-only live property created by the server at
+	commit time.
       </dd>
     </dl>
     <p>
@@ -641,32 +703,59 @@
 
     <hr width="80&#37;">
     <h2>Fetching Status and Updates</h2>
-    <p class="comment">
-      <strong>Warning:</strong> this section is out of date. The
-      mechanisms for status and update are quite a bit different now,
-      with the introduction of the <cite>editor</cite> concept.
+    <p>
+      After the initial checkout, the client can request a status
+      report (what has been changed on the client, pending a commit;
+      what has been changed on the server, pending an update). The
+      update process is similar, except that we also fetch the changes 
+      from the server.
     </p>
     <p>
-      The Subversion design discusses the use of skeleton deltas and
-      deltas to return status and update information (see
-      <code>ra_get_status()</code> and
-      <code>ra_get_update()</code>). However, the appropriate
-      mechanism to use in WebDAV is a <code>PROPFIND</code> on a file,
-      directory, or tree to fetch the <code>DAV:target</code>
-      property. The <code>DAV:target</code> property will specify the
-      URL of the version the version-selector is referring to. If the
-      URL matches the value stored in the working copy, then no
-      changes were made in the repository.
+      The local changes can be handled entirely on the client
+      side. The Working Copy library can easily handle the detection
+      and reporting of these changes. We're concerned with efficiently 
+      detecting what has changed on the server.
     </p>
     <p>
-      It is presumed that the working copy library can detect local
-      modifications to a file, and local tree structure changes. The
-      important part is when the local library needs to consult the
-      server to look for server-side changes.
+      While it would be possible to traverse the repository, fetching
+      the current state, and comparing that to the client state, it
+      would not be efficient. The Subversion design enables the server
+      to easily compute what has changed (relative to the client), if
+      it is given a description of the client state.
     </p>
     <p>
-      Updates are handled similarly, then followed by a sequence of
-      <code>GET</code> operations to fetch the new files.
+      The core of the <em>status</em> and <em>update</em> commands is
+      based on a custom Subversion-specific WebDAV report. This custom
+      report will transmit the state of the working copy to the
+      server, and the server response will specify which resources
+      will need to be updated (fetched).
+    </p>
+    <p>
+      The request is a standard <code>REPORT</code> request, with a
+      custom XML body. The body will use the standard Subversion
+      technique of reporting a top-level revision number, and then
+      only reporting children that have different revisions. The
+      result of the report will use the same technique of reporting
+      only the resources where a change is found. If a change is
+      found, the server will provide a URL to the version resource to
+      fetch for the changed resource. The server will also report the
+      current revision number.
+    </p>
+    <blockquote class="comment">
+      The XML DTDs for the request and response are TBD.
+    </blockquote>
+    <blockquote>
+      <small>
+	The custom report will tie the client to only those servers
+	which support the report, but a future version of the software
+	will contain a fallback codepath, a graceful degradation, to
+	support other DeltaV servers.
+      </small>
+    </blockquote>
+    <p>
+      When an updated is performed, the client will fetch each of the
+      URLs (using <code>GET</code> requests) provided in the server
+      response.
     </p>
     <p>
       <code>GET</code> (and <code>PUT</code>) operations will transfer 
@@ -676,11 +765,6 @@
     </p>
 
     <h3>Entity Tags (etags)</h3>
-    <p class="comment">
-      <strong>Warning:</strong> this section is out of date. We need
-      to update this section on how we'll be fetching the etags during
-      a checkout/update.
-    </p>
     <p>
       Etags are required to be unique across all versions of a
       resource. Luckily, this
@@ -691,14 +775,11 @@
       Etags are used to generate diffs, following the guidelines in
       the aforementioned draft:
       <a href="http://www.ietf.org/internet-drafts/draft-mogul-http-delta-07.txt">Delta Encoding in HTTP</a>.
-      The problem then becomes how to get the etag for each file and
-      directory revision stored on the client. During a
-      <em>checkout</em> or <em>update</em> process, this is easy: the
-      etag is provided in the HTTP response headers for each
-      file retrieved. If etags are needed for directories, then they
-      can be retrieved via <code>PROPFIND</code> (or possibly through
-      a <code>REPORT</code> or during a sequence of
-      <code>PROPFIND</code>s to traverse the server).
+      The problem then becomes how to get the etag for each file
+      stored on the client (we don't need etags for directories since
+      we never fetch them). During a <em>checkout</em> or
+      <em>update</em> process, this is easy: the etag is provided in
+      the HTTP response headers for each file retrieved.
     </p>
     <p>
       The other part of the problem is getting the etag after a
@@ -712,7 +793,7 @@
     <h2>Tags and Branches</h2>
     <p class="comment">
       <strong>Warning:</strong> this section is out of date. How to do
-      a copy is still up in the air, and we won't be using
+      a copy or branch is still up in the air, and we won't be using
       <code>DAV:auto-version</code>. The label concept is also a bit
       unknown. Then... all of this feeds into the possible use of
       baselines.
@@ -792,18 +873,16 @@
       <li><code>MERGE</code></li>
       <li><code>REPORT</code></li>
       <li><code>LABEL</code></li>
-      <li><code>VERSION-CONTROL</code></li>
-      <li><code>BASELINE-CONTROL</code></li>
+      <li>maybe: <code>VERSION-CONTROL</code></li>
+      <li>maybe: <code>BASELINE-CONTROL</code></li>
     </ul>
     <p>
-      The following "core versioning" methods are not required by
+      The following methods are not required by
       Subversion at this time:
       <code>CHECKIN</code>,
       <code>UNCHECKOUT</code>,
+      <code>UPDATE</code>,
       and
-      <code>UPDATE</code>.
-      The following "advanced versioning" methods are not required by
-      Subversion at this time:
       <code>MKWORKSPACE</code>.
     </p>
 
@@ -814,7 +893,7 @@
     <ul>
       <li><code>DAV:creator-displayname</code></li>
       <li><code>DAV:comment</code></li>
-      <li><code>DAV:target</code></li>
+      <li><code>DAV:checked-in</code></li>
       <li><code>DAV:auto-version</code> is set to <code>F</code></li>
       <li>
 	<code>DAV:version-name</code> is simply the (global) revision
@@ -837,7 +916,7 @@
       <li><code>DAV:checked-out</code></li>
     </ul>
     <p>
-      The following "advanced versioning" properties will be
+      The following "optional" properties will be
       implemented:
     </p>
     <ul>
@@ -885,8 +964,7 @@
 
     <h3>Notes, reminders</h3>
     <p>
-      Advanced CHECKOUT to associate an activity with the working
-      resource.
+      CHECKOUT to associate an activity with the working resource.
       <br>
       COPY into a checked-out collection must create new working
       resources (recursively).
@@ -906,7 +984,7 @@
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Sat Dec 23 03:41:17 PST 2000
+Last modified: Thu Jan  4 00:34:37 PST 2001
 <!-- hhmts end -->
   </body>
 </html>
