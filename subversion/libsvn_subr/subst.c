@@ -735,33 +735,35 @@ svn_subst_copy_and_translate (const char *src,
                                     eol_str, repair, keywords, expand);
 
   if (err)
-    {
-      /* ignore closure errors if we're bailing. */
-      svn_error_clear (svn_stream_close (src_stream));
-      svn_error_clear (svn_stream_close (dst_stream));
-      if (s)
-        apr_file_close (s);
-      if (d)
-        apr_file_close (d);
-
-      svn_error_clear (svn_io_remove_file (dst_tmp, pool));
-      return
-        svn_error_createf (err->apr_err, err,
-                           "File translation failed when copying '%s' to '%s'",
-                           src, dst);
-    }
+    goto error;
 
   /* clean up nicely. */
-  SVN_ERR (svn_stream_close (src_stream));
-  SVN_ERR (svn_stream_close (dst_stream));
+  err = svn_stream_close (src_stream);
+  if (err)
+    goto error;
 
-  SVN_ERR (svn_io_file_close (s, pool));
-  SVN_ERR (svn_io_file_close (d, pool));
+  err = svn_stream_close (dst_stream);
+  if (err)
+    goto error;
+
+  err = svn_io_file_close (s, pool);
+  if (err)
+    goto error;
+
+  err = svn_io_file_close (d, pool);
+  if (err)
+    goto error; 
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
+  err = svn_io_file_rename (dst_tmp, dst, pool);
+  if (err)
+    goto error;
 
   return SVN_NO_ERROR;
+ error:
+  svn_error_clear (svn_io_remove_file (dst_tmp, pool));
+
+  return err;
 }
 
 
