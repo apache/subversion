@@ -34,7 +34,7 @@ A rough guide to the source tree:
       Common code for repository access.
    subversion/libsvn_client/
       Common code for client operations.
-   subversion/client/
+   subversion/clients/cmdline/
       The command line client.
    subversion/tests/
       Automated test suite.
