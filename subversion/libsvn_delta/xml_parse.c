@@ -53,17 +53,17 @@
    NULL so that we have the ability to loop over the array easily. */
 static const char * const svn_delta__tagmap[] =
 {
-  "delta-pkg",
-  "tree-delta",
-  "add",
-  "delete",
-  "replace",
-  "file",
-  "dir",
-  "text-delta",
-  "text-delta-ref",
-  "prop-delta",
-  "set",
+  SVN_DELTA__XML_TAG_DELTA_PKG,
+  SVN_DELTA__XML_TAG_TREE_DELTA,
+  SVN_DELTA__XML_TAG_ADD,
+  SVN_DELTA__XML_TAG_DELETE,
+  SVN_DELTA__XML_TAG_REPLACE,
+  SVN_DELTA__XML_TAG_FILE,
+  SVN_DELTA__XML_TAG_DIR,
+  SVN_DELTA__XML_TAG_TEXT_DELTA,
+  SVN_DELTA__XML_TAG_TEXT_DELTA_REF,
+  SVN_DELTA__XML_TAG_PROP_DELTA,
+  SVN_DELTA__XML_TAG_SET,
   NULL
 };
 
@@ -71,8 +71,6 @@ static const char * const svn_delta__tagmap[] =
 
 
 
-
-
 /* Return an informative error message about invalid XML.
    (Set DESTROY_P to indicate an unexpected closure tag) */
 static svn_error_t *
@@ -454,10 +452,10 @@ do_directory_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = svn_xml_get_attr_value ("ancestor", atts);
+  ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ANCESTOR, atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = svn_xml_get_attr_value ("ver", atts);
+  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_VER, atts);
   if (ver)
     youngest_frame->ancestor_revision = atoi (ver);
 
@@ -548,10 +546,10 @@ do_file_callback (svn_xml__digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  ancestor = svn_xml_get_attr_value ("ancestor", atts);
+  ancestor = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ANCESTOR, atts);
   if (ancestor)
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
-  ver = svn_xml_get_attr_value ("ver", atts);
+  ver = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_VER, atts);
   if (ver)
     youngest_frame->ancestor_revision = atoi (ver);
 
@@ -975,27 +973,27 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* kff todo: wonder if we shouldn't use make_attr_hash here instead? */
 
   /* Set "name" field in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value ("name", atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_NAME, atts);
   if (value)
     new_frame->name = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor path in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value ("ancestor", atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ANCESTOR, atts);
   if (value)
     new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
   
   /* Set ancestor revision in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value ("ver", atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_VER, atts);
   if (value)
     new_frame->ancestor_revision = atoi (value);
 
   /* Set "id" in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value ("id", atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ID, atts);
   if (value)
     new_frame->ref_id = svn_string_create (value, my_digger->pool);
 
   /* Set "encoding" in frame, if there's any such attribute in ATTS */
-  value = svn_xml_get_attr_value ("encoding", atts);
+  value = svn_xml_get_attr_value (SVN_DELTA__XML_ATTR_ENCODING, atts);
   if (value)
     new_frame->encoding = svn_string_create (value, my_digger->pool);
 
@@ -1187,7 +1185,7 @@ xml_handle_end (void *userData, const char *name)
 
   /* EVENT: When we get a </dir> pass back the dir_baton and call
      editor. */
-  if (strcmp (name, "dir") == 0)
+  if (strcmp (name, SVN_DELTA__XML_TAG_DIR) == 0)
     {
       err = do_close_directory (digger);
       if (err)
@@ -1196,7 +1194,7 @@ xml_handle_end (void *userData, const char *name)
 
   /* EVENT: when we get a </file>, drop our digger's parsers and call
      editor. */
-  if (strcmp (name, "file") == 0)
+  if (strcmp (name, SVN_DELTA__XML_TAG_FILE) == 0)
     {
       /* closes digger->stack->file_baton, which is good. */
       err = do_close_file (digger);
@@ -1205,7 +1203,7 @@ xml_handle_end (void *userData, const char *name)
     }
 
   /* EVENT: when we get a </text-delta>, do major cleanup.  */
-  if (strcmp (name, "text-delta") == 0)
+  if (strcmp (name, SVN_DELTA__XML_TAG_TEXT_DELTA) == 0)
     {
       if (digger->svndiff_parser != NULL)
         {     
@@ -1229,7 +1227,7 @@ xml_handle_end (void *userData, const char *name)
 
 
   /* EVENT: when we get a </set>, send off the prop-delta. */
-  if (strcmp (name, "set") == 0)
+  if (strcmp (name, SVN_DELTA__XML_TAG_SET) == 0)
     {
       err = do_prop_delta_callback (digger);
       if (err)
@@ -1238,7 +1236,7 @@ xml_handle_end (void *userData, const char *name)
 
   /* EVENT: when we get a prop-delta </delete>, send it off. */
   if (digger->stack->previous)
-    if ( (strcmp (name, "delete") == 0)
+    if ( (strcmp (name, SVN_DELTA__XML_TAG_DELETE) == 0)
          && (digger->stack->previous->tag == svn_delta__XML_propdelta) )
       {
         err = do_prop_delta_callback (digger);
@@ -1249,7 +1247,7 @@ xml_handle_end (void *userData, const char *name)
   /* EVENT: is this the final </tree-delta>?  If so, we have to
      close_directory(root_baton), because there won't be any </dir>
      tag for the root of the change. */
-  if (strcmp (name, "tree-delta") == 0)
+  if (strcmp (name, SVN_DELTA__XML_TAG_TREE_DELTA) == 0)
     {
       if (outermost_tree_delta_close_p (digger))
         {
