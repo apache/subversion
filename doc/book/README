@@ -166,7 +166,9 @@ In addition to everything in section II:
 
          http://www.lysator.liu.se/projects/about_psgml.html
 
-   If you use vi... (### can someone recommend something?)
+   If you use vim, you might check out xmledit, at:
+
+         http://www.vim.org/scripts/script.php?script_id=301
 
 
 2. Get a validating parser.
