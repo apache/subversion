@@ -96,6 +96,7 @@ def guarantee_greek_repository(path):
   main.chmod_tree(path, 0666, 0666)
 
   if main.windows:
+    # FIXME: All this copying stuff around is a pain.
     if os.path.exists(main.current_repo_dir):
       shutil.rmtree(main.current_repo_dir)
     shutil.copytree(path, main.current_repo_dir)
@@ -562,7 +563,7 @@ def duplicate_dir(wc_name, wc_copy_name):
   existing tree at that location."""
 
   if os.path.exists(wc_copy_name):
-    shutil.rmtree(wc_copy_name)
+    main.remove_wc(wc_copy_name)
   shutil.copytree(wc_name, wc_copy_name)
   
 

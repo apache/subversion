@@ -1,37 +1,39 @@
 import os, sys, string, shutil, traceback
 
-### Fix these paths!
-python = 'C:/PROGRA~1/Python/python.exe'
+### FIXME: Any sh clone will do
 shell =  'C:/PROGRA~1/Cygnus/cygwin/bin/bash.exe'
+###
 
-tests = ['subversion/tests/libsvn_subr/path-test.exe',
-         'subversion/tests/libsvn_delta/random-test.exe',
-         'subversion/tests/libsvn_subr/hashdump-test.exe',
-         'subversion/tests/libsvn_wc/translate-test.exe',
+tests = ['subversion/tests/libsvn_subr/hashdump-test.exe',
          'subversion/tests/libsvn_subr/stringtest.exe',
+         'subversion/tests/libsvn_subr/path-test.exe',
+         'subversion/tests/libsvn_subr/time-test.exe',
+         'subversion/tests/libsvn_wc/translate-test.exe',
+         'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/clients/cmdline/xmltests/svn-test.sh',
          'subversion/tests/clients/cmdline/xmltests/svn-test2.sh',
-         'subversion/tests/libsvn_subr/target-test.sh',
-         'subversion/tests/libsvn_subr/time-test.exe']
+         'subversion/tests/libsvn_subr/target-test.sh']
 
 fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.py',
             'subversion/tests/libsvn_repos/run-repos-tests.py']
 
-python_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
+client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/basic_tests.py',
                 'subversion/tests/clients/cmdline/commit_tests.py',
                 'subversion/tests/clients/cmdline/update_tests.py',
+                'subversion/tests/clients/cmdline/switch_tests.py',
                 'subversion/tests/clients/cmdline/prop_tests.py',
                 'subversion/tests/clients/cmdline/schedule_tests.py',
                 'subversion/tests/clients/cmdline/log_tests.py',
                 'subversion/tests/clients/cmdline/copy_tests.py',
                 'subversion/tests/clients/cmdline/diff_tests.py',
+                'subversion/tests/clients/cmdline/merge_tests.py',
                 'subversion/tests/clients/cmdline/stat_tests.py',
                 'subversion/tests/clients/cmdline/trans_tests.py',
-                'subversion/tests/clients/cmdline/svnadmin_tests.py',
-                'subversion/tests/clients/cmdline/module_tests.py']
+                'subversion/tests/clients/cmdline/svnadmin_tests.py']
 
-all_tests = tests + fs_tests + python_tests
+
+all_tests = tests + fs_tests + client_tests
 
 
 # Have to move the executables where the tests expect them to be
@@ -81,7 +83,7 @@ abs_builddir = abs_srcdir  ### For now ...
 
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
-th = run_tests.TestHarness(abs_srcdir, abs_builddir, python, shell,
+th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, shell,
                            os.path.abspath('tests.log'))
 failed = th.run(all_tests)
 
