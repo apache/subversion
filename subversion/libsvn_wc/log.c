@@ -137,7 +137,31 @@ replace_text_base (svn_stringbuf_t *path,
   if (kind == svn_node_none)
     return SVN_NO_ERROR;  /* tolerate mop-up calls gracefully */
   else
-    return svn_wc__sync_text_base (filepath, pool);
+    {
+      enum svn_wc__eol_style eol_style;
+      const char *eol_str;
+
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
+                                      filepath->data, pool));
+
+      /* If the eol-style is 'fixed', then the committed
+         tmp/text-base/file need to be copied back out on top of the
+         working file in the correct 'fixed' eol style.  We do this
+         because it may have been repaired during commit, and we want
+         the working file to look exactly like text-base after a
+         commit. */
+      if (eol_style == svn_wc__eol_style_fixed)
+        SVN_ERR (svn_io_copy_and_translate (tmp_text_base->data,
+                                            filepath->data,
+                                            eol_str, TRUE /* repair */,
+                                            NULL, NULL, NULL, NULL, FALSE,
+                                            pool));
+
+      /* Move committed tmp/text-base to real text-base. */
+      SVN_ERR (svn_wc__sync_text_base (filepath, pool));     
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
