@@ -112,8 +112,7 @@ Options
 * Options 
 
   This lists *all* command line options available to the subversion 
-  client. Options that are command specific (that is, available only
-  to a single command are noted as such)
+  client.
 
   -? -h -H --help                Help.
       
