@@ -365,6 +365,28 @@ def enforce_lock(sbox):
       print "file mode to read-only."
       raise svntest.Failure
 
+    # obtain a lock on one of these files...
+    svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
+                                       '-m', '', iota_path)
+
+    # ...and verify that the write bit gets set...
+    if not (os.stat (iota_path)[0] & mode):
+      print "Locking a file with 'svn:needs-lock' failed to set write bit."
+      raise svntest.Failure
+
+    # ...and unlock it...
+    svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
+                                       '-m', '', iota_path)
+
+    # ...and verify that the write bit gets unset
+    if (os.stat (iota_path)[0] & mode):
+      print "Unlocking a file with 'svn:needs-lock' failed to unset write bit."
+      raise svntest.Failure
+
 
 #----------------------------------------------------------------------
 
