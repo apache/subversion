@@ -76,6 +76,7 @@ svn_fs__bdb_open_nodes_table (DB **nodes_p,
 svn_error_t *
 svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
                          svn_fs_t *fs,
+                         const char *copy_id,
                          const char *txn_id,
                          trail_t *trail)
 {
@@ -111,7 +112,7 @@ svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
   SVN_ERR (BDB_WRAP (fs, "bumping next node ID key", db_err));
 
   /* Create and return the new node id. */
-  *id_p = svn_fs__create_id (next_node_id, "0", txn_id, trail->pool);
+  *id_p = svn_fs__create_id (next_node_id, copy_id, txn_id, trail->pool);
   return SVN_NO_ERROR;
 }
 

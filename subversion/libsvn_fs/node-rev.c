@@ -35,13 +35,14 @@ svn_error_t *
 svn_fs__create_node (const svn_fs_id_t **id_p,
                      svn_fs_t *fs,
                      svn_fs__node_revision_t *noderev,
+                     const char *copy_id,
                      const char *txn_id,
                      trail_t *trail)
 {
   svn_fs_id_t *id;
 
   /* Find an unused ID for the node.  */
-  SVN_ERR (svn_fs__bdb_new_node_id (&id, fs, txn_id, trail));
+  SVN_ERR (svn_fs__bdb_new_node_id (&id, fs, copy_id, txn_id, trail));
 
   /* Store its NODE-REVISION skel.  */
   SVN_ERR (svn_fs__bdb_put_node_revision (fs, id, noderev, trail));

@@ -618,8 +618,10 @@ make_entry (dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  SVN_ERR (svn_fs__create_node (&new_node_id, svn_fs__dag_get_fs (parent),
-                                &new_noderev, txn_id, trail));
+  SVN_ERR (svn_fs__create_node 
+           (&new_node_id, svn_fs__dag_get_fs (parent),
+            &new_noderev, svn_fs__id_copy_id (svn_fs__dag_get_id (parent)),
+            txn_id, trail));
 
   /* Create a new dag_node_t for our new node */
   SVN_ERR (svn_fs__dag_get_node (child_p, svn_fs__dag_get_fs (parent),
