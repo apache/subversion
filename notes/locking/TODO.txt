@@ -22,3 +22,68 @@ This is a summary of the current state of the locking implementation.
 * svn lock and unlock should continue with next target on certain errors
 * Decide what should happen when unlocking in commit operation if an error
   happens.
+
+* mod_authz_svn needs to learn to deal with LOCK/UNLOCK requests
+
+
+
+LIST DISCUSSIONS TO HAVE:
+
+  ### should we bump the format file, so a libsvn_fs 1.0 or 1.1
+      library isn't allowed to circumvent locks?
+
+  ### how do locks relate to 
+
+              - dumping/loading?
+              - backups?
+              - mirroring scripts?
+
+
+
+DAV bugs:
+
+ -- BUG:  http lock comments have tag junk in them
+          SOLUTION: mod_dav_svn looks for attributes in <D:author>.
+                    then stores either just CDATA or whole value.
+
+ -- BUG:  header length limits in MERGE request.
+          SOLUTION:
+              - pass locktoken hash in MERGE request body as new XML element.
+              - rev the provider API:  ap_lookup_provider()
+                 - fix get_locktoken_list()
+                 -  pass <D:merge> element to provider merge()                 
+                 -  new lock vtable with *one* function to add lock
+              - svn 1.2 will require httpd-2.0.53
+
+ -- BUG: 'svn commit' does a no-op commit if locks exist in wc, but
+          files have no edits.  creates a commit with no changed paths!
+
+
+
+
+Stuff to document in book:
+     
+       - 4 new hooks
+       - 'lock' and 'unlock' commands, svn:needs-lock property.
+       - svnadmin lslocks, rmlocks, lock
+       - svnlook lock
+       - two new bdb tables in BDB section.
+       - update the description of autoversioning in appendix C!
+
+         ### remember to update authz policy doc. 
+
+
+
+Autoversioning Compatibility Issues:
+
+ * propfind depth 1 on a collection should show lock-null resources.
+   currently not happening.  can this be done *compatibly* with svn
+   clients?
+
+ * finish autoversioning:  see bug in issue 2161.
+        --> autoversioning on win32 webfolders and MSWord ?
+        --> investigate XP workaround for webfolders:
+                http://www.winnetmag.com/Article/ArticleID/24478/24478.html
+                http://zettai.net/Members/billfergus/1103749117/view
+            IE->File->Open->URL, check 'open as webfolder'?
+

@@ -35,10 +35,7 @@ RA->unlock()
 
 RA->get_lock()
 
-     * do a depth-0 PROPFIND for DAV:lockdiscovery property, with 1
-       custom header:
-
-         - want-creationdate
+     * do a depth-0 PROPFIND for DAV:lockdiscovery property
 
      * mod_dav_svn should call authz_read func on path, if it exists.
 
@@ -76,9 +73,9 @@ RA->get_commit_editor2()
 
      * stash the incoming hash of tokens.
 
-     * every time we do a CHECKOUT or PUT of a file path, look to see
-       if there's a token available in the hash.  If so, put it in the
-       If: header of the request.
+     * every time we do a CHECKOUT, PUT, COPY, DELETE, PROPPATCH of a
+       file path, look to see if there's a token available in the
+       hash.  If so, put it in the If: header of the request.
 
      * send *all* tokens in the If: header of the final MERGE request.
 
