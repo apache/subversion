@@ -185,20 +185,25 @@ read_all (svn_config_t **cfgp,
 svn_error_t *
 svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool)
 {
-  const char *usr_reg_path = NULL;
-  const char *usr_cfg_path;
+  const char *usr_reg_path = NULL, *sys_reg_path = NULL;
+  const char *usr_cfg_path, *sys_cfg_path;
 
 #ifdef SVN_WIN32
+  sys_reg_path = SVN_REGISTRY_SYS_CONFIG_CONFIG_PATH;
   usr_reg_path = SVN_REGISTRY_USR_CONFIG_CONFIG_PATH;
 #endif /* SVN_WIN32 */
+
+  SVN_ERR (svn_config__sys_config_path (&sys_cfg_path,
+                                        SVN_CONFIG__USR_CONFIG_FILE,
+                                        pool));
 
   SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
                                          SVN_CONFIG__USR_CONFIG_FILE,
                                          pool));
 
   SVN_ERR (read_all (cfgp,
-                     NULL, usr_reg_path,
-                     NULL, usr_cfg_path,
+                     sys_reg_path, usr_reg_path,
+                     sys_cfg_path, usr_cfg_path,
                      pool));
 
   return SVN_NO_ERROR;
