@@ -169,6 +169,18 @@ svn_error_t *svn_io_copy_file (const char *src,
                                svn_boolean_t copy_perms,
                                apr_pool_t *pool);
 
+/** 
+ * @since New in 1.1.
+ *
+ * Copy symbolic link @a src to @a dst atomically.  Overwrite @a dst
+ * if it exists, else create it.  Both @a src and @a dst are
+ * utf8-encoded filenames.  After copying, the @a dst link will point
+ * to the same thing @a src does.
+ */
+svn_error_t *svn_io_copy_link (const char *src,
+                               const char *dst,
+                               apr_pool_t *pool);
+
 
 /** Recursively copy directory @a src into @a dst_parent, as a new entry named
  * @a dst_basename.  If @a dst_basename already exists in @a dst_parent, 
