@@ -52,6 +52,8 @@ def main(fname, oname=None, skip_depends=0):
       objext = '.lo'
       if not install_type:
         install_type = 'lib'
+    elif bldtype == 'doc':
+      pass
     else:
       print 'ERROR: unknown build type:', bldtype
       errors = 1
@@ -69,7 +71,10 @@ def main(fname, oname=None, skip_depends=0):
        and parser.get(target, 'testing') != 'skip':
       test_progs.append(tpath)
 
-    sources, s_errors = _collect_paths(parser.get(target, 'sources'), path)
+    pats = parser.get(target, 'sources')
+    if not pats:
+      pats = _default_sources[bldtype]
+    sources, s_errors = _collect_paths(pats, path)
     errors = errors or s_errors
 
     objects = [ ]
@@ -110,11 +115,11 @@ def main(fname, oname=None, skip_depends=0):
     objstr = string.join(objects)
     objnames = string.join(map(os.path.basename, objects))
     libstr = string.join(libs)
-    ofile.write('%s_DEPS = %s\n'
+    ofile.write('%s_DEPS = %s %s\n'
                 '%s_OBJECTS = %s\n'
                 '%s: $(%s_DEPS)\n'
                 '\tcd %s && $(LINK) -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-                % (targ_varname, objstr,
+                % (targ_varname, objstr, string.join(target_deps[target]),
                    targ_varname, objnames,
                    tpath, targ_varname,
                    path, tfile, ldflags, targ_varname, libstr))
@@ -258,12 +263,18 @@ def main(fname, oname=None, skip_depends=0):
     sys.exit(1)
 
 _cfg_defaults = {
-  'sources' : '*.c',
+  'sources' : '',
   'link-flags' : '',
   'libs' : '',
   'custom' : '',
   'install' : '',
   'testing' : '',
+  }
+
+_default_sources = {
+  'lib' : '*.c',
+  'exe' : '*.c',
+  'doc' : '*.texi',
   }
 
 _predef_sections = [
@@ -272,6 +283,7 @@ _predef_sections = [
   'static-apache',
   'test-scripts',
   ]
+
 def _filter_targets(t):
   t = t[:]
   for s in _predef_sections:
