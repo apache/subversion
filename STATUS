@@ -102,3 +102,11 @@ Candidate changes:
       in 1.1.0.
     Votes:
       +1: mbk
+
+  * r10752
+    Remove packages/rpm/mandrake-*.
+    Justification:
+      Foolish to include something that has been maintainerless since before 1.0.0 in
+      1.1.x.
+    Votes:
+      +1: maxb
