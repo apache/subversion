@@ -677,6 +677,14 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
  *      is set to the youngest repository revision (@a *youngest is not
  *      touched unless @a update is set).  This directly corresponds to
  *      the "-u" (--show-updates) flag in the commandline client app.
+ *
+ * This function recurses into externals definitions ('svn:externals')
+ * after handling the main target, if any exist.  The client
+ * notification function (in @a ctx) will be called with the
+ * @c svn_wc_notify_status_external action before handling each externals
+ * definition; with @c svn_wc_notify_status_completed after each
+ * externals definition's statuses have been described to the @a
+ * status_func.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *youngest,  /* only touched if `update' set */
