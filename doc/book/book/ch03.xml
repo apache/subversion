@@ -630,25 +630,28 @@ Updated to revision 2.
         <varlistentry>
           <term><command>svn add foo</command></term>
           <listitem>
-            <para>Schedule <filename>foo</filename> to be added to the
-              repository.  When you next commit,
-              <filename>foo</filename> will become a child of its
-              parent directory.  Note that if <filename>foo</filename>
-              is a directory, everything underneath <filename>foo</filename>
-              will be scheduled for addition.  If you only want to
-              schedule <filename>foo</filename> itself, pass the
+            <para>Schedule file, directory, or symbolic link
+              <filename>foo</filename> to be added to the repository.
+              When you next commit, <filename>foo</filename> will
+              become a child of its parent directory.  Note that if
+              <filename>foo</filename> is a directory, everything
+              underneath <filename>foo</filename> will be scheduled
+              for addition.  If you only want to schedule
+              <filename>foo</filename> itself, pass the
               <option>--non-recursive</option> (<option>-N</option>)
               switch.</para>
+
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><command>svn delete foo</command></term>
           <listitem>
-            <para>Schedule <filename>foo</filename> to be deleted from
-              the repository.  If <filename>foo</filename> is a file,
-              it is immediately deleted from your working copy.  If
-              <filename>foo</filename> is a directory, it is not
+            <para>Schedule file, directory, or symbolic link
+              <filename>foo</filename> to be deleted from the
+              repository.  If <filename>foo</filename> is a file or
+              link, it is immediately deleted from your working copy.
+              If <filename>foo</filename> is a directory, it is not
               deleted, but Subversion schedules it for deletion.  When
               you commit your changes, <filename>foo</filename> will
               be removed from your working copy and the repository.
@@ -823,59 +826,60 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
         <variablelist>
 
           <varlistentry>
-            <term><computeroutput>A      file_or_dir</computeroutput></term>
+            <term><computeroutput>A      item</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> has been scheduled for
+              <para>The file, directory, or symbolic link
+                <filename>item</filename> has been scheduled for
                 addition into the repository.
               </para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>C     file</computeroutput></term>
+            <term><computeroutput>C     item</computeroutput></term>
             <listitem>
-              <para>The file <filename>file</filename> is in a state of
-                conflict.  That is, changes received from the server
-                during an update overlap with local changes that you
-                have in your working copy.  You must resolve this
-                conflict before committing your changes to the
+              <para>The file <filename>item</filename> is in a state
+                of conflict.  That is, changes received from the
+                server during an update overlap with local changes
+                that you have in your working copy.  You must resolve
+                this conflict before committing your changes to the
                 repository.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>D      file_or_dir</computeroutput></term>
+            <term><computeroutput>D      item</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> has been scheduled for
+              <para>The file, directory, or symbolic link
+                <filename>item</filename> has been scheduled for
                 deletion from the repository.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>M      file</computeroutput></term>
+            <term><computeroutput>M      item</computeroutput></term>
             <listitem>
-              <para>The contents of the file <filename>file</filename> have
-                been modified.</para>
+              <para>The contents of the file <filename>item</filename>
+                have been modified.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>X      dir</computeroutput></term>
+            <term><computeroutput>X      item</computeroutput></term>
             <listitem>
-              <para>The directory <filename>dir</filename> is
+              <para>The directory <filename>item</filename> is
                 unversioned, but is related to a Subversion externals
                 definition.  To find out more about externals
-                definitions, see <xref linkend="svn-ch-7-sect-3"/>.</para>
+                definitions, see <xref
+                linkend="svn-ch-7-sect-3"/>.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>?      file_or_dir</computeroutput></term>
+            <term><computeroutput>?      item</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> is not under version
+              <para>The file, directory, or symbolic link
+                <filename>item</filename> is not under version
                 control.  You can silence the question marks by either
                 passing the <option>--quiet</option>
                 (<option>-q</option>) switch to <command>svn
@@ -888,43 +892,44 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>!      file_or_dir</computeroutput></term>
+            <term><computeroutput>!      item</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> is under version
-                control but is missing or somehow incomplete.  The
-                item can be missing if it's removed using a
-                non-Subversion command.  In the case of a directory,
-                it can be incomplete if you happened to interrupt a
-                checkout or update.  A quick <command>svn
-                update</command> will refetch the file or directory
-                from the repository, or <command>svn revert
-                file</command> will restore a missing file.</para>
+              <para>The file, directory, or symbolic link
+                <filename>item</filename> is under version control but
+                is missing or somehow incomplete.  The item can be
+                missing if it's removed using a non-Subversion
+                command.  In the case of a directory, it can be
+                incomplete if you happened to interrupt a checkout or
+                update.  A quick <command>svn update</command> will
+                refetch the file or directory from the repository, or
+                <command>svn revert file</command> will restore a
+                missing file.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>~     file_or_dir</computeroutput></term>
+            <term><computeroutput>~     item</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> is in the repository as
-                one kind of object, but what's actually in your working
-                copy is some other kind.  For example, Subversion might
-                have a file in the repository, but you removed the file
-                and created a directory in its place, without using the
-                <command>svn delete</command> or <command>svn add</command>
-                commands.</para>
+              <para>The file, directory, or symbolic link
+                <filename>item</filename> is in the repository as one
+                kind of object, but what's actually in your working
+                copy is some other kind.  For example, Subversion
+                might have a file in the repository, but you removed
+                the file and created a directory in its place, without
+                using the <command>svn delete</command> or
+                <command>svn add</command> commands.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
-            <term><computeroutput>I      file_or_dir</computeroutput></term>
+            <term><computeroutput>I      item</computeroutput></term>
             <listitem>
-              <para>Subversion is <quote>ignoring</quote> the file or
-                directory <filename>file_or_dir</filename>, probably
-                because you told it to.  For more information on ignored
-                files, see <xref linkend="svn-ch-7-sect-2.3.3"/>.
-                Note that this symbol only shows up if you pass the
+              <para>Subversion is <quote>ignoring</quote> the file,
+                directory, or symbolic link <filename>item</filename>,
+                probably because you told it to.  For more information
+                on ignored files, see <xref
+                linkend="svn-ch-7-sect-2.3.3"/>.  Note that this
+                symbol only shows up if you pass the
                 <option>--no-ignore</option> option to <command>svn
                 status</command>.</para>
             </listitem>

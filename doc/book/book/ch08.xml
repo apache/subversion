@@ -400,7 +400,7 @@ make_new_directory (const char *repos_path,
     {
       /* No error?  Excellent!  Print a brief report of our success.  */
       printf ("Directory '%s' was successfully added as new revision "
-              "'%" SVN_REVNUM_T_FMT "'.\n", new_directory, youngest_rev);
+              "'%ld'.\n", new_directory, youngest_rev);
     }
   else if (err->apr_err == SVN_ERR_FS_CONFLICT)
     {

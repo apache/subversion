@@ -2042,13 +2042,6 @@ umask 002
             <command>svnadmin</command>.  Either run them with a sane
             umask, or wrap them as described above.</para>
         </listitem>
-
-        <listitem>
-          <para>When BerkeleyDB creates new logfiles, they need to be
-            owned by the group as well, so make sure you run
-            <command>chmod g+s</command> on the repository's
-            <filename>db</filename> directory.</para>
-        </listitem>
       </itemizedlist>
 
     </sidebar>
