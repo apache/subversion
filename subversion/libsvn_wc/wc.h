@@ -296,7 +296,9 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
 /* Initialize contents of `entries' for a new adm area. */
-svn_error_t *svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool);
+svn_error_t *svn_wc__entries_init (svn_string_t *path,
+                                   svn_string_t *ancestor_path,
+                                   apr_pool_t *pool);
 
 
 /* For a given ENTRYNAME in PATH, set its version to VERSION in the
@@ -321,6 +323,16 @@ svn_error_t *svn_wc__entry_set (svn_string_t *path,
                                 enum svn_node_kind kind,
                                 apr_pool_t *pool,
                                 ...);
+
+/* Exactly like svn_wc__entry_set, except that changes are merged into
+   an existing entry (by first fetching all entry attributes, *then*
+   writing out.) */
+svn_error_t *svn_wc__entry_merge (svn_string_t *path,
+                                  svn_string_t *entryname,
+                                  svn_vernum_t version,
+                                  enum svn_node_kind kind,
+                                  apr_pool_t *pool,
+                                  ...);
 
 
 /* For a given ENTRYNAME in PATH's entries file:

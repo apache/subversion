@@ -917,7 +917,7 @@ init_adm (svn_string_t *path,
 
 
   /* SVN_WC__ADM_ENTRIES */
-  err = svn_wc__entries_init (path, pool);
+  err = svn_wc__entries_init (path, ancestor_path, pool);
   if (err)
     return err;
 
