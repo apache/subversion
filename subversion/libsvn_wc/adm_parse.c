@@ -71,6 +71,10 @@ svn_string_t *
 svn_wc__versions_init_contents (svn_vernum_t version, apr_pool_t *pool)
 {
   svn_string_t *ret;
+
+  /* kff todo: after writing the new element tag output routines in
+     xml.c, replace the hardcode below with the proper calls. */
+
   const char *part_1 = 
     "<wc-versions xmlns=\"http://subversion.tigris.org/xmlns/\">\n"
     "   <entry version=\"";
