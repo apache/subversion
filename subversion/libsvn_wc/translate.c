@@ -642,6 +642,55 @@ svn_wc_translate_stream (svn_stream_t *s, /* src stream */
 
 
 svn_error_t *
+svn_wc_translate_cstring (const char *src,
+                          const char **dst,
+                          const char *eol_str,
+                          svn_boolean_t repair,
+                          const svn_wc_keywords_t *keywords,
+                          svn_boolean_t expand,
+                          apr_pool_t *pool)
+{
+  svn_stringbuf_t *src_stringbuf, *dst_stringbuf;
+  svn_stream_t *src_stream, *dst_stream;
+  svn_error_t *err;
+
+  src_stringbuf = svn_stringbuf_create (src, pool);
+  
+  /* The easy way out:  no translation needed, just copy. */
+  if (! (eol_str || keywords))
+    {
+      dst_stringbuf = svn_stringbuf_dup (src_stringbuf, pool);
+      goto all_good;
+    }
+
+  /* Convert our stringbufs into streams. */
+  src_stream = svn_stream_from_stringbuf (src_stringbuf, pool);
+  dst_stringbuf = svn_stringbuf_create ("", pool);
+  dst_stream = svn_stream_from_stringbuf (dst_stringbuf, pool);
+
+  /* Translate src stream into dst stream. */
+  err = svn_wc_translate_stream (src_stream, dst_stream,
+                                 eol_str, repair, keywords, expand);
+  if (err)
+    {
+      svn_stream_close (src_stream);
+      svn_stream_close (dst_stream);      
+      return 
+        svn_error_create (err->apr_err, 0, err,
+                          "stringbuf translation failed");
+    }
+
+  /* clean up nicely. */
+  SVN_ERR (svn_stream_close (src_stream));
+  SVN_ERR (svn_stream_close (dst_stream));
+
+ all_good:
+  *dst = dst_stringbuf->data;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_copy_and_translate (const char *src,
                            const char *dst,
                            const char *eol_str,
