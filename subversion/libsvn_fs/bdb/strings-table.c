@@ -50,16 +50,16 @@ svn_fs__bdb_open_strings_table (DB **strings_p,
                          0666));
 
   if (create)
-  {
-    DBT key, value;
+    {
+      DBT key, value;
 
-    /* Create the `next-key' table entry.  */
-    BDB_ERR (strings->put
-            (strings, 0,
-             svn_fs__str_to_dbt (&key, (char *) svn_fs__next_key_key),
-             svn_fs__str_to_dbt (&value, (char *) "0"),
-             SVN_BDB_AUTO_COMMIT));
-  }
+      /* Create the `next-key' table entry.  */
+      BDB_ERR (strings->put
+              (strings, 0,
+               svn_fs__str_to_dbt (&key, (char *) svn_fs__next_key_key),
+               svn_fs__str_to_dbt (&value, (char *) "0"),
+               SVN_BDB_AUTO_COMMIT));
+    }
   
   *strings_p = strings;
   return 0;

@@ -3066,7 +3066,7 @@ txn_body_copy (void *baton,
     {
       svn_fs_path_change_kind_t kind;
       const char *txn_id = svn_fs_txn_root_name (to_root, trail->pool);
-      svn_fs_id_t *to_id;
+      const svn_fs_id_t *to_id;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */

@@ -272,6 +272,21 @@ SOURCE=".\bdb\txn-table.c"
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=".\bdb\uuids-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
 # End Group
 # Begin Source File
 
@@ -320,6 +335,10 @@ SOURCE=.\tree.c
 # Begin Source File
 
 SOURCE=.\txn.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\uuid.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -456,6 +475,19 @@ SOURCE=".\bdb\strings-table.h"
 # Begin Source File
 
 SOURCE=".\bdb\txn-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=".\bdb\uuids-table.h"
 
 !IF  "$(CFG)" == "libsvn_fs - Win32 Release"
 
