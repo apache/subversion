@@ -1056,15 +1056,19 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
                                              apr_time_t timestamp)
 {
-  *revision = 0;
+  svn_ra_session_t *ras = session_baton;
 
-  /* On the other side of the network, mod_dav_svn can simply call
-     svn_repos_dated_revision().  */
+  /* ### need to implement this function...
+     ###
+     ### marshal the query over and call svn_repos_dated_revision()
+  */
 
-  return SVN_NO_ERROR;
+  *revision = SVN_INVALID_REVNUM;
+
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, ras->pool,
+                          "ra_dav does not currently support date-based "
+                          "operations.");
 }
-
-
 
 
 /* -------------------------------------------------------------------------
