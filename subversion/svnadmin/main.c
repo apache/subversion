@@ -99,18 +99,19 @@ usage (const char *progname, int exit_code)
      "\n"
      "Commands are: \n"
      "\n"
-     "  - create   REPOS_PATH\n"
+     "  create   REPOS_PATH\n"
      "\n"
-     "  - youngest REPOS_PATH\n"
+     "  youngest REPOS_PATH\n"
      "\n"
-     "  - lstxn    REPOS_PATH\n"
+     "  lstxns   REPOS_PATH\n"
      "      Print all txns and their trees.\n"
      "\n"
-     "  - lsrevs   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
+     "  lsrevs   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
-     "      (Printing a revision tree shows its structure and file sizes.)\n"
+     "\n"
+     "Printing a tree shows its structure, node ids, and file sizes.\n"
      "\n",
      progname);
 
@@ -148,7 +149,7 @@ main (int argc, const char * const *argv)
 
   if (! ((is_create = strcmp(argv[1], "create") == 0)
          || (is_youngest = strcmp(argv[1], "youngest") == 0)
-         || (is_lstxn = strcmp(argv[1], "lstxn") == 0)
+         || (is_lstxn = strcmp(argv[1], "lstxns") == 0)
          || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)))
     {
       usage (argv[0], 1);
