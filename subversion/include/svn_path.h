@@ -103,7 +103,7 @@ void svn_path_split (const svn_string_t *path,
 int svn_path_is_empty (const svn_string_t *path, enum svn_path_style style);
 
 
-/* Remove trailing slashes that don't affect the meaning of the path.
+/* Remove trailing separators that don't affect the meaning of the path.
    (At some future point, this may make other semantically inoperative
    transformations.) */
 void svn_path_canonicalize (svn_string_t *path,

@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-02-13 17:09:28 $
+              Last updated:  $Date: 2001-02-14 18:01:48 $
 
 
 TABLE OF CONTENTS
@@ -368,7 +368,7 @@ Automated Tests:
 ================
 
 For a description of how to use and add tests to Subversion's
-automated test framework, please read subversion/tests-common/README.
+automated test framework, please read subversion/tests/README.
 
 
 APR Status Codes:

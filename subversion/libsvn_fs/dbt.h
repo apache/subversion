@@ -58,7 +58,7 @@ DBT *svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size);
      to be freed when POOL is cleared.  */
 DBT *svn_fs__result_dbt (DBT *dbt);
 
-/* Prepare DBT to be used aa a key in operations on RECNO tables. */
+/* Prepare DBT to be used as a key in operations on RECNO tables. */
 DBT *svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno);
 
 /* Arrange for POOL to `track' DBT's data: when POOL is cleared,
