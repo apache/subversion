@@ -2732,7 +2732,7 @@ check_wc_root (svn_boolean_t *wc_root,
   if (! p_entry->url)
     return svn_error_createf 
       (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       _("'%s' has no ancestry information."),
+       _("'%s' has no ancestry information"),
        parent);
 
   /* If PATH's parent in the WC is not its parent in the repository,

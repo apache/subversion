@@ -960,7 +960,7 @@ get_root_changes_offset (apr_off_t *root_offset,
 
   if (i == (num_bytes - 2))
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Final line in revision file missing space."));
+                             _("Final line in revision file missing space"));
 
   i++;
 
@@ -1105,7 +1105,7 @@ build_rep_list (apr_array_header_t **list,
       if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
         return svn_error_create
           (SVN_ERR_FS_CORRUPT, NULL,
-           _("Malformed svndiff data in representation."));
+           _("Malformed svndiff data in representation"));
       rs->ver = buf[3];
       rs->chunk_index = 0;
       rs->off += 4;
@@ -1208,7 +1208,7 @@ get_combined_window (svn_txdelta_window_t **result,
   if (rs->off > rs->end)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              _("Reading one svndiff window read beyond the end "
-                               "of the representation."));
+                               "of the representation"));
 
   /* Combine in the windows from the other delta reps, if needed. */
   for (i = 1; i < rb->rs_list->nelts; i++)
@@ -1332,13 +1332,13 @@ rep_read_contents (void *baton,
               if (! rb->src_state)
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff data requested "
-                                           "non-existent source."));
+                                           "non-existent source"));
               rs = rb->src_state;
               sbuf = apr_pcalloc (rb->pool, window->sview_len);
               if (! ((rs->start + window->sview_offset) < rs->end))
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff requested position beyond "
-                                           "end of stream."));
+                                           "end of stream"));
               if ((rs->start + window->sview_offset) != rs->off)
                 {
                   rs->off = rs->start + window->sview_offset;
@@ -2570,7 +2570,7 @@ write_change_entry (apr_file_t *file,
       break;
     default:
       return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                               _("Invalid change type."));
+                               _("Invalid change type"));
     }
 
   if (change->node_rev_id)
@@ -2862,7 +2862,7 @@ set_representation (svn_stream_t **contents_p,
 
   if (! svn_fs_fs__id_txn_id (noderev->id))
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Attempted to write to non-transaction."));
+                             _("Attempted to write to non-transaction"));
 
   SVN_ERR (rep_write_get_baton (&wb, fs, noderev, pool));
 
@@ -2971,7 +2971,7 @@ get_next_revision_ids (const char **node_id,
   str = apr_strtok (buf, " ", &last_str);
   if (! str)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                             _("Corrupt current file."));
+                             _("Corrupt current file"));
 
   str = apr_strtok (NULL, " ", &last_str);
   if (! str)

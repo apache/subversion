@@ -240,7 +240,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
                                _("Protocol error: the MERGE response for the "
                                  "'%s' resource did not return all of the "
                                  "properties that we asked for (and need to "
-                                 "complete the commit)."), mc->href->data);
+                                 "complete the commit)"), mc->href->data);
     }
 #endif
 

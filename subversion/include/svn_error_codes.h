@@ -767,7 +767,7 @@ SVN_ERROR_START
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_CLIENT_UNRELATED_RESOURCES,
               SVN_ERR_CLIENT_CATEGORY_START + 12,
-              "Two versioned resources are unrelated.")
+              "Two versioned resources are unrelated")
 
 
   /* misc errors */
