@@ -31,15 +31,16 @@ Relación nombre usuario <-> nombre real:
 gradha                  Grzegorz Adam Hankiewicz
 ruben                   Rubén Gómez
 beerfrick               Ariel Arjona
+dbrouard		Diego Brouard
 
 
 Ficheros huérfanos con traducción parcial:
 ------------------------------------------
-ch02.xml: beerfrick
 
 
 Ficheros en proceso de traducción:
 ----------------------------------
+ch02.xml: dbrouard
 ch03.xml: ruben
 ch04.xml: gradha
 
