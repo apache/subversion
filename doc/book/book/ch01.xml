@@ -20,8 +20,8 @@
     <title>What is Subversion?</title>
       
     <para>Subversion is a free/open-source version control system.
-      That is, Subversion manages files and directories over time.
-      A tree of files is placed into a central
+      That is, Subversion manages files and directories over time.  A
+      tree of files is placed into a central
       <firstterm>repository</firstterm>.  The repository is much like
       an ordinary file server, except that it remembers every change
       ever made to your files and directories.  This allows you to

@@ -54,32 +54,36 @@
     <para>This book is written for computer literate folk who want to
       use Subversion to manage their data.  While Subversion runs on a
       number of different operating systems, its primary user
-      interface is command-line based.  For that reason, the examples
-      in this book assume the reader is using a Unix-like operating
-      system, and is relatively comfortable with Unix and command-line
-      interfaces.</para>
+      interface is command-line based.  It is that command-line tool
+      (<command>svn</command>) which is discussed and used in this
+      book.  For consistency, the examples in this book assume the
+      reader is using a Unix-like operating system, and is relatively
+      comfortable with Unix and command-line interfaces.</para>
 
-    <para>Not to fear, Microsoft Windows users can download a
-      pre-compiled Windows native Subversion command-line client that
-      works in the Command Prompt application.  Many examples of the
-      client will work in the Command Prompt, but you may have more
-      success if you run the examples inside the Cygwin Unix emulation
+    <para>That said, the <command>svn</command> program also runs on
+      non-Unix platforms like Microsoft Windows.  With a few minor
+      exceptions, such as the use of backward slashes
+      (<literal>\</literal>) instead of forward slashes
+      (<literal>/</literal>) for path separators, the input to and
+      output from this tool when run on Windows are identical to its
+      Unix counterpart.  However, Windows users may find more success
+      by running the examples inside the Cygwin Unix emulation
       environment.</para>
 
     <para>Most readers are probably programmers or sysadmins who need
-      to track changes to source code; this is the most common use for
-      Subversion, and therefore it is the scenario underlying all of
-      the book's examples.  But keep in mind that Subversion can be
-      used to manage changes to any sort of information: images,
-      music, databases, documentation, and so on.  To Subversion, all
-      data is just data.</para>
+      to track changes to source code.  This is the most common use
+      for Subversion, and therefore it is the scenario underlying all
+      of the book's examples.  But Subversion can be used to manage
+      changes to any sort of information: images, music, databases,
+      documentation, and so on.  To Subversion, all data is just
+      data.</para>
     
     <para>While this book is written with the assumption that the
       reader has never used version control, we've also tried to make
-      it easy for former CVS users to get up to speed quickly.
-      Special sidebars may discuss CVS from time to time, and a
-      special appendix summarizes most of the differences between CVS
-      and Subversion.</para>
+      it easy for users of CVS to make a painless leap into
+      Subversion.  Special sidebars may discuss CVS from time to time,
+      and a special appendix summarizes most of the differences
+      between CVS and Subversion.</para>
 
   </sect1>
 
@@ -90,56 +94,63 @@
     <title>How to Read this Book</title>
 
     <para>This book aims to be useful to people of widely different
-      backgrounds: from people with no experience in version control,
-      all the way up to experienced sysadmins.  Depending on your own
+      backgrounds&mdash;from people with no previous experience in
+      version control to experienced sysadmins.  Depending on your own
       background, certain chapters may be more or less important to
-      you.</para>
+      you.  The following can be considered a <quote>recommended
+      reading list</quote> for various types of readers:</para>
 
-    <para>What kind of reader are you?</para>
+    <variablelist>
+      <varlistentry>
+        <term>Experienced sysadmins</term>
+        <listitem>
+          <para>The assumption here is that you've probably used CVS
+            before, and are dying to get a Subversion server up and
+            running ASAP.  Chapters 5 and 6 will show you how to create
+            your first repository and make it available over the
+            network.  After that's done, chapter 3 and appendix A are
+            the fastest routes to learning the Subversion client while
+            drawing on your CVS experience.</para>
+        </listitem>
+      </varlistentry>
 
-    <itemizedlist>
-      <listitem><para>
-          <emphasis>The experienced sysadmin or computer geek.</emphasis>
+      <varlistentry>
+        <term>New users</term>
+        <listitem>
+          <para>Your administrator has probably set up Subversion
+            already, and you need to learn how to use the client.  If
+            you've never used a version control system (like CVS),
+            then chapters 2 and 3 are a vital introduction.  If you're
+            already an old hand at CVS, chapter 3 and appendix A are
+            the best place to start.</para>
+        </listitem>
+      </varlistentry>
 
-          The assumption here is that you've probably used CVS before,
-          and are dying to get a Subversion server up and running
-          ASAP.  Chapters 5 and 6 will show you how to create your
-          first repository and make it available over the network.
-          After that's done, chapter 3 and appendix A are the fastest
-          routes to learning the Subversion client while drawing on
-          your CVS experience.</para></listitem>
+      <varlistentry>
+        <term>Advanced users</term>
+        <listitem>
+          <para>Whether you're a user or administrator, eventually
+            your project will grow larger.  You're going to want to
+            learn how to do more advanced things with Subversion, such
+            as how to use branches and perform mergees (chapter 4),
+            how to use Subversion's property support, how to configure
+            runtime options (chapter 7), and other things.  Chapters 4
+            and 7 aren't vital at first, but be sure to read them once
+            you're comfortable with the basics.</para>
+        </listitem>
+      </varlistentry>
 
-      <listitem><para>
-          <emphasis>The new user.</emphasis>
+      <varlistentry>
+        <term>Developers</term>
+        <listitem>
+          <para>Presumably, you're already familiar with Subversion,
+            and now want to either extend it or build new software on
+            top of its many APIs.  Chapter 8 is just for you.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
 
-          Your administrator has probably set up Subversion already,
-          and you need to learn how to use the client.  If you've
-          never used CVS (or have never used a version control
-          system), then chapters 2 and 3 are a vital introduction.  If
-          you're already an old hand at CVS, chapter 3 and appendix A 
-          are the best place to start.</para></listitem>
-
-      <listitem><para>
-          <emphasis>The advanced user.</emphasis>
-
-          Whether you're a user or administrator, eventually your
-          project will grow larger.  You're going to want to learn how
-          to do more advanced things with Subversion, such as
-          branching and merging (chapter 4), set metadata properties
-          and configure runtime options (chapter 7), and other things.
-          Chapters 4 and 7 aren't vital at first, but be sure to read
-          them once you're comfortable with the
-          basics.</para></listitem>
-
-      <listitem><para>
-          <emphasis>The developer.</emphasis>
-
-          Presumably, you're already familiar with Subversion, and now
-          want to either extend it, or build new software on top of
-          its many APIs.  Chapter 8 is just for you.</para></listitem>
-      </itemizedlist>
-
-    <para>The book ends with reference material: chapter 9 is a
+    <para>The book ends with reference material&mdash;chapter 9 is a
       reference guide for all Subversion commands, and the appendices
       cover a number of useful topics.  These are the chapters you're
       mostly likely to come back to after you've finished the
@@ -229,8 +240,7 @@
         <varlistentry>
           <term>Chapter 1, <emphasis>Introduction</emphasis></term>
           <listitem>
-            <para>Covers the history of
-              <productname>Subversion</productname> as well as its
+            <para>Covers the history of Subversion as well as its
               features, architecture, components, and install
               methods.</para>
           </listitem>
@@ -249,8 +259,8 @@
           <term>Chapter 3, <emphasis>Guided Tour</emphasis></term>
           <listitem>
             <para>Walks you through a day in the life of a Subversion
-              user.  It demonstrates how to use Subversion obtain,
-              modify, and commit data using Subversion.</para>
+              user.  It demonstrates how to use Subversion to obtain,
+              modify, and commit data.</para>
           </listitem>
         </varlistentry>
 
@@ -269,8 +279,8 @@
             Administration</emphasis></term>
           <listitem>
             <para>Describes the basics of the Subversion repository,
-              how to create, configure, and maintain a repository, as
-              well as the tools you can use to do so.</para>
+              how to create, configure, and maintain a repository, and
+              the tools you can use to do all of this.</para>
           </listitem>
         </varlistentry>
 

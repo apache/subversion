@@ -350,10 +350,10 @@ X    Resource is external to this working copy (comes from another
     <title>Metadata Properties</title>
 
     <para>A new feature of Subversion is that you can attach arbitrary
-      metadata to files and directories.  We refer to this data as
-      <firstterm>properties</firstterm>, and they can be thought of as
-      collections of arbitrary name/value pairs attached to each item
-      in your working copy.</para>
+      metadata (or <quote>properties</quote>) to files and
+      directories.  Properties are arbitrary name/value pairs
+      associated with files and directories in your working
+      copy.</para>
     
     <para>To set or get a property name, use the <command>svn
       propset</command> and <command>svn propget</command>
