@@ -1,14 +1,35 @@
 <preface id="svn-ch-0">
+  <!-- @ENGLISH {{{
+  <title>Preface</title>
+  @ENGLISH }}} -->
   <title>Innledning</title>
   
   <simplesect>
     
     <blockquote>
+      <!-- @ENGLISH {{{
+      <para><quote>If C gives you enough rope to hang yourself, think
+        of Subversion as a sort of rope storage facility.</quote>
+        &mdash;Brian W. Fitzpatrick</para>
+      @ENGLISH }}} -->
       <para><quote>Hvis C gir deg nok tau til &#229; henge deg selv, tenk p&#229; 
         Subversion som en slags lagringsplass for tau.</quote>
         &#8212;Brian W. Fitzpatrick</para>
     </blockquote>
 
+    <!-- @ENGLISH {{{
+    <para>In the world of open-source software, the Concurrent
+      Versions System (CVS) has long been the tool of choice for
+      version control.  And rightly so.  CVS itself is free software,
+      and its non-restrictive <foreignphrase>modus
+      operandi</foreignphrase> and support for networked
+      operation&mdash;which allow dozens of geographically dispersed
+      programmers to share their work&mdash;fits the collaborative
+      nature of the open-source world very well.  CVS and its
+      semi-chaotic development model have become cornerstones of
+      open-source culture.
+    </para>
+    @ENGLISH }}} -->
     <para>I opensource-verdenen har Concurrent Versions System (CVS) 
       lenge v&#230;rt f&#248;rstevalget innen versjonskontroll.
       Og det er fortjent.
@@ -20,6 +41,18 @@
       CVS med sin halvkaotiske utviklingsmodell har blitt hj&#248;rnesteiner 
       i kulturen av fri programvare.</para>
 
+    <!-- @ENGLISH {{{
+    <para>But like many tools, CVS is starting to show its age.
+      Subversion is a relatively new version control system designed
+      to be the successor to CVS.  The designers set out to win the
+      hearts of CVS users in two ways: by creating an open-source
+      system with a design (and <quote>look and feel</quote>) similar
+      to CVS, and by attempting to fix most of CVS's noticeable flaws.
+      While the result isn't necessarily the next great evolution in
+      version control design, Subversion <emphasis>is</emphasis> very
+      powerful, very usable, and very flexible.
+    </para>
+    @ENGLISH }}} -->
     <para>Men som mange verkt&#248;y, begynner CVS &#229; vise aldringstegn.
       Subversion er et relativt nytt versjonskontrollsystem konstruert 
       for &#229; bli etterf&#248;lgeren til CVS.
@@ -33,6 +66,16 @@
       innen versjonskontrolldesign, <emphasis>er</emphasis> Subversion 
       meget kraftig, brukbart og veldig fleksibelt.</para>
 
+    <!-- @ENGLISH {{{
+    <para>This book is written to document the 1.1 series of the
+      Subversion version control system.  We have made every attempt to be
+      thorough in our coverage.  However, Subversion has a thriving
+      and energetic development community, so there are already a
+      number of features and improvements planned for future versions
+      of Subversion that may change some of the commands and specific
+      notes in this book.
+    </para>
+    @ENGLISH }}} -->
     <para>Denne boken er skrevet for &#229; dokumentere 1.0-serien av 
       versjonskontrollsystemet Subversion.
       Vi har gjort ethvert fors&#248;k p&#229; &#229; v&#230;re grundig i dekningen av 
@@ -50,8 +93,21 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-1">
 
+    <!-- @ENGLISH {{{
+    <title>Audience</title>
+    @ENGLISH }}} -->
     <title>Publikum</title>
     
+    <!-- @ENGLISH {{{
+    <para>This book is written for computer-literate folk who want to
+      use Subversion to manage their data.  While Subversion runs on a
+      number of different operating systems, its primary user
+      interface is command-line based.  It is that command-line tool
+      (<command>svn</command>) which is discussed and used in this
+      book.  For consistency, the examples in this book assume the
+      reader is using a Unix-like operating system, and is relatively
+      comfortable with Unix and command-line interfaces.</para>
+    @ENGLISH }}} -->
     <para>Denne boken er skrevet for datamaskinkyndige personer som vil 
       bruke Subversion til &#229; behandle sine data.
       Selv om Subversion kj&#248;rer under flere forskjellige 
@@ -63,16 +119,36 @@
       Unix-lignende operativsystem og er relativt komfortabel med Unix 
       og kommandolinjemilj&#248;.</para>
 
+    <!-- @ENGLISH {{{
+    <para>That said, the <command>svn</command> program also runs on
+      non-Unix platforms like Microsoft Windows.  With a few minor
+      exceptions, such as the use of backward slashes
+      (<literal>\</literal>) instead of forward slashes
+      (<literal>/</literal>) for path separators, the input to and
+      output from this tool when run on Windows are identical to its
+      Unix counterpart.  However, Windows users may find more success
+      by running the examples inside the Cygwin Unix emulation
+      environment.</para>
+    @ENGLISH }}} -->
     <para>N&#229;r det er sagt, kj&#248;rer <command>svn</command>-programmet ogs&#229; 
       p&#229; andre plattformer enn Unix, for eksempel Microsoft Windows.
       Med noen f&#229; unntak, som bruken av omvendte skr&#229;streker 
       (<literal>\</literal>) istedenfor vanlige skr&#229;streker 
-      (<literal>/</literal>) som stiseparatoerer, er inndataene og 
+      (<literal>/</literal>) som stiseparatorer, er inndataene og 
       utdataene til og fra dette verkt&#248;yet n&#229;r det kj&#248;res under Windows 
-      identisk til den tilsvarende versjonen p&#229; Unix.
+      identisk med den tilsvarende versjonen p&#229; Unix.
       Windowsbrukere kan imidlertid f&#229; st&#248;rre suksess ved &#229; kj&#248;re 
       eksemplene i Unix-emuleringsmilj&#248;et Cygwin.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Most readers are probably programmers or sysadmins who need
+      to track changes to source code.  This is the most common use
+      for Subversion, and therefore it is the scenario underlying all
+      of the book's examples.  But Subversion can be used to manage
+      changes to any sort of information: images, music, databases,
+      documentation, and so on.  To Subversion, all data is just
+      data.</para>
+    @ENGLISH }}} -->
     <para>De fleste leserne er sannsynligvis programmerere eller 
       systemadministratorer som har behov for &#229; f&#248;lge forandringer i 
       kildekode.
@@ -83,6 +159,14 @@
       og s&#229; videre.
       For Subversion sin del er alle data bare data.</para>
     
+    <!-- @ENGLISH {{{
+    <para>While this book is written with the assumption that the
+      reader has never used version control, we've also tried to make
+      it easy for users of CVS to make a painless leap into
+      Subversion.  Special sidebars may discuss CVS from time to time,
+      and a special appendix summarizes most of the differences
+      between CVS and Subversion.</para>
+    @ENGLISH }}} -->
     <para>Selv om denne boken er skrevet med antakelsen om at brukeren 
       aldri har brukt versjonskontroll tidligere, har vi ogs&#229; fors&#248;kt &#229; 
       gj&#248;re det lett for CVS-brukere &#229; foreta en smertefri overgang til 
@@ -97,8 +181,19 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-2">
+    <!-- @ENGLISH {{{
+    <title>How to Read this Book</title>
+    @ENGLISH }}} -->
     <title>Hvordan lese denne boken</title>
 
+    <!-- @ENGLISH {{{
+    <para>This book aims to be useful to people of widely different
+      backgrounds&mdash;from people with no previous experience in
+      version control to experienced sysadmins.  Depending on your own
+      background, certain chapters may be more or less important to
+      you.  The following can be considered a <quote>recommended
+      reading list</quote> for various types of readers:</para>
+    @ENGLISH }}} -->
     <para>Denne boken tar sikte p&#229; &#229; v&#230;re nyttig for folk med varierende 
       bakgrunn &#8212; fra folk med ingen tidligere erfaring fra 
       versjonskontroll til erfarne systemadministratorer.
@@ -109,8 +204,20 @@
 
     <variablelist>
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Experienced sysadmins</term>
+        @ENGLISH }}} -->
         <term>Erfarne systemadministratorer</term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>The assumption here is that you've probably used CVS
+            before, and are dying to get a Subversion server up and
+            running ASAP.  Chapters 5 and 6 will show you how to create
+            your first repository and make it available over the
+            network.  After that's done, chapter 3 and appendix A are
+            the fastest routes to learning the Subversion client while
+            drawing on your CVS experience.</para>
+          @ENGLISH }}} -->
           <para>Antakelsen her er at du sannsynligvis har brukt CVS f&#248;r, 
             og kl&#248;r i fingrene etter &#229; f&#229; en Subversiontjener opp og g&#229; 
             s&#229; fort som mulig.
@@ -123,8 +230,19 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>New users</term>
+        @ENGLISH }}} -->
         <term>Nye brukere</term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Your administrator has probably set up Subversion
+            already, and you need to learn how to use the client.  If
+            you've never used a version control system (like CVS),
+            then chapters 2 and 3 are a vital introduction.  If you're
+            already an old hand at CVS, chapter 3 and appendix A are
+            the best place to start.</para>
+          @ENGLISH }}} -->
           <para>Administratoren din har muligens satt opp Subversion 
             allerede, og du trenger &#229; l&#230;re hvordan klienten skal brukes.
             Hvis du aldri har brukt et versjonskontrollsystem f&#248;r (som 
@@ -135,8 +253,21 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Advanced users</term>
+        @ENGLISH }}} -->
         <term>Avanserte brukere</term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Whether you're a user or administrator, eventually
+            your project will grow larger.  You're going to want to
+            learn how to do more advanced things with Subversion, such
+            as how to use branches and perform merges (chapter 4),
+            how to use Subversion's property support, how to configure
+            runtime options (chapter 7), and other things.  Chapters 4
+            and 7 aren't vital at first, but be sure to read them once
+            you're comfortable with the basics.</para>
+          @ENGLISH }}} -->
           <para>Enten du er en bruker eller administrator, vil 
             prosjektet ditt etterhvert vokse seg st&#248;rre.
             Du vil &#248;nske &#229; l&#230;re hvordan man gj&#248;r mer avanserte ting med 
@@ -151,8 +282,16 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Developers</term>
+        @ENGLISH }}} -->
         <term>Utviklere</term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Presumably, you're already familiar with Subversion,
+            and now want to either extend it or build new software on
+            top of its many APIs.  Chapter 8 is just for you.</para>
+          @ENGLISH }}} -->
           <para>Antagelig er du allerede kjent med Subversion, og vil n&#229; 
             enten utvide den eller lage ny programvare p&#229; toppen av dens 
             mange programmeringsgrensesnitt.
@@ -161,6 +300,13 @@
       </varlistentry>
     </variablelist>
 
+    <!-- @ENGLISH {{{
+    <para>The book ends with reference material&mdash;chapter 9 is a
+      reference guide for all Subversion commands, and the appendices
+      cover a number of useful topics.  These are the chapters you're
+      mostly likely to come back to after you've finished the
+      book.</para>
+    @ENGLISH }}} -->
     <para>Boken slutter med referansemateriale &#8212; kapittel 9 er en 
       referanseguide for alle Subversionkommandoer, og appendiksene 
       dekker en rekke nyttige emner.
@@ -173,36 +319,64 @@
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-3">
+    <!-- @ENGLISH {{{
+    <title>Conventions Used in This Book</title>
+    @ENGLISH }}} -->
     <title>Konvensjoner brukt i boken</title>
     
+    <!-- @ENGLISH {{{
+    <para>This section covers the various conventions used in this
+      book.</para>
+    @ENGLISH }}} -->
     <para>Denne seksjonen tar for seg de forskjellige konvensjonene 
       brukt i denne boken.</para>
     
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-0-sect3.1">
+      <!-- @ENGLISH {{{
+      <title>Typographic Conventions</title>
+      @ENGLISH }}} -->
       <title>Typografiske konvensjoner</title>
       
       <variablelist>
         
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term><command>Constant width</command></term>
+          @ENGLISH }}} -->
           <term><command>Konstant bredde</command></term>
           <listitem>
+            <!-- @ENGLISH {{{
+            <para>Used for commands, command output, and switches</para>
+            @ENGLISH }}} -->
             <para>Brukt om kommandoer, utdata fra kommandoer og om 
               valg.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term><replaceable>Constant width italic</replaceable></term>
+          @ENGLISH }}} -->
           <term><replaceable>Skr&#229; skrift med konstant 
             bredde</replaceable></term>
           <listitem>
+            <!-- @ENGLISH {{{
+            <para>Used for replaceable items in code and text</para>
+            @ENGLISH }}} -->
             <para>Brukt til utbyttbare elementer i kode og tekst</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term><filename>Italic</filename></term>
+          @ENGLISH }}} -->
           <term><filename>Skr&#229; skrift</filename></term>
           <listitem>
+            <!-- @ENGLISH {{{
+            <para>Used for file and directory names</para>
+            @ENGLISH }}} -->
             <para>Brukes for fil- og katalognavn</para>
           </listitem>
         </varlistentry>
@@ -213,24 +387,46 @@
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-0-sect3.2">
+      <!-- @ENGLISH {{{
+      <title>Icons</title>
+      @ENGLISH }}} -->
       <title>Ikoner</title>
 
       <note>
+        <!-- @ENGLISH {{{
+        <para>This icon designates a note relating to the surrounding
+          text.</para>
+        @ENGLISH }}} -->
         <para>Dette ikonet indikerer et notat som har sammenheng med den 
           omkringliggende teksten.</para>
       </note>
 
       <tip>
+        <!-- @ENGLISH {{{
+        <para>This icon designates a helpful tip relating to the surrounding
+          text.</para>
+        @ENGLISH }}} -->
         <para>Dette ikonet indikerer et nyttig tips som har sammenheng 
           med den omkringliggende teksten.</para>
       </tip>
 
       <warning>
+        <!-- @ENGLISH {{{
+        <para>This icon designates a warning relating to the surrounding
+          text.</para>
+        @ENGLISH }}} -->
         <para>Dette ikonet indikerer en advarsel som har sammenheng med 
           den omkringliggende teksten.</para>
       </warning>
     </sect2>
 
+    <!-- @ENGLISH {{{
+    <para>Note that the source code examples are just
+      that&mdash;examples. While they will compile with the proper
+      compiler incantations, they are intended to illustrate the
+      problem at hand, not necessarily serve as examples of good
+      programming style.</para>
+    @ENGLISH }}} -->
     <para>Merk at kildekodeeksemplene er bare det &#8212; eksempler.
       Selv om de vil kompilere med den riktige kompilatorbesvergelsen, 
       er de beregnet p&#229; &#229; illustrere problemet der og da, ikke 
@@ -242,13 +438,28 @@
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-4">
+    <!-- @ENGLISH {{{
+    <title>Organization of This Book</title>
+    @ENGLISH }}} -->
     <title>Organiseringen av denne boken</title>
 
+    <!-- @ENGLISH {{{
+    <para>The chapters that follow and their contents are listed
+      here:</para>
+    @ENGLISH }}} -->
     <para>Kapitlene som f&#248;lger og innholdet deres er listet her:</para>
 
       <variablelist>
         
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 1, <emphasis>Introduction</emphasis></term>
+          <listitem>
+            <para>Covers the history of Subversion as well as its
+              features, architecture, components, and install
+              methods.  Also includes a quick-start guide.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 1, <emphasis>Introduksjon</emphasis></term>
           <listitem>
             <para>Dekker historien til Subversion s&#229; vel som funksjoner, 
@@ -258,6 +469,14 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 2, <emphasis>Basic Concepts</emphasis></term>
+          <listitem>
+            <para>Explains the basics of version control and different
+              versioning models, along with Subversion's repository,
+              working copies, and revisions.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 2, <emphasis>Grunnleggende 
             konsepter</emphasis></term>
           <listitem>
@@ -268,6 +487,14 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 3, <emphasis>Guided Tour</emphasis></term>
+          <listitem>
+            <para>Walks you through a day in the life of a Subversion
+              user.  It demonstrates how to use Subversion to obtain,
+              modify, and commit data.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 3, <emphasis>Guidet tur</emphasis></term>
           <listitem>
             <para>Tar deg med gjennom en dag i livet til en 
@@ -278,6 +505,15 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 4, <emphasis>Branching and Merging</emphasis></term>
+          <listitem>
+            <para>Discusses branches, merges, and tagging, including
+              best practices for branching and merging, common
+              use-cases, how to undo changes, and how to easily swing
+              from one branch to the next.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 4, <emphasis>Forgreninger og 
             fletting</emphasis></term>
           <listitem>
@@ -290,6 +526,15 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 5, <emphasis>Repository
+            Administration</emphasis></term>
+          <listitem>
+            <para>Describes the basics of the Subversion repository,
+              how to create, configure, and maintain a repository, and
+              the tools you can use to do all of this.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 5, 
             <emphasis>Depotadministrasjon</emphasis></term>
           <listitem>
@@ -300,6 +545,17 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 6, <emphasis>Server Configuration</emphasis></term>
+          <listitem>
+            <para>Explains how to configure your Subversion server and
+              the three ways to access your repository:
+              <literal>HTTP</literal>, the <literal>svn</literal>
+              protocol, and local access.  It also covers the details
+              of authentication, authorization and anonymous
+              access.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 6, 
             <emphasis>Tjenerkonfigurasjon</emphasis></term>
           <listitem>
@@ -313,6 +569,16 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 7, <emphasis>Advanced Topics</emphasis></term>
+          <listitem>
+            <para>Explores the Subversion client configuration files,
+              file and directory properties, how to
+              <literal>ignore</literal> files in your working copy,
+              how to include external trees in your working copy, and
+              lastly, how to handle vendor branches.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 7, <emphasis>Avanserte emner</emphasis></term>
           <listitem>
             <para>Utforsker Subversion-klientens konfigurasjonsfiler, 
@@ -324,6 +590,17 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 8, <emphasis>Developer Information</emphasis></term>
+          <listitem>
+            <para>Describes the internals of Subversion, the
+              Subversion filesystem, and the working copy
+              administrative areas from a programmer's point of view.
+              Demonstrates how to use the public APIs to write a
+              program that uses Subversion, and most importantly, how
+              to contribute to the development of Subversion.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 8, 
           <emphasis>Utviklerinformasjon</emphasis></term>
           <listitem>
@@ -338,6 +615,16 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Chapter 9, <emphasis>Subversion Complete
+            Reference</emphasis></term>
+          <listitem>
+            <para>Explains in great detail every subcommand of
+              <command>svn</command>, <command>svnadmin</command>, and
+              <command>svnlook</command> with plenty of examples for
+              the whole family!</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Kapittel 9, <emphasis>Komplett referanse for 
             Subversion</emphasis></term>
           <listitem>
@@ -349,6 +636,20 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Appendix A, <emphasis>Subversion for CVS
+            Users</emphasis></term>
+          <listitem>
+            <para>Covers the similarities and differences between
+              Subversion and CVS, with numerous suggestions on how to
+              break all the bad habits you picked up from years of
+              using CVS.  Included are descriptions of Subversion
+              revision numbers, versioned directories, offline
+              operations, <command>update</command>
+              vs. <command>status</command>, branches, tags, metadata,
+              conflict resolution, and authentication.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Appendiks A, <emphasis>Subversion for 
             CVS-brukere</emphasis></term>
           <listitem>
@@ -365,6 +666,13 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Appendix B, <emphasis>Troubleshooting</emphasis></term>
+          <listitem>
+            <para>Addresses common problems and difficulties using and
+              building Subversion.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Appendiks B, <emphasis>Feils&#248;king</emphasis></term>
           <listitem>
             <para>Adresserer vanlige problemer og vanskeligheter ved 
@@ -373,6 +681,15 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Appendix C, <emphasis>WebDAV and
+            Autoversioning</emphasis></term>
+          <listitem>
+            <para>Describes the details of WebDAV and DeltaV, and how
+              you can configure your Subversion repository to be
+              mounted read/write as a DAV share.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Appendiks C, <emphasis>WebDAV og 
             autoversjonering</emphasis></term>
           <listitem>
@@ -383,6 +700,14 @@
         </varlistentry>
 
         <varlistentry>
+          <!-- @ENGLISH {{{
+          <term>Appendix D, <emphasis>Third Party Tools</emphasis></term>
+          <listitem>
+            <para>Discusses tools that support or use Subversion,
+              including alternative client programs, repository
+              browser tools, and so on.</para>
+          </listitem>
+          @ENGLISH }}} -->
           <term>Appendiks D, <emphasis>Tredjeparts 
             verkt&#248;y</emphasis></term>
           <listitem>
@@ -400,8 +725,19 @@
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-5">
+    <!-- @ENGLISH {{{
+    <title>This Book is Free</title>
+    @ENGLISH }}} -->
     <title>Denne boken er fri</title>
 
+    <!-- @ENGLISH {{{
+    <para>This book started out as bits of documentation written by
+      Subversion project developers, which were then coalesced into a
+      single work and rewritten.  As such, it has always been under a
+      free license.  (See <xref linkend="svn-copyright"/>.)  In fact,
+      the book was written in the public eye, as a part of Subversion.
+      This means two things:</para>
+    @ENGLISH }}} -->
     <para>Denne boken startet som sm&#229;biter av dokumentasjon skrevet av 
       Subversions prosjektutviklere, og deretter satt sammen til et 
       enkeltst&#229;ende verk og omskrevet.
@@ -413,11 +749,24 @@
 
     <itemizedlist>
       <listitem>
+        <!-- @ENGLISH {{{
+        <para>You will always find the latest version of this book in
+          Subversion's own source tree.</para>
+        @ENGLISH }}} -->
         <para>Du vil alltid finne den seneste versjonen av denne boken i 
           Subversions eget kildekodetre.</para>
       </listitem>
 
       <listitem>
+        <!-- @ENGLISH {{{
+        <para>You can distribute and make changes to this book however
+          you wish&mdash;it's under a free license.  Of course,
+          rather than distribute your own private version of this
+          book, we'd much rather you send feedback and patches to the
+          Subversion developer community.  See <xref
+          linkend="svn-ch-8-sect-6"/> to learn about joining this
+          community.</para>
+        @ENGLISH }}} -->
         <para>Du kan distribuere og gj&#248;re forandringer til denne boken 
           s&#229; mye du &#248;nsker &#8212; den er under en fri lisens.
           Selvf&#248;lgelig, istedenfor at du distribuerer din egen private 
@@ -428,9 +777,18 @@
       </listitem>
     </itemizedlist>
     
+    <!-- @ENGLISH {{{
+    <para>You can send publishing comments and questions to O'Reilly
+      here: ###insert boilerplate.</para>
+    @ENGLISH }}} -->
     <para>Du kan sende publiseringskommentarer og sp&#248;rsm&#229;l til O&#8217;Reilly 
       her: ###insert boilerplate.</para>
 
+    <!-- @ENGLISH {{{
+    <para>A relatively recent online version of this book can be found
+      at <systemitem
+      class="url">http://svnbook.red-bean.com</systemitem>.</para>
+    @ENGLISH }}} -->
     <para>En relativt fersk versjon av boken finner du online p&#229; 
       <systemitem 
       class="url">http://svnbook.red-bean.com</systemitem>.</para>
@@ -441,8 +799,22 @@
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-6">
+    <!-- @ENGLISH {{{
+    <title>Acknowledgments</title>
+    @ENGLISH }}} -->
     <title>Krediteringer</title>
 
+    <!-- @ENGLISH {{{
+    <para>This book would not be possible (nor very useful) if
+      Subversion did not exist.  For that, the authors would like to
+      thank Brian Behlendorf and CollabNet for the vision to fund such
+      a risky and ambitious new Open Source project; Jim Blandy for
+      the original Subversion name and design&mdash;we love you, Jim;
+      Karl Fogel for being such a good friend and a great community
+      leader, in that order.<footnote><para>Oh, and thanks, Karl, for
+      being too overworked to write this book yourself.</para>
+      </footnote></para>
+    @ENGLISH }}} -->
     <para>Denne boken ville ikke v&#230;rt mulig (og heller ikke s&#230;rlig 
       nyttig) hvis Subversion ikke eksisterte.
       Derfor vil forfatterne takke Brian Behlendorf og CollabNet for 
@@ -455,9 +827,37 @@
       for at du er for overarbeidet til &#229; skrive denne boken 
       selv.</para></footnote></para>
 
+    <!-- @ENGLISH {{{
+    <para>Thanks to O'Reilly and our editors, Linda Mui and Tatiana
+      Diaz for their patience and support.</para>
+    @ENGLISH }}} -->
     <para>Takk til O&#8217;Reilly og v&#229;re redakt&#248;rer, Linda Mui og Tatiana 
       Diaz for deres t&#229;lmodighet og st&#248;tte.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Finally, we thank the countless people who contributed to
+      this book with informal reviews, suggestions, and fixes: While
+      this is undoubtedly not a complete list, this book would be
+      incomplete and incorrect without the help of: Jani Averbach,
+      Ryan Barrett, Francois Beausoleil, Jennifer Bevan, Matt Blais,
+      Zack Brown, Martin Buchholz, Brane Cibej, John R. Daily, Peter
+      Davis, Olivier Davy, Robert P. J. Day, Mo DeJong, Brian Denny,
+      Joe Drew, Nick Duffek, Ben Elliston, Justin Erenkrantz, Shlomi
+      Fish, Julian Foad, Chris Foote, Martin Furter, Dave Gilbert,
+      Eric Gillespie, Matthew Gregan, Art Haas, Greg Hudson, Alexis
+      Huxley, Jens B. Jorgensen, Tez Kamihira, David Kimdon, Mark
+      Benedetto King, Andreas J. Koenig, Nuutti Kotivuori, Matt Kraai,
+      Scott Lamb, Vincent Lefevre, Morten Ludvigsen, Paul Lussier,
+      Bruce A. Mah, Philip Martin, Feliciano Matias, Patrick Mayweg,
+      Gareth McCaughan, Jon Middleton, Tim Moloney, Mats Nilsson, Joe
+      Orton, Amy Lyn Pilato, Kevin Pilch-Bisson, Dmitriy Popkov,
+      Michael Price, Mark Proctor, Steffen Prohaska, Daniel Rall,
+      Tobias Ringstrom, Garrett Rooney, Joel Rosdahl, Christian Sauer,
+      Larry Shatzer, Russell Steicke, Sander Striker, Erik Sjoelund,
+      Johan Sundstroem, John Szakmeister, Mason Thomas, Eric
+      Wadsworth, Colin Watson, Alex Waugh, Chad Whitacre, Josef Wolf,
+      Blair Zajac, and the entire Subversion community.</para>
+    @ENGLISH }}} -->
     <para>Til slutt vil vi takke alle de utallige folkene som har 
       bidratt til denne boken med informative anmeldelser, forslag og 
       korreksjoner:
@@ -484,6 +884,9 @@
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-0-sect-6.1">
+      <!-- @ENGLISH {{{
+      <title>From Ben Collins-Sussman</title>
+      @ENGLISH }}} -->
       <title>Fra Ben Collins-Sussman</title>
 
       <blockquote lang="en">
@@ -493,7 +896,7 @@
           still doing email.</quote>
           I don&#8217;t know where she gets all that patience!
           She&#8217;s my perfect counterbalance.</emphasis></para>
-        
+
         <para><emphasis>Thanks to my extended family for their sincere 
           encouragement, despite having no actual interest in the 
           subject.
@@ -507,6 +910,13 @@
           are.</emphasis></para>
       </blockquote>
 
+      <!-- @ENGLISH {{{
+      <para>Thanks to my wife Frances, who, for many months, got to
+        hear, <quote>But honey, I'm still working on the book</quote>,
+        rather than the usual, <quote>But honey, I'm still doing
+        email.</quote>  I don't know where she gets all that patience!
+        She's my perfect counterbalance.</para>
+      @ENGLISH }}} -->
       <para>Takk til min kone Frances, som i mange m&#229;neder m&#229;tte h&#248;re 
         <quote>Men kj&#230;re, jeg jobber fortsatt p&#229; boken</quote>, 
         istedenfor den vanlige <quote>Men kj&#230;re, jeg holder fortsatt p&#229; 
@@ -514,12 +924,23 @@
         Jeg vet ikke hvor hun f&#229;r all t&#229;lmodigheten fra!
         Hun er min perfekte motvekt.</para>
       
+      <!-- @ENGLISH {{{
+      <para>Thanks to my extended family for their sincere
+        encouragement, despite having no actual interest in the
+        subject.  (You know, the ones who say, <quote>Ooh, you're
+        writing a book?</quote>, and then when you tell them it's a
+        computer book, sort of glaze over.)</para>
+      @ENGLISH }}} -->
       <para>Takk til min storfamilie for deres oppriktige oppmuntring, 
         til tross for at de ikke har noen egentlig interesse for emnet.
         (Du vet, de som sier <quote>&#197;&#229;&#229;ja, du skriver en bok?</quote>, 
         og n&#229;r du forteller at det er en bok om datamaskiner, forsvinner 
         stjerneglansen i &#248;ynene deres.)</para>
 
+      <!-- @ENGLISH {{{
+      <para>Thanks to all my close friends, who make me a rich, rich man.
+        Don't look at me that way&mdash;you know who you are.</para>
+      @ENGLISH }}} -->
       <para>Takk til alle mine n&#230;re venner, som gj&#248;r meg til en rik, rik 
         mann.
         Ikke se p&#229; meg p&#229; den m&#229;ten &#8212; dere vet hvem dere er.</para>
@@ -528,6 +949,9 @@
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-0-sect-6.2">
+      <!-- @ENGLISH {{{
+      <title>From Brian W. Fitzpatrick</title>
+      @ENGLISH }}} -->
       <title>Fra Brian W. Fitzpatrick</title>
 
       <blockquote lang="en">
@@ -557,6 +981,15 @@
           I couldn&#8217;t agree more.</emphasis></para>
       </blockquote>
 
+      <!-- @ENGLISH {{{
+      <para>Huge thanks to my wife Marie for being incredibly
+        understanding, supportive, and most of all, patient.  Thank
+        you to my brother Eric who first introduced me to UNIX
+        programming way back when. Thanks to my Mom and Grandmother
+        for all their support, not to mention enduring a Christmas
+        holiday where I came home and promptly buried my head in my
+        laptop to work on the book.</para>
+      @ENGLISH }}} -->
       <para>Kjempestor takk til min kone Marie for &#229; v&#230;re utrolig 
         forst&#229;elsesfull, st&#248;ttende og mest av alt, t&#229;lmodig.
         Takk til min bror Eric som f&#248;rst introduserte meg til 
@@ -565,16 +998,31 @@
         nevne &#229; holde ut en juleferie hvor jeg kom hjem og med en gang 
         begravde hodet i laptopen for &#229; arbeide p&#229; boken.</para>
 
+      <!-- @ENGLISH {{{
+      <para>To Mike and Ben: It was a pleasure working with you on the
+        book.  Heck, it's a pleasure working with you at work!</para>
+      @ENGLISH }}} -->
       <para>Til Mike og Ben:
         Det var en glede &#229; jobbe med dere p&#229; boken.
         S&#248;ren heller, det er en glede &#229; arbeide med dere p&#229; 
         jobben!</para>
 
+      <!-- @ENGLISH {{{
+      <para>To everyone in the Subversion community and the Apache
+        Software Foundation, thanks for having me.  Not a day goes by
+        where I don't learn something from at least one of you.
+      </para>
+      @ENGLISH }}} -->
       <para>Til alle i Subversion-milj&#248;et og Apache Software Foundation, 
         takk for at dere har meg.
         Det g&#229;r ikke en dag uten at jeg l&#230;rer noe fra ihvertfall en av 
         dere.</para>
 
+      <!-- @ENGLISH {{{
+      <para>Lastly, thanks to my Grandfather who always told me that
+        <quote>freedom equals responsibility.</quote> I couldn't agree
+        more.</para>
+      @ENGLISH }}} -->
       <para>Til sist, takk til min bestefar som alltid fortalte meg at 
         <quote>frihet er lik ansvarlighet</quote>.
         Jeg kunne ikke v&#230;re mer enig.</para>
@@ -583,6 +1031,9 @@
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-0-sect-6.3">
+      <!-- @ENGLISH {{{
+      <title>From C. Michael Pilato</title>
+      @ENGLISH }}} -->
       <title>Fra C. Michael Pilato</title>
 
       <blockquote lang="en">
@@ -610,6 +1061,15 @@
           creative excellence&#8212;thank you.</emphasis></para>
       </blockquote>
 
+      <!-- @ENGLISH {{{
+      <para>Special thanks to my wife, Amy, for her love and patient
+        support, for putting up with late nights, and for even
+        reviewing entire sections of this book&mdash;you always go the
+        extra mile, and do so with incredible grace.  Gavin, when
+        you're old enough to read, I hope you're as proud of your
+        Daddy as he is of you.  Mom and Dad (and the rest of the
+        family), thanks for your constant support and enthusiasm.</para>
+      @ENGLISH }}} -->
       <para>Spesiell takk til min kone Amy for hennes kj&#230;rlighet og 
         t&#229;lmodige st&#248;tte, for &#229; holde ut med sene kvelder, og for &#229; til 
         og med se over hele seksjoner av denne boken &#8212; du g&#229;r alltid den 
@@ -619,6 +1079,16 @@
         Mor og Far (og resten av familien), takk for deres konstante 
         st&#248;tte og entusiasme.</para>
 
+      <!-- @ENGLISH {{{
+      <para>Hats off to Shep Kendall, through whom the world of
+        computers was first opened to me; Ben Collins-Sussman, my
+        tour-guide through the open-source world; Karl Fogel&mdash;you
+        <emphasis>are</emphasis> my <filename>.emacs</filename>; Greg
+        Stein, for oozing practical programming know-how; Brian
+        Fitzpatrick&mdash;for sharing this writing experience with me.
+        To the many folks from whom I am constantly picking up new
+        knowledge&mdash;keep dropping it!</para>
+      @ENGLISH }}} -->
       <para>Hatten av for Shep Kendall, gjennom ham ble verdenen av 
         datamaskiner f&#248;rst &#229;pnet for meg;
         Ben Collins-Sussman, min turguide gjennom open source-verdenen;
@@ -630,6 +1100,10 @@
         Til de mange folkene som jeg til stadighet plukker opp ny 
         kunnskap etter &#8212; fortsett med &#229; str&#248; den omkring!</para>
 
+      <!-- @ENGLISH {{{
+      <para>Finally, to the One who perfectly demonstrates creative
+        excellence&mdash;thank you.</para>
+      @ENGLISH }}} -->
       <para>Til sist, til den Ene som s&#229; perfekt demonstrerer kreativ 
         fortreffelighet &#8212; takk.</para>
 
@@ -641,8 +1115,16 @@
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-7">
+    <!-- @ENGLISH {{{
+    <title>New in Subversion 1.1</title>
+    @ENGLISH }}} -->
     <title>Nytt i Subversion 1.1</title>
 
+    <!-- @ENGLISH {{{
+    <para>This edition of the book has been updated to cover new
+      features and behavioral changes in Subversion 1.1.  Here's a
+      brief list of pointers to major 1.1 changes.</para>
+    @ENGLISH }}} -->
     <para>Denne utgaven av boken er blitt oppdatert for &#229; dekke nye 
       funksjoner og forandringer i oppf&#248;rselen for Subversion 1.1.
       Her er en rask oversikt over pekere til store forandringer i 
@@ -651,11 +1133,23 @@
     <variablelist>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Non-database repositories</term>
+        <listitem>
+          <para>It's now possible to create repositories that don't
+            use a BerkeleyDB database.  Instead, these new
+            repositories store data in the ordinary filesystem using a
+            custom file format.  These repositories aren't susceptible
+            to <quote>wedging</quote>, but also aren't as well-tested
+            as Berkeley DB repositories.  See <xref
+            linkend="svn-ch-5-sect-1.2.A"/>.</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Depot uten database</term>
         <listitem>
           <para>Det er n&#229; mulig &#229; opprette depot som ikke bruker en 
             Berkeley DB database.
-            Istenfor lagrer disse nye depotene data i det ordin&#230;re 
+            Istedenfor lagrer disse nye depotene data i det ordin&#230;re 
             filsystemet ved &#229; bruke et tilpasset format.
             Disse depotene er ikke s&#229;rbare for <!-- &#164; 
             --><quote>wedging</quote>, men er heller ikke s&#229; 
@@ -665,6 +1159,16 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Symbolic link versioning</term>
+        <listitem>
+          <para>Unix users can now create symbolic links and place
+            them under version control with the <command>svn
+            add</command> command.  See <xref
+            linkend="svn-ch-9-sect-1.2-re-add"/> and <xref
+            linkend="svn-ch-7-sect-2.3.7"/>.</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Versjonering av symbolske lenker</term>
         <listitem>
           <para>Unixbrukere kan n&#229; opprette symbolske lenker og plassere 
@@ -676,6 +1180,20 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Client follows copies and renames</term>
+        <listitem>
+          <para>Branches (copies) of files and directories maintain
+            historical connections to their source, but in Subversion
+            1.0 only <command>svn log</command> ever followed that
+            copy/rename history, not other commands like <command>svn
+            diff</command>, <command>svn merge</command>, <command>svn
+            list</command>, or <command>svn cat</command>.  In
+            Subversion 1.1, all client subcommands now transparently
+            trace backwards through copies and renames when examining
+            older versions of files and directories.</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Klienten f&#248;lger kopieringer og navneskifter</term>
         <listitem>
           <para>Forgreninger (kopier) av filer og kataloger 
@@ -692,6 +1210,22 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Client auto-escaping of URIs and IRIs</term>
+        <listitem>
+          <para>In the 1.0 command-line client, users had to escape
+            URLs manually.  The client only accepted <quote>legally
+            correct</quote> URLs, such as
+            <literal>http://host/path%20with%20space/project/espa%F1a</literal>.
+            The 1.1 command-line client now knows how to do what
+            web-browsers have been doing for long time: it
+            auto-escapes characters like spaces and accented letters,
+            as long as the user places the
+            URL in quotes to protect characters from the shell:
+            <literal>"http://host/path with
+            space/project/espa&ntilde;a"</literal></para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Autobeskytting i klienten av URI-er og IRI-er</term>
         <listitem>
           <para>I kommandolinjeklienten for 1.0 m&#229;tte brukere beskytte 
@@ -710,6 +1244,20 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Localized user messages</term>
+        <listitem>
+          <para>Subversion 1.1 is now using
+            <literal>gettext()</literal> to display translated error,
+            informational, and help messages to the user. There are
+            currently translations for German, Spanish, Polish,
+            Swedish, Traditional Chinese, Japanese, Brazilian
+            Portuguese and Norwegian Bokmal.  To localize your
+            Subversion client, just set your shell's LANG environment
+            variable to a supported locale value (for example,
+            <literal>de_DE</literal>).</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Lokaliserte brukermeldinger</term>
         <listitem>
           <para>Subversion 1.1 bruker n&#229; <literal>gettext()</literal> 
@@ -720,20 +1268,36 @@
             og norsk (bokm&#229;l).
             For &#229; f&#229; Subversion til &#229; bruke en av oversettelsene, sett 
             skallets LANG-variabel til en st&#248;ttet verdi (for eksempel 
-            <literal>de_DE</literal>).</para>
+            <literal>nb_NO</literal>).</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Shareable working copies</term>
+        <listitem>
+          <para>There have been historical problems with permissions
+            when multiple users share a working copy, which are
+            believed to be fixed now.</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Delbare arbeidskopier</term>
         <listitem>
-          <para>Det har v&#230;rt historiske problemer med tilgansrettigheter 
-            n&#229;r flere brukere deler en arbeidskopi, det ser ut til &#229; 
-            v&#230;re ordnet n&#229;.</para>
+          <para>Det har v&#230;rt historiske problemer med 
+            tilgangsrettigheter n&#229;r flere brukere deler en arbeidskopi, 
+            det ser ut til &#229; v&#230;re ordnet n&#229;.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term><literal>store-passwords</literal> run-time variable</term>
+        <listitem>
+          <para>This is a new runtime variable which only disables
+            password caching, so that server certificates can still be
+            cached.  See <xref linkend="svn-ch-7-sect-1.3.2"/>.</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term><literal>store-passwords</literal> kj&#248;revariabel</term>
         <listitem>
           <para>Dette er en ny variabel for bruk under kj&#248;ring som bare 
@@ -743,6 +1307,18 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>Optimizations and bugfixes</term>
+        <listitem>
+          <para>The <command>svn checkout</command>, <command>svn
+            update</command>, <command>svn status</command>, and
+            <command>svn blame</command> commands are faster.  More
+            than fifty small bugs have been fixed, all described in
+            the Subversion project's CHANGES file (at <systemitem
+            class="url">http://svn.collab.net/repos/svn/trunk/CHANGES
+            </systemitem>).</para>
+        </listitem>
+        @ENGLISH }}} -->
         <term>Optimaliseringer og feilrettinger</term>
         <listitem>
           <para>Kommandoene <command>svn checkout</command>, 
@@ -756,9 +1332,41 @@
       </varlistentry>
 
       <varlistentry>
+        <!-- @ENGLISH {{{
+        <term>New command switches</term>
+        @ENGLISH }}} -->
         <term>Nye kommandobrytere</term>
         <listitem>
           <itemizedlist>
+            <!-- @ENGLISH {{{
+            <listitem><para><command>svn blame -&#64738;-verbose</command>: see
+            <xref linkend="svn-ch-9-sect-1.2-re-blame"/>.
+            </para></listitem>
+
+            <listitem><para><command>svn export -&#64738;-native-eol EOL</command>: see
+            <xref linkend="svn-ch-9-sect-1.2-re-export"/>.
+            </para></listitem>
+            
+            <listitem><para><command>svn add -&#64738;-force</command>: see
+            <xref linkend="svn-ch-9-sect-1.2-re-add"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnadmin dump -&#64738;-deltas</command>: see
+            <xref linkend="svn-ch-5-sect-3.5"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnadmin create -&#64738;-fs-type TYPE</command>: see
+            <xref linkend="svn-ch-9-sect-2.2-re-create"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnadmin recover -&#64738;-wait</command>: see
+            <xref linkend="svn-ch-9-sect-2.2-re-recover"/>.
+            </para></listitem>
+
+            <listitem><para><command>svnserve -&#64738;-tunnel-user=NAME</command>: see
+            <xref linkend="svn-ch-9-sect-4.1"/>.
+            </para></listitem>
+            @ENGLISH }}} -->
             <listitem><para><command>svn blame --verbose</command>: Se 
               <xref linkend="svn-ch-9-sect-1.2-re-blame"/>.
               </para></listitem>
@@ -767,7 +1375,7 @@
               EOL</command>: Se <xref 
               linkend="svn-ch-9-sect-1.2-re-export"/>.
               </para></listitem>
-            
+
             <listitem><para><command>svn add --force</command>: Se <xref 
               linkend="svn-ch-9-sect-1.2-re-add"/>.
               </para></listitem>
@@ -797,6 +1405,9 @@
   </sect1>
 </preface>
 
-<!-- local variables: sgml-parent-document: ("book.xml" "chapter")
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
 vim: set ft=svnbook :
-end: -->
+-->

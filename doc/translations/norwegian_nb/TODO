@@ -1,0 +1,93 @@
+This is a -*- text -*- file.
+
+
+--------------------------------------------------------------
+
+To be fixed by someone:
+
+  - When using shared working copies, a user changing the permissions
+    of a file directly (svn ps svn:executable) or indirectly
+    (i.e. through an update), must own that file.  There is no way to
+    do this automatically which does not involve possible data loss.
+
+--------------------------------------------------------------
+
+Put in best-practices doc:
+
+  - (perhaps) suggest the use of environment variables to represent
+    long repository URLs.  useful for lots of branching/tagging commands.
+    Maybe this can go into our existing best-practices doc?
+
+
+--------------------------------------------------------------
+
+To be added by someone:
+
+  - With svn 1.1, it's now possible to set up svn+ssh using just one
+    Unix account on the server.  You create an RSA key for each user,
+    and add a command directive to each .ssh/authorized_keys entry on
+    the server, which changes the command to "svnserve -t
+    --tunnel-user=whoever".  (The command directive can also be used
+    to add a -r invocation to svnserve, or to specify the path to
+    svnserve.)  The book should perhaps document this way of setting
+    up svn+ssh.
+
+ - ch06 talks about Basic authentication and recommends https.
+   Add a mention of Digest authentication now that Apache's bug
+   has been fixed that broke it and potentially update the 
+   example to use it instead.
+
+--------------------------------------------------------------
+To be fixed by someone:
+
+ - we seem to inconsistently assume repositories live either in
+   /usr/local/svn/ or /usr/local/repositories/ throughout the book.
+   We ought to consistify.
+
+--------------------------------------------------------------
+
+To be fixed by cmpilato:
+
+ch05:
+
+
+ch07:
+
+--------------------------------------------------------------
+
+To be fixed by sussman:
+
+ch04:
+
+   - 'mixed tag' section.  explain how 'svn cp URL' works, that it's
+     not just a literal 'cp -R' to the repository.  mixed-rev
+     directories can create a repos tree different than you expect.
+     the mixed-tag example assumes you start with a WC all at one
+     revision, then only back/fore-date *files*, not dirs.
+
+
+ch06:  
+
+
+
+
+-----------------------------------------------
+
+
+List of 1.1 features/changes (that still need to be documented)
+============================
+
+  * Need whole new section to explain "peg objects" and history
+    tracing.  Lots of examples involving different subcommands.
+    (Which chapter should this section go in?)
+
+  * Need whole new section explaining activating l10n and IRI autoescaping.
+    (What chapter should this section go in?)
+
+  * New 'SVNPathAuthz Off' directive, to disable path-based authz in
+    apache (and increase speed.)
+
+List of 1.2 features/changes (that still need to be documented)
+============================
+
+  * svn log --limit

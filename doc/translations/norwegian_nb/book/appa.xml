@@ -1,8 +1,18 @@
 <appendix id="svn-ap-a">
+  <!-- @ENGLISH {{{
+  <title>Subversion for CVS Users</title>
+  @ENGLISH }}} -->
   <title>Subversion for CVS-brukere</title>
 
   <simplesect>
 
+    <!-- @ENGLISH {{{
+    <para>This appendix is a guide for CVS users new to Subversion.
+      It's essentially a list of differences between the two systems
+      as <quote>viewed from 10,000 feet</quote>. For each section, we
+      provide backreferences to relevant chapters when
+      possible.</para>
+    @ENGLISH }}} -->
     <para>Dette appendikset er en guide for CVS-brukere som nettopp har 
       begynt &#229; bruke Subversion.
       Det er hovedsaklig en liste over forskjeller mellom de to 
@@ -11,6 +21,14 @@
       For hver seksjon refererer vi tilbake til relevante kapitler n&#229;r 
       det er mulig.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Although the goal of Subversion is to take over the current
+      and future CVS user base, some new features and design changes
+      were required to fix certain <quote>broken</quote> behaviors
+      that CVS had.  This means that, as a CVS user, you may need to
+      break habits&mdash;ones that you forgot were odd to begin
+      with.</para>
+    @ENGLISH }}} -->
     <para>Selv om m&#229;let til Subversion er &#229; overta dagens og fremtidens 
       brukermasse, var det n&#248;dvendig med nye funksjoner og forandringer 
       i oppbygningen for &#229; ordne enkelte <quote>&#248;delagte</quote> 
@@ -24,13 +42,31 @@
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-1">
+    <!-- @ENGLISH {{{
+    <title>Revision Numbers Are Different Now</title>
+    @ENGLISH }}} -->
     <title>Revisjonsnumre er forskjellige n&#229;</title>
 
+    <!-- @ENGLISH {{{
+    <para>In CVS, revision numbers are per-file.  This is because CVS
+      uses RCS as a backend; each file has a corresponding RCS file in
+      the repository, and the repository is roughly laid out according
+      to the structure of your project tree.</para>
+    @ENGLISH }}} -->
     <para>I CVS er revisjonsnumrene konstruert for hver enkelt fil.
       Dette er fordi CVS bruker bruker RCS som st&#248;tteprogram;
       hver fil har en tilsvarende RCS-fil i depotet, og depotet er lagt 
       ut p&#229; bortimot samme m&#229;te som prosjekttreet ditt.</para>
 
+    <!-- @ENGLISH {{{
+    <para>In Subversion, the repository looks like a single
+      filesystem.  Each commit results in an entirely new filesystem
+      tree; in essence, the repository is an array of trees.  Each of
+      these trees is labeled with a single revision number.  When
+      someone talks about <quote>revision 54</quote>, they're talking
+      about a particular tree (and indirectly, the way the filesystem
+      looked after the 54th commit).</para>
+    @ENGLISH }}} -->
     <para>I Subversion ser depotet ut som et enkeltst&#229;ende filsystem.
       Hver innlegging resulterer i et helt nytt filsystemtre;
       depotet er i grunnen en rekke av tr&#230;r.
@@ -39,6 +75,17 @@
       spesifikt tre (og indirekte, s&#229;nn som filsystemet s&#229; ut etter den 
       54. innleggingen).</para>
 
+    <!-- @ENGLISH {{{
+    <para>Technically, it's not valid to talk about <quote>revision 5
+      of <filename>foo.c</filename></quote>.  Instead, one would say
+      <quote><filename>foo.c</filename> as it appears in revision
+      5</quote>. Also, be careful when making assumptions about the
+      evolution of a file.  In CVS, revisions 5 and 6 of
+      <filename>foo.c</filename> are always different.  In Subversion,
+      it's most likely that <filename>foo.c</filename> did
+      <emphasis>not</emphasis> change between revisions 5 and
+      6.</para>
+    @ENGLISH }}} -->
     <para>Teknisk sett gir det ingen ingen mening &#229; snakke om 
       <quote>revisjon 5 av <filename>foo.c</filename></quote>.
       Istedenfor vil man si <quote><filename>foo.c</filename> som den 
@@ -51,6 +98,10 @@
       <emphasis>ikke</emphasis> forandret seg mellom revisjon 5 og 
       6.</para>
 
+    <!-- @ENGLISH {{{
+    <para>For more details on this topic, see <xref
+      linkend="svn-ch-2-sect-3.2" />.</para>
+    @ENGLISH }}} -->
     <para>For flere detaljer om dette emnet, se <xref 
       linkend="svn-ch-2-sect-3.2" />.</para>
 
@@ -60,17 +111,40 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-2">
+    <!-- @ENGLISH {{{
+    <title>Directory Versions</title>
+    @ENGLISH }}} -->
     <title>Katalogversjoner</title>
+    <!-- @ENGLISH {{{
+    
+    <para>Subversion tracks tree structures, not just file contents.
+      It's one of the biggest reasons Subversion was written to
+      replace CVS.</para>
+    @ENGLISH }}} -->
     <para>I tillegg til &#229; arkivere innholdet av filene, holder 
       Subversion ogs&#229; orden p&#229; trestrukturer.
       Dette er en av hovedgrunnene til at Subversion ble skrevet for &#229; 
       erstatte CVS.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Here's what this means to you, as a former CVS user:</para>
+    @ENGLISH }}} -->
     <para>Her er hva dette har &#229; si for deg, som en tidligere 
       CVS-bruker:</para>
 
     <itemizedlist>
       <listitem>
+        <!-- @ENGLISH {{{
+        <para>The <command>svn add</command> and <command>svn
+          delete</command> commands work on directories now, just as
+          they work on files.  So do <command>svn copy</command> and
+          <command>svn move</command>.  However, these commands do
+          <emphasis>not</emphasis> cause any kind of immediate change
+          in the repository.  Instead, the working items are simply
+          <quote>scheduled</quote> for addition or deletion.  No
+          repository changes happen until you run <command>svn
+          commit</command>.</para>
+        @ENGLISH }}} -->
         <para>Kommandoene <command>svn add</command> og <command>svn 
           delete</command> virker n&#229; ogs&#229; p&#229; kataloger, akkurat som de 
           gj&#248;r p&#229; filer.
@@ -84,6 +158,12 @@
           kj&#248;rer <command>svn commit</command>.</para>
       </listitem>
       <listitem>
+        <!-- @ENGLISH {{{
+        <para>Directories aren't dumb containers anymore; they have
+          revision numbers like files.  (Or more properly, it's
+          correct to talk about <quote>directory
+          <filename>foo/</filename> in revision 5</quote>.)</para>
+        @ENGLISH }}} -->
         <para>Kataloger er ikke <quote>dumme</quote> lagringsplasser for 
           filer mer, de har revisjonsnumre i likhet med filer.
           (Eller riktigere beskrevet, det er korrekt &#229; snakke om 
@@ -92,12 +172,31 @@
       </listitem>
     </itemizedlist>
 
+    <!-- @ENGLISH {{{
+    <para>Let's talk more about that last point.  Directory versioning
+      is a hard problem; because we want to allow mixed-revision
+      working copies, there are some limitations on how far we can
+      abuse this model.</para>
+    @ENGLISH }}} -->
     <para>La oss snakke mer om det siste punktet.
       Versjonskontroll av kataloger er et vanskelig problem.
       Fordi vi &#248;nsker &#229; tillate kopier som inneholder blandede 
       revisjoner, er det lagt inn begrensninger i hvor langt vi kan g&#229; 
       n&#229;r det gjelder &#229; misbruke denne modellen.</para>
 
+    <!-- @ENGLISH {{{
+    <para>From a theoretical point of view, we define <quote>revision
+      5 of directory <filename>foo</filename></quote> to mean a
+      specific collection of directory-entries and properties.  Now
+      suppose we start adding and removing files from
+      <filename>foo</filename>, and then commit.  It would be a lie
+      to say that we still have revision 5 of
+      <filename>foo</filename>.  However, if we bumped
+      <filename>foo</filename>'s revision number after the commit,
+      that would be a lie too; there may be other changes to
+      <filename>foo</filename> we haven't yet received, because we
+      haven't updated yet.</para>
+    @ENGLISH }}} -->
     <para>Fra et teoretisk synspunkt definerer vi <quote>revisjon 5 av 
       katalogen <filename>foo</filename></quote> til &#229; bety en spesifikk 
       samling av katalogposter og egenskaper.
@@ -112,6 +211,17 @@
       forel&#248;pig ikke har mottatt, fordi vi ikke har oppdatert 
       enda.</para>
     
+    <!-- @ENGLISH {{{
+    <para>Subversion deals with this problem by quietly tracking
+      committed adds and deletes in the <filename>.svn</filename>
+      area.  When you eventually run <command>svn update</command>,
+      all accounts are settled with the repository, and the
+      directory's new revision number is set correctly.
+      <emphasis>Therefore, only after an update is it truly safe to
+      say that you have a <quote>perfect</quote> revision of a
+      directory.</emphasis> Most of the time, your working copy will
+      contain <quote>imperfect</quote> directory revisions.</para>
+    @ENGLISH }}} -->
     <para>Subversion tar seg av dette problemet ved &#229; i all stillhet 
       unders&#248;ke innlagte tillegginger og slettinger i 
       <filename>.svn</filename>, det sjekkes at alt er i orden i henhold 
@@ -123,6 +233,16 @@
       Mesteparten av tiden vil arbeidskopien din inneholde 
       <quote>uperfekte</quote> katalogrevisjoner.</para>
     
+    <!-- @ENGLISH {{{
+    <para>Similarly, a problem arises if you attempt to commit
+      property changes on a directory.  Normally, the commit would
+      bump the working directory's local revision number.  But again,
+      that would be a lie, because there may be adds or deletes that
+      the directory doesn't yet have, because no update has happened.
+      <emphasis>Therefore, you are not allowed to commit
+      property-changes on a directory unless the directory is
+      up-to-date.</emphasis></para>
+    @ENGLISH }}} -->
     <para>P&#229; samme m&#229;te vil et problem oppst&#229; hvis du fors&#248;ker &#229; legge 
       inn forandringer i egenskapene for en katalog.
       Normalt ville innleggingen &#248;ke det lokale revisjonsnummeret for 
@@ -134,6 +254,10 @@
       egenskapsforandringer p&#229; en katalog hvis den ikke er 
       oppdatert.</emphasis></para>
 
+    <!-- @ENGLISH {{{
+    <para>For more discussion about the limitations of directory
+      versioning, see <xref linkend="svn-ch-2-sect-3.4"/>.</para>
+    @ENGLISH }}} -->
     <para>For videre diskusjon om begrensningene p&#229; versjonskontroll for 
       kataloger, se <xref linkend="svn-ch-2-sect-3.4"/>.</para>
 
@@ -144,13 +268,30 @@
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-3">
+    <!-- @ENGLISH {{{
+    <title>More Disconnected Operations</title>
+    @ENGLISH }}} -->
     <title>Flere frakoblede operasjoner</title>
 
+    <!-- @ENGLISH {{{
+    <para>In recent years, disk space has become outrageously cheap
+      and abundant, but network bandwidth has not.  Therefore, the
+      Subversion working copy has been optimized around the scarcer
+      resource.</para>
+    @ENGLISH }}} -->
     <para>I de senere &#229;r har diskplass blitt h&#229;rreisende billig og 
       tilgjengelig, i motsetning til b&#229;ndbredde.
-      Derfor er arbeidskopiene til Subversion blitt optimalisert for den 
-      mer dyrebare ressursen.</para>
+      Derfor er arbeidskopiene til Subversion <!-- &#164; kan &#171;blitt&#187; 
+      sl&#248;yfes? -->blitt optimalisert for den mer dyrebare 
+      ressursen.</para>
 
+    <!-- @ENGLISH {{{
+    <para>The <filename>.svn</filename> administrative directory
+      serves the same purpose as the <filename>CVS</filename>
+      directory, except that it also stores read-only,
+      <quote>pristine</quote> copies of your files.  This allows you
+      to do many things off-line:</para>
+    @ENGLISH }}} -->
     <para>Den administrative katalogen <filename>.svn</filename> tjener 
       samme form&#229;l som <filename>CVS</filename>-katalogen, unntatt at 
       den ogs&#229; lagrer skrivebeskyttede, <quote>rene</quote> kopier av 
@@ -162,6 +303,10 @@
       <varlistentry>
         <term><command>svn status</command></term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Shows you any local changes you've made (see <xref
+            linkend="svn-ch-3-sect-4.3.1"/>)</para>
+          @ENGLISH }}} -->
           <para>Viser deg alle lokale forandringer du har gjort (se 
             <xref linkend="svn-ch-3-sect-4.3.1"/>)</para>
         </listitem>
@@ -170,6 +315,10 @@
       <varlistentry>
         <term><command>svn diff</command></term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Shows you the details of your changes (see <xref
+            linkend="svn-ch-3-sect-4.3.2"/>)</para>
+          @ENGLISH }}} -->
           <para>Viser deg forandringene dine i detalj (se <xref 
             linkend="svn-ch-3-sect-4.3.2"/>)</para>
         </listitem>
@@ -178,6 +327,10 @@
       <varlistentry>
         <term><command>svn revert</command></term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Removes your local changes (see <xref
+            linkend="svn-ch-3-sect-4.3.3"/>)</para>
+          @ENGLISH }}} -->
           <para>Tilbakestiller dine lokale forandringer (se <xref 
             linkend="svn-ch-3-sect-4.3.3"/>)</para>
         </listitem>
@@ -185,10 +338,24 @@
 
     </variablelist>
 
+    <!-- @ENGLISH {{{
+    <para>Also, the cached pristine files allow the Subversion client
+      to send differences when committing, which CVS cannot do.</para>
+    @ENGLISH }}} -->
     <para>I tillegg tillater de originale filene Subversionklienten &#229; 
       sende oppdateringen som en differansefil, noe CVS ikke kan 
       gj&#248;re.</para>
 
+    <!-- @ENGLISH {{{
+    <para>The last subcommand in the list is new; it will not only
+      remove local mods, but it will un-schedule operations such as
+      adds and deletes.  It's the preferred way to revert a file;
+      running <command>rm file; svn update</command> will still work, but
+      it blurs the purpose of updating.  And, while we're on this
+      subject&hellip;
+
+    </para>
+    @ENGLISH }}} -->
     <para>Den siste delkommandoen i listen er ny;
       den vil ikke bare fjerne lokale forandringer, men den vil ogs&#229; 
       fjerne operasjoner som tillegg og slettinger fra k&#248;en.
@@ -203,12 +370,32 @@
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-4">
+    <!-- @ENGLISH {{{
+    <title>Distinction Between Status and Update</title>
+    @ENGLISH }}} -->
     <title>Skille mellom status og oppdatering</title>
 
+    <!-- @ENGLISH {{{
+    <para>In Subversion, we've tried to erase a lot of the confusion
+      between the <command>cvs status</command> and
+      <command>cvs update</command> commands.</para>
+    @ENGLISH }}} -->
     <para>I Subversion har vi pr&#248;vd &#229; fjerne en del av forvirringen 
       ang&#229;ende kommandoene <command>cvs status</command> og <command>cvs 
       update</command>.</para>
 
+    <!-- @ENGLISH {{{
+    <para>The <command>cvs status</command> command has two purposes:
+      first, to show the user any local modifications in the working
+      copy, and second, to show the user which files are out-of-date.
+      Unfortunately, because of CVS's hard-to-read status output, many
+      CVS users don't take advantage of this command at all.  Instead,
+      they've developed a habit of running <command>cvs update</command>
+      or <command>cvs update -n</command> to quickly see their mods.  If
+      users forget to use the <option>-n</option> option, this has the
+      side effect of merging repository changes they may not be ready
+      to deal with.</para>
+    @ENGLISH }}} -->
     <para>Kommandoen <command>cvs status</command> har to form&#229;l:
       For det f&#248;rste &#229; vise brukeren alle lokale forandringer i 
       arbeidskopien, og for det andre &#229; vise brukeren hvilke filer som 
@@ -222,6 +409,13 @@
       f&#248;re til at det flettes inn forandringer fra depotet som de 
       kanskje ikke er klare til &#229; h&#229;ndtere.</para>
 
+    <!-- @ENGLISH {{{
+    <para>With Subversion, we've tried to remove this muddle by making
+      the output of <command>svn status</command> easy to read for
+      both humans and parsers.  Also, <command>svn update</command>
+      only prints information about files that are updated,
+      <emphasis>not</emphasis> local modifications.</para>
+    @ENGLISH }}} -->
     <para>Med Subversion har vi fors&#248;kt &#229; fjerne dette rotet ved &#229; gj&#248;re 
       informasjonen fra <command>svn status</command> lettlest b&#229;de for 
       menneske og maskin.
@@ -229,6 +423,12 @@
       update</command> seg til kun &#229; inneholde filer som blir oppdatert, 
       <emphasis>ikke</emphasis> lokale endringer.</para>
 
+    <!-- @ENGLISH {{{
+    <para><command>svn status</command> prints all files that have
+      local modifications.  By default, the repository is not
+      contacted.  While this subcommand accepts a fair number of
+      options, the following are the most commonly used ones:</para>
+    @ENGLISH }}} -->
     <para><command>svn status</command> lister alle filer som inneholder 
       lokale forandringer.
       Standard oppf&#248;rsel er &#229; ikke kontakte depotet og nettverkskontakt 
@@ -240,6 +440,10 @@
       <varlistentry>
         <term><option>-u</option></term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Contact the repository to determine, and then display,
+            out-of-dateness information.</para>
+          @ENGLISH }}} -->
           <para>Kontakt depotet for &#229; finne ut, og deretter vise 
             informasjon om utdaterte elementer.</para>
         </listitem>
@@ -248,6 +452,10 @@
       <varlistentry>
         <term><option>-v</option></term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Show <emphasis>all</emphasis> entries under
+            version control.</para>
+          @ENGLISH }}} -->
           <para>Vis <emphasis>alle</emphasis> elementer som er under 
             versjonskontroll.</para>
         </listitem>
@@ -256,12 +464,21 @@
       <varlistentry>
         <term><option>-N</option></term>
         <listitem>
+          <!-- @ENGLISH {{{
+          <para>Run non-recursively (do not descend into
+            subdirectories).</para>
+          @ENGLISH }}} -->
           <para>Kj&#248;r kommandoen ikke-rekursivt (ikke g&#229; inn i 
             underkataloger).</para>
         </listitem>
       </varlistentry>
     </variablelist>
 
+    <!-- @ENGLISH {{{
+    <para>The <command>status</command> command has two output
+      formats.  In the default <quote>short</quote> format, local
+      modifications look like this:</para>
+    @ENGLISH }}} -->
     <para>Status-kommandoen har to visningsformater.
       Med det vanlige <quote>korte</quote> formatet ser lokale 
       forandringer ut som dette:</para>
@@ -272,6 +489,11 @@ M     ./foo.c
 M     ./bar/baz.c
 </screen>
 
+    <!-- @ENGLISH {{{
+    <para>If you specify the <option>-&#64738;-show-updates</option>
+      (<option>-u</option>) switch, a longer output format is
+      used:</para>
+    @ENGLISH }}} -->
     <para>Hvis du spesifisererer valget <option>--show-updates</option> 
       (<option>-u</option>), brukes et lengre format:</para>
 
@@ -284,6 +506,17 @@ M             1050    ./bar/baz.c
 Status against revision:   1066
 </screen>
 
+    <!-- @ENGLISH {{{
+    <para>In this case, two new columns appear.  The second column
+      contains an asterisk if the file or directory is out-of-date.
+      The third column shows the working-copy's revision number of the
+      item.  In the example above, the asterisk indicates that
+      <filename>faces.html</filename> would be patched if we updated,
+      and that <filename>bloo.png</filename> is a newly added file in
+      the repository.  (The <literal>-</literal> next to
+      <filename>bloo.png</filename> means that it doesn't yet exist in
+      the working copy.)</para>
+    @ENGLISH }}} -->
     <para>I dette tilfellet kommer to nye kolonner til syne.
       Den andre kolonnen inneholder en asterisk hvis filen eller 
       katalogen er utdatert.
@@ -305,9 +538,27 @@ Status against revision:   1066
          paragraph *is* about -u, not -v, my patch concentrated on
          that. -->
 
+    <!-- @ENGLISH {{{
+    <para>Lastly, here's a quick summary of the most common status codes that
+      you may see:</para>
+    @ENGLISH }}} -->
     <para>Til sist, her er en rask oversikt over de vanligste 
       statuskodene som du vil se:</para>
 
+    <!-- @ENGLISH {{{
+    <screen>
+A    Resource is scheduled for Addition
+D    Resource is scheduled for Deletion
+M    Resource has local modifications
+C    Resource has conflicts (changes have not been completely merged
+       between the repository and working copy version)
+X    Resource is external to this working copy (comes from another
+       repository.  See <xref linkend="svn-ch-7-sect-2.3.6" />)
+?    Resource is not under version control
+!    Resource is missing or incomplete (removed by another tool than
+       Subversion)
+</screen>
+    @ENGLISH }}} -->
     <screen>
 A    Ressursen er klargjort for tillegging (<quote>Added</quote>)
 D    Ressursen er klargjort for sletting (<quote>Deleted</quote>)
@@ -324,12 +575,23 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
     <!-- ###TODO:  This paragraph should be moved elsewhere.  We are
                    talking about status codes here, and not update.
                    Although CVS uses update as a form of status... -->
+    <!-- @ENGLISH {{{
+    <para>Subversion has combined the CVS <literal>P</literal> and
+      <literal>U</literal> codes into just <literal>U</literal>.  When
+      a merge or conflict occurs, Subversion simply prints
+      <literal>G</literal> or <literal>C</literal>, rather than a
+      whole sentence about it.</para>
+    @ENGLISH }}} -->
     <para>Subversion har kombinert CVSs <literal>P</literal>- og 
       <literal>U</literal>-kode inn i en <command>U</command>.
       N&#229;r en fletting eller konflikt oppst&#229;r, skriver Subversion rett og 
       slett bare <command>G</command> eller <command>C</command>, 
       istedenfor en hel setning om det.</para>
 
+    <!-- @ENGLISH {{{
+    <para>For a more detailed discussion of <command>svn
+      status</command>, see <xref linkend="svn-ch-3-sect-4.3.1" />.</para>
+    @ENGLISH }}} -->
     <para>For en mer detaljert diskusjon om <command>svn 
       status</command>, se <xref linkend="svn-ch-3-sect-4.3.1" 
       />.</para>
@@ -341,8 +603,18 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ======================== SECTION 5 ============================= -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-5">
+    <!-- @ENGLISH {{{
+    <title>Branches and Tags</title>
+    @ENGLISH }}} -->
     <title>Forgreninger og merker</title>
 
+    <!-- @ENGLISH {{{
+    <para>Subversion doesn't distinguish between filesystem space and
+      <quote>branch</quote> space; branches and tags are ordinary
+      directories within the filesystem.  This is probably the single
+      biggest mental hurdle a CVS user will need to climb.  Read all
+      about it in <xref linkend="svn-ch-4"/>.</para>
+    @ENGLISH }}} -->
     <para>Subversion skiller ikke mellom omr&#229;der i filsystemet og 
       omr&#229;der for <quote>forgreninger</quote>, forgreninger og merker er 
       vanlige kataloger i filsystemet.
@@ -352,6 +624,20 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
 
 
     <warning>
+      <!-- @ENGLISH {{{
+      <para>Since Subversion treats branches and tags as ordinary
+        directories, always remember to check out the
+        <literal>trunk</literal>
+        (<literal>http://svn.example.com/repos/calc/trunk/</literal>)
+        of your project, and not the project itself
+        (<literal>http://svn.example.com/repos/calc/</literal>).  If
+        you make the mistake of checking out the project itself,
+        you'll wind up with a working copy that contains a copy of
+        your project for every branch and tag you
+        have.<footnote><para>That is, providing you don't run out of
+        disk space before your checkout
+        finishes.</para></footnote></para>
+      @ENGLISH }}} -->
       <para>Siden Subversion behandler forgreninger og merker som 
         ordin&#230;re kataloger, husk alltid p&#229; &#229; hente ut katalogen kalt 
         <literal>trunk</literal> 
@@ -372,18 +658,37 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-6">
+    <!-- @ENGLISH {{{
+    <title>Metadata Properties</title>
+    @ENGLISH }}} -->
     <title>Metadata-egenskaper</title>
 
+    <!-- @ENGLISH {{{
+    <para>A new feature of Subversion is that you can attach arbitrary
+      metadata (or <quote>properties</quote>) to files and
+      directories.  Properties are arbitrary name/value pairs
+      associated with files and directories in your working
+      copy.</para>
+    @ENGLISH }}} -->
     <para>En ny funksjon i Subversion lar deg legge til vilk&#229;rlige 
       metadata (eller <quote>egenskaper</quote>) til filer og katalgoer.
       Egenskaper er vilk&#229;rlige navn/verdi-par koblet til filer og 
       kataloger i arbeidskopien din.</para>
     
+    <!-- @ENGLISH {{{
+    <para>To set or get a property name, use the <command>svn
+      propset</command> and <command>svn propget</command>
+      subcommands.  To list all properties on an object, use
+      <command>svn proplist</command>.</para>
+    @ENGLISH }}} -->
     <para>For &#229; sette eller lese et egenskapsnavn, bruk delkommandoene 
       <command>svn propset</command> og <command>svn propget</command>.
       For &#229; liste ut alle egenskaper ved et objekt, bruk <command>svn 
       proplist</command>.</para>
 
+    <!-- @ENGLISH {{{
+    <para>For more information, see <xref linkend="svn-ch-7-sect-2"/>.</para>
+    @ENGLISH }}} -->
     <para>For mer informasjon, se <xref 
       linkend="svn-ch-7-sect-2"/>.</para>
 
@@ -393,8 +698,21 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-7">
+    <!-- @ENGLISH {{{
+    <title>Conflict Resolution</title>
+    @ENGLISH }}} -->
     <title>Reparering av konflikter</title>
 
+    <!-- @ENGLISH {{{
+    <para>CVS marks conflicts with in-line <quote>conflict
+      markers</quote>, and prints a <literal>C</literal> during an
+      update.  Historically, this has caused problems, because CVS
+      isn't doing enough.  Many users forget about (or don't see) the
+      <literal>C</literal> after it whizzes by on their terminal.
+      They often forget that the conflict-markers are even present,
+      and then accidentally commit files containing
+      conflict-markers.</para>
+    @ENGLISH }}} -->
     <para>CVS markerer konflikter med innlagte 
       <quote>konfliktmerker</quote>, og skriver en <literal>C</literal> 
       under oppdatering.
@@ -404,6 +722,14 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       Ofte glemmer de at konfliktmerkene er der i det hele tatt, og de 
       legger deretter inn filer som inneholder konfliktmerker.</para>
     
+    <!-- @ENGLISH {{{
+
+    <para>Subversion solves this problem by making conflicts more
+      tangible.  It remembers that a file is in a state of conflict,
+      and won't allow you to commit your changes until you run
+      <command>svn resolved</command>.  See <xref
+      linkend="svn-ch-3-sect-4.4"/> for more details.</para>
+    @ENGLISH }}} -->
     <para>Subversion l&#248;ser dette problemet ved &#229; gj&#248;re konflikter mer 
       synlige.
       Den husker at en fil har en konflikt, og vil ikke tillate deg &#229; 
@@ -416,8 +742,21 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-8">
+    <!-- @ENGLISH {{{
+    <title>Binary Files and Translation</title>
+    @ENGLISH }}} -->
     <title>Bin&#230;re filer og konverteringer</title>
 
+    <!-- @ENGLISH {{{
+    <para>In the most general sense, Subversion handles binary files
+      more gracefully than CVS does.  Because CVS uses RCS, it can
+      only store successive full copies of a changing binary file.
+      But internally, Subversion expresses differences between files
+      using a binary-differencing algorithm, regardless of whether they
+      contain textual or binary data.  That means that all files are
+      stored differentially (compressed) in the repository, and small
+      differences are always sent over the network.</para>
+    @ENGLISH }}} -->
     <para>Generelt sett behandler Subversion bin&#230;re filer mer elegant 
       enn CVS.
       Fordi CVS bruker RCS, kan den bare lagre hele kopier av bin&#230;re 
@@ -431,11 +770,27 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       depotet, og sm&#229; forandringer blir alltid sendt over 
       nettverket.</para>
     
+    <!-- @ENGLISH {{{
+    <para>CVS users have to mark binary files with
+      <option>-kb</option> flags, to prevent data from being garbled
+      (due to keyword expansion and line-ending translations).  They
+      sometimes forget to do this.</para>
+    @ENGLISH }}} -->
     <para>CVS-brukere m&#229; merke bin&#230;re filer med flagget 
       <option>-kb</option>, for &#229; forhindre data &#229; bli rotet til (p&#229; 
       grunn av n&#248;kkelordutvidelser og oversettelse av linjeslutt).
       Dette glemmer de noen ganger.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Subversion takes the more paranoid route: first, it never
+      performs any kind of keyword or line-ending translation unless
+      you explicitly ask it do so (see <xref
+      linkend="svn-ch-7-sect-2.3.4"/> and <xref
+      linkend="svn-ch-7-sect-2.3.5"/> for more details).  By default,
+      Subversion treats all file data as literal byte strings, and
+      files are always stored in the repository in an untranslated
+      state.</para>
+    @ENGLISH }}} -->
     <para>Subversion tar den mer paranoide ruten:
       Til &#229; begynne med utf&#248;rer den ingen form for n&#248;kkelordutvidelser 
       hvis du ikke ber den spesielt om &#229; gj&#248;re det (Se <xref 
@@ -445,6 +800,14 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       rene strenger av bytes, og filer blir alltid lagret i depotet i en 
       uoversatt tilstand.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Second, Subversion maintains an internal notion of whether a
+      file is <quote>text</quote> or <quote>binary</quote> data, but
+      this notion is <emphasis>only</emphasis> extant in the working
+      copy.  During an <command>svn update</command>, Subversion will
+      perform contextual merges on locally modified text files, but
+      will not attempt to do so for binary files.</para>
+    @ENGLISH }}} -->
     <para>For det andre har Subversion et internt begrep om en fil er 
       <quote>tekst</quote> eller <quote>bin&#230;re</quote> data, men dette 
       begrepet er <emphasis>bare</emphasis> bevart i arbeidskopien.
@@ -452,6 +815,21 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       kontekstbaserte flettinger p&#229; tekstfiler som inneholder lokale 
       endringer, men vil ikke fors&#248;ke dette for bin&#230;re filer.</para>
 
+    <!-- @ENGLISH {{{
+    <para>To determine whether a contextual merge is possible,
+      Subversion examines the <literal>svn:mime-type</literal>
+      property.  If the file has no <literal>svn:mime-type</literal>
+      property, or has a mime-type that is textual (e.g.
+      <literal>text/*</literal>),
+      Subversion assumes it is text.  Otherwise, Subversion assumes
+      the file is binary.  Subversion also helps users by running a
+      binary-detection algorithm in the <command>svn import</command>
+      and <command>svn add</command> commands.  These commands will
+      make a good guess and then (possibly) set a binary
+      <literal>svn:mime-type</literal> property on the file being
+      added.  (If Subversion guesses wrong, the user can always remove
+      or hand-edit the property.)</para>
+    @ENGLISH }}} -->
     <para>For &#229; avgj&#248;re hvorvidt en kontekstbasert fletting er mulig, 
       leser Subversion <literal>svn:mime-type</literal>-egenskapen.
       Hvis filen ikke har noen 
@@ -476,8 +854,18 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-9">
 
+    <!-- @ENGLISH {{{
+    <title>Versioned Modules</title>
+    @ENGLISH }}} -->
     <title>Versjonerte moduler</title>
 
+    <!-- @ENGLISH {{{
+    <para>Unlike CVS, a Subversion working copy is aware that it has
+      checked out a module.  That means that if somebody changes the
+      definition of a module (e.g. adds or removes components), then a
+      call to <command>svn update</command> will update the working
+      copy appropriately, adding and removing components.</para>
+    @ENGLISH }}} -->
     <para>I motsetning til CVS er en arbeidskopi i Subversion klar over 
       at den har hentet ut en modul.
       Dette betyr at hvis noen forandrer definisjonen av en modul (det 
@@ -485,6 +873,10 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       <command>svn update</command> oppdatere arbeidskopien p&#229; en 
       skikkelig m&#229;te.</para>
 
+    <!-- @ENGLISH {{{
+    <para>Subversion defines modules as a list of directories within a
+      directory property:  see <xref linkend="svn-ch-7-sect-3"/>.</para>
+    @ENGLISH }}} -->
     <para>Subversion definerer moduler som en liste av kataloger 
       innenfor en katalogegenskap:
       Se <xref linkend="svn-ch-7-sect-3"/>.</para>
@@ -496,8 +888,25 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-10">
 
+    <!-- @ENGLISH {{{
+    <title>Authentication</title>
+    @ENGLISH }}} -->
     <title>Autentisering</title>
 
+    <!-- @ENGLISH {{{
+    <para>With CVS's pserver, you are required to <quote>login</quote>
+      to the server before any read or write operation&mdash;you even
+      have to login for anonymous operations.  With a Subversion
+      repository using Apache <command>httpd</command> or
+      <command>svnserve</command> as the server, you don't provide
+      any authentication credentials at the outset&mdash;if an
+      operation that you perform requires authentication, the server
+      will challenge you for your credentials (whether those
+      credentials are username and password, a client certificate, or
+      even both).  So if your repository is world-readable, you will
+      not be required to authenticate at all for read
+      operations.</para>
+    @ENGLISH }}} -->
     <para>Med CVSs pserver er du n&#248;dt til &#229; <quote>logge inn</quote> p&#229; 
       tjeneren f&#248;r du kan utf&#248;re lese- eller skriveoperasjoner &#8212; du m&#229; 
       til og med logge inn for anonyme operasjoner.
@@ -509,6 +918,12 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       S&#229; hvis depotet er lesbart for hele verden, trenger du ikke &#229; 
       autentisere i det hele tatt for leseoperasjoner.</para>
 
+    <!-- @ENGLISH {{{
+    <para>As with CVS, Subversion still caches your credentials on
+      disk (in your <filename>~/.subversion/auth/</filename>
+      directory) unless you tell it not to by using the
+      <option>-&#64738;-no-auth-cache</option> switch.</para>
+    @ENGLISH }}} -->
     <para>I likhet med CVS vil Subversion lagre dine 
       autentiseringsopplysninger p&#229; disken (i katalogen 
       <filename>~/.subversion/auth/</filename>) unntatt hvis du ber den 
@@ -516,6 +931,13 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       Til dette bruker du valget 
       <option>--no-auth-cache</option>.</para>
 
+    <!-- @ENGLISH {{{
+    <para>The exception to this behaviors, however, is in the case of
+      accessing an <command>svnserve</command> server over an SSH
+      tunnel, using the <literal>svn+ssh://</literal> URL schema.  In
+      that case, the <command>ssh</command> program unconditionally
+      demands authentication just to start the tunnel.</para>
+    @ENGLISH }}} -->
     <para>Unntaket fra denne oppf&#248;rselen derimot, er tilfellet med &#229; 
       aksessere en <command>svnserve</command>-tjener gjennom en 
       SSH-tunnel ved &#229; bruke URL-skjemaet <literal>svn+ssh://</literal>.
@@ -529,8 +951,26 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
   <!-- ================================================================= -->
   <sect1 id="svn-ap-a-sect-11">
 
+    <!-- @ENGLISH {{{
+    <title>Converting a Repository from CVS to Subversion</title>
+    @ENGLISH }}} -->
     <title>Konvertere et depot fra CVS til Subversion</title>
 
+    <!-- @ENGLISH {{{
+    <para>Perhaps the most important way to familiarize CVS users with
+      Subversion is to let them continue to work on their projects
+      using the new system.  And while that can be somewhat
+      accomplished using a flat import into a Subversion repository of
+      an exported CVS repository, the more thorough solution involves
+      transferring not just the latest snapshot of their data, but all
+      the history behind it as well, from one system to another.  This
+      is an extremely difficult problem to solve that involves
+      deducing changesets in the absence of atomicity, and translating
+      between the systems' completely orthogonal branching policies,
+      among other complications.  Still, there are a handful of tools
+      claiming to at least partially support the ability to convert
+      existing CVS repositories into Subversion ones.</para>
+    @ENGLISH }}} -->
     <para>Kanskje den viktigste m&#229;ten &#229; gj&#248;re CVS-brukere kjent med 
       Subversion er &#229; la dem fortsette arbeidet p&#229; prosjektene deres ved 
       bruk av det nye systemet.
@@ -547,6 +987,22 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       hvertfall delvis &#229; kunne konvertere eksisterende CVS-depoter til 
       Subversion.</para>
 
+    <!-- @ENGLISH {{{
+    <para>One such tool is cvs2svn (<systemitem
+      class="url">http://cvs2svn.tigris.org/</systemitem>), a Python
+      script originally created by members of Subversion's own
+      development community.  Others include Chia-liang Kao's
+      Subversion converter plugin to the VCP tool (<systemitem
+      class="url">http://svn.clkao.org/revml/branches/svn-perl/</systemitem>)
+      and Lev Serebryakov's RefineCVS (<systemitem
+      class="url">http://lev.serebryakov.spb.ru/refinecvs/</systemitem>).
+      These tools have various levels of completeness, and may make
+      entirely different decisions about how to handle your CVS
+      repository history.  Whichever tool you decide to use, be sure
+      to perform as much verification as you can stand on the
+      conversion results&mdash;after all, you've worked hard to build
+      that history!</para>
+    @ENGLISH }}} -->
     <para>Et slikt verkt&#248;y er cvs2svn (<systemitem 
       class="url">http://cvs2svn.tigris.org/</systemitem>), et 
       Pythonskript originalt laget av medlemmer fra Subversions 
@@ -564,6 +1020,11 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       &#8212; n&#229;r alt kommer til alt har du jobbet hardt for &#229; lage denne 
       historien!</para>
 
+    <!-- @ENGLISH {{{
+    <para>For an updated collection of links to known converter tools,
+      visit the Links page of the Subversion website (<systemitem
+      class="url">http://subversion.tigris.org/project_links.html</systemitem>).</para>
+    @ENGLISH }}} -->
     <para>For en oppdatert samling av lenker til kjente 
       konverteringsverkt&#248;y, bes&#248;k lenkesiden p&#229; hjemmesiden til 
       Subversion (<systemitem 

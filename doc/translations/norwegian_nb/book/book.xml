@@ -24,16 +24,25 @@
 ]>
 
   <book id="svn" lang="no">
+  <!-- @ENGLISH {{{
+  <title>Version Control with Subversion</title>
+  @ENGLISH }}} -->
   <title>Versjonskontroll med Subversion</title>
 
   <!-- Using revnumber would be more appropriate, but our stylesheets -->
   <!-- don't seem to render it. -->
   <subtitle><para>For Subversion 1.1</para>
+            <!-- @ENGLISH {{{
+            <para>(book compiled from &svn.version;)</para>
+            @ENGLISH }}} -->
             <para>(Boken kompilert fra &svn.version;)</para>
   </subtitle>
 
   <bookinfo>
 
+    <!-- @ENGLISH {{{
+    <edition>First</edition>
+    @ENGLISH }}} -->
     <edition>F&#248;rste</edition>
     <isbn>0-59600-448-6</isbn>
     <authorgroup>
@@ -55,11 +64,21 @@
 
     </authorgroup>
 
+    <othercredit>
+      <firstname>&#216;yvind</firstname>
+      <othername>A.</othername>
+      <surname>Holm</surname>
+      <contrib>Oversatt til norsk av</contrib>
+    </othercredit>
+
     <editor>
       <firstname>Linda</firstname>
       <surname>Mui</surname>
     </editor>
 
+    <!-- @ENGLISH {{{
+    <pagenums>350 pages (est.)</pagenums>
+    @ENGLISH }}} -->
     <pagenums>350 sider (ca.)</pagenums>
     <pubdate>(TBA)</pubdate>
 
@@ -72,6 +91,13 @@
       <holder>C. Michael Pilato</holder>
     </copyright>
 
+      <!-- @ENGLISH {{{
+      <legalnotice><para>This work is licensed under the Creative
+        Commons Attribution License. To view a copy of this license,
+        visit http://creativecommons.org/licenses/by/2.0/ or send a
+        letter to Creative Commons, 559 Nathan Abbott Way, Stanford,
+        California 94305, USA.</para></legalnotice>
+      @ENGLISH }}} -->
       <legalnotice><para>Dette verket er lisensiert under Creative 
         Commons Attribution License.
         For &#229; se en kopi av denne lisensen, g&#229; til 
@@ -87,8 +113,8 @@
   &ch00;
   &ch01;
   &ch02;
-  <!-- CO {{{
   &ch03;
+  <!-- CO {{{
   &ch04;
   &ch05;
   &ch06;

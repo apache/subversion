@@ -1,0 +1,41 @@
+#!/usr/bin/perl -w
+
+#=========================================================
+# $Id$
+# Removes the English text from stdin or files.
+#
+# This complicated piece of software is licensed under the
+# GNU General Public License.
+#=========================================================
+
+use strict;
+
+$| = 1;
+
+use Getopt::Std;
+our ($opt_h) = (0);
+getopts('h') || die("Option error. Use -h for help.\n");
+
+$opt_h && usage(0);
+
+my $Data = join("", <>);
+$Data =~ s/\n *?<!-- \@ENGLISH {{{.*?\@ENGLISH }}} -->\s*?\n/\n/gs;
+print($Data);
+
+sub usage {
+	my $Retval = shift;
+	print(<<END);
+
+Usage: $0 [file [...]]
+
+Strips the \@ENGLISH markers and all text inside from stdin or files
+specified on the command line. All output goes to stdout.
+
+END
+	exit($Retval);
+}
+
+__END__
+
+# vim: set fileencoding=UTF-8 filetype=perl foldmethod=marker foldlevel=0 :
+# End of file $Id$
