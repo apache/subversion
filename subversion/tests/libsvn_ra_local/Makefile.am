@@ -33,7 +33,7 @@ check:
 	@if test -n "$(SVN_TESTS)"; then \
 	  for prog in "$(SVN_TESTS)"; do \
 	    echo; \
-n	    echo -n "Running all sub-tests in $$prog..."; \
+	    echo -n "Running all sub-tests in $$prog..."; \
 	    ./$$prog >> tests.log; \
 	    if [ $$? -eq 0 ]; \
 	    then \
