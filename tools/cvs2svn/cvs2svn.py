@@ -1197,8 +1197,10 @@ class Dumper:
     # Jump back to the end of the stream
     self.dumpfile.seek(0, 2)
 
-    # This record is done.
-    self.dumpfile.write('\n')
+    # This record is done (write two newlines -- one to terminate
+    # contents that weren't themselves newline-termination, one to
+    # provide a blank line for readability.
+    self.dumpfile.write('\n\n')
     return change.closed_tags, change.closed_branches
 
   def delete_path(self, svn_path, tags, branches, prune=None):
