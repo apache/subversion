@@ -50,6 +50,9 @@
 /* ==================================================================== */
 
 
+#ifndef SVN_DELTA_H
+#define SVN_DELTA_H
+
 #include "svn_types.h"
 #include "apr_pools.h"
 
@@ -106,6 +109,7 @@ typedef struct svn_delta_digger_t
 
 
 
+#endif  /* SVN_DELTA_H */
 
 
 /* 
