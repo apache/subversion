@@ -1095,7 +1095,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
           (when svn-status-operated-on-dot
             ;; when the commit used . as argument, delete the trailing directory
             ;; from the svn output
-            (search-forward "/"))
+            (search-forward "/" nil t))
           (setq name (buffer-substring-no-properties (point) (point-at-eol)))
           ;;(message "%S %S" action name)
           (setq result (cons (list name action)
