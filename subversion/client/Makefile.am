@@ -16,7 +16,7 @@ svn_LDADD = ../libsvn_client/libsvn_client.la     \
             ../libsvn_delta/libsvn_delta.la       \
 	    ../libsvn_subr/libsvn_subr.la         \
             ../tests-common/libsvn_test_editor.la \
-            ../../apr/libapr.a                    \
+            @SVN_APR_LIBS@                        \
             ../../expat-lite/libexpat.la
 
 

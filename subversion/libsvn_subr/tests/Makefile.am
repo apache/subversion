@@ -10,12 +10,12 @@ INCLUDES = -I../../include -I../../../apr/include
 ## Libraries this binary depends upon:
 hashdump_test_LDADD = ../../tests-common/libsvn_tests_main.la   \
                       ../libsvn_subr.la                         \
-                      ../../../apr/libapr.a                     \
+                      @SVN_APR_LIBS@                            \
                       ../../../expat-lite/libexpat.la
 
 stringtest_LDADD = ../../tests-common/libsvn_tests_main.la   \
                    ../libsvn_subr.la                         \
-                   ../../../apr/libapr.a                     \
+                   @SVN_APR_LIBS@                            \
                    ../../../expat-lite/libexpat.la
 
 

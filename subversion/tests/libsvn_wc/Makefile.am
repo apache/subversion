@@ -13,14 +13,14 @@ INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
 checkout_test_LDADD = ../libsvn_wc.la                          \
                       ../../libsvn_delta/libsvn_delta.la       \
                       ../../libsvn_subr/libsvn_subr.la         \
-                      ../../../apr/libapr.a                    \
+                      @SVN_APR_LIBS@                           \
                       ../../../expat-lite/libexpat.la
 
 commit_test_LDADD = ../libsvn_wc.la                          \
                     ../../libsvn_delta/libsvn_delta.la       \
                     ../../tests-common/libsvn_test_editor.la \
                     ../../libsvn_subr/libsvn_subr.la         \
-                    ../../../apr/libapr.a                    \
+                    @SVN_APR_LIBS@                           \
                     ../../../expat-lite/libexpat.la
 
 ## Make libtool be quiet

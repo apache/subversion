@@ -15,7 +15,7 @@ ra_dav_test_LDADD = ../libsvn_ra_dav.la                     \
                     ../../libsvn_delta/libsvn_delta.la      \
                     ../../../expat-lite/libexpat.la         \
                     ../../../neon/libneon.la                \
-                    ../../../apr/libapr.a
+                    @SVN_APR_LIBS@
 
 ## Libraries this binary depends upon:
 ra_commit_LDADD = ../libsvn_ra_dav.la                     \
@@ -24,7 +24,7 @@ ra_commit_LDADD = ../libsvn_ra_dav.la                     \
                     ../../libsvn_delta/libsvn_delta.la      \
                     ../../../expat-lite/libexpat.la         \
                     ../../../neon/libneon.la                \
-                    ../../../apr/libapr.a
+                    @SVN_APR_LIBS@
 
 
 ## Make libtool be quiet
