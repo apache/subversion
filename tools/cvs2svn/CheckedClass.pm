@@ -100,7 +100,7 @@ sub CheckedClass::check_new {
     my $info = $self->merged_type_info();
     for (@{$info->{required_args}}) {
 	croak "required arg \"$_\" missing in $classname constructor"
-	    unless defined $self->{$_};
+	    unless exists $self->{$_};
     }
     while (my ($arg, $val) = each %$self) {
 	my $expected_type = $info->{arg_types}->{$arg};
@@ -156,10 +156,14 @@ sub CheckedClass::merged_type_info {
 	$member_types{$arg} = $type;
     }
     while (my ($arg, $type) = each %{$ti->{optional_args}}) {
+	croak "$class member $arg multiply defined"
+	    if exists $member_types{$arg};
 	$arg_types{$arg} = $type;
 	$member_types{$arg} = $type;
     }
     while (my ($arg, $type) = each %{$ti->{members}}) {
+	croak "$class member $arg multiply defined"
+	    if exists $member_types{$arg};
 	$member_types{$arg} = $type;
     }
 
