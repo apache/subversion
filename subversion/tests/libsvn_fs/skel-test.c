@@ -120,6 +120,15 @@ skel_is_digit (char byte)
 }
 #endif
 
+/* Return true iff BYTE is a paren byte.  */
+static int
+skel_is_paren (char byte)
+{
+  init_char_types ();
+
+  return skel_char_map[(unsigned char) byte] == type_paren;
+}
+
 /* Return true iff BYTE is a name byte.  */
 static int
 skel_is_name (char byte)
@@ -130,22 +139,36 @@ skel_is_name (char byte)
 }
 
 
+/* Check that SKEL is an atom, and it's contents match LEN bytes of
+   DATA. */
+static int
+check_atom (skel_t *skel, const char *data, int len)
+{
+  return (skel
+	  && skel->is_atom
+	  && skel->len == len
+	  && ! memcmp (skel->data, data, len));
+}
+
 
 /* Functions that generate/check interesting implicit-length atoms.  */
 
 
 /* Append to STR an implicit-length atom consisting of the byte BYTE,
-   terminated by the space character SPACE.  BYTE must be a name byte,
-   and SPACE must be a space byte.  */
+   terminated by the character TERM.  BYTE must be a name byte,
+   and TERM must be a valid skel separator, or NUL.  */
 static void
-put_implicit_length_byte (svn_string_t *str, char byte, char space)
+put_implicit_length_byte (svn_string_t *str, char byte, char term)
 {
   if (! skel_is_name (byte))
     abort ();
-  if (! skel_is_space (space))
+  if (term != '\0'
+      && ! skel_is_space (term)
+      && ! skel_is_paren (term))
     abort ();
   svn_string_appendbytes (str, &byte, 1);
-  svn_string_appendbytes (str, &space, 1);
+  if (term != '\0')
+    svn_string_appendbytes (str, &term, 1);
 }
 
 
@@ -157,10 +180,7 @@ check_implicit_length_byte (skel_t *skel, char byte)
   if (! skel_is_name (byte))
     abort ();
 
-  return (skel
-	  && skel->is_atom
-	  && skel->len == 1
-	  && skel->data[0] == byte);
+  return check_atom (skel, &byte, 1);
 }
 
 
@@ -175,7 +195,8 @@ gen_implicit_length_all_chars (int *len_p)
   pos = 0;
   name[pos++] = 'x';
   for (i = 0; i < 256; i++)
-    if (! skel_is_space (i))
+    if (! skel_is_space (i)
+        && ! skel_is_paren (i))
       name[pos++] = i;
 
   *len_p = pos;
@@ -184,19 +205,22 @@ gen_implicit_length_all_chars (int *len_p)
 
 
 /* Append to STR an implicit-length atom containing every character
-   that's legal in such atoms, terminated by the whitespace character
-   SPACE.  */
+   that's legal in such atoms, terminated by the valid atom terminator
+   TERM.  */
 static void
-put_implicit_length_all_chars (svn_string_t *str, char space)
+put_implicit_length_all_chars (svn_string_t *str, char term)
 {
   int len;
   char *name = gen_implicit_length_all_chars (&len);
 
-  if (! skel_is_space (space))
+  if (term != '\0'
+      && ! skel_is_space (term)
+      && ! skel_is_paren (term))
     abort ();
 
   svn_string_appendbytes (str, name, len);
-  svn_string_appendbytes (str, &space, 1);
+  if (term != '\0')
+    svn_string_appendbytes (str, &term, 1);
 }
 
 
@@ -208,10 +232,7 @@ check_implicit_length_all_chars (skel_t *skel)
   int len;
   char *name = gen_implicit_length_all_chars (&len);
 
-  return (skel
-	  && skel->is_atom
-	  && skel->len == len
-	  && ! memcmp (skel->data, name, len));
+  return check_atom (skel, name, len);
 }
 
 
@@ -228,29 +249,27 @@ parse_implicit_length (const char **msg)
 
   /* Try all valid single-byte atoms.  */
   {
+    const char *c;
     int i;
 
-    for (i = 0; i < 256; i++)
-      if (skel_is_name(i))
-	{
-	  svn_string_setempty (str);
-	  put_implicit_length_byte (str, i, ' ');
-	  skel = parse_str (str);
-	  if (! check_implicit_length_byte (skel, i))
-	    return fail ();
-	}
+    for (c = "\t\n\f\r ()[]"; *c; c++)
+      for (i = 0; i < 256; i++)
+        if (skel_is_name(i))
+          {
+            svn_string_setempty (str);
+            put_implicit_length_byte (str, i, *c);
+            skel = parse_str (str);
+            if (! check_implicit_length_byte (skel, i))
+              return fail ();
+          }
   }
 
   /* Try an atom that contains every character that's legal in an
      implicit-length atom.  */
   svn_string_setempty (str);
-  put_implicit_length_all_chars (str, ' ');
+  put_implicit_length_all_chars (str, '\0');
   skel = parse_str (str);
   if (! check_implicit_length_all_chars (skel))
-    return fail ();
-
-  /* Try to parse some invalid atoms.  */
-  if (parse_cstr ((char *) "howdy"))
     return fail ();
 
   return 0;
@@ -288,18 +307,14 @@ put_explicit_length (svn_string_t *str, const char *data, int len, char sep)
 static int
 check_explicit_length (skel_t *skel, const char *data, int len)
 {
-  return (skel
-	  && skel->is_atom
-	  && skel->len == len
-	  && ! memcmp (skel->data, data, len));
+  return check_atom (skel, data, len);
 }
-
 
 
 /* Test parsing of explicit-length atoms.  */
 
 static int
-try_explicit_length (const char *data, int len)
+try_explicit_length (const char *data, int len, int check_len)
 {
   int i;
   svn_string_t *str = get_empty_string ();
@@ -312,7 +327,7 @@ try_explicit_length (const char *data, int len)
 	svn_string_setempty (str);
 	put_explicit_length (str, data, len, i);
 	skel = parse_str (str);
-	if (! check_explicit_length (skel, data, len))
+	if (! check_explicit_length (skel, data, check_len))
 	  return fail (); 
       }
 
@@ -326,7 +341,7 @@ parse_explicit_length (const char **msg)
   *msg = "parse explicit-length atoms";
 
   /* Try to parse the empty atom.  */
-  try_explicit_length ("", 0);
+  try_explicit_length ("", 0, 0);
 
   /* Try to parse every one-character atom.  */
   {
@@ -337,7 +352,7 @@ parse_explicit_length (const char **msg)
 	char buf[1];
 	
 	buf[0] = i;
-	if (try_explicit_length (buf, 1))
+	if (try_explicit_length (buf, 1, 1))
 	  return fail ();
       }
   }
@@ -350,13 +365,59 @@ parse_explicit_length (const char **msg)
     for (i = 0; i < 256; i++)
       data[i] = i;
 
-    if (try_explicit_length (data, 256))
+    if (try_explicit_length (data, 256, 256))
       return fail ();
   }
 
-  /* Try to parse some invalid atoms.  */
-  if (parse_cstr ((char *) "6 howdy"))
-    return fail ();
+  return 0;
+}
+
+
+
+/* Test parsing of invalid atoms. */
+
+static struct invalid_atoms
+{
+  int type;
+  int len;
+  const char *data;
+} invalid_atoms[] = { { 1,  1, "(" },
+                      { 1,  1, ")" },
+                      { 1,  1, "[" },
+                      { 1,  1, "]" },
+                      { 1,  1, " " },
+                      { 1, 13, "Hello, World!" },
+                      { 1,  8, "1mplicit" },
+
+                      { 2,  2, "1" },
+                      { 2,  1, "12" },
+
+                      { 7,  0, NULL } };
+
+static int
+parse_invalid_atoms (const char **msg)
+{
+  struct invalid_atoms *ia = invalid_atoms;
+
+  *msg = "parse invalid atoms";
+
+  while (ia->type != 7)
+    {
+      if (ia->type == 1)
+        {
+          skel_t *skel = parse_cstr ((char *) ia->data);
+          if (check_atom (skel, ia->data, ia->len))
+            return fail ();
+        }
+      else
+        {
+          if (!try_explicit_length (ia->data, ia->len,
+                                    strlen (ia->data)))
+            return fail ();
+        }
+
+      ia++;
+    }
 
   return 0;
 }
@@ -804,6 +865,7 @@ int (*test_funcs[]) (const char **msg) = {
   0,
   parse_implicit_length,
   parse_explicit_length,
+  parse_invalid_atoms,
   parse_list,
   unparse_implicit_length,
   unparse_list,
