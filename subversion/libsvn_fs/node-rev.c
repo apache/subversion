@@ -151,11 +151,13 @@ deltify (svn_fs_id_t *target_id,
       source_dkey = NULL;
   }
 
-  if (target_pkey && source_pkey)
+  if ((target_pkey && source_pkey)
+      && (strcmp (target_pkey, source_pkey)))
     SVN_ERR (svn_fs__rep_deltify (fs, target_pkey, source_pkey, trail));
 
-  if (target_dkey && source_dkey)
-    SVN_ERR (svn_fs__rep_deltify (fs, target_dkey, source_dkey, trail));
+  if ((target_dkey && source_dkey)
+      && (strcmp (target_dkey, source_dkey)))     
+   SVN_ERR (svn_fs__rep_deltify (fs, target_dkey, source_dkey, trail));
 
   return SVN_NO_ERROR;
 }
