@@ -1,5 +1,5 @@
 /*
- * stringtest.c:  a collection of libsvn_string tests
+ * string-test.c:  a collection of libsvn_string tests
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -378,7 +378,7 @@ test12 (const char **msg,
         apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
-  const char fname[] = "stringtest.tmp";
+  const char fname[] = "string-test.tmp";
   apr_file_t *file;
   apr_status_t status;
   apr_size_t len;
