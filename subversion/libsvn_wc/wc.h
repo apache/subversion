@@ -167,7 +167,9 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  apr_pool_t *pool);
 
 
-/* Stuff that knows about the working copy XML formats. */
+/*** Stuff that knows about the working copy XML formats. ***/
+
+/* Initial contents of `versions' for a new adm area. */
 svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
                                               apr_pool_t *pool);
 
