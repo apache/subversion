@@ -1,3 +1,16 @@
+Version 1.0.9
+(13 October 2004, from /branches/1.0.9)
+http://svn.collab.net/repos/svn/tags/1.0.9
+
+ User-visible-changes:
+  - Server:
+    * fixed: 'svn ls' HTTP performance regression (r11211, -232, -285)
+    * fixed: 'svn log -v' hiding too much info on 'empty' revisions. (r11137)
+
+ Developer-visible-changes:
+ * fixed: make redhat 7/8 rpm scripts build the book correctly (11143)
+
+
 Version 1.0.8
 (22 September 2004, from /branches/1.0.8)
 http://svn.collab.net/repos/svn/tags/1.0.8
