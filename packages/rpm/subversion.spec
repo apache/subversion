@@ -1,3 +1,4 @@
+%define apache_version 2.0.31
 %define neon_version 0.18.2
 %define apr_version 0.2002.01.19
 Summary: A Concurrent Versioning system similar to but better than CVS.
@@ -17,8 +18,8 @@ Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
-BuildPreReq: apache >= 2.0.16
-BuildPreReq: apache-devel >= 2.0.16
+BuildPreReq: apache >= %{apache_version}
+BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apr-devel >= %{apr_version}
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db-devel >= 4.0.14
