@@ -53,17 +53,7 @@
 #define SVN_STRING_H
 
 #include <apr_pools.h>       /* APR memory pools for everyone. */
-
-
-/* a string of bytes  */
-
-typedef struct svn_string_t
-{
-  char *data;                /* pointer to the bytestring */
-  size_t len;                /* length of bytestring */
-  size_t blocksize;          /* total size of buffer allocated */
-} svn_string_t;
-
+#include "svn_types.h"
 
 /* Create a new bytestring containing a C string (null-terminated), or
    containing a generic string of bytes (NON-null-terminated) */
