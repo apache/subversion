@@ -49,6 +49,7 @@
 
 
 #include <assert.h>
+#include <string.h>
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "delta.h"
