@@ -445,6 +445,7 @@ remote_propget (apr_hash_t *props,
 }
 
 
+/* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
 svn_client_propget (apr_hash_t **props,
                     const char *propname,
@@ -457,9 +458,10 @@ svn_client_propget (apr_hash_t **props,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
   const char *utarget;  /* target, or the url for target */
-  svn_node_kind_t kind;
   svn_revnum_t revnum;
   const char *auth_dir;
+
+  *props = apr_hash_make (pool);
 
   SVN_ERR (maybe_convert_to_url (&utarget, target, revision, pool));
 
@@ -469,6 +471,7 @@ svn_client_propget (apr_hash_t **props,
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
+      svn_node_kind_t kind;
       svn_opt_revision_t new_revision;  /* only used in one case */
 
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -477,8 +480,6 @@ svn_client_propget (apr_hash_t **props,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
                                             auth_dir, NULL, NULL,
                                             FALSE, FALSE, ctx, pool));
-
-      *props = apr_hash_make (pool);
 
       /* Default to HEAD. */
       if (revision->kind == svn_opt_revision_unspecified)
@@ -494,12 +495,6 @@ svn_client_propget (apr_hash_t **props,
         {
           SVN_ERR (svn_client__get_revision_number
                    (&revnum, ra_lib, session, revision, NULL, pool));
-
-          SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
-
-          SVN_ERR (remote_propget (*props, propname, utarget, "",
-                                   kind, revnum, ra_lib, session,
-                                   recurse, pool));
         }
       else if (revision->kind == svn_opt_revision_previous)
         {
@@ -510,39 +505,33 @@ svn_client_propget (apr_hash_t **props,
                  "\"%s\" is a URL, but revision kind requires a working copy",
                  target);
             }
-          else  /* target is a working copy path */
-            {
-              SVN_ERR (svn_client__get_revision_number
-                       (&revnum, NULL, NULL, revision, target, pool));
-              
-              SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
-              
-              SVN_ERR (remote_propget (*props, propname, utarget, "",
-                                       kind, revnum, ra_lib, session,
-                                       recurse, pool));
-            }
+
+          /* target is a working copy path */
+          SVN_ERR (svn_client__get_revision_number
+                   (&revnum, NULL, NULL, revision, target, pool));
         }
       else
         {
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
         }
+
+      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+
+      SVN_ERR (remote_propget (*props, propname, utarget, "",
+                               kind, revnum, ra_lib, session,
+                               recurse, pool));
     }
   else  /* working copy path */
     {
-      apr_hash_t *prop_hash;
       svn_boolean_t pristine;
 
-      prop_hash = apr_hash_make (pool);
-      
-      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target,
-                                      FALSE, TRUE, pool));
-      
+      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
+                                      pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           "'%s' -- not a versioned resource", target);
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                  "'%s' -- not a versioned resource", target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
@@ -559,10 +548,8 @@ svn_client_propget (apr_hash_t **props,
 
       /* Fetch, recursively or not. */
       if (recurse && (node->kind == svn_node_dir))
-        {
-          SVN_ERR (recursive_propget (prop_hash, propname, pristine,
-                                      adm_access, pool));
-        }
+        SVN_ERR (recursive_propget (*props, propname, pristine,
+                                    adm_access, pool));
       else
         {
           const svn_string_t *propval;
@@ -570,12 +557,10 @@ svn_client_propget (apr_hash_t **props,
           SVN_ERR (pristine_or_working_propval (&propval, propname, target,
                                                 adm_access, pristine, pool));
 
-          apr_hash_set (prop_hash, target, APR_HASH_KEY_STRING, propval);
+          apr_hash_set (*props, target, APR_HASH_KEY_STRING, propval);
         }
       
       SVN_ERR (svn_wc_adm_close (adm_access));
-      
-      *props = prop_hash;
     }
 
   return SVN_NO_ERROR;
@@ -832,6 +817,7 @@ recursive_proplist (apr_array_header_t *props,
   return SVN_NO_ERROR;
 }
 
+/* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
 svn_client_proplist (apr_array_header_t **props,
                      const char *target, 
@@ -840,15 +826,17 @@ svn_client_proplist (apr_array_header_t **props,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  apr_array_header_t *prop_list
-      = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
   svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *node;
   const char *utarget;  /* target, or the url for target */
   svn_revnum_t revnum;
 
+  *props = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
+
   SVN_ERR (maybe_convert_to_url (&utarget, target, revision, pool));
 
+  /* Iff utarget is a url, that means we must use it, that is, the
+     requested property information is not available locally. */
   if (svn_path_is_url (utarget))
     {
       void *ra_baton, *session;
@@ -876,12 +864,6 @@ svn_client_proplist (apr_array_header_t **props,
         {
           SVN_ERR (svn_client__get_revision_number
                    (&revnum, ra_lib, session, revision, NULL, pool));
-
-          SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
-
-          SVN_ERR (remote_proplist (prop_list, utarget, "",
-                                    kind, revnum, ra_lib, session,
-                                    recurse, pool));
         }
       else if (revision->kind == svn_opt_revision_previous)
         {
@@ -892,23 +874,22 @@ svn_client_proplist (apr_array_header_t **props,
                  "\"%s\" is a URL, but revision kind requires a working copy",
                  target);
             }
-          else  /* it's a working copy path */
-            {
-              SVN_ERR (svn_client__get_revision_number
-                       (&revnum, NULL, NULL, revision, target, pool));
-              
-              SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
-              
-              SVN_ERR (remote_proplist (prop_list, utarget, "",
-                                        kind, revnum, ra_lib, session,
-                                        recurse, pool));
-            }
+
+          /* target is a working copy path */
+          SVN_ERR (svn_client__get_revision_number
+                   (&revnum, NULL, NULL, revision, target, pool));
         }
       else
         {
           return svn_error_create
             (SVN_ERR_CLIENT_BAD_REVISION, NULL, "unknown revision kind");
         }
+
+      SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
+
+      SVN_ERR (remote_proplist (*props, utarget, "",
+                                kind, revnum, ra_lib, session,
+                                recurse, pool));
     }
   else  /* working copy path */
     {
@@ -916,15 +897,14 @@ svn_client_proplist (apr_array_header_t **props,
 
       SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
                                       pool));
-      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
-      if (! entry)
+      SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
+      if (! node)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  "'%s' -- not a versioned resource", 
-                                  target);
+                                  "'%s' -- not a versioned resource", target);
       
       SVN_ERR (svn_client__get_revision_number
                (&revnum, NULL, NULL, revision, target, pool));
-      
+
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
         {
@@ -935,16 +915,14 @@ svn_client_proplist (apr_array_header_t **props,
           pristine = FALSE;
         }
 
-      if (recurse && entry->kind == svn_node_dir)
-        SVN_ERR (recursive_proplist (prop_list, adm_access, pristine, pool));
+      /* Fetch, recursively or not. */
+      if (recurse && (node->kind == svn_node_dir))
+        SVN_ERR (recursive_proplist (*props, adm_access, pristine, pool));
       else 
-        SVN_ERR (add_to_proplist (prop_list, target, adm_access, pristine,
-                                  pool));
+        SVN_ERR (add_to_proplist (*props, target, adm_access, pristine, pool));
       
       SVN_ERR (svn_wc_adm_close (adm_access));
     }
-
-  *props = prop_list;
 
   return SVN_NO_ERROR;
 }
