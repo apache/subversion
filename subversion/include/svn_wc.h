@@ -131,7 +131,10 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
  * with @a path.  @a path must be a directory that is locked as part of the 
  * set containing the @a associated access baton.
  *
- * @a pool is used only for local processing it is not used for the batons.
+ * If the requested access baton is marked as missing in, or is simply
+ * absent from, @a associated, return SVN_ERR_WC_NOT_LOCKED.
+ *
+ * @a pool is used only for local processing, it is not used for the batons.
  */
 svn_error_t *svn_wc_adm_retrieve (svn_wc_adm_access_t **adm_access,
                                   svn_wc_adm_access_t *associated,

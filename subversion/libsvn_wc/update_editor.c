@@ -91,6 +91,13 @@ struct edit_baton
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
 
+  /* This editor is normally wrapped in a cancellation editor anyway,
+     so it doesn't bother to check for cancellation itself.  However,
+     it needs a cancel_func and cancel_baton available to pass to
+     long-running functions. */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
   apr_pool_t *pool;
 };
 
@@ -146,13 +153,6 @@ struct bump_dir_info
 
   /* the path of the directory to bump */
   const char *path;
-
-  /* The repository URL this directory will correspond to. */
-  const char *new_URL;
-
-  /* was this directory added? (if so, we'll add it to the parent dir
-     at bump time) */
-  svn_boolean_t added;
 };
 
 
@@ -227,11 +227,15 @@ make_dir_baton (const char *path,
       d->name = svn_path_basename (path, pool);
     }
   else
-    d->name = NULL;
+    {
+      d->name = NULL;
+    }
 
   /* Figure out the new_URL for this directory. */
   if (eb->switch_url)
     {
+      /* switches are the same way as checkouts, except we're
+         telescoping off the switch URL. */
       if (pb)
         d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
       else
@@ -239,7 +243,12 @@ make_dir_baton (const char *path,
     }
   else  /* must be an update */
     {
+      /* updates are the odds ones.  if we're updating a path already
+         present on disk, we use its original URL.  otherwise, we'll
+         telescope based on its parent's URL. */
       d->new_URL = get_entry_url (eb->adm_access, d->path, NULL, pool);
+      if ((! d->new_URL) && pb)
+        d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
     }
 
   /* the bump information lives in the edit pool */
@@ -247,8 +256,6 @@ make_dir_baton (const char *path,
   bdi->parent = pb ? pb->bump_info : NULL;
   bdi->ref_count = 1;
   bdi->path = apr_pstrdup (eb->pool, d->path);
-  bdi->new_URL = d->new_URL ? apr_pstrdup (eb->pool, d->new_URL) : NULL;
-  bdi->added = added;
 
   /* the parent's bump info has one more referer */
   if (pb)
@@ -587,12 +594,14 @@ open_root (void *edit_baton,
 
       /* Mark directory as being at target_revision, but incomplete. */  
       tmp_entry.revision = eb->target_revision;
+      tmp_entry.url = d->new_URL;
       tmp_entry.incomplete = TRUE;
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                     d->path, pool));
       SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_REVISION |
+                                     SVN_WC__ENTRY_MODIFY_URL |
                                      SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                      TRUE /* immediate write */,
                                      pool));
@@ -653,6 +662,49 @@ delete_entry (const char *path,
                                    TRUE, /* sync */
                                    pool));
     
+  if (pb->edit_baton->switch_url)
+    {
+      /* The SVN_WC__LOG_DELETE_ENTRY log item will cause
+       * svn_wc_remove_from_revision_control() to be run.  But that
+       * function checks whether the deletion target's URL is child of
+       * its parent directory's URL, and if it's not, then the entry
+       * in parent won't be deleted (because presumably the child
+       * represents a disjoint working copy, i.e., it is a wc_root).
+       *
+       * However, during a switch this works against us, because by
+       * the time we get here, the parent's URL has already been
+       * changed.  So we manually remove the child from revision
+       * control after the delete-entry item has been written in the
+       * parent's log, but before it is run, so the only work left for
+       * the log item is to remove the entry in the parent directory.
+       */
+
+      svn_node_kind_t kind;
+      const char *full_path = svn_path_join (pb->path, path, pool);
+
+      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
+      if (kind == svn_node_dir)
+        {
+          svn_wc_adm_access_t *child_access;
+          svn_error_t *err;
+
+          SVN_ERR (svn_wc_adm_retrieve
+                   (&child_access, pb->edit_baton->adm_access,
+                    full_path, pool));
+          
+          err = svn_wc_remove_from_revision_control
+            (child_access,
+             SVN_WC_ENTRY_THIS_DIR,
+             TRUE,
+             pb->edit_baton->cancel_func,
+             pb->edit_baton->cancel_baton,
+             pool);
+          
+          if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
+            return err;
+        }
+    }
+
   SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
@@ -723,26 +775,16 @@ add_directory (const char *path,
     }
   else  /* ...or we got invalid copyfrom args. */
     {
-      /* If the copyfrom args are both invalid, inherit the URL from the
-         parent, and make the revision equal to the global target
-         revision. */
       svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *parent_entry, *dir_entry;
+      const svn_wc_entry_t *dir_entry;
       apr_hash_t *entries;
       svn_wc_entry_t tmp_entry;
 
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
-                                    pb->path, db->pool));
-      SVN_ERR (svn_wc_entry (&parent_entry, pb->path, adm_access, FALSE,
-                             db->pool));
-      copyfrom_path = svn_path_url_add_component (parent_entry->url, 
-                                                  db->name,
-                                                  db->pool);
-      copyfrom_revision = pb->edit_baton->target_revision;      
-      
       /* Extra check:  a directory by this name may not exist, but there
          may still be one scheduled for addition.  That's a genuine
          tree-conflict.  */
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
+                                    pb->path, db->pool));
       SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, db->pool));
       dir_entry = apr_hash_get (entries, db->name, APR_HASH_KEY_STRING);
       if (dir_entry && dir_entry->schedule == svn_wc_schedule_add)
@@ -766,9 +808,10 @@ add_directory (const char *path,
                                      TRUE /* immediate write */, pool));
     }
 
-  /* Create dir (if it doesn't yet exist), make sure it's formatted
-     with an administrative subdir.   */
-  SVN_ERR (prep_directory (db, copyfrom_path, copyfrom_revision, db->pool));
+  SVN_ERR (prep_directory (db,
+                           db->new_URL,
+                           pb->edit_baton->target_revision,
+                           db->pool));
 
   *child_baton = db;
 
@@ -807,14 +850,17 @@ open_directory (const char *path,
                                                      pool);
   *child_baton = this_dir_baton;
 
-  /* Mark directory as being at target_revision, but incomplete. */
+  /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = eb->target_revision;
+  tmp_entry.url = this_dir_baton->new_URL;
   tmp_entry.incomplete = TRUE;
+
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                 this_dir_baton->path, pool));  
   SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_REVISION |
+                                 SVN_WC__ENTRY_MODIFY_URL |
                                  SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                  TRUE /* immediate write */,
                                  pool));
@@ -1884,6 +1930,7 @@ close_edit (void *edit_baton,
          url.  All of this tweaking might happen recursively!  Note
          that if eb->target is NULL, that's okay (albeit "sneaky",
          some might say).  */
+
       SVN_ERR (svn_wc__do_update_cleanup
                (svn_path_join_many (eb->pool, eb->anchor, eb->target, NULL),
                 eb->adm_access,
@@ -1956,6 +2003,8 @@ make_editor (svn_wc_adm_access_t *adm_access,
   eb->notify_baton    = notify_baton;
   eb->traversal_info  = traversal_info;
   eb->diff3_cmd       = diff3_cmd;
+  eb->cancel_func     = cancel_func;
+  eb->cancel_baton    = cancel_baton;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
