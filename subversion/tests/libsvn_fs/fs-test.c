@@ -3750,7 +3750,6 @@ dir_deltas (const char **msg)
   tree_test_t expected_trees[8];
   int revision_count = 0;
   int i, j;
-  apr_pool_t *subpool = svn_pool_create (pool);
 
   *msg = "test svn_fs_dir_delta";
 
@@ -3772,17 +3771,13 @@ dir_deltas (const char **msg)
   expected_trees[revision_count++].entries = 0;
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   /* Create and commit the greek tree. */
   SVN_ERR (greek_tree_under_root (txn_root));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Recycle. */
-  apr_pool_destroy (subpool);
-  subpool = svn_pool_create (pool);
 
   /***********************************************************************/
   /* REVISION 1 */
@@ -3813,23 +3808,18 @@ dir_deltas (const char **msg)
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 20;
-    SVN_ERR (svn_fs_revision_root (&revision_root, fs,
-                                   youngest_rev, subpool)); 
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, pool)); 
     SVN_ERR (validate_tree (revision_root,
                             expected_trees[revision_count].entries,
                             expected_trees[revision_count].num_entries));
     revision_count++;
   }
 
-  /* Recycle. */
-  apr_pool_destroy (subpool);
-  subpool = svn_pool_create (pool);
-
   /* Make a new txn based on the youngest revision, make some changes,
      and commit those changes (which makes a new youngest
      revision). */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
     txn_script_command_t script_entries[] = {
       { '+', "A/delta",     "This is the file 'delta'.\n" },
@@ -3877,23 +3867,18 @@ dir_deltas (const char **msg)
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 20;
-    SVN_ERR (svn_fs_revision_root (&revision_root, fs,
-                                   youngest_rev, subpool)); 
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, pool)); 
     SVN_ERR (validate_tree (revision_root,
                             expected_trees[revision_count].entries,
                             expected_trees[revision_count].num_entries));
     revision_count++;
-  }
-
-  /* Recycle. */
-  apr_pool_destroy (subpool);
-  subpool = svn_pool_create (pool);
+  } 
 
   /* Make a new txn based on the youngest revision, make some changes,
      and commit those changes (which makes a new youngest
      revision). */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   {
     txn_script_command_t script_entries[] = {
       { '+', "A/mu",        "Re-added file 'mu'.\n" },
@@ -3905,10 +3890,6 @@ dir_deltas (const char **msg)
   }
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Recycle. */
-  apr_pool_destroy (subpool);
-  subpool = svn_pool_create (pool);
 
   /***********************************************************************/
   /* REVISION 3 */
@@ -3940,16 +3921,12 @@ dir_deltas (const char **msg)
     };
     expected_trees[revision_count].entries = expected_entries;
     expected_trees[revision_count].num_entries = 21;
-    SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, subpool)); 
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, pool)); 
     SVN_ERR (validate_tree (revision_root,
                             expected_trees[revision_count].entries,
                             expected_trees[revision_count].num_entries));
     revision_count++;
   }
-
-  /* Recycle. */
-  apr_pool_destroy (subpool);
-  subpool = svn_pool_create (pool);
 
   /* THE BIG IDEA: Now that we have a collection of revisions, let's
      first make sure that given any two revisions, we can get the
@@ -3967,39 +3944,34 @@ dir_deltas (const char **msg)
           apr_hash_t *rev_diffs;
 
           /* Initialize our source revisions hash. */
-          rev_diffs = apr_hash_make (subpool);
-          revision = apr_pcalloc (subpool, sizeof (svn_revnum_t));
+          rev_diffs = apr_hash_make (pool);
+          revision = apr_pcalloc (pool, sizeof (svn_revnum_t));
           *revision = i;
           apr_hash_set (rev_diffs, "", APR_HASH_KEY_STRING, revision);
 
           /* Prepare a txn that will receive the changes from
              svn_fs_dir_delta */
-          SVN_ERR (svn_fs_begin_txn (&txn, fs, i, subpool));
-          SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+          SVN_ERR (svn_fs_begin_txn (&txn, fs, i, pool));
+          SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
           /* Get the editor that will be modifying our transaction. */
           SVN_ERR (dir_delta_get_editor (&editor,
                                          &edit_baton,
                                          fs,
                                          txn_root,
-                                         svn_string_create ("", subpool),
-                                         subpool));
+                                         svn_string_create ("", pool),
+                                         pool));
     
           /* Here's the kicker...do the directory delta. */
-          SVN_ERR (svn_fs_revision_root (&revision_root, fs, j, subpool)); 
-
-          {
-            apr_pool_t *edit_pool = svn_pool_create (subpool);
-            SVN_ERR (svn_fs_dir_delta (txn_root,
-                                       "",
-                                       rev_diffs,
-                                       revision_root,
-                                       "",
-                                       editor,
-                                       edit_baton,
-                                       edit_pool));
-            apr_pool_destroy (edit_pool);
-          }
+          SVN_ERR (svn_fs_revision_root (&revision_root, fs, j, pool)); 
+          SVN_ERR (svn_fs_dir_delta (txn_root,
+                                     "",
+                                     rev_diffs,
+                                     revision_root,
+                                     "",
+                                     editor,
+                                     edit_baton,
+                                     pool));
 
           /* Hopefully at this point our transaction has been modified
              to look exactly like our latest revision.  We'll check
