@@ -167,6 +167,17 @@ possible for a node change kinds from revision to revision --- 10.3
 could be a directory, while 10.4 could be a file --- but Subversion
 does not allow this.
 
+   /* ### kff todo: might it be awfully swell to have a REV field in
+    * HEADER, recording the revision this node appeared in?  This
+    * would make it a lot easier to trace an individual resource's
+    * history.  Getting REV could be tricky, though, since we don't
+    * know the revision number until after the transaction is
+    * finalized... But that could be gotten around various ways, for
+    * example, indirection: record a key into some table somewhere,
+    * then after the transaction is complete, set the value at that
+    * key to the new revision number.  Or maybe there's a better way?
+    */
+
 PROP-KEY is a key into the `representations' table (which see), whose
 value is a PROPLIST skel.
 
