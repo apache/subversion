@@ -45,6 +45,10 @@
    ### input stringbuf and its "which pool?" problem. */
 %ignore svn_io_open_unique_file;
 
+/* scripts can do the printf, then write to a stream. we can't really
+   handle the variadic, so ignore it. */
+%ignore svn_stream_printf;
+
 /* -----------------------------------------------------------------------
    apr_size_t * is always an IN/OUT parameter in svn_io.h
 */
@@ -135,5 +139,7 @@ void apr_pool_destroy(apr_pool_t *p);
 #include "svn_version.h"
 #include "svn_time.h"
 
-#include "swigutil.h"
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
 %}

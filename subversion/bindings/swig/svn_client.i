@@ -62,7 +62,7 @@
         PyObject *item = PyTuple_New(2);
         PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
-        PyObject *hash = svn_swig_prophash_to_dict((*ppitem)->prop_hash);
+        PyObject *hash = svn_swig_py_prophash_to_dict((*ppitem)->prop_hash);
 
         if (item == NULL || name == NULL || hash == NULL) {
             Py_XDECREF(item);
@@ -86,7 +86,7 @@
 %typemap(python,argout) apr_hash_t **statushash {
     $result = t_output_helper(
         $result,
-        svn_swig_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
+        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_status_t));
 }
 
 /* ----------------------------------------------------------------------- */
@@ -94,4 +94,8 @@
 %include svn_client.h
 %header %{
 #include "svn_client.h"
+
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
 %}

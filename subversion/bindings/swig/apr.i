@@ -91,7 +91,7 @@ typedef apr_int32_t time_t;
 %typemap(python,argout) apr_hash_t **PROPHASH {
     /* toss prior result, get new result from the hash */
     Py_DECREF($result);
-    $result = svn_swig_prophash_to_dict(*$1);
+    $result = svn_swig_py_prophash_to_dict(*$1);
 }
 
 /* -----------------------------------------------------------------------

@@ -56,6 +56,7 @@
 /* ### well, there isn't an obvious way to make it readonly, so let's
    ### just axe it altogether for now. */
 %ignore svn_txdelta_window_t::new_data;
+// [swig 1.3.12] %immutable svn_txdelta_window_t::new_data;
 
 /* ----------------------------------------------------------------------- */
 

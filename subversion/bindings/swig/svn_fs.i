@@ -30,7 +30,7 @@
    construct the things) and will live in a pool (so we don't need to
    destroy the things).
 */
-%nodefault
+%nodefault;
 
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
@@ -73,7 +73,7 @@
     $1 = &temp;
 }
 %typemap(python, argout) char *** {
-    $result = t_output_helper($result, svn_swig_c_strings_to_list(*$1));
+    $result = t_output_helper($result, svn_swig_py_c_strings_to_list(*$1));
 }
 
 /* -----------------------------------------------------------------------
@@ -90,7 +90,7 @@
 %typemap(python,argout) apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
-        svn_swig_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
+        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
 }
 
 /* ----------------------------------------------------------------------- */
@@ -100,5 +100,8 @@
 
 %header %{
 #include "svn_fs.h"
-#include "swigutil.h"
+
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
 %}
