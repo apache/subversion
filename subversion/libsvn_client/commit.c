@@ -713,6 +713,25 @@ reconcile_errors (svn_error_t *commit_err,
   return err;
 }
 
+/* Return TRUE if one of the first PROCESSED items in COMMIT_ITEMS is a
+   parent of PATH, return FALSE otherwise. */
+static svn_boolean_t
+have_processed_parent (apr_array_header_t *commit_items,
+                       int processed,
+                       const char *path,
+                       apr_pool_t *pool)
+{
+  int i;
+  for (i = 0; i < processed && i < commit_items->nelts; ++i)
+    {
+      svn_client_commit_item_t *item
+        = ((svn_client_commit_item_t **) commit_items->elts)[i];
+
+      if (svn_path_is_child (item->path, path, pool))
+        return TRUE;
+    }
+  return FALSE;
+}
 
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
@@ -911,16 +930,32 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
             adm_access_path = item->path;
           else
             svn_path_split_nts (item->path, &adm_access_path, NULL, pool);
-          if ((bump_err = svn_wc_adm_retrieve (&adm_access, base_dir_access,
-                                               adm_access_path, pool)))
-            goto cleanup;
 
-          /* This item may have been processed as a child of an earlier
-             item, and may have deleted at that stage. */
+          bump_err = svn_wc_adm_retrieve (&adm_access, base_dir_access,
+                                          adm_access_path, pool);
+          if (bump_err)
+            {
+              if (bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED
+                  && have_processed_parent (commit_items, i, item->path, pool))
+                {
+                  /* This happens when the item is a directory that is
+                     deleted, and it has been processed as a child of an
+                     earlier item. */
+                  svn_error_clear_all (bump_err);
+                  bump_err = SVN_NO_ERROR;
+                  continue;
+                }
+              goto cleanup;
+            }
+
           if ((bump_err = svn_wc_entry (&entry, item->path, adm_access, TRUE,
                                         pool)))
             goto cleanup;
-          if (! entry)
+
+          if (! entry
+              && have_processed_parent (commit_items, i, item->path, pool))
+            /* This happens when the item is a file that is deleted, and it
+               has been processed as a child of an earlier item. */
             continue;
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 

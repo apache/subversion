@@ -441,6 +441,9 @@ do_close (svn_wc_adm_access_t *adm_access,
 {
   apr_hash_index_t *hi;
 
+  if (adm_access->type == svn_wc__adm_access_closed)
+    return SVN_NO_ERROR;
+
   apr_pool_cleanup_kill (adm_access->pool, adm_access, pool_cleanup);
 
   /* Close children */

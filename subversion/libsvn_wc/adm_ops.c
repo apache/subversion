@@ -1613,8 +1613,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
          removed from revision control. */
 
       /* Remove the entire administrative .svn area, thereby removing
-         _this_ dir from revision control too.  Note: be careful with the
-         batons for this function. */
+         _this_ dir from revision control too.  */
       SVN_ERR (svn_wc__adm_destroy (adm_access, subpool));
       
       /* If caller wants us to recursively nuke everything on disk, go

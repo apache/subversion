@@ -260,8 +260,8 @@ svn_error_t *svn_wc__ensure_adm (const char *path,
 
 
 /* Blow away the admistrative directory associated with the access baton
-   ADM_ACCESS. It is safe to close ADM_ACCESS after calling this
-   function. */
+   ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
+   again, after calling this function. */
 svn_error_t *svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool);
 
