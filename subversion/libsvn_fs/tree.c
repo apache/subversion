@@ -1202,7 +1202,8 @@ path_append (const char *dir, const char *entry, apr_pool_t *pool)
 }
 
 
-/* Wrapper function */
+/* Set *IS_ANCESTOR to non-zero iff ID1 is an ancestor of ID2 in FS,
+   as part of TRAIL. */
 static svn_error_t *
 id_check_ancestor (int *is_ancestor,
                    svn_fs_t *fs, 
@@ -1219,6 +1220,74 @@ id_check_ancestor (int *is_ancestor,
   /* Do the test.  If the test fails, we'll just go with "not an
      ancestor" for now.  ### better come back and check this out.  */
   return svn_fs__dag_is_ancestor (is_ancestor, node1, node2, trail);
+}
+
+/* Set *IS_PARENT to non-zero iff ID1 is the direct predecessor of ID2
+   in FS, as part of TRAIL. */
+static svn_error_t *
+id_is_parent (int *is_parent,
+              svn_fs_t *fs,
+              const svn_fs_id_t *id1,
+              const svn_fs_id_t *id2,
+              trail_t *trail)
+{
+  dag_node_t *node1, *node2;
+
+  /* Get the nodes. */
+  svn_fs__dag_get_node (&node1, fs, id1, trail);
+  svn_fs__dag_get_node (&node2, fs, id2, trail);
+
+  return svn_fs__dag_is_parent (is_parent, node1, node2, trail);
+}              
+
+static svn_error_t *
+maybe_update_ancestry (svn_fs_t *fs,
+                       const svn_fs_id_t *ancestor_id,
+                       const svn_fs_id_t *source_id,
+                       const svn_fs_id_t *target_id,
+                       const char *txn_id,
+                       const char *target_path,
+                       trail_t *trail)
+{
+  int a_parentof_t;
+  int a_ancestorof_s;
+
+  /* Per the really really big comment in merge(), we can reset the
+     predecessor-id in the node to which TARGET_ID refers to point to
+     SOURCE_ID iff:
+
+     - we have successfully merged ancestor, source, and target, 
+     - target is a direct successor of ancestor (meaning, ancestor is
+       the parent of target), and
+     - source is a descendent of ancestor (meaning ancestor is ... uh,
+       an ancestor of source).
+
+     *** IT IS ASSUMED THAT IF YOU ARE CALLING THIS FUNCTION, THE
+         SUCCESSFUL MERGE REQUIREMENT HAS BEEN MET. ***
+
+     So now, just check the other two requirements, easiest check
+     first. */
+
+  SVN_ERR (id_is_parent (&a_parentof_t, fs, ancestor_id, target_id, trail));
+  if (a_parentof_t)
+    {
+      SVN_ERR (id_check_ancestor (&a_ancestorof_s, fs, ancestor_id, 
+                                  target_id, trail));
+      if (a_ancestorof_s)
+        {
+          /* Set target's predecessor-id to source_id.  */
+          svn_fs__node_revision_t *noderev;
+
+          if (strcmp (svn_fs__id_txn_id (target_id), txn_id))
+            return svn_error_createf
+              (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+               "unexpected immutable node at \"%s\"", target_path);
+          SVN_ERR (svn_fs__get_node_revision (&noderev, fs, target_id, trail));
+          noderev->predecessor_id = source_id;
+          SVN_ERR (svn_fs__put_node_revision (fs, target_id, noderev, trail));
+        }
+    }
+  return SVN_NO_ERROR;
 }
 
 /* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
@@ -1368,6 +1437,42 @@ merge (svn_stringbuf_t *conflict_p,
    *     // Remaining entries in target should be left as-is.
    *   }
    *
+   *
+   * A WORD ABOUT MERGE RECURSION AND ANCESTRY TRACKING
+   *
+   * After we do the merge into target, target has absorbed the
+   * history between ancestor and source, but there is no record of
+   * this absorbtion having happened.  For example, when generating a
+   * log message for target, you'd want to include all the changes
+   * between ancestor and source.
+   *
+   * In the general case, this is the same genetic merge problem that
+   * we'll have to deal with when we do full ancestry tracking.
+   * (Hello, changesets.)
+   *
+   * But the most common particular case is that target is an
+   * immediate descendant of ancestor, and source is also a descendant
+   * of ancestor.  That is:
+   *
+   *    svn_fs_id_distance (ancestor, target) == 1
+   *    svn_fs_id_distance (ancestor, source) >= 1
+   *
+   * In such cases, we can record the successful merge for free, by
+   * setting target's predecessor-id to s_entry->id.  This is safe
+   * because:
+   *
+   * - all the history from time-zero to ancestor is preserved
+   *
+   * - all the history from ancestor to source is now preserved
+   *
+   * - the single historical step from ancestor to target is preserved
+   *   as a single step from source to target, which is an accurate
+   *   reflection of the post-merge situation anyway.
+   *
+   * Note that this trick should be used after any call to merge(),
+   * not just the recursive call above.  That means the transaction
+   * root should potentially have its predecessor-id updated after the
+   * merge, too.
    */
 
   if ((! svn_fs__dag_is_directory (source))
@@ -1555,6 +1660,14 @@ merge (svn_stringbuf_t *conflict_p,
                   SVN_ERR (merge (conflict_p, new_tpath,
                                   t_ent_node, s_ent_node, a_ent_node,
                                   txn_id, trail));
+
+                  /* If target is an immediate descendant of ancestor,
+                     and source is also a descendant of ancestor, we
+                     need to point target's predecessor-id to
+                     source. */
+                  SVN_ERR (maybe_update_ancestry (fs, a_entry->id, s_entry->id,
+                                                  t_entry->id, txn_id, 
+                                                  new_tpath, trail));
                 }
               /* Else target entry has changed since ancestor entry,
                  but it changed either to source entry or to a
@@ -1774,16 +1887,16 @@ txn_body_merge (void *baton, trail_t *trail)
     {
       const svn_fs_id_t *ancestor_id, *target_id;
 
-      SVN_ERR (merge (args->conflict,
-                      "",
-                      txn_root_node,
-                      source_node,
-                      ancestor_node,
-                      txn_id,
-                      trail));
+      SVN_ERR (merge (args->conflict, "", txn_root_node,
+                      source_node, ancestor_node, txn_id, trail));
 
+      /* Possibly change the target's predecessor-id to be source
+         following a successful merge; see Dostoyevskian comment in
+         merge() about this for the full explanation. */
       ancestor_id = svn_fs__dag_get_id (ancestor_node);
       target_id = svn_fs__dag_get_id (txn_root_node);
+      SVN_ERR (maybe_update_ancestry (fs, ancestor_id, source_id, 
+                                      target_id, txn_id, "", trail));
 
       /* After the merge, txn's new "ancestor" is now really the node
          at source_id, so record that fact.  Think of this as

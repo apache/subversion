@@ -1623,6 +1623,8 @@ struct is_ancestor_baton
 {
   const svn_fs_id_t *node1_id;
   int is_ancestor;
+  int need_parent; /* non-zero if we only care about parenthood, not
+                      full ancestry */
 };
 
 
@@ -1641,6 +1643,11 @@ is_ancestor_callback (void *baton,
       /* ... compare NODE's ID with the ID we're looking for. */
       if (svn_fs__id_eq (b->node1_id, svn_fs__dag_get_id (node)))
         b->is_ancestor = 1;
+
+      /* Now, if we only are interested in parenthood, we don't care
+         to look any further than this. */
+      if (b->need_parent)
+        *done = 1;
     }
 
   return SVN_NO_ERROR;
@@ -1665,6 +1672,7 @@ svn_fs__dag_is_ancestor (int *is_ancestor,
     return SVN_NO_ERROR;
 
   baton.is_ancestor = 0;
+  baton.need_parent = 0;
   baton.node1_id = id1;
 
   SVN_ERR (svn_fs__dag_walk_predecessors (node2, is_ancestor_callback,
@@ -1675,6 +1683,36 @@ svn_fs__dag_is_ancestor (int *is_ancestor,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs__dag_is_parent (int *is_parent,
+                       dag_node_t *node1,
+                       dag_node_t *node2,
+                       trail_t *trail)
+{
+  struct is_ancestor_baton baton;
+  const svn_fs_id_t 
+    *id1 = svn_fs__dag_get_id (node1),
+    *id2 = svn_fs__dag_get_id (node2);
+
+  /* Pessimism. */
+  *is_parent = 0;
+
+  /* Parentry holds relatedness as a prerequisite. */
+  if (! svn_fs_check_related (id1, id2))
+    return SVN_NO_ERROR;
+
+  baton.is_ancestor = 0;
+  baton.need_parent = 1;
+  baton.node1_id = id1;
+
+  SVN_ERR (svn_fs__dag_walk_predecessors (node2, is_ancestor_callback,
+                                          &baton, trail));
+  if (baton.is_ancestor)
+    *is_parent = 1;
+
+  return SVN_NO_ERROR;
+}
 
 
 /* 

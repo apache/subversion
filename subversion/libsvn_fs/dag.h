@@ -493,6 +493,13 @@ svn_error_t *svn_fs__dag_is_ancestor (int *is_ancestor,
                                       trail_t *trail);
 
 
+/* Set *IS_PARENT to non-zero IFF NODE1 is the parent of NODE2.
+   Perform this test under TRAIL.  */
+svn_error_t *svn_fs__dag_is_parent (int *is_ancestor,
+                                    dag_node_t *node1,
+                                    dag_node_t *node2,
+                                    trail_t *trail);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
