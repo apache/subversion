@@ -97,7 +97,7 @@ svn_opt_subcommand_takes_option (const svn_opt_subcommand_desc_t *command,
 /* Print the canonical command name for CMD, and all its aliases, to
    STREAM.  If HELP is set, print CMD's help string too, in which case
    obtain option usage from OPTIONS_TABLE. */
-static void
+static svn_error_t *
 print_command_info (const svn_opt_subcommand_desc_t *cmd,
                     const apr_getopt_option_t *options_table,
                     svn_boolean_t help, 
@@ -108,7 +108,7 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
   apr_size_t i;
 
   /* Print the canonical command name. */
-  fputs (cmd->name, stream);
+  SVN_ERR (svn_cmdline_fputs (cmd->name, stream, pool));
 
   /* Print the list of aliases. */
   first_time = TRUE;
@@ -118,24 +118,25 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
         break;
 
       if (first_time) {
-        fprintf (stream, " (");
+        SVN_ERR (svn_cmdline_fputs (" (", stream, pool));
         first_time = FALSE;
       }
       else
-        fprintf (stream, ", ");
+        SVN_ERR (svn_cmdline_fputs (", ", stream, pool));
       
-      fprintf (stream, "%s", cmd->aliases[i]);
+      SVN_ERR (svn_cmdline_fputs (cmd->aliases[i], stream, pool));
     }
 
   if (! first_time)
-    fprintf (stream, ")");
+    SVN_ERR (svn_cmdline_fputs (")", stream, pool));
   
   if (help)
     {
       const apr_getopt_option_t *option;
       svn_boolean_t have_options = FALSE;
 
-      fprintf (stream, ": %s", dgettext (PACKAGE_NAME, cmd->help));
+      SVN_ERR (svn_cmdline_fprintf (stream, pool, ": %s",
+                                    dgettext (PACKAGE_NAME, cmd->help)));
 
       /* Loop over all valid option codes attached to the subcommand */
       for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
@@ -144,7 +145,8 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
             {
               if (have_options == FALSE)
                 {
-                  fprintf (stream, _("\nValid options:\n"));
+                  SVN_ERR (svn_cmdline_fputs (_("\nValid options:\n"),
+                                              stream, pool));
                   have_options = TRUE;
                 }
 
@@ -158,14 +160,17 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
                 {
                   const char *optstr;
                   svn_opt_format_option (&optstr, option, TRUE, pool);
-                  fprintf (stream, "  %s\n", optstr);
+                  SVN_ERR (svn_cmdline_fprintf (stream, pool, "  %s\n",
+                                                optstr));
                 }
             }
         }
 
       if (have_options)
-        fprintf (stream, "\n");
+        SVN_ERR (svn_cmdline_fprintf (stream, pool, "\n"));
     }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -177,22 +182,34 @@ svn_opt_print_generic_help (const char *header,
                             apr_pool_t *pool, FILE *stream)
 {
   int i = 0;
+  svn_error_t *err;
 
   if (header)
-    fprintf (stream, "%s", header);
+    if ((err = svn_cmdline_fputs (header, stream, pool)))
+      goto print_error;
   
   while (cmd_table[i].name) 
     {
-      fprintf (stream, "   ");
-      print_command_info (cmd_table + i, opt_table, FALSE, pool, stream);
-      fprintf (stream, "\n");
+      if ((err = svn_cmdline_fputs ("   ", stream, pool))
+          || (err = print_command_info (cmd_table + i, opt_table, FALSE,
+                                        pool, stream))
+          || (err = svn_cmdline_fputs ("\n", stream, pool)))
+        goto print_error;
       i++;
     }
 
-  fprintf (stream, "\n");
-  
+  if ((err = svn_cmdline_fputs ("\n", stream, pool)))
+    goto print_error;
+
   if (footer)
-    fprintf (stream, "%s", footer);
+    if ((err = svn_cmdline_fputs (footer, stream, pool)))
+      goto print_error;
+
+  return;
+
+ print_error:
+  svn_handle_error (err, stderr, FALSE);
+  svn_error_clear (err);
 }
 
 
@@ -236,11 +253,18 @@ svn_opt_subcommand_help (const char *subcommand,
 {
   const svn_opt_subcommand_desc_t *cmd =
     svn_opt_get_canonical_subcommand (table, subcommand);
+  svn_error_t *err;
     
   if (cmd)
-    print_command_info (cmd, options_table, TRUE, pool, stdout);
+    err = print_command_info (cmd, options_table, TRUE, pool, stdout);
   else
-    fprintf (stderr, _("\"%s\": unknown command.\n\n"), subcommand);
+    err = svn_cmdline_fprintf (stderr, pool,
+                               _("\"%s\": unknown command.\n\n"), subcommand);
+  
+  if (err) {
+    svn_handle_error (err, stderr, FALSE);
+    svn_error_clear (err);
+  }
 }
 
 
@@ -662,30 +686,23 @@ print_version_info (const char *pgm_name,
 {
   if (quiet)
     {
-      printf ("%s\n", SVN_VER_NUMBER);
+      SVN_ERR (svn_cmdline_printf (pool, "%s\n", SVN_VER_NUMBER));
       return SVN_NO_ERROR;
     }
 
-  printf (_("%s, version %s\n"
-            "   compiled %s, %s\n\n"), pgm_name, SVN_VERSION,
-                                      __DATE__, __TIME__);
-  fputs (_("Copyright (C) 2000-2004 CollabNet.\n"
-           "Subversion is open source software, see"
-           " http://subversion.tigris.org/\n"
-           "This product includes software developed by CollabNet "
-           "(http://www.Collab.Net/).\n\n"), stdout);
+  SVN_ERR (svn_cmdline_printf (pool, _("%s, version %s\n"
+                                       "   compiled %s, %s\n\n"), pgm_name,
+                               SVN_VERSION, __DATE__, __TIME__));
+  SVN_ERR (svn_cmdline_fputs (_("Copyright (C) 2000-2004 CollabNet.\n"
+                                "Subversion is open source software, see"
+                                " http://subversion.tigris.org/\n"
+                                "This product includes software developed by "
+                                "CollabNet (http://www.Collab.Net/).\n\n"),
+                              stdout, pool));
 
   if (footer)
     {
-      const char *footer_stdout;
-
-      /* ### Back when this code lived in help-cmd.c, prior to rev
-       * 3250 or so, this was the only part of the version output that
-       * did utf8-to-native conversion.  So I've kept that conversion,
-       * but shouldn't the rest of the code do something similar?
-       */
-      SVN_ERR (svn_cmdline_cstring_from_utf8 (&footer_stdout, footer, pool));
-      printf ("%s\n", footer_stdout);
+      SVN_ERR (svn_cmdline_printf (pool, "%s\n", footer));
     }
 
   return SVN_NO_ERROR;
@@ -726,7 +743,8 @@ svn_opt_print_help (apr_getopt_t *os,
                                 pool,
                                 stdout);
   else                                       /* unknown option or cmd */
-    fprintf (stderr, _("Type '%s help' for usage.\n"), pgm_name);
+    SVN_ERR (svn_cmdline_fprintf (stderr, pool,
+                                  _("Type '%s help' for usage.\n"), pgm_name));
 
   return SVN_NO_ERROR;
 }
