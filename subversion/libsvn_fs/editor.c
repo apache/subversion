@@ -11,17 +11,12 @@
  * ====================================================================
  */
 
-/* This is on hold until the fs is robust and complete, at which point
-   this editor will be written using the public svn_fs.h functions
-   (i.e., the same tree.c stuff the networking layer uses).  Exercise
-   those code paths!  Exorcise those code paths! */
-
-#if 0  /* till end of file */
 
 #include "apr_pools.h"
 #include "apr_file_io.h"
 
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "dag.h"
@@ -54,7 +49,6 @@ struct edit_baton
 
   /* svn transaction associated with this edit (created in replace_root). */
   svn_fs_txn_t *txn;
-  const char *txn_name;
 
   /* The object representing the root directory of the svn txn. */
   svn_fs_root_t *root;
@@ -68,7 +62,6 @@ struct dir_baton
   struct dir_baton *parent;
 
   svn_string_t *path;  /* the -absolute- path to this dir in the fs */
-  svn_string_t *name;  /* basename of the field above */
 
 };
 
@@ -78,7 +71,6 @@ struct file_baton
   struct dir_baton *parent;
 
   svn_string_t *path;  /* the -absolute- path to this file in the fs */
-  svn_string_t *name;  /* basename of the field above */
 
 };
 
@@ -91,21 +83,21 @@ replace_root (void *edit_baton,
               svn_revnum_t base_revision,
               void **root_baton)
 {
-  /* kff todo: figure out breaking into subpools soon */
+  /* ben sez: kff todo: figure out breaking into subpools soon */
   struct edit_baton *eb = edit_baton;
   struct dir_baton *dirb = apr_pcalloc (eb->pool, sizeof (*dirb));
 
-  /* Begin a -subversion- transaction, cache its name, and get its
+  /* Begin a subversion transaction, cache its name, and get its
      root object. */
   SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool));
-  SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
-  SVN_ERR (svn_fs_txn_root (&(dirb->root), eb->txn, eb->pool));
+  SVN_ERR (svn_fs_txn_root (&(eb->root), eb->txn, eb->pool));
   
-  /* Finish filling out the root dir baton. */
+  /* Finish filling out the root dir baton.  The `base_path' field is
+     an -absolute- path in the filesystem, upon which all dir batons
+     will telescope.  */
   dirb->edit_baton = edit_baton;
   dirb->parent = NULL;
-  dirb->base_path = svn_string_dup (eb->base_path, eb->pool);
-  /* ben todo:  do we really need a dirb->name field? */
+  dirb->path = svn_string_dup (eb->base_path, eb->pool);
  
   *root_baton = dirb;
   return SVN_NO_ERROR;
@@ -118,12 +110,13 @@ delete_entry (svn_string_t *name,
               void *parent_baton)
 {
   struct dir_baton *parent = parent_baton;
-  struct edit_baton *eb = dirb->edit_baton;
+  struct edit_baton *eb = parent->edit_baton;
 
   svn_string_t *path_to_kill = svn_string_dup (parent->path, eb->pool);
-  svn_string_append (path_to_kill, name);
+  svn_path_add_component (path_to_kill, name, svn_path_repos_style);
 
-  SVN_ERR (svn_fs_delete (eb->root, path_to_kill, eb->pool));
+  /* This routine is a mindless wrapper. */
+  SVN_ERR (svn_fs_delete (eb->root, path_to_kill->data, eb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -134,29 +127,46 @@ delete_entry (svn_string_t *name,
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
-               svn_string_t *ancestor_path,
-               long int ancestor_revision,
+               svn_string_t *copyfrom_path,
+               svn_revnum_t copyfrom_revision,
                void **child_baton)
 {
+  struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *new_dirb
-    = apr_pcalloc (pb->edit_baton->pool, sizeof (*new_dirb));
-  struct add_repl_args add_args;
-  
-  add_args.parent = pb;
-  add_args.name = name;
-  
-  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs,
-                              txn_body_add_directory,
-                              &add_args,
-                              pb->edit_baton->pool));
+  struct edit_baton *eb = pb->edit_baton;
 
-  new_dirb->edit_baton = pb->edit_baton;
+  /* Sanity check. */  
+  if (copyfrom_path && (copyfrom_revision <= 0))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+       "fs editor: add_dir `%s': got copyfrom_path, but no copyfrom_rev",
+       name->data);
+
+  /* Build a new dir baton for this directory */
+  new_dirb = apr_pcalloc (eb->pool, sizeof (*new_dirb));
+  new_dirb->edit_baton = eb;
   new_dirb->parent = pb;
-  new_dirb->base_rev = ancestor_revision;
-  new_dirb->base_path = ancestor_path;
-  new_dirb->name = svn_string_dup (name, pb->edit_baton->pool);
-  new_dirb->node = add_args.new_node;
+  new_dirb->path = svn_string_dup (pb->path, eb->pool);
+  svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
+
+  if (copyfrom_path)
+    {
+      /* If the driver supplied ancestry args, the filesystem can make a
+         "cheap copy" under the hood... how convenient! */
+      svn_fs_root_t *copyfrom_root;
+
+      SVN_ERR (svn_fs_revision_root (&copyfrom_root, eb->fs,
+                                     copyfrom_revision, eb->pool));
+
+      SVN_ERR (svn_fs_copy (copyfrom_root, copyfrom_path->data,
+                            eb->root, new_dirb->path->data, eb->pool));
+    }
+  else
+    {
+      /* No ancestry given, just make a new directory. */      
+      SVN_ERR (svn_fs_make_dir (eb->root, new_dirb->path->data, eb->pool));
+    }
 
   *child_baton = new_dirb;
   return SVN_NO_ERROR;
@@ -170,26 +180,18 @@ replace_directory (svn_string_t *name,
                    svn_revnum_t base_revision,
                    void **child_baton)
 {
+  struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *dirb = apr_pcalloc (pb->edit_baton->pool, sizeof (*dirb));
-  struct add_repl_args repl_args;
-  
-  repl_args.parent = pb;
-  repl_args.name   = name;
+  struct edit_baton *eb = pb->edit_baton;
 
-  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs,
-                              txn_body_replace_directory,
-                              &repl_args,
-                              pb->edit_baton->pool));
+  /* Build a new dir baton for this directory */
+  new_dirb = apr_pcalloc (eb->pool, sizeof (*new_dirb));
+  new_dirb->edit_baton = eb;
+  new_dirb->parent = pb;
+  new_dirb->path = svn_string_dup (pb->path, eb->pool);
+  svn_path_add_component (new_dirb->path, name, svn_path_repos_style);
 
-  dirb->edit_baton = pb->edit_baton;
-  dirb->parent = pb;
-  dirb->base_rev = base_revision;
-  dirb->base_path = NULL;
-  dirb->name = svn_string_dup (name, pb->edit_baton->pool);
-  dirb->node = repl_args.new_node;
-
-  *child_baton = dirb;
+  *child_baton = new_dirb;
   return SVN_NO_ERROR;
 }
 
@@ -197,7 +199,11 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
+  /* The fs doesn't give one whit that we're done making changes to
+     any particular directory... it's all happening inside one svn
+     transaction tree.
 
+     Thus this routine is a no-op! */
 
   return SVN_NO_ERROR;
 }
@@ -206,23 +212,15 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
+  /* The fs doesn't give one whit that we're done making changes to
+     any particular file... it's all happening inside one svn
+     transaction tree.
+
+     Thus this routine is a no-op! */
 
   return SVN_NO_ERROR;
 }
 
-
-
-static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *handler_baton)
-{
-#if 0
-  struct handle_txdelta_args *txdelta_args = handler_baton;
-
-  /* fooo */
-#endif /* 0 */
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -231,22 +229,13 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
-  struct handle_txdelta_args txdelta_args;
-
-  txdelta_args.fb = fb;
-
-  /* fooo; */
-
-  /* Get the base against to which the incoming delta should be
-     applied to produce the new file. */
-  SVN_ERR (svn_fs__retry_txn (fb->parent->edit_baton->fs,
-                              txn_body_get_base_contents,
-                              &txdelta_args,
-                              fb->parent->edit_baton->pool));
-
+  struct edit_baton *eb = fb->parent->edit_baton;
   
-  *handler = window_handler;
-  *handler_baton = &txdelta_args;
+  /* This routine is a mindless wrapper. */
+  SVN_ERR (svn_fs_apply_textdelta (handler, handler_baton,
+                                   eb->root, fb->path->data,
+                                   eb->pool));
+  
   return SVN_NO_ERROR;
 }
 
@@ -256,28 +245,45 @@ apply_textdelta (void *file_baton,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
-          svn_string_t *ancestor_path,
-          long int ancestor_revision,
+          svn_string_t *copy_path,
+          long int copy_revision,
           void **file_baton)
 {
+  struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
-  struct file_baton *new_fb
-    = apr_pcalloc (pb->edit_baton->pool, sizeof (*new_fb));
-  struct add_repl_args add_args;
+  struct edit_baton *eb = pb->edit_baton;
 
-  add_args.parent = pb;
-  add_args.name = name;
+  /* Sanity check. */  
+  if (copy_path && (copy_revision <= 0))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
+       "fs editor: add_file `%s': got copy_path, but no copy_rev",
+       name->data);
 
-  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs,
-                              txn_body_add_file,
-                              &add_args,
-                              pb->edit_baton->pool));
-
+  /* Build a new file baton */
+  new_fb = apr_pcalloc (eb->pool, sizeof (*new_fb));
   new_fb->parent = pb;
-  new_fb->name = svn_string_dup (name, pb->edit_baton->pool);
-  new_fb->base_rev = ancestor_revision;
-  new_fb->base_path = ancestor_path;
-  new_fb->node = add_args.new_node;
+  new_fb->path = svn_string_dup (pb->path, eb->pool);
+  svn_path_add_component (new_fb->path, name, svn_path_repos_style);
+
+  if (copy_path)
+    {
+      /* If the driver supplied ancestry args, the filesystem can make a
+         "cheap copy" under the hood... how convenient! */
+      svn_fs_root_t *copy_root;
+
+      SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
+                                     copy_revision, eb->pool));
+
+      SVN_ERR (svn_fs_copy (copy_root, copy_path->data,
+                            eb->root, new_fb->path->data, eb->pool));
+    }
+  else
+    {
+      /* No ancestry given, just make a new file. */      
+      SVN_ERR (svn_fs_make_file (eb->root, new_fb->path->data, eb->pool));
+    }
 
   *file_baton = new_fb;
   return SVN_NO_ERROR;
@@ -292,23 +298,17 @@ replace_file (svn_string_t *name,
               svn_revnum_t base_revision,
               void **file_baton)
 {
+  struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
-  struct file_baton *fb = apr_pcalloc (pb->edit_baton->pool, sizeof (*fb));
-  struct add_repl_args repl_args;
+  struct edit_baton *eb = pb->edit_baton;
 
-  repl_args.parent = pb;
-  repl_args.name   = name;
+  /* Build a new file baton */
+  new_fb = apr_pcalloc (eb->pool, sizeof (*new_fb));
+  new_fb->parent = pb;
+  new_fb->path = svn_string_dup (pb->path, eb->pool);
+  svn_path_add_component (new_fb->path, name, svn_path_repos_style);
 
-  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs, txn_body_replace_file,
-                              &repl_args, pb->edit_baton->pool));
-
-  fb->parent = pb;
-  fb->base_rev = base_revision;
-  fb->base_path = NULL;
-  fb->name = svn_string_dup (name, pb->edit_baton->pool);
-  fb->node = repl_args.new_node;
-
-  *file_baton = fb;
+  *file_baton = new_fb;
   return SVN_NO_ERROR;
 }
 
@@ -320,15 +320,11 @@ change_file_prop (void *file_baton,
                   svn_string_t *value)
 {
   struct file_baton *fb = file_baton;
-  struct change_prop_args args;
+  struct edit_baton *eb = fb->parent->edit_baton;
 
-  args.node = fb->node;
-  args.name = name;
-  args.value = value;
-
-  SVN_ERR (svn_fs__retry_txn (fb->parent->edit_baton->fs,
-                              txn_body_change_prop, &args,
-                              fb->parent->edit_baton->pool));
+  /* This routine is a mindless wrapper. */
+  SVN_ERR (svn_fs_change_node_prop (eb->root, fb->path->data,
+                                    name, value, eb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -339,16 +335,12 @@ change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
-  struct dir_baton *dirb = dir_baton;
-  struct change_prop_args args;
+  struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;
 
-  args.node = dirb->node;
-  args.name = name;
-  args.value = value;
-
-  SVN_ERR (svn_fs__retry_txn (dirb->edit_baton->fs,
-                              txn_body_change_prop, &args,
-                              dirb->edit_baton->pool));
+  /* This routine is a mindless wrapper. */
+  SVN_ERR (svn_fs_change_node_prop (eb->root, db->path->data,
+                                    name, value, eb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -367,13 +359,14 @@ close_edit (void *edit_baton)
       /* If the commit failed, it's *probably* due to an out-of-date
          conflict.  Now, the filesystem gives us the ability to
          continue diddling the transaction and try again; but let's
-         face it: that's not how the cvs or svn works from a suser
+         face it: that's not how the cvs or svn works from a user
          interface standpoint.  Thus we don't make use of this fs
          feature (for now, at least.)
 
          So, in a nutshell: svn commits are an all-or-nothing deal.
          Each commit creates a new fs txn which either succeeds or is
-         aborted completely.  No second chances.  :) */
+         aborted completely.  No second chances;  the user simply
+         needs to update and commit again  :) */
 
       SVN_ERR (svn_fs_abort_txn (eb->txn));
     }
@@ -444,7 +437,6 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
 }
 
 
-#endif /* 0 */
 
 
 /* 
