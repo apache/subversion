@@ -1281,8 +1281,6 @@ get_combined_window (svn_txdelta_window_t **result,
   /* Combine in the windows from the other delta reps, if needed. */
   for (i = 1; i < rb->rs_list->nelts; i++)
     {
-      svn_txdelta__compose_ctx_t context;
-
       if (window->src_ops == 0)
         break;
 
@@ -1315,7 +1313,7 @@ get_combined_window (svn_txdelta_window_t **result,
       /* Combine this window with the current one.  Cycles pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create (rb->pool);
-      window = svn_txdelta__compose_windows (nwin, window, &context, new_pool);
+      window = svn_txdelta__compose_windows (nwin, window, new_pool);
       svn_pool_destroy (pool);
       pool = new_pool;
     }
