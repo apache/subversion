@@ -36,7 +36,7 @@ typedef enum {
   svn_cl__xml_file_opt = 256,
   svn_cl__ancestor_path_opt,
   svn_cl__force_opt,
-  svn_cl__recursive_opt,
+  svn_cl__recursive_opt
 } svn_cl__longopt_t;
 
 
