@@ -53,6 +53,21 @@ def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
   messenger.generate()
 
 
+# Minimal, incomplete, version of popen2.Popen3 for those platforms
+# for which popen2 does not provide it.
+try:
+  Popen3 = popen2.Popen3
+except AttributeError:
+  class Popen3:
+    def __init__(self, cmd, capturestderr):
+      if type(cmd) != str:
+        cmd = svn.core.argv_to_command_string(cmd)
+      self.fromchild, self.tochild = popen2.popen2(cmd, mode='b')
+
+    def wait(self):
+      return self.fromchild.close() or self.tochild.close()
+
+
 class OutputBase:
   "Abstract base class to formalize the inteface of output methods"
 
@@ -60,6 +75,7 @@ class OutputBase:
     self.cfg = cfg
     self.repos = repos
     self.prefix_param = prefix_param
+    self._CHUNKSIZE = 128 * 1024
 
     # This is a public member variable. This must be assigned a suitable
     # piece of descriptive text before make_subject() is called.
@@ -97,15 +113,23 @@ class OutputBase:
     representation."""
     raise NotImplementedError
 
-  def run(self, cmd):
-    """Override this method.
-    Execute CMD, writing the stdout produced to the output representation."""
-    raise NotImplementedError
-
   def write(self, output):
     """Override this method.
     Append the literal text string OUTPUT to the output representation."""
     raise NotImplementedError
+
+  def run(self, cmd):
+    """Override this method, if the default implementation is not sufficient.
+    Execute CMD, writing the stdout produced to the output representation."""
+    pipe_ob = Popen3(cmd)
+
+    buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+    while buf:
+      self.write(buf)
+      buf = pipe_ob.fromchild.read(self._CHUNKSIZE)
+
+    # wait on the child so we don't end up with a billion zombies
+    pipe_ob.wait()
 
 
 class MailedOutput(OutputBase):
@@ -144,15 +168,6 @@ class SMTPOutput(MailedOutput):
 
     self.write(self.mail_headers(group, params))
 
-  def run(self, cmd):
-    # we're holding everything in memory, so we may as well read the
-    # entire diff into memory and stash that into the buffer
-    pipe_ob = popen2.Popen3(cmd)
-    self.write(pipe_ob.fromchild.read())
-
-    # wait on the child so we don't end up with a billion zombies
-    pipe_ob.wait()
-
   def finish(self):
     server = smtplib.SMTP(self.cfg.general.smtp_hostname)
     if self.cfg.is_set('general.smtp_username'):
@@ -175,25 +190,6 @@ class StandardOutput(OutputBase):
   def finish(self):
     pass
 
-  def run(self, cmd):
-    # flush our output to keep the parent/child output in sync
-    sys.stdout.flush()
-    sys.stderr.flush()
-
-    # we can simply fork and exec the diff, letting it generate all the
-    # output to our stdout (and stderr, if necessary).
-    pid = os.fork()
-    if pid:
-      # in the parent. we simply want to wait for the child to finish.
-      ### should we deal with the return values?
-      os.waitpid(pid, 0)
-    else:
-      # in the child. run the diff command.
-      try:
-        os.execvp(cmd[0], cmd)
-      finally:
-        os._exit(1)
-
 
 class PipeOutput(MailedOutput):
   "Deliver a mail message to an MDA via a pipe."
@@ -204,9 +200,6 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = string.split(cfg.general.mail_command)
 
-    # we want a descriptor to /dev/null for hooking up to the diffs' stdin
-    self.null = os.open('/dev/null', os.O_RDONLY)
-
   def start(self, group, params):
     MailedOutput.start(self, group, params)
 
@@ -215,7 +208,7 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = popen2.Popen3(cmd)
+    self.pipe = Popen3(cmd)
     self.write = self.pipe.tochild.write
 
     # we don't need the read-from-mailer descriptor, so close it
@@ -223,39 +216,6 @@ class PipeOutput(MailedOutput):
 
     # start writing out the mail message
     self.write(self.mail_headers(group, params))
-
-  def run(self, cmd):
-    # flush the buffers that write to the mailer. we're about to fork, and
-    # we don't want data sitting in both copies of the buffer. we also
-    # want to ensure the parts are delivered to the mailer in the right order.
-    self.pipe.tochild.flush()
-
-    pid = os.fork()
-    if pid:
-      # in the parent
-
-      # wait for the diff to finish
-      ### do anything with the return value?
-      os.waitpid(pid, 0)
-
-      return
-
-    # in the child
-
-    # duplicate the write-to-mailer descriptor to our stdout and stderr
-    os.dup2(self.pipe.tochild.fileno(), 1)
-    os.dup2(self.pipe.tochild.fileno(), 2)
-
-    # hook up stdin to /dev/null
-    os.dup2(self.null, 0)
-
-    ### do we need to bother closing self.null and self.pipe.tochild ?
-
-    # run the diff command, now that we've hooked everything up
-    try:
-      os.execvp(cmd[0], cmd)
-    finally:
-      os._exit(1)
 
   def finish(self):
     # signal that we're done sending content
