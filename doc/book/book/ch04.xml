@@ -884,7 +884,7 @@ $
           that an update produces files named
           <filename>filename.mine</filename>,
           <filename>filename.rOLDREV</filename>, and
-          <filename>filename.NEWREV</filename>.  When <command>svn
+          <filename>filename.rNEWREV</filename>.  When <command>svn
           merge</command> produces a conflict, though, it creates
           three files named <filename>filename.working</filename>,
           <filename>filename.left</filename>, and
@@ -892,7 +892,7 @@ $
           terms <quote>left</quote> and <quote>right</quote> are
           describing which side of the double-tree comparison the file
           came from.  In any case, these differing names will help you
-          distnguish between conflicts that happened as a result of an
+          distinguish between conflicts that happened as a result of an
           update versus ones that happened as a result of a
           merge.</para>
 
