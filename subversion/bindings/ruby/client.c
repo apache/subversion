@@ -538,8 +538,33 @@ static VALUE
 cl_log (int argc, VALUE *argv, VALUE self)
 {
   svn_client_auth_baton_t *auth_baton;
+
+  VALUE aStart, aEnd, discover_changed_paths;
+  apr_array_header_t *paths;
+  svn_error_t *err;
+  svn_ruby_log_receiver_baton_t baton;
+  svn_client_revision_t start, end;
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
-  return svn_ruby_client_log (argc, argv, self, auth_baton);
+
+  svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
+                         &discover_changed_paths, &baton, NULL);
+
+  start = svn_ruby_parse_revision (aStart);
+  end = svn_ruby_parse_revision (aEnd);
+
+  err = svn_client_log (auth_baton,
+                        paths, &start, &end,
+                        RTEST (discover_changed_paths),
+                        svn_ruby_log_receiver,
+                        (void *)&baton,
+                        baton.pool);
+
+  apr_pool_destroy (baton.pool);
+  if (err)
+    svn_ruby_raise (err);
+
+  return Qnil;
 }
 
 static VALUE

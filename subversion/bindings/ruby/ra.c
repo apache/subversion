@@ -661,6 +661,11 @@ ra_do_update (int argc, VALUE *argv, VALUE self)
 static VALUE
 ra_get_log (int argc, VALUE *argv, VALUE self)
 {
+  VALUE aStart, aEnd, discover_changed_paths;
+  apr_array_header_t *paths;
+  svn_error_t *err;
+  svn_ruby_log_receiver_baton_t baton;
+  svn_revnum_t start, end;
   svn_ruby_ra_t *ra;
 
   Data_Get_Struct (self, svn_ruby_ra_t, ra);
@@ -668,8 +673,24 @@ ra_get_log (int argc, VALUE *argv, VALUE self)
   if (ra->closed)
     rb_raise (rb_eRuntimeError, "not opened");
 
-  return svn_ruby_ra_get_log (argc, argv, self,
-			      ra->plugin, ra->session_baton, ra->pool);
+
+  svn_ruby_get_log_args (argc, argv, self, &paths, &aStart, &aEnd,
+                         &discover_changed_paths, &baton, ra->pool);
+ 
+  start = NUM2LONG (aStart);
+  end = NUM2LONG (aEnd);
+
+  err = ra->plugin->get_log (ra->session_baton,
+			     paths, start, end,
+			     RTEST (discover_changed_paths),
+			     svn_ruby_log_receiver,
+			     (void *)&baton);
+
+  apr_pool_destroy (baton.pool);
+  if (err)
+    svn_ruby_raise (err);
+
+  return Qnil;
 }
 
 static VALUE
