@@ -339,7 +339,7 @@ class TreeMirror:
 
   def delete_path(self, path, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
-    Return the deleted path.
+    Return the deleted path, or None if PATH does not exist.
 
     If PRUNE is not None, then the deleted path may differ from PATH,
     because this will delete the highest possible directory.  In other
@@ -378,8 +378,11 @@ class TreeMirror:
         last_parent_dir = parent_dir
 
       # ... and old with the new:
-      parent_dir_key = parent_dir[component]
-      parent_dir = marshal.loads(self.db[parent_dir_key])
+      if parent_dir.has_key(component):
+        parent_dir_key = parent_dir[component]
+        parent_dir = marshal.loads(self.db[parent_dir_key])
+      else:
+        return None
 
       if prune and (len(parent_dir) == 1):
         highest_empty = (path_so_far, last_parent_dir, last_parent_dir_key)
@@ -591,11 +594,17 @@ class Dump:
     self.dumpfile.write('\n')
 
   def delete_path(self, svn_path):
+    """If SVN_PATH exists in the head mirror, output its deletion and
+    return the path actually deleted; else return None.
+    ### FIXME: the path deleted can differ from SVN_PATH because of
+    pruning, which really ought to be a boolean parameter here."""
     deleted_path = self.head_mirror.delete_path(svn_path, 1) # 1 means prune
-    print '    (deleted %s)' % deleted_path
-    self.dumpfile.write('Node-path: %s\n'
-                        'Node-action: delete\n'
-                        '\n' % deleted_path)
+    if deleted_path:
+      print '    (deleted %s)' % deleted_path
+      self.dumpfile.write('Node-path: %s\n'
+                          'Node-action: delete\n'
+                          '\n' % deleted_path)
+    return deleted_path
 
   def close(self):
     self.dumpfile.close()
@@ -702,13 +711,28 @@ class Commit:
       print 'Try rerunning with (for example) \"--encoding=latin1\".'
       sys.exit(1)
 
-    dump.start_revision(props)
+    ### FIXME: Until we handle branches and tags, there's a
+    ### possibility that none of the code below will get used.  For
+    ### example, if the CVS file was added on a branch, then its
+    ### revision 1.1 will start out in state "dead", and the RCS file
+    ### will be in the Attic/.  If that file is the only item in the
+    ### commit, then we won't hit the `self.changes' case at all, and
+    ### we won't do anything in the `self.deletes' case, since we
+    ### don't handle the branch right now, and we special-case
+    ### revision 1.1.
+    ###
+    ### So this variable helps make sure we don't write a no-op
+    ### revision to the dumpfile.
+    started_revision = 0
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = branch_path(ctx, br) + cvs_path
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
+      if not started_revision:
+        dump.start_revision(props)
+        started_revision = 1
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
@@ -716,10 +740,29 @@ class Commit:
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = branch_path(ctx, br) + cvs_path
       print '    deleting %s : %s' % (cvs_rev, svn_path)
-      dump.delete_path(svn_path)
+      if cvs_rev != '1.1':
+        if not started_revision:
+          dump.start_revision(props)
+          started_revision = 1
+        ### FIXME: this will return None if no path was deleted.  But
+        ### we'll already have started the revision by then, so it's a
+        ### bit late to use the knowledge!  Need to reorganize things
+        ### so that starting the revision is a callback with its own
+        ### internal conditional, so anyone can just invoke when they
+        ### know they're really about to do something.
+        ###
+        ### Right now what happens is we get an empty revision
+        ### (assuming nothing else happened in this revision), so it
+        ### won't show up 'svn log' output, even when invoked on the
+        ### root -- because no paths changed!  That needs to be fixed,
+        ### regardless of whether cvs2svn creates such revisions.
+        dump.delete_path(svn_path)
 
-    previous_rev = dump.end_revision()
-    print '    new revision:', previous_rev
+    if started_revision:
+      previous_rev = dump.end_revision()
+      print '    new revision:', previous_rev
+    else:
+      print '    no new revision created, as nothing to do'
 
 
 # ### This stuff left in temporarily, as a reference:
