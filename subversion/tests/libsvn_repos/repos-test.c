@@ -799,7 +799,229 @@ node_locations (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
 
+/* Testing the reporter. */
+
+/* Functions for an editor that will catch removal of defunct locks. */
+
+/* The main editor baton. */
+typedef struct rmlocks_baton_t {
+  apr_hash_t *removed;
+  apr_pool_t *pool;
+} rmlocks_baton_t;
+
+/* The file baton. */
+typedef struct rmlocks_file_baton_t {
+  rmlocks_baton_t *main_baton;
+  const char *path;
+} rmlocks_file_baton_t;
+
+/* An svn_delta_editor_t function. */
+static svn_error_t *
+rmlocks_open_file (const char *path,
+                   void *parent_baton,
+                   svn_revnum_t base_revision,
+                   apr_pool_t *file_pool,
+                   void **file_baton)
+{
+  rmlocks_file_baton_t *fb = apr_palloc (file_pool, sizeof (*fb));
+  rmlocks_baton_t *b = parent_baton;
+
+  fb->main_baton = b;
+  fb->path = apr_pstrdup (b->pool, path);
+
+  *file_baton = fb;
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_delta_editor_t function. */
+static svn_error_t *
+rmlocks_change_prop (void *file_baton,
+                     const char *name,
+                     const svn_string_t *value,
+                     apr_pool_t *pool)
+{
+  rmlocks_file_baton_t *fb = file_baton;
+
+  if (strcmp (name, SVN_PROP_ENTRY_LOCK_TOKEN) == 0)
+    {
+      if (value != NULL)
+        return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                                 "Value for lock-token property not NULL");
+
+      /* We only want it removed once. */
+      if (apr_hash_get (fb->main_baton->removed, fb->path,
+                        APR_HASH_KEY_STRING) != NULL)
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                  "Lock token for '%s' already removed",
+                                  fb->path);
+
+      /* Mark as removed. */
+      apr_hash_set (fb->main_baton->removed, fb->path, APR_HASH_KEY_STRING,
+                    (void *)1);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_delta_editor_t function. */
+static svn_error_t *
+rmlocks_open_root (void *edit_baton,
+                   svn_revnum_t base_revision,
+                   apr_pool_t *dir_pool,
+                   void **root_baton)
+{
+  *root_baton = edit_baton;
+  return SVN_NO_ERROR;
+}
+
+/* An svn_delta_editor_t function. */
+static svn_error_t *
+rmlocks_open_directory (const char *path,
+                        void *parent_baton,
+                        svn_revnum_t base_revision,
+                        apr_pool_t *pool,
+                        void **dir_baton)
+{
+  *dir_baton = parent_baton;
+  return SVN_NO_ERROR;
+}
+
+/* Create an svn_delta_editor/baton, storing them in EDITOR/EDIT_BATON,
+   that will store paths for which lock tokens were *REMOVED in REMOVED.
+   Allocate the editor and *REMOVED in POOL. */
+static svn_error_t *
+create_rmlocks_editor (svn_delta_editor_t **editor,
+                       void **edit_baton,
+                       apr_hash_t **removed,
+                       apr_pool_t *pool)
+{
+  rmlocks_baton_t *baton = apr_palloc (pool, sizeof (*baton));
+
+  /* Create the editor. */
+  *editor = svn_delta_default_editor (pool);
+  (*editor)->open_root = rmlocks_open_root;
+  (*editor)->open_directory = rmlocks_open_directory;
+  (*editor)->open_file = rmlocks_open_file;
+  (*editor)->change_file_prop = rmlocks_change_prop;
+
+  /* Initialize the baton. */
+  baton->removed = apr_hash_make (pool);
+  baton->pool = pool;
+  *edit_baton = baton;
+
+  *removed = baton->removed;
+
+  return SVN_NO_ERROR;
+}
+
+/* Check that HASH contains exactly the const char * entries for all entries
+   in the NULL-terminated array SPEC. */
+static svn_error_t *
+rmlocks_check (const char **spec, apr_hash_t *hash)
+{
+  apr_size_t n = 0;
+
+  for (; *spec; ++spec, ++n)
+    {
+      if (! apr_hash_get (hash, *spec, APR_HASH_KEY_STRING))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "Lock token for '%s' should have been removed", *spec);
+    }
+
+  if (n < apr_hash_count (hash))
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Lock token for one or more paths unexpectedly "
+                             "removed");
+  return SVN_NO_ERROR;
+}
+
+/* Test that defunct locks are removed by the reporter. */
+static svn_error_t *
+rmlocks (const char **msg,
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
+         apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_revnum_t youngest_rev;
+  svn_delta_editor_t *editor;
+  void *edit_baton, *report_baton;
+
+  *msg = "test removal of defunct locks";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-rmlocks", pool));
+  fs = svn_repos_fs (repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+
+  /* Lock some files, break a lock, steal another and check that those get
+     removed. */
+  {
+    svn_lock_t *l1, *l2, *l3, *l4;
+    svn_fs_access_t *fs_access;
+    apr_hash_t *removed;
+    const char *expected [] = { "A/mu", "A/D/gamma", NULL };
+
+    SVN_ERR (svn_fs_create_access (&fs_access, "user1", subpool));
+    SVN_ERR (svn_fs_set_access (fs, fs_access));
+
+    SVN_ERR (svn_fs_lock (&l1, fs, "/iota", NULL, FALSE, 0, youngest_rev,
+                          subpool));
+    SVN_ERR (svn_fs_lock (&l2, fs, "/A/mu", NULL, FALSE, 0, youngest_rev,
+                          subpool));
+    SVN_ERR (svn_fs_lock (&l3, fs, "/A/D/gamma", NULL, FALSE, 0, youngest_rev,
+                          subpool));
+
+    /* Break l2. */
+    SVN_ERR (svn_fs_unlock (fs, "/A/mu", NULL, TRUE, subpool));
+
+    /* Steal l3 from ourselves. */
+    SVN_ERR (svn_fs_lock (&l4, fs, "/A/D/gamma", NULL, TRUE, 0, youngest_rev,
+                          subpool));
+
+    /* Create the editor. */
+    SVN_ERR (create_rmlocks_editor (&editor, &edit_baton, &removed, subpool));
+
+    /* Report what we have. */
+    SVN_ERR (svn_repos_begin_report (&report_baton, 1, "user1", repos, "/", "",
+                                     NULL, FALSE, TRUE, FALSE, editor,
+                                     edit_baton, NULL, NULL, subpool));
+    SVN_ERR (svn_repos_set_path2 (report_baton, "", 1, FALSE, NULL,
+                                  subpool));
+    SVN_ERR (svn_repos_set_path2 (report_baton, "iota", 1, FALSE, l1->token,
+                                  subpool));
+    SVN_ERR (svn_repos_set_path2 (report_baton, "A/mu", 1, FALSE, l2->token,
+                                  subpool));
+    SVN_ERR (svn_repos_set_path2 (report_baton, "A/D/gamma", 1, FALSE,
+                                  l3->token, subpool));
+    
+    /* End the report. */
+    SVN_ERR (svn_repos_finish_report (report_baton, pool));
+
+    /* And check that the edit did what we wanted. */
+    SVN_ERR (rmlocks_check (expected, removed));
+  }
+
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -810,5 +1032,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (node_tree_delete_under_copy),
     SVN_TEST_PASS (revisions_changed),
     SVN_TEST_PASS (node_locations),
+    SVN_TEST_PASS (rmlocks),
     SVN_TEST_NULL
   };
