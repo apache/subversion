@@ -175,3 +175,9 @@ already know about.)
      Justification: Conform to docstring; correctness; low risk
      Votes:
       +1: jerenkrantz
+
+
+   * r8098
+     Load RA modules as foo-MAJOR.so.0 instead of foo-MAJOR.so.
+     Justification: Low risk; we should be nice to binary packagers.
+     Votes:
