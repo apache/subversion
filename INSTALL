@@ -405,8 +405,9 @@ V.  BUILDING A SUBVERSION SERVER
           ServerName svn.myserver.org
 
     If you are using virtual hosting through Apache's NameVirtualHost
-    directive, this will not be an issue.
- 
+    directive, you may need to use the ServerAlias directive to specify
+    additional names that your server is known by.
+
 10. Now fire up apache 2.0:
 
            /usr/local/apache2/bin/apachectl stop
