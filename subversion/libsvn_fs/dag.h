@@ -76,7 +76,8 @@ svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node);
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 
 
-/* Set IS_MUTABLE to TRUE iff NODE is mutable */
+/* Set IS_MUTABLE to a non-zero value if NODE is currently mutable in
+   TRAIL, or zero otherwise.  */
 svn_error_t *svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
                                         dag_node_t *node,
                                         trail_t *trail);
@@ -183,15 +184,53 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       trail_t *trail);
 
 
+/* Why do we have both svn_fs__dag_link and svn_fs__dag_rename?
+
+   They each have different limitations and abilities (kind of like
+   superheroes!) that allow them to ensure the consistency of the
+   filesystem.
+
+   - svn_fs__dag_link can't rename mutable nodes.  But since CHILD is
+     immutable, it knows that it's safe to create a new link to it:
+     mutable nodes must have exactly one parent, while immutable nodes
+     can be shared arbitrarily.
+
+   - svn_fs__dag_rename always deletes one link, and adds another, as
+     a single atomic operation.  Since it preserves the total number
+     of links to the node being renamed, you can use it on both
+     mutable nodes (which must always have one parent) and immutable
+     nodes (which can have as many parents as they please).  But by
+     the same token, you can't use it to create virtual copies, one of
+     the filesystem's defining features.  */
+
+
 /* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
-   PARENT must be mutable.  CHILD must be immutable.  This function
-   ensures that CHILD is not equal to, or a parent of, PARENT.  NAME
-   must be a single path component; it cannot be a slash-separated
-   directory path.  */
+   PARENT must be mutable.  CHILD must be immutable.  NAME must be a
+   single path component; it cannot be a slash-separated directory
+   path.  
+
+   Note that it is impossible to use this function to create cyclic
+   directory structures.  Since PARENT is mutable, and every parent of
+   a mutable node is mutable itself, and CHILD is immutable, we know
+   that CHILD can't be equal to, or a parent of, PARENT.  */
 svn_error_t *svn_fs__dag_link (dag_node_t *parent,
                                dag_node_t *child,
                                const char *name,
                                trail_t *trail);
+
+
+/* Rename the node named FROM_NAME in FROM_DIR to TO_NAME in TO_DIR,
+   as part of TRAIL.  FROM_DIR and TO_DIR must both be mutable; the
+   node being renamed may be either mutable or immutable.  FROM_NAME
+   and TO_NAME must be single path components; they cannot be
+   slash-separated directory paths.
+
+   This function ensures that the rename does not create a cyclic
+   directory structure, by checking that TO_DIR is not a child of
+   FROM_DIR.  */
+svn_error_t *svn_fs__dag_rename (dag_node_t *from_dir, const char *from_name,
+                                 dag_node_t *  to_dir, const char *  to_name,
+                                 trail_t *trail);
 
 
 /* Delete the directory entry named NAME from PARENT, as part of
