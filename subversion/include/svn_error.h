@@ -100,6 +100,11 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
 svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 
 
+/* Add NEW to the end of CHAIN's chain of errors; i.e., NEW will be
+   the last child error in CHAIN.  */
+void svn_error_compose (svn_error_t *chain, svn_error_t *new);
+
+
 /* Free ERROR by destroying its pool; note that the pool may be shared
    with wrapped child errors inside this error. */
 void svn_error_free (svn_error_t *error);

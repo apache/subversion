@@ -11,6 +11,7 @@
  * ====================================================================
  */
 
+#include <stdio.h>
 #include <string.h>
 
 #include "apr_pools.h"
@@ -59,6 +60,7 @@ read_hook_line (char **cmd_p,
   int i;
   apr_status_t apr_err;
   apr_array_header_t *args = apr_array_make (pool, 4, sizeof (*cmd_p));
+  const char *hook_file_path;  /* for error msgs */
   
   int
     done = 0,
@@ -68,37 +70,49 @@ read_hook_line (char **cmd_p,
     suppress_comment_effect = 0,
     suppress_escape_effect = 0;
               
+  /* Get the hook's file name, for use in error messages. */
+  apr_err = apr_file_name_get (&hook_file_path, hook_file);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "read_hook_line: error getting hook file name");
+    
  restart:
 
   idx = 0;
-  while ((apr_err = apr_file_getc (&c, hook_file)))
+  done = 0;
+  commented = 0;
+  while (1)
     {
+      apr_err = apr_file_getc (&c, hook_file);
+
       if ((! APR_STATUS_IS_SUCCESS (apr_err))
           && (APR_STATUS_IS_EOF (apr_err)))   /* reached end of file */
         {
-          *cmd_p = NULL;
+          if (idx > 0)
+            {
+              c = '\n';  /* fake a newline */
+              done = 1;
+            }
+          else
+            *cmd_p = NULL;
+
           return SVN_NO_ERROR;
         }
       else if (! APR_STATUS_IS_SUCCESS (apr_err))   /* error other than eof */
         {
-          const char *filename;
-          apr_file_name_get (&filename, hook_file);
           return svn_error_createf 
             (apr_err, 0, NULL, pool,
-             "read_hook_line: error reading line from `%s'", filename);
+             "read_hook_line: error reading line from `%s'", hook_file_path);
         }
 
       /* Else, we got another char in the line. */
 
       /* Sanity check: is this line overly long? */
       if (idx >= APR_PATH_MAX)
-        {
-          const char *filename;
-          apr_file_name_get (&filename, hook_file);
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "read_hook_line: line too long in `%s'", filename);
-        }
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "read_hook_line: line too long in `%s'", hook_file_path);
         
       if (escaped)
         {
@@ -151,7 +165,7 @@ read_hook_line (char **cmd_p,
         /* fallthru */
         case ' ':
         case '\t':
-          if (idx > 0)   /* convert as soon as see whitespace */
+          if (idx > 0)   /* convert the buffered data  */
             {
               buf[idx] = '\0';
 
@@ -160,24 +174,49 @@ read_hook_line (char **cmd_p,
                   /* ### todo: error check expanded length here */
 
                   if (strcmp (buf, "$user") == 0)
-                    strcpy (buf, user);
+                    {
+                      if (user)
+                        strcpy (buf, user);
+                      else
+                        goto expansion_error;
+                    }
                   else if (strcmp (buf, "$txn") == 0)
-                    strcpy (buf, txn_name);
+                    {
+                      if (txn_name)
+                        strcpy (buf, txn_name);
+                      else
+                        goto expansion_error;
+                    }
                   else if (strcmp (buf, "$rev") == 0)
-                    strcpy (buf, rev);
+                    {
+                      if (rev)
+                        strcpy (buf, rev);
+                      else
+                        goto expansion_error;
+                    }
                   else if (strcmp (buf, "$repos") == 0)
-                    strcpy (buf, repos);
+                    {
+                      if (repos)
+                        strcpy (buf, repos);
+                      else
+                        goto expansion_error;
+                    }
+                  else if (buf[0] == '$')
+                    {
+                    expansion_error:
+                      return svn_error_createf
+                        (SVN_ERR_REPOS_HOOK_FAILURE, 0, NULL, pool,
+                         "read_hook_line: error expanding `%s' in `%s'",
+                         buf, hook_file_path);
+                    }
                 }
 
-              *((const char **)apr_array_push (args)) = buf;
+              *((const char **)apr_array_push (args))
+                = apr_pstrdup (pool, buf);
 
-              /* Reset everything. */
+              /* Reset. */
               idx = 0;
               suppress_expansion = 0;
-              suppress_escape_effect = 0;
-              suppress_comment_effect = 0;
-              commented = 0;
-              escaped = 0;
             }
 
           break;
@@ -213,7 +252,7 @@ read_hook_line (char **cmd_p,
     }
 
   /* Change the last space into a null terminator. */
-  cmd_p[len - 1] = '\0';
+  (*cmd_p)[len - 1] = '\0';
 
   return SVN_NO_ERROR;
 }
@@ -244,26 +283,74 @@ run_hook_file (svn_fs_t *fs,
                const char *txn_name,
                apr_pool_t *pool)
 {
-#if 0
-  svn_error_t *err;
+  svn_error_t *err, *accum_err = NULL;
+  apr_status_t apr_err;
   char *cmd;
+  apr_file_t *f;
+  const char *repos = svn_fs_repository (fs);
+  const char *rev_str;
 
-  const char *rev_str = apr_psprintf (pool, "%ld", rev);
-  const char *repos;
+  if (SVN_IS_VALID_REVNUM (rev))
+    rev_str = apr_psprintf (pool, "%ld", rev);
+  else
+    rev_str = NULL;
   
-  err = read_hook_line (&cmd,
-                        hook_file,
-                        repos,
-                        user,
-                        rev_str,
-                        txn_name,
-                        pool);
-#endif /* 0 */
+  apr_err = apr_file_open (&f, hook_file, APR_READ, APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "run_hook_file: opening `%s'", hook_file);
+  
+  while (1)
+    {
+      err = read_hook_line (&cmd,
+                            f,
+                            repos,
+                            user,
+                            rev_str,
+                            txn_name,
+                            pool);
+      
+      if (! cmd)
+        break;
+      else if (err)
+        {
+          svn_error_t *new_err
+            = svn_error_createf (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,
+                                 "run_hook_file: running cmd `%s' "
+                                 "from file `%s'",
+                                 cmd, hook_file);
 
-  return SVN_NO_ERROR;
+          if (accum_err)
+            svn_error_compose (accum_err, new_err);
+          else
+            accum_err = err;
+
+          if (stop_if_fail)
+            break;
+        }
+      else  /* no error reading the command */
+        {
+          int ret;
+
+          /* ### todo: not ideal, but for now by far the easiest way
+             to get what we want. */
+          ret = system (cmd);
+          if (ret)
+            return svn_error_createf (SVN_ERR_REPOS_HOOK_FAILURE,
+                                      0, err, pool,
+                                      "run_hook_file: running cmd `%s' "
+                                      "from file `%s'",
+                                      cmd, hook_file);
+        }
+    }
+
+  apr_err = apr_file_close (f);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "run_hook_file: closing `%s'", hook_file);
+
+  return accum_err;
 }
-
-
 
 
 
