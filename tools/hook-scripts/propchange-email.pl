@@ -221,7 +221,7 @@ push(@body, "Revision: $rev\n");
 push(@body, "Property Name: $propname\n");
 push(@body, "\n");
 push(@body, "New Property Value:\n");
-push(@body, @svnlines);
+push(@body, map { /[\r\n]+$/ ? $_ : "$_\n" } @svnlines);
 push(@body, "\n");
 
 # Go through each project and see if there are any matches for this
