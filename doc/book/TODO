@@ -36,6 +36,7 @@ To be fixed by fitz:
 
   - Be clear that PREV, BASE, and COMMITTED only refer to local paths,
     not to URLs.
+  - Document svnadmin --deltify in Ch09.
 
 --------------------------------------------------------------
 
