@@ -202,6 +202,11 @@ struct dav_resource_private {
   /* the revnum value from a possible SVN_DAV_VERSION_NAME_HEADER */
   svn_revnum_t version_name;
 
+  /* Hex MD5 digests for base text and resultant fulltext.
+     Either or both of these may be null, in which case ignored. */
+  const char *base_checksum;
+  const char *result_checksum;
+
   /* was this resource auto-checked-out? */
   svn_boolean_t auto_checked_out;
 

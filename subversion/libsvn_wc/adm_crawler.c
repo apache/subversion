@@ -533,16 +533,9 @@ svn_wc_transmit_text_deltas (const char *path,
   svn_txdelta_stream_t *txdelta_stream;
   apr_file_t *localfile = NULL;
   apr_file_t *basefile = NULL;
+  const char *base_digest_hex = NULL;
+  unsigned char digest[MD5_DIGESTSIZE];
   
-  /* Tell the editor that we're about to apply a textdelta to the
-     file baton; the editor returns to us a window consumer routine
-     and baton.  If there is no handler provided, just close the file
-     and get outta here.  */
-  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
-                                    &handler, &wh_baton));
-  if (! handler)
-    return editor->close_file (file_baton, pool);
-
   /* Make an untranslated copy of the working file in the
      adminstrative tmp area because a) we want this to work even if
      someone changes the working file while we're generating the
@@ -557,16 +550,10 @@ svn_wc_transmit_text_deltas (const char *path,
   tmp_base = svn_wc__text_base_path (path, TRUE, pool);
   SVN_ERR (svn_io_copy_file (tmpf, tmp_base, FALSE, pool));
 
-  /* Alert the caller that we have created a temporary file that might
-     need to be cleaned up. */
-  if (tempfile)
-    *tempfile = tmp_base;
-
-  /* If the translation step above actually created a new file, delete
-     the old one. */
+  /* If the translation step above created a new file, delete it. */
   if (tmpf != path)
     SVN_ERR (svn_io_remove_file (tmpf, pool));
-      
+
   /* If we're not sending fulltext, we'll be sending diffs against the
      text-base. */
   if (! fulltext)
@@ -581,22 +568,21 @@ svn_wc_transmit_text_deltas (const char *path,
       if (ent->checksum)
         {
           const char *tb = svn_wc__text_base_path (path, FALSE, pool);
-          unsigned char digest[MD5_DIGESTSIZE];
-          const char *hex_digest;
+          unsigned char tb_digest[MD5_DIGESTSIZE];
 
-          SVN_ERR (svn_io_file_checksum (digest, tb, pool));
-          hex_digest = svn_md5_digest_to_cstring (digest, pool);
+          SVN_ERR (svn_io_file_checksum (tb_digest, tb, pool));
+          base_digest_hex = svn_md5_digest_to_cstring (tb_digest, pool);
 
-          if (strcmp (hex_digest, ent->checksum) != 0)
+          if (strcmp (base_digest_hex, ent->checksum) != 0)
             {
               /* Compatibility hack: working copies created before
                  13 Jan 2003 may have entry checksums stored in
                  base64.  See svn_io_file_checksum_base64()'s doc
                  string for details. */ 
-              const char *base64_digest
-                = (svn_base64_from_md5 (digest, pool))->data;
+              const char *digest_base64
+                = (svn_base64_from_md5 (tb_digest, pool))->data;
 
-              if (strcmp (base64_digest, ent->checksum) != 0)
+              if (strcmp (digest_base64, ent->checksum) != 0)
                 {
                   /* There is an entry checksum, but it does not match
                      the actual text base checksum.  Extreme badness.
@@ -626,7 +612,7 @@ svn_wc_transmit_text_deltas (const char *path,
                      "   recorded checksum:        %s\n"
                      "   actual checksum (hex):    %s\n"
                      "   actual checksum (base64): %s\n",
-                     tb, ent->checksum, hex_digest, base64_digest);
+                     tb, ent->checksum, base_digest_hex, digest_base64);
                 }
             }
         }
@@ -634,10 +620,43 @@ svn_wc_transmit_text_deltas (const char *path,
         SVN_ERR (svn_wc__open_text_base (&basefile, path, APR_READ, pool));
     }
 
+  /* ### This is a pity.  tmp_base was created with svn_io_copy_file()
+     above, which uses apr_file_copy(), which probably called
+     apr_file_transfer_contents(), which ran over every byte of the
+     file and therefore could have computed a checksum effortlessly.
+     But we're not about to change the interface of apr_file_copy(),
+     so we'll have to run over the bytes again... */
+  SVN_ERR (svn_io_file_checksum (digest, tmp_base, pool));
+
+  /* Tell the editor that we're about to apply a textdelta to the
+     file baton; the editor returns to us a window consumer routine
+     and baton.  If there is no handler provided, just close the file
+     and get outta here.  */
+  SVN_ERR (editor->apply_textdelta
+           (file_baton,
+            base_digest_hex, svn_md5_digest_to_cstring (digest, pool),
+            pool, &handler, &wh_baton));
+
+  /* ### If no handler, then we sure did waste a bunch of effort
+     above, copying files and computing checksums and whatnot.
+     Perhaps it would be better for the result_checksum to be passed
+     to the handler at the same time as the null windows?  What an
+     ugly interface.  But more efficient... Hmmm. */
+  if (! handler)
+    {
+      SVN_ERR (svn_io_remove_file (tmp_base, pool));
+      return editor->close_file (file_baton, pool);
+    }
+
+  /* Alert the caller that we have created a temporary file that might
+     need to be cleaned up. */
+  if (tempfile)
+    *tempfile = tmp_base;
+
   /* Open a filehandle for tmp text-base. */
   SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
                                APR_READ, APR_OS_DEFAULT, pool),
-             "do_apply_textdelta: error opening local file");
+             "svn_wc_transmit_text_deltas: error opening local file");
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */

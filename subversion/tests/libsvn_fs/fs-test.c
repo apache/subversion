@@ -4423,7 +4423,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   random_data_to_buffer (content_buffer, filesize, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
-           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
@@ -4437,7 +4437,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   random_data_to_buffer (content_buffer, 20, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
-           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
@@ -4450,7 +4450,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
-           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
@@ -4465,7 +4465,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   random_data_to_buffer (content_buffer + (filesize - 20), 20, TRUE, seed);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
-           (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR (svn_txdelta_send_string (&contents, wh_func, wh_baton, subpool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
@@ -4481,8 +4481,8 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
       random_data_to_buffer (content_buffer, filesize, FALSE, seed);
       apr_md5 (digest, contents.data, contents.len);
-      SVN_ERR (svn_fs_apply_textdelta 
-               (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
+      SVN_ERR (svn_fs_apply_textdelta (&wh_func, &wh_baton, txn_root,
+                                       "bigfile", NULL, NULL, subpool));
       SVN_ERR (svn_txdelta_send_string 
                (&contents, wh_func, wh_baton, subpool));
       SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));

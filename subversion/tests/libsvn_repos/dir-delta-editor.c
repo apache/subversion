@@ -212,6 +212,8 @@ test_apply_textdelta (void *file_baton,
   return svn_fs_apply_textdelta (handler, handler_baton,
                                  fb->edit_baton->txn_root, 
                                  fb->path,
+                                 base_checksum,
+                                 result_checksum,
                                  pool);
 }
 

@@ -395,8 +395,13 @@ svn_error_t *svn_fs__dag_get_edit_stream (svn_stream_t **contents,
    returned by svn_fs__dag_get_edit_stream, as part of TRAIL.  TXN_ID
    is the Subversion transaction under which this occurs.
 
+   If CHECKSUM is non-null, it must match the checksum for FILE's
+   contents (note: this is not recalculated, the recorded checksum is
+   used), else the error SVN_ERR_CHECKSUM_MISMATCH is returned.
+
    This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs__dag_finalize_edits (dag_node_t *file,
+                                         const char *checksum,
                                          const char *txn_id, 
                                          trail_t *trail);
 
