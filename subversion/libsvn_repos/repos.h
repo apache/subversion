@@ -162,6 +162,39 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       const char *name,
                                       svn_string_t *old_value,
                                       apr_pool_t *pool);
+  
+  
+/* Created for 1.0.7 security fix.  Only used by mod_dav_svn; allows
+   mod_dav_svn to pass in a new authz_read_func which is used to
+   validate paths. */
+svn_error_t *
+svn_repos__get_logs2 (svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool);
+
+/* Created for 1.0.7 security fix.  Only used by mod_dav_svn; allows
+   mod_dav_svn to pass in a new authz_read_func which is used to
+   validate paths.  */
+svn_error_t *
+svn_repos__history2 (svn_fs_t *fs,
+                    const char *path,
+                    svn_repos_history_func_t history_func,
+                    void *history_baton,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    svn_boolean_t cross_copies,
+                    apr_pool_t *pool);
+
 
 
 #ifdef __cplusplus
