@@ -94,15 +94,6 @@ struct dir_baton
   */
   svn_boolean_t disjoint_url;
 
-  /* The number of other changes associated with this directory in the
-     delta (typically, the number of files being changed here, plus
-     this dir itself).  BATON->ref_count starts at 1, is incremented
-     for each entity being changed, and decremented for each
-     completion of one entity's changes.  When the ref_count is 0, the
-     directory may be safely set to the target revision, and this baton
-     freed. */
-  int ref_count;
-
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -122,8 +113,35 @@ struct dir_baton
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
 
+  /* The bump information for this directory. */
+  struct bump_dir_info *bump_info;
+
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
+};
+
+
+/* The bump information is tracked separately from the directory batons.
+   This is a small structure kept in the edit pool, while the heavier
+   directory baton is managed by the editor driver.
+
+   In a postfix delta case, the directory batons are going to disappear.
+   The files will refer to these structures, rather than the full
+   directory baton.  */
+struct bump_dir_info
+{
+  /* ptr to the bump information for the parent directory */
+  struct bump_dir_info *parent;
+
+  /* how many entries are referring to this bump information? */
+  int ref_count;
+
+  /* the path of the directory to bump */
+  const char *path;
+
+  /* was this directory added? (if so, we'll add it to the parent dir
+     at bump time) */
+  svn_boolean_t added;
 };
 
 
@@ -143,18 +161,17 @@ struct handler_baton
    edit. */
 static struct dir_baton *
 make_dir_baton (const char *path,
-                struct edit_baton *edit_baton,
-                struct dir_baton *parent_baton,
+                struct edit_baton *eb,
+                struct dir_baton *pb,
                 svn_boolean_t added,
                 apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
-  struct dir_baton *pb = parent_baton;
   struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
   svn_stringbuf_t *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
   svn_boolean_t disjoint_url = FALSE;
+  struct bump_dir_info *bdi;
   
   /* Don't do this.  Just do NOT do this to me. */
   if (pb && (! path))
@@ -171,7 +188,7 @@ make_dir_baton (const char *path,
     d->name = NULL;
 
   /* Figure out the URL for this directory. */
-  if (edit_baton->is_checkout)
+  if (eb->is_checkout)
     {
       /* for checkouts, telescope the URL normally.  no such thing as
          disjoint urls.   */
@@ -206,105 +223,111 @@ make_dir_baton (const char *path,
         }
     }
 
-  d->edit_baton   = edit_baton;
+  /* the bump information lives in the edit pool */
+  bdi = apr_palloc (eb->pool, sizeof (*bdi));
+  bdi->parent = pb ? pb->bump_info : NULL;
+  bdi->ref_count = 1;   /* we refer to it */
+  bdi->path = apr_pstrdup (eb->pool, d->path->data);    /* full path */
+  bdi->added = added;
+
+  /* the parent's bump info has one more referer */
+  if (pb)
+    ++bdi->parent->ref_count;
+
+  d->edit_baton   = eb;
   d->parent_baton = pb;
-  d->ref_count    = 1;
   d->pool         = pool;
   d->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   d->added        = added;
   d->URL          = URL;
   d->disjoint_url = disjoint_url;
-
-  if (pb)
-    pb->ref_count++;
+  d->bump_info    = bdi;
 
   return d;
 }
 
 
-/* Avoid the circular prototypes problem. */
-static svn_error_t *decrement_ref_count (struct dir_baton *d);
 
+/* Decrement the bump_dir_info's reference count. If it hits zero,
+   then this directory is "done". This means it is safe to bump the
+   revision of the directory, and to add it as a child to its parent
+   directory.
 
+   In addition, when the directory is "done", we loop onto the parent's
+   bump information to possibly mark it as done, too.
+*/
 static svn_error_t *
-bump_dir_revision (struct dir_baton *dir_baton)
+maybe_bump_dir_revision (struct edit_baton *eb,
+                         struct bump_dir_info *bdi,
+                         apr_pool_t *pool)
 {
-  struct dir_baton *parent = dir_baton->parent_baton;
+  svn_stringbuf_t *pathbuf = svn_stringbuf_create ("", pool);
 
-  /* Bump this dir to the new revision if this directory is beneath
-     the target of an update, or unconditionally if this is a
-     checkout. */
-  if (dir_baton->edit_baton->is_checkout || parent)
+  /* Keep moving up the tree of directories until we run out of parents,
+     or a directory is not yet "done".  */
+  for ( ; bdi != NULL; bdi = bdi->parent)
     {
-      SVN_ERR (svn_wc__entry_modify
-               (dir_baton->path,
-                NULL,
-                SVN_WC__ENTRY_MODIFY_REVISION,
-                dir_baton->edit_baton->target_revision,
-                svn_node_dir,
-                svn_wc_schedule_normal,
-                FALSE, FALSE,
-                0,
-                0,
-                NULL,
-                NULL,
-                dir_baton->pool,
-                NULL));
-    }
+      if (--bdi->ref_count > 0)
+        return SVN_NO_ERROR;    /* directory isn't done yet */
 
-  /* If this directory is newly added it doesn't have an entry in the
-     parent's list of entries. The directory is now complete, and can be
-     added. */
-  if (dir_baton->added && parent)
-    {
-      SVN_ERR (svn_wc__entry_modify (parent->path,
-                                     dir_baton->name,
-                                     SVN_WC__ENTRY_MODIFY_KIND,
-                                     SVN_INVALID_REVNUM,
-                                     svn_node_dir,
-                                     svn_wc_schedule_normal,
-                                     FALSE, FALSE,
-                                     0,
-                                     0,
-                                     NULL,
-                                     NULL,
-                                     parent->pool,
-                                     NULL));
-    }
 
-  /* We've declared this directory done, so decrement its parent's ref
-     count too. */ 
-  if (parent)
-    SVN_ERR (decrement_ref_count (parent));
+      /* Bump this dir to the new revision if this directory is beneath
+         the target of an update, or unconditionally if this is a
+         checkout. */
+      if (eb->is_checkout || bdi->parent)
+        {
+          svn_stringbuf_set (pathbuf, bdi->path);
+
+          SVN_ERR (svn_wc__entry_modify (pathbuf,
+                                         NULL,
+                                         SVN_WC__ENTRY_MODIFY_REVISION,
+                                         eb->target_revision,
+                                         svn_node_dir,
+                                         svn_wc_schedule_normal,
+                                         FALSE, FALSE,
+                                         0,
+                                         0,
+                                         NULL,
+                                         NULL,
+                                         pool,
+                                         NULL));
+        }
+
+      /* If this directory is newly added it doesn't have an entry in the
+         parent's list of entries. The directory is now complete, and can be
+         added. */
+      if (bdi->added && bdi->parent)
+        {
+          svn_stringbuf_t *namebuf;
+
+          svn_stringbuf_set (pathbuf, bdi->parent->path);
+          namebuf = svn_stringbuf_create (svn_path_basename (bdi->path, pool),
+                                          pool);
+
+          SVN_ERR (svn_wc__entry_modify (pathbuf,
+                                         namebuf,
+                                         SVN_WC__ENTRY_MODIFY_KIND,
+                                         SVN_INVALID_REVNUM,
+                                         svn_node_dir,
+                                         svn_wc_schedule_normal,
+                                         FALSE, FALSE,
+                                         0,
+                                         0,
+                                         NULL,
+                                         NULL,
+                                         pool,
+                                         NULL));
+        }
+    }
+  /* we exited the for loop because there are no more parents */
 
   return SVN_NO_ERROR;
 }
 
-
-/* Decrement DIR_BATON's ref count, and if the count hits 0, call
- * free_dir_baton().
- *
- * Note: There is no corresponding function for incrementing the
- * ref_count.  As far as we know, nothing special depends on that, so
- * it's always done inline.
- */
-static svn_error_t *
-decrement_ref_count (struct dir_baton *d)
-{
-  d->ref_count--;
-
-  if (d->ref_count == 0)
-    return bump_dir_revision (d);
-
-  return SVN_NO_ERROR;
-}
 
 
 struct file_baton
 {
-  /* Baton for this file's parent directory. */
-  struct dir_baton *dir_baton;
-
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -341,18 +364,19 @@ struct file_baton
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
 
+  /* Bump information for the directory this file lives in */
+  struct bump_dir_info *bump_info;
 };
 
 
-/* Make a file baton, using a new subpool of PARENT_DIR_BATON's pool.
+/* Make a new file baton in the provided POOL, with PB as the parent baton.
    PATH is relative to the root of the edit. */
 static struct file_baton *
-make_file_baton (struct dir_baton *parent_dir_baton,
+make_file_baton (struct dir_baton *pb,
                  const char *path,
                  apr_pool_t *pool)
 {
   struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
-  struct dir_baton *pb = parent_dir_baton;
   svn_stringbuf_t *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
@@ -397,13 +421,14 @@ make_file_baton (struct dir_baton *parent_dir_baton,
     }
 
   f->pool         = pool;
-  f->dir_baton    = pb;
   f->edit_baton   = pb->edit_baton;
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   f->URL          = URL;
   f->disjoint_url = disjoint_url;
+  f->bump_info    = pb->bump_info;
 
-  pb->ref_count++;
+  /* the directory's bump info has one more referer now */
+  ++f->bump_info->ref_count;
 
   return f;
 }
@@ -440,11 +465,10 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (err != SVN_NO_ERROR)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      apr_pool_t *pool = svn_pool_create (fb->pool);
-      svn_stringbuf_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
-
-      apr_file_remove (tmppath->data, pool);
-      svn_pool_destroy (pool);
+      svn_stringbuf_t *tmppath = svn_wc__text_base_path (fb->path,
+                                                         TRUE,
+                                                         fb->pool);
+      apr_file_remove (tmppath->data, fb->pool);
     }
   else
     {
@@ -674,17 +698,15 @@ change_dir_prop (void *dir_baton,
      on with life.  It's not a regular user property. */
   else if (svn_wc_is_entry_prop (name))
     {
-      /* make a temporary hash */
-      apr_pool_t *subpool = svn_pool_create (pool);
-      apr_hash_t *att_hash = apr_hash_make (subpool);
-      svn_stringbuf_t *local_name = svn_stringbuf_create (name, subpool);
+      apr_hash_t *att_hash = apr_hash_make (pool);
+      svn_stringbuf_t *local_name = svn_stringbuf_create (name, pool);
 
       /* remove the 'svn:wc:entry:' prefix from the property name. */
       svn_wc__strip_entry_prefix (local_name);
 
       /* push the property into the att hash. */
       apr_hash_set (att_hash, local_name->data, local_name->len, 
-                    svn_stringbuf_create (value ? value->data : "", subpool));
+                    svn_stringbuf_create (value ? value->data : "", pool));
 
       /* write out the new attribute (via the hash) to the directory's
          THIS_DIR entry. */
@@ -694,10 +716,7 @@ change_dir_prop (void *dir_baton,
                                      svn_wc_schedule_normal, FALSE, FALSE,
                                      0, 0, NULL,
                                      att_hash,
-                                     subpool, NULL));
-
-      /* free whatever memory was used for this mini-operation */
-      svn_pool_destroy (subpool);
+                                     pool, NULL));
 
       return SVN_NO_ERROR;
     }
@@ -724,7 +743,6 @@ static svn_error_t *
 close_directory (void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
-  svn_error_t *err = NULL;
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
@@ -740,9 +758,7 @@ close_directory (void *dir_baton)
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
       /* Lock down the administrative area */
-      err = svn_wc__lock (db->path, 0, db->pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_wc__lock (db->path, 0, db->pool));
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -753,12 +769,10 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      err = svn_wc__merge_prop_diffs (db->path->data, NULL,
-                                      db->propchanges, db->pool,
-                                      &entry_accum, &conflicts);
-      if (err) 
-        return 
-          svn_error_quick_wrap (err, "close_dir: couldn't do prop merge.");
+      SVN_ERR_W (svn_wc__merge_prop_diffs (db->path->data, NULL,
+                                           db->propchanges, db->pool,
+                                           &entry_accum, &conflicts),
+                 "close_dir: couldn't do prop merge.");
 
       /* Set revision. */
       revision_str = apr_psprintf (db->pool,
@@ -826,12 +840,10 @@ close_directory (void *dir_baton)
     }
 
 
-  /* We're truly done with this directory now.  decrement_ref_count
-  will actually destroy dir_baton if the ref count reaches zero, so we
-  call this LAST. */
-  err = decrement_ref_count (db);
-  if (err)
-    return err;
+  /* We're done with this directory, so remove one reference from the
+     bump information. This may trigger a number of actions. See
+     maybe_bump_dir_revision() for more information.  */
+  SVN_ERR (maybe_bump_dir_revision (db->edit_baton, db->bump_info, db->pool));
 
   return SVN_NO_ERROR;
 }
@@ -853,6 +865,9 @@ add_or_open_file (const char *path,
   apr_hash_t *dirents;
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
+
+  /* the file_pool can stick around for a *long* time, so we want to use
+     a subpool for any temporary allocations. */
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* ### kff todo: if file is marked as removed by user, then flag a
@@ -860,6 +875,9 @@ add_or_open_file (const char *path,
      kind.  see issuezilla task #398. */
 
   fb = make_file_baton (pb, path, pool);
+
+  /* It is interesting to note: everything below is just validation. We
+     aren't actually doing any "work" or fetching any persistent data. */
 
   SVN_ERR (svn_io_get_dirents (&dirents, pb->path, subpool));
 
@@ -2139,8 +2157,10 @@ close_file (void *file_baton)
                                 NULL, /* inherit URL from parent dir. */
                                 fb->pool));
 
-  /* Tell the parent directory it has one less thing to worry about. */
-  SVN_ERR (decrement_ref_count (fb->dir_baton));
+  /* We have one less referrer to the directory's bump information. */
+  SVN_ERR (maybe_bump_dir_revision (fb->edit_baton,
+                                    fb->bump_info,
+                                    fb->pool));
 
   return SVN_NO_ERROR;  
 }
@@ -2209,7 +2229,7 @@ make_editor (svn_stringbuf_t *anchor,
 {
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor (subpool);
 
   if (is_checkout)
     assert (ancestor_url != NULL);
