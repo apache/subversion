@@ -48,6 +48,12 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
+<li><a href="#wedged-repos">What the heck!  Every time I try to access
+    my repository, the process just hangs.  Is my repository
+    corrupt?</a></li>
+<li><a href="#wedged-wc">What the heck!  Every time I try to run a svn
+    command, it says my working copy is locked.  Is my working copy
+    corrupt?</a></li>
 <li><a href="#unrecognized-url-error">I just built the distribution
     binary, and when I try to check out Subversion, I get an error
     about an "Unrecognized URL scheme."  What's up with that?</a></li>
@@ -575,6 +581,55 @@ understood it <em>before</em> actually hacking the code, right? :)
 
 <![CDATA[-----------------------------------------------------------]]>
 
+<h3>What the heck! Every time I try to access my repository, the
+process just hangs. Is my repository <a name="wedged-repos">corrupt?</a></h3>
+
+<p>
+Your repository is not corrupt, nor is your data lost. If your process
+accesses the repository directly (mod_dav_svn, svnlook, svnadmin, or
+if you access a `file://' URL), then it's using Berkeley DB to access
+your data.  Berkeley DB is journaling system, meaning that it logs
+everything it is about to do before it does so.  If your process is
+interrupted (Control-C, or segfault), then a lockfile is left behind,
+along with a logfile describing unfinished business.  Any other
+process that attempts to access the database will just hang, waiting
+for the lockfile to disappear.  To awaken your repository, you need to
+ask Berkeley DB to either finish the work, or rewind the database to a
+previous state that is known to be consistent.  Simply run:</p>
+
+<pre>
+svnadmin recover /path/to/repos
+</pre>
+
+<p>Make sure you disable all access to the repository before doing
+this (by shutting down Apache).  Make sure you run this command as the
+user that owns and manages the database, and not as root, else it will
+leave root-owned files in the db directory which cannot be opened by
+the non-root user that manages the database, which is typically either
+you or your Apache process.</p>
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3>What the heck! Every time I try to run a svn command, it says my
+working copy is locked. Is my working copy <a name="wedged-wc">
+corrupt?</a></h3>
+
+<p>
+Your working copy is not corrupt, nor is your data lost.  Subversion's
+working copy is journaling system, meaning that it logs everything it
+is about to do before it does so.  If the svn client program is
+interrupted (Control-C, or segfault), then one or more lockfiles are
+left behind, along with logfiles describing unfinished business.
+(The`svn status' command will show an 'L' next to locked directories.)
+Any other process that attempts to access the working copy will fail
+when it sees the locks.  To awaken your working copy, you need to tell
+the svn client to finish the work.  Simply run:</p>
+
+<pre>
+svn cleanup working-copy
+</pre>
+
+<![CDATA[-----------------------------------------------------------]]>
+
 <h3>I just built the distribution binary, and when I try to check out
 Subversion, I get an error about an "Unrecognized URL scheme."  What's up
 with<a name="unrecognized-url-error"> that?</a></h3>
@@ -603,66 +658,8 @@ variable.</p>
 <h3><a name="db-recover">I'm getting errors finding or opening a repository,
     but I know my repository URL is correct.  What's wrong?</a></h3> 
 
-<p>Sometimes you'll see errors that look like this:</p>
+<p>See <a href="#wedged-repos">this faq.</a></p>
 
-<blockquote>
-<pre>
-svn_error: #21100 : &lt;Couldn't find a repository.&gt;
-  svn_ra_local__split_URL: Unable to find valid repository
-   (file:///path/to/repos)
-</pre>
-</blockquote>
-
-<p>or</p>
-
-<blockquote>
-<pre>
-svn_error: #21089 : &lt;Berkeley DB error&gt;
-  REPORT request failed on /my-repos
-
-svn_error: #21089 : &lt;Berkeley DB error&gt;
-  
-Berkeley DB error while opening environment for filesystem /path/to/repos:
-No such file or directory
-</pre>
-</blockquote>
-
-<p>These sometimes mean that a repository administrator should run:</p>
-
-<blockquote>
-<pre>
-db_recover -ve -h /path/to/repos/db
-</pre>
-</blockquote>
-
-<p>Make sure you run this command as the user that owns and manages
-the database and not as root because running <tt>db_recover</tt> as
-root will leave root owned files in the db directory which cannot be
-opened by the non-root user that manages the database, which is
-typically your Apache process.</p>
-
-<p>Yes, we consider it a bug that <tt>db_recover</tt> needs to be run
-at all.  We're working on it, and volunteers are welcome :-).
-</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I'm getting strange errors in my httpd error log, and Subversion
-operations aren't working.</h3>
-
-<p>Sometimes you need to run Berkeley DB's recovery procedure.  Shut
-down apache, cd into the relevant repository's `<tt>db</tt>'
-subdirectory, and run
-"<tt>/usr/local/BerkeleyDB.<i>X</i>.<i>Y</i>/bin/db_recover&nbsp;-ve</tt>".
-<br>
-(Substitute the appropriate major and minor revision numbers of 
-Berkeley DB for "<i>X</i>" and "<i>Y</i>", of course.)
-</p>
-<p>
-Of course, we'd prefer that the repository never require human
-maintenance.  However, until we get all the bugs worked out, the above
-will sometimes be necessary.
-</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
