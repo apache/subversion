@@ -22,6 +22,25 @@
 
 %import apr.i
 %import svn_types.i
+%import svn_string.i
+
+/* ----------------------------------------------------------------------- 
+   completely ignore a number of functions. the presumption is that the
+   scripting language already has facilities for these things (or they
+   are relatively trivial).
+*/
+%ignore svn_io_check_path;
+%ignore svn_io_copy_file;
+%ignore svn_io_copy_dir_recursively;
+%ignore svn_io_append_file;
+%ignore svn_io_read_length_line;
+%ignore svn_io_file_affected_time;
+%ignore svn_io_fd_from_file;
+%ignore svn_io_get_dirents;
+%ignore svn_io_run_cmd;
+
+%ignore apr_check_dir_empty;
+%ignore apr_dir_remove_recursively;
 
 /* -----------------------------------------------------------------------
    apr_size_t * is always an IN/OUT parameter in svn_io.h
@@ -29,6 +48,13 @@
 
 %typemap(in) apr_size_t * = apr_size_t *INOUT;
 %typemap(argout) apr_size_t * = apr_size_t *INOUT;
+
+/* -----------------------------------------------------------------------
+   handle the MIME type return value of svn_io_detect_mimetype()
+*/
+
+%typemap(ignore) const char ** = const char **OUTPUT;
+%typemap(argout) const char ** = const char **OUTPUT;
 
 /* ----------------------------------------------------------------------- */
 

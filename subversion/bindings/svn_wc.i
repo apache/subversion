@@ -18,7 +18,9 @@
 
 %module _wc
 
+%import apr.i
 %import svn_types.i
+%import svn_string.i
 %import svn_delta.i
 
 %include svn_wc.h

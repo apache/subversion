@@ -18,6 +18,18 @@
 
 %module _ra
 
+%import apr.i
+%import svn_types.i
+%import svn_string.i
+%import svn_delta.i
+
+/* -----------------------------------------------------------------------
+   these types (as 'type **') will always be an OUT param
+*/
+OUT_PARAM(svn_ra_plugin_t);
+
+/* ----------------------------------------------------------------------- */
+
 %include svn_ra.h
 %{
 #include "svn_ra.h"

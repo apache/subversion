@@ -21,6 +21,24 @@
 
 %import apr.i
 
+/* -----------------------------------------------------------------------
+   Create macros to define OUT parameters for "type **" params.
+
+   OUT_PARAM(type) : create an OUT param for "type **"
+   OUT_PARAM_S(type, stype) : specify a type and its swig type
+*/
+
+#define OUT_PARAM(type) \
+	%typemap(ignore) type ** (type *temp) { $target = &temp; } \
+	%typemap(python,argout) type ** { \
+	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
+                           SWIGTYPE_p_##type)); }
+#define OUT_PARAM_S(type, stype) \
+	%typemap(ignore) type ** (type *temp) { $target = &temp; } \
+	%typemap(python,argout) type ** { \
+	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
+                           SWIGTYPE_p_##stype)); }
+
 /* ----------------------------------------------------------------------- */
 
 %typemap(python,except) svn_error_t * {
