@@ -47,7 +47,7 @@ svn_wc__entries_init (svn_string_t *path,
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_string_t *accum = NULL;
-  char *initial_revstr = apr_psprintf (pool, "%ld", 0);
+  char *initial_revstr = apr_psprintf (pool, "%d", 0);
 
   /* Create the entries file, which must not exist prior to this. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
