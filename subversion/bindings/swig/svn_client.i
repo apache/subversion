@@ -117,6 +117,16 @@
 %typemap(perl5,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
     /* ### FIXME-perl */
 }
+
+/* -----------------------------------------------------------------------
+   handle svn_wc_notify_func_t/baton pairs
+*/
+
+%typemap(python,in) (svn_wc_status_func_t status_func, void *status_baton) {
+  $1 = svn_swig_py_status_func;
+  $2 = $input; /* our function is the baton. */
+}
+
 /* -----------------------------------------------------------------------
    handle svn_client_get_commit_log_t/baton pairs
 */
@@ -170,7 +180,7 @@
 %typemap(java, javain) svn_client_prompt_t "$javainput"
 
 /* -----------------------------------------------------------------------
-   handle svn_client_get_commit_log_t/baton pairs
+   handle svn_log_message_receiver_t/baton pairs
 */
 
 %typemap(java,in) (svn_log_message_receiver_t receiver,

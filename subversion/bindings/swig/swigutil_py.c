@@ -114,6 +114,12 @@ static PyObject *make_ob_window(void *ptr)
   return make_pointer("svn_txdelta_window_t *", ptr);
 }
 
+/* for use by the "O&" format specifier */
+static PyObject *make_ob_status(void *ptr)
+{
+  return make_pointer("svn_wc_status_t *", ptr);
+} 
+
 static PyObject *convert_hash(apr_hash_t *hash,
                               PyObject * (*converter_func)(void *value,
                                                            void *ctx),
@@ -937,6 +943,28 @@ void svn_swig_py_notify_func(void *baton,
                                       revision)) != NULL)
     {
       Py_XDECREF(result);
+    }
+  release_py_lock();
+}
+
+
+/* Thunked version of svn_wc_status_func_t callback type. */
+void svn_swig_py_status_func(void *baton,
+                             const char *path,
+                             svn_wc_status_t *status)
+{
+  PyObject *function = baton;
+  PyObject *result;
+
+  if (function == NULL || function == Py_None)
+    return;
+
+  acquire_py_lock();
+  /* ### shouldn't we set an exception if this fails? */
+  if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
+                                      make_ob_status, status)) != NULL)
+    {
+      Py_DECREF(result);
     }
   release_py_lock();
 }
