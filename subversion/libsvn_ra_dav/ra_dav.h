@@ -26,7 +26,8 @@
 
 #include <ne_request.h>
 #include <ne_uri.h>
-#include <ne_207.h>            /* for ne_propname, NE_ELM_207_UNUSED */
+#include <ne_207.h>            /* for NE_ELM_207_UNUSED */
+#include <ne_props.h>          /* for ne_propname */
 
 #include "svn_types.h"
 #include "svn_string.h"
