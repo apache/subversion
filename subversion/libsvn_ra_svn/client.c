@@ -24,6 +24,7 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_network_io.h>
+#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -34,6 +35,7 @@
 #include "svn_config.h"
 #include "svn_ra.h"
 #include "svn_ra_svn.h"
+#include "svn_md5.h"
 
 #include "ra_svn.h"
 
@@ -505,10 +507,15 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
   apr_pool_t *pool = conn->pool;
   svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
+  unsigned char digest[MD5_DIGESTSIZE];
+  const char *expected_checksum, *hex_digest;
+  apr_md5_ctx_t md5_context;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c[r]bb", path,
                                rev, (props != NULL), (stream != NULL)));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rl", &rev, &proplist));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "crl",
+                                       &expected_checksum,
+                                       &rev, &proplist));
 
   if (fetched_rev)
     *fetched_rev = rev;
@@ -519,6 +526,8 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
   if (!stream)
     return SVN_NO_ERROR;
 
+  apr_md5_init(&md5_context);
+
   /* Read the file's contents. */
   while (1)
     {
@@ -528,10 +537,23 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
                                 "Non-string as part of file contents");
       if (item->u.string->len == 0)
         break;
-      if (stream)
-        SVN_ERR(svn_stream_write(stream, item->u.string->data,
-                                 &item->u.string->len));
+
+      apr_md5_update(&md5_context, item->u.string->data, item->u.string->len);
+
+      SVN_ERR(svn_stream_write(stream, item->u.string->data,
+                               &item->u.string->len));
     }
+
+  apr_md5_final(digest, &md5_context);
+  hex_digest = svn_md5_digest_to_cstring(digest, pool);
+  if (strcmp (hex_digest, expected_checksum) != 0)
+      return svn_error_createf
+          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+           "ra_svn_get_file: checksum mismatch for '%s':\n"
+           "   expected checksum:  %s\n"
+           "   actual checksum:    %s\n",
+           path, expected_checksum, hex_digest);
+
   SVN_ERR(svn_stream_close(stream));
   return SVN_NO_ERROR;
 }

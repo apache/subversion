@@ -26,6 +26,7 @@
 #include <apr_network_io.h>
 #include <apr_user.h>
 #include <apr_file_info.h>
+#include <apr_md5.h>
 
 #include <svn_types.h>
 #include <svn_string.h>
@@ -37,6 +38,7 @@
 #include <svn_path.h>
 #include <svn_time.h>
 #include <svn_utf.h>
+#include <svn_md5.h>
 
 #include "server.h"
 
@@ -349,7 +351,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *path, *full_path;
+  const char *path, *full_path, *hex_digest;
   svn_revnum_t rev;
   svn_fs_root_t *root;
   svn_stream_t *contents;
@@ -358,6 +360,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char buf[4096];
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
+  unsigned char digest[MD5_DIGESTSIZE];
 
   /* Parse arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]bb", &path, &rev,
@@ -368,6 +371,8 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Fetch the properties and a stream for the contents. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_fs_file_md5_checksum(digest, root, full_path, pool));
+  hex_digest = svn_md5_digest_to_cstring(digest, pool);
   if (want_props)
     SVN_CMD_ERR(get_props(&props, root, full_path, pool));
   if (want_contents)
@@ -377,6 +382,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_cstring(conn, pool, hex_digest));
   SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
