@@ -16,7 +16,9 @@
 #include "dag.h"
 #include "err.h"
 #include "fs.h"
+#include "node-rev.h"
 #include "nodes-table.h"
+#include "txn-table.h"
 #include "rev-table.h"
 #include "skel.h"
 #include "trail.h"
@@ -38,9 +40,8 @@ struct dag_node_t
      skel). */
   skel_t *contents;
 
-  /* Not yet sure exactly what gets allocated in this pool.  If I
-     don't get sure soon, it'll go away.  Probably this node and
-     subnodes. */
+  /* The transaction trail pool in which this dag_node_t was
+     allocated. */
   apr_pool_t *pool;
 };
 
@@ -143,25 +144,15 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
   /* NOTREACHED */
   return NULL;
 }
-
-
 svn_error_t *
 svn_fs__dag_revision_root (dag_node_t **node_p,
                            svn_fs_t *fs,
                            svn_revnum_t rev,
                            trail_t *trail)
 {
-#if 0
-  kff todo: coding here;
-  svn_error_t *err;
-  err = svn_fs__get_rep (skel_t **skel_p,
-                         svn_fs_t *fs,
-                         const svn_fs_id_t *id,
-                         DB_TXN *db_txn,
-                         apr_pool_t *pool);
-#endif
-
-  return SVN_NO_ERROR;
+  abort();
+  /* NOTREACHED */
+  return NULL;
 }
 
 
@@ -172,29 +163,50 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
                         trail_t *trail)
 {
   svn_error_t *err;
-  dag_node_t *root_node;
-  svn_revnum_t revision;  /* Hmm, how to get this? */
+  svn_fs_id_t *base_root_id, *root_id;
+  dag_node_t *root_node;  /* The node we'll return. */
+  skel_t *root_skel;      /* Skel contents of the node we'll return. */
 
-  /* Step 1. Find the immutable root node for this transaction.
-   * Step 2. Make a new node with the same contents, except mutable.
-   * Step 3. Store the new node under a successor key (see
-   *         svn_fs__new_successor_id).
-   */
+  /* See if this transaction's root has already been cloned.
+     If it has, return the clone.  Else clone it, and return the
+     clone. */
 
-  /* Step 1. */
-  err = svn_fs__dag_revision_root (&root_node,
-                                   fs,
-                                   revision,
-                                   trail);
+  err = svn_fs__get_txn (&root_id, &base_root_id, fs, svn_txn, trail);
   if (err)
     return err;
 
-  /* Step 2. */
-  abort();  /* heh */
+  if (svn_fs_id_eq (root_id, base_root_id))  /* root as yet uncloned */
+    {
+      skel_t *base_skel;
 
-  /* Step 3. */
-  /* What, you're still here? */
+      /* Get the skel for the base node. */
+      err = svn_fs__get_node_revision (&base_skel, fs, base_root_id, trail);
+      if (err)
+        return err;
 
+      /* Create the new, mutable root node. */
+      err = svn_fs__create_successor
+        (&root_id, fs, base_root_id, base_skel, trail);
+      if (err)
+        return err;
+    }
+
+  /* One way or another, base_root_id now identifies a cloned root node. */
+
+  /* Get the skel for the new root node. */
+  err = svn_fs__get_node_revision (&root_skel, fs, root_id, trail);
+  if (err)
+    return err;
+
+  /* kff todo: Hmm, time for a constructor?  Do any of these need to
+     be copied?  I don't think so... */
+  root_node = apr_pcalloc (trail->pool, sizeof (*root_node));
+  root_node->fs = fs;
+  root_node->id = root_id;
+  root_node->contents = root_skel;
+  root_node->pool = trail->pool;
+  
+  *root_p = root_node;
   return SVN_NO_ERROR;
 }
 
