@@ -841,11 +841,25 @@ main (int argc, const char * const *argv)
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
     {
+      svn_error_t *tmp_err;
+
       if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         svn_opt_subcommand_help (subcommand->name, svn_cl__cmd_table,
                                  svn_cl__options, pool);
       else
         svn_handle_error (err, stderr, 0);
+
+      /* Tell the user about 'svn cleanup' if any error on the stack
+         was about locked working copies. */
+      for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
+        if (tmp_err->apr_err == SVN_ERR_WC_LOCKED)
+          {
+            fputs ("svn: run 'svn cleanup' to remove locks"
+                   " (type 'svn help cleanup' for details)\n", stderr);
+            break;
+          }
+
+      svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }

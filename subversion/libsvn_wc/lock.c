@@ -105,14 +105,11 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
         return SVN_NO_ERROR;
     }
 
-  err = svn_error_create (SVN_ERR_WC_LOCKED, 0, NULL,
-                          "run 'svn cleanup' to remove locks;"
-                          " type 'svn help cleanup' for details");
-  return svn_error_createf (SVN_ERR_WC_LOCKED, 0, err,
+  return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL,
                             "working copy locked: %s",
                             /* ### do we have a utility function that
-                                   converts the empty path to a
-                                   non-canonical form? */
+                               converts the empty path to a
+                               non-canonical, but readable form? */
                             (adm_access->path[0] ? adm_access->path : "."));
 }
 
