@@ -1,14 +1,19 @@
+
+What the client looks like right now:
+=====================================
+
 The client for milestone 1 is somewhat limited: it can checkout and
 update from XML files, and commit to XML files.  The changes it can
 make in a working copy are file mods and file adds.
 
 So:
 
- svn checkout -d TARGETDIR --xml-file FILE.XML --ancestor-path blah --version N
- svn update --xml-file FILE.XML
- svn add FILE
- svn delete [--force] FILE
- svn commit --xml-file FILE.XML --version N
+   svn checkout -d TARGETDIR --xml-file FILE.XML \
+                --ancestor-path blah --version N
+   svn update --xml-file FILE.XML
+   svn add FILE
+   svn delete [--force] FILE
+   svn commit --xml-file FILE.XML --version N
 
 You may be wondering why the --ancestor-path and --version are on the
 command line.  Don't worry, they won't be in a real-life client.  The
@@ -18,3 +23,72 @@ be passed manually, by a human (excuse me, I mean by a developer).
 
 If you check out into TARGETDIR, that directory must exist and be
 empty.
+
+
+What the client will look like in real life:
+============================================
+
+We're trying to be similar to command-line CVS, but not suffocatingly
+so.  Subversion will differ where it provides a feature CVS doesn't,
+or doesn't provide something CVS does, or where people generally agree
+that the CVS way is not successful and shouldn't be imitated.
+
+The CVS custom of switching on a subcommand seems to work out pretty
+well, so we'll do the same thing:
+
+   svn [global_options] command [command_options] [command_arguments]
+
+A start on global options:
+
+  -r repository                  Use REPOSITORY.
+  -f                             Suppress reading of .svnrc.
+  -h -H --help [command]         Like CVS: get general or cmd-specific help.
+  --help-options                 (Also like the CVS help scheme.)
+  --help-commands                (Same.)
+  --dry-run                      Like cvs -n
+  -q                             Quiet.  (No need for two levels of this?)
+  -v --version                   Print program name, version, and url.
+
+And the commands will look a lot like CVS's, though there are some
+newcomers:
+
+   checkout | co
+   update   | up
+   commit   | ci
+   add      | ad | new
+   rename   | mv
+   delete   | del | rm
+   copy     | cp
+   branch  /* implemented via copy, though may want to be its own command */
+   tag     /* implemented via copy, though may want to be its own command */
+   status   | stat
+   diff     | di | dif
+   rdiff
+   annotate | ann
+   import   | im | imp
+   history  | hi | his
+   log      | lo
+   propset  | pset
+   propget  | pget
+
+Some command-specific options are unique to that command, but others
+are common to several commands, for example:
+
+   -v version            Like "cvs cmd -r REV"
+   -D date               Like "cvs cmd -D DATE"
+   -l                    Local dir only, do not recurse.
+   -R                    Recurse (the default, and counteracts a -l in .cvsrc)
+
+This is just a beginning.  We need to expand each command to describe
+exactly what it does and what options it takes, etc.  For example,
+keyword substitution (a feature many people want) has not been touched
+above.  Nor has turning line-end conversion on or off... by the way, a
+plea: let's please not mix that up with keyword substitution.  I think
+a good behavior for Subversion would be:
+
+   All files are assumed binary by default.  If the user explicitly
+   asks for it, she can get keyword substitution.  And, if she asks
+   for it, she can get line-end conversion.  These two filters are
+   completely independent of one another.
+
+But Your Mileage May Vary.  Have at it!...
