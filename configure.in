@@ -73,6 +73,9 @@ dnl unistd.h is currently used by vdelta.c
 dnl    -- so is sys/stat.h (check for this?)
 AC_CHECK_HEADERS(unistd.h)
 
+dnl needed by fs.h
+dnl todo:  can we make sure this is db 3.14 header?
+AC_CHECK_HEADERS(db.h)
 
 dnl Check for typedefs, structures, and compiler characteristics ----------
 
