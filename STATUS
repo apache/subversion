@@ -40,13 +40,6 @@ Candidate changes:
     Votes:
       +1: lundblad, brane
 
-  * r11181
-    Fix encoding regression since 1.0.x
-    Justification:
-      It's a regression.
-    Votes:
-      +1: dionisos, lundblad, brane
-
   * r11202, r11243
     Fix eol-style translation error for propget.
     Justification:
