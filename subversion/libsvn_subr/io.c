@@ -1007,6 +1007,47 @@ svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
 
 
 
+/* Miscellaneous stream functions. */
+struct string_stream_baton
+{
+  const char *data;
+  apr_size_t len;
+  apr_size_t amt_read;
+};
+
+static svn_error_t *
+read_handler_string (void *baton, char *buffer, apr_size_t *len)
+{
+  struct string_stream_baton *btn = baton;
+  apr_size_t left_to_read = btn->len - btn->amt_read;
+  *len = (*len > left_to_read) ? left_to_read : *len;
+  memcpy (buffer, btn->data + btn->amt_read, *len);
+  btn->amt_read += *len;
+  return SVN_NO_ERROR;
+}
+
+svn_stream_t *
+svn_stream_from_string (const char *data, 
+                        apr_size_t len,
+                        apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  struct string_stream_baton *baton;
+
+  if (! (data && len))
+    return svn_stream_empty (pool);
+
+  baton = apr_palloc (pool, sizeof (*baton));
+  baton->data = data;
+  baton->len = len;
+  baton->amt_read = 0;
+  stream = svn_stream_create (baton, pool);
+  svn_stream_set_read (stream, read_handler_string);
+  return stream;
+}
+
+
+
 /* TODO write test for these two functions, then refactor. */
 
 svn_error_t *

@@ -334,6 +334,11 @@ svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
 
 svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool);
 
+/* Return a generic readable stream from a hunk of DATA and its
+   length, LEN.  Allocate the stream in POOL.  */
+svn_stream_t *svn_stream_from_string (const char *data, 
+                                      apr_size_t len,
+                                      apr_pool_t *pool);
 
 /* Functions for operating on generic streams.  */
 
