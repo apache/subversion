@@ -127,7 +127,7 @@ void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
 
 /** Free the memory used by @a error, as well as all ancestors and
- * descendents of @a error. 
+ * descendants of @a error. 
  *
  * Unlike other Subversion objects, errors are managed explicitly; you 
  * MUST clear an error if you are ignoring it, or you are leaking memory. 

@@ -96,7 +96,7 @@ string__j_to_svn_string(JNIEnv *env,
 
     }
 
-  /* return wether an exception has occured */
+  /* return wether an exception has occurred */
   if( (hasException != NULL) && _hasException )
     {
       (*hasException) = _hasException;

@@ -205,7 +205,7 @@
 
     <title>Installing Subversion</title>
 
-    <para>Subversion is built on a portablility layer called APR (the
+    <para>Subversion is built on a portability layer called APR (the
       Apache Portable Runtime library).  This means Subversion should
       work on any operating system that the Apache httpd server runs
       on: Windows, Linux, all flavors of BSD, Mac OS X, Netware, and

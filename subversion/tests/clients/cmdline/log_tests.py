@@ -32,7 +32,7 @@ import svntest
 # add, del, mv, cp, as well as file modifications, and make sure that
 # some files are modified more than once.
 #
-# Give each commit a recognizeable log message.  Test all combinations
+# Give each commit a recognizable log message.  Test all combinations
 # of -r options, including none.  Then test with -v, which will
 # (presumably) show changed paths as well.
 #
@@ -428,7 +428,7 @@ def log_where_nothing_changed(sbox):
   # xml protocol error if there were no changes in revision N
   # underneath SOMEPATH.  This problem was introduced in revision
   # 3811, which didn't cover the case where svn_repos_get_logs might
-  # invoke log_receiver zero times.  Since the reciever never ran, the
+  # invoke log_receiver zero times.  Since the receiver never ran, the
   # lrb->needs_header flag never got cleared.  Control would proceed
   # without error to the end of dav_svn__log_report(), which would
   # send a closing tag even though no opening tag had ever been sent.

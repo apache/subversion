@@ -378,7 +378,7 @@ C    Conflict
       more gracefully than CVS does.  Because CVS uses RCS, it can
       only store successive full copies of a changing binary file.
       But internally, Subversion expresses differences between files
-      using a binary-differencing algoritm, regardless of whether they
+      using a binary-differencing algorithm, regardless of whether they
       contain textual or binary data.  That means that all files are
       stored differentially (compressed) in the repository, and small
       differences are always sent over the network.</para>
@@ -393,7 +393,7 @@ C    Conflict
       you explicitly ask it do so (see <xref
       linkend="svn-ch-6-sect-2.3.4"/> and <xref
       linkend="svn-ch-6-sect-2.3.5"/> for more details.)  By default,
-      Subversion treats all file data as literal bytestrings, and
+      Subversion treats all file data as literal byte strings, and
       files are always stored in the repository in an untranslated
       state.</para>
 

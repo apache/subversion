@@ -95,7 +95,7 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  * then successive calls to
  *
- *    @c svn_io_open_unique_file(&f, &uniqe_name, @a path, ".tmp", pool) 
+ *    @c svn_io_open_unique_file(&f, &unique_name, @a path, ".tmp", pool) 
  *
  * will open
  *

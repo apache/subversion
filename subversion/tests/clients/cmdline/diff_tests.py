@@ -131,7 +131,7 @@ def check_update_a_file(diff_output):
                            'M')
 
 def diff_check_update_a_file_repo_subset(wc_dir):
-  "diff and check update a file for a rpeository subset"
+  "diff and check update a file for a repository subset"
 
   repo_subset = os.path.join('A', 'B')
   if diff_check_repo_subset(wc_dir, repo_subset, check_update_a_file, 1):

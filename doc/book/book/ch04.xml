@@ -135,7 +135,7 @@
         single files, but whole directories as well.  In this case,
         you want to make a copy of the
         <filename>/trunk/calc</filename> directory.  Where should the
-        new copy live?  Whereever you wish&mdash;it's a matter of project
+        new copy live?  Wherever you wish&mdash;it's a matter of project
         policy.  Let's say that your team has a policy of creating
         branches in the <filename>/branches/calc</filename> area of
         the repository, and you want to name your branch
@@ -796,7 +796,7 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
         update command.</para>
 
       <para>When you run <command>svn update</command>, you're asking
-        the repository to compare two trees.  The repsository does so,
+        the repository to compare two trees.  The repository does so,
         and then sends a description of the differences back to the
         client. The only difference between <command>svn
         switch</command> and <command>svn update</command> is that the

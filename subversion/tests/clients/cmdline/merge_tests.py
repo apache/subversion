@@ -442,7 +442,7 @@ def add_with_history(sbox):
 
   # FIXME: No idea why working_copies shows up as a singleton, when it
   # isn't even a WC dir.  Even with the other_singleton_handler it
-  # fails.  It looks like a problem in the test harnesss framework to
+  # fails.  It looks like a problem in the test harness framework to
   # me, so just use a plain run_svn.
 
   def other_singleton_handler(a, ignored_baton):
@@ -479,7 +479,7 @@ def add_with_history(sbox):
     print "status failed"
     return 1
 
-  # Althogh the merge command produces three lines of output, the
+  # Although the merge command produces three lines of output, the
   # status output is only two lines. The file Q/foo does not appear in
   # the status because it is simply a child of a copied directory.
   expected_output = svntest.wc.State(wc_dir, {
@@ -951,7 +951,7 @@ def merge_one_file(sbox):
   #    {
   #        int access_status;
   #    
-  #        /* (Long-ish comment ommitted) */
+  #        /* (Long-ish comment omitted) */
   #        access_status = ap_run_quick_handler(r, 0);
   #        if (access_status == DECLINED) {
   #            access_status = ap_process_request_internal(r);
@@ -977,7 +977,7 @@ def merge_one_file(sbox):
   #
   # Step through from the top.  Every time access_status is set or
   # compared, print out its value before and after the assignment or
-  # comparision.  I mean *every time*, even if you think it couldn't
+  # comparison.  I mean *every time*, even if you think it couldn't
   # possibly have been affected :-).  You'll see some pretty weird
   # stuff -- looks like there's a stack smasher somewhere that's
   # affecting this variable.  But even that doesn't fully explain what

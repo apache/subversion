@@ -116,7 +116,7 @@
       <title>DeltaV extensions</title>
   
       <para>Because RFC 2518 left out versioning concepts, another
-        capable group was left with the responsiblity of writing RFC
+        capable group was left with the responsibility of writing RFC
         3253, which adds versioning to WebDAV.  WebDAV/DeltaV clients
         and servers are often called just <quote>DeltaV</quote>
         clients and servers, since DeltaV implies the existence of
@@ -403,7 +403,7 @@
       <para>Subversion, on the other hand, uses mod_dav_svn as a
         provider for mod_dav.  mod_dav_svn understands all WebDAV
         methods except <literal>LOCK</literal>, and understands a
-        sizeable subset of DeltaV methods.  It accesses data in the
+        sizable subset of DeltaV methods.  It accesses data in the
         Subversion repository, rather than in the real filesystem.
         Subversion 1.0 doesn't support locking, because it would
         actually quite difficult to implement, since Subversion uses
@@ -441,7 +441,7 @@
 &lt;/Location&gt;
 </screen>
 
-      <para>This techique is a risky business; in some sense, the
+      <para>This technique is a risky business; in some sense, the
         mod_dav_svn is now lying to the WebDAV client.  It claims to
         accept the <literal>LOCK</literal> request, but in reality the
         lock isn't being enforced at all levels.  If a second WebDAV

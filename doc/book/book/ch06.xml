@@ -94,7 +94,7 @@
         configuration area override those in the system-wide one, and
         command-line arguments supplied to <command>svn</command>
         program have the final word on behavior.  On Unix-like
-        platforms, the sytem-wide configuration area is expected to be
+        platforms, the system-wide configuration area is expected to be
         the <filename>/etc/subversion</filename> directory; on Windows
         machines, it again looks for a <filename>Subversion</filename>
         directory inside the common Application Data location (again,
@@ -217,7 +217,7 @@ REGEDIT4
         commonly used configuration options and their default values.
         Note the presence of both system-wide (for network
         proxy-related options) and per-user settings (editor programs
-        and passoword storage, among others).  Also note that all the
+        and password storage, among others).  Also note that all the
         options are effectively commented out.  You need only to
         remove the hash (<literal>#</literal>) character from the
         beginning of the option names, and set the values as you
@@ -266,7 +266,7 @@ collabnet = svn.collab.net
           a match is made, Subversion then looks for a section in the
           <filename>servers</filename> file whose name is the matched
           group's name.  From that section it reads the actual network
-          configuration settions.</para>
+          configuration settings.</para>
 
         <para>The <literal>global</literal> section contains the
           settings which are meant for all of the servers not matched
@@ -741,7 +741,7 @@ $
         how property modifications affect the usual Subversion
         workflow.  As we mentioned earlier, file and directory
         properties are versioned, just like your file contents.  As a
-        result, Subversion provides the same opportunies for
+        result, Subversion provides the same opportunities for
         merging&mdash;in cleanly or conflicting fashions&mdash;someone
         else's modifications into your own.</para>
 
@@ -875,7 +875,7 @@ $
         modifications to the repository are completely immune to the
         presence or absence of properties.  The <command>svn</command>
         program has some additional subcommands for actually making
-        property changes, but that is the only noticeable assymmetry.</para>
+        property changes, but that is the only noticeable asymmetry.</para>
 
     </sect2>
 
@@ -1059,7 +1059,7 @@ $
           <para>There are, however, some differences in the ways that
             CVS and Subversion handle ignore patters.  The two systems
             use the ignore patterns at some different times, and there
-            are slight discrepencies in what the ignore patterns apply
+            are slight discrepancies in what the ignore patterns apply
             to.  Also, Subversion does not recognize the use of the
             <literal>!</literal> pattern as a reset back to having no
             ignore patterns at all.  Finally, while the
@@ -1259,7 +1259,7 @@ I      calc/debug_log.3.gz
             <para>&hellip; or maybe even a section of a book &hellip;</para>
           </footnote> 
           about how to use keywords, and you don't want Subversion to
-          substitute your beautiful examples of un-substited keyword
+          substitute your beautiful examples of un-substituted keyword
           anchors!</para>
 
         <para>To tell Subversion whether or not to substitute keywords
@@ -1563,7 +1563,7 @@ Fetching external item into calc/third-party/skins
     <para>If you need to change the externals definition, you can do
       so using the regular property modification subcommands.  When
       you commit a change to the <literal>svn:externals</literal>
-      property, Subversion will syncronize the checked-out items
+      property, Subversion will synchronize the checked-out items
       against the changed externals definition when you next run
       <command>svn update</command>.  The same thing will happen when
       others update their working copies and receive your changes to
@@ -1601,11 +1601,11 @@ Fetching external item into calc/third-party/skins
       development, the project closely tracked APR's changing API,
       always sticking to the <quote>bleeding edge</quote> of the
       library's code churn.  Now that both APR and Subversion have
-      matured, Subversion attempts to syncronize with APR's library
+      matured, Subversion attempts to synchronize with APR's library
       API only at well-tested, stable release points.</para>
 
     <para>Now, if your project depends on someone else's information,
-      there are several ways that you could attempt to syncronize that
+      there are several ways that you could attempt to synchronize that
       information with your own.  Most painfully, you could issue oral
       or written instructions to all the contributors of your project,
       telling them to make sure that they have the specific versions
@@ -1848,13 +1848,13 @@ $ svn_load_dirs.pl -t libcomplex-1.1                                   \
         drop.  In the trivial case, there will be no files that are in
         one version and not the other, and the script will perform the
         new import without incident.  If, however, there are
-        discrepencies in the file layouts between versions,
+        discrepancies in the file layouts between versions,
         <command>svn_load_dirs.pl</command> will prompt you for how
         you would like to resolve those differences.  For example, you
         will have the opportunity to tell the script that you know
         that the file <filename>math.c</filename> in version 1.0 of
         libcomplex was renamed to <filename>arithmetic.c</filename> in
-        libcomplex 1.1.  Any discrepencies not explained by moves
+        libcomplex 1.1.  Any discrepancies not explained by moves
         are treated as regular additions and deletions.</para>
 
       <para>The script also accepts a separate configuration file for

@@ -870,7 +870,7 @@ def hook_test(sbox):
 # node-rev-id parentage.
 
 def merge_mixed_revisions(sbox):
-  "commit mixed-rev wc (no erronous merge error)"
+  "commit mixed-rev wc (no erroneous merge error)"
 
   if sbox.build():
     return 1

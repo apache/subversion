@@ -566,7 +566,7 @@ def inappropriate_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 # Issue #920. Don't allow setting of svn:eol-style on binary files or files 
-# with inconsistent eol stypes.
+# with inconsistent eol types.
   
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")

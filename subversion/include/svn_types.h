@@ -310,7 +310,7 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 
 
-/* ### Note: despite being about mime-TYPES, thes probably don't
+/* ### Note: despite being about mime-TYPES, these probably don't
  * ### belong in svn_types.h.  However, no other header is more
  * ### appropriate, and didn't feel like creating svn_validate.h for
  * ### so little.

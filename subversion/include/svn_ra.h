@@ -713,7 +713,7 @@ typedef struct svn_ra_plugin_t
 
 
 /**
- * libsvn_client will be reponsible for loading each RA DSO it needs.
+ * libsvn_client will be responsible for loading each RA DSO it needs.
  * However, all "ra_FOO" implementations *must* export a function named
  * @c svn_ra_FOO_init() of type @c svn_ra_init_func_t.
  *

@@ -99,7 +99,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
   fprintf(stderr, "\n<<<hashtable__create\n");
 #endif
               
-  /* return wether an exception has occured */
+  /* return wether an exception has occurred */
   if( (hasException != NULL) && _hasException )
     {
       (*hasException) = JNI_TRUE;
@@ -175,7 +175,7 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
   fprintf(stderr, ")\n");
 #endif
 
-  /* check wether an exception has occured */
+  /* check wether an exception has occurred */
   if( (hasException != NULL) && _hasException )
     {
       (*hasException) = JNI_TRUE;

@@ -692,7 +692,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_BASE,
               SVN_ERR_MISC_CATEGORY_START + 0,
-              "A problem occured; see later errors for details")
+              "A problem occurred; see later errors for details")
 
   SVN_ERRDEF (SVN_ERR_PLUGIN_LOAD_FAILURE,
               SVN_ERR_MISC_CATEGORY_START + 1,
@@ -790,7 +790,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CL_COMMIT_IN_ADDED_DIR,
               SVN_ERR_CL_CATEGORY_START + 6,
-              "Commiting in directory scheduled for addition")
+              "Committing in directory scheduled for addition")
 
   SVN_ERRDEF (SVN_ERR_CL_NO_EXTERNAL_EDITOR,
               SVN_ERR_CL_CATEGORY_START + 7,

@@ -62,7 +62,7 @@
     
     <para>Because CVS doesn't have atomic commits,
       <filename>cvs2svn.py</filename> has the difficult job of
-      deducing them.  It does this by examing RCS files and looking
+      deducing them.  It does this by examining RCS files and looking
       for per-file revisions with identical log messages.  If two RCS
       revisions have the same log message, and were committed at
       nearly the same time (say, within a couple minutes of each

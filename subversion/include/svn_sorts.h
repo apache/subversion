@@ -72,7 +72,7 @@ int svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b);
  *
  * Compare two @c svn_revnum_t's, returning an integer greater than, equal
  * to, or less than 0, according as @a b is greater than, equal to, or less
- * than @a a. Note that this sorts newest revsion to oldest (IOW, descending
+ * than @a a. Note that this sorts newest revision to oldest (IOW, descending
  * order).
  *
  * This is useful for converting an array of revisions into a sorted

@@ -652,7 +652,7 @@ calc/Makefile:6
         numbers.</para>
 
       <para>At first, it may not be entirely clear why this sort of
-        flexibliity is considered a feature, and not a liability.
+        flexibility is considered a feature, and not a liability.
         After completing a commit to the repository, the freshly
         committed files and directories are at more recent working
         revision than the rest of the working copy.  It looks like a

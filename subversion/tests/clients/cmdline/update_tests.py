@@ -667,7 +667,7 @@ def expect_extra_files(node, extra_files):
   raise svntest.main.SVNTreeUnequal
 
 def update_delete_modified_files(sbox):
-  "update that deletes modifed files"
+  "update that deletes modified files"
 
   if sbox.build():
     return 1
@@ -895,7 +895,7 @@ def update_replace_dir(sbox):
 #----------------------------------------------------------------------
 
 def update_single_file(sbox):
-  "update with explict file target"
+  "update with explicit file target"
   
   if sbox.build():
     return 1

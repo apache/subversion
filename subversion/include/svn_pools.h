@@ -67,7 +67,7 @@ void svn_pool_clear_debug (apr_pool_t *p,
  *
  * Destroy a @a pool and all of its children. 
  *
- * This define for @c svn_pool_destroy exists for symmatry (the
+ * This define for @c svn_pool_destroy exists for symmetry (the
  * not-so-grand reason) and for the existence of a great memory usage
  * debugging hook (the grand reason).
  */

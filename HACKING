@@ -642,7 +642,7 @@ look up the line number at the end of marshal.c:vparse_tuple() where
 it returns the "Malformed network data" error.
 
 To debug the client, simply pull it up in gdb, set a breakpoint, and
-run the offending commmand:
+run the offending command:
 
   % gdb svn
   (gdb) break marshal.c:NNN
