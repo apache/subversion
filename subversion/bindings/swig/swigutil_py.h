@@ -63,11 +63,11 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
 PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type);
 
-/* helper function to convert a 'char ***' into a Python list of string
+/* helper function to convert a 'char **' into a Python list of string
    objects */
 PyObject *svn_swig_py_c_strings_to_list(char **strings);
 
-/* helper function to convert an array of 'const char *' to a Python lis
+/* helper function to convert an array of 'const char *' to a Python list
    of string objects */
 PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
