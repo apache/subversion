@@ -76,7 +76,6 @@ test_add_directory (svn_string_t *name,
                     void *walk_baton, void *parent_baton,
                     svn_string_t *base_path,
                     long int base_version,
-                    svn_pdelta_t *pdelta,
                     void **child_baton)
 {
   printf ("ADD_DIR event:  name '%s', ancestor '%s' version %d\n",
@@ -91,7 +90,6 @@ test_replace_directory (svn_string_t *name,
                         void *walk_baton, void *parent_baton,
                         svn_string_t *base_path,
                         long int base_version,
-                        svn_pdelta_t *pdelta,
                         void **child_baton)
 {
   printf ("REPLACE_DIR event:  name '%s', ancestor '%s' version %d\n",
@@ -119,22 +117,29 @@ test_finish_file (void *baton)
 }
 
 
+
 svn_error_t *
-test_add_file (svn_string_t *name,
-               void *walk_baton, void *parent_baton,
-               svn_string_t *base_path,
-               long int base_version,
-               svn_pdelta_t *pdelta,
-               svn_text_delta_window_handler_t **handler,
-               void **handler_baton)
+test_begin_textdelta (void *walk_baton, void *parent_baton,
+                      svn_text_delta_window_handler_t **handler,
+                      void **handler_baton)
 {
-  printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
-          name->data, base_path->data, base_version);
-  
   /* Set the value of HANDLER and HANDLER_BATON here */
   *handler        = my_vcdiff_windoweater;
   *handler_baton  = NULL;
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+test_add_file (svn_string_t *name,
+               void *walk_baton, void *parent_baton,
+               svn_string_t *base_path,
+               long int base_version)
+{
+  printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
+          name->data, base_path->data, base_version);
+  
   return SVN_NO_ERROR;
 }
 
@@ -144,18 +149,11 @@ svn_error_t *
 test_replace_file (svn_string_t *name,
                    void *walk_baton, void *parent_baton,
                    svn_string_t *base_path,
-                   long int base_version,
-                   svn_pdelta_t *pdelta,
-                   svn_text_delta_window_handler_t **handler,
-                   void **handler_baton)
+                   long int base_version)
 {
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
           name->data, base_path->data, base_version);
   
-  /* Set the value of HANDLER and HANDLER_BATON here */
-  *handler        = my_vcdiff_windoweater;
-  *handler_baton  = NULL;
-
   return SVN_NO_ERROR;
 }
 
@@ -221,7 +219,10 @@ int main()
   my_walker.finish_file        = test_finish_file;
   my_walker.add_file           = test_add_file;
   my_walker.replace_file       = test_replace_file;
-    
+  my_walker.begin_textdelta    = test_begin_textdelta;
+  my_walker.begin_propdelta    = NULL;
+  my_walker.finish_textdelta   = NULL;
+  my_walker.finish_propdelta   = NULL;
 
   /* Fire up the XML parser */
   err = svn_delta_parse (my_read_func, source_baton, /* read from here */
