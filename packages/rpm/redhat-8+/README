@@ -21,9 +21,8 @@ This build requires certain other packages to be installed.
 
     The non-standard packages apache, db, and neon, can be found at:
 
-    http://summersoft.fay.ar.us/pub/linux/RPMS/i386
-    http://summersoft.fay.ar.us/pub/linux/RPMS/ppc
-    http://summersoft.fay.ar.us/pub/linux/RPMS/src
+    http://summersoft.fay.ar.us/pub/subversion/i386
+    http://summersoft.fay.ar.us/pub/subversion/src
 
 2.  Building a source and binary RPM
 
