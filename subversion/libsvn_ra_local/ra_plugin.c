@@ -413,7 +413,6 @@ do_update (void *session_baton,
                                  sbaton->fs_path->data,
                                  target, 
                                  switch_path->data,
-                                 FALSE, /* not a switch */
                                  TRUE, /* send text-deltas */
                                  recurse,
                                  pipe_editor, pipe_edit_baton,
@@ -506,7 +505,6 @@ do_switch (void *session_baton,
                                  sbaton->fs_path->data,
                                  target,
                                  switch_fs_path->data,
-                                 TRUE, /* is switch */
                                  TRUE, /* we want text-deltas */
                                  recurse,
                                  pipe_editor, pipe_edit_baton,
@@ -551,7 +549,6 @@ do_status (void *session_baton,
                                  sbaton->fs_path->data,
                                  target,
                                  switch_path->data,
-                                 FALSE, /* not a switch  */
                                  FALSE, /* don't send text-deltas */
                                  recurse,
                                  status_editor, status_baton,
