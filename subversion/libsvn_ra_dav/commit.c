@@ -52,6 +52,9 @@
 
 
 
+#include <apr_pools.h>
+#include <apr_hash.h>
+
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
@@ -62,15 +65,40 @@
 typedef struct
 {
   svn_ra_session_t *ras;
+  const char *activity_url;
+  apr_hash_t *workrsrc;         /* PATH -> WORKING RESOURCE */
 
 } commit_ctx_t;
 
+
+static svn_error_t *
+create_activity (commit_ctx_t *cc)
+{
+  /* ### send a REPORT request (DAV:repository-report) to find out where to
+     ### create the activity.
+     ### NOTE: we should cache this in the admin subdir
+  */
+
+  /* ### send the MKACTIVITY request
+     ### need GUID generation
+  */
+
+  return NULL;
+}
+
+static svn_error_t *
+checkout_resource (commit_ctx_t *cc, const char *src_url, const char **wr_url)
+{
+  /* ### examine cc->workrsrc -- we may already have a WR */
+  return NULL;
+}
 
 static svn_error_t *
 commit_delete (svn_string_t *name,
                void *edit_baton,
                void *parent_baton)
 {
+  /* ### CHECKOUT, then DELETE */
   return NULL;
 }
 
@@ -82,6 +110,7 @@ commit_add_dir (svn_string_t *name,
                 svn_vernum_t ancestor_version,
                 void **child_baton)
 {
+  /* ### CHECKOUT parent, then MKCOL */
   return NULL;
 }
 
@@ -93,6 +122,11 @@ commit_rep_dir (svn_string_t *name,
                 svn_vernum_t ancestor_version,
                 void **child_baton)
 {
+  /* ### if replacing with ancestor of something else, then CHECKOUT target
+     ### and COPY ancestor over the target
+     ### replace w/o an ancestor is just a signal for change within the
+     ### dir and we do nothing
+  */
   return NULL;
 }
 
@@ -102,6 +136,7 @@ commit_change_dir_prop (void *edit_baton,
                         svn_string_t *name,
                         svn_string_t *value)
 {
+  /* ### CHECKOUT, then PROPPATCH */
   return NULL;
 }
 
@@ -112,12 +147,18 @@ commit_change_dirent_prop (void *edit_baton,
                            svn_string_t *name,
                            svn_string_t *value)
 {
+  /* ### need to design where dirent props are stored */
   return NULL;
 }
 
 static svn_error_t *
 commit_finish_dir (void *edit_baton, void *dir_baton)
 {
+  /* ### nothing? */
+
+  /* ### finish of the top-level dir... right point for commit?
+     ### (MERGE, DELETE on the activity)
+  */
   return NULL;
 }
 
@@ -129,6 +170,7 @@ commit_add_file (svn_string_t *name,
                  svn_vernum_t ancestor_version,
                  void **file_baton)
 {
+  /* ### CHECKOUT parent (then PUT in apply_txdelta) */
   return NULL;
 }
 
@@ -140,6 +182,8 @@ commit_rep_file (svn_string_t *name,
                  svn_vernum_t ancestor_version,
                  void **file_baton)
 {
+  /* ### CHECKOUT (then PUT in apply_txdelta) */
+  /* ### if replacing with a specific ancestor, then COPY */
   return NULL;
 }
 
@@ -150,6 +194,7 @@ commit_apply_txdelta (void *edit_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
 {
+  /* ### PUT */
   return NULL;
 }
 
@@ -160,12 +205,14 @@ commit_change_file_prop (void *edit_baton,
                          svn_string_t *name,
                          svn_string_t *value)
 {
+  /* CHECKOUT, then PROPPATCH */
   return NULL;
 }
 
 static svn_error_t *
 commit_finish_file (void *edit_baton, void *file_baton)
 {
+  /* ### nothing? */
   return NULL;
 }
 
@@ -194,8 +241,13 @@ svn_ra_get_commit_editor(svn_ra_session_t *ras,
                          void **edit_baton)
 {
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
+  svn_error_t *err;
 
   cc->ras = ras;
+  err = create_activity(cc);
+  if (err)
+    return err;
+
   *edit_baton = cc;
 
   *editor = &commit_editor;
