@@ -36,7 +36,7 @@ const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
     apr_hash_t *hash = apr_hash_make (pool);
     HV *h = (HV *)SvRV(source);
     char *key;
-    int cnt = hv_iterinit(h), retlen;
+    I32 cnt = hv_iterinit(h), retlen;
 
     while (cnt--) {
 	SV* item = hv_iternextsv(h, &key, &retlen);
@@ -694,7 +694,8 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
 /* Wrap RA */
 
 static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
-					 void *callback_baton)
+					 void *callback_baton,
+					 apr_pool_t *pool)
 {
     SV *result;
     swig_type_info *tinfo = SWIG_TypeQuery("apr_file_t *");
@@ -792,7 +793,7 @@ apr_pool_t *svn_swig_pl_make_pool (SV *obj)
 
 typedef struct  {
     SV *obj;
-    PerlIO *f;
+    IO *io;
     apr_pool_t *pool;
 } io_baton_t;
 
@@ -801,7 +802,19 @@ static svn_error_t *io_handle_read (void *baton,
 				    apr_size_t *len)
 {
     io_baton_t *io = baton;
-    *len = PerlIO_read (io->f, buffer, *len);
+    MAGIC *mg;
+
+    if (mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar)) {
+	SV *ret;
+	SV *buf = sv_newmortal();
+	perl_callback_thunk (CALL_METHOD, "READ", &ret, "OOi",
+			     SvTIED_obj((SV*)io->io, mg),
+			     buf, *len);
+	*len = SvIV (ret);
+	memmove (buffer, SvPV_nolen(buf), *len);
+    }
+    else
+	*len = PerlIO_read (IoIFP (io->io), buffer, *len);
     return SVN_NO_ERROR;
 }
 
@@ -810,15 +823,32 @@ static svn_error_t *io_handle_write (void *baton,
 				     apr_size_t *len)
 {
     io_baton_t *io = baton;
-    *len = PerlIO_write (io->f, data, *len);
+    MAGIC *mg;
+
+    if (mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar)) {
+	SV *ret;
+	perl_callback_thunk (CALL_METHOD, "WRITE", &ret, "Osi",
+			     SvTIED_obj((SV*)io->io, mg), data, *len);
+	*len = SvIV (ret);
+    }
+    else
+	*len = PerlIO_write (IoIFP (io->io), data, *len);
     return SVN_NO_ERROR;
 }
 
 static svn_error_t *io_handle_close (void *baton)
 {
     io_baton_t *io = baton;
-    PerlIO_close (io->f);
-    SvREFCNT_dec (io->obj);
+    MAGIC *mg;
+
+    if (mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar)) {
+	perl_callback_thunk (CALL_METHOD, "CLOSE", NULL, "O",
+			     SvTIED_obj((SV*)io->io, mg));
+    }
+    else {
+	PerlIO_close (IoIFP (io->io));
+	SvREFCNT_dec (io->obj);
+    }
     apr_pool_destroy (io->pool);
     return SVN_NO_ERROR;
 }
@@ -826,16 +856,17 @@ static svn_error_t *io_handle_close (void *baton)
 svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
 {
     swig_type_info *tinfo = SWIG_TypeQuery("svn_stream_t *");
+    IO *io;
 
-    if (obj && SvROK(obj) && SvTYPE(SvRV(obj)) == SVt_PVGV && GvIO(SvRV(obj))) {
+    if (obj && SvROK(obj) && SvTYPE(SvRV(obj)) == SVt_PVGV &&
+	(io = GvIO(SvRV(obj)))) {
 	apr_pool_t *pool = svn_pool_create (NULL);
-	io_baton_t *io = apr_palloc (pool, sizeof(io_baton_t));
-	io->obj = obj;
-	io->f = IoIFP(GvIO(SvRV(obj)));
+	io_baton_t *iob = apr_palloc (pool, sizeof(io_baton_t));
 	SvREFCNT_inc (obj);
-	io->obj = obj;
-	io->pool = pool;
-	*stream = svn_stream_create (io, pool);
+	iob->obj = obj;
+	iob->io = io;
+	iob->pool = pool;
+	*stream = svn_stream_create (iob, pool);
 	svn_stream_set_read (*stream, io_handle_read);
 	svn_stream_set_write (*stream, io_handle_write);
 	svn_stream_set_close (*stream, io_handle_close);
