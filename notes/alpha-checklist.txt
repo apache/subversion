@@ -105,16 +105,6 @@ Outline Mode:
   STATUS: Mike and Karl working on right now, see
           subversion/libsvn_repos/hooks.txt.
 
-** change #6:  invert text-delta interface (gstein)
-
-   Answer: driver will provide editor with a struct that contains a
-   "menu" of ways to produce a textdelta... i.e. a pair of filenames,
-   and/or a pair of svn_stream_t's, and/or an svn_txdelta_stream.  Let
-   the editor select what it wants to use.
-
-   ESTIMATE: ?  Greg, was something blocking on this for M3?
-   Otherwise, let's do it during post-Alpha.
-
 ** simple Apache-only authentication & authorization (gstein, kfogel)
 
   Ben asks:  doesn't this already exst?  Can't we just throw existing
@@ -170,6 +160,15 @@ subdirs, or hide them under a cvs-like interface?
 
    - 'merge' will probably need to use delta_dirs()
 
+** change #6:  invert text-delta interface (gstein)
+
+   Answer: driver will provide editor with a struct that contains a
+   "menu" of ways to produce a textdelta... i.e. a pair of filenames,
+   and/or a pair of svn_stream_t's, and/or an svn_txdelta_stream.  Let
+   the editor select what it wants to use.
+
+   ESTIMATE: ?  Greg, was something blocking on this for M3?
+   Otherwise, let's do it during post-Alpha.
 
 ** general pool usage code-review (gstein and fitz)
 
