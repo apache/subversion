@@ -16,6 +16,13 @@
 #
 ######################################################################
 
+import re
+import string
+import os.path
+
+import svn_test_main
+
+
 
 # A node in a tree.
 #
@@ -111,6 +118,7 @@ def node_is_greater(a, b):
   else:
     return -1
 
+
 # Comparison:  are two tree nodes the same?
 def compare_nodes(a, b):
   "Compare two nodes' contents, ignoring children.  Return 0 if the same."
@@ -126,13 +134,7 @@ def compare_nodes(a, b):
   # done recursively by compare_trees() -- to which this function is a
   # helper.
 
-
-
-###########################################################################
-# EXPORTED ROUTINES
-
-
-# General utility:  change one path into a linked list of nodes.
+# Internal utility used by most build_tree_from_foo() routines.
 #
 # (Take the output and .add_child() it to a root node.)
 
@@ -163,20 +165,85 @@ def create_from_path(path, contents=None, props={}):
   return root_node
 
 
-# Change a list of paths into an entire tree. (no contents or props)
- 
-def build_tree_from_paths(paths):
-  "Take a list of PATHS, and return an assembled tree of nodes."
+# a regexp machine for matching the name of the administrative dir.
+rm = re.compile("^SVN/|/SVN/|/SVN$|^/SVN/|^SVN$")
 
-  root = SVNTreeNode(root_node_name, None)
+# helper for visitfunc(), which is a helper for build_tree_from_wc()
+def get_props(path):
+  "Return a hash of props for PATH, using the svn client."
 
-  for i in paths:
-    root.add_child(create_from_path(i))
+  # It's not kosher to look inside SVN/ and try to read the internal
+  # property storage format.  Instead, we use 'svn proplist'.  After
+  # all, this is the only way the user can retrieve them, so we're
+  # respecting the black-box paradigm.
 
-  return root
+  props = {}
+  output = svn_test_main.run_svn("proplist", path)
+
+  for line in output:
+    name, value = line.split(':')
+    name = string.strip(name)
+    value = string.strip(value)
+    props[name] = value
+
+  return props
 
 
-# Main comparison routine!  
+# helper for visitfunc(), which helps build_tree_from_wc()
+def get_text(path):
+  "Return a string with the textual contents of a file at PATH."
+
+  # sanity check
+  if not os.path.isfile(path):
+    return None
+
+  fp = open(path, 'r')
+  contents = fp.read()
+  fp.close()
+  return contents
+
+
+# helper for build_tree_from_wc()   -- callback for os.walk()
+def visitfunc(baton, dirpath, entrynames):
+  "Callback for os.walk().  Builds a tree of SVNTreeNodes."
+
+  # if any element of DIRPATH is 'SVN', go home.
+  if rm.search(dirpath):
+    return
+
+  # unpack the baton
+  root = baton[0]
+  load_props = baton[1]
+
+  # Create a linked list of nodes from DIRPATH, and deposit
+  # DIRPATH's properties in the tip.
+  if load_props:
+    dirpath_props = get_props(dirpath)
+  else:
+    dirpath_props = {}
+  new_branch = create_from_path(dirpath, None, dirpath_props)
+  root.add_child(new_branch)
+
+  # Repeat the process for each file entry.
+  for entry in entrynames:
+    entrypath = os.path.join(dirpath, entry)
+    if os.path.isfile(entrypath):
+      if load_props:
+        file_props = get_props(entrypath)
+      else:
+        file_props = {}
+      file_contents = get_text(entrypath)
+      new_branch = create_from_path(entrypath,
+                                    file_contents, file_props)
+      root.add_child(new_branch)
+
+
+###########################################################################
+###########################################################################
+# EXPORTED ROUTINES ARE BELOW
+
+
+# Main tree comparison routine!  
 
 def compare_trees(a, b):
   "Return 0 iff two trees are identical."
@@ -237,8 +304,10 @@ def dump_tree(n,indent=""):
       dump_tree(c,indent + "  |-- ")
 
 
-# How to explicitly build an "expected" tree.
-#
+###################################################################
+# Build an "expected" static tree from a list of lists
+
+
 # Create a list of lists, of the form:
 #
 #  [ [path, contents, props], ... ]
@@ -258,6 +327,98 @@ def build_generic_tree(nodelist):
     root.add_child(new_branch)
 
   return root
+
+
+####################################################################
+# Build trees from different kinds of subcommand output.
+
+
+# Parse co/up output into a tree.
+#
+#   Tree nodes will contain no contents, and only one 'status' prop.
+
+def build_tree_from_checkout(lines):
+  "Return a tree derived by parsing the output LINES from 'co' or 'up'."
+
+  root = SVNTreeNode(root_node_name)
+  rm = re.compile ('^(..)\s+(.+)')
+  
+  for line in lines:
+    match = rm.search(line)
+    if match and match.groups():
+      new_branch = create_from_path(match.group(2), None,
+                                    {'status' : match.group(1)})
+      root.add_child(new_branch)
+
+  return root
+
+
+# Parse ci/im output into a tree.
+#
+#   Tree nodes will contain no contents, and only one 'verb' prop.
+
+def build_tree_from_commit(lines):
+  "Return a tree derived by parsing the output LINES from 'ci' or 'im'."
+
+  root = SVNTreeNode(root_node_name)
+  rm = re.compile ('^(\w+)\s+(.+)')
+  
+  for line in lines:
+    match = rm.search(line)
+    if match and match.groups():
+      new_branch = create_from_path(match.group(2), None,
+                                    {'verb' : match.group(1)})
+      root.add_child(new_branch)
+
+  return root
+
+
+# Parse status output into a tree.
+#
+#   Tree nodes will contain no contents, and these props:
+#
+#          'status', 'wc_rev', 'repos_rev'
+
+def build_tree_from_status(lines):
+  "Return a tree derived by parsing the output LINES from 'st'."
+
+  root = SVNTreeNode(root_node_name)
+  rm = re.compile ('^(..)\s+(\d+)\s+\(.+\)\s+(.+)')
+  
+  for line in lines:
+    match = rm.search(line)
+    if match and match.groups():
+      new_branch = create_from_path(match.group(4), None,
+                                    {'status' : match.group(1),
+                                     'wc_rev' : match.group(2),
+                                     'repos_rev' : match.group(3)})
+      root.add_child(new_branch)
+
+  return root
+
+
+####################################################################
+# Build trees by looking at the working copy
+
+
+#   The reason the 'load_props' flag is off by default is because it
+#   creates a drastic slowdown -- we spawn a new 'svn proplist'
+#   process for every file and dir in the working copy!
+
+def build_tree_from_wc(wc_path, load_props=0):
+  """Walk a subversion working copy starting at WC_PATH and return a
+  tree structure containing file contents.  If LOAD_PROPS is true,
+  then all file and dir properties will be read into the tree as well."""
+
+  root = SVNTreeNode(root_node_name)
+
+  baton = (root, load_props)
+  os.path.walk(wc_path, visitfunc, baton)
+
+  return root
+
+
+dump_tree(build_tree_from_wc('wc-t1'))
 
 
 
