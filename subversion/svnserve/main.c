@@ -41,7 +41,7 @@ static void usage(const char *progname)
 {
   if (!progname)
     progname = "svn-server";
-  fprintf(stderr, "Usage: %s [-X|-d|-t] [-r root]\n", progname);
+  fprintf(stderr, "Usage: %s [-X|-d|-t|-R] [-r root]\n", progname);
   exit(1);
 }
 
