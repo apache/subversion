@@ -739,10 +739,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     return SVN_NO_ERROR;
 
   /* If we calculated only a base_dir and no relative targets, this
-     must mean that we are being asked to commit a single directory.
-     In order to do this properly, we need to anchor our commit up one
-     directory level, so long as our anchor is still a versioned
-     directory. */
+     must mean that we are being asked to commit (effectively) a
+     single path. */
   if ((! rel_targets) || (! rel_targets->nelts))
     {
       const char *parent_dir, *name;
