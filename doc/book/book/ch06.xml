@@ -1740,7 +1740,7 @@ Fetching external item into calc/third-party/skins
       the old <filename>main.c</filename> which Subversion knew about, 
       and the new <filename>foobar.c</filename> which Subversion did 
       not know about.  You rename <filename>foobar.c</filename> to 
-      <filename>main.c</filename> and <command>svn mv</command> it 
+      <filename>main.c</filename> and <command>svn move</command> it 
       back to the new name.  This way, Subversion will know that 
       <filename>foobar.c</filename> is a descendant of 
       <filename>main.c</filename>.  <filename>dead.c</filename> has 
@@ -1792,8 +1792,8 @@ Fetching external item into calc/third-party/skins
         <para>Can be run at any point in time to bring an existing
           directory in the repository to exactly match an external
           directory.  This script runs all the <command>svn
-          add</command>, <command>svn rm</command> and optionally any
-          <command>svn mv</command> commands as necessary.</para>
+          add</command>, <command>svn delete</command> and optionally any
+          <command>svn move</command> commands as necessary.</para>
       </listitem>
 
       <listitem>

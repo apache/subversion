@@ -73,8 +73,8 @@
         <listitem>
         <para>The <command>svn add</command> and <command>svn
           rm</command> commands work on directories now, just as they
-          work on files.  So do <command>svn cp</command> and
-          <command>svn mv</command>.  However, these commands do
+          work on files.  So do <command>svn copy</command> and
+          <command>svn move</command>.  However, these commands do
           <emphasis>not</emphasis> cause any kind of immediate change
           in the repository.  Instead, the working items are simply
           <quote>scheduled</quote> for addition or deletion.  No
@@ -184,7 +184,7 @@
     <para>The last subcommand in the list is new; it will not only
       remove local mods, but it will un-schedule operations such as
       adds and deletes.  It's the preferred way to revert a file;
-      running <command>rm file; svn up</command> will still work, but
+      running <command>rm file; svn update</command> will still work, but
       it blurs the purpose of updating.  And, while we're on this
       subject&hellip;
 
@@ -432,7 +432,7 @@ C    Conflict
 
     <para>Unlike CVS, a Subversion working copy is aware that it has
       checked out a module.  That means that if somebody changes the
-      definition of a module, then a call to <command>svn up</command>
+      definition of a module, then a call to <command>svn update</command>
       will update the working copy appropriately.</para>
 
     <para>Subversion defines modules as a list of directories within a
