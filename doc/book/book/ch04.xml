@@ -95,7 +95,7 @@
 
     <para>Let's say that you've been given the task of performing a
       radical reorganization of the project.  It will take a long time
-      to calc, and will affect all the files in the project.  The
+      to write, and will affect all the files in the project.  The
       problem here is that you don't want to interfere with Sally, who
       is in the process of fixing small bugs here and there.  She's
       depending on the fact that the latest version of the project is
