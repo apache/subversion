@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-08-23 13:56+0200\n"
+"POT-Creation-Date: 2004-09-01 00:09+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -244,7 +244,11 @@ msgstr "Konflikt: Nåværende basefil: %s\n"
 msgid "Conflict Properties File: %s\n"
 msgstr "Konflikt: Egenskapsfil: %s\n"
 
-#: clients/cmdline/info-cmd.c:257
+#: clients/cmdline/info-cmd.c:252
+msgid "'svn info' only works on working copy paths, not URLs"
+msgstr "'svn info' virker bare på arbeidskopistier, ikke URL-er"
+
+#: clients/cmdline/info-cmd.c:264
 #, c-format
 msgid ""
 "%s:  (Not a versioned resource)\n"
@@ -282,8 +286,8 @@ msgstr "tving operasjonen til å kjøre"
 msgid "force validity of log message source"
 msgstr "godkjenn angitt kilde for loggmelding"
 
-#: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:199
-#: svnadmin/main.c:202 svndumpfilter/main.c:699 svndumpfilter/main.c:702
+#: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:221
+#: svnadmin/main.c:224 svndumpfilter/main.c:699 svndumpfilter/main.c:702
 #: svnlook/main.c:89 svnlook/main.c:92
 msgid "show help on a subcommand"
 msgstr "vis hjelp for en delkommando"
@@ -384,12 +388,13 @@ msgstr "følg ikke kopieringer under historiegjennomgang"
 
 #: clients/cmdline/main.c:108
 msgid "disregard default and svn:ignore property ignores"
-msgstr "forbigå det som skal oversees i svn:ignore\n"
+msgstr ""
+"forbigå det som skal oversees i svn:ignore\n"
 "                             og standard-ignoreringer"
 
 #: clients/cmdline/main.c:110
 msgid "do not cache authentication tokens"
-msgstr "ikke mellomlagre autentiserings-informasjon"
+msgstr "ikke mellomlagre autentiseringsinformasjon"
 
 #: clients/cmdline/main.c:112
 msgid "do no interactive prompting"
@@ -409,7 +414,8 @@ msgstr "ta hensyn til opprinnelse når fletninger beregnes"
 
 #: clients/cmdline/main.c:120
 msgid "ignore ancestry when calculating merges"
-msgstr "ikke ta hensyn til opprinnelse når fletninger\n"
+msgstr ""
+"ikke ta hensyn til opprinnelse når fletninger\n"
 "                             beregnes"
 
 #: clients/cmdline/main.c:122
@@ -440,7 +446,7 @@ msgstr "operer på en revisjonsegenskap (bruk med -r)"
 msgid "relocate via URL-rewriting"
 msgstr "relokaliser via nettadresse-omskrivning"
 
-#: clients/cmdline/main.c:136 svnadmin/main.c:241
+#: clients/cmdline/main.c:136 svnadmin/main.c:263
 msgid "read user configuration files from directory ARG"
 msgstr "les brukerens innstillingsfil fra katalogen ARG"
 
@@ -461,7 +467,7 @@ msgid ""
 msgstr ""
 "Bruk andre linjeskift enn systemets markør\n"
 "                             for filer med en systemegen svn:eol-style-\n"
-"                             egenskap.  ARG kan være 'LF', 'CR' eller 'CRLF'"
+"                             egenskap. ARG kan være 'LF', 'CR' eller 'CRLF'"
 
 #: clients/cmdline/main.c:171
 msgid ""
@@ -532,7 +538,7 @@ msgstr ""
 "Send endringer fra arbeidskopien til depotet.\n"
 "bruk: commit [STI...]\n"
 "\n"
-"  En loggmelding må være med, men den kan være tom.  Hvis melding ikke\n"
+"  En loggmelding må være med, men den kan være tom. Hvis melding ikke\n"
 "  oppgis med valgene --message eller --file, startes en tekstredigerer.\n"
 
 #: clients/cmdline/main.c:215
@@ -836,7 +842,7 @@ msgstr ""
 "\n"
 "  3. I den tredje formen kan KILDE være en URL eller en arbeidskopi.\n"
 "     Tilsvarende URL brukes hvis arbeidskopi velges. URLen ved revisjon\n"
-"     REV blir sammenlignet slik den var mellom revisjonene N og M.  Hvis\n"
+"     REV blir sammenlignet slik den var mellom revisjonene N og M. Hvis\n"
 "     REV utelates, settes den til HEAD.\n"
 "\n"
 "  WCSTI er filstien for arbeidskopien som mottar endringene. Hvis\n"
@@ -960,7 +966,7 @@ msgstr ""
 "  egenskapens verdi, slik at visningen ser penere ut. I tillegg har hver\n"
 "  egenskap filstien som forstavelse når flere stier vises. Du kan bruke\n"
 "  argumentet --strict for å ta bort forstavelsene (dette er nyttig\n"
-"  f. eks. når binære egenskaper sendes til en fil).\n"
+"  for eksempel når binære egenskaper sendes til en fil).\n"
 
 #: clients/cmdline/main.c:490
 msgid ""
@@ -997,7 +1003,8 @@ msgid ""
 "      Author, LastChangedBy    - The last person to modify the file.\n"
 "      Date, LastChangedDate    - The date/time the object was last "
 "modified.\n"
-"      Rev, LastChangedRevision - The last revision the object changed.\n"
+"      Rev, Revision,           - The last revision the object changed.\n"
+"      LastChangedRevision\n"
 "      Id                       - A compressed summary of the previous\n"
 "                                   4 keywords.\n"
 "    svn:executable - If present, make the file executable. This\n"
@@ -1032,27 +1039,27 @@ msgstr ""
 "      URL , HeadURL            - URLen til objektets seneste revisjon.\n"
 "      Author, LastChangedBy    - Den som gjorde den siste endringen.\n"
 "      Date, LastChangedDate    - Dato og tid for den siste endringen.\n"
-"      Rev, LastChangedRevision - Seneste revisjonen der objektet ble "
+"      Rev, Revision,           - Seneste revisjonen der objektet ble "
 "endret.\n"
-"      Id                       - Sammendrag over de fire foregående\n"
+"      LastChangedRevision\n"
+"      Id                       - Sammendrag av de fire foregående\n"
 "                                 nøkkelordene.\n"
 "    svn:executable - Gjør en fil kjørbar hvis den er til stede. Denne\n"
 "      egenskapen kan ikke settes på kataloger. Et ikke-rekursivt forsøk\n"
 "      mot en katalog vil feile, mens et rekursivt vil sette egenskapen på\n"
 "      katalogens barn.\n"
-"    svn:eol-style  - En av de tre operativsystem-særegne filendelsene\n"
-"     'LF', 'CR' og 'CRLF'.\n"
+"    svn:eol-style  - Enten 'native', 'LF', 'CR' eller 'CRLF'.\n"
 "    svn:mime-type  - En fils MIME-type. Brukes for å bestemme om filen skal\n"
 "      flettes og hvordan filen sendes via Apache. En MIME-type som begynner\n"
-"      med 'text/' (eller mangler MIME-type), behandles som tekst, mens alt\n"
-"      annet behandles binært.\n"
+"      med 'text/' (eller manglende MIME-type), behandles som tekst, mens\n"
+"      alt annet behandles binært.\n"
 "    svn:externals  - En linjeskift-delt liste med modul-spesifikasjoner.\n"
-"      Hver av de består av en relativ filsti, valgfrie revisjonsargumenter\n"
+"      Hver av dem består av en relativ filsti, valgfrie revisjonsargumenter\n"
 "      og en URL. Eksempler:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 
-#: clients/cmdline/main.c:543
+#: clients/cmdline/main.c:544
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1068,7 +1075,7 @@ msgstr ""
 "  konfliktmarkører. Alt den gjør er å fjerne de filene som ble opprettet\n"
 "  da konflikten oppsto slik at man igjen kan sende inn STI.\n"
 
-#: clients/cmdline/main.c:552
+#: clients/cmdline/main.c:553
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1083,7 +1090,7 @@ msgstr ""
 "  konflikt-tilstander. Den henter imidlertid ikke tilbake slettede "
 "kataloger.\n"
 
-#: clients/cmdline/main.c:562
+#: clients/cmdline/main.c:563
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1215,7 +1222,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Head revision:   981\n"
 
-#: clients/cmdline/main.c:629
+#: clients/cmdline/main.c:630
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1239,12 +1246,12 @@ msgstr ""
 "     for å flytte en arbeidskopi til en annen forgrening eller merke\n"
 "     innenfor det samme depotet.\n"
 "\n"
-"  2. Forandre bare URL-meta-data som tilhører arbeidskopien innbyrdes.\n"
+"  2. Forandre bare URL-metadata som tilhører arbeidskopien innbyrdes.\n"
 "     Dette gjøres når depotets plassering endres (som etter\n"
 "     en plan- eller tjenernavnsendring), men arbeidskopien din\n"
 "     fortsatt gjenspeiler samme katalog i det samme depotet.\n"
 
-#: clients/cmdline/main.c:650
+#: clients/cmdline/main.c:651
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1267,8 +1274,8 @@ msgstr ""
 "Hent forandringer som er gjort i depotet inn i arbeidskopien.\n"
 "bruk: update [STI...]\n"
 "\n"
-"  Hvis ingen revisjon angis, gjelder hovedrevisjonen (HEAD).\n"
-"  Du kan ellers synkronisere med en revisjon med -r.\n"
+"  Hvis ingen revisjon angis, gjelder topprevisjonen (HEAD).\n"
+"  Du kan ellers synkronisere arbeidskopien til en revisjon med -r.\n"
 "\n"
 "For hvert oppdatert objekt vises en rad hvor det første tegnet viser hva\n"
 "som er blitt gjort. Disse tegnene betyr:\n"
@@ -1282,44 +1289,44 @@ msgstr ""
 "  Et tegn i den første kolonnen viser hva som er gjort med selve filen,\n"
 "  mens den andre viser oppdateringer i filens egenskaper.\n"
 
-#: clients/cmdline/main.c:674
+#: clients/cmdline/main.c:675
 msgid "Print client version info\n"
 msgstr "Vis versjonsinformasjon for klienten\n"
 
-#: clients/cmdline/main.c:728 svnadmin/main.c:56
+#: clients/cmdline/main.c:729 svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "Fanget signal"
 
-#: clients/cmdline/main.c:825 svnadmin/main.c:953
+#: clients/cmdline/main.c:826 svnadmin/main.c:1005
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flere revisjonsargument ble brukt. Prøv '-r M:N' i stedet for '-r M -r N'"
 
-#: clients/cmdline/main.c:837 svnadmin/main.c:970
+#: clients/cmdline/main.c:838 svnadmin/main.c:1022
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaksfeil i revisjonsargumentet '%s'"
 
-#: clients/cmdline/main.c:982 clients/cmdline/main.c:992
+#: clients/cmdline/main.c:983 clients/cmdline/main.c:993
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
 
-#: clients/cmdline/main.c:1008
+#: clients/cmdline/main.c:1009
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaksfeil i 'native-eol'-argumentet '%s'"
 
-#: clients/cmdline/main.c:1051
+#: clients/cmdline/main.c:1052
 msgid "Subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: clients/cmdline/main.c:1069 svnadmin/main.c:1087 svnlook/main.c:1962
+#: clients/cmdline/main.c:1070 svnadmin/main.c:1142 svnlook/main.c:1962
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Ukjent kommando: '%s'\n"
 
-#: clients/cmdline/main.c:1102
+#: clients/cmdline/main.c:1103
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1328,13 +1335,13 @@ msgstr ""
 "Delkommandoen '%s' godtar ikke valget '%s'\n"
 "Skriv 'svn help %s' for bruksområde.\n"
 
-#: clients/cmdline/main.c:1136
+#: clients/cmdline/main.c:1137
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Loggmeldingsfilen er under versjonskontroll. Bruk '--force-log' for å "
 "overstyre"
 
-#: clients/cmdline/main.c:1154
+#: clients/cmdline/main.c:1155
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1342,7 +1349,7 @@ msgstr ""
 "Loggmeldingen er en filsti (ville du bruke -F?). Bruk '--force-log' for å\n"
 "overstyre"
 
-#: clients/cmdline/main.c:1349
+#: clients/cmdline/main.c:1350
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1740,7 +1747,7 @@ msgid "Can't write to '%s'"
 msgstr "Kan ikke skrive til '%s'"
 
 #: clients/cmdline/util.c:187 clients/cmdline/util.c:211
-#: libsvn_fs_fs/fs_fs.c:3323
+#: libsvn_fs_fs/fs_fs.c:3330
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Finner ikke status for '%s'"
@@ -1850,8 +1857,8 @@ msgstr "Rammefeil i rørprotokollen"
 msgid "Read error in pipe"
 msgstr "Lesefeil i rør"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:283
-#: libsvn_subr/cmdline.c:300
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:286
+#: libsvn_subr/cmdline.c:303
 msgid "Write error"
 msgstr "Feil ved skriving"
 
@@ -2605,27 +2612,27 @@ msgstr "Kan ikke sende inn ikke-rekursiv sletting av en katalog"
 msgid "Unknown entry kind for '%s'"
 msgstr "Ukjent posttype for '%s'"
 
-#: libsvn_client/commit_util.c:237
+#: libsvn_client/commit_util.c:236
 #, c-format
-msgid "Entry '%s' has been replaced by a special file"
-msgstr "Posten '%s' er blitt erstattet av en spesiell fil"
+msgid "Entry '%s' has unexpectedly changed special status"
+msgstr "Posten '%s' har uventet forandret spesialstatus"
 
-#: libsvn_client/commit_util.c:287
+#: libsvn_client/commit_util.c:286
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "Avbryter innsending: '%s' er fortsatt i konflikt"
 
-#: libsvn_client/commit_util.c:343
+#: libsvn_client/commit_util.c:342
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
 msgstr "Forventet ikke at '%s' skulle være roten på en arbeidskopi"
 
-#: libsvn_client/commit_util.c:360
+#: libsvn_client/commit_util.c:359
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
 msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 
-#: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
+#: libsvn_client/commit_util.c:606 libsvn_client/commit_util.c:731
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
 #: libsvn_client/diff.c:1206 libsvn_client/diff.c:1856
 #: libsvn_client/diff.c:2291 libsvn_client/diff.c:2396
@@ -2640,17 +2647,17 @@ msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 msgid "'%s' is not under version control"
 msgstr "'%s' er ikke under versjonskontroll"
 
-#: libsvn_client/commit_util.c:610
+#: libsvn_client/commit_util.c:609
 #, c-format
 msgid "Entry for '%s' has no URL"
 msgstr "Innslaget for '%s' mangler URL"
 
-#: libsvn_client/commit_util.c:641
+#: libsvn_client/commit_util.c:640
 #, c-format
 msgid "'%s' is scheduled for addition within unversioned parent"
 msgstr "'%s' er klarert for å legges til i en ikke-versjonert forelder"
 
-#: libsvn_client/commit_util.c:661
+#: libsvn_client/commit_util.c:660
 #, c-format
 msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
@@ -2658,10 +2665,10 @@ msgid ""
 "inside an unversioned (or not-yet-versioned) directory?"
 msgstr ""
 "Innslaget for '%s' er merket som 'kopiert', men er ikke selv angitt å\n"
-"skulle legges til.  Kanskje du prøver å sende inn et mål som ligger i\n"
+"skulle legges til. Kanskje du prøver å sende inn et mål som ligger i\n"
 "en ikke-versjonert (eller ikke enda versjonert) katalog?"
 
-#: libsvn_client/commit_util.c:701
+#: libsvn_client/commit_util.c:700
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
@@ -2670,17 +2677,17 @@ msgstr ""
 "'%s' er ikke under versjonskontroll og er ikke en del av innsendingen,\n"
 "men dens barn '%s' er del av innsendingen"
 
-#: libsvn_client/commit_util.c:781
+#: libsvn_client/commit_util.c:780
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr "Kan ikke sende inn både '%s' og '%s' siden de refererer til samme URL"
 
-#: libsvn_client/commit_util.c:925
+#: libsvn_client/commit_util.c:924
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "Objekt '%s' for innsending har kopimerke satt, men ingen copyfrom-URL"
 
-#: libsvn_client/commit_util.c:929
+#: libsvn_client/commit_util.c:928
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr ""
@@ -3173,7 +3180,7 @@ msgstr "Misformet copyroot-linje i node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Misformet copyfrom-linje i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2917
+#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2924
 msgid "Attempted to write to non-transaction"
 msgstr "Forsøk på å skrive til en ikke-transaksjon"
 
@@ -3264,37 +3271,37 @@ msgstr "Ugyldig text-mod-merke i rev-file"
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ugyldig prop-mod-merke i rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:2150
+#: libsvn_fs_fs/fs_fs.c:2157
 msgid "Copying from transactions not allowed"
 msgstr "Kopiering fra transaksjoner er ikke tillatt"
 
-#: libsvn_fs_fs/fs_fs.c:2392 libsvn_fs_fs/fs_fs.c:2399
+#: libsvn_fs_fs/fs_fs.c:2399 libsvn_fs_fs/fs_fs.c:2406
 msgid "next-id file corrupt"
 msgstr "next-id-fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:2625
+#: libsvn_fs_fs/fs_fs.c:2632
 msgid "Invalid change type"
 msgstr "Ugyldig endringstype"
 
-#: libsvn_fs_fs/fs_fs.c:2936
+#: libsvn_fs_fs/fs_fs.c:2943
 msgid "Can't set text contents of a directory"
 msgstr "Kan ikke sette tekstinnholdet til en katalog"
 
-#: libsvn_fs_fs/fs_fs.c:3026 libsvn_fs_fs/fs_fs.c:3031
-#: libsvn_fs_fs/fs_fs.c:3038
+#: libsvn_fs_fs/fs_fs.c:3033 libsvn_fs_fs/fs_fs.c:3038
+#: libsvn_fs_fs/fs_fs.c:3045
 msgid "Corrupt current file"
 msgstr "Gjeldende fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:3326
+#: libsvn_fs_fs/fs_fs.c:3333
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Kan ikke endre filrettigheter på '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3459
+#: libsvn_fs_fs/fs_fs.c:3466
 msgid "Transaction out of date"
 msgstr "Transaksjonen er foreldet"
 
-#: libsvn_fs_fs/fs_fs.c:3698
+#: libsvn_fs_fs/fs_fs.c:3705
 msgid "No such transaction"
 msgstr "Ingen slik transaksjon"
 
@@ -3314,7 +3321,7 @@ msgstr "Adresseskjemaet '%s' er ukjent"
 #: libsvn_ra/ra_loader.c:291
 #, c-format
 msgid "  - handles '%s' schema\n"
-msgstr "  . håndterer skjemaet '%s'\n"
+msgstr "  - håndterer skjemaet '%s'\n"
 
 #: libsvn_ra_dav/commit.c:150
 #, c-format
@@ -3333,7 +3340,7 @@ msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
 #: libsvn_ra_dav/commit.c:1221
 #, c-format
 msgid "applying log message to %s"
-msgstr "Bruker loggmelding på %s"
+msgstr "bruker loggmelding på %s"
 
 #: libsvn_ra_dav/fetch.c:257
 msgid "Could not save the URL of the version resource"
@@ -3410,7 +3417,7 @@ msgstr "get-file-revs REPORT er ikke implementert"
 
 #: libsvn_ra_dav/file_revs.c:367
 msgid "The file-revs report didn't contain any revisions"
-msgstr "'file-revs'-rapport inneholdt ingen revisjoner"
+msgstr "'file-revs'-rapporten inneholdt ingen revisjoner"
 
 #: libsvn_ra_dav/merge.c:216
 #, c-format
@@ -3427,8 +3434,8 @@ msgid ""
 "Internal error: there is an unknown parent (%d) for the 'DAV:response' "
 "element within the MERGE response"
 msgstr ""
-"Intern feil: Det er en ukjent forelder (%d) til elementet for 'DAV_respons' "
-"innenfor MERGE-respons"
+"Intern feil: Det er en ukjent forelder (%d) til elementet for 'DAV:response' "
+"innenfor MERGE-responsen"
 
 #: libsvn_ra_dav/merge.c:240
 #, c-format
@@ -3436,7 +3443,7 @@ msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
-"Protokollfeil: MERGE-respons for ressursen '%s' returnerte ikke alle "
+"Protokollfeil: MERGE-responsen for ressursen '%s' returnerte ikke alle "
 "egenskapene vi ba om (og behøves for å fullføre innsending)"
 
 #: libsvn_ra_dav/merge.c:259
@@ -3481,7 +3488,7 @@ msgstr "Egenskapen VCC ble ikke funnet i ressursen"
 
 #: libsvn_ra_dav/props.c:787
 msgid "The relative-path property was not found on the resource"
-msgstr "Egenskapen relative-path ikke funnet i ressursen"
+msgstr "Egenskapen relative-path ble ikke funnet i ressursen"
 
 #: libsvn_ra_dav/props.c:908
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
@@ -3507,16 +3514,16 @@ msgstr "Ugyldig adresse: Negativt nummer i mellomtjenerens port"
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
-"Ugyldig adresse: Portnummeret til mellomtjeneren er større en TCP-porters "
+"Ugyldig adresse: Portnummeret til mellomtjeneren er større enn TCP-porters "
 "maksimumsstørrelse på 65535"
 
 #: libsvn_ra_dav/session.c:450
 msgid "Invalid config: illegal character in timeout value"
-msgstr "Ugyldig innstilling: Tidsgrensens verdi har ulovlig tegn"
+msgstr "Ugyldig innstilling: Tidsgrensens verdi inneholder ulovlig tegn"
 
 #: libsvn_ra_dav/session.c:454
 msgid "Invalid config: negative timeout value"
-msgstr "Ugyldig innstilling: Negativ verdi på tidsgrense"
+msgstr "Ugyldig innstilling: Negativ tidsgrenseverdi"
 
 #: libsvn_ra_dav/session.c:467
 msgid "Invalid config: illegal character in debug mask value"
@@ -3528,7 +3535,7 @@ msgstr "Ugyldig adresse for depotet"
 
 #: libsvn_ra_dav/session.c:565
 msgid "Network socket initialization failed"
-msgstr "Klargjøring for nettverks-sokkelen feilet"
+msgstr "Klargjøring av nettverks-sokkelen feilet"
 
 #: libsvn_ra_dav/session.c:578
 msgid "SSL is not supported"
@@ -3550,7 +3557,7 @@ msgstr "Oppgrader tjeneren til versjon 0.19 eller senere"
 
 #: libsvn_ra_dav/session.c:836
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr "Modul for tilgang til depot via protokollen WebDav (DeltaV)."
+msgstr "Modul for tilgang til depot via WebDav-protokollen (DeltaV)."
 
 #: libsvn_ra_dav/session.c:874
 #, c-format
@@ -3818,7 +3825,7 @@ msgstr "Strenglengde større enn maksimum"
 
 #: libsvn_ra_svn/marshal.c:545
 msgid "Number is larger than maximum"
-msgstr "Nummer er større enn maximum"
+msgstr "Nummer er større enn maksimum"
 
 #: libsvn_ra_svn/marshal.c:758
 msgid "Empty error list"
@@ -3840,21 +3847,21 @@ msgid ""
 "WARNING: dumped revision (%ld).  Loading this dump into an empty repository\n"
 "WARNING: will fail.\n"
 msgstr ""
-"ADVARSEL: Refererer til data i revisjon %ld, som er eldre enn eldste\n"
-"ADVARSEL: dumpede revisjon (%ld).  Lasting av denne dumpen inn i et\n"
+"ADVARSEL: Refererer til data i revisjon %ld som er eldre enn eldste\n"
+"ADVARSEL: dumpede revisjon (%ld). Lasting av denne dumpen inn i et\n"
 "ADVARSEL: tomt depot vil feile.\n"
 
-#: libsvn_repos/dump.c:935
+#: libsvn_repos/dump.c:934
 #, c-format
 msgid "Start revision %ld is greater than end revision %ld"
 msgstr "Startrevisjon %ld er større enn sluttervisjon %ld"
 
-#: libsvn_repos/dump.c:940
+#: libsvn_repos/dump.c:939
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
 msgstr "Sluttrevisjon %ld er ugyldig (yngste revisjon er %ld)"
 
-#: libsvn_repos/dump.c:1045
+#: libsvn_repos/dump.c:1044
 #, c-format
 msgid "* %s revision %ld.\n"
 msgstr "* %s revisjon %ld.\n"
@@ -3877,7 +3884,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- Innsendt revisjon %ld >>>\n"
+"------- Revisjon %ld lagt inn >>>\n"
 "\n"
 
 #: libsvn_repos/load.c:1123
@@ -3888,7 +3895,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- Innsendt ny revisjon %ld (lastet fra opprinnelig revisjon %ld) >>>\n"
+"------- Ny revisjon %ld lagt inn (lastet fra opprinnelig revisjon %ld) >>>\n"
 "\n"
 
 #: libsvn_repos/rev_hunt.c:64
@@ -4065,12 +4072,12 @@ msgstr "Ingen post for '%s'"
 #: libsvn_wc/adm_files.c:904
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
-msgstr "Revisjon %ld passer ikke til den eksisterende revisjonen %ld i '%s'"
+msgstr "Revisjon %ld samsvarer ikke med den eksisterende revisjonen %ld i '%s'"
 
 #: libsvn_wc/adm_files.c:912
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
-msgstr "Adressen '%s' passer ikke til den eksisterende adressen '%s' i '%s'"
+msgstr "Adressen '%s' samsvarer ikke med den eksisterende adressen '%s' i '%s'"
 
 #: libsvn_wc/adm_ops.c:213
 #, c-format
@@ -4253,7 +4260,8 @@ msgstr ""
 #, c-format
 msgid "Corrupt working copy: '%s' in directory '%s' has an invalid schedule"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s'er klargjort for en ugyldig oppgave"
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' er klargjort for en ugyldig "
+"oppgave"
 
 #: libsvn_wc/entries.c:814
 #, c-format
@@ -4261,7 +4269,7 @@ msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
 "addition) is not itself scheduled for addition"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s (som er klargjort for å legges "
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å legges "
 "til) er ikke selv klargjort for dette."
 
 #: libsvn_wc/entries.c:822
@@ -4270,7 +4278,7 @@ msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
 "deletion) is not itself scheduled for deletion"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s (som er klargjort for å slettes ) "
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å slettes ) "
 "er ikke selv klargjort for dette"
 
 #: libsvn_wc/entries.c:830
@@ -4279,8 +4287,8 @@ msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
 "replacement) has an invalid schedule"
 msgstr ""
-"Ødelagt arbeidskopi: '%s' i katalogen '%s (som er klargjort for å byttes ut) "
-"er ikke selv klargjort for dette"
+"Ødelagt arbeidskopi: '%s' i katalogen '%s' (som er klargjort for å byttes "
+"ut) er ikke selv klargjort for dette"
 
 #: libsvn_wc/entries.c:1109
 #, c-format
@@ -4613,7 +4621,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Kontrollsummer passer og indikerer ødelagt teksbase: '%s'\n"
+"Kontrollsummer samsvarer ikke og indikerer ødelagt tekstbase: '%s'\n"
 "   forventet:  %s\n"
 "   gjeldende:  %s\n"
 
@@ -4715,77 +4723,89 @@ msgstr "'%s' mangler informasjon om opprinnelse"
 msgid "Unable to make any directories"
 msgstr "Kan ikke lage kataloger"
 
-#: svnadmin/main.c:72 svndumpfilter/main.c:62
+#: svnadmin/main.c:92 svndumpfilter/main.c:62
 msgid "Can't open stdio file"
 msgstr "Kan ikke åpne standard-innfil"
 
-#: svnadmin/main.c:100
+#: svnadmin/main.c:121
 msgid "Repository argument required"
 msgstr "Argument kreves for depot"
 
-#: svnadmin/main.c:105
+#: svnadmin/main.c:126
 #, c-format
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' er en nettadresse men skulle vært en filsti"
 
-#: svnadmin/main.c:205 svndumpfilter/main.c:705 svnlook/main.c:95
+#: svnadmin/main.c:227 svndumpfilter/main.c:705 svnlook/main.c:95
 #: svnversion/main.c:201
 msgid "show version information"
 msgstr "vis versjonsinformasjon"
 
-#: svnadmin/main.c:208
+#: svnadmin/main.c:230
 msgid "specify revision number ARG (or X:Y range)"
-msgstr "angi argument for revisjonsnummer (eller\n"
+msgstr ""
+"angi argument for revisjonsnummer (eller\n"
 "                             'X:Y'-område)"
 
-#: svnadmin/main.c:211
+#: svnadmin/main.c:233
 msgid "dump incrementally"
 msgstr "dump inkrementelt"
 
-#: svnadmin/main.c:214
+#: svnadmin/main.c:236
 msgid "use deltas in dump output"
 msgstr "bruk delta under utskrift"
 
-#: svnadmin/main.c:217
+#: svnadmin/main.c:239
 msgid "bypass the repository hook system"
 msgstr "gå utenom depotets påhakningssystem"
 
-#: svnadmin/main.c:220
+#: svnadmin/main.c:242
 msgid "no progress (only errors) to stderr"
 msgstr "ingen progresjon (kun feil) til standardfeil"
 
-#: svnadmin/main.c:223
+#: svnadmin/main.c:245
 msgid "ignore any repos UUID found in the stream"
 msgstr "overse alle depot-UUIDer i strømmen"
 
-#: svnadmin/main.c:226
+#: svnadmin/main.c:248
 msgid "set repos UUID to that found in stream, if any"
-msgstr "sett depot-UUID til det som eventuelt blir\n"
+msgstr ""
+"sett depot-UUID til det som eventuelt blir\n"
 "                             funnet i strømmen"
 
-#: svnadmin/main.c:229
+#: svnadmin/main.c:251
 msgid "type of repository: 'bdb' or 'fsfs'"
 msgstr "depottype: 'bdb' eller 'fsfs'"
 
-#: svnadmin/main.c:232
+#: svnadmin/main.c:254
 msgid "load at specified directory in repository"
 msgstr "last til angitt katalog i depotet"
 
-#: svnadmin/main.c:235
+#: svnadmin/main.c:257
 msgid "disable fsync at transaction commit [Berkeley DB]"
-msgstr "slå av fsync ved innsending av transaksjonene\n"
+msgstr ""
+"slå av fsync ved innsending av transaksjonene\n"
 "                             [Berkeley DB]"
 
-#: svnadmin/main.c:238
+#: svnadmin/main.c:260
 msgid "disable automatic log file removal [Berkeley DB]"
-msgstr "slå av automatisk fjerning av loggfiler\n"
+msgstr ""
+"slå av automatisk fjerning av loggfiler\n"
 "                             [Berkeley DB]"
 
-#: svnadmin/main.c:244
+#: svnadmin/main.c:266
 msgid "remove redundant log files from source repository"
 msgstr "fjern overflødige loggfiler fra depotet"
 
-#: svnadmin/main.c:256
+#: svnadmin/main.c:269
+msgid ""
+"wait instead of exit if the the repository is in\n"
+"                             use by another process"
+msgstr ""
+"vent istedenfor å avslutte hvis depotet\n"
+"                             er i bruk av en annen prosess"
+
+#: svnadmin/main.c:282
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
 "\n"
@@ -4795,7 +4815,7 @@ msgstr ""
 "\n"
 "Lag et nytt, tomt depot på DEPOTSTI.\n"
 
-#: svnadmin/main.c:262
+#: svnadmin/main.c:288
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
@@ -4813,7 +4833,7 @@ msgstr ""
 "forrige revisjon lagres for hver revisjon. Hvis ingen revisjoner angis,\n"
 "vil kun HEAD-revisjonen deltifiseres.\n"
 
-#: svnadmin/main.c:271
+#: svnadmin/main.c:297
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -4834,7 +4854,7 @@ msgstr ""
 "dumpes kun forskjeller mot den foregående revisjonen i stedet for den\n"
 "vanlige fullteksten.\n"
 
-#: svnadmin/main.c:282
+#: svnadmin/main.c:308
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
 "\n"
@@ -4844,7 +4864,7 @@ msgstr ""
 "\n"
 "Forklarer bruken for dette programmet og dets delkommandoer.\n"
 
-#: svnadmin/main.c:287
+#: svnadmin/main.c:313
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
@@ -4854,7 +4874,7 @@ msgstr ""
 "\n"
 "Tar et øyeblikksbilde av et depot (også hvis det er i bruk).\n"
 
-#: svnadmin/main.c:292
+#: svnadmin/main.c:318
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
 "\n"
@@ -4870,7 +4890,7 @@ msgstr ""
 "ADVARSEL: Endring eller sletting av loggfiler som er i bruk, vil\n"
 "ødelegge depotet ditt.\n"
 
-#: svnadmin/main.c:299
+#: svnadmin/main.c:325
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
 "\n"
@@ -4882,7 +4902,7 @@ msgstr ""
 "Vis liste over ubrukte loggfiler for Berkeley DB.\n"
 "\n"
 
-#: svnadmin/main.c:304
+#: svnadmin/main.c:330
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
 "\n"
@@ -4898,7 +4918,7 @@ msgstr ""
 "det som er spesifisert av strømmen hvis depotet var tomt på\n"
 "forhånd. Tilbakemeldinger sendes til standardutdata.\n"
 
-#: svnadmin/main.c:314
+#: svnadmin/main.c:340
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
 "\n"
@@ -4908,29 +4928,25 @@ msgstr ""
 "\n"
 "Skriver ut navnene på alle transaksjoner som ikke er sendt inn.\n"
 
-#: svnadmin/main.c:319
+#: svnadmin/main.c:345
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
 "Run the Berkeley DB recovery procedure on a repository.  Do\n"
 "this if you've been getting errors indicating that recovery\n"
-"ought to be run.\n"
-"\n"
-"WARNING: only run this when you are SURE you're the only process\n"
-"accessing the repository.  Requires exclusive access.\n"
+"ought to be run.  Recovery requires exclusive access and will\n"
+"exit if the repository is in use by another process.\n"
 "\n"
 msgstr ""
 "bruk: svnadmin recover DEPOTSTI\n"
 "\n"
-"Kjør Berkeley DBs framgangsmetode for gjenoppretting på et depot.\n"
+"Kjør Berkeley DBs reparasjonsprosedyre på et depot.\n"
 "Gjør dette hvis du får feilmeldinger som indikerer at depotet må\n"
-"repareres.\n"
-"\n"
-"ADVARSEL: Du kan bare gjøre dette når ingen andre prosesser bruker\n"
-"depotet. Kommandoen krever eksklusiv tilgang.\n"
+"repareres. Gjenoppretting krever eksklusiv aksess og vil avslutte\n"
+"hvis depotet er i bruk av en annen prosess.\n"
 "\n"
 
-#: svnadmin/main.c:328
+#: svnadmin/main.c:353
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
@@ -4940,7 +4956,7 @@ msgstr ""
 "\n"
 "Slett navngitt(e) transaksjon(er).\n"
 
-#: svnadmin/main.c:333
+#: svnadmin/main.c:358
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -4965,7 +4981,7 @@ msgstr ""
 "MERK: Historikk lagres ikke for revisjonsegenskaper, så denne kommandoen\n"
 "overskriver alltid gjeldende loggmelding.\n"
 
-#: svnadmin/main.c:347
+#: svnadmin/main.c:372
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -4975,40 +4991,47 @@ msgstr ""
 "\n"
 "Kontrollerer data lagret i depotet.\n"
 
-#: svnadmin/main.c:470 svnadmin/main.c:525
+#: svnadmin/main.c:496 svnadmin/main.c:551
 msgid "First revision cannot be higher than second"
 msgstr "Den første revisjonen kan ikke være høyere enn den andre"
 
-#: svnadmin/main.c:479
+#: svnadmin/main.c:505
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "Deltifiserer revisjon %ld..."
 
-#: svnadmin/main.c:483
+#: svnadmin/main.c:509
 msgid "done.\n"
 msgstr "ferdig.\n"
 
-#: svnadmin/main.c:552
+#: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"generell bruk: svnadmin DELKOMMANDO DEPOTSTI  [ARGS & VALG ...]\n"
+"generell bruk: svnadmin DELKOMMANDO DEPOTSTI  [ARGUMENTER & VALG ...]\n"
 "Skriv \"svnadmin help <delkommando>\" for hjelp om en delkommando.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
-#: svnadmin/main.c:630
+#: svnadmin/main.c:653
 msgid "Please wait; recovering the repository may take some time...\n"
 msgstr "Vennligst vent. Gjenoppretting av depotet kan ta lang tid...\n"
 
-#: svnadmin/main.c:641
+#: svnadmin/main.c:687
+msgid ""
+"Failed to get exclusive repository access; perhaps another process\n"
+"such as httpd, svnserve or svn has it open?"
+msgstr "Klarte ikke å få eksklusiv tilgang til depotet. Kanskje en annen\n"
+"prosess som for eksempel httpd, svnserve eller svn holder det åpent?"
+
+#: svnadmin/main.c:692
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr "Venter på depotlås; kanskje en annen prosess har åpnet den?\n"
 
-#: svnadmin/main.c:647
+#: svnadmin/main.c:699
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -5016,33 +5039,33 @@ msgstr ""
 "\n"
 "Gjenoppretting er fullført.\n"
 
-#: svnadmin/main.c:654
+#: svnadmin/main.c:706
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Siste depotrevisjon er %ld.\n"
 
-#: svnadmin/main.c:762
+#: svnadmin/main.c:814
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transaksjonen '%s' er fjernet.\n"
 
-#: svnadmin/main.c:786
+#: svnadmin/main.c:838
 msgid "Missing revision"
 msgstr "Mangler revisjon"
 
-#: svnadmin/main.c:789
+#: svnadmin/main.c:841
 msgid "Only one revision allowed"
 msgstr "Kun én revisjon er tillatt"
 
-#: svnadmin/main.c:795
+#: svnadmin/main.c:847
 msgid "Exactly one file argument required"
 msgstr "Kun ett filargument behøves"
 
-#: svnadmin/main.c:1065 svndumpfilter/main.c:1103 svnlook/main.c:1939
+#: svnadmin/main.c:1120 svndumpfilter/main.c:1103 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
-#: svnadmin/main.c:1155
+#: svnadmin/main.c:1210
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5084,7 +5107,8 @@ msgstr "Fjern revisjoner som tømmes ved filtrering."
 
 #: svndumpfilter/main.c:711
 msgid "Renumber revisions left after filtering."
-msgstr "Renummerer revisjoner som er til overs etter\n"
+msgstr ""
+"Renummerer revisjoner som er til overs etter\n"
 "                             filtrering."
 
 #: svndumpfilter/main.c:713
@@ -5095,14 +5119,16 @@ msgstr "Ikke filtrer revisjonsegenskaper."
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
-msgstr "Filtrer bort noder med angitte prefikser fra dumpstrømmen.\n"
+msgstr ""
+"Filtrer bort noder med angitte prefikser fra dumpstrømmen.\n"
 "bruk: svndumpfilter exclude STIPREFIKS...\n"
 
 #: svndumpfilter/main.c:730
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
-msgstr "Filtrer bort noder uten angitte prefikser fra dumpstrømmen.\n"
+msgstr ""
+"Filtrer bort noder uten angitte prefikser fra dumpstrømmen.\n"
 "bruk: svndumpfilter include STIPREFIKS...\n"
 
 #: svndumpfilter/main.c:736
@@ -5121,7 +5147,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "generell bruk: svndumpfilter DELKOMMANDO [ARGUMENTER & VALG ...]\n"
-"Skriv \"svndumpfilter help <delkommando>\" for hjelp til en spesifikk\ndelkommando.\n"
+"Skriv \"svndumpfilter help <delkommando>\" for hjelp til en spesifikk\n"
+"delkommando.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
@@ -5448,7 +5475,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"generell bruk: svnlook DELKOMMANDO DEPOTSTI [ARGS & VALG ...]\n"
+"generell bruk: svnlook DELKOMMANDO DEPOTSTI [ARGUMENTER & VALG ...]\n"
 "Merk: De delkommandoene som tar valgene --revision og --transaction\n"
 "      bruker depotets yngste revisjon hvis de brukes uten disse\n"
 "      valgene.\n"
@@ -5531,14 +5558,14 @@ msgstr ""
 "    $ svnversion . /repos/svn/trunk \n"
 "    4168\n"
 "\n"
-"  Versjonnummeret er et eneste tall hvis arbeidskopien er én revisjon som "
+"  Versjonsnummeret er et enkelt tall hvis arbeidskopien er én revisjon som "
 "er\n"
 "  uendret, ikke byttet (\"switched\") og med en adresse som passer til\n"
 "  TRAIL_URL. Versjonsnummeret vil i andre tilfeller bli mer komplisert:\n"
 "\n"
 "   4123:4168     arbeidskopi med blandede revisjoner\n"
 "   4168M         arbeidskopi med endringer\n"
-"   4123S         arbeidskopi som er byttet på (\"swiched\")\n"
+"   4123S         arbeidskopi som er byttet på (\"switched\")\n"
 "   4123:4168MS   blandet revisjon, endret, og byttet på\n"
 "\n"
 "  Hvis programmet kjøres i en katalog som ikke er en arbeidskopi, f.eks. en\n"
