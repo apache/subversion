@@ -1,5 +1,5 @@
 /*
- * apply_delta.c :  routines for update and checkout
+ * make_walker.c :  routines for update and checkout
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
