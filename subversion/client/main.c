@@ -62,8 +62,10 @@
 #include "cl.h"
 
 
+
 
-/* The command dispatch table. */
+/*** Command dispatch. ***/
+
 static svn_cl__cmd_desc_t cmd_table[] = {
   { "add",        NULL,       TRUE,  svn_cl__add      },
   { "ad",         "add",      TRUE,  svn_cl__add      },
@@ -88,10 +90,34 @@ static svn_cl__cmd_desc_t cmd_table[] = {
 };
 
 
+static svn_cl__cmd_desc_t *
+get_cmd_table_entry (const char *cmd_name)
+{
+  int i;
+
+  if (cmd_name == NULL)
+    {
+      fprintf (stderr, "svn error: no command name provided\n");
+      return NULL;
+    }
+
+  /* Regardless of the option chosen, the user gets --help :-) */
+  if (cmd_name[0] == '-')
+    return NULL;
+
+  for (i = 0; i < sizeof (cmd_table); i++)
+    if (strcmp (cmd_name, cmd_table[i].cmd_name) == 0)
+      return cmd_table + i;
+
+  /* Else command not found. */
+
+  fprintf (stderr, "svn error: `%s' is an unknown command\n", cmd_name);
+  return NULL;
+}
+
 
 
-/*** Code. ***/
-
+/*** Option parsing. ***/
 static void
 parse_command_options (int argc,
                        char **argv,
@@ -221,14 +247,47 @@ svn_cl__parse_options (int argc,
 }
 
 
-svn_error_t *
-svn_cl__help (int argc, char **argv, apr_pool_t* pool)
-{
-  static const char zUsage[] =
-    "What command do you need help with?\n"
-    "You must type the command you need help with along with the `--help'\n"
-    "command line option.  Choose from the following commands:\n\n";
+
+/*** Help. ***/
 
+static void
+print_command_help (char *cmd, apr_pool_t *pool)
+{
+  printf ("THIS CODE IN PROGRESS\n");
+}
+
+
+static void
+print_generic_help (apr_pool_t *pool)
+{
+#if 0
+  static const char usage[] =
+    "usage: svn <subcommand> [options] [args]\n"
+    "\n"
+    "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
+    "Available subcommands are:\n"
+    "\n";
+#endif /* 0 */
+
+  printf ("THIS CODE IN PROGRESS\n");
+}
+
+
+svn_error_t *
+svn_cl__help (int argc, char **argv, apr_pool_t *pool)
+{
+  if (argc > 2)
+    {
+      int i;
+      for (i = 2; i < argc; i++)
+          print_command_help (argv[i], pool);
+    }
+  else
+    {
+      print_generic_help (pool);
+    }
+
+#if 0
   int ix = 0;
   svn_cl__cmd_desc_t* pCD = cmd_table;
 
@@ -244,40 +303,14 @@ svn_cl__help (int argc, char **argv, apr_pool_t* pool)
     }
 
   fputc( '\n', stdout );
-  return NULL;
+#endif /* 0 */
+
+  return SVN_NO_ERROR;
 }
 
 
-static svn_cl__cmd_desc_t *
-get_cmd_table_entry (const char *cmd_name)
-{
-  int i;
-
-  if (cmd_name == NULL)
-    {
-      fprintf (stderr, "svn error: no command name provided\n");
-      svn_cl__help (0, NULL, NULL);
-      return NULL;
-    }
-
-  /* Regardless of the option chosen, the user gets --help :-) */
-  if (cmd_name[0] == '-')
-    {
-      svn_cl__help (0, NULL, NULL);
-      return NULL;
-    }
-
-  for (i = 0; i < sizeof (cmd_table); i++)
-    if (strcmp (cmd_name, cmd_table[i].cmd_name) == 0)
-      return cmd_table + i;
-
-  /* Else command not found. */
-
-  fprintf (stderr, "svn error:  `%s' is an unknown command\n", cmd_name);
-  svn_cl__help (0, NULL, NULL);
-  return NULL;
-}
-
+
+/*** Main. ***/
 
 int
 main (int argc, char **argv)
@@ -287,7 +320,10 @@ main (int argc, char **argv)
   apr_pool_t *pool;
 
   if (p_cmd == NULL)
-    return EXIT_FAILURE;
+    {
+      svn_cl__help (0, NULL, NULL);
+      return EXIT_FAILURE;
+    }
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
