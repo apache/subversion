@@ -28,7 +28,7 @@ dnl Set of available languages.
 dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
 
 dnl APR defines a number of useful autoconf macros. grab them.
-sinclude(apr/apr_common.m4)
+sinclude(apr/build/apr_common.m4)
 
 
 dnl Sub-package configuration ---------------------
