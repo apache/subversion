@@ -4272,8 +4272,8 @@ trunk/vendors/deli/
 
           <screen>
 $ svnlook history -r 20 /usr/local/svn/repos /tags/1.0 --show-ids
-REVISION   PATH 
---------   ----
+REVISION   PATH &lt;ID&gt;
+--------   ---------
       19   /tags/1.0 &lt;1.2.12&gt;
       17   /branches/1.0-rc2 &lt;1.1.10&gt;
       16   /branches/1.0-rc2 &lt;1.1.x&gt;

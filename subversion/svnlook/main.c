@@ -1314,13 +1314,13 @@ do_history (svnlook_ctxt_t *c,
 
   if (show_ids)
     {
-      printf ("REVISION   PATH\n");
-      printf ("--------   ----\n");
+      printf ("REVISION   PATH <ID>\n");
+      printf ("--------   ---------\n");
     }
   else
     {
-      printf ("REVISION   PATH <ID>\n");
-      printf ("--------   ---------\n");
+      printf ("REVISION   PATH\n");
+      printf ("--------   ----\n");
     }
 
   /* Call our history crawler.  We want the whole lifetime of the path
