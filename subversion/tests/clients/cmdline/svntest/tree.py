@@ -193,6 +193,8 @@ class SVNTreeNode:
     ### self.children is None (file) and self.children == [] (empty
     ### diretory), but it seems that most places that construct
     ### SVNTreeNode objects don't even try to do that.  --xbc
+    ###
+    ### See issue #1611 about this problem.  -kfogel
     if self.children is not None:
       print "    Children:  ", len(self.children)
     else:
@@ -642,26 +644,26 @@ def build_tree_from_status(lines):
   #
   #    [one space]
   #
-  #    - out-of-date flag      (-)  (single letter: "*" or " ")
+  #    - out-of-date flag      (6)  (single letter: "*" or " ")
   #
   #    [three spaces]
   #
-  #    - working revision      (6)  (either digits or "-")
+  #    - working revision      (7)  (either digits or "-")
   #
   #    [one space]
   #
-  #    - last-changed revision (7)  (either digits or "?")
+  #    - last-changed revision (8)  (either digits or "?")
   #
   #    [one space]
   #
-  #    - last author           (7)  (string of non-whitespace characters)
+  #    - last author           (9)  (string of non-whitespace characters)
   #
   #    [one space]
   #
-  #    - path                  (8)  (string of characters until newline)
+  #    - path                 (10)  (string of characters until newline)
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile ('^([!MACDRUG_ ][MACDRUG_ ])(.)(.)(.)([KOBT ]) .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
@@ -672,9 +674,9 @@ def build_tree_from_status(lines):
     
     match = rm.search(line)
     if match and match.groups():
-      if match.group(7) != '-': # ignore items that only exist on repos
+      if match.group(9) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(6)}
+                   'wc_rev' : match.group(7)}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':
@@ -683,7 +685,7 @@ def build_tree_from_status(lines):
           atthash['switched'] = match.group(4)
         if match.group(5) != ' ':
           atthash['writelocked'] = match.group(5)
-        new_branch = create_from_path(match.group(8), None, {}, atthash)
+        new_branch = create_from_path(match.group(10), None, {}, atthash)
 
       root.add_child(new_branch)
 

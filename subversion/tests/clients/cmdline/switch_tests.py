@@ -547,7 +547,7 @@ def relocate_deleted_missing_copied(sbox):
     'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+'),
     'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
-  expected_status.remove('A/B/F')
+  expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
                                          
   # Relocate
