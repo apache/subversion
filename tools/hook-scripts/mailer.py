@@ -145,6 +145,7 @@ class MailedOutput:
   def start(self, group, params):
     self.to_addr = self.cfg.get('to_addr', group, params)
     self.from_addr = self.cfg.get('from_addr', group, params)
+    self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
     prefix = self.cfg.get('subject_prefix', group, params)
@@ -152,11 +153,13 @@ class MailedOutput:
       subject = prefix + ' ' + self.subject
     else:
       subject = self.subject
-    return 'From: %s\n'    \
+    hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
-           '\n'            \
            % (self.from_addr, self.to_addr, subject)
+    if self.reply_to:
+      hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
+    return hdrs + '\n'
 
 
 class SMTPOutput(MailedOutput):
@@ -336,7 +339,7 @@ def generate_list(output, header, changelist, selection):
         is_dir = ''
       if change.prop_changes:
         if change.text_changed:
-          props = '   (text, props changed)'
+          props = '   (contents, props changed)'
         else:
           props = '   (props changed)'
       else:
@@ -360,6 +363,14 @@ def generate_diff(output, cfg, repos, date, change, pool):
     return
 
   if not change.path:
+    ### need group and params
+    #suppress = cfg.get('suppress_deletes', group, params)
+    suppress = 'yes'
+    if suppress == 'yes':
+      # a record of the deletion is in the summary. no need to write
+      # anything further here.
+      return
+
     output.write('\nDeleted: %s\n' % change.base_path)
     diff = svn.fs.FileDiff(repos.root_prev, change.base_path, None, None, pool)
 
