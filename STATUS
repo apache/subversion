@@ -89,7 +89,7 @@ Candidate changes:
       svn_io_copy_dirs_recursively() function to notice/copy symlinks. 
       And this is a bug in one of the new svn 1.1 features.
     Votes:
-      +1: sussman, ghudson
+      +1: sussman, ghudson, kfogel
 
   * r10505
     Remove 'svn_node_special' from svn_node_kind_t.
