@@ -77,17 +77,17 @@ public class NativeWrapper
     /**
      * setter for "revision" in Entry class
      */
-    public static native void entrySetRevision(Entry entry, long revision);
+    public static native void entrySetRevision(Entry entry, Revision revision);
     
     /**
      * setter for "nodekind" in Entry class
      */
-     public static native void entrySetNodekind(Entry entry, int nodekind);
+     public static native void entrySetKind(Entry entry, Nodekind kind);
 
     /**
      * setter for "schedule" in Entry class
      */
-    public static native void entrySetSchedule(Entry entry, int schedule);
+    public static native void entrySetSchedule(Entry entry, Schedule schedule);
     
     /**
      * setter for "conflicted" in Entry class
@@ -142,12 +142,12 @@ public class NativeWrapper
     /**
      * wrapper for function "status__set_text_status" (status.h)
      */
-    public static native void statusSetTextStatus(Status status, int text_status);
+    public static native void statusSetTextStatus(Status status, StatusKind text_status);
 
     /**
      * wrapper for function "status__set_prop_status" (status.h)
      */
-    public static native void statusSetPropStatus(Status status, int prop_status);
+    public static native void statusSetPropStatus(Status status, StatusKind prop_status);
 
     /**
      * wrapper for function "status__set_copied" (status.h)
@@ -162,12 +162,23 @@ public class NativeWrapper
     /**
      * wrapper for function "status__set_repos_text_status" (status.h)
      */
-    public static native void statusSetReposTextStatus(Status status, int repos_text_status);
+    public static native void statusSetReposTextStatus(Status status, StatusKind repos_text_status);
 
     /**
      * wrapper for function "status__set_repos_prop_status" (status.h)
      */
-    public static native void statusSetReposPropStatus(Status status, int repos_prop_status);
+    public static native void statusSetReposPropStatus(Status status, StatusKind repos_prop_status);
+
+    /**
+     * wrapper for function "nodekind__create" (nodekind.h)
+     */
+    public static native Nodekind nodekindCreate(int kind);
+
+    /**
+     * wrapper for function "revision__create" (revision.h)
+     */
+    public static native Revision revisionCreate(long rev);
+  
 }
 
 /* 
