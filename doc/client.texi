@@ -94,9 +94,8 @@ over the net, is a well-formed XML element, having the following form:
 @example
 <text-delta>@var{data}</text-delta>
 @end example
-Here, @var{data} is the raw VDelta data, escaped appropriately for XML
-character data.
-
+Here, @var{data} is the raw VDelta data, encoded in the MIME Base64
+format.
 
 @c -----------------------------------------------------------------------
 @node Property Deltas
