@@ -9,12 +9,7 @@ Status of 1.1.4:
 
 Showstoppers:
 
-  * r12718
-    SWIG 1.3.24+ changes were not properly backported.  Makefile.in changes
-    were omitted.  LSWIGPY and LSWIGPL need to be merged so that <1.3.24 can
-    work correctly.
-    Votes:
-      +1: maxb, jszakmeister
+  none
 
 Candidate changes that seem to have become stalled
 due to persistent lack of votes:
@@ -125,3 +120,9 @@ Approved changes (further review is welcome, but not required):
       +1: ghudson, jerenkrantz, jszakmeister
       Nominated by: David James <james82@gmail.com>
 
+  * r12718
+    SWIG 1.3.24+ changes were not properly backported.  Makefile.in changes
+    were omitted.  LSWIGPY and LSWIGPL need to be merged so that <1.3.24 can
+    work correctly.
+    Votes:
+      +1: maxb, jszakmeister, philip
