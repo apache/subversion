@@ -526,10 +526,12 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
+    svn_boolean_t disable_merge_response,
     apr_pool_t *pool)
 {
   merge_ctx_t mc = { 0 };
   const char *body;
+  apr_hash_t *extra_headers = NULL;
 
   mc.pool = pool;
   mc.base_href = repos_url;
@@ -546,6 +548,12 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.committed_date = MAKE_BUFFER(pool);
   mc.last_author = MAKE_BUFFER(pool);
 
+  if (disable_merge_response)
+    {
+      extra_headers = apr_hash_make(pool);
+      apr_hash_set (extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
+                    SVN_DAV_OPTION_NO_MERGE_RESPONSE);
+    }
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -561,7 +569,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   SVN_ERR( svn_ra_dav__parsed_request(ras, "MERGE", repos_url, body, 0,
                                       merge_elements, validate_element,
                                       start_element, end_element, &mc,
-                                      pool) );
+                                      extra_headers, pool) );
 
   /* is there an error stashed away in our context? */
   if (mc.err != NULL)
