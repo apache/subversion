@@ -52,7 +52,7 @@
 
 #include "apr_pools.h"
 #include "apr_hash.h"
-#include "xmlparse.h"
+#include "svn_xml.h"
 
 #ifndef DELTA_H
 #define DELTA_H
@@ -225,10 +225,10 @@ typedef struct svn_xml__digger_t
      parser. */
   svn_error_t *validation_error;
 
-  /* The expat parser itself, so that our expat callbacks have the
+  /* The expat parser (wrapped), so that our expat callbacks have the
      power to set themselves to NULL in the case of an error.  (Again,
-     this is done by signal_expat_bailout(). */
-  XML_Parser expat_parser;   /* (note: this is a pointer in disguise!) */
+     this is done by svn_xml_signal_bailout(). */
+  svn_xml_parser_t *svn_parser;  
 
   /* A vcdiff parser, called whenever we receive binary data from
      expat.  Specifically, this is the _current_ vcdiff parser that
@@ -274,7 +274,7 @@ typedef struct svn_propdelta_t
 
 
 
-/* A object representing a Subversion-specific XML parser; opaque to
+/* A object representing a delta-specific XML parser; opaque to
    outside callers, this object is passed to svn_delta_xml_parsebytes(). 
 
    This is typedef'ed in public "svn_delta.h".
@@ -283,7 +283,7 @@ typedef struct svn_propdelta_t
 struct svn_delta_xml_parser_t
 {
   apr_pool_t *my_pool;            /* the pool which contains the parser */
-  XML_Parser expat_parser;        /* custom-built Expat parser */
+  svn_xml_parser_t *svn_parser;   /* a standard subversion xml parser */
   svn_xml__digger_t *digger;      /* maintains stack state, etc. */
 };
 

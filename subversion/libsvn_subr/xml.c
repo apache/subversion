@@ -50,28 +50,57 @@
 
 
 #include <string.h>
+#include "apr_pools.h"
 #include "svn_xml.h"
+
 
 
 
 /*** Making a parser. ***/
 
-XML_Parser
+svn_xml_parser_t *
 svn_xml_make_parser (void *userData,
                      XML_StartElementHandler start_handler,
                      XML_EndElementHandler end_handler,
-                     XML_CharacterDataHandler data_handler)
+                     XML_CharacterDataHandler data_handler,
+                     apr_pool_t *pool)
 {
+  svn_xml_parser_t *svn_parser;
+  apr_pool_t *subpool;
+
   XML_Parser parser = XML_ParserCreate (NULL);
 
   XML_SetUserData (parser, userData);
   XML_SetElementHandler (parser, start_handler, end_handler); 
   XML_SetCharacterDataHandler (parser, data_handler);
 
-  return parser;
+  subpool = svn_pool_create (pool, NULL);
+
+  svn_parser = apr_pcalloc (subpool, sizeof (svn_xml_parser_t));
+
+  svn_parser->parser = parser;
+  svn_parser->pool   = subpool;
+
+  return svn_parser;
 }
 
 
+/* Free a parser */
+void
+svn_xml_free_parser (svn_xml_parser_t *svn_parser)
+{
+  /* Free the expat parser */
+  XML_ParserFree (svn_parser->parser);        
+
+  /* Free the subversion parser */
+  apr_destroy_pool (svn_parser->pool);
+}
+
+
+
+
+/* Push LEN bytes of xml data in BUF at SVN_PARSER.  If this is the
+   final push, IS_FINAL must be set.  */
 svn_error_t *
 svn_xml_parse (svn_xml_parser_t *svn_parser,
                const char *buf,
@@ -79,22 +108,54 @@ svn_xml_parse (svn_xml_parser_t *svn_parser,
                svn_boolean_t is_final)
 {
   svn_error_t *err;
-  int ret;
+  int success;
 
-  ret = XML_Parse (svn_parser->parser, buf, len, is_final);
+  /* Parse some xml data */
+  success = XML_Parse (svn_parser->parser, buf, len, is_final);
 
-  if (ret)
+  /* If expat choked internally, return its error. */
+  if (! success)
     {
       err = svn_error_createf
-        (SVN_ERR_MALFORMED_XML, 0, NULL, pool, 
+        (SVN_ERR_MALFORMED_XML, 0, NULL, svn_parser->pool, 
          "%s at line %d",
-         XML_ErrorString (XML_GetErrorCode (parser)),
-         XML_GetCurrentLineNumber (parser));
-#if 0
-      /*kff todo: free which parser here?  Uh, how about this: */
-      *coding_baton = &Ben;
-#endif /* :-) */
+         XML_ErrorString (XML_GetErrorCode (svn_parser->parser)),
+         XML_GetCurrentLineNumber (svn_parser->parser));
+      
+      /* Kill all parsers and return the expat error */
+      svn_xml_free_parser (svn_parser);
+      return err;
+    }
+
+  /* Did an an error occur somewhere *inside* the expat callbacks? */
+  if (svn_parser->error)
+    {
+      err = svn_parser->error;
+      svn_xml_free_parser (svn_parser);
+      return err;
+    }
+  
+  return SVN_NO_ERROR;
 }
+
+
+
+/* The way to officially bail out of xml parsing.
+   Store ERROR in SVN_PARSER and set all expat callbacks to NULL. */
+void svn_xml_signal_bailout (svn_error_t *error,
+                             svn_xml_parser_t *svn_parser)
+{
+  /* This will cause the current XML_Parse() call to finish quickly! */
+  XML_SetElementHandler (svn_parser->parser, NULL, NULL);
+  XML_SetCharacterDataHandler (svn_parser->parser, NULL);
+  
+  /* Once outside of XML_Parse(), the existence of this field will
+     cause svn_delta_parse()'s main read-loop to return error. */
+  svn_parser->error = error;
+}
+
+
+
 
 
 
@@ -145,7 +206,7 @@ svn_xml_write_tag (apr_file_t *file,
   char *attribute, *value;
   svn_string_t *xmlstring;
 
-  apr_pool_t *subpool = apr_make_sub_pool (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
 
   xmlstring = svn_string_create ("<", subpool);
 
@@ -180,8 +241,10 @@ svn_xml_write_tag (apr_file_t *file,
   status = apr_full_write (file, xmlstring->data, xmlstring->len,
                            &bytes_written);
   if (status)
-    return svn_error_create (status, 0, NULL, pool,
+    return svn_error_create (status, 0, NULL, subpool,
                              "svn_xml_write_tag:  file write error.");
+
+  apr_destroy_pool (subpool);
 
   return SVN_NO_ERROR;
 }

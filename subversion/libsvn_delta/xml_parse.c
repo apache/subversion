@@ -104,22 +104,6 @@ static const char * const svn_delta__tagmap[] =
 
 
 
-/* The way to officially bail out of expat. 
-   
-   Store ERROR in DIGGER and set all expat callbacks to NULL. (To
-   understand why this works, see svn_delta_parse(). ) */
-static void
-signal_expat_bailout (svn_error_t *error, svn_xml__digger_t *digger)
-{
-  /* This will cause the current XML_Parse() call to finish quickly! */
-  XML_SetElementHandler (digger->expat_parser, NULL, NULL);
-  XML_SetCharacterDataHandler (digger->expat_parser, NULL);
-
-  /* Once outside of XML_Parse(), the existence of this field will
-     cause svn_delta_parse()'s main read-loop to return error. */
-  digger->validation_error = error;
-}
-
 
 
 /* Return an informative error message about invalid XML.
@@ -1011,7 +995,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (err)
     {
       /* Uh-oh, unrecognized tag, bail out. */
-      signal_expat_bailout (err, my_digger);
+      svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
     }
 
@@ -1045,7 +1029,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   err = do_stack_append (my_digger, new_frame, name);
   if (err) {
     /* Uh-oh, invalid XML, bail out. */
-    signal_expat_bailout (err, my_digger);
+    svn_xml_signal_bailout (err, my_digger->svn_parser);
     return;
   }
 
@@ -1059,7 +1043,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       {
         err = do_directory_callback (my_digger, new_frame, atts, FALSE);
         if (err)
-          signal_expat_bailout (err, my_digger);
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;
       }
 
@@ -1070,7 +1054,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       {
         err = do_directory_callback (my_digger, new_frame, atts, TRUE);
         if (err)
-          signal_expat_bailout (err, my_digger);
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;
       }  
 
@@ -1081,7 +1065,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       {
         err = do_delete_dirent (my_digger, new_frame);
         if (err)
-          signal_expat_bailout (err, my_digger);
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;
       }
 
@@ -1092,7 +1076,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       {
         err = do_file_callback (my_digger, new_frame, atts, FALSE);
         if (err)
-          signal_expat_bailout (err, my_digger);
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;
       }
 
@@ -1103,7 +1087,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       {
         err = do_file_callback (my_digger, new_frame, atts, TRUE);
         if (err)
-          signal_expat_bailout (err, my_digger);
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;
       }
 
@@ -1112,7 +1096,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     {
       err = do_begin_textdelta (my_digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
+        svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
     }
 
@@ -1121,7 +1105,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     {
       err = do_begin_textdeltaref (my_digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
+        svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
     }
 
@@ -1130,7 +1114,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     {
       err = do_begin_propdelta (my_digger);
       if (err)
-        signal_expat_bailout (err, my_digger);
+        svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
     }
 
@@ -1139,7 +1123,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     {
       err = do_begin_setprop (my_digger, new_frame);
       if (err)
-        signal_expat_bailout (err, my_digger);
+        svn_xml_signal_bailout (err, my_digger->svn_parser);
       return;
     }
 
@@ -1150,7 +1134,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       {
         err = do_delete_prop (my_digger, new_frame);
         if (err)
-          signal_expat_bailout (err, my_digger);
+          svn_xml_signal_bailout (err, my_digger->svn_parser);
         return;
       }
 
@@ -1175,7 +1159,7 @@ xml_handle_end (void *userData, const char *name)
   err = do_stack_check_remove (digger, name);
   if (err) {
     /* Uh-oh, invalid XML, bail out */
-    signal_expat_bailout (err, digger);
+    svn_xml_signal_bailout (err, digger->svn_parser);
     return;
   }
   
@@ -1188,7 +1172,7 @@ xml_handle_end (void *userData, const char *name)
     {
       err = do_close_directory (digger);
       if (err)
-        signal_expat_bailout (err, digger);
+        svn_xml_signal_bailout (err, digger->svn_parser);
     }      
 
   /* EVENT: when we get a </file>, drop our digger's parsers and call
@@ -1198,7 +1182,7 @@ xml_handle_end (void *userData, const char *name)
       /* closes digger->stack->file_baton, which is good. */
       err = do_close_file (digger);
       if (err)
-        signal_expat_bailout (err, digger);
+        svn_xml_signal_bailout (err, digger->svn_parser);
     }
 
   /* EVENT: when we get a </text-delta>, do major cleanup.  */
@@ -1211,7 +1195,7 @@ xml_handle_end (void *userData, const char *name)
              to do. */
           err = svn_vcdiff_parse (digger->vcdiff_parser, NULL, 0);
           if (err)
-            signal_expat_bailout (err, digger);
+            svn_xml_signal_bailout (err, digger->svn_parser);
         }
 
       /* If we're finishing a "postfix" text-delta, we must
@@ -1222,7 +1206,7 @@ xml_handle_end (void *userData, const char *name)
           /* closes digger->stack->file_baton, which is good. */
           err = do_close_file (digger); 
           if (err)
-            signal_expat_bailout (err, digger);
+            svn_xml_signal_bailout (err, digger->svn_parser);
         }
     }
 
@@ -1232,7 +1216,7 @@ xml_handle_end (void *userData, const char *name)
     {
       err = do_prop_delta_callback (digger);
       if (err)
-        signal_expat_bailout (err, digger);
+        svn_xml_signal_bailout (err, digger->svn_parser);
     }
 
   /* EVENT: when we get a prop-delta </delete>, send it off. */
@@ -1242,7 +1226,7 @@ xml_handle_end (void *userData, const char *name)
       {
         err = do_prop_delta_callback (digger);
         if (err)
-          signal_expat_bailout (err, digger);
+          svn_xml_signal_bailout (err, digger->svn_parser);
       }
 
 
@@ -1266,7 +1250,7 @@ xml_handle_end (void *userData, const char *name)
       as it should be.  */
       err = do_close_directory (digger);
       if (err)
-        signal_expat_bailout (err, digger);      
+        svn_xml_signal_bailout (err, digger->svn_parser);      
     }
   
   /* This is a void expat callback, don't return anything. */
@@ -1296,7 +1280,7 @@ xml_handle_data (void *userData, const char *data, int len)
     svn_error_t *err = svn_error_create (SVN_ERR_MALFORMED_XML, 0,
                                          NULL, digger->pool,
                                          "xml_handle_data: no XML context!");
-    signal_expat_bailout (err, digger);
+    svn_xml_signal_bailout (err, digger->svn_parser);
     return;
   }
 
@@ -1315,10 +1299,10 @@ xml_handle_data (void *userData, const char *data, int len)
       err = svn_vcdiff_parse (digger->vcdiff_parser, data, length);
       if (err)
         {
-          signal_expat_bailout
+          svn_xml_signal_bailout
             (svn_error_quick_wrap
              (err, "xml_handle_data: vcdiff parser choked."),
-             digger);
+             digger->svn_parser);
           return;
         }                          
     }
@@ -1371,8 +1355,8 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
 {
   svn_error_t *err;
 
-  svn_delta_xml_parser_t *xmlparser;
-  XML_Parser expat_parser;
+  svn_delta_xml_parser_t *delta_parser;
+  svn_xml_parser_t *svn_parser;
 
   svn_xml__digger_t *digger;
   svn_xml__stackframe_t *rootframe;
@@ -1421,24 +1405,25 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->postfix_hash     = apr_make_hash (main_subpool);
 
   /* Create an expat parser */
-  expat_parser = svn_xml_make_parser (digger,
-                                      xml_handle_start,
-                                      xml_handle_end,
-                                      xml_handle_data);
+  svn_parser = svn_xml_make_parser (digger,
+                                    xml_handle_start,
+                                    xml_handle_end,
+                                    xml_handle_data,
+                                    main_subpool);
 
   /* Store the parser in the digger too, so that our expat callbacks
      can magically set themselves to NULL in the case of an error. */
-  digger->expat_parser = expat_parser;
+  digger->svn_parser = svn_parser;
 
   /* Create a new subversion xml parser and put everything inside it. */
-  xmlparser = apr_pcalloc (main_subpool, sizeof (svn_delta_xml_parser_t));
+  delta_parser = apr_pcalloc (main_subpool, sizeof (svn_delta_xml_parser_t));
   
-  xmlparser->my_pool      = main_subpool;
-  xmlparser->expat_parser = expat_parser;
-  xmlparser->digger       = digger;
+  delta_parser->my_pool      = main_subpool;
+  delta_parser->svn_parser   = svn_parser;
+  delta_parser->digger       = digger;
 
   /* Return goodness. */
-  *parser = xmlparser;
+  *parser = delta_parser;
   return SVN_NO_ERROR;
 }
 
@@ -1459,41 +1444,28 @@ svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser)
    local cleanup can occur.)  */
 svn_error_t *
 svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
-                    svn_delta_xml_parser_t *svn_xml_parser)
+                          svn_delta_xml_parser_t *delta_parser)
 {
   svn_error_t *err;
-  XML_Parser expat_parser = svn_xml_parser->expat_parser;
-  apr_pool_t *pool = svn_xml_parser->digger->pool;
 
-  /* Parse the chunk of stream. */
-  if (! XML_Parse (expat_parser, buffer, len, isFinal))
+  err = svn_xml_parse (delta_parser->svn_parser,
+                       buffer,
+                       len,
+                       isFinal);
+
+  if (err)
+    return err;
+
+  /* Call `close_edit' callback if this is the final push */
+  if (isFinal && delta_parser->digger->editor->close_edit)
     {
-      /* Uh oh, expat *itself* choked somehow! */
-      err = svn_error_createf
-        (SVN_ERR_MALFORMED_XML, 0, NULL, pool, 
-         "%s at line %d",
-         XML_ErrorString (XML_GetErrorCode (expat_parser)),
-         XML_GetCurrentLineNumber (expat_parser));
-
-      /* Kill the expat parser and return its error */
-      XML_ParserFree (expat_parser);      
-      return err;
-    }
-
-  if (isFinal && svn_xml_parser->digger->editor->close_edit)
-    {
-      err = (* (svn_xml_parser->digger->editor->close_edit))
-        (svn_xml_parser->digger->edit_baton);
+      err = (* (delta_parser->digger->editor->close_edit))
+        (delta_parser->digger->edit_baton);
 
       if (err)
         return err;        
     }
   
-  /* After parsing our chunk, check to see if any editor callback did
-     a signal_expat_bailout() */
-  if (svn_xml_parser->digger->validation_error)
-      return svn_xml_parser->digger->validation_error;
-
   return SVN_NO_ERROR;
 }
 
@@ -1519,10 +1491,10 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
   apr_size_t len;
   int done;
   svn_error_t *err;
-  svn_delta_xml_parser_t *xmlparser;
+  svn_delta_xml_parser_t *delta_parser;
 
   /* Create a custom Subversion XML parser */
-  err =  svn_delta_make_xml_parser (&xmlparser,
+  err =  svn_delta_make_xml_parser (&delta_parser,
                                     editor,
                                     base_path,
                                     base_version,
@@ -1547,13 +1519,13 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
     done = (len == 0);
 
     /* Push these bytes at the parser */
-    err = svn_delta_xml_parsebytes (buf, len, done, xmlparser);
+    err = svn_delta_xml_parsebytes (buf, len, done, delta_parser);
     if (err)
       return err;
 
   } while (! done);
 
-  svn_delta_free_xml_parser (xmlparser);
+  svn_delta_free_xml_parser (delta_parser);
   return SVN_NO_ERROR;
 }
 
