@@ -336,11 +336,11 @@ create_conf (svn_fs_t *fs, const char *path)
 
   /* Write a default template for each standard conf file. */
 
-  /* Pre-commit hooks. */
+  /* Start-commit hooks. */
   {
     this_path = apr_psprintf (fs->pool, "%s/%s",
                               fs->conf_path,
-                              SVN_FS__REPOS_CONF_PRECOMMIT_HOOKS);
+                              SVN_FS__REPOS_CONF_START_COMMIT_HOOKS);
     
     apr_err = apr_file_open (&f, this_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -351,18 +351,57 @@ create_conf (svn_fs_t *fs, const char *path)
                                 "creating conf file `%s'", this_path);
     
     contents =
-      "# Pre-commit hooks: invoke a program with some arguments.  One of\n"
-      "# the arguments may be \"$txn\", which is substituted with a\n"
+      "# Start-commit hooks: invoke a hook program before a commit is\n"
+      "# started; i.e., before the txn is created.  In the arguments, the\n"
+      "# string \"$user\" is subsituted with the user attempting the commit,\n"
+      "# and the string \"$repos\" is substituted with the absolute path to\n"
+      "# the repository in which the commit is being attempted.\n"
+      "#\n"
+      "# If any hook program exits with non-zero status, the commit will be\n"
+      "# rejected.  All hooks are run, until one fails or there are no more\n" 
+      "# left.\n"
+      "#\n"
+      "# EXAMPLE:\n"
+      "#\n"
+      "# my-start-commit-hook.py blah --repository $repos --user $user\n";
+
+    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "writing conf file `%s'", this_path);
+
+    apr_err = apr_file_close (f);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "closing conf file `%s'", this_path);
+  }  /* end start-commit hooks */
+
+  /* Pre-commit hooks. */
+  {
+    this_path = apr_psprintf (fs->pool, "%s/%s",
+                              fs->conf_path,
+                              SVN_FS__REPOS_CONF_PRE_COMMIT_HOOKS);
+    
+    apr_err = apr_file_open (&f, this_path,
+                             (APR_WRITE | APR_CREATE | APR_EXCL),
+                             APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err)
+      return svn_error_createf (apr_err, 0, NULL, fs->pool, 
+                                "creating conf file `%s'", this_path);
+    
+    contents =
+      "# Pre-commit hooks: invoke a hook program before a txn is committed.\n"
+      "# One of the arguments may be \"$txn\", which is substituted with a\n"
       "# Subversion txn id at the time the hook is run.  Another may be\n"
       "# \"$repos\", which is substituted with the absolute path to the\n"
       "# repository in which the txn can be found.\n"
       "#\n"
       "# If a hook program exits with non-zero status, the txn will be\n"
-      "# discarded and no commit will take place; if it exits with zero\n"
+      "# discarded and no commit will take place; if all exit with zero\n"
       "# (successful) status, the txn will be committed.\n"
       "#\n"
-      "# All hooks here will be run, until one fails or there are no more\n"
-      "# left.\n"
+      "# All hooks are run, until one fails or there are no more left.\n"
       "#\n"
       "# EXAMPLE:\n"
       "#\n"
@@ -383,7 +422,7 @@ create_conf (svn_fs_t *fs, const char *path)
   {
     this_path = apr_psprintf (fs->pool, "%s/%s",
                               fs->conf_path,
-                              SVN_FS__REPOS_CONF_POSTCOMMIT_HOOKS);
+                              SVN_FS__REPOS_CONF_POST_COMMIT_HOOKS);
     
     apr_err = apr_file_open (&f, this_path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -394,13 +433,13 @@ create_conf (svn_fs_t *fs, const char *path)
                                 "creating conf file `%s'", this_path);
     
     contents =
-      "# Post-commit hooks: invoke a program with some arguments.  One of\n"
-      "# the arguments may be \"$rev\", which is substituted with the\n"
-      "# revision number of the newly-committed tree.  Another may be\n"
-      "# \"$repos\", which is substituted with the absolute path to the\n"
-      "# repository in which the revision was committed.\n"
+      "# Post-commit hooks: invoke a hook program when a new revision is\n"
+      "# committed.  One of the arguments may be \"$rev\", which is\n"
+      "# substituted with the revision number of the newly-committed tree.\n"
+      "# Another may be \"$repos\", which is substituted with the absolute\n"
+      "# path to the repository in which the revision was committed.\n"
       "#\n"
-      "# All hooks here will be run, regardless of the success or failure\n"
+      "# All hooks are run, regardless of the success or failure\n"
       "# of any one hook.\n"
       "#\n"
       "# EXAMPLE:\n"
