@@ -311,9 +311,9 @@ typedef struct svn_client_commit_item_t
  * @c NULL, this value is undefined).  The log message MUST be a UTF8 
  * string with LF line separators.
  *
- * @a commit_items is an array of @c svn_client_commit_item_t structures,
- * which may be fully or only partially filled-in, depending on the
- * type of commit operation.
+ * @a commit_items is a read-only array of @c svn_client_commit_item_t
+ * structures, which may be fully or only partially filled-in,
+ * depending on the type of commit operation.
  *
  * @a baton is provided along with the callback for use by the handler.
  *
