@@ -33,7 +33,7 @@ post-extract:
 	# work around libdb4's name.
 	@${PERL} -pi -e 's/ldb/ldb4/g' ${WRKSRC}/configure
 
-	# axe the neon subdir because otherwise svn complains when trying to 
+	# axe the neon subdir because otherwise svn complains when trying to
 	# link against our installed version.
 	@${RM} -r ${WRKSRC}/neon
 
