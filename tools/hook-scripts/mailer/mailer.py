@@ -25,7 +25,6 @@ import smtplib
 import re
 
 import svn.fs
-import svn.util
 import svn.delta
 import svn.repos
 import svn.core
@@ -311,7 +310,7 @@ class Commit(Messenger):
     ### so if the body doesn't change, then it can be sent N times
     ### rather than rebuilding it each time.
 
-    subpool = svn.util.svn_pool_create(self.pool)
+    subpool = svn.core.svn_pool_create(self.pool)
 
     for (group, param_tuple), params in self.groups.items():
       self.output.start(group, params)
@@ -321,9 +320,9 @@ class Commit(Messenger):
                        group, params, subpool)
 
       self.output.finish()
-      svn.util.svn_pool_clear(subpool)
+      svn.core.svn_pool_clear(subpool)
 
-    svn.util.svn_pool_destroy(subpool)
+    svn.core.svn_pool_destroy(subpool)
 
 
 class PropChange(Messenger):
@@ -356,9 +355,9 @@ class PropChange(Messenger):
 
 def generate_content(output, cfg, repos, changelist, group, params, pool):
 
-  svndate = repos.get_rev_prop(svn.util.SVN_PROP_REVISION_DATE)
+  svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
-  date = time.ctime(svn.util.secs_from_timestr(svndate, pool))
+  date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
                % (repos.author, date, repos.rev))
@@ -369,7 +368,7 @@ def generate_content(output, cfg, repos, changelist, group, params, pool):
   generate_list(output, 'Modified', changelist, _select_modifies)
 
   output.write('Log:\n%s\n'
-               % (repos.get_rev_prop(svn.util.SVN_PROP_REVISION_LOG) or ''))
+               % (repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''))
 
   # these are sorted by path already
   for path, change in changelist:
@@ -560,7 +559,7 @@ class Repository:
 
     self.root_this = self.get_root(rev)
 
-    self.author = self.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR)
+    self.author = self.get_rev_prop(svn.core.SVN_PROP_REVISION_AUTHOR)
 
   def get_rev_prop(self, propname):
     return svn.fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
@@ -753,7 +752,7 @@ if __name__ == '__main__':
     raise MissingConfig(config_fname)
 
   ### run some validation on these params
-  svn.util.run_app(main, cmd, config_fname, repos_dir, revision,
+  svn.core.run_app(main, cmd, config_fname, repos_dir, revision,
                    author, propname)
 
 # ------------------------------------------------------------------------
