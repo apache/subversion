@@ -139,7 +139,8 @@ A FLAG has one of the following forms:
     This is a mutable node, part of an unfinished transaction.
     Mutable nodes always form trees, not DAGs.  PARENT-ID is this
     node's parent; if PARENT-ID is the empty string, this node is the
-    root directory.
+    root directory.  The filesystem uses the PARENT-ID to detect
+    attempts to create cyclic directory structures.
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
@@ -177,15 +178,11 @@ represents a directory, and has the form:
 
 The list (ENTRY ...) gives the directory entries; each ENTRY has the form:
 
-    (NAME ID [BASE-PATH])
+    (NAME ID)
 
 where:
-  - NAME is the name of the directory entry, in UTF-8,
-  - ID is the ID of the node revision to which this entry refers, and
-  - for clones in unfinished transactions, BASE-PATH is the name the
-    node had in the transaction's base revision, if that is different from
-    its path in the transaction.  BASE-PATH is explaned in more detail in
-    `Cloning', below.
+  - NAME is the name of the directory entry, in UTF-8, and
+  - ID is the ID of the node revision to which this entry refers
 
 
 PROPLIST: property lists for nodes and directory entries
@@ -387,69 +384,6 @@ to allocate ID's for new transactions.
 The `transactions' table is a btree, with no particular sort order.
 
 
-Cloning
-
-As we make changes to an unfinished transaction, we clone each node
-whose contents we need to change.  Since multiple processes may want
-to work on a transaction at the same time, the database needs to
-provide enough information for each process to observe the cloning
-done by the other processes.
-
-In particular, if process A holds a reference to an uncloned node, and
-then process B clones that node, or some of its parents, process A
-must be able to find the clones created by B in order to correctly
-make its own changes to the node.
-
-The Berkeley DB `clones' table provides enough information to do this
-tracking.  Every key in `clones' is a string consisting of the ID of
-the transaction TXN, a space, and BASE-PATH, the path of some node
-revision in the revision tree on which TXN is based.  Each value
-associated with one of these keys is a skel of one of the following
-forms:
-
-    (cloned CLONE)
-        This means that the named node has been cloned in TXN; CLONE
-	is the clone's node revision ID.
-    (moved PARENT-CLONE ENTRY-NAME)
-        This means that the named node has been moved (renamed) in the
-        transaction, and the entry referring to it is now the
-        directory entry named ENTRY-NAME in the directory whose node
-        revision ID is PARENT-CLONE.  Note that PARENT-CLONE must be
-        a clone in TXN, since its contents have been modified.
-
-Thus, we can use the following algorithm to clone a node in TXN whose
-name in the base revision is BASE-PATH:
-
-If BASE-PATH is empty:
-  We're trying to clone the root.  The transaction's record in
-  `transactions' tells us whether its root has been cloned yet; that's
-  where we record things.
-Otherwise:
-  Check the `clones' table for an entry for (TXN BASE-PATH).
-  If there is an entry of the form (cloned CLONE):
-    Our node has already been cloned, and CLONE is the clone's ID.
-  If there is an entry of the form (moved PARENT-CLONE ENTRY),
-    Create our own clone of BASE-PATH, CLONE.
-    Change the entry in `clones' to (cloned CLONE).
-    Change the entry named ENTRY-NAME in PARENT-CLONE to point to CLONE.
-  If there is no entry in `clones':
-    The directory path BASE-PATH contains at least one component;
-    divide it into its rightmost component, LAST, and the path leading
-    up to that, BASE-PARENT.
-    Recurse on this process to create a clone of BASE-PARENT, whose ID
-    is PARENT-CLONE.
-    Create a clone of our node, CLONE.
-    Add an entry in `clones' for (TXN BASE-PATH) whose value is (cloned CLONE).
-    Change the entry named LAST in PARENT-CLONE to point to CLONE.
-
-Since clone tracking is based on nodes' names in the base revision, we
-must always be able to find a node's base name, even if we reached
-that node through cloned nodes.  To this end, whenever we move an
-uncloned node, we record its original base name in the new directory
-entry referring to it.  This is the BASE-PATH element of the directory
-entry, described above.
-
-
 Merge rules
 
 The Subversion filesystem must provide the following characteristics:
@@ -559,7 +493,7 @@ fs.c		Creating and destroying filesystem objects.
 
 err.c		Error handling.
 
-nodes-table.c, txn-table.c, clones-table.c, rev-table.c
+nodes-table.c, txn-table.c, rev-table.c
 
 		Create and open particular database tables.
 		Responsible for intra-record consistency.
@@ -576,7 +510,7 @@ tree.c		Operations on the tree filesystem.  This layer is
 		built on top of dag.c, but transparently distinguishes
 		virtual copies, making the underlying DAG look like a
 		real tree.  This makes incomplete transactions behave
-		like ordinary mutable filesystems.  Most of the
+		like ordinary mutable filesystems.
 
 delta.c		Computing deltas.
 
@@ -591,7 +525,6 @@ Berkeley DB tables
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION,
                                 "next-id" -> TXN)
-               "clones" : btree(CLONE-KEY -> CLONE)
 
 
 Syntactic elements
@@ -601,7 +534,6 @@ Table keys:
 
                      ID ::= node.revision-id ;
                     TXN ::= number ;
-##            BASE-PATH ::= [xbc todo: whatzis?]
 
 
 Nodes:
@@ -627,22 +559,12 @@ Transactions:
            BASE-ROOT-ID ::= node.revision-id ;
 
 
-Clones:
-
-	      CLONE-KEY ::= TXN ' ' BASE-PATH
-                  CLONE ::= ("cloned" CLONE-ID)
-                          | ("moved" PARENT-CLONE-ID ENTRY-NAME);
-               CLONE-ID ::= node.revision-id ;
-        PARENT-CLONE-ID ::= node.revision-id ;
-             ENTRY-NAME ::= atom ;
-
-
 Node revisions:
 
           NODE-REVISION ::= FILE | DIR ;
                    FILE ::= (HEADER DATA) ;
                     DIR ::= (HEADER (ENTRY ...)) ;
-                  ENTRY ::= (NAME ID) | (NAME ID BASE-PATH) ;
+                  ENTRY ::= (NAME ID) ;
                    NAME ::= atom ;
 
 
