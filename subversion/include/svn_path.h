@@ -28,8 +28,6 @@
  * the @c svn_path_canonicalize and @c svn_path_internal_style functions, must
  * be in canonical form.  There is one exception -- svn_path_is_canonical() --
  * (for the obvious reasons).
- *
- * todo: this library really needs a test suite!
  */
 
 #ifndef SVN_PATH_H

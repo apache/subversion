@@ -190,8 +190,7 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
 /*** Helpers for svn_subst_translate_stream ***/
 
 
-/* Write out LEN bytes of BUF into STREAM, using POOL to allocate any
-   svn_error_t errors that might occur along the way. */
+/* Write out LEN bytes of BUF into STREAM. */
 static svn_error_t *
 translate_write (svn_stream_t *stream,
                  const void *buf,
@@ -483,9 +482,7 @@ translate_keyword (char *buf,
    REPAIR is TRUE, ignore the inconsistency, else return an
    SVN_ERR_IO_INCONSISTENT_EOL error.  If we are examining the first
    newline in the file, copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
-   use for later consistency checks.  
-
-   Use POOL to allocate errors that may occur. */
+   use for later consistency checks. */
 static svn_error_t *
 translate_newline (const char *eol_str,
                    apr_size_t eol_str_len,
