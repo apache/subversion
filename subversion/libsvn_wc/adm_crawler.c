@@ -109,7 +109,7 @@ restore_file (const char *file_path,
   assert(entry != NULL);
 
   /* Possibly set timestamp to last-commit-time. */
-  if (use_commit_times)
+  if (use_commit_times && (! special))
     {
       SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
                                               file_path, pool));

@@ -430,6 +430,7 @@ log_do_file_timestamp (struct log_runner *loggy,
                        const char **atts)
 {
   apr_time_t timestamp;
+  svn_boolean_t special;
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
                      loggy->pool);
@@ -440,10 +441,19 @@ log_do_file_timestamp (struct log_runner *loggy,
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'timestamp' attribute in '%s'"),
                               svn_wc_adm_access_path (loggy->adm_access));
-  
-  SVN_ERR (svn_time_from_cstring (&timestamp, timestamp_string, loggy->pool));
 
-  SVN_ERR (svn_io_set_file_affected_time (timestamp, full_path, loggy->pool));
+  /* Do not set the timestamp on special files. */
+  SVN_ERR (svn_wc__get_special (&special, name, loggy->adm_access,
+                                loggy->pool));
+  
+  if (! special)
+    {
+      SVN_ERR (svn_time_from_cstring (&timestamp, timestamp_string,
+                                      loggy->pool));
+      
+      SVN_ERR (svn_io_set_file_affected_time (timestamp, full_path,
+                                              loggy->pool));
+    }
 
   return SVN_NO_ERROR;
 }
