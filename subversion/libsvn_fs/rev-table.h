@@ -35,26 +35,24 @@ int svn_fs__open_revisions_table (DB **revisions_p,
 
 
 /* Set *SKEL_P to point to the REVISION skel for the filesystem
-   revision REV in FS, as part of the Berkeley DB transaction DB_TXN.
-   Allocate the skel and the data it points into in POOL.
+   revision REV in FS, as part of TRAIL.
+   Allocate the skel and the data it points into in TAIL->pool.
 
    This verifies that *SKEL_P is a well-formed REVISION skel.  */
 svn_error_t *svn_fs__get_rev (skel_t **skel_p,
                               svn_fs_t *fs,
                               svn_revnum_t rev,
-                              DB_TXN *db_txn,
-                              apr_pool_t *pool);
+                              trail_t *trail);
 
-/* Store SKEL as the REVISION skel in FS as part of the Berkeley DB
-   transaction DB_TXN, and return the new filesystem revision number
-   in *REV.  Do any necessary temporary allocation in POOL.
+/* Store SKEL as the REVISION skel in FS as part of TRAIL, and return
+   the new filesystem revision number in *REV.  Do any necessary
+   temporary allocation in TRAIL->pool.
 
    This verifies that SKEL is a well-formed REVISION skel.  */
 svn_error_t *svn_fs__put_rev (svn_revnum_t *rev,
                               svn_fs_t *fs,
                               skel_t *skel,
-                              DB_TXN *db_txn,
-                              apr_pool_t *pool);
+                              trail_t *trail);
 
 
 /* Set *ROOT_ID_P to the ID of the root directory of revision REV in FS,

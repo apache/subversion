@@ -524,6 +524,20 @@ svn_fs__matches_atom (skel_t *skel, const char *str)
 
 
 int
+svn_fs__atom_matches_string (skel_t *skel, svn_string_t *str)
+{
+  if (skel
+      && skel->is_atom)
+    {
+      return (skel->len == str->len
+              && ! memcmp (skel->data, str->data, skel->len));
+    }
+  else
+    return 0;
+}
+
+
+int
 svn_fs__list_length (skel_t *skel)
 {
   if (! skel
