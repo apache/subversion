@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 #  hot-backup.py: perform a "hot" backup of a Berkeley DB repository.
+#                 (and clean old logfiles after backup completes.)
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -14,6 +15,11 @@
 # If newer versions of this license are posted there, you may use a
 # newer version instead, at your option.
 #
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+
 ######################################################################
 
 import os, shutil, string
@@ -70,11 +76,33 @@ outfile.close()
 infile.close()
 errfile.close()
 
+print "Re-copying logfiles:"
+
 for item in stdout_lines:
   logfile = string.strip(item)
   src = os.path.join(db_dir, "db", logfile)
   dst = os.path.join(backup_subdir, "db", logfile)
-  print "Re-copying logfile '" + logfile + "'..."
+  print "   Re-copying logfile '" + logfile + "'..."
   shutil.copy(src, dst)
   
 print "Backup completed."
+
+
+# Step 4:  ask db_archive which logfiles can be expunged.
+
+infile, outfile, errfile = os.popen3(db_archive + " -a -h "
+                                     + os.path.join(db_dir, "db"))
+stdout_lines = outfile.readlines()
+stderr_lines = errfile.readlines()
+outfile.close()
+infile.close()
+errfile.close()
+
+print "Cleaning obsolete logfiles:"
+
+for item in stdout_lines:
+  logfile = string.strip(item)
+  print "   Deleting '", logfile, "'..."
+  os.unlink(logfile)
+
+print "Done."
