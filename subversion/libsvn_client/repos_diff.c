@@ -156,7 +156,7 @@ make_dir_baton (const svn_stringbuf_t *name,
     }
 
   if (name)
-    svn_path_add_component (dir_baton->path, name, svn_path_local_style);
+    svn_path_add_component (dir_baton->path, name);
 
   return dir_baton;
 }
@@ -180,7 +180,7 @@ make_file_baton (const svn_stringbuf_t *name,
   file_baton->pool = subpool;
 
   file_baton->path = svn_stringbuf_dup (parent_baton->path, file_baton->pool);
-  svn_path_add_component (file_baton->path, name, svn_path_local_style);
+  svn_path_add_component (file_baton->path, name);
 
   return file_baton;
 }
@@ -361,7 +361,7 @@ delete_entry (svn_stringbuf_t *name,
   svn_stringbuf_t *path = svn_stringbuf_dup (pb->path, pool);
   svn_node_kind_t kind;
 
-  svn_path_add_component (path, name, svn_path_local_style);
+  svn_path_add_component (path, name);
 
   /* We need to know if this is a directory or a file */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,

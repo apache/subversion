@@ -669,7 +669,7 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    svn_path_add_component_nts(url, path, svn_path_url_style);
+    svn_path_add_component_nts(url, path);
 
   err = svn_ra_dav__get_baseline_info(&is_dir,
                                       NULL,

@@ -37,7 +37,6 @@ struct edit_baton
   svn_stringbuf_t *editor_name;
   svn_stream_t *out_stream;
   apr_pool_t *pool;
-  enum svn_path_style style;
   int indentation;
   svn_boolean_t verbose;
   svn_stringbuf_t *newline;
@@ -204,7 +203,7 @@ test_delete_entry (svn_stringbuf_t *filename,
   svn_stringbuf_t *str;
 
   path = svn_stringbuf_dup (d->path, d->edit_baton->pool);
-  svn_path_add_component (path, filename, d->edit_baton->style);
+  svn_path_add_component (path, filename);
   str = svn_stringbuf_createf (d->edit_baton->pool,
                             "[%s] delete_entry (%s)\n",
                             d->edit_baton->editor_name->data,
@@ -286,7 +285,7 @@ add_or_open_dir (svn_stringbuf_t *name,
 
   /* Set child_baton to a new dir baton. */
   d->path = svn_stringbuf_dup (pd->path, pd->edit_baton->pool);
-  svn_path_add_component (d->path, name, pd->edit_baton->style);
+  svn_path_add_component (d->path, name);
   d->edit_baton = pd->edit_baton;
   d->indent_level = (pd->indent_level + 1);
   *child_baton = d;
@@ -462,7 +461,7 @@ add_or_open_file (svn_stringbuf_t *name,
   fb->dir_baton = d;
   fb->path = (svn_stringbuf_t *) svn_stringbuf_dup (d->path,
                                                     d->edit_baton->pool);
-  svn_path_add_component (fb->path, name, d->edit_baton->style);
+  svn_path_add_component (fb->path, name);
   fb->indent_level = (d->indent_level + 1);
   *file_baton = fb;
  
@@ -618,7 +617,6 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                      int indentation,
                      svn_boolean_t verbose,
                      svn_stringbuf_t *path,
-                     enum svn_path_style style,
                      apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
@@ -645,7 +643,6 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   my_edit_baton->root_path = svn_stringbuf_dup (path, pool);
   my_edit_baton->editor_name = svn_stringbuf_dup (editor_name, pool);
   my_edit_baton->pool = pool;
-  my_edit_baton->style = style;
   my_edit_baton->indentation = indentation;
   my_edit_baton->verbose = verbose;
   my_edit_baton->out_stream = out_stream;

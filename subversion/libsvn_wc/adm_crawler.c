@@ -349,7 +349,6 @@ do_dir_replaces (void **newest_baton,
           /* We only want the last component of the path; that's what
              the editor's open_directory() expects from us. */
           dirname = svn_path_last_component (stackptr->path,
-                                             svn_path_local_style, 
                                              stackptr->pool);
 
           /* Get a baton for this directory */
@@ -392,8 +391,7 @@ do_dir_closures (svn_stringbuf_t *desired_path,
                  struct stack_object **stack,
                  const svn_delta_edit_fns_t *editor)
 {
-   while (svn_path_compare_paths (desired_path, (*stack)->path,
-                                  svn_path_local_style))
+   while (svn_path_compare_paths (desired_path, (*stack)->path))
     {
       if ((*stack)->baton)
         SVN_ERR (editor->close_directory ((*stack)->baton));
@@ -658,7 +656,7 @@ bail_if_unresolved_conflict (svn_stringbuf_t *full_path,
       else  /* non-directory, that's all we need to know */
         {
           parent_dir = svn_stringbuf_dup (full_path, pool);
-          svn_path_remove_component (parent_dir, svn_path_local_style);
+          svn_path_remove_component (parent_dir);
         }
       
       SVN_ERR (svn_wc_conflicted_p (&text_conflict_p,
@@ -742,7 +740,7 @@ verify_tree_deletion (svn_stringbuf_t *dir,
 
       /* Construct the fullpath of this entry. */
       if (! is_this_dir)
-        svn_path_add_component_nts (fullpath, key, svn_path_local_style);
+        svn_path_add_component_nts (fullpath, key);
 
       /* If parent is marked for deletion only, this entry must be
          marked the same way. */
@@ -842,11 +840,10 @@ derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
           /* Fetch the 'name' attribute of this parent directory from
              its URL. */
           dirname = svn_path_last_component (stackptr->this_dir->url,
-                                             svn_path_url_style, stack->pool);
+                                             stack->pool);
 
           /* Add it to the url. */
-          svn_path_add_component_nts (root_copyfrom_url, dirname->data,
-                                      svn_path_url_style);
+          svn_path_add_component_nts (root_copyfrom_url, dirname->data);
         }
       else 
         {
@@ -857,7 +854,7 @@ derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
     }
 
   /* Lastly, add the original entry's name to the derived url. */
-  svn_path_add_component (root_copyfrom_url, entry_name, svn_path_url_style);
+  svn_path_add_component (root_copyfrom_url, entry_name);
 
   /* Return the results. */
   *copyfrom_url = root_copyfrom_url;
@@ -1067,8 +1064,7 @@ report_single_mod (const char *name,
   /* Construct a full path to the current entry */
   full_path = svn_stringbuf_dup ((*stack)->path, (*stack)->pool);
   if (entry_name != NULL)
-    svn_path_add_component (full_path, entry_name,
-                            svn_path_local_style);
+    svn_path_add_component (full_path, entry_name);
 
   /* Preemptive strike:  if the current entry is a file in a state
      of conflict that has NOT yet been resolved, we abort the
@@ -1460,8 +1456,7 @@ crawl_dir (svn_stringbuf_t *path,
       if (current_entry->kind == svn_node_dir)
         {
           svn_stringbuf_t *full_path = svn_stringbuf_dup (path, subpool);
-          svn_path_add_component_nts (full_path, keystring,
-                                      svn_path_local_style);         
+          svn_path_add_component_nts (full_path, keystring);
           SVN_ERR (svn_wc_entry (&current_entry, full_path, subpool));
         }
 
@@ -1593,18 +1588,17 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
 
           /* Get the full path of the target. */
           target = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (target, tgt_name, svn_path_local_style);
+          svn_path_add_component (target, tgt_name);
           
           /* Examine top of stack and target, and get a nearer common
              'subparent'. */
 
           subparent = svn_path_get_longest_ancestor 
-            (target, stack->path, svn_path_local_style, pool);
+            (target, stack->path, pool);
           
           /* If the current stack path is NOT equal to the subparent,
              it must logically be a child of the subparent.  So... */
-          if (svn_path_compare_paths (stack->path, subparent,
-                                      svn_path_local_style))
+          if (svn_path_compare_paths (stack->path, subparent))
             {
               /* ...close directories and remove stackframes until the
                  stack reaches the common parent. */
@@ -1623,11 +1617,8 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
           /* Push new stackframes to get down to the immediate parent
              of the target PTARGET, which must also be a child of the
              subparent. */
-          svn_path_split (target, &ptarget, NULL,
-                          svn_path_local_style, pool);
-          remainder = svn_path_is_child (stack->path, ptarget, 
-                                         svn_path_local_style,
-                                         pool);
+          svn_path_split (target, &ptarget, NULL, pool);
+          remainder = svn_path_is_child (stack->path, ptarget, pool);
           
           /* If PTARGET is below the current stackframe, we have to
              push a new stack frame for each directory level between
@@ -1642,9 +1633,7 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
               dir_baton = NULL;
 
               /* split the remainder into path components. */
-              components = svn_path_decompose (remainder,
-                                               svn_path_local_style,
-                                               pool);
+              components = svn_path_decompose (remainder, pool);
               
               for (j = 0; j < components->nelts; j++)
                 {
@@ -1654,8 +1643,7 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
                     (((svn_stringbuf_t **) components->elts)[j]);
 
                   new_path = svn_stringbuf_dup (stack->path, pool);
-                  svn_path_add_component (new_path, component,
-                                          svn_path_local_style);
+                  svn_path_add_component (new_path, component);
                   err = svn_wc_entry (&new_entry, new_path, pool);
                   if (err)
                     return svn_error_quick_wrap 
@@ -1683,9 +1671,7 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
               apr_pool_t *subpool = svn_pool_create (pool);
               svn_stringbuf_t *basename;
               
-              basename = svn_path_last_component (target,
-                                                  svn_path_local_style, 
-                                                  pool);
+              basename = svn_path_last_component (target, pool);
               
               /* If TARGET is a file, we check that file for mods.  No
                  stackframes will be pushed or popped, since (the file's
@@ -1845,12 +1831,12 @@ report_revisions (svn_stringbuf_t *wc_path,
 
   /* Construct the actual 'fullpath' = wc_path + dir_path */
   svn_stringbuf_t *full_path = svn_stringbuf_dup (wc_path, subpool);
-  svn_path_add_component (full_path, dir_path, svn_path_local_style);
+  svn_path_add_component (full_path, dir_path);
 
   /* Get both the SVN Entries and the actual on-disk entries. */
   SVN_ERR (svn_wc_entries_read (&entries, full_path, subpool));
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
-
+  
   /* Do the real reporting and recursing. */
 
   /* Looping over current directory's SVN entries: */
@@ -1880,8 +1866,7 @@ report_revisions (svn_stringbuf_t *wc_path,
       /* Compute the complete path of the entry, relative to dir_path. */
       full_entry_path = svn_stringbuf_dup (dir_path, subpool);
       if (current_entry_name)
-        svn_path_add_component (full_entry_path, current_entry_name,
-                                svn_path_local_style);
+        svn_path_add_component (full_entry_path, current_entry_name);
 
       /* The Big Tests: */
       
@@ -1911,8 +1896,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                 {
                   svn_stringbuf_t *long_file_path 
                     = svn_stringbuf_dup (full_path, pool);
-                  svn_path_add_component (long_file_path, current_entry_name,
-                                          svn_path_local_style);
+                  svn_path_add_component (long_file_path, current_entry_name);
 
                   /* Recreate file from text-base. */
                   SVN_ERR (restore_file (long_file_path, pool));
@@ -1957,8 +1941,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                 svn_wc_entry_t *subdir_entry;
                 svn_stringbuf_t *megalong_path = 
                   svn_stringbuf_dup (wc_path, subpool);
-                svn_path_add_component (megalong_path, full_entry_path,
-                                        svn_path_local_style);
+                svn_path_add_component (megalong_path, full_entry_path);
                 SVN_ERR (svn_wc_entry (&subdir_entry, megalong_path, subpool));
                 
                 if (subdir_entry->revision != dir_rev)
@@ -2049,7 +2032,7 @@ crawl_as_copy (svn_stringbuf_t *parent,
   svn_error_t *err;
 
   /* Assemble the full path of the commit target. */
-  svn_path_add_component (fullpath, name, svn_path_local_style);
+  svn_path_add_component (fullpath, name);
 
   /* Get the entry for the parent of the commit target.  This needs to
      have a valid URL so we will know where to copy from. */
@@ -2262,7 +2245,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
     {
       svn_stringbuf_t *parent_name = svn_stringbuf_dup (path, pool);
       svn_wc_entry_t *parent_entry;
-      svn_path_remove_component (parent_name, svn_path_local_style);
+      svn_path_remove_component (parent_name);
       SVN_ERR (svn_wc_entry (&parent_entry, parent_name, pool));
       base_rev = parent_entry->revision;
     }

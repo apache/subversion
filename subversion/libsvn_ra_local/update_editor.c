@@ -206,8 +206,7 @@ open_directory (svn_stringbuf_t *name,
   child->my_baton = 
     svn_stringbuf_dup ((svn_stringbuf_t *) child->parent_dir_baton->my_baton,
                        my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) child->my_baton, name,
-                          svn_path_local_style);
+  svn_path_add_component ((svn_stringbuf_t *) child->my_baton, name);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
@@ -247,8 +246,7 @@ add_directory (svn_stringbuf_t *name,
   child->my_baton = 
     svn_stringbuf_dup ((svn_stringbuf_t *) child->parent_dir_baton->my_baton,
                        my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) child->my_baton, name,
-                          svn_path_local_style);
+  svn_path_add_component ((svn_stringbuf_t *) child->my_baton, name);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
@@ -288,8 +286,7 @@ add_file (svn_stringbuf_t *name,
   fb->my_baton = 
     svn_stringbuf_dup ((svn_stringbuf_t *) fb->dir_baton->my_baton,
                        my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) fb->my_baton, name,
-                          svn_path_local_style);
+  svn_path_add_component ((svn_stringbuf_t *) fb->my_baton, name);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,
@@ -327,8 +324,7 @@ open_file (svn_stringbuf_t *name,
   fb->my_baton = 
     svn_stringbuf_dup ((svn_stringbuf_t *) fb->dir_baton->my_baton,
                        my_eb->pool);
-  svn_path_add_component ((svn_stringbuf_t *) fb->my_baton, name,
-                          svn_path_local_style);
+  svn_path_add_component ((svn_stringbuf_t *) fb->my_baton, name);
 
   /* fetch & send entry props for this path. */
   SVN_ERR (send_entry_props (my_eb->root,

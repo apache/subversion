@@ -175,10 +175,10 @@ static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
 {
   svn_stringbuf_t *s = svn_stringbuf_create(url, pool);
 
-  svn_path_canonicalize(s, svn_path_url_style);
+  svn_path_canonicalize(s);
 
   /* ### creates yet another string. let's optimize this stuff... */
-  return svn_path_last_component(s, svn_path_url_style, pool);
+  return svn_path_last_component(s, pool);
 }
 
 /* ### fold this function into store_vsn_url; not really needed */
@@ -741,7 +741,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 
 #ifdef BUSTED_CRAP
   path = svn_stringbuf_create_from_string(&bc_url, pool);
-  svn_path_add_component_nts(path, bc_relative.data, svn_path_url_style);
+  svn_path_add_component_nts(path, bc_relative.data);
 
   *bc_root = path->data;
 #else
@@ -793,7 +793,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 
   /* First, create the full URL that the user wants to get. */
   url_str = svn_stringbuf_create (ras->url, ras->pool);
-  svn_path_add_component_nts (url_str, path, svn_path_url_style);
+  svn_path_add_component_nts (url_str, path);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -815,8 +815,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                              ras->pool));
 
       final_bc_url = svn_stringbuf_create_from_string(&bc_url, ras->pool);
-      svn_path_add_component_nts (final_bc_url, bc_relative.data,
-                                  svn_path_url_style);
+      svn_path_add_component_nts (final_bc_url, bc_relative.data);
       
       final_url = final_bc_url->data;
 
@@ -1203,7 +1202,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           parent_dir = &TOP_DIR(rb);
 
           pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
-          svn_path_add_component(pathbuf, rb->namestr, svn_path_url_style);
+          svn_path_add_component(pathbuf, rb->namestr);
 
           err = (*rb->editor->open_directory)(rb->namestr,
                                               parent_dir->baton, base,
@@ -1238,7 +1237,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       parent_dir = &TOP_DIR(rb);
 
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
-      svn_path_add_component(pathbuf, rb->namestr, svn_path_url_style);
+      svn_path_add_component(pathbuf, rb->namestr);
 
       CHKERR( (*rb->editor->add_directory)(rb->namestr, parent_dir->baton,
                                            cpath, crev, &new_dir_baton) );
@@ -1268,8 +1267,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
-      svn_path_add_component(parent_dir->pathbuf, rb->namestr,
-                             svn_path_url_style);
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr);
       break;
 
     case ELEM_add_file:
@@ -1297,8 +1295,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
-      svn_path_add_component(parent_dir->pathbuf, rb->namestr,
-                             svn_path_url_style);
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr);
       break;
 
     case ELEM_remove_prop:
@@ -1467,7 +1464,7 @@ static int end_element(void *userdata,
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */
-      svn_path_remove_component(TOP_DIR(rb).pathbuf, svn_path_url_style);
+      svn_path_remove_component(TOP_DIR(rb).pathbuf);
       break;
 
     case NE_ELM_href:

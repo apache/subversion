@@ -180,7 +180,7 @@ assemble_status (svn_wc_status_t **status,
       else  /* non-directory, that's all we need to know */
         {
           parent_dir = svn_stringbuf_dup (path, pool);
-          svn_path_remove_component (parent_dir, svn_path_local_style);
+          svn_path_remove_component (parent_dir);
         }
       
       SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
@@ -350,8 +350,7 @@ add_unversioned_items (svn_stringbuf_t *path,
           /* Reset our base string... */
           printable_path = svn_stringbuf_dup (path, pool);
           /* ...and append the current entry. */
-          svn_path_add_component_nts (printable_path, keystring,
-                                      svn_path_local_style);
+          svn_path_add_component_nts (printable_path, keystring);
           
           /* Add this item to the status hash. */
           SVN_ERR (add_status_structure (statushash,
@@ -415,8 +414,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       svn_stringbuf_t *dirpath, *basename;
 
       /* Figure out file's parent dir */
-      svn_path_split (path, &dirpath, &basename,
-                      svn_path_local_style, subpool);      
+      svn_path_split (path, &dirpath, &basename, subpool);
 
       /* Load entries file for file's parent */
       SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
@@ -460,8 +458,7 @@ svn_wc_statuses (apr_hash_t *statushash,
           basename = (const char *) key;
           if (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0)
             {
-              svn_path_add_component_nts (fullpath, basename,
-                                          svn_path_local_style);
+              svn_path_add_component_nts (fullpath, basename);
             }
 
           entry = (svn_wc_entry_t *) val;

@@ -226,9 +226,8 @@ get_dir_entries (apr_hash_t *tree_entries,
       /* Calculate the full path of this entry (by appending the name
          to the path thus far) */
       full_path = svn_stringbuf_dup (path, pool);
-      svn_path_add_component (full_path, 
-                              svn_stringbuf_create (dirent->name, pool),
-                              svn_path_repos_style); 
+      svn_path_add_component (full_path,
+                              svn_stringbuf_create (dirent->name, pool));
 
       /* Now, copy this dirent to the master hash, but this time, use
          the full path for the key */

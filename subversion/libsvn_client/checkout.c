@@ -60,7 +60,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
   assert (URL != NULL);
 
   /* Canonicalize the URL. */
-  svn_path_canonicalize (URL, svn_path_repos_style);
+  svn_path_canonicalize (URL);
 
   /* Fetch the checkout editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision

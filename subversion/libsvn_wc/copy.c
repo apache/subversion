@@ -76,7 +76,7 @@ svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool)
         continue;
 
       child_path = svn_stringbuf_dup (path, subpool);
-      svn_path_add_component_nts (child_path, name, svn_path_local_style);
+      svn_path_add_component_nts (child_path, name);
 
       /* If a file, remove it from wcprops. */
       if (current_entry->kind == svn_node_file)
@@ -125,7 +125,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   svn_stringbuf_t *dst_path = svn_stringbuf_dup (dst_parent, pool);
-  svn_path_add_component (dst_path, dst_basename, svn_path_local_style);
+  svn_path_add_component (dst_path, dst_basename);
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
@@ -229,7 +229,7 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   svn_stringbuf_t *dst_path = svn_stringbuf_dup (dst_parent, pool);
-  svn_path_add_component (dst_path, dst_basename, svn_path_local_style);
+  svn_path_add_component (dst_path, dst_basename);
 
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an

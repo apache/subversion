@@ -158,8 +158,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
 
               frame->ancestor_path
                 = svn_stringbuf_dup (p->ancestor_path, pool);
-              svn_path_add_component (frame->ancestor_path, this_name,
-                                      svn_path_repos_style);
+              svn_path_add_component (frame->ancestor_path, this_name);
             }
 
           /* If ancestor_revision not set, and see it here, then set it. */

@@ -52,7 +52,6 @@ svn_cl__diff (apr_getopt_t *os,
   svn_cl__push_implicit_dot_target (targets, pool);
   SVN_ERR (svn_path_remove_redundancies (&condensed_targets,
                                          targets,
-                                         svn_path_local_style,
                                          pool));
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

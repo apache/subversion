@@ -72,7 +72,7 @@ svn_sort_compare_items_as_paths (const void *a, const void *b)
   str_b.len = item_b->size;
   str_b.pool = NULL;
 
-  return svn_path_compare_paths (&str_a, &str_b, svn_path_local_style);
+  return svn_path_compare_paths (&str_a, &str_b);
 }
 
 
@@ -81,7 +81,7 @@ svn_sort_compare_strings_as_paths (const void *a, const void *b)
 {
   const svn_stringbuf_t *str_a = *((svn_stringbuf_t **) a);
   const svn_stringbuf_t *str_b = *((svn_stringbuf_t **) b);
-  return svn_path_compare_paths (str_a, str_b, svn_path_local_style);
+  return svn_path_compare_paths (str_a, str_b);
 }
 
 

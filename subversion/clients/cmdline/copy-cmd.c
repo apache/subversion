@@ -101,7 +101,7 @@ svn_cl__copy (apr_getopt_t *os,
       */
       /*
       svn_stringbuf_t *src_parent = svn_stringbuf_dup (src_path, pool);
-      svn_path_remove_component (src_parent, svn_path_local_style);
+      svn_path_remove_component (src_parent);
       SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
                                                 &trace_edit_baton,
                                                 src_parent, pool));

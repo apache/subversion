@@ -54,7 +54,6 @@ svn_cl__update (apr_getopt_t *os,
   /* Remove redundancies from the target list while preserving order. */
   SVN_ERR (svn_path_remove_redundancies (&condensed_targets,
                                          targets,
-                                         svn_path_local_style,
                                          pool));
 
   for (i = 0; i < condensed_targets->nelts; i++)

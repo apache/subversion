@@ -218,14 +218,13 @@ print_dirs_changed_tree (svn_repos_node_t *node,
     return;
 
   full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  svn_path_add_component_nts (full_path, tmp_node->name);
   print_dirs_changed_tree (tmp_node, full_path, pool);
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts 
-        (full_path, tmp_node->name, svn_path_repos_style);
+      svn_path_add_component_nts (full_path, tmp_node->name);
       print_dirs_changed_tree (tmp_node, full_path, pool);
     }
 
@@ -280,14 +279,13 @@ print_changed_tree (svn_repos_node_t *node,
 
   /* Recursively handle the node's children. */
   full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  svn_path_add_component_nts (full_path, tmp_node->name);
   print_changed_tree (tmp_node, full_path, pool);
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts 
-        (full_path, tmp_node->name, svn_path_repos_style);
+      svn_path_add_component_nts (full_path, tmp_node->name);
       print_changed_tree (tmp_node, full_path, pool);
     }
 
@@ -312,17 +310,15 @@ open_writable_binary_file (apr_file_t **fh,
   if (! apr_err)
     return SVN_NO_ERROR;
 
-  svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
+  svn_path_split (path, &dir, &basename, pool);
 
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
-  if (svn_path_is_empty (dir, svn_path_local_style))
+  if (svn_path_is_empty (dir))
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "Error opening writable file %s", path->data);
 
-  path_pieces = svn_path_decompose (dir,
-                                    svn_path_local_style,
-                                    pool);
+  path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
     return APR_SUCCESS;
 
@@ -331,7 +327,7 @@ open_writable_binary_file (apr_file_t **fh,
     {
       enum svn_node_kind kind;
       svn_stringbuf_t *piece = ((svn_stringbuf_t **) (path_pieces->elts))[i];
-      svn_path_add_component (full_path, piece, svn_path_local_style);
+      svn_path_add_component (full_path, piece);
       SVN_ERR (svn_io_check_path (full_path, &kind, pool));
 
       /* Does this path component exist at all? */
@@ -427,13 +423,13 @@ print_diff_tree (svn_fs_root_t *root,
       if ((tmp_node->action == 'R') && (tmp_node->text_mod))
         {
           orig_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-          svn_path_add_component (orig_path, path, svn_path_local_style);
+          svn_path_add_component (orig_path, path);
           SVN_ERR (open_writable_binary_file (&fh2, orig_path, pool));
           SVN_ERR (dump_contents (fh2, base_root, path, pool));
           apr_file_close (fh2);
 
           new_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_NEW, pool);
-          svn_path_add_component (new_path, path, svn_path_local_style);
+          svn_path_add_component (new_path, path);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
@@ -441,12 +437,12 @@ print_diff_tree (svn_fs_root_t *root,
       if (tmp_node->action == 'A')
         {
           orig_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-          svn_path_add_component (orig_path, path, svn_path_local_style);
+          svn_path_add_component (orig_path, path);
           SVN_ERR (open_writable_binary_file (&fh2, orig_path, pool));
           apr_file_close (fh2);
 
           new_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_NEW, pool);
-          svn_path_add_component (new_path, path, svn_path_local_style);
+          svn_path_add_component (new_path, path);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           SVN_ERR (dump_contents (fh1, root, path, pool));
           apr_file_close (fh1);
@@ -454,13 +450,13 @@ print_diff_tree (svn_fs_root_t *root,
       if (tmp_node->action == 'D')
         {
           orig_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_BASE, pool);
-          svn_path_add_component (orig_path, path, svn_path_local_style);
+          svn_path_add_component (orig_path, path);
           SVN_ERR (open_writable_binary_file (&fh2, orig_path, pool));
           SVN_ERR (dump_contents (fh2, base_root, path, pool));
           apr_file_close (fh2);
 
           new_path = svn_stringbuf_create (SVNLOOK_DIFF_TMPDIR_NEW, pool);
-          svn_path_add_component (new_path, path, svn_path_local_style);
+          svn_path_add_component (new_path, path);
           SVN_ERR (open_writable_binary_file (&fh1, new_path, pool));
           apr_file_close (fh1);
         }
@@ -512,14 +508,13 @@ print_diff_tree (svn_fs_root_t *root,
 
   /* Recursively handle the node's children. */
   full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  svn_path_add_component_nts (full_path, tmp_node->name);
   SVN_ERR (print_diff_tree (root, base_root, tmp_node, full_path, pool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts 
-        (full_path, tmp_node->name, svn_path_repos_style);
+      svn_path_add_component_nts (full_path, tmp_node->name);
       SVN_ERR (print_diff_tree (root, base_root, tmp_node, full_path, pool));
     }
 
@@ -577,14 +572,13 @@ print_ids_tree (svn_repos_node_t *node,
   /* Recursively handle the node's children. */
   subpool = svn_pool_create (pool);
   full_path = svn_stringbuf_dup (path, pool);
-  svn_path_add_component_nts (full_path, tmp_node->name, svn_path_repos_style);
+  svn_path_add_component_nts (full_path, tmp_node->name);
   print_ids_tree (tmp_node, root, full_path, indentation + 1, pool);
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
-      svn_path_add_component_nts 
-        (full_path, tmp_node->name, svn_path_repos_style);
+      svn_path_add_component_nts (full_path, tmp_node->name);
       print_ids_tree (tmp_node, root, full_path, indentation + 1, pool);
     }
   svn_pool_create (subpool);

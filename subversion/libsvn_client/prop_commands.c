@@ -79,8 +79,7 @@ svn_client_propset (const char *propname,
 
           /* Compute the complete path of the entry */
           if (current_entry_name)
-            svn_path_add_component_nts (full_entry_path, current_entry_name,
-                                        svn_path_local_style);
+            svn_path_add_component_nts (full_entry_path, current_entry_name);
 
           if (current_entry->schedule != svn_wc_schedule_delete)
             {
@@ -138,8 +137,7 @@ recursive_propget (apr_hash_t *props,
 
       /* Compute the complete path of the entry */
       if (current_entry_name)
-        svn_path_add_component_nts (full_entry_path, current_entry_name,
-                                    svn_path_local_style);
+        svn_path_add_component_nts (full_entry_path, current_entry_name);
 
       if (current_entry->schedule != svn_wc_schedule_delete)
         {
@@ -257,8 +255,7 @@ recursive_proplist (apr_array_header_t *props,
 
       /* Compute the complete path of the entry */
       if (current_entry_name)
-        svn_path_add_component_nts (full_entry_path, current_entry_name,
-                                    svn_path_local_style);
+        svn_path_add_component_nts (full_entry_path, current_entry_name);
 
       if (current_entry->schedule != svn_wc_schedule_delete)
         {

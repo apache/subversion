@@ -220,8 +220,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
                                              revision,
                                              cc->ras->pool));
       bc = svn_stringbuf_create_from_string(&bc_url, cc->ras->pool);
-      svn_path_add_component_nts(bc, bc_relative.data,
-                                 svn_path_url_style);
+      svn_path_add_component_nts(bc, bc_relative.data);
 
       url = bc->data;
     }
@@ -293,7 +292,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
 
   urlbuf = svn_stringbuf_create_from_string(activity_url, cc->ras->pool);
   /* ### grumble. this doesn't watch out for trailing "/" */
-  svn_path_add_component_nts(urlbuf, uuid_buf, svn_path_url_style);
+  svn_path_add_component_nts(urlbuf, uuid_buf);
 
   cc->activity_url = urlbuf->data;
 
@@ -331,7 +330,7 @@ static svn_error_t * add_child(resource_t **child,
   rsrc->url = apr_pstrcat(pool, parent->url, "/", name, NULL);
 
   rsrc->local_path = svn_stringbuf_dup(parent->local_path, pool);
-  svn_path_add_component_nts(rsrc->local_path, name, svn_path_local_style);
+  svn_path_add_component_nts(rsrc->local_path, name);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
      completely new object, or implicitly created via a COPY.  Either
@@ -699,8 +698,7 @@ static svn_error_t * commit_add_dir(svn_stringbuf_t *name,
          header given to COPY is simply the wr_url that is already
          part of the child object. */
       src_url = svn_stringbuf_create(bc_url.data, pool);
-      svn_path_add_component_nts(src_url, bc_relative.data,
-                                 svn_path_url_style);
+      svn_path_add_component_nts(src_url, bc_relative.data);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
@@ -838,8 +836,7 @@ static svn_error_t * commit_add_file(svn_stringbuf_t *name,
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
       src_url = svn_stringbuf_create(bc_url.data, pool);
-      svn_path_add_component_nts(src_url, bc_relative.data,
-                                 svn_path_url_style);
+      svn_path_add_component_nts(src_url, bc_relative.data);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,

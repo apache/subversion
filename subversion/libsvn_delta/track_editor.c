@@ -122,7 +122,7 @@ add_directory (svn_stringbuf_t *name,
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_stringbuf_dup (parent_d->path,
                                      child_d->edit_baton->pool);
-  svn_path_add_component (child_d->path, name, svn_path_local_style);
+  svn_path_add_component (child_d->path, name);
 
   /* If this was an add-with-history (copy), then indicate in the
      hash-value that this dir needs to be RECURSIVELY bumped after the
@@ -157,7 +157,7 @@ open_directory (svn_stringbuf_t *name,
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_stringbuf_dup (parent_d->path,
                                      child_d->edit_baton->pool);
-  svn_path_add_component (child_d->path, name, svn_path_local_style);
+  svn_path_add_component (child_d->path, name);
 
   *child_baton = child_d;
 
@@ -181,7 +181,7 @@ add_file (svn_stringbuf_t *name,
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_stringbuf_dup (parent_d->path,
                                       parent_d->edit_baton->pool);
-  svn_path_add_component (child_fb->path, name, svn_path_local_style);
+  svn_path_add_component (child_fb->path, name);
 
   apr_hash_set (parent_d->edit_baton->committed_targets,
                 child_fb->path->data, APR_HASH_KEY_STRING,
@@ -206,7 +206,7 @@ open_file (svn_stringbuf_t *name,
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_stringbuf_dup (parent_d->path,
                                       parent_d->edit_baton->pool);
-  svn_path_add_component (child_fb->path, name, svn_path_local_style);
+  svn_path_add_component (child_fb->path, name);
 
   *file_baton = child_fb;
 
@@ -222,7 +222,7 @@ delete_entry (svn_stringbuf_t *name,
   struct dir_baton *parent_d = parent_baton;
   svn_stringbuf_t *path = svn_stringbuf_dup (parent_d->path,
                                        parent_d->edit_baton->pool);
-  svn_path_add_component (path, name, svn_path_local_style);
+  svn_path_add_component (path, name);
   
   apr_hash_set (parent_d->edit_baton->committed_targets,
                 path->data, APR_HASH_KEY_STRING, (void *) svn_nonrecursive);

@@ -182,8 +182,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
           target = svn_stringbuf_create (resource->info->repos_path,
                                          resource->pool);
           svn_path_add_component_nts (target,
-                                      child->first_cdata.first->text,
-                                      svn_path_repos_style);
+                                      child->first_cdata.first->text);
 
           (*((svn_stringbuf_t **)(apr_array_push (paths)))) = target;
         }

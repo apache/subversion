@@ -85,7 +85,6 @@ main (int argc, char *argv[])
                              3, 
                              TRUE,
                              base_path, 
-                             svn_path_repos_style,
                              globalpool);
   
   /* Fire up the XML parser */

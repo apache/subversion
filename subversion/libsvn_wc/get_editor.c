@@ -155,7 +155,7 @@ make_dir_baton (svn_stringbuf_t *name,
   if (name)
     {
       d->name = svn_stringbuf_dup (name, subpool);
-      svn_path_add_component (path, name, svn_path_local_style);
+      svn_path_add_component (path, name);
     }
 
   d->path         = path;
@@ -334,9 +334,7 @@ make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
                                        subpool);
 
   /* Make the file's on-disk name. */
-  svn_path_add_component (path,
-                          name,
-                          svn_path_local_style);
+  svn_path_add_component (path, name);
 
   f->pool       = subpool;
   f->dir_baton  = parent_dir_baton;
@@ -605,7 +603,7 @@ add_directory (svn_stringbuf_t *name,
                              parent_dir_baton->path,
                              parent_dir_baton->pool));
       new_URL = svn_stringbuf_dup (parent_entry->url, this_dir_baton->pool);
-      svn_path_add_component (new_URL, name, svn_path_url_style);
+      svn_path_add_component (new_URL, name);
 
       copyfrom_path = new_URL;
       copyfrom_revision = parent_dir_baton->edit_baton->target_revision;      
@@ -1205,12 +1203,12 @@ make_patch_open_tag (svn_stringbuf_t **entry_accum,
   svn_stringbuf_t *dir, *bname;
   svn_stringbuf_t *backup_prefix = svn_stringbuf_create ("-B", pool);
 
-  svn_path_split (path, &dir, &bname, svn_path_local_style, pool);
+  svn_path_split (path, &dir, &bname, pool);
   if (dir)
     {
       /* Append '.#' to the dir, then append that whole thing to the
          BACKUP_PREFIX. */
-      svn_path_add_component_nts (dir, ".#", svn_path_local_style);
+      svn_path_add_component_nts (dir, ".#");
       svn_stringbuf_appendstr (backup_prefix, dir);
     }
   else
@@ -1883,8 +1881,7 @@ close_file (void *file_baton)
                                           renamed_path->data);
               
               renamed_basename
-                = svn_path_last_component (renamed_path,
-                                           svn_path_local_style, fb->pool);
+                = svn_path_last_component (renamed_path, fb->pool);
 
               svn_xml_make_open_tag (&entry_accum,
                                      fb->pool,
@@ -2049,8 +2046,7 @@ close_edit (void *edit_baton)
       svn_wc_entry_t *entry;
       svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->anchor, eb->pool);
       if (eb->target)
-        svn_path_add_component (full_path, eb->target,
-                                svn_path_local_style);
+        svn_path_add_component (full_path, eb->target);
       SVN_ERR (svn_wc_entry (&entry, full_path, eb->pool));
       if (entry->kind == svn_node_dir)
         SVN_ERR (svn_wc__ensure_uniform_revision (full_path,
@@ -2271,12 +2267,12 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
-  if (svn_path_is_empty (path, svn_path_local_style))
+  if (svn_path_is_empty (path))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
-  svn_path_split (path, &parent, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (parent, svn_path_local_style))
+  svn_path_split (path, &parent, &basename, pool);
+  if (svn_path_is_empty (parent))
     svn_stringbuf_set (parent, ".");
   err = svn_wc_entry (&p_entry, parent, pool);
   if (err || ! p_entry)
@@ -2293,7 +2289,7 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
   expected_url = svn_stringbuf_dup (p_entry->url, pool);
-  svn_path_add_component (expected_url, basename, svn_path_url_style);
+  svn_path_add_component (expected_url, basename);
   if (entry->url && (! svn_stringbuf_compare (expected_url, entry->url)))
     return SVN_NO_ERROR;
 
@@ -2321,8 +2317,8 @@ svn_wc_get_actual_target (svn_stringbuf_t *path,
     }
   else
     {
-      svn_path_split (path, anchor, target, svn_path_local_style, pool);
-      if (svn_path_is_empty (*anchor, svn_path_local_style))
+      svn_path_split (path, anchor, target, pool);
+      if (svn_path_is_empty (*anchor))
         svn_stringbuf_set (*anchor, ".");
     }
 

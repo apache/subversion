@@ -191,7 +191,7 @@ make_dir_baton (const svn_stringbuf_t *name,
     }
 
   if (name)
-    svn_path_add_component (dir_baton->path, name, svn_path_local_style);
+    svn_path_add_component (dir_baton->path, name);
 
   return dir_baton;
 }
@@ -218,7 +218,7 @@ make_file_baton (const svn_stringbuf_t *name,
      into the directory's list of already diff'd entries, and must continue
      to exist after we have finished with this file. */
   file_baton->path = svn_stringbuf_dup (parent_baton->path, parent_baton->pool);
-  svn_path_add_component (file_baton->path, name, svn_path_local_style);
+  svn_path_add_component (file_baton->path, name);
 
   /* If the parent directory is added rather than replaced it does not
      exist in the working copy. Determine a working copy path that does
@@ -235,7 +235,7 @@ make_file_baton (const svn_stringbuf_t *name,
 
       file_baton->wc_path = svn_stringbuf_dup (wc_dir_baton->path,
                                                file_baton->pool);
-      svn_path_add_component (file_baton->wc_path, name, svn_path_local_style);
+      svn_path_add_component (file_baton->wc_path, name);
     }
   else
     {
@@ -360,8 +360,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   in_anchor_not_target =
     (dir_baton->edit_baton->target
      && !svn_path_compare_paths (dir_baton->path,
-                                 dir_baton->edit_baton->anchor,
-                                 svn_path_local_style));
+                                 dir_baton->edit_baton->anchor));
 
   SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path, dir_baton->pool));
 
@@ -392,7 +391,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
         continue;
 
       path = svn_stringbuf_dup (dir_baton->path, dir_baton->pool);
-      svn_path_add_component_nts (path, name, svn_path_local_style);
+      svn_path_add_component_nts (path, name);
 
       /* Skip entry if it is in the list of entries already diff'd. */
       if (apr_hash_get (dir_baton->compared, path->data, path->len))
@@ -478,7 +477,7 @@ delete_entry (svn_stringbuf_t *name,
   svn_wc_entry_t *entry;
   struct dir_baton *b;
 
-  svn_path_add_component (path, name, svn_path_local_style);
+  svn_path_add_component (path, name);
   SVN_ERR (svn_wc_entry (&entry, path, pool));
   switch (entry->kind)
     {
@@ -852,7 +851,7 @@ svn_wc_diff (svn_stringbuf_t *anchor,
 
   target_path = svn_stringbuf_dup (anchor, eb->pool);
   if (target)
-    svn_path_add_component (target_path, target, svn_path_local_style);
+    svn_path_add_component (target_path, target);
 
   SVN_ERR (svn_wc_entry (&entry, target_path, eb->pool));
 

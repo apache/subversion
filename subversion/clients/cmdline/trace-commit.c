@@ -88,7 +88,7 @@ delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
   svn_stringbuf_t *printable_name = 
     svn_stringbuf_dup (d->path, d->edit_baton->pool);
 
-  svn_path_add_component (printable_name, name, svn_path_local_style);
+  svn_path_add_component (printable_name, name);
 
   printf ("Deleting        %s\n", printable_name->data);
   return SVN_NO_ERROR;
@@ -110,7 +110,7 @@ add_directory (svn_stringbuf_t *name,
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_stringbuf_dup (parent_d->path, 
                                      child_d->edit_baton->pool);
-  svn_path_add_component (child_d->path, name, svn_path_local_style);
+  svn_path_add_component (child_d->path, name);
   child_d->added = TRUE;
 
   printf ("Adding          %s\n", child_d->path->data);
@@ -134,7 +134,7 @@ open_directory (svn_stringbuf_t *name,
   child_d->parent_dir_baton = parent_d;
   child_d->path = svn_stringbuf_dup (parent_d->path, 
                                      child_d->edit_baton->pool);
-  svn_path_add_component (child_d->path, name, svn_path_local_style);
+  svn_path_add_component (child_d->path, name);
 
   *child_baton = child_d;
 
@@ -213,7 +213,7 @@ add_file (svn_stringbuf_t *name,
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_stringbuf_dup (parent_d->path, 
                                       parent_d->edit_baton->pool);
-  svn_path_add_component (child_fb->path, name, svn_path_local_style);
+  svn_path_add_component (child_fb->path, name);
   child_fb->added = TRUE;
   child_fb->binary = FALSE;
   *file_baton = child_fb;
@@ -235,7 +235,7 @@ open_file (svn_stringbuf_t *name,
   child_fb->parent_dir_baton = parent_d;
   child_fb->path = svn_stringbuf_dup (parent_d->path, 
                                       parent_d->edit_baton->pool);
-  svn_path_add_component (child_fb->path, name, svn_path_local_style);
+  svn_path_add_component (child_fb->path, name);
 
   *file_baton = child_fb;
 

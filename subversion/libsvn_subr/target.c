@@ -40,13 +40,12 @@ svn_path_get_absolute(svn_stringbuf_t **pabsolute,
   char * buffer;
   int apr_err = apr_filepath_merge(&buffer, NULL, relative->data,
                                    APR_FILEPATH_NOTRELATIVE
-                                   | APR_FILEPATH_NATIVE
                                    | APR_FILEPATH_TRUENAME,
                                    pool);
   if (apr_err == APR_SUCCESS)
     {
       *pabsolute = svn_stringbuf_create(buffer, pool);
-      svn_path_canonicalize(*pabsolute, svn_path_local_style);
+      svn_path_canonicalize(*pabsolute);
       return SVN_NO_ERROR;
     }
   else
@@ -80,7 +79,7 @@ svn_path_split_if_file(svn_stringbuf_t *path,
         }
       else if (finfo.filetype == APR_REG)
         {
-          svn_path_split(path, pdirectory, pfile, svn_path_local_style, pool);
+          svn_path_split(path, pdirectory, pfile, pool);
         }
       else 
         {
@@ -96,7 +95,6 @@ svn_error_t *
 svn_path_condense_targets (svn_stringbuf_t **pbasedir,
                            apr_array_header_t ** pcondensed_targets,
                            const apr_array_header_t *targets,
-                           enum svn_path_style style,
                            apr_pool_t *pool)
 {
   if (targets->nelts <=0)
@@ -138,7 +136,6 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
           (*((svn_stringbuf_t **)apr_array_push (abs_targets))) = absolute;
           *pbasedir = svn_path_get_longest_ancestor (*pbasedir, 
                                                      absolute, 
-                                                     style,
                                                      pool);
         }
       
@@ -171,7 +168,7 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
                     ((svn_stringbuf_t **)abs_targets->elts)[j];
 
                   ancestor = svn_path_get_longest_ancestor 
-                    (abs_targets_i, abs_targets_j, style, pool);
+                    (abs_targets_i, abs_targets_j, pool);
 
                   if (! ancestor)
                     continue;
@@ -226,7 +223,7 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
       /* Finally check if pbasedir is a dir or a file. */
       SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
       if ((pcondensed_targets != NULL)
-          && (! svn_path_is_empty (file, svn_path_local_style)))
+          && (! svn_path_is_empty (file)))
         {
           /* If there was just one target, and it was a file, then
              return it as the sole condensed target. */
@@ -241,7 +238,6 @@ svn_path_condense_targets (svn_stringbuf_t **pbasedir,
 svn_error_t *
 svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
                               const apr_array_header_t *targets,
-                              enum svn_path_style style,
                               apr_pool_t *pool)
 {
   apr_pool_t *temp_pool;
@@ -302,7 +298,7 @@ svn_path_remove_redundancies (apr_array_header_t **pcondensed_targets,
             }
           
           /* Quit here if this path is a child of one of the keepers. */
-          if (svn_path_is_child (keeper, abs_path, style, temp_pool))
+          if (svn_path_is_child (keeper, abs_path, temp_pool))
             { 
               keep_me = FALSE;
               break;

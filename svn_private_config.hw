@@ -56,7 +56,6 @@
 
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
-#define SVN_PATH_ALTERNATE_SEPARATOR '/'
 
 /* Whether the trailing /. in local paths should be stripped */
 #define SVN_PATH_STRIP_TRAILING_SLASHDOT 1
@@ -70,7 +69,7 @@
 #endif /* CONFIG_HW */
 
 
-/* 
+/*
  * local variables:
  * mode: C
  * eval: (load-file "../svn-dev.el")

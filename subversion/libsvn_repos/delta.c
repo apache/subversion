@@ -194,22 +194,21 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
   /* Aplit TGT_PATH into TGT_PARENT_DIR and TGT_ENTRY unless SRC_ENTRY
      is NULL or TGT_PATH cannot be split. */
-  if ((! src_entry) || (svn_path_is_empty (tgt_path, svn_path_repos_style)))
+  if ((! src_entry) || (svn_path_is_empty (tgt_path)))
     {
       tgt_parent_dir = svn_stringbuf_dup (tgt_path, pool);
       tgt_entry = NULL;
     }
   else
     {
-      svn_path_split (tgt_path, &tgt_parent_dir, &tgt_entry,
-                      svn_path_repos_style, pool);
+      svn_path_split (tgt_path, &tgt_parent_dir, &tgt_entry, pool);
     }
 
   /* Make sure that parent dirs are really directories under both the
      source and target roots.  This also doubles as an existence
      check.  Obviously, an empty parent path is the root of the
      repository, guaranteed to exist as a directory. */
-  if (! svn_path_is_empty (src_parent_dir, svn_path_repos_style))
+  if (! svn_path_is_empty (src_parent_dir))
     {
       int s_dir, t_dir;
       SVN_ERR (svn_fs_is_dir (&s_dir, src_root, src_parent_dir->data, pool));
@@ -217,7 +216,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       if ((! s_dir) || (! t_dir))
         return not_a_dir_error ("source parent", src_parent_dir, pool);
     }
-  if (! svn_path_is_empty (tgt_parent_dir, svn_path_repos_style))
+  if (! svn_path_is_empty (tgt_parent_dir))
     {
       int s_dir, t_dir;
       SVN_ERR (svn_fs_is_dir (&s_dir, src_root, tgt_parent_dir->data, pool));
@@ -252,7 +251,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   tgt_fullpath = svn_stringbuf_dup (tgt_path, pool);
   src_fullpath = svn_stringbuf_dup (src_parent_dir, pool);
   if (src_entry && src_entry->len > 0)
-    svn_path_add_component (src_fullpath, src_entry, svn_path_repos_style);
+    svn_path_add_component (src_fullpath, src_entry);
 
   /* Get the node ids for the source and target paths. */
   SVN_ERR (svn_fs_node_id (&tgt_id, tgt_root, tgt_fullpath->data, pool));
@@ -355,9 +354,9 @@ get_revision_from_hash (apr_hash_t *hash, svn_stringbuf_t *path,
      path isn't empty, hack the last component off the path and see if
      *that* has a revision entry in our hash. */
   while ((! SVN_IS_VALID_REVNUM(revision)) 
-         && (! svn_path_is_empty (path_copy, svn_path_repos_style)))
+         && (! svn_path_is_empty (path_copy)))
     {
-      svn_path_remove_component (path_copy, svn_path_repos_style);
+      svn_path_remove_component (path_copy);
 
       val = apr_hash_get (hash, path_copy->data, APR_HASH_KEY_STRING);
       if (val)
@@ -658,7 +657,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
   /* Get the target's full path */
   target_full_path = svn_stringbuf_dup (target_parent, pool);
   svn_path_add_component 
-    (target_full_path, target_entry, svn_path_repos_style);
+    (target_full_path, target_entry);
 
   /* Is the target a file or a directory?  */
   SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
@@ -669,7 +668,7 @@ add_file_or_dir (struct context *c, void *dir_baton,
       /* Get the source's full path */
       source_full_path = svn_stringbuf_dup (source_parent, pool);
       svn_path_add_component 
-        (source_full_path, source_entry, svn_path_repos_style);
+        (source_full_path, source_entry);
 
       /* Get the base revision for the entry from the hash. */
       base_revision = get_revision_from_hash (c->source_rev_diffs,
@@ -730,7 +729,7 @@ replace_file_or_dir (struct context *c,
   /* Get the target's full path */
   target_full_path = svn_stringbuf_dup (target_parent, pool);
   svn_path_add_component 
-    (target_full_path, target_entry, svn_path_repos_style);
+    (target_full_path, target_entry);
 
   /* Is the target a file or a directory?  */
   SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
@@ -739,7 +738,7 @@ replace_file_or_dir (struct context *c,
   /* Get the source's full path */
   source_full_path = svn_stringbuf_dup (source_parent, pool);
   svn_path_add_component 
-    (source_full_path, source_entry, svn_path_repos_style);
+    (source_full_path, source_entry);
 
   /* Get the base revision for the entry from the hash. */
   base_revision = get_revision_from_hash (c->source_rev_diffs,
@@ -818,8 +817,7 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
 
   target_full_path = svn_stringbuf_dup (target_parent, subpool);
   target_entry = svn_stringbuf_create (t_entry->name, subpool);
-  svn_path_add_component (target_full_path, target_entry,
-                          svn_path_repos_style);
+  svn_path_add_component (target_full_path, target_entry);
 
   /* Is the target a file or a directory?  */
   SVN_ERR (svn_fs_is_dir (&t_is_dir, c->target_root, 
@@ -847,8 +845,7 @@ find_nearest_entry (svn_fs_dirent_t **s_entry,
 
       svn_stringbuf_set (source_full_path, source_parent->data);
       svn_path_add_component (source_full_path,
-                              svn_stringbuf_create (this_entry->name, subpool),
-                              svn_path_repos_style);
+                              svn_stringbuf_create (this_entry->name, subpool));
 
       /* Is this entry a file or a directory?  */
       SVN_ERR (svn_fs_is_dir (&s_is_dir, c->source_root, 
@@ -954,8 +951,7 @@ delta_dirs (struct context *c,
       t_entry = val;
 
       svn_stringbuf_set (target_name, t_entry->name);
-      svn_path_add_component (target_fullpath, target_name,
-                              svn_path_repos_style);
+      svn_path_add_component (target_fullpath, target_name);
 
       /* Can we find something with the same name in the source
          entries hash? */
@@ -1101,8 +1097,7 @@ delta_dirs (struct context *c,
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
           svn_path_add_component(source_fullpath,
-                                 svn_stringbuf_create(s_entry->name, subpool),
-                                 svn_path_repos_style);
+                                 svn_stringbuf_create(s_entry->name, subpool));
 
           /* Do we actually want to delete the dir if we're non-recursive? */
           SVN_ERR (svn_fs_is_dir (&is_dir, c->source_root, source_fullpath->data,

@@ -75,7 +75,7 @@ svn_repos_set_path (void *report_baton,
     {
       /* Sanity check: make that we didn't call this with real data
          before simply informing the reporter of our base revision. */
-      if (! svn_path_is_empty (path, svn_path_repos_style))
+      if (! svn_path_is_empty (path))
         return 
           svn_error_create
           (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
@@ -109,9 +109,8 @@ svn_repos_set_path (void *report_baton,
          itself, not a directory containing the file). */
       from_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
       if (rbaton->target)
-        svn_path_add_component (from_path, rbaton->target, 
-                                svn_path_repos_style);
-      svn_path_add_component (from_path, path, svn_path_repos_style);
+        svn_path_add_component (from_path, rbaton->target);
+      svn_path_add_component (from_path, path);
 
       /* Copy into our txn. */
       SVN_ERR (svn_fs_link (from_root, from_path->data,
@@ -143,9 +142,8 @@ svn_repos_delete_path (void *report_baton,
      itself, not a directory containing the file). */
   delete_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
   if (rbaton->target)
-    svn_path_add_component (delete_path, rbaton->target, 
-                            svn_path_repos_style);
-  svn_path_add_component (delete_path, path, svn_path_repos_style);
+    svn_path_add_component (delete_path, rbaton->target);
+  svn_path_add_component (delete_path, path);
   
 
   /* Remove the file or directory (recursively) from the txn. */
@@ -176,7 +174,7 @@ svn_repos_finish_report (void *report_baton)
      the full source path.  */
   rev_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
   if (rbaton->target)
-    svn_path_add_component (rev_path, rbaton->target, svn_path_repos_style);
+    svn_path_add_component (rev_path, rbaton->target);
 
   /* Get the root of the revision we want to update to. */
   SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->repos->fs,

@@ -166,7 +166,7 @@ delete_entry (svn_stringbuf_t *name,
 
   /* Construct the full path of this entry based on its parent. */
   full_path = svn_stringbuf_dup (d->path, eb->pool);
-  svn_path_add_component (full_path, name, svn_path_repos_style);
+  svn_path_add_component (full_path, name);
 
   /* Was this a dir or file (we have to check the base root for this one) */
   SVN_ERR (svn_fs_is_dir (&is_dir, eb->base_root, full_path->data, eb->pool));
@@ -217,7 +217,7 @@ open_directory (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   d->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (d->path, name, svn_path_local_style);
+  svn_path_add_component (d->path, name);
 
   /* Fill in other baton members */
   d->edit_baton = eb;
@@ -243,7 +243,7 @@ add_directory (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   d->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (d->path, name, svn_path_local_style);
+  svn_path_add_component (d->path, name);
 
   /* Fill in other baton members */
   d->edit_baton = eb;
@@ -268,7 +268,7 @@ open_file (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   fb->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (fb->path, name, svn_path_local_style);
+  svn_path_add_component (fb->path, name);
 
   /* Fill in other baton members */
   fb->dir_baton = pd;
@@ -294,7 +294,7 @@ add_file (svn_stringbuf_t *name,
 
   /* Construct the full path of the new directory */
   fb->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (fb->path, name, svn_path_local_style);
+  svn_path_add_component (fb->path, name);
 
   /* Fill in other baton members */
   fb->dir_baton = pd;

@@ -73,7 +73,6 @@ svn_cl__commit (apr_getopt_t *os,
   SVN_ERR (svn_path_condense_targets (&base_dir,
                                       &condensed_targets,
                                       targets,
-                                      svn_path_local_style,
                                       pool));
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
@@ -91,8 +90,7 @@ svn_cl__commit (apr_getopt_t *os,
      difference between the absolute path of the current working
      directory and the absolute path of the common parent directory
      used in the commit (if there is a concise difference). */
-  remainder = svn_path_is_child (cur_dir, base_dir,
-                                 svn_path_local_style, pool);
+  remainder = svn_path_is_child (cur_dir, base_dir, pool);
   if (remainder)
     trace_dir = remainder;
   else
