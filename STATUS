@@ -37,14 +37,6 @@ Candidate changes:
     Votes:
       +1: pmayweg, ghudson
 
-  * r10711
-    Fix a non-portable temp file creation in SVN::Ra::Callback.  This
-    triggers error on win32 ra_dav.
-    Justification:
-      Perl bindings only; win32 fixes.
-    Votes:
-      +1: clkao, ghudson
-
   * r10731
     Fix svn_path_dirname() so it returns canonical paths when passed a path
       with the last segment separated by multiple slashes.
