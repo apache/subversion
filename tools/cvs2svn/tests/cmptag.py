@@ -12,8 +12,8 @@ def cvs_checkout(repo, module, tag, target):
 
 def do_cvs2svn(repo, module, target):
     print "    converting %s %s:" % (repo, module)
-    rc = os.system("../cvs2svn.py --create -s %s %s/%s >test.log"
-                   % (target, repo, module))
+    rc = os.system("%s ../cvs2svn.py --create -s %s %s/%s >test.log"
+                   % (sys.executable, target, repo, module))
     if rc != 0:
         raise "cvs2svn failed"
 
