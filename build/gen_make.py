@@ -213,7 +213,9 @@ class Generator(gen_base.GeneratorBase):
       deps = string.join(sources)
       cmd = getattr(objname, 'build_cmd', '')
       if cmd:
-        self.ofile.write('%s: %s\n\t%s %s\n' % (objname, deps, cmd, sources[0]))
+        self.ofile.write('%s: %s\n\t%s %s\n' % (objname, deps, cmd,
+                                                os.path.join('$(top_srcdir)',
+                                                             sources[0])))
       else:
         self.ofile.write('%s: %s\n' % (objname, deps))
 
