@@ -63,6 +63,7 @@ send_file_contents (const char *path,
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
   apr_file_t *f = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
 
   /* If there are properties, look for EOL-style and keywords ones. */
@@ -92,6 +93,7 @@ send_file_contents (const char *path,
       SVN_ERR (svn_io_file_open (&f, path, APR_READ, APR_OS_DEFAULT, pool));
       contents = svn_stream_from_aprfile (f, pool);
 
+      /* Generate a keyword structure. */
       if (keywords_val)
         SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
                                            APR_STRINGIFY(SVN_INVALID_REVNUM),
@@ -107,35 +109,48 @@ send_file_contents (const char *path,
 
       /* Copy the original file to the temporary one, de-translating
          along the way. */
-      SVN_ERR (svn_subst_translate_stream (contents, tmp_stream, 
-                                           eol_style_val ? "\n" : NULL,
-                                           eol_style_val ? TRUE : FALSE,
-                                           keywords_val ? &keywords : NULL,
-                                           FALSE));
+      if ((err = svn_subst_translate_stream (contents, tmp_stream, 
+                                             eol_style_val ? "\n" : NULL,
+                                             eol_style_val ? TRUE : FALSE,
+                                             keywords_val ? &keywords : NULL,
+                                             FALSE)))
+        goto cleanup;
 
       /* Close our original and temporary files. */
-      SVN_ERR (svn_io_file_close (f, pool));
-      SVN_ERR (svn_io_file_close (tmp_f, pool));
+      if ((err = svn_io_file_close (f, pool)))
+        goto cleanup;
+      if ((err = svn_io_file_close (tmp_f, pool)))
+        goto cleanup;
     }
 
   /* Open our contents file, either the original path or the temporary
      copy we might have made above. */
-  SVN_ERR (svn_io_file_open (&f, tmpfile_path ? tmpfile_path : path, 
-                             APR_READ, APR_OS_DEFAULT, pool));
+  if ((err = svn_io_file_open (&f, tmpfile_path ? tmpfile_path : path, 
+                               APR_READ, APR_OS_DEFAULT, pool)))
+    goto cleanup;
   contents = svn_stream_from_aprfile (f, pool);
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
-                                    digest, pool));
+  if ((err = svn_txdelta_send_stream (contents, handler, handler_baton,
+                                      digest, pool)))
+    goto cleanup;
 
   /* Close our contents file. */
-  SVN_ERR (svn_io_file_close (f, pool));
+  if ((err = svn_io_file_close (f, pool)))
+    goto cleanup;
 
-  /* If we used a tempfile, we need to close and remove it, too. */
+ cleanup:
   if (tmpfile_path)
-    SVN_ERR (svn_io_remove_file (tmpfile_path, pool));
+    {
+      /* If we used a tempfile, we need to close and remove it, too. */
+      svn_error_t *err2 = svn_io_remove_file (tmpfile_path, pool);
+      if (err)
+        svn_error_compose (err, err2);
+      else
+        err = err2;
+    }
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
