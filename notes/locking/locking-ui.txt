@@ -350,6 +350,17 @@ II. New Client Behaviors
                 "defunct", the client is instructed to destroy the lock
                 token.
 
+                A new column will be added to the update output to indicate
+                removed lock tokens:
+
+                svn up
+                U     path1
+                 U    path2
+                  K   path3
+                C K   path4
+
+                In the above example, lock tokens for path3 and path4
+                were removed.  path4 also had a conflict.
 
 III. New Server Behaviors
 
