@@ -420,20 +420,21 @@ svn_cl__log (apr_getopt_t *os,
 
   if (opt_state->xml)
     {
-      svn_stringbuf_t *sb;
-      
-      /* The header generation is commented out because it might not
-         be certain that the log messages are indeed the advertised
-         encoding, UTF-8. The absence of the header should not matter
-         to people processing the output, and they should add it
-         themselves if storing the output as a fully-formed XML
-         document. */
-      /* <?xml version="1.0" encoding="utf-8"?> */
-      /* svn_xml_make_header (&sb, pool); */
-      
-      sb = NULL;
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
-      printf ("%s", sb->data);  /* "<log>" */
+      /* If output is not incremental, output the XML header and wrap
+         everything in a top-level element. This makes the output in
+         its entirety a well-formed XML document. */
+      if (! opt_state->incremental)
+        {
+          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+          /* <?xml version="1.0" encoding="utf-8"?> */
+          svn_xml_make_header (&sb, pool);
+          
+          /* "<log>" */
+          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
+
+          printf ("%s", sb->data);  
+        }
       
       SVN_ERR (svn_client_log (auth_baton,
                                targets,
@@ -445,9 +446,15 @@ svn_cl__log (apr_getopt_t *os,
                                NULL,  /* no baton necessary */
                                pool));
       
-      sb = NULL;
-      svn_xml_make_close_tag (&sb, pool, "log");
-      printf ("%s", sb->data);  /* "</log>" */
+      if (! opt_state->incremental)
+        {
+          svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+          /* "</log>" */
+          svn_xml_make_close_tag (&sb, pool, "log");
+
+          printf ("%s", sb->data);
+        }
     }
   else  /* default output format */
     {
