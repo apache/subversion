@@ -402,7 +402,7 @@ svn_path_is_single_path_component (svn_stringbuf_t *path,
   char dirsep = get_separator_from_style (style);
 
   /* Can't be empty */
-  if (path->data == '\0')
+  if (*path->data == '\0')
     return 0;
 
   /* Can't be `.' or `..' */
