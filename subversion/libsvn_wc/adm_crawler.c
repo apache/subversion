@@ -170,6 +170,7 @@ set_entry_flags (svn_string_t *current_entry_name,
    necessary to create the one for PATH (..using calls from EDITOR.)  */
 static svn_error_t *
 do_dir_replaces (svn_string_t *path,
+                 apr_pool_t *pool,
                  struct stack_object **stack,
                  svn_delta_edit_fns_t *editor,
                  void *edit_baton,
@@ -188,7 +189,7 @@ do_dir_replaces (svn_string_t *path,
         break;
       
       if (stackptr->previous)  
-        stackptr = stackptr->previous;  /* decend. */
+        stackptr = stackptr->previous;  /* descend. */
       else
         {
           /* Can't descend?  We must have reached stack_bottom, which
@@ -209,21 +210,29 @@ do_dir_replaces (svn_string_t *path,
   /* Now that we're outside the while() loop, our stackptr is pointing
      to the frame with the "youngest" directory baton. */
 
-  while (1)  /* Now walk _up_ the stack, creating & storing batons. */
+  while (1)  /* Now walk _up_ the stack, creating & storing new batons. */
     {
       if (stackptr->next)
         {
+          svn_string_t *ancestor_path;
+          svn_vernum_t ancestor_ver;
           void *dir_baton;
 
           /* Move up the stack */
           stackptr = stackptr->next;
+
+          /* Get the ancestry for this directory */
+          err = svn_wc__entry_get_ancestry (stackptr->path, NULL,
+                                            &ancestor_path, &ancestor_ver,
+                                            pool);
+          if (err) return err;
           
           /* Get a baton for this directory */
           err = 
             editor->replace_directory (stackptr->path, /* current dir */
                                        stackptr->previous->path, /* parent */
-                                       NULL,  /* TODO:  FIX THIS!!! */
-                                       0,     /* TODO:  FIX THIS!!! */
+                                       ancestor_path,
+                                       ancestor_ver,
                                        &dir_baton);
           if (err) return err;
 
@@ -348,6 +357,9 @@ process_subdirectory (svn_string_t *path,
 {
   svn_error_t *err;
   struct svn_wc__entries_index *index;
+
+  svn_string_t *ancestor_path;
+  svn_vernum_t ancestor_ver;
   
   /* Vars that we automatically get when fetching a directory entry */
   svn_string_t *current_entry_name;
@@ -393,16 +405,23 @@ process_subdirectory (svn_string_t *path,
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
-                  err = do_dir_replaces (path, &stack, editor, edit_baton,
+                  err = do_dir_replaces (path, pool, &stack,
+                                         editor, edit_baton,
                                          &dir_baton);
                   if (err) return err;
                 }
 
+              /* Get the ancestry for this new directory */
+              err = svn_wc__entry_get_ancestry (path, NULL,
+                                                &ancestor_path, &ancestor_ver,
+                                                pool);
+              if (err) return err;
+              
               /* Add the new directory, getting a new dir baton.  */
               err = editor->add_directory (current_entry_name,
                                            dir_baton,
-                                           NULL, /* TODO:  FIX ME !!! */
-                                           0, /* TODO:  FIX ME !!! */
+                                           ancestor_path,
+                                           ancestor_ver,
                                            &new_dir_baton);
               if (err) return err;
 
@@ -415,17 +434,22 @@ process_subdirectory (svn_string_t *path,
           else if (current_entry_type == svn_file_kind)
             {
               void *file_baton;
-              svn_string_t *ancestor_path;
-              svn_vernum_t ancestor_ver;
               
               /* Do what's necesary to get a baton for current directory */
               if (! dir_baton)
                 {
-                  err = do_dir_replaces (path, &stack, editor, edit_baton,
+                  err = do_dir_replaces (path, pool, &stack,
+                                         editor, edit_baton,
                                          &dir_baton);
                   if (err) return err;
                 }
-              
+
+              /* Get the ancestry for this new file */
+              err = svn_wc__entry_get_ancestry (path, current_entry_name,
+                                                &ancestor_path, &ancestor_ver,
+                                                pool);
+              if (err) return err;
+
               /* Add a new file, getting a file baton */
               err = editor->add_file (current_entry_name,
                                       dir_baton,
@@ -451,7 +475,8 @@ process_subdirectory (svn_string_t *path,
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
             {
-              err = do_dir_replaces (path, &stack, editor, edit_baton,
+              err = do_dir_replaces (path, pool, &stack,
+                                     editor, edit_baton,
                                      &dir_baton);
               if (err) return err;
             }
@@ -464,17 +489,22 @@ process_subdirectory (svn_string_t *path,
       else if (modified_p)
         {
           void *file_baton;
-          svn_string_t *ancestor_path;
-          svn_vernum_t ancestor_ver;
 
           /* Do what's necesary to get a baton for current directory */
           if (! dir_baton)
             {
-              err = do_dir_replaces (path, &stack, editor, edit_baton,
+              err = do_dir_replaces (path, pool, &stack,
+                                     editor, edit_baton,
                                      &dir_baton);
               if (err) return err;
             }
-          
+
+          /* Get the ancestry for this new file */
+          err = svn_wc__entry_get_ancestry (path, current_entry_name,
+                                            &ancestor_path, &ancestor_ver,
+                                            pool);
+          if (err) return err;
+                    
           /* Replace the file, getting a file baton */
           err = editor->replace_file (current_entry_name,
                                       dir_baton,
