@@ -216,7 +216,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not open the FS root for the "
-                                 "revision just committed.");
+                                 "revision just committed.",
+                                 repos->pool);
     }
 
   bb = apr_brigade_create(pool, output->c->bucket_alloc);
@@ -236,14 +237,16 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not get date of newest revision"); 
+                                 "Could not get date of newest revision",
+                                 repos->pool); 
     }
   serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
                               SVN_PROP_REVISION_AUTHOR, pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not get author of newest revision"); 
+                                 "Could not get author of newest revision",
+                                 repos->pool); 
     }
 
 
@@ -308,7 +311,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Error constructing resource list.");
+                                     "Error constructing resource list.",
+                                     repos->pool);
         }
     }
 

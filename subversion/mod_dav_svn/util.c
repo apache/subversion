@@ -28,7 +28,7 @@
 
 
 dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
-                                const char *message)
+                                const char *message, apr_pool_t *pool)
 {
     dav_error *derr;
 
@@ -51,13 +51,17 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
         /* add other mappings here */
       }
 
-    derr = dav_new_error_tag(serr->pool, status,
-                             serr->apr_err, serr->message,
+    derr = dav_new_error_tag(pool, status,
+                             serr->apr_err, apr_pstrdup(pool, serr->message),
                              SVN_DAV_ERROR_NAMESPACE,
                              SVN_DAV_ERROR_TAG);
     if (message != NULL)
-        derr = dav_push_error(serr->pool, status, serr->apr_err,
+        derr = dav_push_error(pool, status, serr->apr_err,
                               message, derr);
+
+    /* Now, destroy the Subversion error. */
+    svn_error_clear(serr);
+
     return derr;
 }
 

@@ -71,7 +71,8 @@ static dav_error *set_auto_log_message(dav_resource *resource)
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Error setting auto-log-message on "
-                               "auto-checked-out resource's transaction.");
+                               "auto-checked-out resource's transaction.",
+                               resource->pool);
   return NULL;
 }
 
@@ -88,14 +89,16 @@ static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
           /* ### correct HTTP error? */
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "The transaction specified by the "
-                                     "activity does not exist");
+                                     "activity does not exist",
+                                     pool);
         }
 
       /* ### correct HTTP error? */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "There was a problem opening the "
                                  "transaction specified by this "
-                                 "activity.");
+                                 "activity.",
+                                 pool);
     }
 
   return NULL;
@@ -285,7 +288,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not open the (transaction) root "
-                                   "of the repository");
+                                   "of the repository",
+                                   resource->pool);
         
       return NULL;
     }
@@ -346,7 +350,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       /* ### is BAD_REQUEST proper? */
       return dav_svn_convert_err(serr, HTTP_CONFLICT,
                                  "The activity href could not be parsed "
-                                 "properly.");
+                                 "properly.",
+                                 resource->pool);
     }
   if (parse.activity_id == NULL)
     {
@@ -386,7 +391,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not determine the youngest "
                                      "revision for verification against "
-                                     "the baseline being checked out.");
+                                     "the baseline being checked out.",
+                                     resource->pool);
         }
 
       if (resource->info->root.rev != youngest)
@@ -427,7 +433,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
         {
           /* ### correct HTTP error? */
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not open the transaction tree.");
+                                     "Could not open the transaction tree.",
+                                     resource->pool);
         }
 
       /* assert: repos_path != NULL (for this type of resource) */
@@ -444,7 +451,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
           /* ### correct HTTP error? */
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not get created-rev of "
-                                     "transaction node.");
+                                     "transaction node.",
+                                     resource->pool);
         }
 
       /* If txn_created_rev is invalid, that means it's already
@@ -743,7 +751,8 @@ dav_error *dav_svn_checkin(dav_resource *resource,
               else
                 msg = "An error occurred while committing the transaction.";
               
-              return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
+              return dav_svn_convert_err(serr, HTTP_CONFLICT, msg,
+                                         resource->pool);
             }
 
           /* Commit was successful, so schedule deltification. */
@@ -860,14 +869,16 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
   if (apr_err)
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
-                               "Error writing REPORT response.");
+                               "Error writing REPORT response.",
+                               resource->pool);
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, bb))) && (! derr))
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.");
+                               "Error flushing brigade.",
+                               resource->pool);
 
   return derr;
 }
@@ -1008,7 +1019,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
       else
         msg = "An error occurred while committing the transaction.";
 
-      return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
+      return dav_svn_convert_err(serr, HTTP_CONFLICT, msg, pool);
     }
 
   /* Commit was successful, so schedule deltification. */

@@ -301,21 +301,24 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                             resource->pool);
   if (serr)
     {
-      derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message);
+      derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                 resource->pool);
       goto cleanup;
     }
   
   if ((serr = maybe_send_header(&lrb)))
     {
       derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error beginning REPORT reponse.");
+                                 "Error beginning REPORT reponse.",
+                                 resource->pool);
       goto cleanup;
     }
     
   if ((serr = send_xml(&lrb, "</S:log-report>" DEBUG_CR)))
     {
       derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error ending REPORT reponse.");
+                                 "Error ending REPORT reponse.",
+                                 resource->pool);
       goto cleanup;
     }
 
@@ -326,6 +329,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   if (((apr_err = ap_fflush(output, lrb.bb))) && (! derr))
     derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
                                HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.");
+                               "Error flushing brigade.",
+                               resource->pool);
   return derr;
 }
