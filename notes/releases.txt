@@ -89,7 +89,7 @@
    To make sure httpd.conf is properly set up for DAV access, see
    subversion/tests/clients/cmdline/README.
 
-   You should also have libtool-1.4.3 and autoconf-2.5x installed
+   You should also have libtool-1.5.10 and autoconf-2.59 installed
    from source.   It is important that you do not use distribution
    shipped versions of this software as they are often patched in
    ways that are not portable.
