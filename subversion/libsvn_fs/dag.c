@@ -568,6 +568,7 @@ set_entry (dag_node_t *parent,
                                               trail->pool));
   len = raw_entries_buf->len;
   SVN_ERR (svn_stream_write (wstream, raw_entries_buf->data, &len));
+  SVN_ERR (svn_stream_close (wstream));
   return SVN_NO_ERROR;
 }
 
@@ -754,6 +755,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
                                                 trail->pool));
     len = raw_proplist_buf->len;
     SVN_ERR (svn_stream_write (wstream, raw_proplist_buf->data, &len));
+    SVN_ERR (svn_stream_close (wstream));
   }
 
   return SVN_NO_ERROR;
@@ -1039,6 +1041,7 @@ delete_entry (dag_node_t *parent,
                                                 trail->pool));
     len = unparsed_entries->len;
     SVN_ERR (svn_stream_write (ws, unparsed_entries->data, &len));
+    SVN_ERR (svn_stream_close (ws));
   }
     
   return SVN_NO_ERROR;
