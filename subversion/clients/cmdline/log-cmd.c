@@ -35,7 +35,7 @@
 #include "svn_sorts.h"
 #include "svn_xml.h"
 #include "svn_time.h"
-#include "svn_utf.h"
+#include "svn_cmdline.h"
 #include "svn_subst.h"
 #include "cl.h"
 
@@ -180,8 +180,8 @@ log_message_receiver (void *baton,
                       apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
-  const char *author_native, *date_native;
-  const char *msg_native = NULL;     /* Silence a gcc uninitialized warning */
+  const char *author_stdout, *date_stdout;
+  const char *msg_stdout = NULL;     /* Silence a gcc uninitialized warning */
   svn_error_t *err;
 
   /* Number of lines in the msg. */
@@ -202,9 +202,9 @@ log_message_receiver (void *baton,
   if (author == NULL)
     author = "(no author)";
 
-  err = svn_utf_cstring_from_utf8 (&author_native, author, pool);
+  err = svn_cmdline_cstring_from_utf8 (&author_stdout, author, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    author_native = svn_utf_cstring_from_utf8_fuzzy (author, pool);
+    author_stdout = svn_cmdline_cstring_from_utf8_fuzzy (author, pool);
   else if (err)
     return err;
 
@@ -214,10 +214,10 @@ log_message_receiver (void *baton,
       apr_time_t time_temp;
       
       SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
-      date_native = svn_time_to_human_cstring(time_temp, pool);
+      date_stdout = svn_time_to_human_cstring(time_temp, pool);
     }
   else
-    date_native = "(no date)";
+    date_stdout = "(no date)";
   
   if (! lb->quiet)
     {
@@ -227,19 +227,19 @@ log_message_receiver (void *baton,
       {
         /* Convert log message from UTF8/LF to native locale and eol-style. */
         svn_string_t *logmsg = svn_string_create (msg, pool);
-        svn_subst_detranslate_string (&logmsg, logmsg, pool);
-        msg_native = logmsg->data;
+        svn_subst_detranslate_string (&logmsg, logmsg, TRUE, pool);
+        msg_stdout = logmsg->data;
       }
     }
 
   printf (SEP_STRING);
 
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s",
-          rev, author_native, date_native);
+          rev, author_stdout, date_stdout);
 
   if (! lb->quiet)
     {
-      lines = num_lines (msg_native);
+      lines = num_lines (msg_stdout);
       printf (" | %d line%s", lines, (lines > 1) ? "s" : "");
     }
 
@@ -259,7 +259,7 @@ log_message_receiver (void *baton,
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
-          const char *path_native, *path = item->key;
+          const char *path_stdout, *path = item->key;
           svn_log_changed_path_t *log_item 
             = apr_hash_get (changed_paths, item->key, item->klen);
           const char *copy_data = "";
@@ -267,24 +267,24 @@ log_message_receiver (void *baton,
           if (log_item->copyfrom_path 
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, 
-                                                  log_item->copyfrom_path, 
-                                                  pool));
+              SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, 
+                                                      log_item->copyfrom_path, 
+                                                      pool));
               copy_data 
                 = apr_psprintf (pool, 
                                 " (from %s:%" SVN_REVNUM_T_FMT ")",
-                                path_native,
+                                path_stdout,
                                 log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-          printf ("   %c %s%s\n", log_item->action, path_native, copy_data);
+          SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
+          printf ("   %c %s%s\n", log_item->action, path_stdout, copy_data);
         }
     }
 
   if (! lb->quiet)
     {
       printf ("\n");  /* A blank line always precedes the log message. */
-      printf ("%s\n", msg_native);
+      printf ("%s\n", msg_stdout);
     }
 
   return SVN_NO_ERROR;

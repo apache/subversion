@@ -22,13 +22,13 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
-#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -49,11 +49,11 @@ print_entry (const char *target,
              apr_pool_t *pool)
 {
   svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
-  const char *native;
+  const char *name_stdout;
 
   /* Get a non-UTF8 version of the target. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&native, target, pool));
-  printf ("Path: %s\n", native);
+  SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout, target, pool));
+  printf ("Path: %s\n", name_stdout);
 
   /* Note: we have to be paranoid about checking that these are
      valid, since svn_wc_entry() doesn't fill them in if they
@@ -61,20 +61,22 @@ print_entry (const char *target,
 
   if (entry->name && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->name, pool));
-      printf ("Name: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->name, pool));
+      printf ("Name: %s\n", name_stdout);
     }
  
   if (entry->url) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->url, pool));
-      printf ("URL: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout, entry->url, pool));
+      printf ("URL: %s\n", name_stdout);
     }
            
   if (entry->repos) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->repos, pool));
-      printf ("Repository: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->repos, pool));
+      printf ("Repository: %s\n", name_stdout);
     }
  
   if (entry->uuid) 
@@ -139,9 +141,10 @@ print_entry (const char *target,
     {
       if (entry->copyfrom_url) 
         {
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->copyfrom_url,
-                                              pool));
-          printf ("Copied From URL: %s\n", native);
+          SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                                  entry->copyfrom_url,
+                                                  pool));
+          printf ("Copied From URL: %s\n", name_stdout);
         }
  
       if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
@@ -151,8 +154,9 @@ print_entry (const char *target,
  
   if (entry->cmt_author) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->cmt_author, pool));
-      printf ("Last Changed Author: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->cmt_author, pool));
+      printf ("Last Changed Author: %s\n", name_stdout);
     }
  
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
@@ -170,32 +174,37 @@ print_entry (const char *target,
  
   if (entry->checksum) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->checksum, pool));
-      printf ("Checksum: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->checksum, pool));
+      printf ("Checksum: %s\n", name_stdout);
     }
  
   if (text_conflict && entry->conflict_old) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->conflict_old, pool));
-      printf ("Conflict Previous Base File: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->conflict_old, pool));
+      printf ("Conflict Previous Base File: %s\n", name_stdout);
     }
  
   if (text_conflict && entry->conflict_wrk) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->conflict_wrk, pool));
-      printf ("Conflict Previous Working File: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->conflict_wrk, pool));
+      printf ("Conflict Previous Working File: %s\n", name_stdout);
     }
  
   if (text_conflict && entry->conflict_new) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->conflict_new, pool));
-      printf ("Conflict Current Base File: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->conflict_new, pool));
+      printf ("Conflict Current Base File: %s\n", name_stdout);
     }
  
   if (props_conflict && entry->prejfile) 
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native, entry->prejfile, pool));
-      printf ("Conflict Properties File: %s\n", native);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&name_stdout,
+                                              entry->prejfile, pool));
+      printf ("Conflict Properties File: %s\n", name_stdout);
     }
  
   /* Print extra newline separator. */
@@ -265,11 +274,12 @@ svn_cl__info (apr_getopt_t *os,
         {
           /* Print non-versioned message and extra newline separator. */
 
-          const char *native;
+          const char *target_stdout;
           /* Get a non-UTF8 version of the target. */
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native, target, subpool));
+          SVN_ERR (svn_cmdline_cstring_from_utf8 (&target_stdout, target,
+                                                  subpool));
 
-          printf ("%s:  (Not a versioned resource)\n\n", native);
+          printf ("%s:  (Not a versioned resource)\n\n", target_stdout);
           continue;
         }
 

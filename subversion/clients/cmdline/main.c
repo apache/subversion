@@ -31,6 +31,7 @@
 #include <apr_lib.h>
 #include <apr_signal.h>
 
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"

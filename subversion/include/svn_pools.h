@@ -29,11 +29,6 @@
 #include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-#define APR_WANT_STDIO
-#endif
-#include <apr_want.h>
-
 #include "svn_types.h"
 
 #ifdef __cplusplus
@@ -87,22 +82,6 @@ svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
  * completeness.
  */
 #define svn_pool_destroy apr_pool_destroy
-
-
-
-/* ### todo: This function doesn't really belong in this header, but
-   it didn't seem worthwhile to create a new header just for one
-   function, especially since this should probably move to APR as
-   apr_cmdline_init() or whatever anyway.  There's nothing
-   svn-specific in its code, other than SVN_WIN32, which obviously APR
-   has its own way of dealing with.  Thoughts?  (Brane?) */
-
-/** Set up the locale for character conversion, and initialize APR.
- * If @a error_stream is non-null, print error messages to the stream,
- * using @a progname as the program name. Return @c EXIT_SUCCESS if
- * successful, otherwise @c EXIT_FAILURE.
- */
-int svn_cmdline_init (const char *progname, FILE *error_stream);
 
 
 #ifdef __cplusplus

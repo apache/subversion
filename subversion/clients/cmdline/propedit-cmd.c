@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -175,7 +176,7 @@ svn_cl__propedit (apr_getopt_t *os,
           svn_string_t *propval;
           const char *new_propval;
           const char *base_dir = target;
-          const char *target_native;
+          const char *target_stdout;
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
           
@@ -223,10 +224,10 @@ svn_cl__propedit (apr_getopt_t *os,
                                             ctx->config,
                                             subpool));
           
-          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, 
-                                              subpool));
-          if (target_native[0] == '\0')
-            target_native = ".";
+          SVN_ERR (svn_cmdline_cstring_from_utf8 (&target_stdout, target, 
+                                                  subpool));
+          if (target_stdout[0] == '\0')
+            target_stdout = ".";
 
           /* ...and re-set the property's value accordingly. */
           if (new_propval)
@@ -249,12 +250,12 @@ svn_cl__propedit (apr_getopt_t *os,
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, subpool));
               printf ("Set new value for property '%s' on '%s'\n",
-                      pname, target_native);
+                      pname, target_stdout);
             }
           else
             {
               printf ("No changes to property '%s' on '%s'\n",
-                      pname, target_native);
+                      pname, target_stdout);
             }
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }

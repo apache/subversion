@@ -20,6 +20,7 @@
 #include <apr_want.h>
 #include <apr_general.h>
 
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_utf.h"
@@ -67,22 +68,22 @@ int main(int argc, char **argv)
 
   /* Display the results */
   {
-    const char *common_path_native;
-    err = svn_utf_cstring_from_utf8(&common_path_native, common_path, pool);
+    const char *common_path_stdout;
+    err = svn_utf_cstring_from_utf8(&common_path_stdout, common_path, pool);
     if (err != SVN_NO_ERROR)
       svn_handle_error(err, stderr, 1);
-    printf("%s: ", common_path_native);
+    printf("%s: ", common_path_stdout);
   }
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char * target = ((const char**)condensed_targets->elts)[i];
       if (target)
         {
-          const char *target_native;
-          err = svn_utf_cstring_from_utf8(&target_native, target, pool);
+          const char *target_stdout;
+          err = svn_utf_cstring_from_utf8(&target_stdout, target, pool);
           if (err != SVN_NO_ERROR)
             svn_handle_error(err, stderr, 1);
-          printf("%s, ", target_native);
+          printf("%s, ", target_stdout);
         }
       else
         printf("NULL, "); 
