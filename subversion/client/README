@@ -102,33 +102,37 @@ Common options
 
 
   -? -h -H --help  Help.
-  --trace          Like "cvs -t"
-  -V --verbose     Run with a wordily prolix verbositude.
-  -q               Quiet.  (CVS has two levels of this, but that's overkill?)
-                   (Yes, overkill. -Fitz)  
-                   /* OTOH:  quiet, normal, verbose and trace make for
-			"levels" of verbosity  - Bruce */
-  -v VERSION       Like "cvs cmd -r REV"
-  --version        Print program name, version, and url.
-                     /* Problem: "--version" and "-v" are both
-                        pronounced "version", but they mean different
-                        things. */
-  -D DATE          Like "cvs cmd -D DATE"
-  -l               Local dir only, do not recurse. 
-                   (-R doesn't apply as it is the default behavior)
-  -d               Target directory (like "cvs checkout -d DIR")
-  -f               Force (probably useful for a few commands)
-  -m               Use "message" for the creation log.
-  -F file          Read the log message from file.
+  -V --verbose  KWd     What level of chatter?
+The valid verbose option keywords are:
+	quiet
+	progress   ** default
+	detail     (verbose??;)
+	trace      
+	/* debug iff DEBUG is #define-d?? */
 
-  -p               Check out/update/whatever files to standard output 
+  -q --quiet       alias for --verbose=quiet
+
+  -D --date-ver    Like "cvs cmd -D DATE"
+  -l --current-dir Local dir only, do not recurse. 
+                   (-R doesn't apply as it is the default behavior)
+  -d --dest-dir    Target directory (like "cvs checkout -d DIR")
+  -f --force       Force (probably useful for a few commands)
+  -m --log-msg     Use "message" for the creation log.
+  -F --msg-file    Read the log message from file.
+
+  -p --stdout      Check out/update/whatever files to standard output 
                    (avoids stickiness).
 
-  --dry-run        Like "cvs -n"
+  -n --dry-run     Like "cvs -n" /* then use the short option, too? */
   --no-rc          Suppress reading of .svnrc.
-  --               End of option processing (this is the standard, right?)
-                   (Yes, it is one of the standards) :)
 
+  -e --editor EDNM    Edit messages with EDITOR.
+  -k --keyword-expansion KWd  Set/Use keyword expansion
+  -l --local-dir      Local; run only in current working directory.
+  -R --recursive      Operate recursively (default).
+  -T --tempdir DIR    Put temporary files in TEMPDIR.
+  -r --read-only      Make new working files read-only.
+  -w --writable       Make new working files read-write.
 
   -R REPOSITORY    Use REPOSITORY.
                      /* Issue: -R may be unnecessary, if arguments
@@ -136,6 +140,8 @@ Common options
                         Stein.  That would be nice, it would free up
                         another option letter. */
 
+  --               End of option processing (this is the standard, right?)
+                   (Yes, it is one of the standards) :)
 
 
 Subcommands and their Options
