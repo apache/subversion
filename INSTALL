@@ -16,10 +16,10 @@ Contents:
      I. BUILD REQUIREMENTS
 
     II. INSTALLATION
-     A. Bootstrapping from a Tarball or RPM
+     A. Building from a Tarball or RPM
      B. Building the Latest Source under Unix
      C. Building under Unix in Different Directories
-     D. Bootstrapping from a Zip or Installer File under Windows
+     D. Installing from a Zip or Installer File under Windows
      E. Building the Latest Source under Windows
 
    III. BUILDING A SUBVERSION SERVER
@@ -347,15 +347,10 @@ I.    BUILD REQUIREMENTS
 II.   INSTALLATION
       ============
 
-  A.  Bootstrapping from a Tarball or RPM
-      -----------------------------------
+  A.  Building from a Tarball or RPM
+      ------------------------------
 
-      In order to get the very latest Subversion source code, you need
-      to check it out of a Subversion repository, and therefore you
-      first need a Subversion client.
-
-
-      1.  Bootstrapping from a Tarball
+      1.  Building from a Tarball
 
       Download the most recent distribution tarball from:
 
@@ -363,24 +358,14 @@ II.   INSTALLATION
 
       Unpack it, and use the standard GNU procedure to compile:
 
-          $ ./configure --enable-maintainer-mode
+          $ ./configure
           $ make
+          # make install
 
-      (The switch to ./configure turns on debugging.)
-
-      After compiling, you will have an 'svn' binary sitting in
-      the tree.  Use it to check out a real Subversion working copy:
-
-          $ subversion-rXXXX/subversion/clients/cmdline/svn checkout \
-            http://svn.collab.net/repos/svn/trunk svn
-
-          A  svn/dist.sh
-          A  svn/buildcheck.sh
-          A  svn/HACKING
-          ...
+      You can also run the full test suite by running 'make check'.      
 
 
-      2.  Bootstrapping from an RPM
+      2.  Building from an RPM
 
       If you are using Linux (or any OS that can use RPM) then another
       possibility is to download the binary RPM from the
@@ -402,15 +387,6 @@ II.   INSTALLATION
 
           # rpm -ivh subversion*.386.rpm (add other packages as necessary)
 
-      After installing, you can then use the svn command to check out the
-      latest source code:
-
-          $ /usr/bin/svn checkout http://svn.collab.net/repos/svn/trunk svn
-          A  svn/dist.sh
-          A  svn/buildcheck.sh
-          A  svn/HACKING
-          ...
-
       Note: For an easy way to generate a new version of the RPM
       source and binary package from the latest source code you
       just checked out, see the packages/rpm/README file for a
@@ -420,12 +396,13 @@ II.   INSTALLATION
   B.  Building the Latest Source under Unix
       -------------------------------------
 
-      (These instructions assume you have already installed Subversion
-      and checked out a Subversion working copy.  See the section
-      "Bootstrapping from a Tarball or RPM" above for more.)
+      These instructions assume you have already installed Subversion
+      and checked out a working copy of Subversion's own code --
+      either the latest /trunk code, or some branch or tag.
 
       You can discard the directory created by the tarball; you're
-      about to build the latest, greatest Subversion client.
+      about to build the latest, greatest Subversion client.  This is
+      the procedure Subversion developers use.
 
       First off, if you have any Subversion libraries lying around
       from previous 'make installs', clean them up first!
@@ -459,12 +436,18 @@ II.   INSTALLATION
       Once you've prepared the working copy by running autogen.sh,
       just follow the usual configuration and build procedure:
 
-          $ ./configure --enable-maintainer-mode
+          $ ./configure
           $ make
           # make install
 
-      (We recommend `--enable-maintainer-mode' so you get a debuggable
-      Subversion.  See also section III.A for more about this.)
+      (Optionally, you might want to pass --enable-maintainer-mode to
+      the ./configure script.  This enables debugging symbols in your
+      binaries (among other things) and most Subversion developers use it.)
+
+      Unlike the pre-packaged tarball (which includes apr, apr-util,
+      and neon subdirectories), ./configure will fail if it cannot
+      find apr, apr-util, and neon libraries already installed on your
+      system.
 
       Since the resulting binary depends on shared libraries, the
       destination library directory must be identified in your
@@ -476,8 +459,8 @@ II.   INSTALLATION
       to dynamically load repository access plugins.  If you try to do
       a checkout and see an error like:
 
-      svn_error: #21068 : <Bad URL passed to RA layer>
-         Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
+      subversion/libsvn_ra/ra_loader.c:209: (apr_err=170000)
+      svn: Unrecognized URL scheme 'http://svn.collab.net/repos/svn/trunk'
 
       It probably means that the dynamic loader/linker can't find all
       of the libsvn_* libraries.
@@ -488,17 +471,11 @@ II.   INSTALLATION
       subversion itself.  If you want to use -jN, use the following
       instead:
 
-          $ ./configure --enable-maintainer-mode --disable-shared
+          $ ./configure
           $ make -jN external-all
           $ make -jN local-all
           $ make check
           # make install
-
-      (The second option to configure inhibits the creation of shared
-      libraries; subversion commands will be statically linked to libsvn_*.  On
-      some systems the commands will still be dynamically linked to already
-      installed shared libraries.  For a completely static build see the
-      '--enable-all-static' option.)
 
 
   C.  Building under Unix in Different Directories
@@ -548,7 +525,7 @@ II.   INSTALLATION
       into another working copy.
 
 
-  D.  Bootstrapping from a Zip or Installer File under Windows
+  D.  Installing from a Zip or Installer File under Windows
       --------------------------------------------------------
 
       Of all the ways of getting a Subversion client, this is the
@@ -563,9 +540,9 @@ II.   INSTALLATION
       client, the SVNADMIN administration tool, and the SVNLOOK
       reporting tool.
 
-      Now open a DOS box (run either "cmd" or "command" from the
-      Start menu's "Run..." menu option), change to the directory you
-      installed the executables into, and run:
+      To test the installation, open a DOS box (run either "cmd" or
+      "command" from the Start menu's "Run..." menu option), change to
+      the directory you installed the executables into, and run:
 
           C:\test>svn co http://svn.collab.net/repos/svn/trunk svn
 
@@ -1008,7 +985,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       The following section is an abbreviated version of the
       information in the Subversion Book
-      (http://svnbook.red-bean.com).  Please read chapter 5 for more
+      (http://svnbook.red-bean.com).  Please read chapter 6 for more
       details.
 
       The following assumes you have already created a repository.
