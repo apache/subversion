@@ -6,6 +6,10 @@ dnl General Setup -----------------------
 
 dnl First line is *required*;  sanity-checks that the our src dir exists.
 AC_INIT(subversion/include/svn_types.h)
+AC_CONFIG_AUX_DIR(helpers)
+
+dnl Generate config.nice early (before the args are munged)
+SVN_CONFIG_NICE(config.nice)
 
 dnl Required to init all of the `automake' macros, and to run typical macros
 AM_INIT_AUTOMAKE(subversion, 0.1, no-define)
@@ -22,6 +26,9 @@ dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
 
 dnl APR defines a number of useful autoconf macros. grab them.
 sinclude(apr/apr_common.m4)
+
+
+dnl Sub-package configuration ---------------------
 
 dnl Possibly reconfigure packages in subdirectories
 AC_ARG_ENABLE(subdir-config,
