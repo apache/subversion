@@ -433,6 +433,8 @@ mark_tree (svn_wc_adm_access_t *adm_access,
            apr_uint32_t modify_flags,
            svn_wc_schedule_t schedule,
            svn_boolean_t copied,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
            svn_wc_notify_func_t notify_func,
            void *notify_baton,
            apr_pool_t *pool)
@@ -474,6 +476,7 @@ mark_tree (svn_wc_adm_access_t *adm_access,
                                         subpool));
           SVN_ERR (mark_tree (child_access, modify_flags,
                               schedule, copied,
+                              cancel_func, cancel_baton,
                               notify_func, notify_baton,
                               subpool));
         }
@@ -525,9 +528,14 @@ mark_tree (svn_wc_adm_access_t *adm_access,
 /* Remove/erase PATH from the working copy. This involves deleting PATH
  * from the physical filesystem. PATH is assumed to be an unversioned file
  * or directory.
+ *
+ * If CANCEL_FUNC is non-null, invoke it with CANCEL_BATON at various
+ * points, return any error immediately.
  */
 static svn_error_t *
 erase_unversioned_from_wc (const char *path,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
                            apr_pool_t *pool)
 {
   svn_node_kind_t kind;
@@ -548,7 +556,16 @@ erase_unversioned_from_wc (const char *path,
       break;
 
     case svn_node_dir:
+      /* ### It would be more in the spirit of things to feed the
+         ### cancellation check through to svn_io_remove_dir()... */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
+
       SVN_ERR (svn_io_remove_dir (path, pool));
+
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
+
       break;
     }
 
@@ -565,12 +582,17 @@ erase_unversioned_from_wc (const char *path,
  * The result is that all that remains are versioned directories, each with
  * its .svn directory and .svn contents.
  *
+ * If CANCEL_FUNC is non-null, invoke it with CANCEL_BATON at various
+ * points, return any error immediately.
+ *
  * KIND is the node kind appropriate for PATH
  */
 static svn_error_t *
 erase_from_wc (const char *path,
                svn_wc_adm_access_t *adm_access,
                svn_node_kind_t kind,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   /* Check that the item exists in the wc. */
@@ -578,6 +600,9 @@ erase_from_wc (const char *path,
   SVN_ERR (svn_io_check_path (path, &wc_kind, pool));
   if (wc_kind == svn_node_none)
     return SVN_NO_ERROR;
+
+  if (cancel_func)
+    SVN_ERR (cancel_func (cancel_baton));
 
   switch (kind)
     {
@@ -619,7 +644,8 @@ erase_from_wc (const char *path,
               continue;
 
             down_path = svn_path_join (path, name, pool);
-            SVN_ERR (erase_from_wc (down_path, dir_access, entry->kind, pool));
+            SVN_ERR (erase_from_wc (down_path, dir_access, entry->kind,
+                                    cancel_func, cancel_baton, pool));
           }
 
         /* Now handle any remaining unversioned items */
@@ -642,7 +668,8 @@ erase_from_wc (const char *path,
               continue;
 
             down_path = svn_path_join (path, name, pool);
-            SVN_ERR (erase_unversioned_from_wc (down_path, pool));
+            SVN_ERR (erase_unversioned_from_wc
+                     (down_path, cancel_func, cancel_baton, pool));
           }
       }
       /* ### TODO: move this dir into parent's .svn area */
@@ -656,6 +683,8 @@ erase_from_wc (const char *path,
 svn_error_t *
 svn_wc_delete (const char *path,
                svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool)
@@ -672,7 +701,7 @@ svn_wc_delete (const char *path,
 
   SVN_ERR (svn_wc_entry (&entry, path, dir_access, FALSE, pool));
   if (!entry)
-    return erase_unversioned_from_wc (path, pool);
+    return erase_unversioned_from_wc (path, cancel_func, cancel_baton, pool);
     
   /* Note: Entries caching?  What happens to this entry when the entries
      file is updated?  Lets play safe and copy the values */
@@ -702,7 +731,8 @@ svn_wc_delete (const char *path,
           if (dir_access != adm_access)
             {
               SVN_ERR (svn_wc_remove_from_revision_control
-                       (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+                       (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE,
+                        cancel_func, cancel_baton, pool));
             }
           else
             {
@@ -728,6 +758,7 @@ svn_wc_delete (const char *path,
               /* Recursively mark a whole tree for deletion. */
               SVN_ERR (mark_tree (dir_access, SVN_WC__ENTRY_MODIFY_SCHEDULE,
                                   svn_wc_schedule_delete, FALSE,
+                                  cancel_func, cancel_baton,
                                   notify_func, notify_baton,
                                   pool));
             }
@@ -759,9 +790,11 @@ svn_wc_delete (const char *path,
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
   if (was_schedule_add)
-    SVN_ERR (erase_unversioned_from_wc (path, pool));
+    SVN_ERR (erase_unversioned_from_wc
+             (path, cancel_func, cancel_baton, pool));
   else
-    SVN_ERR (erase_from_wc (path, adm_access, was_kind, pool));
+    SVN_ERR (erase_from_wc (path, adm_access, was_kind,
+                            cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1011,6 +1044,8 @@ svn_wc_add (const char *path,
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (adm_access, SVN_WC__ENTRY_MODIFY_COPIED,
                               svn_wc_schedule_normal, TRUE,
+                              NULL,  /* ### cancel_func */
+                              NULL,  /* ### cancel_baton */
                               NULL, NULL, /* N/A cuz we aren't deleting */
                               pool));
 
@@ -1278,6 +1313,8 @@ svn_error_t *
 svn_wc_revert (const char *path,
                svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool)
@@ -1289,6 +1326,10 @@ svn_wc_revert (const char *path,
   svn_boolean_t wc_root = FALSE, reverted = FALSE;
   apr_uint32_t modify_flags = 0;
   svn_wc_adm_access_t *dir_access;
+
+  /* Check cancellation here, so recursive calls get checked early. */
+  if (cancel_func)
+    SVN_ERR (cancel_func (cancel_baton));
 
   SVN_ERR (svn_wc_adm_probe_retrieve (&dir_access, parent_access, path, pool));
 
@@ -1368,7 +1409,10 @@ svn_wc_revert (const char *path,
         {
           was_deleted = entry->deleted;
           SVN_ERR (svn_wc_remove_from_revision_control (parent_access, bname,
-                                                        FALSE, pool));
+                                                        FALSE,
+                                                        cancel_func,
+                                                        cancel_baton,
+                                                        pool));
         }
       else if (entry->kind == svn_node_dir)
         {
@@ -1386,7 +1430,8 @@ svn_wc_revert (const char *path,
             }
           else
             SVN_ERR (svn_wc_remove_from_revision_control 
-                     (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+                     (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE,
+                      cancel_func, cancel_baton, pool));
         }
       else  /* Else it's `none', or something exotic like a symlink... */
         return svn_error_createf
@@ -1520,6 +1565,7 @@ svn_wc_revert (const char *path,
 
           /* Revert the entry. */
           SVN_ERR (svn_wc_revert (full_entry_path, dir_access, TRUE,
+                                  cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
 
           svn_pool_clear (subpool);
@@ -1546,6 +1592,8 @@ svn_error_t *
 svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      const char *name,
                                      svn_boolean_t destroy_wf,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
                                      apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1555,6 +1603,10 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries = NULL;
   const char *full_path = apr_pstrdup (pool,
                                        svn_wc_adm_access_path (adm_access));
+
+  /* Check cancellation here, so recursive calls get checked early. */
+  if (cancel_func)
+    SVN_ERR (cancel_func (cancel_baton));
 
   /* NAME is either a file's basename or SVN_WC_ENTRY_THIS_DIR. */
   is_file = (strcmp (name, SVN_WC_ENTRY_THIS_DIR)) ? TRUE : FALSE;
@@ -1664,7 +1716,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           if (current_entry->kind == svn_node_file)
             {
               err = svn_wc_remove_from_revision_control
-                (adm_access, current_entry_name, destroy_wf, subpool);
+                (adm_access, current_entry_name, destroy_wf,
+                 cancel_func, cancel_baton, subpool);
 
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
@@ -1683,9 +1736,14 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                  subpool);
               SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
                                             entrypath, pool));
+
               err = svn_wc_remove_from_revision_control (entry_access,
                                                          SVN_WC_ENTRY_THIS_DIR,
-                                                         destroy_wf, subpool);
+                                                         destroy_wf,
+                                                         cancel_func,
+                                                         cancel_baton,
+                                                         subpool);
+
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
                   svn_error_clear (err);

@@ -76,6 +76,7 @@ svn_client_revert (const char *path,
     }
 
   err = svn_wc_revert (path, adm_access, recursive,
+                       ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func, ctx->notify_baton,
                        pool);
 

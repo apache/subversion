@@ -615,16 +615,25 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 
   /* Remove the object from revision control -- whether it's a
      single file or recursive directory removal.  Attempt
-     attempt to destroy all working files & dirs too. */
+     attempt to destroy all working files & dirs too. 
+  
+     ### We pass NULL, NULL for cancel_func and cancel_baton below.
+     ### If they were available, it would be nice to use them. */
   if (entry->kind == svn_node_dir)
     {
       err = svn_wc_remove_from_revision_control (adm_access,
                                                  SVN_WC_ENTRY_THIS_DIR,
-                                                 TRUE, loggy->pool);
+                                                 TRUE,
+                                                 NULL, NULL,
+                                                 loggy->pool);
     }
   else if (entry->kind == svn_node_file)
-    err = svn_wc_remove_from_revision_control (loggy->adm_access, name,
-                                               TRUE, loggy->pool);
+    {
+      err = svn_wc_remove_from_revision_control (loggy->adm_access, name,
+                                                 TRUE,
+                                                 NULL, NULL,
+                                                 loggy->pool);
+    }
     
   /* It's possible that locally modified files were left behind during
      the removal.  That's okay;  just check for this special case. */
@@ -728,14 +737,19 @@ log_do_committed (struct log_runner *loggy,
         }
 
       /* Else, we're deleting a file, and we can safely remove files
-         from revision control without screwing something else up. */
+         from revision control without screwing something else up.
+
+         ### We pass NULL, NULL for cancel_func and cancel_baton below.
+         ### If they were available, it would be nice to use them. */
       else
         {         
           const svn_wc_entry_t *parentry;
           svn_wc_entry_t tmp_entry;
 
           SVN_ERR (svn_wc_remove_from_revision_control (loggy->adm_access,
-                                                        name, FALSE, pool));
+                                                        name, FALSE,
+                                                        NULL, NULL,
+                                                        pool));
           
           /* If the parent entry's working rev 'lags' behind new_rev... */
           SVN_ERR (svn_wc_entry (&parentry,
@@ -821,9 +835,11 @@ log_do_committed (struct log_runner *loggy,
                                             pdir, pool));
             }
 
+          /* ### We pass NULL, NULL for cancel_func and cancel_baton below.
+             ### If they were available, it would be nice to use them. */
           if (base_name)
             SVN_ERR (svn_wc_remove_from_revision_control 
-                     (entry_access, base_name, FALSE, pool));
+                     (entry_access, base_name, FALSE, NULL, NULL, pool));
         }
     }
 
@@ -1300,10 +1316,12 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
                              svn_wc_adm_access_path (adm_access), adm_access,
                              FALSE, pool));
 
-      /* Blow away the entire directory, and all those below it too. */
+      /* Blow away the entire directory, and all those below it too. 
+         ### We pass NULL, NULL for cancel_func and cancel_baton below.
+         ### If they were available, it would be nice to use them. */
       SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
                                                     SVN_WC_ENTRY_THIS_DIR,
-                                                    TRUE, pool));
+                                                    TRUE, NULL, NULL, pool));
 
       /* If revnum of this dir is greater than parent's revnum, then
          recreate 'deleted' entry in parent. */

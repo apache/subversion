@@ -1038,12 +1038,18 @@ svn_error_t *svn_wc_copy (const char *src,
  * added.  Only versioned directories will remain in the working copy,
  * these get deleted by the update following the commit.
  *
+ * If @a cancel_func is non-null, call it with @a cancel_baton at
+ * various points during the deletion.  If it returns an error
+ * (typically SVN_ERR_CANCELLED), return that error immediately.
+ *
  * For each path marked for deletion, @a notify_func will be called with
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  */
 svn_error_t *svn_wc_delete (const char *path,
                             svn_wc_adm_access_t *adm_access,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             svn_wc_notify_func_t notify_func,
                             void *notify_baton,
                             apr_pool_t *pool);
@@ -1117,12 +1123,16 @@ svn_error_t *svn_wc_add (const char *path,
  * @a adm_access's entire administrative area will be deleted, along with
  * *all* the administrative areas anywhere in the tree below @a adm_access.
  *
- * Normally, only adminstrative data is removed.  However, if
+ * Normally, only administrative data is removed.  However, if
  * @a destroy_wf is true, then all working file(s) and dirs are deleted
  * from disk as well.  When called with @a destroy_wf, any locally
  * modified files will *not* be deleted, and the special error
  * @c SVN_ERR_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
  * check for this special return value if @a destroy_wf is true.)
+ *
+ * If @a cancel_func is non-null, call it with @a cancel_baton at
+ * various points during the removal.  If it returns an error
+ * (typically SVN_ERR_CANCELLED), return that error immediately.
  *
  * WARNING:  This routine is exported for careful, measured use by
  * libsvn_client.  Do *not* call this routine unless you really
@@ -1132,6 +1142,8 @@ svn_error_t *
 svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      const char *name,
                                      svn_boolean_t destroy_wf,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
                                      apr_pool_t *pool);
 
 
@@ -1887,6 +1899,11 @@ svn_wc_cleanup (const char *path,
  * unless @a path is a wc root, in which case @a parent_access refers to 
  * @a path itself.
  *
+ * If @cancel_func is non-null, call it with @a cancel_baton at
+ * various points during the reversion process.  If it returns an
+ * error (typically SVN_ERR_CANCELLED), return that error
+ * immediately.
+ *
  * For each item reverted, @a notify_func will be called with @a notify_baton
  * and the path of the reverted item. @a notify_func may be @c NULL if this
  * notification is not needed.
@@ -1895,6 +1912,8 @@ svn_error_t *
 svn_wc_revert (const char *path, 
                svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive, 
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool);
