@@ -26,6 +26,7 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
+Skip = svntest.testcase.Skip
 
 #--------------------------------------------------------------------
 # Data
@@ -98,7 +99,7 @@ def basic_utf8_conversion(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              basic_utf8_conversion
+              Skip(basic_utf8_conversion, locale.getlocale()[1] != 'ISO8859-1')
              ]
 
 if __name__ == '__main__':
