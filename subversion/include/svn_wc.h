@@ -459,12 +459,20 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
    non-overlapping children of the parent dir, either files or
    directories. (Use svn_path_condense_targets to create the target
    list).  If the target list is NULL or contains no elements, then a
-   single crawl will be made from PARENT_DIR. */
-svn_error_t *svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
-                                      apr_array_header_t *condensed_targets,
-                                      const svn_delta_edit_fns_t *edit_fns,
-                                      void *edit_baton,
-                                      apr_pool_t *pool);
+   single crawl will be made from PARENT_DIR.
+
+   REVNUM_FN/REV_BATON allows this routine to query the repository for
+   the latest revision.  It is used (temporarily) for checking that
+   directories are "up-to-date" when a dir-propchange is discovered.
+   We don't expect it to be here forever.  :-)  */
+svn_error_t *
+svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
+                         apr_array_header_t *condensed_targets,
+                         const svn_delta_edit_fns_t *edit_fns,
+                         void *edit_baton,
+                         const svn_ra_get_latest_revnum_func_t *revnum_fn,
+                         void *rev_baton,
+                         apr_pool_t *pool);
 
 
 /* Do a depth-first crawl in a working copy, beginning at PATH.

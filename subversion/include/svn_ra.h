@@ -61,6 +61,13 @@ typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
                                                     svn_stringbuf_t *path,
                                                     svn_revnum_t new_rev);
 
+/* A function type for retrieving the youngest revision from a repos.   */
+typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
+       (void *session_baton,
+        svn_revnum_t *latest_revnum);
+
+
+
 /*----------------------------------------------------------------------*/
 
 /* The update Reporter */
