@@ -276,7 +276,10 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
 }
 
 
-/* FIXME: DOCSTRING! */
+/* Common implementation for svn_utf_cstring_to_utf8,
+   svn_utf_cstring_to_utf8_ex, svn_utf_cstring_from_utf8 and
+   svn_utf_cstring_from_utf8_ex. Convert SRC to DEST using CONVSET as
+   the translator and allocating from POOL. */
 static svn_error_t *
 convert_cstring (const char **dest,
                  const char *src,
