@@ -500,12 +500,11 @@ svn_wc_status (svn_wc_status_t **status,
                apr_pool_t *pool)
 {
   svn_wc_status_t *s;
-  const svn_wc_entry_t *entry, *parent_entry;
+  const svn_wc_entry_t *entry = NULL;
+  const svn_wc_entry_t *parent_entry = NULL;
 
   if (adm_access)
     SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  else
-    entry = NULL;
 
   /* If we have an entry, and PATH is not a root, then we need a parent
      entry */
@@ -522,8 +521,6 @@ svn_wc_status (svn_wc_status_t **status,
           SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
                                  FALSE, pool));
         }
-      else
-        parent_entry = NULL;
     }
 
   SVN_ERR (assemble_status (&s, path, adm_access, entry, parent_entry,
