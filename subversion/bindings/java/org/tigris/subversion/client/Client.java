@@ -17,9 +17,12 @@ package org.tigris.subversion.client;
  */
 
 import java.io.File;
+import java.io.OutputStream;
+import java.util.List;
 
 import org.tigris.subversion.SubversionException;
 import org.tigris.subversion.auth.AuthProvider;
+import org.tigris.subversion.opt.OptRevision;
 import org.tigris.subversion.wc.Notifier;
 
 /**
@@ -49,5 +52,14 @@ public interface Client
     LogMessageReceiver getCommitLogReceiver();
 
     void checkout(String url, File path, Object revision, boolean recurse)
+        throws SubversionException;
+
+    /**
+     * @see <a href="http://svn.collab.net/svn-doxygen/svn__client_8h.html#a33">svn_client_diff</a>
+     */
+    void diff(List diffOptions, String path1, OptRevision revision1,
+              String path2, OptRevision revision2, boolean recurse,
+              boolean ignoreAncestry, boolean noDiffDeleted,
+              OutputStream outfile, OutputStream errfile)
         throws SubversionException;
 }
