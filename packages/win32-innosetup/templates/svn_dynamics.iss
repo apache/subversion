@@ -19,6 +19,10 @@
 ; Path to Inno Setup Executable
 #define path_is "E:\Inno Setup4"
 
+;Build defines ----------------------------------------------------------------
+; Uncomment the defines if true
+#define inc_dbgsyms
+#define VC7
 
 ; You should edit the paths below the examples according to your system
 
@@ -34,6 +38,7 @@
 #define path_davsvn "C:\work\Subversion\binaries_svn\svn-win32\httpd"
 #define path_authzsvn "C:\work\Subversion\binaries_svn\svn-win32\httpd"
 ; Misc
+#define path_msvcr70_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_brkdb_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_svnpath "tools\svnpath"
 #define path_iconv "C:\work\Subversion\binaries_svn\svn-win32\iconv"
@@ -68,5 +73,4 @@
 ;Python bindings
 #define path_py_bind_libsvn "C:\work\Subversion\binaries_svn\python_bindings\libsvn"
 #define path_py_bind_svn "C:\work\Subversion\binaries_svn\python_bindings\svn"
-
 
