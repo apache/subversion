@@ -202,6 +202,34 @@ void
 svn_cl__subcommand_help (const char *subcommand,
                          apr_pool_t *pool);
 
+
+/* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
+ * according to ARG, where ARG is "N" or "N:M", like so:
+ * 
+ *    - If ARG is "N", set OPT_STATE->start_revision's kind to
+ *      svn_client_revision_number and its value to the number N; and
+ *      leave OPT_STATE->end_revision untouched.
+ *
+ *    - If ARG is "N:M", set OPT_STATE->start_revision's and
+ *      OPT_STATE->end_revision's kinds to svn_client_revision_number
+ *      and values to N and M respectively.
+ * 
+ * N and/or M may be one of the special revision descriptors
+ * recognized by revision_from_word().
+ *
+ * If ARG is invalid, return non-zero; else return zero.
+ * It is invalid to omit a revision (as in, ":", "N:" or ":M").
+ *
+ * Note:
+ *
+ * It is typical, though not required, for OPT_STATE->start_revision
+ * and OPT_STATE->end_revision to be svn_client_revision_unspecified
+ * kind on entry.
+ */
+int svn_cl__parse_revision (svn_cl__opt_state_t *os,
+                            const char *arg,
+                            apr_pool_t *pool);
+
 
 /*** Command-line output functions -- printing to the user. ***/
 

@@ -208,10 +208,16 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
      svn_cl__auth_password_opt} },
   
   { "merge", svn_cl__merge, {0},
-    "Merge changes in the working copy.  IMPLEMENTATION INCOMPLETE.\n"
-    "usage: svn merge [-r REV1[:REV2]] [TARGETS]\n",
-    {'r', 'D', 'x', 'n',
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    "merge:  apply the differences between two paths to a working copy path.\n"
+    "usage:  svn merge PATH1[@N] PATH2[@M] [WCPATH]\n\n"
+    "  * PATH1 and PATH2 are either working-copy paths or URLs, specified at\n"
+    "    revisions N and M.  These are the two sources to be compared.\n"
+    "  * WCPATH is the working-copy path that will receive the changes.\n\n"
+    "    - If either N or M are omitted, HEAD revision is assumed.\n"   
+    "    - If WCPATH is omitted, a value of '.' is assumed.\n"
+    "    - If PATH1 and PATH2 are identical, an alternate syntax is allowed:\n"
+    "            svn merge -rN:M PATH [WCPATH]\n",
+    {'r', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
     "Create a new directory under revision control.\n"
@@ -611,31 +617,10 @@ valid_revision_number (const char *rev)
 }
 
 
-/* Set OPT_STATE->start_revision and/or OPT_STATE->end_revision
- * according to ARG, where ARG is "N" or "N:M", like so:
- * 
- *    - If ARG is "N", set OPT_STATE->start_revision's kind to
- *      svn_client_revision_number and its value to the number N; and
- *      leave OPT_STATE->end_revision untouched.
- *
- *    - If ARG is "N:M", set OPT_STATE->start_revision's and
- *      OPT_STATE->end_revision's kinds to svn_client_revision_number
- *      and values to N and M respectively.
- * 
- * N and/or M may be one of the special revision descriptors
- * recognized by revision_from_word().
- *
- * If ARG is invalid, return non-zero; else return zero.
- * It is invalid to omit a revision (as in, ":", "N:" or ":M").
- *
- * Note:
- *
- * It is typical, though not required, for OPT_STATE->start_revision
- * and OPT_STATE->end_revision to be svn_client_revision_unspecified
- * kind on entry.
- */
-static int
-parse_revision (svn_cl__opt_state_t *os, const char *arg, apr_pool_t *pool)
+int
+svn_cl__parse_revision (svn_cl__opt_state_t *os,
+                        const char *arg,
+                        apr_pool_t *pool)
 {
   char *left_rev, *right_rev;
   char *sep;
@@ -847,7 +832,7 @@ main (int argc, const char * const *argv)
         opt_state.message = svn_stringbuf_create (opt_arg, pool);
         break;
       case 'r':
-        ret = parse_revision (&opt_state, opt_arg, pool);
+        ret = svn_cl__parse_revision (&opt_state, opt_arg, pool);
         if (ret)
           {
             svn_handle_error (svn_error_createf
