@@ -3,6 +3,7 @@ noinst_PROGRAMS = skel-test fs-test
 COMMON_LIBS = @SVN_LIBSVN_FS_LIBS@ \
               @SVN_TESTS_MAIN_LIBS@ \
               @SVN_TESTS_EDITOR_LIBS@ \
+              @SVN_LIBSVN_DELTA_LIBS@ \
               @SVN_LIBSVN_SUBR_LIBS@ \
               @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@ -ldb
               ## Shouldn't -ldb be added automatically by the autoconf script?
