@@ -80,3 +80,9 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
   - document mod_authz_svn!  and don't forget to mention it in the
     'svnserve vs. apache' comparison section of ch05.
 
+  - 'svn import' syntax changed... right?  it's not updated everywhere.
+
+  - clarify that 'svn st -u' only adds an asterisk;  it does *not*
+    make the entire record reflect the repository's version of the
+    file.
+
