@@ -53,8 +53,7 @@ svn_cl__diff (apr_getopt_t *os,
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       enum svn_node_kind kind;
 
-      err = svn_io_check_path (target, &kind, pool);
-      if (err) return err;
+      SVN_ERR (svn_io_check_path (target, &kind, pool));
 
       switch (kind) 
         {

@@ -49,18 +49,14 @@ svn_cl__print_dir_diff (svn_stringbuf_t *path,
   svn_boolean_t iswc;
 
   /* Check that this is a real working copy. */
-  err = svn_wc_check_wc (path, &iswc, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc_check_wc (path, &iswc, pool));
 
   if (!iswc)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
                               "Directory `%s' is not under version control.",
                               path->data);
 
-  err = svn_wc_entries_read (&entries, path, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc_entries_read (&entries, path, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {

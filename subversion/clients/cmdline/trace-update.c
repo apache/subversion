@@ -147,22 +147,19 @@ close_directory (void *dir_baton)
       svn_wc_entry_t *entry;
       svn_boolean_t merged, text_conflict, prop_conflict;
       
-      err = svn_wc_entry (&entry,
-                          d->path,
-                          d->edit_baton->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_entry (&entry,
+                             d->path,
+                             d->edit_baton->pool));
       
-      err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                 d->path,
-                                 entry,
-                                 d->edit_baton->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                    d->path,
+                                    entry,
+                                    d->edit_baton->pool));
       
       if (! prop_conflict)
         {
-          err = svn_wc_props_modified_p 
-            (&merged, d->path, d->edit_baton->pool);
-          if (err) return err;
+          SVN_ERR (svn_wc_props_modified_p 
+                   (&merged, d->path, d->edit_baton->pool));
         }
       
       if (prop_conflict)
@@ -196,16 +193,14 @@ close_file (void *file_baton)
       svn_wc_entry_t *entry;
       svn_boolean_t merged, text_conflict, prop_conflict;
 
-      err = svn_wc_entry (&entry,
-                          fb->path,
-                          fb->parent_dir_baton->edit_baton->pool);
-      if (err) return err;
-
-      err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
-                                 fb->parent_dir_baton->path,
-                                 entry,
-                                 fb->parent_dir_baton->edit_baton->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_entry (&entry,
+                             fb->path,
+                             fb->parent_dir_baton->edit_baton->pool));
+               
+      SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                    fb->parent_dir_baton->path,
+                                    entry,
+                                    fb->parent_dir_baton->edit_baton->pool));
 
       if (fb->text_changed)
         {
