@@ -247,24 +247,16 @@ simple_save_creds (svn_boolean_t *saved,
 {
   svn_auth_cred_simple_t *creds = credentials;
   provider_baton_t *pb = provider_baton;
-  const char *no_auth_cache;
   const char *config_dir;
 
   *saved = FALSE;
 
-  no_auth_cache = apr_hash_get (parameters, 
-                                SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                                APR_HASH_KEY_STRING);
- 
   config_dir = apr_hash_get (parameters,
                              SVN_AUTH_PARAM_CONFIG_DIR,
                              APR_HASH_KEY_STRING);
   
-  if (no_auth_cache == NULL)
-    SVN_ERR (save_creds (saved, pb, creds->username, creds->password,
-                         config_dir, pool));
-
-  return SVN_NO_ERROR;
+  return save_creds (saved, pb, creds->username, creds->password,
+                     config_dir, pool);
 }
 
 
@@ -334,23 +326,15 @@ username_save_creds (svn_boolean_t *saved,
 {
   svn_auth_cred_simple_t *creds = credentials;
   provider_baton_t *pb = provider_baton;
-  const char *no_auth_cache;
   const char *config_dir;
 
   *saved = FALSE;
-
-  no_auth_cache = apr_hash_get (parameters, 
-                                SVN_AUTH_PARAM_NO_AUTH_CACHE,
-                                APR_HASH_KEY_STRING);
 
   config_dir = apr_hash_get (parameters,
                              SVN_AUTH_PARAM_CONFIG_DIR,
                              APR_HASH_KEY_STRING);
   
-  if (no_auth_cache == NULL)
-    SVN_ERR (save_creds (saved, pb, creds->username, NULL, config_dir, pool));
-
-  return SVN_NO_ERROR;
+  return save_creds (saved, pb, creds->username, NULL, config_dir, pool);
 }
 
 
