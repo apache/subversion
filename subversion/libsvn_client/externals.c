@@ -371,7 +371,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
-                FALSE, /* timestamp_sleep */
+                TRUE, /* timestamp_sleep */
                 ib->ctx,
                 ib->pool));
     }
@@ -429,7 +429,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
-                FALSE, /* timestamp_sleep */
+                TRUE, /* timestamp_sleep */
                 ib->ctx,
                 ib->pool));
     }
@@ -455,7 +455,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       err = svn_client__update_internal (path,
                                          &(new_item->revision),
                                          TRUE, /* recurse */
-                                         FALSE, /* timestamp_sleep */
+                                         TRUE, /* timestamp_sleep */
                                          ib->ctx,
                                          ib->pool);
 
@@ -480,7 +480,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                     path,
                     &(new_item->revision),
                     TRUE, /* recurse */
-                    FALSE, /* timestamp_sleep */
+                    TRUE, /* timestamp_sleep */
                     ib->ctx,
                     ib->pool));
         }
