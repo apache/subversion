@@ -541,6 +541,9 @@ static svn_error_t *ra_svn_get_repos_root(void *sess, const char **url,
                                           apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
+  if (! conn->repos_root)
+    return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                            "Server did not send repository root");
   *url = conn->repos_root;
   return SVN_NO_ERROR;
 }
