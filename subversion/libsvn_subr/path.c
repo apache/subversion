@@ -530,46 +530,52 @@ svn_path_get_longest_ancestor (const char *path1,
                                const char *path2,
                                apr_pool_t *pool)
 {
-  if (svn_path_is_url (path1)) 
+  svn_boolean_t path1_is_url, path2_is_url;
+  path1_is_url = svn_path_is_url (path1);
+  path2_is_url = svn_path_is_url (path2);
+
+  if (path1_is_url && path2_is_url) 
     {
-      if (svn_path_is_url (path2))
+      char *path_ancestor; 
+      int i = 0;
+
+      /* Find ':' */
+      while (1)
         {
-          char *ancestor, *path_ancestor, *prefix;
-          int i = 0;
-
-          /* Find ':' */
-          for (i = 0; path1[i] != ':'; i++) 
-            {
-              /* They're both URLs, so EOS can't come before ':' */
-              assert (path1[i] != '\0' && path2[i] != '\0');
-
-              /* No shared protocol => no common prefix */
-              if (path1[i] != path2[i])
-                return NULL;  
-            }
-
-          i += 3;  /* Advance past '://' */
-
-          path_ancestor = get_longest_path_ancestor (path1 + i, path2 + i, 
-                                                     pool); 
-
-          /* No shared path => no common prefix */
-          if ((! path_ancestor) || (*path_ancestor == '\0'))
+          /* No shared protocol => no common prefix */
+          if (path1[i] != path2[i])
             return NULL;  
 
-          else 
-            return apr_pstrcat (pool, apr_pstrndup (pool, path1, i),
-                                path_ancestor, NULL);
+          if (path1[i] == ':') 
+            break;
+
+          /* They're both URLs, so EOS can't come before ':' */
+          assert ((path1[i] != '\0') && (path2[i] != '\0'));
+
+          i++;
         }
-      else
-        {
-          /* A URL and a non-URL => no common prefix */
-          return NULL;  
-        }
+
+      i += 3;  /* Advance past '://' */
+
+      path_ancestor = get_longest_path_ancestor (path1 + i, path2 + i, pool);
+
+      /* No shared path => no common prefix */
+      if ((! path_ancestor) || (*path_ancestor == '\0'))
+        return NULL;  
+      else 
+        return apr_pstrcat (pool, apr_pstrndup (pool, path1, i),
+                            path_ancestor, NULL);
     }
-  else
+
+  else if ((! path1_is_url) && (! path2_is_url))
     { 
       return get_longest_path_ancestor (path1, path2, pool);
+    }
+
+  else
+    {
+      /* A URL and a non-URL => no common prefix */
+      return NULL;  
     }
 }
 

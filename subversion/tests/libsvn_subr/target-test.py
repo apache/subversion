@@ -45,11 +45,11 @@ tests = [('normal use',
           'file:///A/C file:///B/D',
           ': file:///A/C, file:///B/D, \n'),
          ('URLs with mixed protocols',
-          'http://host/A/C file:///B/D',
-          ': http://host/A/C, file:///B/D, \n'),
+          'http://host/A/C file:///B/D gopher://host/A',
+          ': http://host/A/C, file:///B/D, gopher://host/A, \n'),
          ('mixed paths and URLs',
-          'z/A/B http://host/A/C/D',
-          ': ' + cwd + '/z/A/B, http://host/A/C/D, \n')]
+          'z/A/B z/A http://host/A/C/D http://host/A/C',
+          ': ' + cwd + '/z/A, http://host/A/C, \n')]
 
 # (re)Create the test directory
 if os.path.exists('z'):
