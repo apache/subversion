@@ -321,7 +321,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#\n"
       "# Check that the author of this commit has the rights to perform the\n"
       "# commit on the files and directories being modified.\n"
-      "# commit-access-check.pl ${REPOS} ${TXN} commit-access-check.cfg "
+      "# commit-access-control.pl ${REPOS} ${TXN} commit-access-control.cfg "
       "|| exit 1\n"
       "#\n"
       "# All checks passed, so allow the commit.\n"

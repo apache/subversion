@@ -12,11 +12,11 @@ Contents:
       from `repository/hooks/post-commit'.  Run the script with no
       arguments for usage.
 
-   2. commit-access-check.pl and commit-access-check.cfg
+   2. commit-access-control.pl and commit-access-control.cfg
       Uses the `svnlook' program to check if check if the user that
       submitted the commit has appropriate rights to perform the
       commit on all the modified files and directories using the
       permissions specified in the configuration file.
 
-      The commit-access-check.cfg is a sample configuration file that
-      you should modify for your own use.
+      The commit-access-control.cfg is a sample configuration file
+      that you should modify for your own use.
