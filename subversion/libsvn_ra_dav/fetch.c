@@ -593,15 +593,8 @@ svn_error_t * svn_ra_dav__do_checkout (void *session_baton,
 ** ### docco...
 */
 
-static svn_error_t * reporter_set_directory(void *report_baton,
-                                            svn_string_t *dir_path,
-                                            svn_revnum_t revision)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t * reporter_set_file(void *report_baton,
-                                       svn_string_t *file_path,
+static svn_error_t * reporter_set_path(void *report_baton,
+                                       svn_string_t *path,
                                        svn_revnum_t revision)
 {
   return SVN_NO_ERROR;
@@ -613,8 +606,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 }
 
 static const svn_ra_reporter_t ra_dav_reporter = {
-  reporter_set_directory,
-  reporter_set_file,
+  reporter_set_path,
   reporter_finish_report
 };
 
