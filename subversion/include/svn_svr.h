@@ -66,41 +66,115 @@
 
 */
 
-#include <subversion/types.h>
+#include <svn_types.h>
 
 
 
 /* For reading history */
-ver_t svn_svr_latest (repos, user);
-prop_t svn_svr_get_ver_prop (repos, user, ver, propname);
-proplist_t svn_svr_get_ver_proplist (repos, user, ver);
-proplist_t svn_svr_get_ver_propnames (repos, user, ver);
+
+svn_ver_t * svn_svr_latest (svn_string_t *repos, 
+                            svn_string_t *user);
+
+svn_string_t * svn_svr_get_ver_prop (svn_string_t *repos, 
+                                     svn_string_t *user, 
+                                     svn_ver_t *ver, 
+                                     svn_string_t *propname);
+
+svn_proplist_t * svn_svr_get_ver_proplist (svn_string_t *repos, 
+                                           svn_string_t *user, 
+                                           svn_ver_t *ver);
+
+svn_proplist_t * svn_svr_get_ver_propnames (svn_string_t *repos, 
+                                            svn_string_t *user, 
+                                            svn_ver_t *ver);
  
+
+
 /* For reading nodes */
-node_t svn_svr_read (repos, user, ver, path);
-str_t svn_svn_svr_get_node_prop (repos, user, ver, path, propname);
-str_t svn_svr_get_dirent_prop (repos, user, ver, path, propname); 
-proplist_t svn_svr_get_node_proplist (repos, ver, path); 
-proplist_t svn_svr_get_dirent_proplist (repos, user, ver, path); 
-proplist_t svn_svr_get_node_propnames (repos, user, ver, path); 
-proplist_t svn_svr_get_dirent_propnames (repos, user, ver, path); 
+
+svn_node_t * svn_svr_read (svn_string_t *repos, 
+                           svn_string_t *user, 
+                           svn_ver_t *ver, 
+                           svn_string_t *path);
+
+svn_string_t * svn_svn_svr_get_node_prop (svn_string_t *repos, 
+                                          svn_string_t *user, 
+                                          svn_ver_t *ver, 
+                                          svn_string_t *path, 
+                                          svn_string_t *propname);
+
+svn_string_t * svn_svr_get_dirent_prop (svn_string_t *repos, 
+                                        svn_string_t *user, 
+                                        svn_ver_t *ver, 
+                                        svn_string_t *path, 
+                                        svn_string_t *propname);
+ 
+svn_proplist_t * svn_svr_get_node_proplist (svn_string_t *repos, 
+                                            svn_ver_t *ver, 
+                                            svn_string_t *path);
+ 
+svn_proplist_t * svn_svr_get_dirent_proplist (svn_string_t *repos, 
+                                              svn_string_t *user, 
+                                              svn_ver_t *ver, 
+                                              svn_string_t *path);
+ 
+svn_proplist_t * svn_svr_get_node_propnames (svn_string_t *repos, 
+                                             svn_string_t *user, 
+                                             svn_ver_t *ver, 
+                                             svn_string_t *path);
+ 
+svn_proplist_t * svn_svr_get_dirent_propnames (svn_string_t *repos, 
+                                               svn_string_t *user, 
+                                               svn_ver_t *ver, 
+                                               svn_string_t *path); 
+
+
 
 /* For writing */
-token_t svn_svr_submit (repos, user, skelta); 
-ver_t svn_svr_write (repos, user, delta, token); 
-bool_t svn_svr_abandon (repos, user, token); 
+
+svn_token_t svn_svr_submit (svn_string_t *repos, 
+                            svn_string_t *user, 
+                            svn_skelta_t *skelta);
+ 
+svn_ver_t * svn_svr_write (svn_string_t *repos, 
+                           svn_string_t *user, 
+                           svn_delta_t *delta, 
+                           svn_token_t token);
+ 
+int svn_svr_abandon (svn_string_t *repos, 
+                     svn_string_t *user, 
+                     svn_token_t token);   /* returns success or failure */ 
+
 
 /* For difference queries */
-delta_t svn_svr_get_delta (repos, user, ver1, path1, ver2, path2); 
-diff_t svn_svr_get_diff (repos, user, ver1, path1, ver2, path2); 
+
+svn_delta_t * svn_svr_get_delta (svn_string_t *repos, 
+                                 svn_string_t *user, 
+                                 svn_ver_t *ver1, 
+                                 svn_string_t *path1, 
+                                 svn_ver_t *ver2, 
+                                 svn_string_t *path2);
+ 
+svn_diff_t * svn_svr_get_diff (svn_string_t *repos, 
+                               svn_string_t *user, 
+                               svn_ver_t *ver1, 
+                               svn_string_t *path1, 
+                               svn_ver_t *ver2, 
+                               svn_string_t *path2); 
+
 
 /* The status() and update() routines are the only ones which aren't
 simple wrappers for the filesystem API.  They make repeated small
 calls to svn_fs_cmp() and svn_fs_get_delta() respectively (see
 <svn_fs.h>) */
 
-skelta_t svn_svr_get_status (repos, user, skelta); 
-delta_t svn_svr_get_update (repos, user, skelta); 
+svn_skelta_t * svn_svr_get_status (svn_string_t *repos, 
+                                   svn_string_t *user, 
+                                   svn_skelta_t *skelta);
+ 
+svn_delta_t * svn_svr_get_update (svn_string_t *repos, 
+                                  svn_string_t *user, 
+                                  svn_skelta_t *skelta); 
 
 
 
