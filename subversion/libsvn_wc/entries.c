@@ -586,13 +586,13 @@ svn_wc__entry_get (svn_string_t *path,
                    apr_hash_t **hash)
 {
   svn_error_t *err;
-  
-  /* Create a new, empty hashtable */
-  apr_hash_t *ht = apr_make_hash (pool);
+  apr_hash_t *ht = apr_make_hash (pool);  /* Create a new, empty hashtable */
 
   err = do_entry (path, pool, entryname, 0, version, 0, ht);
-  
-  
+  if (err)
+    return err;
+
+  *hash = ht;
 
   return SVN_NO_ERROR;
 }
