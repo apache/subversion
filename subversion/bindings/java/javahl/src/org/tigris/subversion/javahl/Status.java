@@ -90,6 +90,15 @@ public class Status
     {
         return new Revision.Number(revision);
     }
+
+    /**
+     * @return revision if versioned, otherwise SVN_INVALID_REVNUM
+     */
+    public long getRevisionNumber()
+    {
+        return revision;
+    }
+
     /**
      * @return the last time the file was changed revision number.
      * or null if not available
@@ -117,12 +126,21 @@ public class Status
         return textStatus;
     }
 
+    public String getTextStatusDescription()
+    {
+        return Kind.getDescription(textStatus);
+    }
     /**
      * @return file status property enum of the "property" component.
      */
     public int getPropStatus()
     {
         return propStatus;
+    }
+
+    public String getPropStatusDescription()
+    {
+        return Kind.getDescription(propStatus);
     }
 
     /**
@@ -179,31 +197,48 @@ public class Status
     /**
      * @return last changed revision
      */
-    public Revision.Number getLastChangedRevision() {
+    public Revision.Number getLastChangedRevision()
+    {
         return new Revision.Number(lastChangedRevision);
+    }
+
+    /**
+     * @return last changed revision
+     */
+    public long getLastChangedRevisionNumber()
+    {
+        return lastChangedRevision;
     }
 
     /**
      * @return the node kind
      */
-    public int getNodeKind() {
+    public int getNodeKind()
+    {
         return nodeKind;
     }
 
 
-    public String getUrlCopiedFrom() {
+    public String getUrlCopiedFrom()
+    {
         return urlCopiedFrom;
     }
     
-    public Revision.Number getRevisionCopiedFrom() {
+    public Revision.Number getRevisionCopiedFrom()
+    {
         return new Revision.Number(revisionCopiedFrom);
     }
 
+    public long getRevisionCopiedFromNumber()
+    {
+        return revisionCopiedFrom;
+    }
     /**
      * tells if is managed by svn (added, normal, modified ...)
      * @return
      */
-    public boolean isManaged()  {
+    public boolean isManaged()
+    {
         int textStatus = getTextStatus();
         return ((textStatus != Status.Kind.unversioned) && 
                 (textStatus != Status.Kind.none) &&
@@ -214,43 +249,45 @@ public class Status
      * tells if the resource has a remote counter-part
      * @return
      */
-    public boolean hasRemote() {
+    public boolean hasRemote()
+    {
         int textStatus = getTextStatus();
         return ((isManaged()) && (textStatus != Status.Kind.added));
     }
     
-    public boolean isAdded() {
+    public boolean isAdded()
+    {
         int textStatus = getTextStatus();
         return textStatus == Status.Kind.added;
     }
 
-    public boolean isDeleted() {
+    public boolean isDeleted()
+    {
         int textStatus = getTextStatus();
         return textStatus == Status.Kind.deleted;        
     }
 
-    public boolean isMerged() {
+    public boolean isMerged()
+    {
         int textStatus = getTextStatus();
         return textStatus == Status.Kind.merged;        
     }
 
-    public boolean isIgnored() {
+    public boolean isIgnored()
+    {
         int textStatus = getTextStatus();
         return textStatus == Status.Kind.ignored;        
     }
-    
-
 
     /**
      * tells if it is modified
      * @return
      */
-    public boolean isModified() {
+    public boolean isModified()
+    {
         int textStatus = getTextStatus();
         return textStatus == Status.Kind.modified;
     }
-
-
 
     public static final class Kind
     {

@@ -17,7 +17,13 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
-public class SVNClient
+
+/**
+ * This is the main interface class. All subversion operations
+ * are implemented in this class. This class is not threadsafe
+ * If you need threadsafe access, use SVNClientSynchronized
+ */
+public class SVNClient implements SVNClientInterface
 {
 
     /**
