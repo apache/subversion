@@ -22,67 +22,12 @@
         number of GUI clients available for Subversion, each in
         various phases of development.</para>
 
-      <table id="svn-ap-d-table-1">
-        <title>GUI Clients for Subversion</title>
-
-        <tgroup cols="5">
-          <thead>
-            <row>
-              <entry>name</entry>
-              <entry>Language</entry>
-              <entry>Portable</entry>
-              <entry>License</entry>
-              <entry>URL</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>RapidSVN</entry>
-              <entry>C++</entry>
-              <entry>Yes, native widgets</entry>
-              <entry>Apache-style</entry>
-              <entry><systemitem
-              class="url">http://rapidsvn.tigris.org/</systemitem></entry>
-            </row>
-
-            <row>
-              <entry>gsvn</entry>
-              <entry>Python</entry>
-              <entry>Unix only, non-native widgets</entry>
-              <entry>GPL</entry>
-              <entry><systemitem
-              class="url">http://gsvn.tigris.org/</systemitem></entry>
-            </row>
-
-            <row>
-              <entry>TortoiseSVN</entry>
-              <entry>C++</entry>
-              <entry>Win32 only</entry>
-              <entry>GPL</entry>
-              <entry><systemitem
-              class="url">http://tortoisesvn.tigris.org/</systemitem></entry>
-            </row>
-
-            <row>
-              <entry>svnup</entry>
-              <entry>Java, JNI bindings</entry>
-              <entry>Yes</entry>
-              <entry>Apache-style</entry>
-              <entry><systemitem
-              class="url">http://svnup.tigris.org/</systemitem></entry>
-            </row>
-      
-            <row>
-              <entry>jsvn</entry>
-              <entry>Java, wrapping the svn command-line client</entry>
-              <entry>Yes</entry>
-              <entry>Academic Free License</entry>
-              <entry><systemitem
-              class="url">http://jsvn.alternatecomputing.com</systemitem></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
+      <para>We used to describe all those clients here, but lately
+        there are too many of them, and they're moving too fast, for a
+        printed manual to keep track of them.  So instead, we
+        recommend you to the links page at <systemitem class="url"
+        >http://subversion.tigris.org/project_links.html</systemitem>,
+        which is kept reasonably up to date.</para>
 
     </sect1>
 
