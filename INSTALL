@@ -16,7 +16,7 @@
 
 I.  THEORY AND DOCUMENTATION
 
-   A.  DESIGN
+  A.  DESIGN
 
       A design spec was written in June 2000, and is a bit out of
       date.  But it still gives a good theoretical introduction to the
@@ -24,27 +24,30 @@ I.  THEORY AND DOCUMENTATION
       layers.  Look in doc/programmer/design/, or look at one of the
       versions posted on the Subversion website.
 
-   B.  WEBDAV
+      
+  B.  WEBDAV
 
       Greg Stein has written an introduction Subversion's network
       protocol, which is an extended dialect of HTTP.  The document is
       'www/webdav-usage.html', and is also posted on the website.
 
-   C.  USER MANUAL
+      
+  C.  USER MANUAL
 
       We've started documenting some of the behavior of the client;
       it's only a small beginning, but it may help.  Look at
       doc/user/manual/ for this project.
 
+      
 
-II.  PARTICIPATING
+II.   PARTICIPATING
 
-   Read the HACKING file!  It describes Subversion coding and log
-   message standards, as well as how to join discussion lists.
+      Read the HACKING file!  It describes Subversion coding and log
+      message standards, as well as how to join discussion lists.
 
-   Talk on IRC with developers:  irc.openprojects.net, channel #svn.
+      Talk on IRC with developers:  irc.openprojects.net, channel #svn.
 
-   Read the FAQ:  http://subversion.tigris.org/project_faq.html
+      Read the FAQ:  http://subversion.tigris.org/project_faq.html
 
 
 
@@ -56,6 +59,7 @@ III.  INSTALLATION
       to check it out of a Subversion repository, and therefore you
       first need a Subversion client.
 
+      
       1.  BOOSTRAPPING FROM TARBALL
 
           Download the most recent distribution tarball from:
@@ -81,6 +85,7 @@ III.  INSTALLATION
              A  svn/HACKING
              ...
 
+             
       2.  BOOTSTRAPPING FROM RPM
 
           If you are using Linux (or any OS that can use RPM) then another
@@ -117,6 +122,7 @@ III.  INSTALLATION
                     just checked out, see the packages/rpm/README file for a
                     one-line build procedure.
 
+                    
   B.  BUILDING THE LATEST SOURCE
 
       You can discard the directory created by the tarball; you're
@@ -125,15 +131,15 @@ III.  INSTALLATION
       First off, if you have any Subversion libraries lying around
       from previous 'make installs', clean them up first!
 
-         # rm -f /usr/local/lib/libsvn*
-         # rm -f /usr/local/lib/libapr*
-         # rm -f /usr/local/lib/libexpat*
-         # rm -f /usr/local/lib/libneon*
+          # rm -f /usr/local/lib/libsvn*
+          # rm -f /usr/local/lib/libapr*
+          # rm -f /usr/local/lib/libexpat*
+          # rm -f /usr/local/lib/libneon*
 
       Start the process by running "autogen.sh":
 
-         $ chmod +x autogen.sh    # if not already executable
-         $ ./autogen.sh
+          $ chmod +x autogen.sh    # if not already executable
+          $ ./autogen.sh
 
       This script will make sure you have all the necessary components
       available to build Subversion.  If any are missing, you will be
@@ -142,10 +148,10 @@ III.  INSTALLATION
 
       After all components are in place, follow the usual procedure:
 
-         $ ./configure --enable-maintainer-mode --disable-shared
-         $ make
-         $ make check    (optional)           
-         # make install
+          $ ./configure --enable-maintainer-mode --disable-shared
+          $ make
+          $ make check    (optional)           
+          # make install
 
       The flags to `configure' are highly recommended for developers,
       as they build a statically-linked binary.  If you don't use
@@ -171,13 +177,14 @@ III.  INSTALLATION
       subversion itself.  If you want to use -jN, use the following
       instead:
 
-         $ ./configure --enable-maintainer-mode --disable-shared
-         $ make -jN external-all
-         $ make -jN local-all
-         $ make check
-         # make install
+          $ ./configure --enable-maintainer-mode --disable-shared
+          $ make -jN external-all
+          $ make -jN local-all
+          $ make check
+          # make install
 
-   C. BUILD REQUIREMENTS
+          
+  C.  BUILD REQUIREMENTS
 
       1.  Berkeley DB
 
@@ -194,15 +201,15 @@ III.  INSTALLATION
       distribution into a subdir named `db' in the top-level of the
       Subversion source tree.  Then Subversion will ignore the system
       DB and use the one it found in its own source tree.
-      Alternatively, you can add this flag
+      Alternatively, you can add this flag:
 
-         --with-berkeley-db=/usr/local/BerkeleyDB.4.0
+          --with-berkeley-db=/usr/local/BerkeleyDB.4.0
 
       to your `configure' switches, and the build process will use the
-      named Berkeley.  You may need to use a different path, of
-      course.
+      named Berkeley.  You may need to use a different path, of course.
 
-      2. Python 2.0
+      
+      2.  Python 2.0
 
       If you want to run "make check", install Python 2.0 or higher on
       your system, as the majority of the test suite is written in
@@ -210,38 +217,36 @@ III.  INSTALLATION
 
 
 
-
 IV.  QUICKSTART GUIDE
 
-   A.  REPOSITORIES
+  A.  REPOSITORIES
 
-     1. REPOSITORY ACCESS
+      1.  REPOSITORY ACCESS
 
       The Subversion client has an abstract interface for accessing a
       repository.  Two "Repository Access" (RA) implementations
       currently exist as libraries:
 
-        libsvn_ra_dav:   accesses a networked repository using WebDAV.
-        libsvn_ra_local: accesses a local repository using Berkeley DB.
+      libsvn_ra_dav:   accesses a networked repository using WebDAV.
+      libsvn_ra_local: accesses a local repository using Berkeley DB.
 
       You can see which methods are available to your 'svn' client
       like so:
 
-        $ svn --version
-        Subversion Client, version 0.6.0
-          compiled Nov 27 2001, 21:15:44
+          $ svn --version
+          Subversion Client, version 0.8.0
+          compiled Jan 26 2002, 16:43:58
 
-        Copyright (C) 2000-2001 CollabNet.
-        Subversion is open source software, see http://subversion.tigris.org/
+          Copyright (C) 2000-2002 CollabNet.
+          Subversion is open source software, see http://subversion.tigris.org/
 
-        The following repository access (RA) modules are available:
+          The following repository access (RA) modules are available:
 
-         * ra_dav : Module for accessing a repository via WebDAV protocol.
-           - handles 'http' schema
-         * ra_local : Module for accessing a repository on local disk.
-           - handles 'file' schema
-           
-
+           * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
+             - handles 'http' schema
+           * ra_local : Module for accessing a repository on local disk.
+             - handles 'file' schema
+                    
       If you don't see ra_local, it probably means that Berkeley DB
       wasn't found when compiling your client binary.  If you don't
       see ra_dav, then something is very wrong;  most likely your
@@ -249,7 +254,7 @@ IV.  QUICKSTART GUIDE
       I.B above.)
 
 
-      2. CREATING A REPOSITORY
+      2.  CREATING A REPOSITORY
 
       A Subversion repository is an ordinary directory that mainly
       contains Berkeley DB .db files.  You can only create a
@@ -259,12 +264,12 @@ IV.  QUICKSTART GUIDE
       many things, but its most important feature is creating an empty
       repository:
 
-          % svnadmin create /usr/local/svn/repos1
+          $ svnadmin create /usr/local/svn/repos1
 
       After the repository is created, you can initially import data
       into it, using libsvn_ra_local (invoked by using a 'file' URL):
 
-          % svn import file:///usr/local/svn/repos1 some/local/dir/
+          $ svn import file:///usr/local/svn/repos1 some/local/dir/
 
       The above example imports the contents of some/local/dir/ right
       into the root of the repository.  If you want to put these
@@ -277,7 +282,7 @@ IV.  QUICKSTART GUIDE
       rights to modify the .db files.  
 
       
-      3. CREATING A SUBVERSION SERVER
+      3.  CREATING A SUBVERSION SERVER
 
       Subversion uses Apache 2.0 as its network server.  Apache's
       mod_dav speaks to a special mod_dav_svn module, which uses
@@ -294,7 +299,7 @@ IV.  QUICKSTART GUIDE
       see section V at the end of this document for a HOWTO.
 
 
-   B.  EXAMPLE WALKTHOUGH
+  B.  EXAMPLE WALKTHOUGH
 
       Here are some simple examples of how one might use the svn
       client.  In general, things are designed to be similar to CVS.
@@ -302,107 +307,114 @@ IV.  QUICKSTART GUIDE
       Users' document (in docs/, or on the website) to understand the
       broader concepts of what's going on!
 
-         # Checkout a working copy.  This can either be a file: or
-         #  http: url, depending on which RA modules are available.
+          # Checkout a working copy.  This can either be a file: or
+          #  http: url, depending on which RA modules are available.
 
-         $ svn co file:///usr/local/svn/repos1 -d wc
-         A wc/foo
-         A wc/bar
-         A wc/baz
-         A wc/baz/gloo
-         A wc/baz/bloo
+          $ svn co file:///usr/local/svn/repos1 -d wc
+          A wc/foo
+          A wc/bar
+          A wc/baz
+          A wc/baz/gloo
+          A wc/baz/bloo
 
-         $ cp -R wc wc2                 # back up this working copy
+          $ cp -R wc wc2                 # back up this working copy
 
-         $ cd wc
-         $ echo "new text" >> bar       # change bar's text
-         $ svn propset color green foo  # add a metadata property to foo
-         $ svn rm baz                   # schedule baz directory for deletion
-         $ touch newfile
-         $ svn add newfile              # schedule newfile for addition
+          $ cd wc
+          $ echo "new text" >> bar       # change bar's text
+          $ svn propset color green foo  # add a metadata property to foo
+          $ svn rm baz                   # schedule baz directory for deletion
+          $ touch newfile
+          $ svn add newfile              # schedule newfile for addition
 
-         $ svn status                   # See what's locally modified
-         M   ./bar
-         _M  ./foo
-         A   ./newfile
-         D   ./baz
-         D   ./baz/gloo
-         D   ./baz/bloo
+          $ svn status                   # See what's locally modified
+          M   ./bar
+          _M  ./foo
+          A   ./newfile
+          D   ./baz
+          D   ./baz/gloo
+          D   ./baz/bloo
 
-         $ svn commit -m "Made many changes"  # Commit the changes
-         Sending    bar
-         Sending    foo
-         Adding     newfile
-         Deleting   baz
-         Commit succeeded.
+          $ svn commit -m "Made many changes"  # Commit the changes
+          Sending    bar
+          Sending    foo
+          Adding     newfile
+          Deleting   baz
+          Commit succeeded.
 
-         $ cd ../wc2                # change to the back-up working copy
+          $ cd ../wc2                # change to the back-up working copy
 
-         $ svn update               # get changes from repository
-         U   ./bar
-         _U  ./foo
-         A   ./newfile
-         D   ./baz
+          $ svn update               # get changes from repository
+          U   ./bar
+          _U  ./foo
+          A   ./newfile
+          D   ./baz
 
 
+          
+V.   BUILDING A SUBVERSION SERVER
 
-V.  BUILDING A SUBVERSION SERVER
-
+  A.  SETUP APACHE
+   
       (Following the BOOTSTRAPPING FROM RPM procedures above will install and
       build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
       Linux systems *IF* the apache-devel-2.0.31 or greater package is already
       installed when the SUBVERSION RPM is built.)
 
-  1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
-      whereever you wish;  it's an independent project.
+      
+      1.  OBTAINING AND INSTALLING APACHE 2.0
+      
+      Checkout the "httpd-2.0" cvs module from apache.org.  Put it whereever
+      you wish;  it's an independent project.
 
-      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
-         (password 'anoncvs')
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic login
+          (password 'anoncvs')
 
-      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co httpd-2.0
 
-  2.  cd httpd-2.0/srclib/, and checkout the "apr" and "apr-util"
-      modules into this directory:
+      Checkout the "apr" and "apr-util" modules into the srclib/ directory:
 
-      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr
-      cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util
+          $ cd httpd-2.0/srclib
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr
+          $ cvs -d :pserver:anoncvs@cvs.apache.org:/home/cvspublic co apr-util
 
-  3.  At the top of the httpd-2.0 tree:
+      At the top of the httpd-2.0 tree:
 
-       ./buildconf
-       ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
+          $ ./buildconf
+          $ ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
 
-       The first arg says to build mod_dav.
-       The second arg says to enable (and build everything) as shared libs.
-       The third arg is where you will ultimately install apache.
+      The first arg says to build mod_dav.
+      The second arg says to enable (and build everything) as shared libs.
+      The third arg is where you will ultimately install apache.
 
-       Note: if you build Subversion with --enable-maintainer-mode,
-       then do the same for Apache. mod_dav_svn uses Apache's
-       maintainer-mode stuff from its headers, so you want to ensure
-       that Apache is built with the same assumption. Just add
-       --enable-maintainer-mode to the configure line above.
+      Note: if you build Subversion with --enable-maintainer-mode,
+      then do the same for Apache. mod_dav_svn uses Apache's
+      maintainer-mode stuff from its headers, so you want to ensure
+      that Apache is built with the same assumption. Just add
+      --enable-maintainer-mode to the configure line above.
 
-       Note: if you have multiple db versions installed on your system,
-       Apache might link to a different one than Subversion, causing
-       failures when accessing the repository through Apache.  To prevent
-       this from happening, you have to tell Apache which db version to
-       use and where to find db.  Add --with-dbm=db4 and
-       --with-berkeley-db=/usr/local/BerkeleyDB.4.0 to the configure
-       line.  Make sure this is the same db as the one Subversion uses.
-       This note assumes you have installed Berkeley DB 4.0.14
-       at its default locations.  For more info about the db requirement,
-       see section III.C.1. 
+      Note: if you have multiple db versions installed on your system,
+      Apache might link to a different one than Subversion, causing
+      failures when accessing the repository through Apache.  To prevent
+      this from happening, you have to tell Apache which db version to
+      use and where to find db.  Add --with-dbm=db4 and
+      --with-berkeley-db=/usr/local/BerkeleyDB.4.0 to the configure
+      line.  Make sure this is the same db as the one Subversion uses.
+      This note assumes you have installed Berkeley DB 4.0.14
+      at its default locations.  For more info about the db requirement,
+      see section III.C.1. 
 
-  All instructions below assume you configured Apache to install
-  under /usr/local/apache2/; substitute appropriately if you
-  chose some other location.
+      All instructions below assume you configured Apache to install
+      under /usr/local/apache2/; substitute appropriately if you
+      chose some other location.
 
-  4.  make depend && make && make install
-
-  5.  Go back into your subversion working copy and run ./autogen.sh if
-      you need to.  Then run
+      Compile and install apache:
+  
+          $ make depend && make && make install
+          
+      Go back into your subversion working copy and run ./autogen.sh if
+      you need to.  Then run:
  
-        ./configure --with-apxs=/usr/local/apache2/bin/apxs
+          $ ./configure --with-apxs=/usr/local/apache2/bin/apxs
 
       This argument tells subversion to build mod_dav_svn, and where to
       find the required information to do so.
@@ -415,52 +427,100 @@ V.  BUILDING A SUBVERSION SERVER
       and link it directly into Apache. Possible, but painful. Stick
       with the shared library for now; if you can't, then ask.
 
-  6. rm /usr/local/lib/libsvn*
+          $ rm /usr/local/lib/libsvn*
 
-     If you have old subversion libraries sitting on your system,
-     libtool will link them instead of the `fresh' ones in your tree.
-     Remove them before building subversion.
+      If you have old subversion libraries sitting on your system,
+      libtool will link them instead of the `fresh' ones in your tree.
+      Remove them before building subversion.
 
-  7. make clean && make && make install
+          $ make clean && make && make install
 
-     After the make install, the Subversion shared libraries are in
-     /usr/local/lib/.  libmod_dav_svn.so should be installed in
-     /usr/local/apache2/modules/.
+      After the make install, the Subversion shared libraries are in
+      /usr/local/lib/.  libmod_dav_svn.so should be installed in
+      /usr/local/apache2/modules/.
 
-  8.  Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
+      
+      2.  CONFIGURING APACHE FOR SUBVERSION
+  
+      Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
 
-          <Location /svn/repos>
-             DAV svn
-             SVNPath /absolute/path/to/repository
-          </Location>
+      <Location /svn/repos>
+          DAV svn
+          SVNPath /absolute/path/to/repository
+      </Location>
 
+      This will give anyone unrestricted access to the repository.  If
+      you want limited access, read or write, you add these lines to
+      the Location block:
+
+          AuthType Basic 
+          AuthName "Subversion repository"
+          AuthUserFile /my/svn/user/passwd/file
+
+      And:
+
+          a) For a read/write restricted repository:
+
+             Require valid-user
+
+          b) For a write restricted repository:
+
+             <LimitExcept GET PROPFIND OPTIONS REPORT>
+                 Require valid-user
+             </LimitExcept>
+
+          c) For seperate restricted read and write access:
+
+             AuthGroupFile /my/svn/group/file
+
+             <LimitExcept GET PROPFIND OPTIONS REPORT>
+                 Require group svn_committers
+             </LimitExcept>
+
+             <Limit GET PROPFIND OPTIONS REPORT>
+                 Require group svn_committers
+                 Require group svn_readers
+             </Limit>
+
+      These are only a few simple examples.  For a complete tutorial
+      on Apache access contol, please consider taking a look at the
+      tutorials found under the "Security" on the following page: 
+      http://httpd.apache.org/docs-2.0/misc/tutorials.html
+                      
+      In order for 'svn cp' to work (which is actually implemented as a
+      DAV COPY command), mod_dav needs to be able to be able to determine
+      the hostname of the server.  A standard way of doing this is to use
+      Apache's ServerName directive to set the server's hostname.  Edit
+      your /usr/local/apache2/conf/httpd.conf to include:
+
+      ServerName svn.myserver.org
+
+      If you are using virtual hosting through Apache's NameVirtualHost
+      directive, you may need to use the ServerAlias directive to specify
+      additional names that your server is known by.
+
+      NOTE: If you are unfamiliar with an Apache directive, or not exactly
+      sure about what it does, don't hesitate to look it up in the
+      documentation: http://httpd.apache.org/docs-2.0/mod/directives.html.
+      
       NOTE: Make sure that the user 'nobody' (or whatever UID the
       httpd process runs as) has permission to read and write the
       Berkeley DB files!  This is a very common problem.
 
-9.  In order for 'svn cp' to work (which is actually implemented as a
-    DAV COPY command), mod_dav needs to be able to be able to determine
-    the hostname of the server.  A standard way of doing this is to use
-    Apache's ServerName directive to set the server's hostname.  Edit
-    your /usr/local/apache2/conf/httpd.conf to include:
+      
+      3.  RUNNING AND TESTING
+ 
+      Fire up apache 2.0:
 
-          ServerName svn.myserver.org
-
-    If you are using virtual hosting through Apache's NameVirtualHost
-    directive, you may need to use the ServerAlias directive to specify
-    additional names that your server is known by.
-
-10. Now fire up apache 2.0:
-
-           /usr/local/apache2/bin/apachectl stop
-           /usr/local/apache2/bin/apachectl start
+          $ /usr/local/apache2/bin/apachectl stop
+          $ /usr/local/apache2/bin/apachectl start
 
       Check /usr/local/apache2/logs/error_log to make sure it started
       up okay.
 
-11. Finally, try doing a network checkout from the repository:
+      Try doing a network checkout from the repository:
 
-          svn co http://localhost/svn/repos -d wc
+          $ svn co http://localhost/svn/repos -d wc
 
       The most common reason this might fail is permission problems
       reading the repository db files.  If the checkout fails, chmod
