@@ -56,11 +56,11 @@ typedef struct xlate_handle_node_t {
   struct xlate_handle_node_t *next;
 } xlate_handle_node_t;
 
-/* This maps userdata_key strings to pointers to pointers to the first entry
-   in the linked list of xlate handles.
-   We don't store the pointer to the list head directly in the hash table,
-   since we remove/insert entries at the head in the list in the code below,
-   and we can't use apr_hash_set() in each character translation because that
+/* This maps const char * userdata_key strings to xlate_handle_node_t **
+   handles to the first entry in the linked list of xlate handles.  We don't
+   store the pointer to the list head directly in the hash table, since we
+   remove/insert entries at the head in the list in the code below, and
+   we can't use apr_hash_set() in each character translation because that
    function allocates memory in each call where the value is non-NULL.
    Since these allocations take place in a global pool, this would be a
    memory leak. */
@@ -195,8 +195,8 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
 
   /* Try to create a handle. */
   *ret = apr_palloc (pool, sizeof(xlate_handle_node_t));
-  apr_err = apr_xlate_open (&(**ret).handle, topage, frompage, pool);
-  (**ret).next = NULL;
+  apr_err = apr_xlate_open (&(*ret)->handle, topage, frompage, pool);
+  (*ret)->next = NULL;
 
   /* If we are called from inside a pool cleanup handler, the just created
      xlate handle will be closed when that handler returns by a newly
