@@ -29,10 +29,11 @@
 int
 main (int argc, char **argv)
 {
+  svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *source_file;
   apr_file_t *target_file;
-  apr_file_t *stout;
+  svn_stream_t *stdout_stream;
   svn_txdelta_stream_t *txdelta_stream;
   svn_txdelta_window_handler_t svndiff_handler;
   svn_stream_t *encoder;
@@ -67,17 +68,14 @@ main (int argc, char **argv)
 	       svn_stream_from_aprfile (target_file, pool),
                pool);
 
-  apr_err = apr_file_open_stdout (&stout, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    {
-      fprintf (stderr, "unable to open stdout for writing\n");
-      exit (1);
-    }
+  err = svn_stream_for_stdout (&stdout_stream, pool);
+  if (err)
+    svn_handle_error (err, stdout, TRUE);
 
 #ifdef QUOPRINT_SVNDIFFS
-  encoder = svn_quoprint_encode (svn_stream_from_aprfile (stout, pool), pool);
+  encoder = svn_quoprint_encode (stdout_stream, pool);
 #else
-  encoder = svn_base64_encode (svn_stream_from_aprfile (stout, pool), pool);
+  encoder = svn_base64_encode (stdout_stream, pool);
 #endif
   svn_txdelta_to_svndiff (encoder, pool, &svndiff_handler, &svndiff_baton);
   svn_txdelta_send_txstream (txdelta_stream,
