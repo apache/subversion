@@ -70,11 +70,10 @@ svn_error_t * svn_ra_open (svn_ra_session_t **p_ras,
 void svn_ra_close (svn_ra_session_t *ras);
 
 svn_error_t * svn_ra_checkout (svn_ra_session_t *ras,
-                               const char *start_at,
+                               const char *start_at_URL,
                                int recurse,
                                const svn_delta_edit_fns_t *editor,
-                               void *edit_baton,
-                               void *dir_baton);
+                               void *edit_baton);
 
 /* Return an *EDITOR and *EDIT_BATON for transmitting a commit to the
    server.  Also, the editor guarantees that if close_edit() returns

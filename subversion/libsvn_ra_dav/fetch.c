@@ -153,6 +153,8 @@ start_resource (void *userdata, const char *href)
   /* ### mod_dav returns absolute paths in the DAV:href element. that is
      ### fine for us, since we're based on top of mod_dav. however, this
      ### will have an impact on future interopability.
+
+     ### i.e. r->href should be turned into an absolute href
   */
   r->href = apr_pstrdup(fc->pool, href);
 
@@ -336,7 +338,11 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   if (len == 0)
     {
       /* file is complete. */
-      /* ### anything to do? */
+      err = (*fc->handler)(NULL, fc->handler_baton);
+      if (err)
+        {
+          /* ### how to abort the read loop? */
+        }
       return;
     }
 
@@ -344,7 +350,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   op.offset = 0;
   op.length = len;
 
+  window.tview_len = len;       /* result will be this long */
   window.num_ops = 1;
+  window.ops_size = 1;          /* ### why is this here? */
   window.ops = &op;
   window.new = &data;
   window.pool = fc->pool;
@@ -393,7 +401,7 @@ fetch_file (svn_ra_session_t *ras,
       /* ### other GET responses? */
     }
 
-  /* ### how to close the handler? */
+  /* note: handler_baton was "closed" in fetch_file_reader() */
 
   /* ### fetch properties */
   /* ### store URL into a local, predefined property */
@@ -404,17 +412,17 @@ fetch_file (svn_ra_session_t *ras,
 
 svn_error_t *
 svn_ra_checkout (svn_ra_session_t *ras,
-                 const char *start_at,
+                 const char *start_at_URL,
                  int recurse,
                  const svn_delta_edit_fns_t *editor,
-                 void *edit_baton,
-                 void *dir_baton)
+                 void *edit_baton)
 {
   svn_error_t *err;
   fetch_ctx_t fc = { 0 };
   dir_rec_t *dr;
   svn_string_t *ancestor_path;
   svn_vernum_t ancestor_version;
+  void *dir_baton;
 
   fc.editor = editor;
   fc.edit_baton = edit_baton;
@@ -422,7 +430,11 @@ svn_ra_checkout (svn_ra_session_t *ras,
   fc.subdirs = apr_make_array(ras->pool, 5, sizeof(dir_rec_t));
   fc.files = apr_make_array(ras->pool, 10, sizeof(file_rec_t));
 
-  /* ### join ras->rep_root, start_at */
+  err = (*editor->replace_root)(edit_baton, &dir_baton);
+  if (err != NULL)
+    return err;
+
+  /* ### join ras->rep_root, start_at_URL */
   dr = apr_push_array(fc.subdirs);
   dr->href = ras->root.path;
   dr->parent_baton = dir_baton;
@@ -505,7 +517,7 @@ svn_ra_checkout (svn_ra_session_t *ras,
  traversal_complete:
   ;
 
-  return NULL;
+  return (*editor->close_directory)(dir_baton);
 }
 
 /* -------------------------------------------------------------------------
