@@ -92,7 +92,7 @@ dnl no apr found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_APR,
 [
   echo "The Apache Portable Runtime (APR) library cannot be found."
-  echo "Please install APR on this system and supply appropriate the"
+  echo "Please install APR on this system and supply the appropriate"
   echo "--with-apr option to 'configure'"
   echo ""
   echo "or"
