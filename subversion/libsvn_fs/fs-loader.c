@@ -31,7 +31,6 @@
 
 #include "fs-loader.h"
 
-#define DEFAULT_FS_TYPE "bdb"
 #define FS_TYPE_FILENAME "fs-type"
 
 /* The implementation of this library is deliberately not separated
