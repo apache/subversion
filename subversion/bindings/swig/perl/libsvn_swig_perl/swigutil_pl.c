@@ -31,10 +31,6 @@
 
 #include "swigutil_pl.h"
 
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
-
 /* element convertors for perl -> c */
 typedef void *(*pl_element_converter_t)(SV *value, void *ctx, 
                                         apr_pool_t *pool);
