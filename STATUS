@@ -98,12 +98,6 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r9125
-    Wrap root->paths_change for Perl.
-    Justification: Perl bindings completeness, low risk.
-    Votes:
-      +1: clkao, breser
-
   * r9144
     Fix a problem that return values of apply_textdelta of a Perl editor
     is different when stacked.
