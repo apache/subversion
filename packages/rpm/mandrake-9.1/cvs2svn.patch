@@ -1,0 +1,11 @@
+--- subversion/tools/cvs2svn/cvs2svn.py~	2003-01-01 19:45:55.000000000 -0700
++++ subversion/tools/cvs2svn/cvs2svn.py	2003-01-01 19:53:48.000000000 -0700
+@@ -14,7 +14,7 @@
+ import getopt
+ import statcache
+ 
+-from svn import fs, util, delta, repos
++from svn import fs, util, delta, repos, rcsparse
+ 
+ 
+ trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
