@@ -834,24 +834,29 @@ $ svn status
           en los metadatos. En el habla habitual, un changeset es
           un parche con un nombre al que se puede referir.</para>
 
-        <para>In Subversion, a global revision number N names a tree
-          in the repository: it's the way the repository looked after
-          the Nth commit.  It's also the name of an implicit
-          changeset: if you compare tree N with tree N-1, you can
-          derive the exact patch that was committed.  For this reason,
-          it's easy to think of <quote>revision N</quote> as not just
-          a tree, but a changeset as well.  If you use an issue
-          tracker to manage bugs, you can use the revision numbers to
-          refer to particular patches that fix bugs&mdash;for example,
-          <quote>this issue was fixed by revision 9238.</quote>.
-          Somebody can then run <command>svn log -r9238</command> to
-          read about the exact changeset which fixed the bug, and run
-          <command>svn diff -r9237:9238</command> to see the patch
-          itself.  And Subversion's merge command also uses revision
-          numbers.  You can merge specific changesets from one branch
-          to another by naming them in the merge arguments:
-          <command>svn merge -r9237:9238</command> would merge
-          changeset #9238 into your working copy.</para>
+        <para>En Subversion, un número global de revisión N nombra el
+          árbol en el repositorio: es la forma en la que quedó
+          el repositorio tras el cambio número N. También es el
+          nombre implícito de un changeset: si compara el árbol
+          N con el árbol N-1, puede derivar el parche exacto
+          cuyos cambios fueron hechos efectivos. Por esta razón,
+          es fácil pensar de la <quote>revisión N</quote> no
+          sólo como un árbol, sino también como un changeset. Si
+          usa un software de gestión de tareas <!-- TODO buscar
+          traducción issue tracker to manage bugs -->para tratar
+          fallos, puede usar los números de revisión para hacer
+          referencia a los parches específicos que corrigen
+          determinados fallos&mdash;por ejemplo, <quote>este
+          problema fue corregido en la revisión 9238.</quote>.
+          Entonces alguien puede ejecutar <command>svn log
+          -r9238</command> para obtener información del changeset
+          exacto que corrigió el problema, y ejecutar <command>svn
+          diff -r9237:9238</command> para ver el propio parche.
+          Y el comando de fusionado de Subversion también usa números
+          de revisión. Puede fusionar changesets específicos de una
+          rama a otra nombrándolos en los parámetros de fusionado:
+          <command>svn merge -r9237:9238</command> fusionaría el
+          changeset #9238 en su copia local.</para>
       </sidebar>
       
       <sect3 id="svn-ch-4-sect-3.2.3">
