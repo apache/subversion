@@ -984,11 +984,8 @@ main (int argc, const char * const *argv)
   svn_boolean_t was_success = FALSE;
 
   /* Initialize context variable. */
-  c.fs = NULL;
-  c.repos = NULL;
+  memset (&c, 0, sizeof (c));
   c.rev_id = SVN_INVALID_REVNUM;
-  c.is_revision = FALSE;
-  c.txn = NULL;
 
   /* We require at least 1 arguments. */
   if (argc < 2)

@@ -81,7 +81,7 @@ struct svn_fs_t
 /*** Filesystem Revision ***/
 typedef struct
 {
-  /* node revsion id of the root node. */
+  /* node revision id of the root node. */
   const svn_fs_id_t *id;
 
   /* id of the transaction that was committed to create this
