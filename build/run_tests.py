@@ -33,31 +33,12 @@ class TestHarness:
     failed = 0
     for prog in list:
       failed = self._run_test(prog) or failed
-
-    print '\nSummary results from', self.logfile
-    self._open_log('r')
-    test_log = self.log.readlines()
-    pass_lines = filter(lambda x: x[:5] == 'PASS:', test_log)
-    fail_lines = filter(lambda x: x[:5] == 'FAIL:', test_log)
-    xpass_lines = filter(lambda x: x[:6] == 'XPASS:', test_log)
-    xfail_lines = filter(lambda x: x[:6] == 'XFAIL:', test_log)
+    if failed:
+      print 'At least one test FAILED, checking ' + self.logfile
+      self._open_log('r')
+      map(sys.stdout.write, filter(lambda x: x[:6] in ('FAIL: ', 'XPASS:'),
+                                   self.log.readlines()))
     self._close_log()
-
-    print 'number of passed tests:', len(pass_lines)
-    print 'number of failed tests:', len(fail_lines)
-    print 'number of expected failures:', len(xfail_lines)
-    print 'number of unexpected passes:', len(xpass_lines)
-
-    if len(fail_lines):
-      print '\nFailed tests:'
-      map(sys.stdout.write, fail_lines)
-    if len(xfail_lines):
-      print '\nExpected failures:'
-      map(sys.stdout.write, xfail_lines)
-    if len(xpass_lines):
-      print '\nUnexpected passes:'
-      map(sys.stdout.write, xpass_lines)
-
     return failed
 
   def _open_log(self, mode):

@@ -358,6 +358,7 @@ def run_one_test(n, test_list):
     if xfail: error = 0                 # Expected failures are not errors.
   else:
     print ('PASS: ', 'XPASS:')[xfail != 0],
+    if xfail: error = 1                 # Unexpected passes are errors.
   print os.path.basename(sys.argv[0]), str(n) + ":", func.__doc__
   return error
 
