@@ -23,12 +23,6 @@ These are in the format of
       OTHER COMMENTS
 
 
-* subversion/libsvn_wc/entries.c:1734
-    /* ### Rest of lock fields. */
-
-* subversion/libsvn_wc/status.c:916
-    /* ### lundblad TODO Loop over lock children for this path and add (lundblad)
-
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
@@ -51,6 +45,9 @@ These are in the format of
        ### already has it.  Also, we need to reread the lock to
        ### avoid a race.  We don't want the write lock grabbed just
        ### to get a lock. */ (cmpilato)
+    (NOTE: I (lundblad) think the right thing to do is to not auto
+    expire locks if the write lock is not held, just pretend they don't exist.
+    A commit will auto expire them anyway.)
 
 * in svn_wc_entry_t, rename lock_crt_date to lock_creation_date.
 
@@ -60,6 +57,8 @@ NICE TO HAVE
 * improve cmdline help messages
 
 * put quotes around user names as well as around lock names when we error.
+
+* support cancelation during lock/unlock.
 
 * possibly teach mailer.py to send lock/unlock mails (fitz)
 
@@ -80,6 +79,9 @@ NICE TO HAVE
 * Questions:
 
    * Decide what should happen when unlocking in commit if an error happens.
+
+   * Should propedit and propset reject to set a property an a file with
+     svn:needs-lock set?
 
    * how do locks relate to dump/load?  file as an enhancement? 
 
