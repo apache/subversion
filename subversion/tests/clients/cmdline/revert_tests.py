@@ -113,6 +113,19 @@ def revert_corrupted_text_base(sbox):
   #
   # Any questions?
 
+  # Yes, I certainly do have questions.
+  # Why on earth do we *care*? Our usual policy is "Mess with .svn and bad
+  # things will happen". Why are we deviating in this case?
+  # Issue 1774 was filed seemingly out-of-the-blue, and there is no record in
+  # it of any discussion on whether it was a bug or not.
+  # I am setting this test to "Skip" for now.
+  #
+  # *If* we decide we want to actually do this, we should do it having
+  # discussed and settled on a design which does not introduce a
+  # crippling slowdown to "svn revert --recursive", as the r8984 did, by
+  # forcing every single text-base in the entire tree to be fully
+  # byte-for-byte compared AND checksummed.
+
   sbox.build()
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, "iota")
@@ -207,7 +220,7 @@ def revert_replaced_file_without_props(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               XFail(revert_reexpand_keyword),
-              revert_corrupted_text_base,
+              Skip(revert_corrupted_text_base),
               revert_replaced_file_without_props,
              ]
 
