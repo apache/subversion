@@ -445,6 +445,213 @@ test12 (const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* Helper function for checking correctness of find_char_backward */
+static svn_error_t *
+test_find_char_backward (const char* data,
+                         apr_size_t len,
+                         char ch,
+                         apr_size_t pos,
+                         svn_boolean_t msg_only,
+                         apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  a = svn_stringbuf_create (data, pool);
+  i = svn_stringbuf_find_char_backward (a, ch);
+
+  if (i == pos)
+    return SVN_NO_ERROR;
+  else
+    return fail (pool, "test failed");
+}
+
+static svn_error_t *
+test13 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "find_char_backward; middle case";
+  a = svn_stringbuf_create ("test, test", pool);
+
+  return
+    test_find_char_backward (a->data, a->len, ',', 4, msg_only, pool);
+}
+
+static svn_error_t *
+test14 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "find_char_backward; 0 case";
+
+  a = svn_stringbuf_create (",test test", pool);
+
+  return
+    test_find_char_backward (a->data, a->len, ',', 0, msg_only, pool);
+}
+
+static svn_error_t *
+test15 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "find_char_backward; strlen - 1 case";
+
+  a = svn_stringbuf_create ("testing,", pool);
+
+  return test_find_char_backward (a->data,
+                                  a->len,
+                                  ',',
+                                  a->len - 1,
+                                  msg_only,
+                                  pool);
+}
+
+static svn_error_t *
+test16 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "find_char_backward; len = 0 case";
+
+  a = svn_stringbuf_create ("", pool);
+
+  return
+    test_find_char_backward (a->data, a->len, ',', 0, msg_only, pool);
+}
+
+static svn_error_t *
+test17 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "find_char_backward; no occurence case";
+
+  a = svn_stringbuf_create ("test test test", pool);
+
+  return test_find_char_backward (a->data,
+                                  a->len,
+                                  ',',
+                                  a->len,
+                                  msg_only,
+                                  pool);
+}
+
+static svn_error_t *
+test_first_non_whitespace (const char *str,
+                           const apr_size_t pos,
+                           svn_boolean_t msg_only,
+                           apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  a = svn_stringbuf_create (str, pool);
+
+  i = svn_stringbuf_first_non_whitespace (a);
+
+  if (i == pos)
+    return SVN_NO_ERROR;
+  else
+    return fail (pool, "test failed");
+}
+
+static svn_error_t *
+test18 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "check whitespace removal; common case";
+
+  return test_first_non_whitespace ("   \ttest", 4, msg_only, pool);
+}
+
+static svn_error_t *
+test19 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "check whitespace removal; no whitespace case";
+
+  return test_first_non_whitespace ("test", 0, msg_only, pool);
+}
+
+static svn_error_t *
+test20 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "check whitespace removal; all whitespace case";
+
+  return test_first_non_whitespace ("   ", 3, msg_only, pool);
+}
+
+static svn_error_t *
+test21 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "check that whitespace will be stripped correctly";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  a = svn_stringbuf_create ("    \ttest\t\t  \t  ", pool);
+  b = svn_stringbuf_create ("test", pool);
+
+  svn_stringbuf_strip_whitespace (a);
+
+  if (svn_stringbuf_compare (a, b) == TRUE)
+    return SVN_NO_ERROR;
+  else
+    return fail (pool, "test failed");
+}
+
+static svn_error_t *
+test_string_compare (const char* str1,
+                     const char* str2,
+                     svn_boolean_t msg_only,
+                     apr_pool_t *pool)
+{
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  a = svn_stringbuf_create (str1, pool);
+  b = svn_stringbuf_create (str2, pool);
+
+  return svn_stringbuf_compare (a, b);
+}
+
+static svn_error_t *
+test22 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "compare stringbufs; different lengths";
+
+  if (test_string_compare ("abc", "abcd", msg_only, pool) == FALSE)
+    return SVN_NO_ERROR;
+  else
+    return fail (pool, "test failed");
+}
+
+static svn_error_t *
+test23 (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "compare stringbufs; equal length, different content";
+
+  if (test_string_compare ("abc", "abb", msg_only, pool) == FALSE)
+    return SVN_NO_ERROR;
+  else
+    return fail (pool, "test failed");
+}
 
 /*
    ====================================================================
@@ -469,5 +676,16 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test10),
     SVN_TEST_PASS (test11),
     SVN_TEST_PASS (test12),
+    SVN_TEST_PASS (test13),
+    SVN_TEST_PASS (test14),
+    SVN_TEST_PASS (test15),
+    SVN_TEST_PASS (test16),
+    SVN_TEST_PASS (test17),
+    SVN_TEST_PASS (test18),
+    SVN_TEST_PASS (test19),
+    SVN_TEST_PASS (test20),
+    SVN_TEST_PASS (test21),
+    SVN_TEST_PASS (test22),
+    SVN_TEST_PASS (test23),
     SVN_TEST_NULL
   };
