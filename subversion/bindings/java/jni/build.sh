@@ -10,6 +10,6 @@
 LIBS="-lapr -ldl -lmm -lcrypt -lpthread -lsvn_subr -lneon -lsvn_repos -lsvn_fs -lsvn_delta -lexpat"
 CC_ARGS="-I/usr/lib/java/include -I/usr/lib/java/include/linux -L/usr/local/lib $LIBS -pthread -shared"
 NATIVE_CLASS_NAME="svn_jni"
-OBJS="svn_jni.c svn_jni_misc.c svn_jni_status.c svn_jni_item.c svn_jni_hashtable.c svn_jni_string.c"
+OBJS="main.c date.c misc.c status.c item.c hashtable.c string.c j.c"
 CC_ARGS="$CC_ARGS -o lib$NATIVE_CLASS_NAME.so $OBJS"
 cc $CC_ARGS
