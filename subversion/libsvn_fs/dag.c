@@ -634,7 +634,10 @@ svn_fs__dag_get_proplist (apr_hash_t **proplist_p,
 
   /* Get property key (returning early if there isn't one) . */
   if (! noderev->prop_key)
-    return SVN_NO_ERROR;
+    {
+      *proplist_p = proplist;
+      return SVN_NO_ERROR;
+    }
 
   /* Get the string associated with the property rep, parsing it as a
      skel, and then attempt to parse *that* into a property hash.  */
