@@ -329,7 +329,9 @@ splay_range_index (apr_off_t offset, range_index_t *ndx)
     }
 
   /* Sanity check ... */
-  assert(offset >= tree->offset || tree->left == NULL && tree->prev == NULL);
+  assert ((offset >= tree->offset) 
+          || ((tree->left == NULL) 
+              && (tree->prev == NULL)));
   ndx->tree = tree;
 }
 
