@@ -1242,7 +1242,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
-     subset of the targets */
+     subset of the targets.
+
+     At the same time, if a non-recursive commit is desired, do not
+     allow a deleted directory as one of the targets. */
   for (i = 0; i < targets->nelts; ++i)
     {
       svn_wc_adm_access_t *adm_access;
@@ -1253,6 +1256,24 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       SVN_ERR_W (svn_wc_adm_probe_retrieve (&adm_access, base_dir_access,
                                             target, pool),
                  _("Are all the targets part of the same working copy?"));
+
+      if (nonrecursive)
+        {
+          svn_wc_status_t *status;
+          svn_node_kind_t kind;
+          
+          SVN_ERR (svn_io_check_path (target, &kind, pool));
+
+          if (kind == svn_node_dir)
+            {
+              SVN_ERR (svn_wc_status (&status, target, adm_access, pool));
+              if (status->text_status == svn_wc_status_deleted ||
+                  status->text_status == svn_wc_status_replaced)
+                return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                         _("Cannot non-recursively commit a "
+                                           "directory deletion"));
+            }
+        }
     }
 
   /* Crawl the working copy for commit items. */
