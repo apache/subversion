@@ -380,7 +380,7 @@ typedef struct svn_delta_edit_fns_t
      for each directory before making changes there.
 
      When the producer is finished making changes to a directory, it
-     should call `finish_directory'.  This lets the consumer do any
+     should call `close_directory'.  This lets the consumer do any
      necessary cleanup, and free the baton's storage.
 
      The `add_file' and `replace_file' callbacks each return a baton
@@ -388,7 +388,7 @@ typedef struct svn_delta_edit_fns_t
      passed to `apply_textdelta' to change the file's contents, or
      `change_file_prop' to change the file's properties.  When the
      producer is finished making changes to a file, it should call
-     `finish_file', to let the consumer clean up and free the baton.
+     `close_file', to let the consumer clean up and free the baton.
 
      The `add_file', `add_directory', `replace_file', and
      `replace_directory' functions all take arguments ANCESTOR_PATH
@@ -413,7 +413,7 @@ typedef struct svn_delta_edit_fns_t
      not be the root dir of the repository).
 
      This function sets DIR_BATON, which will be the dir baton for its
-     matching finish_directory() and the parent baton for any child
+     matching close_directory() and the parent baton for any child
      calls.
 
      kff todo:
@@ -483,8 +483,8 @@ typedef struct svn_delta_edit_fns_t
      (set by add_directory or replace_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
      freed.  */
-  svn_error_t *(*finish_directory) (void *edit_baton,
-                                    void *dir_baton);
+  svn_error_t *(*close_directory) (void *edit_baton,
+                                   void *dir_baton);
 
 
   /* Creating and modifying files.  */
@@ -542,13 +542,13 @@ typedef struct svn_delta_edit_fns_t
   /* We are done processing a file, whose baton is FILE_BATON (set by
      `add_file' or `replace_file').  We won't be using the baton any
      more, so whatever resources it refers to may now be freed.  */
-  svn_error_t *(*finish_file) (void *edit_baton,
-                               void *file_baton);
+  svn_error_t *(*close_file) (void *edit_baton,
+                              void *file_baton);
 
   /* All delta processing is done.  Call this, with the DIR_BATON for
      the root directory of the changes. */
-  svn_error_t *(*finish_edit) (void *edit_baton,
-                               void *dir_baton);
+  svn_error_t *(*close_edit) (void *edit_baton,
+                              void *dir_baton);
 
 } svn_delta_edit_fns_t;
 
