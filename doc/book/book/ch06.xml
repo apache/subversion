@@ -948,7 +948,14 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
       <para>Note that if <command>mod_dav</command> was compiled as a
         shared object (instead of statically linked directly to the
         <command>httpd</command> binary), you'll need a similar
-        <literal>LoadModule</literal> statement for it, too.</para>
+        <literal>LoadModule</literal> statement for it, too.  Be sure
+        that it comes before the <command>mod_dav_svn</command> line:</para>
+
+        <screen>
+LoadModule dav_module         modules/mod_dav.so
+LoadModule dav_svn_module     modules/mod_dav_svn.so
+</screen>
+
     
       <para>At a later location in your configuration file, you now
         need to tell Apache where you keep your Subversion repository
@@ -1480,6 +1487,7 @@ ssl-client-cert-password = somepassword
           <filename>httpd.conf</filename>:</para>
 
         <screen>
+LoadModule dav_module         modules/mod_dav.so
 LoadModule dav_svn_module     modules/mod_dav_svn.so
 LoadModule authz_svn_module   modules/mod_authz_svn.so
 </screen>

@@ -4732,7 +4732,7 @@ trunk/vendors/deli/
           <title>Examples</title>
 
           <para>This shows the history output for the path
-            <filename>/tags/1.0</filename> as of revision 15 in our
+            <filename>/tags/1.0</filename> as of revision 20 in our
             sample repository.</para>
 
           <screen>

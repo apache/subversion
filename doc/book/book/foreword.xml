@@ -6,6 +6,9 @@ ch00.xml. -->
 <preface id="svn-foreword">
     <title>Foreword</title>
 
+    <!-- Hey O'Reilly, should we use some other tag here? -->
+    <para><emphasis>by Karl Fogel</emphasis></para>
+
   <simplesect>
 
     <para>A bad Frequently Asked Questions (FAQ) sheet is one that is
