@@ -52,6 +52,7 @@
    native filesystem directories and revision files. */
 
 /* Names of special files in the fs_fs filesystem. */
+#define PATH_FORMAT        "format"        /* Contains format number */
 #define PATH_UUID          "uuid"          /* Contains UUID */
 #define PATH_CURRENT       "current"       /* Youngest revision */
 #define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
@@ -122,6 +123,12 @@ static txn_vtable_t txn_vtable = {
 };
 
 /* Pathname helper functions */
+
+static const char *
+path_format (svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join (fs->path, PATH_FORMAT, pool);
+}
 
 static const char *
 path_uuid (svn_fs_t *fs, apr_pool_t *pool)
@@ -226,22 +233,60 @@ get_file_offset (apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as the format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format (svn_fs_t *fs)
+{
+  int format = ((fs_fs_data_t *) fs->fsap_data)->format;
+
+  if (format != SVN_FS_FS__FORMAT_NUMBER)
+    {
+      return svn_error_createf 
+        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+         _("Expected FS format '%d'; found format '%d'"), 
+         SVN_FS_FS__FORMAT_NUMBER, format);
+    }
+
+  return SVN_NO_ERROR;
+}
+ 
+
 svn_error_t *
 svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   apr_file_t *current_file;
+  svn_error_t *err;
+  int format;
+
+  fs->path = apr_pstrdup (fs->pool, path);
 
   /* Attempt to open the 'current' file of this repository.  There
      isn't much need for specific state associated with an open fs_fs
      repository. */
-
-  fs->path = apr_pstrdup (fs->pool, path);
-
   SVN_ERR (svn_io_file_open (&current_file, path_current (fs, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
   SVN_ERR (svn_io_file_close (current_file, pool));
+
+  /* Read the FS format number. */
+  err = svn_io_read_version_file (&format, path_format (fs, pool), pool);
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      /* Pre-1.2 filesystems did not have a format file (you could say
+         they were format "0"), so they get upgraded on the fly. */
+      svn_error_clear (err), err = NULL;
+      format = SVN_FS_FS__FORMAT_NUMBER;
+      SVN_ERR (svn_io_write_version_file
+               (path_format (fs, pool), format, pool));
+    }
+  else if (err)
+    return err;
   
+  /* Now we've got a format number no matter what. */
+  ((fs_fs_data_t *) fs->fsap_data)->format = format;
+  SVN_ERR (check_format (fs));
+
   return SVN_NO_ERROR;
 }
 
@@ -3677,6 +3722,11 @@ svn_fs_fs__create (svn_fs_t *fs,
   svn_fs_fs__set_uuid (fs, buffer, pool);
   
   SVN_ERR (svn_fs_fs__dag_init_fs (fs));
+
+  /* This filesystem is ready.  Stamp it with a format number. */
+  SVN_ERR (svn_io_write_version_file
+           (path_format (fs, pool), SVN_FS_FS__FORMAT_NUMBER, pool));
+  ((fs_fs_data_t *) fs->fsap_data)->format = SVN_FS_FS__FORMAT_NUMBER;
 
   return SVN_NO_ERROR;
 }

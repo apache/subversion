@@ -28,8 +28,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** Repository version number. */
-#define SVN_REPOS__VERSION     3
+/*** Repository format number. */
+#define SVN_REPOS__FORMAT_NUMBER     3
 
 
 /*** Repository layout. ***/

@@ -105,11 +105,11 @@ fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR (svn_fs_fs__open (fs, path, pool));
-
   ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
+
+  SVN_ERR (svn_fs_fs__open (fs, path, pool));
 
   return SVN_NO_ERROR;
 }
