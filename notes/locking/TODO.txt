@@ -18,7 +18,8 @@ MUST HAVE
   URL.  The other argument is that, on a delete, the lock should be
   unconditionally deleted.
 
-  Writing test right now. (fitz)
+  Currently, the commit fails over ra_dav (fix in-progress by sussman
+  et al.)
 
 * subversion/libsvn_wc/status.c:982
     /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
