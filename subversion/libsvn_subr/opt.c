@@ -487,45 +487,46 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
                     apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_opt_revision_t start_revision, end_revision;
 
   /* scanning from right to left, just to be friendly to any
      screwed-up filenames that might *actually* contain @-signs.  :-) */
   for (i = (strlen (path) - 1); i >= 0; i--)
     {
       /* If we hit a path separator, stop looking. */
+      /* This is OK only because our revision specifiers can't contain '/'. */
       if (path[i] == '/')
         break;
 
       if (path[i] == '@')
         {
           const char *native_rev;
+          svn_opt_revision_t start_revision, end_revision;
 
           SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
-                                              subpool));
+                                              pool));
 
+          end_revision.kind = svn_opt_revision_unspecified;
           if (svn_opt_parse_revision (&start_revision,
                                       &end_revision,
-                                      native_rev, subpool))
+                                      native_rev, pool)
+              || end_revision.kind != svn_opt_revision_unspecified)
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Syntax error parsing revision '%s'"),
                                       path + i + 1);
 
-          *truepath = apr_pstrndup (pool, path, i);
+          *truepath = svn_path_canonicalize (apr_pstrndup (pool, path, i),
+                                             pool);
           rev->kind = start_revision.kind;
           rev->value = start_revision.value;
 
-          svn_pool_destroy (subpool);
           return SVN_NO_ERROR;
         }
     }
 
   /* Didn't find an @-sign. */
-  *truepath = path;
+  *truepath = svn_path_canonicalize (path, pool);
   rev->kind = svn_opt_revision_unspecified;
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -675,8 +676,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           SVN_ERR (svn_opt_parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[0] = 
-                svn_path_canonicalize (path, pool);
+              ((const char **) (output_targets->elts))[0] = path;
               start_revision->kind = temprev.kind;
               start_revision->value = temprev.value;
             }
@@ -687,8 +687,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           SVN_ERR (svn_opt_parse_path (&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[1] = 
-                svn_path_canonicalize (path, pool);
+              ((const char **) (output_targets->elts))[1] = path;
               end_revision->kind = temprev.kind;
               end_revision->value = temprev.value;
             }

@@ -236,6 +236,9 @@ typedef struct svn_opt_revision_t
  * It is typical, though not required, for @a *start_revision and
  * @a *end_revision to be @c svn_opt_revision_unspecified kind on entry.
  *
+ * If a revision specifier is invalid, return an @c
+ * SVN_ERR_CL_ARG_PARSING_ERROR.
+ *
  * Use @a pool for temporary allocations.
  */
 int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
@@ -250,10 +253,17 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 /**
  * @since New in 1.2.
  *
- * Pull remaining target arguments from @a os into @a *targets_p, including
- * targets stored in @a known_targets (which might come from, for
- * example, the "--targets" command line option), converting them to
- * UTF-8.  Allocate @a *targets_p and its elements in @a pool.
+ * Pull remaining target arguments from @a os into @a *targets_p,
+ * converting them to UTF-8, followed by targets from @a known_targets
+ * (which might come from, for example, the "--targets" command line
+ * option), which are already in UTF-8.
+ *
+ * On each URL target, do some IRI-to-URI encoding and some
+ * auto-escaping.  On each local path, canonicalize case and path
+ * separators, and silently skip it if it is a Subversion administrative
+ * directory.
+ *
+ * Allocate @a *targets_p and its elements in @a pool.
  */
 svn_error_t *
 svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
@@ -265,19 +275,16 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * Pull remaining target arguments from @a os into @a *targets_p, including
- * targets stored in @a known_targets (which might come from, for
- * example, the "--targets" command line option), converting them to
- * UTF-8.  Allocate @a *targets_p and its elements in @a pool.
- *
- * If @a extract_revisions is set, then this function will attempt to
- * look for trailing "@rev" syntax on the paths.  If an @rev is found
- * for the first target in @a *targets_p, it will be removed from the
- * first target string and its value will overwrite the value of @a
- * *start_revision.  If an @rev is found for the second target in @a
- * *targets_p, it will be removed from the second target string and its
- * value will overwrite @a *end_revision.  (Extra revisions beyond that
- * are ignored.) 
+ * The same as @c svn_opt_args_to_target_array2 except that, in
+ * addition, if @a extract_revisions is set, then look for trailing
+ * "@rev" syntax on the first two paths.  If the first target in @a
+ * *targets_p ends in "@rev", replace it with a canonicalized version of
+ * the part before "@rev" and replace @a *start_revision with the value
+ * of "rev".  If the second target in @a *targets_p ends in "@rev",
+ * replace it with a canonicalized version of the part before "@rev"
+ * and replace @a *end_revision with the value of "rev".  Ignore
+ * revision specifiers on any further paths.  "rev" can be any form of
+ * single revision specifier, as accepted by @c svn_opt_parse_revision.
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,
@@ -325,17 +332,35 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
 /**
  * @since New in 1.1.
  *
- * Parse a working-copy or url in @a path, looking for an "@" sign.
+ * Parse a working-copy or URL in @a path, extracting any trailing
+ * revision specifier of the form "@rev" from the last component of
+ * the path.
  *
  * Some examples would be:
  *
- *      - foo/bar/baz@@13
- *      - http://blah/bloo@27
- *      - blarg/snarf@@HEAD
+ *   - foo/bar              -> "foo/bar",      (unspecified)
+ *   - foo/bar@13           -> "foo/bar",      (number, 13)
+ *   - foo/bar@HEAD         -> "foo/bar",      (head)
+ *   - foo/bar@{1999-12-31} -> "foo/bar",      (date, 1999-12-31)
+ *   - http://a/b@27        -> "http://a/b",   (number, 27) 
+ *   - http://a/b@COMMITTED -> "http://a/b",   (committed) [*]
+ *   - foo/bar@1:2          -> error
+ *   - foo/bar@baz          -> error
+ *   - foo/bar@             -> error
+ *   - foo/bar/@13          -> "foo/bar",      (number, 13)
+ *   - foo/bar@@13          -> "foo/bar@",     (number, 13)
+ *   - foo/@bar@HEAD        -> "foo/@bar",     (head)
+ *   - foo@/bar             -> "foo@/bar",     (unspecified)
+ *   - foo@HEAD/bar         -> "foo@HEAD/bar", (unspecified)
  *
- * If an "@" is found, return the two halves in @a *truepath and @a
- * *rev, allocating from @a pool. If no "@" is found, set @a *truepath
- * to @a path and @a *rev to kind 'unspecified'.
+ *   [*] Syntactically valid but probably not semantically useful.
+ *
+ * If a trailing revision specifier is found, parse it into @a *rev and
+ * put the rest of the path into @a *truepath, allocating from @a pool;
+ * or return an @c SVN_ERR_CL_ARG_PARSING_ERROR if the revision
+ * specifier is invalid.  If no trailing revision specifier is found,
+ * set @a *truepath to @a path and @a rev->kind to @c
+ * svn_opt_revision_unspecified.
  */
 svn_error_t *
 svn_opt_parse_path (svn_opt_revision_t *rev,
