@@ -107,7 +107,6 @@
 %ignore svn_io_dir_open;
 %ignore svn_io_dir_remove_nonrecursive;
 %ignore svn_io_dir_read;
-%ignore svn_io_file_printf;
 %ignore svn_io_read_version_file;
 %ignore svn_io_write_version_file;
 

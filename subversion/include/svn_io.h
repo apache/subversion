@@ -737,14 +737,6 @@ svn_io_dir_read (apr_finfo_t *finfo,
                  apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_printf(), which see.  @a format is a utf8-encoded
- * string after it is formatted, so this function can convert it to
- * native encoding before printing.
- */
-svn_error_t *
-svn_io_file_printf (apr_file_t *fptr, const char *format, ...);
-
-
 
 /** Version/format files. 
  *
