@@ -20,7 +20,7 @@ Candidate changes:
       +3: brane. That should be enough :-)
 
   * r10386, r10388:
-    Add IRI support and URI ato-escaping (issue #1910).
+    Add IRI support and URI auto-escaping (issue #1910).
     Justification: Nice usability feature, which could go in if we restart
       the soak period for other reasons.
     Note: r10388 is wrong if it goes into 1.1, but I don't want to change it
@@ -86,3 +86,10 @@ Candidate changes:
        Allows mailer.py to work with fsfs.
     Votes:
       +1: sussman, cmpilato
+
+  * r10461
+    Fix bug in XML directory listing in mod_dav_svn.
+    Justification:
+      One-liner that is good for pathnames with non-ASCII chars.
+    Votes:
+      +1: lundblad
