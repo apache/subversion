@@ -117,3 +117,69 @@ Workplan
 
 Not every step depends on the previous step, so not everything has to
 proceed in order.
+
+Known design issues
+-------------------
+
+Issue #1: Push/pull between svn_fs_apply_text[delta] and svn_txdelta
+
+When building a transaction, we will most likely want to streamily
+generate a delta against the appropriate base and write it into the
+transaction.  However, the target data is not available in the form of
+a readable stream; it arrives in chunks from the caller after
+svn_fs_apply_text[delta] returns.  svn_txdelta demands both source and
+target data in the form of a readable stream, and supplies a readable
+stream of delta windows.
+
+Solution: We will need a variant which returns a writable stream for
+the target data, and accepts a window handler instead of returning a
+stream of delta windows.  This should be easy to implement; we just
+have to redo the window handling code (which is short), and can still
+invoke the same core vdelta engine code.
+
+Issue #2: Avoiding long delays with no feedback during commit
+
+As we've seen with deltification in the BDB implementation, it isn't
+okay to do lots of work in one step of a commit.  Fundamentally,
+though, it's potentially a lot of work to turn an easily mutable
+representation of a transaction into a compact-but-immutable revision
+file.  If we do all this work during the last phase of a commit, not
+only may the user become impatient, but the HTTP client code may time
+out.
+
+Solution A: Write new text representations into the proto-revision
+file as they arrive.  During the last phase of a commit, marshal the
+changed properties, changed directory data, and changed node-rev data
+into the end of the rev file.  This solution was Greg's original plan,
+but it has been criticized half-measure: it introduces permanent waste
+if a file is modified more than once during a single transaction, and
+a large commit could still result in an HTTP timeout just from
+marshalling the metadata onto the rev file.
+
+Solution B: During the final phase of the commit, write out a stub rev
+file which references the transaction directory.  In the same place in
+the code as we currently do deltification, condense the transaction
+into a rev file and then delete the transaction directory.
+Transaction-condensing has to proceed in order, but that's not a big
+deal since waiting for the previous transaction to condense can also
+happen in the background.  This complicated solution introduces two
+sub-problems.  First, if another commit starts before the current one
+is condensed, pointers to the current revision will have to be done by
+<rev, path> rather than by <rev, offset>.  (<rev, path> pointers can
+be resolved inside either transaction directory or a rev file, but are
+somewhat slower to resolve inside a rev file.)  Second, if readers may
+be accessing a transaction directory, we can't be sure when it is okay
+to delete one, since we axiomatically have no read locks.
+
+Non-solution C: Try to solve the problem at the protocol level,
+allowing us to send progress notifications even when nothing has
+happened from the caller's point of view.  Particularly for HTTP, this
+solution seems intractable, although it would provide a lot of future
+flexibility for filesystem implementations.
+
+Non-solution D: Rewrite the svn_fs API so that changes have to occur
+in depth-first order.  (Essentially, use the editor interface.)  This
+would let us represent transactions mostly as just partial rev files
+(storing just a single stack of nested changed-directory data
+alongside), but DAV really needs the flexibility of the current svn_fs
+API, so it's not a starter.
