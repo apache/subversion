@@ -68,7 +68,7 @@ run_hook_cmd (const char *name,
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
      not support those parameters. */
-  apr_err = apr_file_close(write_errhandle);
+  apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
     return svn_error_create
       (apr_err, 0, NULL, pool,
@@ -99,9 +99,9 @@ run_hook_cmd (const char *name,
         }
     }
 
-  /* Hooks are falible, and so hook failure is "expected" to occur at
+  /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe */
-  apr_err = apr_file_close(read_errhandle);
+  apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
     return svn_error_create
       (apr_err, 0, NULL, pool,
@@ -198,6 +198,7 @@ run_post_commit_hook (svn_repos_t *repos,
 static svn_error_t  *
 run_pre_revprop_change_hook (svn_repos_t *repos,
                              svn_revnum_t rev,
+                             const char *author,
                              const char *name,
                              const svn_string_t *value,
                              apr_pool_t *pool)
@@ -215,8 +216,9 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
-      args[3] = name;
-      args[4] = NULL;
+      args[3] = author;
+      args[4] = name;
+      args[5] = NULL;
 
       SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE, pool));
     }
@@ -243,6 +245,7 @@ run_pre_revprop_change_hook (svn_repos_t *repos,
 static svn_error_t  *
 run_post_revprop_change_hook (svn_repos_t *repos,
                               svn_revnum_t rev,
+                              const char *author,
                               const char *name,
                               apr_pool_t *pool)
 {
@@ -257,8 +260,9 @@ run_post_revprop_change_hook (svn_repos_t *repos,
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
-      args[3] = name;
-      args[4] = NULL;
+      args[3] = author;
+      args[4] = name;
+      args[5] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE, pool));
     }
@@ -307,6 +311,7 @@ svn_repos_fs_commit_txn (const char **conflict_p,
 svn_error_t *
 svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                               svn_revnum_t rev,
+                              const char *author,
                               const char *name,
                               const svn_string_t *value,
                               apr_pool_t *pool)
@@ -314,13 +319,14 @@ svn_repos_fs_change_rev_prop (svn_repos_t *repos,
   svn_fs_t *fs = repos->fs;
 
   /* Run pre-revprop-change hook */
-  SVN_ERR (run_pre_revprop_change_hook (repos, rev, name, value, pool));
+  SVN_ERR (run_pre_revprop_change_hook (repos, rev, author, name, 
+                                        value, pool));
 
   /* Change the revision prop. */
   SVN_ERR (svn_fs_change_rev_prop (fs, rev, name, value, pool));
 
   /* Run post-revprop-change hook */
-  SVN_ERR (run_post_revprop_change_hook (repos, rev, name, pool));
+  SVN_ERR (run_post_revprop_change_hook (repos, rev, author, name, pool));
 
   return SVN_NO_ERROR;
 }
