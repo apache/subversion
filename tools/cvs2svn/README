@@ -28,7 +28,8 @@ revision svn repository.  It took about 30 minutes.
 
 * To use this script:
 
-     - Install RCS.  cvs2svn uses the "co" command.
+     - Install RCS.  cvs2svn uses the "co" command.  The RCS home page
+       is http://www.cs.purdue.edu/homes/trinkle/RCS/.
 
      - Get at least python 2.0.
 
