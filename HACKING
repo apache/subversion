@@ -392,7 +392,20 @@ In addition to the GNU standards, Subversion uses these conventions:
          (add-hook 'find-file-hooks 'svn-find-file-hook)
          ;;; End Subversion development section
 
-      (Don't forget to customize the paths for your setup.)
+      You'll need to customize the paths for your setup, of course.
+      You can also make the regexp to string-match more selective; for
+      example, one developer says:
+
+      > Here's the regexp I'm using:
+      > 
+      >     "src/svn/[^/]*/\\(subversion\\|tools\\|build\\)/"
+      >
+      > Two things to notice there: (1) I sometimes have several
+      > working copies checked out under ...src/svn, and I want the
+      > regexp to match all of them; (2) I want the hook to catch only
+      > in "our" directories within the working copy, so I match
+      > "subversion", "tools" and "build" explicitly; I don't want to
+      > use GNU style in the APR that's checked out into my repo. :-)
 
    *  We have a tradition of not marking files with the names of
       individual authors (i.e., we don't put lines like "Author: foo"
