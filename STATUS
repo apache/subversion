@@ -124,7 +124,7 @@ that is, after Thursday, Jan. 8th 2004.
 
 Bindings changes that affect the build system:
 
-    * r8279 and r8280
+    * r8279, r8280 and r8318
      Fix the build system for building against separate apr-util.
      See Issue #1666
      Justification: Shouldn't require in tree apr or apache.
