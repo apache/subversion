@@ -147,14 +147,14 @@ set_version (svn_string_t *path,
 static void
 signal_error (struct log_runner *loggy, const char *fmt)
 {
-  svn_xml_signal_bailout 
-    (loggy->parser, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                       0,
-                                       NULL
-                                       loggy->pool,
-                                       fmt,
-                                       loggy->path->data,
-                                       NULL));
+  svn_xml_signal_bailout (svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
+                                             0,
+                                             NULL,
+                                             loggy->pool,
+                                             fmt,
+                                             loggy->path->data,
+                                             NULL),
+                          loggy->parser);
 }
 
 
@@ -168,7 +168,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   if (! name)
     {
       /* Everything has a name attribute, so check for that first. */
-      signal_error (loggy->parser, "missing name attr in %s");
+      signal_error (loggy, "missing name attr in %s");
     }
   else
     {
@@ -187,16 +187,16 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           const char *verstr = svn_xml_get_attr_value ("version", atts);
           
           if (! verstr)
-            signal_error (loggy->parser, "missing version attr in %s");
+            signal_error (loggy, "missing version attr in %s");
           else
             err = set_version (loggy->path, name, atoi (verstr), loggy->pool);
         }
       else
-        signal_error (loggy->parser, "unrecognized element in %s");
+        signal_error (loggy, "unrecognized element in %s");
     }
       
  if (err)
-   svn_xml_signal_bailout (loggy->parser, err);
+   svn_xml_signal_bailout (err, loggy->parser);
 }
 
 
@@ -233,7 +233,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   /* Parse the log file's contents. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_LOG, APR_READ, pool);
   if (err)
-    goto any_error;
+    return err;
   
   do {
     buf_len = sizeof (buf);
@@ -242,7 +242,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
     if (apr_err && (apr_err != APR_EOF))
       {
         apr_close (f);
-        return svn_error_createf (apr_error, 0, NULL, pool,
+        return svn_error_createf (apr_err, 0, NULL, pool,
                                  "error reading adm log file in %s",
                                   path->data);
       }
