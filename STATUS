@@ -80,6 +80,13 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r13553
+    Fix issue #2173 (Symbolic links from Linux are not ignored in Windows)
+    Justification:
+      High embarassment factor, a highly touted 1.1 feature that no worky.
+    Votes:
+      +1: cmpilato
+
 Approved changes (further review is welcome, but not required):
 
   * r12637, r12640
