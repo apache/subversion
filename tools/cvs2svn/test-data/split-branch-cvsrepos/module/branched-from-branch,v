@@ -1,0 +1,54 @@
+head	1.1;
+access;
+symbols
+	demo-node-0:1.1.1.1.0.2
+	first_working:1.1.1;
+locks; strict;
+comment	@;; @;
+
+
+1.1
+date	98.02.08.01.48.39;	author russel;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	98.02.08.01.48.39;	author russel;	state Exp;
+branches
+	1.1.1.1.2.1;
+next	;
+
+1.1.1.1.2.1
+date	98.02.25.18.56.53;	author adam;	state dead;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@@
+
+
+1.1.1.1
+log
+@Create a branch
+@
+text
+@@
+
+
+1.1.1.1.2.1
+log
+@This revision will go wrong
+@
+text
+@@
+
