@@ -17,10 +17,13 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path, shutil
+import string, sys, re, os.path, shutil, stat
 
 # Our testing module
 import svntest
+
+# A helper function for examining svn:needs-lock
+from prop_tests import check_prop
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -334,7 +337,33 @@ def handle_defunct_lock(sbox):
 # B and verify that that file is set as read-only.
 def enforce_lock(sbox):
   "verify svn:needs-lock read-only behavior"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # svn:needs-lock value should be forced to a '*'
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '', lambda_path)
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
+
+  # Check svn:needs-lock
+#  check_prop('svn:needs-lock', iota_path, ['*'])
+#  check_prop('svn:needs-lock', lambda_path, ['*'])
+#  check_prop('svn:needs-lock', mu_path, ['*'])
+
+  # Now make sure that the perms were flipped on all files
+  if os.name == 'posix':
+    mode = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
+    if ((os.stat (iota_path)[0] & mode)
+        or (os.stat (lambda_path)[0] & mode)
+        or (os.stat (mu_path)[0] & mode)):
+      print "Setting 'svn:needs-lock' property on a file failed to set"
+      print "file mode to read-only."
+      raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -350,7 +379,7 @@ test_list = [ None,
               steal_lock,
               examine_lock,
               XFail(handle_defunct_lock),
-              Skip(enforce_lock, 1),
+              XFail(enforce_lock),
              ]
 
 if __name__ == '__main__':
