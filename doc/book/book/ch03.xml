@@ -912,53 +912,52 @@ C  ./bar.c
            demonstrate the overlapping areas.</para>
         </listitem>
 
-<!-- ###TODO begin airport -->
-
         <listitem>
           <para>For every conflicted file, Subversion places three
-          extra files in your working copy:
+            extra files in your working copy:
 
-<!-- ###TODO make this a varlist -->
-<!-- ###TODO sidebar about svn not screwing up your file. -->
-          <itemizedlist>
+            <!-- ###TODO make this a varlist -->
+            <!-- ###TODO sidebar about svn not screwing up your file. -->
+            <itemizedlist>
+              
+              <listitem>
+                <para><filename>filename.*.mine</filename> This is
+                  your file as it existed in your working copy before
+                  you updated your working copy&mdash;that is, without
+                  conflict markers.  This file has your latest changes
+                  in it.</para>
+              </listitem>
+                  
+              <listitem>
+                <para><filename>filename.*.oldrev</filename> This is
+                  the file that was the BASE revision before you
+                  updated your working copy.  That is, it the file
+                  that you checked out before you made your latest
+                  edits.</para>
+              </listitem>
 
-        <listitem>
-          <para>filename.*.mine
-          This is your file as it existed in your working copy before you updated your
-          working copy&mdash;that is, without conflict markers.  This
-          file has your latest changes in it.
+              <listitem>
+                <para><filename>filename.*.newrevision</filename> This
+                  is the file that your Subversion client just
+                  received from the server when you updated your
+                  working copy.  This file corresponds to the HEAD
+                  revision of the repository.</para>
+              </listitem>
+              
+            </itemizedlist>
 
-          </para>
-        </listitem>filename.*.oldrev
-          This is the file that was the BASE revision before you
-        updated your working copy.  That is, it the file that you
-        checked out before you made your latest edits.
-</para>
-
-        <listitem>
-          <para>filename.*.newrevision
-          This is the file that your Subversion client just received
-          from the server when you updated your working copy.  This
-          file corresponds to the HEAD revision of the repository.
-          </para>
-        </listitem>
-
-</itemizedlist>
-
-          <para>
-            Here<literal>*</literal> represents some random digits
-            that Subversion chooses, "oldrev
-
+            <para>Here<literal>*</literal> represents some random
+              digits that Subversion chooses, "oldrev</para>
         </listitem>
 
       </itemizedlist>
 
-<para>For example, Sally makes changes to the file sandwich in the
-repository.  Harry has just changed the file in his working copy and
-checked it in.  Sally updates her working copy before checking in and
-she gets a conflict:</para>
-
-<screen>
+      <para>For example, Sally makes changes to the file sandwich in
+        the repository.  Harry has just changed the file in his
+        working copy and checked it in.  Sally updates her working
+        copy before checking in and she gets a conflict:</para>
+      
+      <screen>
 $ svn update
 C  sandwich
 Updated to revision 2.
@@ -968,24 +967,23 @@ sandwich.59528.00001.r2
 sandwich.59524.00001.r1
 sandwich.59532.00001.mine
 $
-</screen>
-<!-- ###TODO What happens if the revnum is gt 99999?-->
+      </screen>
+      <!-- ###TODO What happens if the revnum is gt 99999?-->
       
       <para>At this point, Subversion will <emphasis>not</emphasis>
         allow you to commit the file
         <filename>sandwich</filename>until the three temporary files
         are removed.</para>
 
-<screen>
+      <screen>
 $ svn ci -m "Add a few more things"
 subversion/libsvn_client/commit.c:654: (apr_err=155015, src_err=0)
 svn: A conflict in working copy obstructs the current operation
 svn: Commit failed (details follow):
 subversion/libsvn_client/commit_util.c:180: (apr_err=155015, src_err=0)
 svn: Aborting commit: '/home/sally/svn-work/sandwich' remains in conflict.
-</screen>
+      </screen>
 
-           
       <para>If you get a conflict, you need to either (1) hand-merge
         the conflicted text (by examining and editing the conflict
         markers within the file), (2) copy one of the tmpfiles on top
@@ -995,10 +993,10 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich' remains in conflict.
 <!-- ###TODO Talk more here about conflict markers and external diff
 programs -->
 
-<screen>
+      <screen>
 $ cp sandwich.59532.00001.mine sandwich
-</screen>
-           
+      </screen>
+      
       <para>Once you've resolved the conflict, you need to let
         Subversion know by removing the three temporary files.  (The
         <command>svn resolve</command> command, by the way, is a
@@ -1007,32 +1005,33 @@ $ cp sandwich.59532.00001.mine sandwich
         Subversion no longer considers the file to be in a state of
         conflict anymore.</para>
 
-<screen>
+      <screen>
 $ svn resolve sandwich
 Resolved conflicted state of sandwich
-</screen>
+      </screen>
 
-<para>Now you're ready to check in your changes</para>
-
-<screen>
+      <para>Now you're ready to check in your changes</para>
+      
+      <screen>
 $ svn ci -m "Add a few more things"
 Sending        sandwich
 Transmitting file data .
 Committed revision 3.
-</screen>
+      </screen>
 
-<para>Note that<command>svn resolve/command>, unlike most of the
-other commands we've dealt with in this chapter, requires an argument.
-In any case, you want to be careful and only run <command>svn
-resolve</command> when you're certain that you've fixed the conflict
-in your file&mdash;once the temporary files are removed, Subversion
-will even let you check in a file with conflict markers.</para>
-           
+      <para>Note that<command>svn resolve</command>, unlike most of
+        the other commands we've dealt with in this chapter, requires
+        an argument.  In any case, you want to be careful and only run
+        <command>svn resolve</command> when you're certain that you've
+        fixed the conflict in your file&mdash;once the temporary files
+        are removed, Subversion will even let you check in a file with
+        conflict markers.</para>
+      
     </sect2>
-
+    
     <sect2 id="svn-ch-3-sect-4.5">
       <title>Commit your changes</title>
-
+      
       <para>Finally!  Your edits are finished, you've merged all
         updates from the server, and you're ready to commit your
         changes to the repository.</para>
