@@ -301,7 +301,7 @@ class Commit:
     log = rip.logs[rev]
 
     # format the date properly
-    a_t = util.apr_ansi_time_to_apr_time(self.t_max)[1]
+    a_t = util.apr_time_ansi_put(self.t_max)[1]
     date = util.svn_time_to_nts(a_t, pool)
 
     return author, log, date
