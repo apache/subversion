@@ -732,6 +732,10 @@ class RepositoryMirror:
     directory is encountered that has an entry which is not a member
     of the parent stack of the original target.
 
+    NOTE: This function does *not* allow you delete top-level entries
+    (like /trunk, /branches, /tags), not does it prune upwards beyond
+    those entries.
+
     PRUNE is like the -P option to 'cvs checkout'."""
 
     components = string.split(path, '/')
@@ -773,6 +777,10 @@ class RepositoryMirror:
       else:
         return 1
 
+    # We never prune our top-level directories (/trunk, /tags, /branches)
+    if len(components) < 2:
+      return None, [], []
+    
     for component in components[:-1]:
       if path_so_far:
         path_so_far = path_so_far + '/' + component
@@ -807,13 +815,19 @@ class RepositoryMirror:
     for parent_item in parent_chain:
       pkey = parent_item[1]
       pval = marshal.loads(self.nodes_db[pkey])
-      if prune and (new_key is None) and is_prunable(pval):
+
+      # If we're pruning at all, and we're looking at a prunable thing
+      # (and that thing isn't one of our top-level directories --
+      # trunk, tags, branches) ...
+      if prune and (new_key is None) and is_prunable(pval) \
+         and parent_item != parent_chain[-2]:
+        # ... then up our count of pruned items, and do nothing more.
+        # All the action takes place when we hit a non-prunable
+        # parent.
         pruned_count = pruned_count + 1
-        pass
-        # Do nothing more.  All the action takes place when we hit a
-        # non-prunable parent.
       else:
-        # We hit a non-prunable, or aren't pruning, so bubble up the new gospel.
+        # Else, we've hit a non-prunable, or aren't pruning, so bubble
+        # up the new gospel.
         pval[self.mutable_flag] = 1
         if new_key is None:
           del pval[prev_entry_name]
