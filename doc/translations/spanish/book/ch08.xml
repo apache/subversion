@@ -724,24 +724,25 @@ The following repository access (RA) modules are available:
       </sect3>
 
       <sect3 id="svn-ch-8-sect-1.2.3">
-        <title>RA-Local (Direct Repository Access)</title>
+        <title>RA-Local (Acceso directo al repositorio)</title>
 
-        <para>Not all communications with a Subversion repository
-          require a powerhouse server process and a network layer.
-          For users who simply wish to access the repositories on
-          their local disk, they may do so using
-          <literal>file:</literal> URLs and the functionality provided
-          by libsvn_ra_local.  This RA module binds directly with the
-          repository and filesystem libraries, so no network
-          communication is required at all.</para>
+        <para>No todas las comunicaciones con un repositorio
+          Subversion requieren un todopoderoso proceso servidor y
+          una capa de red. Para los usuarios que simplemente desean
+          acceder a los repositorios de sus discos duros locales,
+          pueden hacerlo usando URLs <literal>file:</literal> y la
+          funcionalidad proporcionada por libsvn_ra_local. Este
+          módulo RA enlaza directamente con las librerías de
+          repositorio y sistema de ficheros, por lo que no se
+          requiere comunicación por red en absoluto.</para>
 
-        <para>Subversion requires that the server name included as part
-          of the <literal>file:</literal> URL be either
-          <literal>localhost</literal> or empty, and that there be no
-          port specification.  In other words, your URLs should look
-          like either
-          <literal>file://localhost/path/to/repos</literal> or
-          <literal>file:///path/to/repos</literal>.</para>
+        <para>Subversion requiere que el nombre del servidor
+          incluido como parte de la URL <literal>file:</literal>
+          esté vacío o sea <literal>localhost</literal>, y
+          que no exista especificación alguna de puerto. En
+          otras palabras, las URLs deberían ser como
+          <literal>file://localhost/ruta/al/repositorio</literal>
+          o <literal>file:///ruta/al/repositorio</literal>.</para>
 
         <para>Also, be aware that Subversion's
           <literal>file:</literal> URLs cannot be used in a regular
