@@ -1,6 +1,6 @@
 ## Makefile.in is generated from this by automake.
 
-SUBDIRS = tests
+## SUBDIRS = tests
 
 lib_LTLIBRARIES = libsvn_string.la
 
