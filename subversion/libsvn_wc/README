@@ -39,8 +39,8 @@ other:
   (C) A working copy's "state" is a snapshot (maybe a skelta?) that
       shows the base versions, and any changes, for all entities in
       the working copy.  (Thus, given a wc state, the repository could
-      theoretically reconstruct the entire working copy, modulo any
-      uncomitted local changes.)
+      theoretically reconstruct the entire working copy, modulo the
+      actual content of uncomitted local changes.)
 
   (D) The repository's "relative state" is a list of all entities that
       have changed in the repository relative to a given working copy
@@ -105,10 +105,20 @@ together here:
              in the fresh copy, and commit from that."  (This response
              may apply to subtrees of the working copy, of course).
 
-             Subversion initially implements a _simple_
-             conflict-to-date delta generation algorithm at first; it
-             can improve as we get smarter and/or as there is demand
-             for more informative conflicting updates.
+             The response will probably include more detail than that,
+             of course.  In addition to the general out-of-whackness
+             message, it can say "Directory foo was renamed to bar,
+             conflicting with your new file bar; file blah was
+             deleted, conflicting with your local change to file blah,
+             ..." and so on.  The important thing is that these are
+             informational only -- they're not changing the working
+             copy, they're just telling the user what to examine when
+             she syncs up two working trees manually.
+
+             Subversion implements a _simple_ conflict-to-date delta
+             generation algorithm initially.  It can improve as we get
+             smarter and/or as there is demand for more informative
+             conflicting updates.
 
 --------------------------- Footnotes -----------------------------------
 
@@ -118,7 +128,9 @@ not sure yet.
 
 [2] The working copy doesn't always want to compare against the pure
 latest version of everything -- it may be comparing against some other
-version, or perhaps even different versions for different parts?  So
-the request may need some way of specifying which *repository*
-versions to compare against as well.  I haven't thought about this
-carefully.
+version, or perhaps even different versions for different parts?  In
+the worst case scenario, every entity in the working copy snapshot may
+have a different "latest" to compare against, in addition to the
+possiblity of a different base version.  I haven't thought about this
+carefully yet either, but see no reason the snapshots can't include
+this information.
