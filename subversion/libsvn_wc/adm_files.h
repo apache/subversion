@@ -242,13 +242,17 @@ svn_error_t *svn_wc__sync_props (svn_stringbuf_t *path,
                                  apr_pool_t *pool);
 
 
-/* Ensure that an administrative area exists for PATH, so that
- * PATH is a working copy subdir based on URL at REVISION.  If create
- * an adm area, then initialize it to a locked state.
+/* Ensure that an administrative area exists for PATH, so that PATH is a
+ * working copy subdir based on URL at REVISION.
  *
- * ### the URL- and REVISION-checking described above are not
- * implemented yet.  It's not entirely clear that we need them, need
- * to look at callers...
+ * If the administrative area does not exist then it will be created and
+ * initialized to a unlocked state.
+ *
+ * If the administrative area already exists then the given URL must match
+ * the URL in the administrative area or an error will be returned. The
+ * given REVISION must also match except for the special case of adding a
+ * directory that has a name matching one scheduled for deletion, in which
+ * case REVISION must be zero.
  *
  * Do not ensure existence of PATH itself; if PATH does not exist,
  * return error. 

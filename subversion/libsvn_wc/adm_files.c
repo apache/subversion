@@ -1027,12 +1027,11 @@ svn_wc__sync_props (svn_stringbuf_t *path,
 
 /* Set *EXISTS to non-zero iff there's an adm area for PATH, and it
  * matches URL and REVISION.
- * ### todo: The url/rev match is not currently implemented.
  * 
  * If an error occurs, just return the error and don't touch *EXISTS.
  */
 static svn_error_t *
-check_adm_exists (int *exists,
+check_adm_exists (svn_boolean_t *exists,
                   svn_stringbuf_t *path,
                   svn_stringbuf_t *url,
                   svn_revnum_t revision,
@@ -1040,7 +1039,7 @@ check_adm_exists (int *exists,
 {
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
-  int dir_exists = 0;
+  svn_boolean_t dir_exists = FALSE, wc_exists = FALSE;
   apr_file_t *f = NULL;
   int components_added;
 
@@ -1059,12 +1058,12 @@ check_adm_exists (int *exists,
         }
       else if (kind == svn_node_none)
         {
-          dir_exists = 0;
+          dir_exists = FALSE;
         }
       else                      /* must be a dir. */
         {
           assert (kind == svn_node_dir);
-          dir_exists = 1;
+          dir_exists = TRUE;
         }
     }
 
@@ -1076,7 +1075,7 @@ check_adm_exists (int *exists,
     return err;
   else if (! dir_exists)
     {
-      *exists = 0;
+      *exists = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1089,17 +1088,46 @@ check_adm_exists (int *exists,
   else if (err)
     {
       svn_error_clear_all (err);
-      *exists = 0;
+      wc_exists = FALSE;
     }
   else
-    *exists = 1;
+    wc_exists = TRUE;
 
-  err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool));
 
-  /** kff todo:
-      Step 3: now check that repos and ancestry are correct **/
+  /** Step 3: now check that repos and ancestry are correct **/
+
+  if (wc_exists)
+    {
+      svn_wc_entry_t *entry;
+
+      SVN_ERR (svn_wc_entry (&entry, path, pool));
+      if (!entry)
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                                  "no entry for '%s'", path->data);
+
+      /* The revisions must match except when adding a directory with a
+         name that matches a directory scheduled for deletion. That's
+         because the deleted directory's administrative dir will still be
+         in place but will have an arbitrary revision. */
+      if (entry->revision != revision
+          && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
+        return
+          svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+                             "revison %" SVN_REVNUM_T_FMT
+                             " doesn't match existing revision %"
+                             SVN_REVNUM_T_FMT " in '%s'",
+                             revision, entry->revision, path->data);
+
+      /** ### comparing URLs, should they be cannonicalized first? */
+      if (! svn_stringbuf_compare (entry->url, url))
+        return
+          svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+                             "URL '%s' doesn't match existing URL '%s' in '%s'",
+                             url->data, entry->url->data, path->data);
+    }
+
+  *exists = wc_exists;
 
   return SVN_NO_ERROR;
 }
@@ -1282,7 +1310,7 @@ svn_wc__ensure_adm (svn_stringbuf_t *path,
                     svn_revnum_t revision,
                     apr_pool_t *pool)
 {
-  int exists_already;
+  svn_boolean_t exists_already;
 
   SVN_ERR (check_adm_exists (&exists_already, path, url, revision, pool));
   return (exists_already ? SVN_NO_ERROR : init_adm (path, url, pool));

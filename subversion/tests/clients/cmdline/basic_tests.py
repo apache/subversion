@@ -40,16 +40,18 @@ def basic_checkout(sbox):
   if sbox.build():
     return 1
 
-  # second checkout is expected to fail
   wc_dir = sbox.wc_dir
-  url = svntest.main.current_repo_url
-  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', url,
+
+  # checkout of a different URL into a working copy fails
+  A_url = os.path.join(svntest.main.current_repo_url, 'A')
+  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', A_url,
                                                      '-d', wc_dir)
+  obstructed_update_error = 0
   for stderr_line in stderr_lines:
-    if re.match('.*already a working copy', stderr_line):
-      return 0
-    
-  return 1
+    if re.match('.*<Obstructed update>', stderr_line):
+      obstructed_update_error = 1
+  if not obstructed_update_error:
+    return 1
 
 #----------------------------------------------------------------------
 

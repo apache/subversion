@@ -812,20 +812,31 @@ svn_wc_add (svn_stringbuf_t *path,
     }  
   else /* scheduling a directory for addition */
     {
-      svn_wc_entry_t *p_entry;
-      svn_stringbuf_t *p_path;
+      if (!copyfrom_url)
+        {
+          svn_wc_entry_t *p_entry;
+          svn_stringbuf_t *p_path;
 
-      /* Get the entry for this directory's parent.  We need to snatch
-         the ancestor path out of there. */
-      SVN_ERR (svn_wc_entry (&p_entry, parent_dir, pool));
+          /* Get the entry for this directory's parent.  We need to snatch
+             the ancestor path out of there. */
+          SVN_ERR (svn_wc_entry (&p_entry, parent_dir, pool));
   
-      /* Derive the parent path for our new addition here. */
-      p_path = svn_stringbuf_dup (p_entry->url, pool);
-      svn_path_add_component (p_path, basename);
+          /* Derive the parent path for our new addition here. */
+          p_path = svn_stringbuf_dup (p_entry->url, pool);
+          svn_path_add_component (p_path, basename);
   
-      /* Make sure this new directory has an admistrative subdirectory
-         created inside of it */
-      SVN_ERR (svn_wc__ensure_adm (path, p_path, 0, pool));
+          /* Make sure this new directory has an admistrative subdirectory
+             created inside of it */
+          SVN_ERR (svn_wc__ensure_adm (path, p_path, 0, pool));
+        }
+      else
+        {
+          /* When we are called with the copyfrom arguments set and with
+             the admin directory already in existance, then the dir will
+             contain the copyfrom settings.  So we need to pass the the
+             copyfrom arguments to the ensure call. */
+          SVN_ERR (svn_wc__ensure_adm (path, copyfrom_url, copyfrom_rev, pool));
+        }
       
       /* We're making the same mods we made above, but this time we'll
          force the scheduling. */

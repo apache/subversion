@@ -472,7 +472,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
  * after this call, else the directory must exist already.
  *
  * If the path already exists, but is not a working copy for
- * ANCESTOR_URL, then an error will be returned. 
+ * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned. 
  */
 static svn_error_t *
 prep_directory (svn_stringbuf_t *path,
@@ -481,10 +481,6 @@ prep_directory (svn_stringbuf_t *path,
                 svn_boolean_t force,
                 apr_pool_t *pool)
 {
-  /* kff todo: how about a sanity check that it's not a dir of the
-     same name from a different repository or something? 
-     Well, that will be later on down the line... */
-
   if (force)   /* Make sure the directory exists. */
     SVN_ERR (svn_wc__ensure_directory (path, pool));
 
@@ -1780,21 +1776,6 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-
-  /* Checkout into an existing working-copy isn't supported. */
-  SVN_ERR (svn_io_check_path (dest->data, &kind, pool));
-  if (kind == svn_node_dir)
-    {
-      svn_boolean_t is_wc;
-      SVN_ERR (svn_wc_check_wc (dest, &is_wc, pool));
-      if (is_wc)
-        return svn_error_createf
-          (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-           "checkout into '%s' which is already a working copy",
-           dest->data);
-    }
-
   return make_editor (dest, NULL, target_revision, 
                       TRUE, ancestor_url, 
                       FALSE, NULL,
