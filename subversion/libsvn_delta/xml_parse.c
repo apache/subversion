@@ -1392,7 +1392,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
 
   /* Create a subpool to contain *everything*.  That way,
      svn_delta_free_xml_parser() has an easy target to destroy.  :) */
-  main_subpool = apr_make_sub_pool (pool, NULL);
+  main_subpool = svn_pool_create (pool, NULL);
 
   /* Fetch the rootdir_baton by calling into the editor */
   if (editor->replace_root) 

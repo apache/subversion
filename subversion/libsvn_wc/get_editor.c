@@ -123,7 +123,7 @@ make_dir_baton (svn_string_t *name,
                 struct dir_baton *parent_baton,
                 apr_pool_t *pool)
 {
-  apr_pool_t *subpool = apr_make_sub_pool (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
   struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
   svn_string_t *parent_path
     = parent_baton ? parent_baton->path : edit_baton->dest_dir;
@@ -204,7 +204,7 @@ struct file_baton
 static struct file_baton *
 make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
 {
-  apr_pool_t *subpool = apr_make_sub_pool (parent_dir_baton->pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool, NULL);
   struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
   svn_string_t *path = svn_string_dup (parent_dir_baton->path,
                                        subpool);
@@ -857,9 +857,7 @@ svn_wc_get_update_editor (svn_string_t *dest,
                           apr_pool_t *pool)
 {
   struct edit_baton *eb;
-  apr_pool_t *subpool;
-
-  subpool = apr_make_sub_pool (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
 
   /* Else nothing in the way, so continue. */
 

@@ -73,7 +73,7 @@ main (int argc, char **argv)
   svn_string_t *repos;
 
   apr_initialize ();
-  apr_create_pool (&pool, NULL);
+  pool = svn_pool_create (NULL, NULL);
 
   if (argc != 2)
     {

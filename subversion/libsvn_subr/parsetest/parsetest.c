@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "svn_parse.h"
 
+
 int
 main ()
 {
@@ -17,12 +18,8 @@ main ()
       printf ("apr_initialize() failed.\n");
       exit (1);
     }
-  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
-    {
-      printf ("apr_create_pool() failed.\n");
-      exit (1);
-    }
 
+  pool = svn_pool_create (NULL, NULL);
 
   /* Parse the file "./configfile" */
 

@@ -125,12 +125,41 @@ typedef enum svn_errno_t {
   SVN_ERR_ILLEGAL_URL,
 
   /* the repository access layer could not initialize the socket layer */
-  SVN_ERR_SOCK_INIT
+  SVN_ERR_SOCK_INIT,
+
+  /* an unsuitable container-pool was passed to svn_make_pool() */
+  SVN_ERR_BAD_CONTAINING_POOL
 
 } svn_errno_t;
 
 
 
+/*** Wrappers around APR pools, so we get error pools. ***/
+
+/* You may be wondering why is this is in svn_error, instead of
+   svn_pool or whatever.  The reason is the needs of the SVN error
+   system are our only justification for wrapping APR's pool creation
+   funcs -- because errors have to live as long as the top-most pool
+   in a test program or a `request'.  If you're not using SVN errors,
+   there's no reason not to use APR's native pool interface.  But you
+   are using SVN errors, aren't you? */
+
+/* Return a new pool.  If CONTAINING_POOL is non-null, then the new
+ * pool will be a subpool of it, and will inherit the containing
+ * pool's dedicated error subpool.
+ *
+ * If anything goes wrong, *ABORT_FUNC will be invoked with the
+ * appropriate APR error code, or else a default abort function which
+ * exits the program will be run.
+ */
+apr_pool_t *svn_pool_create (apr_pool_t *containing_pool,
+                             int (*abort_func) (int retcode));
+
+
+
+
+/*** SVN error creation and destruction. ***/
+
 typedef struct svn_error
 {
   apr_status_t apr_err;      /* APR error value, possibly SVN_ custom err */

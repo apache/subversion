@@ -209,14 +209,7 @@ svn_svr_init (svn_svr_policies_t **policy,
 
   /* A policy structure has its own private memory pool, a sub-pool of
      the pool passed in.  */
-
-  result = apr_create_pool (& (*policy->pool), pool);
-
-  if (result != APR_SUCCESS)
-    {
-      char *msg = "svr_init(): can't create sub-pool within policy struct";
-      return (svn_create_error (result, NULL, NULL, pool, msg));
-    }
+  *policy->pool = svn_pool_create (pool, NULL);
 
   return SVN_NO_ERROR;
 }

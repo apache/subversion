@@ -206,14 +206,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
-  if ((result = apr_create_pool (&scratchpool, pool)) != APR_SUCCESS)
-    {
-      return
-        svn_create_error 
-        (result, NULL, NULL, pool,
-         "svn_parse(): can't create sub-pool for parser use");
-    }
-
+  scratchpool = svn_pool_create (pool, NULL);
 
   /* Create a bytestring to hold the current line of file */
   currentline = svn_string_create ("<nobody home>", scratchpool);
