@@ -635,13 +635,13 @@ svn_client__repos_locations (const char **start_url,
 
   /* Set our return variables */
   *start_url = svn_path_join (repos_url, lmb.start_path, pool);
-  *start_revision = apr_pcalloc (pool, sizeof (*start_revision));
+  *start_revision = apr_pcalloc (pool, sizeof (**start_revision));
   (*start_revision)->kind = svn_opt_revision_number;
   (*start_revision)->value.number = lmb.start_revision;
   if (end->kind != svn_opt_revision_unspecified)
     {
       *end_url = svn_path_join (repos_url, lmb.end_path, pool);
-      *end_revision = apr_pcalloc (pool, sizeof (*end_revision));
+      *end_revision = apr_pcalloc (pool, sizeof (**end_revision));
       (*end_revision)->kind = svn_opt_revision_number;
       (*end_revision)->value.number = lmb.end_revision;
     }
