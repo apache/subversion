@@ -1473,6 +1473,7 @@ pre-commit.tmpl
         <varlistentry>
           <term><filename>pre-revprop-change</filename></term>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>Because Subversion's revision properties are not
               versioned, making modifications to such a property (for
               example, the <literal>svn:log</literal> commit message
@@ -1486,19 +1487,45 @@ pre-commit.tmpl
               unversioned property data, Subversion clients will not
               be allowed to remotely modify revision properties at all
               unless this hook is implemented for your repository.</para>
+            @ENGLISH }}} -->
+            <para>Fordi Subversions revisjonsegenskaper ikke er 
+              versjonerte, vil det &#229; forandre slike egenskaper (for 
+              eksempel <literal>svn:log</literal>-egenskapen som 
+              inneholder loggmeldingen for innleggingen) overskrive den 
+              forrige verdien for alltid.
+              Siden data kan g&#229; tapt her, har Subversion denne 
+              p&#229;hakningen (og dens <!-- &#164; -->motstykke 
+              <filename>post-revprop-change</filename>) s&#229; 
+              depotadministratorer kan lage logger med forandringer til 
+              disse elementene ved bruk av eksterne hjelpemidler hvis de 
+              vil det.
+              Som en forholdsregel mot &#229; miste uversjonerte data, vil 
+              ikke Subversionklienter f&#229; lov til &#229; forandre 
+              revisjonsegenskaper i det hele tatt hvis ikke denne 
+              p&#229;hakningen er aktivisert i depotet ditt.</para>
 
+            <!-- @ENGLISH {{{
             <para>This hook runs just before such a modification is
               made to the repository.  The repository passes four
               arguments to this hook: the path to the repository, the
               revision on which the to-be-modified property exists, the
               authenticated username of the person making the change,
               and the name of the property itself.</para>
+            @ENGLISH }}} -->
+            <para>Denne p&#229;hakningen kj&#248;rer like f&#248;r en slik modifisering 
+              blir lagt inn i depotet.
+              Depotet leverer fire argumenter til denne p&#229;hakningen:
+              Stien til depotet, revisjonen som egenskapen som skal 
+              forandres befinner seg p&#229;, det godkjente brukernavnet til 
+              personen som gj&#248;r forandringen, og navnet p&#229; selve 
+              egenskapen.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
           <term><filename>post-revprop-change</filename></term>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>As mentioned earlier, this hook is the counterpart
               of the <filename>pre-revprop-change</filename> hook.  In
               fact, for the sake of paranoia this script will not run
@@ -1512,7 +1539,23 @@ pre-commit.tmpl
               revision on which the property exists, the authenticated
               username of the person making the change, and the name of
               the property itself.</para>
+            @ENGLISH }}} -->
+            <para>Som nevnt tidligere, er denne p&#229;hakningen motstykket 
+              til <filename>pre-revprop-change</filename>-p&#229;hakningen.
+              Faktisk, for paranoiaens skyld vil ikke dette skriptet 
+              kj&#248;re uten at 
+              <filename>pre-revprop-change</filename>-skriptet finnes.
+              N&#229;r begge disse skriptene finnes, kj&#248;rer 
+              <filename>post-revprop-change</filename>-p&#229;hakningen like 
+              etter en revisjonsegenskap er blitt forandret, og blir 
+              vanligvis brukt til &#229; sende en mail som inneholder den nye 
+              verdien til den forandrede egenskapen.
+              Depotet leverer fire argumenter til denne p&#229;hakningen:
+              Stien til depotet, revisjonen som egenskapen tilh&#248;rer, det 
+              godkjente brukernavnet til personen som gj&#248;r forandringen, 
+              og navnet p&#229; selve egenskapen.</para>
 
+            <!-- @ENGLISH {{{
             <para>The Subversion distribution includes a
               <command>propchange-email.pl</command> script (located
               in the <filename>tools/hook-scripts/</filename>
@@ -1522,10 +1565,21 @@ pre-commit.tmpl
               contains the revision and name of the changed property,
               the user who made the change, and the new property
               value.</para>
+            @ENGLISH }}} -->
+            <para>Subversiondistribusjonen inkluderer skriptet 
+              <command>propchange-email.pl</command> (i 
+              <filename>tools/hook-scripts/</filename>-katalogen i 
+              Subversions kildekodetre) som kan bli brukt til &#229; sende 
+              mail med (og/eller legge til en loggfil) detaljene om en 
+              egenskapsforandring.
+              Denne mailen inneholder revisjonen og navnet til den 
+              forandrede egenskapen, brukeren som gjorde forandringen, 
+              og den nye verdien til egenskapen.</para>
           </listitem>
         </varlistentry>
       </variablelist>
 
+      <!-- @ENGLISH {{{
       <para>Subversion will attempt to execute hooks as the same user
         who owns the process which is accessing the Subversion
         repository.  In most cases, the repository is being accessed
@@ -1538,13 +1592,32 @@ pre-commit.tmpl
         same user.  In other words, be alert to potential
         permission-related problems that could prevent the hook from
         performing the tasks you've written it to perform.</para>
+      @ENGLISH }}} -->
+      <para>Subversion vil fors&#248;ke &#229; kj&#248;re p&#229;hakningsskriptene som den 
+        samme brukeren som eier prosessen som aksesserer 
+        Subversiondepotet.
+        I de fleste tilfeller blir depotet aksessert via Apache 
+        HTTPD-tjeneren og mod_dav_svn, s&#229; denne brukeren er den samme 
+        som Apache kj&#248;rer som.
+        Selve p&#229;hakningen m&#229; bli satt opp med rettigheter p&#229; 
+        operativsystemniv&#229; som tillater denne brukeren &#229; kj&#248;re dem.
+        Dette betyr ogs&#229; at enhver fil eller program (inkludert selve 
+        Subversiondepotet) aksessert direkte eller indirekte av 
+        p&#229;hakningen vil bli aksessert som den samme brukeren.
+        Med andre ord, v&#230;r obs p&#229; mulig rettighetsproblematikk som kan 
+        forhindre p&#229;hakningsskriptet fra &#229; utf&#248;re de oppgavene du har 
+        satt det til.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-2.2">
+      <!-- @ENGLISH {{{
       <title>Berkeley DB Configuration</title>
+      @ENGLISH }}} -->
+      <title>Konfigurasjon av Berkeley DB</title>
 
+      <!-- @ENGLISH {{{
       <para>A Berkeley DB environment is an encapsulation of one or
         more databases, log files, region files and configuration
         files.  The Berkeley DB environment has it own set of default
@@ -1556,7 +1629,16 @@ pre-commit.tmpl
         particular repository, with its unique collection of data and
         access patterns, might require a different set of
         configuration option values.</para>
+      @ENGLISH }}} -->
+      <para>Et Berkeley DB-milj&#248; er en innkapsling av en eller flere 
+        databaser, loggfiler, regionfiler og konfigurasjonsfiler.
+        Berkeley DB-milj&#248;et har sitt eget sett med konfigurasjonsverdier 
+        for ting som antallet l&#229;ser som er tillatt brukt p&#229; en gang, 
+        maksimal st&#248;rrelse p&#229; journalloggfiler og s&#229; videre.
+        Subversions filsystemkode velger i tillegg standardverdier for 
+        noen av konfigurasjonsvalgene i Berkeley DB.</para>
 
+      <!-- @ENGLISH {{{
       <para>The folks at Sleepycat (the producers of Berkeley DB)
         understand that different databases have different
         requirements, and so they have provided a mechanism for
@@ -1565,7 +1647,16 @@ pre-commit.tmpl
         a file named <filename>DB_CONFIG</filename> in each
         environment directory, and parses the options found in that
         file for use with that particular Berkeley environment.</para>
+      @ENGLISH }}} -->
+      <para>Folkene i Sleepycat (produsentene av Berkeley DB) innser at 
+        forskjellige databaser har forskjellige krav, og de har derfor 
+        lagt inn en mekanisme for &#229; overstyre mange av 
+        konfigurasjonsverdiene til Berkeley DB under kj&#248;ring.
+        Berkeley sjekker at filen <filename>DB_CONFIG</filename> finnes 
+        i hver milj&#248;katalog, og leser valgene som er i denne filen for 
+        bruk med akkurat dette Berkeley-milj&#248;et.</para>
 
+      <!-- @ENGLISH {{{
       <para>The Berkeley configuration file for your repository is
         located in the <filename>db</filename> environment directory,
         at <filename>repos/db/DB_CONFIG</filename>.  Subversion itself
@@ -1583,6 +1674,25 @@ pre-commit.tmpl
         <filename>DB_CONFIG</filename> won't take effect until you
         recover the database environment (using <command>svnadmin
         recover</command>).</para>
+      @ENGLISH }}} -->
+      <para>Berkeley-konfigurasjonsfilen for ditt depot ligger i 
+        milj&#248;katalogen <filename>db</filename> i 
+        <filename>depot/db/DB_CONFIG</filename>.
+        Subversion oppretter selv denne filen n&#229;r den lager resten av 
+        depotet.
+        Filen inneholder innledningsvis noen standardvalg sammen med 
+        pekere til dokumentasjonen til Berkeley DB som ligger online s&#229; 
+        du kan lese om hva disse valgene gj&#248;r.
+        Selvf&#248;lgelig kan du legge til alle st&#248;ttede Berkeley DB-valg til 
+        <filename>DB_CONFIG</filename>-filen.
+        Pass bare p&#229; at mens Subversion aldri pr&#248;ver &#229; lese eller forst&#229; 
+        innholdet i filen og bruker ingen av valgene i den, vil du unng&#229; 
+        gj&#248;re forandringer i konfigurasjonen som f&#229;r Berkeley DB seg til 
+        &#229; oppf&#248;re seg annerledes enn det Subversionkoden forventer.
+        I tillegg vil ikke forandringer gjort i 
+        <filename>DB_CONFIG</filename> aktiviseres f&#248;r du gjenoppretter 
+        databasemilj&#248;et (ved bruk av <command>svnadmin 
+        recover</command>.</para>
     </sect2>
   </sect1>
 
