@@ -751,7 +751,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
                 status</command>, or by setting the
                 <literal>svn:ignore</literal> property on the parent
                 directory.  For more information on ignored files, see
-                <xref linkend="svn-ch-6-sect-2.1.3"/>.</para>
+                <xref linkend="svn-ch-6-sect-2.2.3" />.</para>
 
             </listitem>
           </varlistentry>
