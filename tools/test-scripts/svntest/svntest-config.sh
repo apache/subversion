@@ -149,7 +149,7 @@ UMOUNT="$BIN/umount"
 #
 # Branch prefix for the e-mail subject
 #
-REVPREFIX=`$SVN info $SVN_REPO | $SED -ne 's@^URL:.*/repos/svn/\(.*\)$@\1 r@p'`
+REVPREFIX=`$SVN info $SVN_REPO | $SED -ne 's@^URL:.*/repos/svn/\(branches/\)*\(.*\)$@\2 r@p'`
 
 #
 # Helper functions
