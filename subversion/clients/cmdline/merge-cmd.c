@@ -45,7 +45,7 @@ svn_cl__merge (apr_getopt_t *os,
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton;
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

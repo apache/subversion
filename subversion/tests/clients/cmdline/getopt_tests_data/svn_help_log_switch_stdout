@@ -33,6 +33,7 @@ Valid options:
   -r [--revision] arg      : specify revision number ARG (or X:Y range)
   -D [--date] arg          : specify a date ARG (instead of a revision)
   -N [--nonrecursive]      : operate on single directory only
+  -q [--quiet]             : print as little as possible
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
 
