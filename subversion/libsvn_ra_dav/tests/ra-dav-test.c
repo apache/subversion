@@ -80,7 +80,7 @@ main (int argc, char **argv)
 
   /* ### what is this path? */
   root_path = svn_string_create("", pool);
-  err = (*plugin->do_checkout)(session_baton, editor, edit_baton, root_path);
+  err = (*plugin->do_checkout)(session_baton, editor, edit_baton);
   if (err)
     goto error;
 
