@@ -18,8 +18,9 @@
 #ifndef SVN_LIBSVN_REPOS_H
 #define SVN_LIBSVN_REPOS_H
 
-#include "apr_pools.h"
-#include "apr_hash.h"
+#include <apr_pools.h>
+#include <apr_hash.h>
+
 #include "svn_fs.h"
 
 #ifdef __cplusplus

@@ -37,6 +37,9 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#include <apr_strings.h>
+
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_pools.h"
@@ -46,7 +49,6 @@
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_quoprint.h"
-#include "apr_strings.h"
 #ifdef SVN_HAVE_OLD_EXPAT
 #include "xmlparse.h"
 #else

@@ -37,7 +37,7 @@
 #include "svn_repos.h"
 #include "svn_utf.h"
 
-#include "db.h"
+#include <db.h>
 
 #ifdef __cplusplus
 extern "C" {

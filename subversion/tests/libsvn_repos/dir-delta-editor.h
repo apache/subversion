@@ -24,7 +24,9 @@
 #define SVN_TEST__DIR_DELTA_EDITOR_H
 
 #include <stdio.h>
-#include "apr_pools.h"
+
+#include <apr_pools.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"

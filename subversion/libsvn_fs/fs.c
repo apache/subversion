@@ -21,9 +21,9 @@
 #include <errno.h>              /* for EINVAL */
 #include <db.h>
 
-#include "apr_general.h"
-#include "apr_pools.h"
-#include "apr_file_io.h"
+#include <apr_general.h>
+#include <apr_pools.h>
+#include <apr_file_io.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"

@@ -25,8 +25,10 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "apr_pools.h"
-#include "apr_file_io.h"
+
+#include <apr_pools.h>
+#include <apr_file_io.h>
+
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */

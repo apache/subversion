@@ -18,8 +18,8 @@
 #ifndef SVN_LIBSVN_FS_TRAIL_H
 #define SVN_LIBSVN_FS_TRAIL_H
 
-#include "db.h"
-#include "apr_pools.h"
+#include <db.h>
+#include <apr_pools.h>
 #include "svn_fs.h"
 
 #ifdef __cplusplus

@@ -16,10 +16,12 @@
  */
 
 #include <db.h>
+
+#include <apr_hash.h>
+#include <apr_tables.h>
+
 #include "svn_fs.h"
 #include "svn_pools.h"
-#include "apr_hash.h"
-#include "apr_tables.h"
 #include "../fs.h"
 #include "../id.h"
 #include "../err.h"

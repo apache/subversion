@@ -17,7 +17,8 @@
  * ====================================================================
  */
 
-#include "apr_lib.h"
+#include <apr_lib.h>
+
 #include "svn_io.h"
 #include "svn_pipe.h"
 

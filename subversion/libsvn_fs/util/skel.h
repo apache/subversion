@@ -18,8 +18,9 @@
 #ifndef SVN_LIBSVN_FS_SKEL_H
 #define SVN_LIBSVN_FS_SKEL_H
 
+#include <apr_pools.h>
+
 #include "svn_string.h"
-#include "apr_pools.h"
 
 #ifdef __cplusplus
 extern "C" {

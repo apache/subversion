@@ -21,7 +21,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <db.h>
-#include "apr_strings.h"
+#include <apr_strings.h>
+
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
