@@ -86,46 +86,68 @@ void svn_xml_startElement(void *userData, const char *name, const char **atts)
 {
   int i;
   char *attr_name, *attr_value;
-  svn_delta_t *my_delta = userData;
+  svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
   if (strcmp (name, "tree-delta"))
     {
       /* Found a new tree-delta element */
+      /* Create new svn_delta_t structure here, using **atts */
     }
 
   else if (strcmp (name, "text-delta"))
     {
       /* Found a new text-delta element */
+      /* Please mark flag in edit_content structure (should be the
+         last structure on our growing delta) */
+    }
+
+  else if (strcmp (name, "prop-delta"))
+    {
+      /* Found a new prop-delta element */
+      /* Please mark flag in edit_content structure (should be the
+         last structure on our growing delta) */
     }
 
   else if (strcmp (name, "new"))
     {
       /* Found a new svn_edit_t */
+      /* Build a new edit struct, fill with **attrs */
     }
 
   else if (strcmp (name, "replace"))
     {
       /* Found a new svn_edit_t */
+      /* Build a new edit struct, fill with **attrs */
     }
 
   else if (strcmp (name, "delete"))
     {
       /* Found a new svn_edit_t */
+      /* Build a new edit struct, fill with **attrs */
     }
 
   else if (strcmp (name, "file"))
     {
       /* Found a new svn_edit_content_t */
+      /* Build a edit_content_t */
+      /* Build an ancestor out of **attrs */
     }
 
   else if (strcmp (name, "dir"))
     {
       /* Found a new svn_edit_content_t */
+      /* Build a edit_content_t */
+      /* Build an ancestor out of **attrs */
+      /* call (*dir_handler) (svn_delta_digger_t *digger, 
+                              svn_ancestor_t *ancestor); */
     }
 
   else
     {
-      /* Found some other random tag -- ignore it. */
+      /* Found some other random tag 
+         -- PUNT to the *caller's* default handler! */
+
+
     }
 
 
@@ -146,7 +168,8 @@ void svn_xml_startElement(void *userData, const char *name, const char **atts)
 
 void svn_xml_endElement(void *userData, const char *name)
 {
-  svn_delta_t *my_delta = userData;
+  svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
+
 
 }
 
@@ -157,22 +180,13 @@ void svn_xml_endElement(void *userData, const char *name)
 
 void svn_xml_DataHandler(void *userData, const char *data, int len)
 {
-  svn_delta_t *my_delta = userData;
+  svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
-  if (len > 0)
-    {
-      int i;
-      int *depthPtr = userData;
-      for (i = 0; i < *depthPtr; i++)
-        putchar (' ');
-      
-      printf ("DATA (len %d): ", len);
-      for (i = 0; i < len; i++)
-        {
-          putchar (data[i]);
-        }
-      printf ("\n");
-    }
+  /* TODO: Check context of my_digger->delta, make sure that *data is
+     relevant before we bother our data_handler() */
+
+  (* (my_digger->data_handler)) (my_digger, data, len);
+
 }
 
 
