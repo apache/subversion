@@ -71,6 +71,56 @@ svn_cl__diff (apr_getopt_t *os,
   if ((status = apr_file_open_stderr (&errfile, pool)))
     return svn_error_create (status, 0, NULL, pool, "can't open stderr");
 
+  /* ### To make "svn diff URL1 URL2" work, we have a problem -- how
+     to distinguish between these two different behaviors
+
+        $ svn diff http://foo@X http://bar@Y
+
+          and
+
+        $ svn diff -rX:Y foo.c bar.c baz.c sub/qux.c sub/quux.c
+
+     That is, multiple targets might mean we want the diff between
+     revisions X and Y for *each* target -- or it might mean we want
+     to diff two paths (a branch vs trunk, for example), which might
+     or might not be at the same revision.  How do we know the
+     intention?
+
+     I think the answer is something like:
+
+        svn_stringbuf_t *target1
+          = ((svn_stringbuf_t **) (condensed_targets->elts))[0];
+   
+        svn_stringbuf_t *target2
+          = ((svn_stringbuf_t **) (condensed_targets->elts))[1];
+   
+        if ((condensed_targets->nelts == 2)
+            && ((is_a_url (target1)) || (is_a_url (target2))))
+          {
+            // start_revision corresponds to target1, end_revision to target2
+            SVN_ERR (svn_client_diff (options,
+                                      auth_baton,
+                                      target1,
+                                      &(opt_state->start_revision),
+                                      target2,
+                                      &(opt_state->end_revision),
+                                      opt_state->nonrecursive ? FALSE : TRUE,
+                                      outfile,
+                                      errfile,
+                                      pool));
+          }
+        else
+          {
+             for (i = 0; i < condensed_targets->nelts; ++i)
+               {
+                  etc, etc, see the code immediately below;
+               }
+          }
+
+    Of course, this assumes we've first fixed svn_client_diff() to
+    handle two distinct paths, ahem.
+  */
+
   for (i = 0; i < condensed_targets->nelts; ++i)
     {
       svn_stringbuf_t *target
