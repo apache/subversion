@@ -168,7 +168,7 @@ open_lock_targets (const svn_wc_entry_t **parent_entry_p,
       svn_wc_adm_access_t *adm_access;
       svn_revnum_t *revnum;
       const svn_wc_entry_t *entry;
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = ((const char **) (paths->elts))[i];
       const char *abs_path;
 
       if (svn_path_is_url (target))
