@@ -25,9 +25,8 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_version.h"
 #include "cl.h"
-
-#include "svn_private_config.h"  /* for SVN_VERSION */
 
 
 /*** Code. ***/
