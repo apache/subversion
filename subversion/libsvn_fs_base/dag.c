@@ -729,7 +729,7 @@ svn_fs_base__dag_set_proplist (dag_node_t *node,
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_base__dag_check_mutable (node, txn_id))
     {
-      svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+      svn_string_t *idstr = svn_fs_base__id_unparse (node->id, node->pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
          "Can't set proplist on *immutable* node-revision %s", idstr->data);
@@ -1646,7 +1646,7 @@ svn_fs_base__dag_is_ancestor (svn_boolean_t *is_ancestor,
   *is_ancestor = FALSE;
 
   /* Ancestry holds relatedness as a prerequisite. */
-  if (! svn_fs_check_related (id1, id2))
+  if (! svn_fs_base__id_check_related (id1, id2))
     return SVN_NO_ERROR;
 
   baton.is_ancestor = FALSE;
@@ -1677,7 +1677,7 @@ svn_fs_base__dag_is_parent (svn_boolean_t *is_parent,
   *is_parent = FALSE;
 
   /* Parentry holds relatedness as a prerequisite. */
-  if (! svn_fs_check_related (id1, id2))
+  if (! svn_fs_base__id_check_related (id1, id2))
     return SVN_NO_ERROR;
 
   baton.is_ancestor = FALSE;

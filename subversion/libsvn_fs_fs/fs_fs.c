@@ -811,7 +811,8 @@ write_noderev_txn (apr_file_t *file,
   outfile = svn_stream_from_aprfile (file, pool);
 
   SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__NODE_ID ": %s\n",
-                              svn_fs_unparse_id (noderev->id, pool)->data));
+                              svn_fs_fs__id_unparse (noderev->id,
+                                                     pool)->data));
 
   SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__KIND ": %s\n",
                               (noderev->kind == svn_node_file) ?
@@ -819,8 +820,8 @@ write_noderev_txn (apr_file_t *file,
 
   if (noderev->predecessor_id)
     SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__PRED ": %s\n",
-                                svn_fs_unparse_id (noderev->predecessor_id,
-                                                   pool)->data));
+                                svn_fs_fs__id_unparse (noderev->predecessor_id,
+                                                       pool)->data));
 
   SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COUNT ": %d\n",
                               noderev->predecessor_count));
@@ -2508,8 +2509,8 @@ unparse_dir_entries (apr_hash_t **str_entries_p,
       new_val = svn_string_createf (pool, "%s %s",
                                     (dirent->kind == svn_node_file) ?
                                     SVN_FS_FS__FILE : SVN_FS_FS__DIR,
-                                    svn_fs_unparse_id (dirent->id,
-                                                       pool)->data);
+                                    svn_fs_fs__id_unparse (dirent->id,
+                                                           pool)->data);
 
       apr_hash_set (*str_entries_p, key, klen, new_val);
     }
@@ -2586,13 +2587,9 @@ write_change_entry (apr_file_t *file,
     }
 
   if (change->node_rev_id)
-    {
-      idstr = svn_fs_unparse_id (change->node_rev_id, pool)->data;
-    }
+      idstr = svn_fs_fs__id_unparse (change->node_rev_id, pool)->data;
   else
-    {
       idstr = SVN_FS_FS__ACTION_RESET;
-    }
   
   buf = apr_psprintf (pool, "%s %s %s %s %s\n",
                       idstr, change_string,
