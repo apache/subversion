@@ -284,18 +284,18 @@ project files included in the source tree are from Microsoft Visual
 C++ 6.x; earlier versions of the compiler are not supported at this
 time.
 
-To build the client components, you'll need a copy of neon 0.15.3. The
+To build the client components, you'll need a copy of neon 0.17.0. The
 sources are available at
 
     http://www.webdav.org/neon/neon-0.15.3.tar.gz
 
 Unpack the distribution into the root directory of the Subversion
-source tree and rename the directory neon-0.15.3 to neon.  The MSVC
+source tree and rename the directory neon-0.17.0 to neon.  The MSVC
 project files in this archive are not up-to-date, so building the neon
-libraries is not straight-forward.  Pre-build neon libraries are
+libraries is not straight-forward.  Pre-built neon libraries are
 available at
 
-   http://www.xbc.nu/svn/libneon-0.15.3-svn-win32.zip
+   http://www.xbc.nu/svn/libneon-0.17.0-svn-win32.zip
 
 Unpack the two files in this archive, libneon.lib and libneonD.lib,
 into the <SVN>/neon directory.
@@ -328,6 +328,7 @@ drivers.
 
 You will have to edit the file svn_private_config.hw to set the
 correct paths for diff and patch.
+
 
 
 Coding Style
