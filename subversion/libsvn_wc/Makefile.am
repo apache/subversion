@@ -18,7 +18,7 @@ libsvn_wc_la_SOURCES = get_editor.c                      \
 ## Build flags ---------
 
 ## These should be variables, no?  (from autoconf?)
-INCLUDES = -I../include -I../../apr/include -I../../expat-lite
+INCLUDES = -I../include -I../../apr/include -I../../expat-lite -I../../
 
 
 ## Build *this* directory first, *then* the test subdirectory!

@@ -66,6 +66,7 @@
 #include "svn_io.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
+#include "config.h"
 
 #include "wc.h"
 
@@ -1130,7 +1131,7 @@ close_file (void *file_baton)
              should be determined through various levels of fallback,
              of course, not hardcoded. */ 
           apr_err = apr_create_process (&diff_proc,
-                                        "/usr/local/bin/diff",
+                                        SVN_CLIENT_DIFF,
                                         diff_args,
                                         NULL,
                                         diffproc_attr,
