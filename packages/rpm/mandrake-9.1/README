@@ -1,4 +1,12 @@
-Last Update: Mon Sep 21 18:31:59 EDT 2003
+Last Update: Mon Sep 22 16:31:59 EDT 2003
+
+Prepared for doc RPM build in later releases.
+Added svnadmin.static conversion from redhat-8+ package for safety.
+
+Shamim Islam
+BA BS
+
+---------------------------------------------------------------
 
 There is a new Makefile in place with additional support files.
 
