@@ -523,17 +523,18 @@ Updated to revision 2.
               and directories for scheduled removal, addition,
               copying, or moving.  While these changes may take place
               immediately in your working copy, no additions or
-              removals will happen in the repository until you decide
-              to commit.</para>
+              removals will happen in the repository until you commit
+              them.</para>
           </listitem>
         </varlistentry>
 
       </variablelist>
       
-      <para>To make file changes, just use your text editor, word
-        processor, or graphics program&mdash;whatever tool you would
+      <para>To make file changes, use your text editor, word
+        processor, graphics program, or whatever tool you would
         normally use.  Subversion handles binary files just as easily
-        as it handles text files (and just as efficiently too).</para>
+        as it handles text files&mdash;and just as efficiently
+        too.</para>
       
       <para>Here is an overview of the four Subversion subcommands
         that you'll use most often to make tree changes (we'll cover
@@ -612,10 +613,10 @@ Updated to revision 2.
           <emphasis>are</emphasis> some use-cases that immediately
           commit tree changes to the repository.  This only happens
           when a subcommand is operating directly on a URL, rather
-          than on a working-copy path. (In particular, specific uses
+          than on a working-copy path. In particular, specific uses
           of <command>svn mkdir</command>, <command>svn
           copy</command>, <command>svn move</command>, and
-          <command>svn delete</command> can work with URLs).</para>
+          <command>svn delete</command> can work with URLs.</para>
 
         <para>URL operations behave in this manner because commands
           that operate on a working copy can use the working copy as a
@@ -638,7 +639,9 @@ Updated to revision 2.
         examining your changes before you commit, you can not only
         make a more accurate log message, but you may discover that
         you've inadvertently changed a file, and this gives you a
-        chance to revert those changes before committing.  You can see
+        chance to revert those changes before committing.
+        Additionally, this is a good opportunity to review and
+        scrutinize changes before publishing them.  You can see
         exactly what changes you've made by using <command>svn
         status</command>, <command>svn diff</command>, and
         <command>svn revert</command>.  You will usually use the first
@@ -669,7 +672,8 @@ Updated to revision 2.
             working copy.  <command>svn status</command> will give
             you all the information you need regarding what has
             changed in your working copy&mdash;without accessing the
-            repository.</para>
+            repository or potentially incorporating new changes
+            published by other users.</para>
         
           <para>In Subversion, <command>update</command> does just
             that&mdash;it updates your working copy with any changes
@@ -1047,9 +1051,8 @@ $ svn status README
           <command>svn revert</command>) can be used without any
           network access.  This makes it easy to manage your
           changes-in-progress when you are somewhere without a network
-          connection (e.g. traveling on an airplane, riding on a
-          commuter train, on the flight deck of the Space Shuttle,
-          etc.).</para>
+          connection such as traveling on an airplane, riding a
+          commuter train or hacking on the beach.</para>
 
         <para>Subversion does this by keeping private caches of
           pristine versions of each versioned file inside of the
@@ -1064,7 +1067,7 @@ $ svn status README
           much faster to send only a file's changes rather than the
           whole file to the server.  At first glance, this might not
           seem that important, but imagine the repercussions if you
-          try to commit a 1 line change to a 400MB file and have to
+          try to commit a one line change to a 400MB file and have to
           send the whole file to the server!</para>
     </sidebar>
 
@@ -1114,7 +1117,7 @@ C  ./bar.c
 
         <listitem>
           <para>Subversion places <firstterm>conflict
-            markers</firstterm> into the file, to visibly demonstrate
+            markers</firstterm> into the file to visibly demonstrate
             the overlapping areas.</para>
         </listitem>
 
