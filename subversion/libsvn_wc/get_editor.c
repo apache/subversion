@@ -1100,8 +1100,9 @@ close_file (void *file_baton)
           /* Preserve any local modifications:
              diff -u SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.diff
              kff todo: wish diff took a --output option.  Redirection
-             isn't very portable.  What to do? */
-          diff_cmd = svn_string_create ("diff -u -- ", fb->pool);
+             isn't very portable.  What to do? 
+             Greg Stein answered: apr_thread_proc.h :-) */
+          diff_cmd = svn_string_create ("diff -c -- ", fb->pool);
           svn_string_appendstr (diff_cmd, txtb_full_path);
           svn_string_appendcstr (diff_cmd, " ");
           svn_string_appendstr (diff_cmd, tmp_txtb_full_path);
@@ -1168,8 +1169,8 @@ close_file (void *file_baton)
 
           /* Build the patch command, for text files anyway. */
           svn_string_appendcstr (patch_cmd, " ");
-          svn_string_appendcstr (patch_cmd, "--reject-file");
-          svn_string_appendcstr (patch_cmd, "=");
+          svn_string_appendcstr (patch_cmd, "-r");
+          svn_string_appendcstr (patch_cmd, " ");
           svn_string_appendstr (patch_cmd, reject_filename);
 #if 0 /* kff todo: activate quietness when development stabilizes */
           svn_string_appendcstr (patch_cmd, " ");
