@@ -4,7 +4,7 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.1.3:
+Status of 1.1.4:
 ================
 
 Candidate changes:
@@ -93,13 +93,6 @@ Candidate changes:
     Votes:
       +1: maxb
 
-Approved changes (further review is welcome, but not required):
-
-Status of 1.1.4:
-================
-
-Candidate changes:
-
   * r12489
     Fix a confusing error message.  Issue #2174
     Justification:
@@ -125,3 +118,5 @@ Candidate changes:
       private function in mod_dav_svn/util.c (like dav_svn__is_canonical).
     Votes:
       +1: cmpilato
+
+Approved changes (further review is welcome, but not required):
