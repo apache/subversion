@@ -96,7 +96,8 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 /** Create a new, empty Subversion filesystem, stored in the directory
  * @a path.  Make @a fs refer to this new filesystem.  @a path must
- * not currently exist, but its parent must exist.
+ * not currently exist, but its parent must exist.  Use @a pool only
+ * for temporary allocations.
  *
  * If @a FSAP_NAME is not @a NULL, it determines the filesystem
  * abstract provider used for the new filesystem.  Currently defined
@@ -112,11 +113,12 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 svn_error_t *svn_fs_create (svn_fs_t *fs, const char *path,
                             const char *fsap_name, apr_pool_t *pool);
 
-/** Make @a fs refer to the filesystem at @a path.
+/** Make @a fs refer to the filesystem at @a path.  Use @a pool only
+ * for temporary allocations.
  *
  * Only one thread may operate on any given filesystem object at once.
  * Two threads may access the same filesystem simultaneously only if
- * they open separate filesystem objects.  
+ * they open separate filesystem objects.
  *
  * NOTE: you probably don't want to use this directly, especially not
  * if it's immediately preceded by a call to @c svn_fs_new().  Take a

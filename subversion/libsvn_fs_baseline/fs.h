@@ -33,16 +33,8 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
-struct svn_fs_t 
+typedef struct
 {
-  /* A pool managing this filesystem.  Freeing this pool must
-     completely clean up the filesystem, including any database
-     or system resources it holds.  */
-  apr_pool_t *pool;
-
-  /* The path to the repository's top-level directory. */
-  char *path;
-
   /* A Berkeley DB environment for all the filesystem's databases.
      This establishes the scope of the filesystem's transactions.  */
   DB_ENV *env;
@@ -61,29 +53,9 @@ struct svn_fs_t
      transaction trail alive. */
   svn_boolean_t in_txn_trail;
 
-  /* A callback function for printing warning messages, and a baton to
-     pass through to it.  */
-  svn_fs_warning_callback_t warning;
-  void *warning_baton;
-
-  /* The filesystem configuration. */
-  apr_hash_t *config;
-
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
-};
-
-
-/* Return a canonicalized version of a filesystem PATH, allocated in
-   POOL.  While the filesystem API is pretty flexible about the
-   incoming paths (they must be UTF-8 with '/' as separators, but they
-   don't have to begin with '/', and multiple contiguous '/'s are
-   ignored) we want any paths that are physically stored in the
-   underlying database to look consistent.  Specifically, absolute
-   filesystem paths should begin with '/', and all redundant and trailing '/'
-   characters be removed.  */
-const char *
-svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool);
+} bl_fsap_data_t;
 
 
 /*** Filesystem Revision ***/
