@@ -348,7 +348,7 @@ The database contains a table called "revisions", which is a
 record-number table mapping revision numbers onto REVISION skels.
 Since Berkeley DB record numbers start with 1, whereas Subversion
 filesystem revision numbers start at zero, revision V is stored as
-record number V-1 in the `revisions' table.  Filesystem reevision zero
+record number V+1 in the `revisions' table.  Filesystem reevision zero
 always has node revision 0.0 as its root directory; that node revision
 is guaranteed to be an empty directory.
 
