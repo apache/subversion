@@ -12,8 +12,8 @@ SVN::Client - Subversion client functions
     my $ctx = SVN::_Client::new_svn_client_ctx_t ();
 
     $ctx->auth_baton (SVN::Core::auth_open
-          ([SVN::Client::get_simple_provider,
-            SVN::Client::get_username_provider]));
+          ([SVN::Client::get_simple_provider(),
+            SVN::Client::get_username_provider()]));
 
     SVN::Client::cat (\*STDOUT,
                       'http://svn.collab.net/repos/svn/trunk/README',
