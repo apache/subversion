@@ -48,6 +48,8 @@
 
 
 
+#include <stdarg.h>
+#include "apr_strings.h"
 #include "svn_error.h"
 
 
@@ -84,6 +86,26 @@ svn_create_error (apr_status_t apr_err,
   return new_error;
 }
 
+
+svn_error_t *
+svn_create_errorf (apr_status_t apr_err,
+                   int src_err,
+                   svn_error_t *child,
+                   apr_pool_t *pool,
+                   const char *fmt, ...)
+{
+  svn_error_t *err;
+
+  va_list ap;
+  va_start (ap, fmt);
+  err = svn_create_error (apr_err, src_err,
+                          apr_pvsprintf (pool, fmt, ap),
+                          child,
+                          pool);
+  va_end (ap);
+
+  return err;
+}
 
 
 /* A quick n' easy way to create a wrappered exception with your own
