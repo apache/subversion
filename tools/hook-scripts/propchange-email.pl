@@ -8,10 +8,10 @@
 # For usage, see the usage subroutine or run the script with no
 # command line arguments.
 #
-# $HeadURL: http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/commit-email.pl $
-# $LastChangedDate: 2002-10-04 16:19:56 -0500 (Fri, 04 Oct 2002) $
-# $LastChangedBy: kfogel $
-# $LastChangedRevision: 3287 $
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
 #    
 # ====================================================================
 # Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -398,7 +398,7 @@ sub safe_read_from_pipe
   my @output;
   while (<SAFE_READ>)
     {
-      chomp;
+      s/[\r\n]+$//;
       push(@output, $_);
     }
   close(SAFE_READ);
@@ -421,7 +421,7 @@ sub safe_read_from_pipe
 }
 
 # Use safe_read_from_pipe to start a child process safely and return
-# the output if it suceeded or an error message followed by the output
+# the output if it succeeded or an error message followed by the output
 # if it failed.
 sub read_from_process
 {
