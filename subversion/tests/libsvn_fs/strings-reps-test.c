@@ -210,8 +210,9 @@ read_rep (const char **msg,
   
   skel_data = svn_fs__unparse_skel (read_args.skel, pool);
   if (strcmp (skel_data->data, new_rep))
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-                             "representation corrupted");
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                              "representation corrupted (\"%s\" != \"%s\")",
+                              skel_data->data, new_rep);
   
   /* Set up transaction baton for re-writing reps. */
   args.fs = new_args.fs;
@@ -236,8 +237,9 @@ read_rep (const char **msg,
   
   skel_data = svn_fs__unparse_skel (read_args.skel, pool);
   if (strcmp (skel_data->data, rep))
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-                             "representation corrupted");
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                              "representation corrupted (\"%s\" != \"%s\")",
+                              skel_data->data, rep);
   
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
