@@ -54,7 +54,8 @@ svn_cl__propdel (apr_getopt_t *os,
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
       SVN_ERR (svn_wc_prop_set (pname, NULL, target, pool));
-      printf ("property `%s' deleted from %s.\n", pname->data, target->data);
+      if (! opt_state->quiet)
+        printf ("property `%s' deleted from %s.\n", pname->data, target->data);
     }
 
   return SVN_NO_ERROR;

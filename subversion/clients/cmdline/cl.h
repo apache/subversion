@@ -55,6 +55,7 @@ typedef struct svn_cl__opt_state_t
   svn_stringbuf_t *ancestor_path;
   svn_boolean_t force;
   svn_boolean_t recursive;
+  svn_boolean_t quiet;
   svn_boolean_t version;
   apr_array_header_t *args;
   /* TODO fixme. This still doesn't handle binary data from a file! */

@@ -97,7 +97,8 @@ svn_cl__commit (apr_getopt_t *os,
 
   /* Commit. */
   SVN_ERR (svn_client_commit (NULL, NULL,
-                              trace_editor, trace_edit_baton,
+                              opt_state->quiet ? NULL : trace_editor, 
+                              opt_state->quiet ? NULL : trace_edit_baton,
                               svn_cl__prompt_user, NULL,
                               targets,
                               message,

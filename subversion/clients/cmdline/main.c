@@ -176,6 +176,7 @@ main (int argc, const char * const *argv)
     {"force",         svn_cl__force_opt, 0},
     {"help",          'h', 0},
     {"message",       'm', 1},
+    {"quiet",         'q', 0},
     {"recursive",     svn_cl__recursive_opt, 0},
     {"revision",      'r', 1},
     {"date",          'D', 1},
@@ -251,6 +252,9 @@ main (int argc, const char * const *argv)
       case 'h':
       case '?':
         opt_state.help = TRUE;
+        break;
+      case 'q':
+        opt_state.quiet = TRUE;
         break;
       case svn_cl__xml_file_opt:
         opt_state.xml_file = svn_stringbuf_create (opt_arg, pool);
