@@ -1370,9 +1370,9 @@ environment based on <tt>make</tt>, add something like this to your
 ##
 svn_version.c: FORCE
     echo -n 'const char* svn_version(void) { const char* SVN_Version = "' \
-                                       > svn_version.c
-    svnversion -n .                   >> svn_version.c
-    echo '"; return SVN_Version; }'   >> svn_version.c
+                                       &gt; svn_version.c
+    svnversion -n .                   &gt;&gt; svn_version.c
+    echo '"; return SVN_Version; }'   &gt;&gt; svn_version.c
 
 </pre>
 
@@ -1578,7 +1578,7 @@ a +s binary program to run the update, since Unix won't allow scripts
 to run +s.  Compile a tiny C program:</p>
 
 <pre>
-#include <stdlib.h>
+#include &lt;stdlib.h&gt;
 int main(int argc, const char *argv[])
 {
   system("/usr/local/bin/svn update /home/joe/public_html/");
@@ -1877,7 +1877,7 @@ following command:
 </p>
 <pre>
   $ ldd /usr/local/apache2/bin/httpd | fgrep libdb
-      libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
+      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
 </pre>
 
 <p>And then you can simply build Subversion with no mention of BDB.
@@ -1900,7 +1900,7 @@ library with the following:
 </p>
 <pre>
   $ ldd /usr/local/bin/svn | fgrep libdb
-      libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
+      libdb-4.2.so =&gt; /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
 </pre>
 
 <p>
