@@ -327,8 +327,9 @@ log_do_file_xfer (struct log_runner *loggy,
                   const XML_Char **atts)
 {
   svn_error_t *err;
-  const char *dest = NULL, *eol_str = NULL, *revision = NULL;
-  const char *date = NULL, *author = NULL, *url = NULL;
+  enum svn_wc__eol_style style;
+  const char *dest = NULL, *eol_str_val = NULL, *eol_str = NULL;
+  const char *revision = NULL, *date = NULL, *author = NULL, *url = NULL;
   const char *repair = NULL, *expand = NULL;
   svn_io_keywords_t *keywords = NULL;
 
@@ -339,13 +340,24 @@ log_do_file_xfer (struct log_runner *loggy,
                               "missing dest attr in %s", loggy->path->data);
 
   /* Optional: try to get any other translation-related attributes. */
-  eol_str = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EOL_STR, atts);
   revision = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
   date = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DATE, atts);
   author = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_AUTHOR, atts);
   url = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_URL, atts);
   repair = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REPAIR, atts);
   expand = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EXPAND, atts);
+
+  /* Look for an EOL attribute.  Note that we can't pass an actual LF
+     or CRLF in the xml, because expat will convert them into a space!
+     Thus our xml contains the same codes used in the values of
+     svn:eol-style, and thus we use the same parser to get back a real
+     eol. */
+  eol_str_val = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EOL_STR, atts);
+  if (eol_str_val)
+    svn_wc__eol_style_from_value (&style, /* ignored */
+                                  &eol_str, eol_str_val); 
+  else
+    eol_str = NULL;
 
   /* Conditionally build a keywords structure. */
   if (revision || date || author || url)
