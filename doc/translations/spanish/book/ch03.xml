@@ -597,7 +597,7 @@ Updated to revision 2.
 
         <varlistentry>
           <term><computeroutput>D      foo</computeroutput></term>
-          <listitem>
+          <listitem><!--TODO-->
             <para>El fichero o directorio <filename>foo</filename> fue
               <computeroutput>D</computeroutput>eleted <!--TODO:otra vez-->
               de su copia de trabajo local.</para>
@@ -606,7 +606,7 @@ Updated to revision 2.
         
         <varlistentry>
           <term><computeroutput>R      foo</computeroutput></term>
-          <listitem>
+          <listitem><!--TODO-->
             <para>El fichero o directorio <filename>foo</filename> fue
               <computeroutput>R</computeroutput>eplaced <!--TODO:otra mas-->
               en su copia de trabajo local; esto es, <filename>foo</filename>
@@ -619,7 +619,7 @@ Updated to revision 2.
 
         <varlistentry>
           <term><computeroutput>G      foo</computeroutput></term>
-          <listitem>
+          <listitem><!--TODO-->
             <para>El fichero <filename>foo</filename> recibió nuevos
               cambios del repositorio, pero su copia local del
               fichero tenía sus modificaciones. O los cambios no se
@@ -634,7 +634,7 @@ Updated to revision 2.
 
         <varlistentry>
           <term><computeroutput>C      foo</computeroutput></term>
-          <listitem>
+          <listitem><!--TODO-->
             <para>El fichero <filename>foo</filename> recibió cambios
               <computeroutput>C</computeroutput>onflicting del servidor.
               Los cambios del servidor directamente <!--overlap-->
@@ -652,55 +652,60 @@ Updated to revision 2.
     <sect2 id="svn-ch-3-sect-4.2">
       <title>Hacer Cambios en Su Copia de Trabajo Local</title>
       
-      <para>
-      Now you can get to work and make changes in your
-        working copy. It's usually most convenient to decide on a
-        particular change (or set of changes) to make, such as writing
-        a new feature, fixing a bug, etc.  The Subversion commands
-        that you will use here are <command>svn add</command>,
+      <para>Ahora puede conseguir trabajar y hacer cambios en su copia
+        de trabajo local. Generalmente es más conveniente decidir un
+        cambio particular (o un conjunto de cambios) a hacer, por ejemplo
+        escribir una nueva característica, corregir un fallo, etc. Los
+        comandos de Subversion que puede usar aqui <!--TODO:use here...
+        poner mejor "en esta situación?"--> son <command>svn add</command>,
         <command>svn delete</command>, <command>svn copy</command>,
-        and <command>svn move</command>.  However, if you are merely
-        editing files that are already in Subversion, you may not need
-        to use any of these commands until you commit.  Changes you can
-        make to your working copy:</para>
+        y <command>svn move</command>. Sin embargo, si usted está
+        simplemente corrigiendo los archivos que están ya en Subversion,
+        puede no necesitar utilizar ninguno de estos comandos hasta que
+        envie los cambios. Cambios que puede hacer a su copia de trabajo
+        local:</para>
       
       <variablelist>
         
         <varlistentry>
-          <term>File changes</term>
+          <term>Cambios en los ficheros</term>
+            <!--TODO:File changes-->
           <listitem>
-            <para>This is the simplest sort of change.  You don't need
-              to tell Subversion that you intend to change a file;
-              just make your changes.  Subversion will be able to
-              automatically detect which files have been
-              changed.</para>
+            <para>Esta es la clase más simple de cambio. No necesita
+              decirle a Subversion que se propone a cambiar un fichero;
+              simplemente <!--TODO:just--> haga los cambios. Subversion
+              será capaz de detectar automaticamente qué archivos han
+              sido cambiados.</para>
           </listitem>
         </varlistentry>
 
         <varlistentry>
-          <term>Tree changes</term>
+          <term>Cambios en el árbol</term><!--TODO:tree changes-->
           <listitem>
-            <para>You can ask Subversion to <quote>mark</quote> files
-              and directories for scheduled removal, addition,
-              copying, or moving.  While these changes may take place
-              immediately in your working copy, no additions or
-              removals will happen in the repository until you commit
-              them.</para>
+            <para>Puede preguntar a Subversion que <quote>marque</quote>
+              ficheros y directorios para <!--TODO:scheduled removal-->
+              el borrado planificado, la adición, la copia, o moverlos.
+              <!--TODO:moving-->Mientras estos cambios pueden ocurrir
+              inmediatamente en su copia de trabajo local, ninguna
+              adición o borrado sucederá en el respositorio hasta que
+              envie los cambios.</para>
           </listitem>
         </varlistentry>
 
       </variablelist>
       
-      <para>To make file changes, use your text editor, word
-        processor, graphics program, or whatever tool you would
-        normally use.  Subversion handles binary files just as easily
-        as it handles text files&mdash;and just as efficiently
-        too.</para>
+      <para>Para hacer cambios en los ficheros, use su editor de textos,
+        procesador de textos, programa de graficos <!--TODO: graphics
+        program-->, o cualquier herramienta que usaría normalmente.
+        Subversion maneja ficheros binarios tan fácilmente como maneja
+        archivos de texto&mdash;y tan eficientemente también.</para>
       
-      <para>Here is an overview of the four Subversion subcommands
-        that you'll use most often to make tree changes (we'll cover
-        <command>svn import</command> and <command>svn mkdir</command>
-        later).</para>
+      <para>Aqui hay una descripción de los cuatro subcomandos de
+        Subversion que usted usará más a menudo para hacer cambios del
+        árbol (cubriremos <command>svn import</command> y
+        <command>svn mkdir</command> después.</para>
+        <!--TODO:habría que poner alguna explicación sobre el árbol?
+        que se trata del árbol de repositorio?-->
       
       <variablelist>
         
