@@ -4011,7 +4011,9 @@ Content-length: 101
           <literal>--clean-logs</literal> switch,
           <command>svnadmin</command> will perform a hotcopy of your
           repository, and then remove unused Berkeley DB logs from the
-          original repository.</para>
+          original repository.  You can run this command at any time and make
+          a safe copy of the repository, regardless of whether other processes
+          are using the repository.</para>
 
         </refsect1>
 
