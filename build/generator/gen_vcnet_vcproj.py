@@ -124,8 +124,7 @@ class Generator(gen_win.WinGeneratorBase):
     # each target we work with.
     for target in install_targets:
       # These aren't working yet
-      if isinstance(target, gen_base.TargetScript)      \
-         or isinstance(target, gen_base.TargetExternal):
+      if isinstance(target, gen_base.TargetExternal):
         continue    
       guids[target.name] = self.makeguid(target.name)
 
@@ -135,8 +134,7 @@ class Generator(gen_win.WinGeneratorBase):
     for target in install_targets:
       name = target.name
       # These aren't working yet
-      if isinstance(target, gen_base.TargetScript)      \
-         or isinstance(target, gen_base.TargetExternal):
+      if isinstance(target, gen_base.TargetExternal):
         continue
 
       if isinstance(target, gen_base.TargetProject):

@@ -90,10 +90,6 @@ class Generator(gen_win.WinGeneratorBase):
     # Traverse the targets and generate the project files
     for target in install_targets:
       name = target.name
-      # These aren't working yet
-      if isinstance(target, gen_base.TargetScript):
-        continue
-
       if isinstance(target, gen_base.TargetProject):
         # Figure out where the external .dsp is located.
         if target.project_name:
