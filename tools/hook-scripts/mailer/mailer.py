@@ -37,7 +37,7 @@ def main(pool, config_fname, repos_dir, rev):
 
   cfg = Config(config_fname, repos)
 
-  editor = svn.repos.RevisionChangeCollector(repos.fs_ptr, rev)
+  editor = svn.repos.RevisionChangeCollector(repos.fs_ptr, rev, pool)
 
   e_ptr, e_baton = svn.delta.make_editor(editor, pool)
   svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, pool)
