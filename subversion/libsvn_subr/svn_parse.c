@@ -382,7 +382,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
   if (latest_warning)
     return latest_warning;
   else
-    return SVN_SUCCESS;
+    return SVN_NO_ERROR;
 }
 
 
