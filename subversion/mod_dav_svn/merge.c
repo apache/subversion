@@ -339,7 +339,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                  "previous revision.");
     }
 
-  bb = apr_brigade_create(pool);
+  bb = apr_brigade_create(pool, output->c->bucket_alloc);
 
   /* prep some strings */
   

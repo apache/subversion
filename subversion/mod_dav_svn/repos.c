@@ -1427,8 +1427,8 @@ static svn_error_t *dav_svn_write_to_filter(void *baton,
   apr_status_t status;
 
   /* take the current data and shove it into the filter */
-  bb = apr_brigade_create(dc->pool);
-  bkt = apr_bucket_transient_create(buffer, *len);
+  bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
+  bkt = apr_bucket_transient_create(buffer, *len, dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
     return svn_error_create(status, 0, NULL, dc->pool,
@@ -1446,8 +1446,8 @@ static svn_error_t *dav_svn_close_filter(void *baton)
   apr_status_t status;
 
   /* done with the file. write an EOS bucket now. */
-  bb = apr_brigade_create(dc->pool);
-  bkt = apr_bucket_eos_create();
+  bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
+  bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
     return svn_error_create(status, 0, NULL, dc->pool,
@@ -1500,7 +1500,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                           resource->info->repos->repo_name,
                           title);
 
-    bb = apr_brigade_create(resource->pool);
+    bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
     ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
 	       "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
 
@@ -1552,7 +1552,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
              "<a href=\"http://subversion.tigris.org/\">Subversion</a>"
              "</em>\n</body></html>");
 
-    bkt = apr_bucket_eos_create();
+    bkt = apr_bucket_eos_create(output->c->bucket_alloc);
     APR_BRIGADE_INSERT_TAIL(bb, bkt);
     if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
@@ -1598,8 +1598,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           break;
 
         /* build a brigade and write to the filter ... */
-        bb = apr_brigade_create(resource->pool);
-        bkt = apr_bucket_transient_create(block, bufsize);
+        bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+        bkt = apr_bucket_transient_create(block, bufsize, output->c->bucket_alloc);
         APR_BRIGADE_INSERT_TAIL(bb, bkt);
         if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
           /* ### what to do with status; and that HTTP code... */
@@ -1609,8 +1609,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       }
 
       /* done with the file. write an EOS bucket now. */
-      bb = apr_brigade_create(resource->pool);
-      bkt = apr_bucket_eos_create();
+      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+      bkt = apr_bucket_eos_create(output->c->bucket_alloc);
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
       if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
         /* ### what to do with status; and that HTTP code... */

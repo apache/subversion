@@ -562,7 +562,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.output = output;
   uc.anchor = resource->info->repos_path;
   uc.dst_path = dst_path;
-  uc.bb = apr_brigade_create(resource->pool);
+  uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */
