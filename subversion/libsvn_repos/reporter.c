@@ -91,8 +91,10 @@ static void add_to_path_map(apr_hash_t *hash,
   const char *repos_path = linkpath ? linkpath : norm_path;
 
   /* now, geez, put the path in the map already! */
-  apr_hash_set (hash, path, APR_HASH_KEY_STRING, 
-                (void *) apr_pstrdup (apr_hash_pool_get (hash), repos_path));
+  apr_hash_set (hash,
+                apr_pstrdup (apr_hash_pool_get (hash), path),
+                APR_HASH_KEY_STRING, 
+                apr_pstrdup (apr_hash_pool_get (hash), repos_path));
 }
 
 
