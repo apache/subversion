@@ -1156,7 +1156,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        callback_err = lock_func (lock_baton, abs_path, FALSE, NULL, err);
+        callback_err = lock_func (lock_baton, path, FALSE, NULL, err);
 
       svn_error_clear (err);
 
