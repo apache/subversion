@@ -590,5 +590,5 @@ Checked out revision 1.
 local variables: 
 sgml-parent-document: ("book.xml" "chapter")
 end:
-vim: set textwidth=72 nowrap formatoptions+=w2 expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 :
+vim: set ft=svnbook :
 -->

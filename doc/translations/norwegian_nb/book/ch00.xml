@@ -636,11 +636,167 @@
     </sect2>
 
   </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 7 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-7">
+    <title>Nytt i Subversion 1.1</title>
+
+    <para>Denne utgaven av boken er blitt oppdatert for &#229; dekke nye 
+      funksjoner og forandringer i oppf&#248;rselen for Subversion 1.1.
+      Her er en rask oversikt over pekere til store forandringer i 
+      1.1.</para>
+
+    <variablelist>
+
+      <varlistentry>
+        <term>Depot uten database</term>
+        <listitem>
+          <para>Det er n&#229; mulig &#229; opprette depot som ikke bruker en 
+            Berkeley DB database.
+            Istenfor lagrer disse nye depotene data i det ordin&#230;re 
+            filsystemet ved &#229; bruke et tilpasset format.
+            Disse depotene er ikke s&#229;rbare for <!-- &#164; 
+            --><quote>wedging</quote>, men er heller ikke s&#229; 
+            gjennomtestet som Berkeley DB-depot.
+            Se <xref inkend="svn-ch-5-sect-1.2.A"/>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Versjonering av symbolske lenker</term>
+        <listitem>
+          <para>Unixbrukere kan n&#229; opprette symbolske lenker og plassere 
+            dem under versjonskontroll med <command>svn 
+            add</command>-kommandoen.
+            Se <xref inkend="svn-ch-9-sect-1.2-re-add"/> og <xref 
+            inkend="svn-ch-7-sect-2.3.7"/>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Klienten f&#248;lger kopieringer og navneskifter</term>
+        <listitem>
+          <para>Forgreninger (kopier) av filer og kataloger 
+            vedlikeholder historiske forbindelser til kilden deres, men 
+            i Subversion 1.0 fulgte bare <command>svn log</command> 
+            denne kopierings/navneskiftehistorien, ikke andre kommandoer 
+            som <command>svn diff</command>, <command>svn 
+            merge</command>, <command>svn list</command> eller 
+            <command>svn cat</command>.
+            I Subversion 1.1 tr&#229;ler alle delkommandoene seg bakover 
+            gjennom kopieringer og navneskifter ved unders&#248;kelser av 
+            eldre versjoner av filer og kataloger.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Autobeskytting i klienten av URI-er og IRI-er</term>
+        <listitem>
+          <para>I kommandolinjeklienten for 1.0 m&#229;tte brukere beskytte 
+            (<quote>escape</quote>) URL-er manuelt.
+            Klienten aksepterte bare <quote>lovlige og korrekte</quote> 
+            URL-er, som 
+            <literal>http://host/path%20with%20space/project/espa%F1a</literal>.
+            Kommandolinjeklienten for 1,1 ved n&#229; hvordan den skal gj&#248;re 
+            det som nettlesere har gjort i lang tid:
+            Den autobeskytter tegn som mellom og bokstaver med aksent, 
+            s&#229; lenge brukeren plasserer URL-en i hermetegn for &#229; 
+            beskytte tegn fra skallet:
+            <literal>"http://host/sti med 
+            mellomrom/project/espa&#241;a"</literal></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Lokaliserte brukermeldinger</term>
+        <listitem>
+          <para>Subversion 1.1 bruker n&#229; <literal>gettext()</literal> 
+            for &#229; vise oversatte feil-, informasjons- og hjelpemeldinger 
+            til brukeren.
+            Det er forel&#248;pige oversettelser for tysk, spansk, polsk, 
+            svensk, tradisjonell kinesisk, japansk, portugisisk (Brasil) 
+            og norsk (bokm&#229;l).
+            For &#229; f&#229; Subversion til &#229; bruke en av oversettelsene, sett 
+            skallets LANG-variabel til en st&#248;ttet verdi (for eksempel 
+            <literal>de_DE</literal>).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Delbare arbeidskopier</term>
+        <listitem>
+          <para>Det har v&#230;rt historiske problemer med tilgansrettigheter 
+            n&#229;r flere brukere deler en arbeidskopi, det ser ut til &#229; 
+            v&#230;re ordnet n&#229;.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><literal>store-passwords</literal> kj&#248;revariabel</term>
+        <listitem>
+          <para>Dette er en ny variabel for bruk under kj&#248;ring som bare 
+            kobler ut lagring av passord, s&#229; tjenersertifikater fortsatt 
+            kan lagres. Se <xref linkend="svn-ch-7-sect-1.3.2"/>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Optimaliseringer og feilrettinger</term>
+        <listitem>
+          <para>Kommandoene <command>svn checkout</command>, 
+            <command>svn update</command>, <command>svn status</command> 
+            og <command>svn blame</command> er raskere.
+            Mer enn femti sm&#229; feil er blitt fikset, alle beskrevet i 
+            Subversionprosjektets CHANGES-fil (p&#229; <systemitem 
+            class="url">http://svn.collab.net/repos/svn/trunk/CHANGES 
+            </systemitem>).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Nye kommandobrytere</term>
+        <listitem>
+          <itemizedlist>
+            <listitem><para><command>svn blame --verbose</command>: Se 
+              <xref linkend="svn-ch-9-sect-1.2-re-blame"/>.
+              </para></listitem>
+
+            <listitem><para><command>svn export --native-eol 
+              EOL</command>: Se <xref 
+              linkend="svn-ch-9-sect-1.2-re-export"/>.
+              </para></listitem>
+            
+            <listitem><para><command>svn add --force</command>: Se <xref 
+              linkend="svn-ch-9-sect-1.2-re-add"/>.
+              </para></listitem>
+
+            <listitem><para><command>svnadmin dump --deltas</command>: 
+              Se <xref linkend="svn-ch-5-sect-3.5"/>.
+              </para></listitem>
+
+            <listitem><para><command>svnadmin create --fs-type 
+              TYPE</command>: Se <xref 
+              linkend="svn-ch-9-sect-2.2-re-create"/>.
+              </para></listitem>
+
+            <listitem><para><command>svnadmin recover --wait</command>: 
+              Se <xref linkend="svn-ch-9-sect-2.2-re-recover"/>.
+              </para></listitem>
+
+            <listitem><para><command>svnserve 
+              --tunnel-user=NAME</command>: Se <xref 
+              linkend="svn-ch-9-sect-4.1"/>.
+              </para></listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+  </sect1>
 </preface>
 
-<!--
-local variables: 
-sgml-parent-document: ("book.xml" "chapter")
-end:
-vim: set textwidth=72 nowrap formatoptions+=w2 expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 :
--->
+<!-- local variables: sgml-parent-document: ("book.xml" "chapter")
+vim: set ft=svnbook :
+end: -->

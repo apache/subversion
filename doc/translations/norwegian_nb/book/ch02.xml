@@ -169,8 +169,8 @@
             L&#229;sesystemet var ikke i stand til &#229; forhindre problemet &#8212; 
             men skapte likevel en falsk f&#248;lelse av trygghet.
             Det er lett for Harry og Sally &#229; tenke seg at ved &#229; l&#229;se 
-            filer, starter hver av dem en trygg, isolert oppgave, og 
-            dermed forhindrer dem fra &#229; diskutere deres inkompatible 
+            filer, starter hver av dem en trygg, isolert oppgave, og de 
+            bryr seg dermed ikke med &#229; diskutere deres inkompatible 
             forandringer p&#229; et tidligere tidspunkt.</para></listitem>
       </itemizedlist>
 
@@ -406,10 +406,10 @@ Makefile  integer.c  button.c  .svn/
           syntaksen, og tillater tjenernavn og portnumre &#229; bli 
           spesifisert som en del av adressen.
           Husk at tilgangsmetoden <literal>file:</literal> bare er 
-          gyldig for plasseringer p&#229; den samme tjeneren som klienten &#8212; 
-          faktisk, i overenskommelse med konvensjonen m&#229; delen som 
-          best&#229;r av tjenernavnet enten v&#230;re <literal>localhost</literal> 
-          eller ikke v&#230;re der i det hele tatt:</para>
+          gyldig for lokale depot &#8212; faktisk, i overenskommelse med 
+          konvensjonen m&#229; delen som best&#229;r av tjenernavnet enten v&#230;re 
+          <literal>localhost</literal> eller ikke v&#230;re der i det hele 
+          tatt:</para>
  
         <screen>
 $ svn checkout file:///sti/til/depot
@@ -541,7 +541,7 @@ U button.c
         seg fra venstre til h&#248;yre.
         Hvert revisjonsnummer har et filsystemtre hengende under seg, og 
         hvert tre er et <quote>&#248;yeblikksbilde</quote> av hvordan depotet 
-        s&#229; ut etter hver innlegging.</para>
+        s&#229; ut etter en innlegging.</para>
       
       <figure id="svn-ch-2-dia-7">
         <title>Depotet</title>
@@ -607,9 +607,9 @@ calc/Makefile:6
      button.c:6
 </screen>
 
-      <para>Sallys forandringer i <filename>integer.c</filename> vil 
-        komme til syne i arbeidskopien din, og din forandring vil 
-        fortsatt v&#230;re til stede i <filename>button.c</filename>.
+      <para>Sallys forandring i <filename>integer.c</filename> vil komme 
+        til syne i arbeidskopien din, og din forandring vil fortsatt 
+        v&#230;re til stede i <filename>button.c</filename>.
         I dette eksempelet er teksten i <filename>Makefile</filename> 
         identisk i revisjon 4, 5 og 6, men Subversion vil merke kopien 
         av <filename>Makefile</filename> med revisjon 6 for &#229; indikere 
@@ -803,5 +803,5 @@ calc/Makefile:6
 local variables: 
 sgml-parent-document: ("book.xml" "chapter")
 end:
-vim: set textwidth=72 nowrap formatoptions+=w2 expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 :
+vim: set ft=svnbook :
 -->
