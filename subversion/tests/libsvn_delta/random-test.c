@@ -274,13 +274,10 @@ walk_range_index (range_index_node_t *node, const char **msg)
   return walk_range_index (node->right, msg);
 }
 
-static void
-print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
-{
-  if (node == NULL)
-    return;
 
-  print_range_index (node->left, msg, ndx);
+static void
+print_node_data (range_index_node_t *node, const char *msg, apr_off_t ndx)
+{
   if (-node->target_offset == ndx)
     {
       printf ("   * Node: [%3"APR_OFF_T_FMT
@@ -297,7 +294,43 @@ print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
               (node->target_offset < 0
                ? -node->target_offset : node->target_offset));
     }
-  print_range_index (node->right, msg, ndx);
+}
+
+static void
+print_range_index_r (range_index_node_t *node, const char *msg, apr_off_t ndx)
+{
+  if (node == NULL)
+    return;
+
+  print_range_index_r (node->left, msg, ndx);
+  print_node_data (node, msg, ndx);
+  print_range_index_r (node->right, msg, ndx);
+}
+
+static void
+print_range_index_i (range_index_node_t *node, const char *msg, apr_off_t ndx)
+{
+  if (node == NULL)
+    return;
+
+  while (node->prev)
+    node = node->prev;
+
+  do
+    {
+      print_node_data (node, msg, ndx);
+      node = node->next;
+    }
+  while (node);
+}
+
+static void
+print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
+{
+  printf ("  (recursive)\n");
+  print_range_index_r (node, msg, ndx);
+  printf ("  (iterative)\n");
+  print_range_index_i (node, msg, ndx);
 }
 
 
@@ -350,6 +383,9 @@ random_range_index_test (const char **msg,
                                    "insert_range");
         }
     }
+
+  printf ("Final tree state:\n");
+  print_range_index (ndx->tree, "", iterations + 1);
   return SVN_NO_ERROR;
 }
 
