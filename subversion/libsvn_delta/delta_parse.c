@@ -67,6 +67,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "xmlparse.h"
@@ -87,12 +88,51 @@ void svn_xml_startElement(void *userData, const char *name, const char **atts)
   char *attr_name, *attr_value;
   svn_delta_t *my_delta = userData;
 
+  if (strcmp (name, "tree-delta"))
+    {
+      /* Found a new tree-delta element */
+    }
+
+  else if (strcmp (name, "text-delta"))
+    {
+      /* Found a new text-delta element */
+    }
+
+  else if (strcmp (name, "new"))
+    {
+      /* Found a new svn_edit_t */
+    }
+
+  else if (strcmp (name, "replace"))
+    {
+      /* Found a new svn_edit_t */
+    }
+
+  else if (strcmp (name, "delete"))
+    {
+      /* Found a new svn_edit_t */
+    }
+
+  else if (strcmp (name, "file"))
+    {
+      /* Found a new svn_edit_content_t */
+    }
+
+  else if (strcmp (name, "dir"))
+    {
+      /* Found a new svn_edit_content_t */
+    }
+
+  else
+    {
+      /* Found some other random tag -- ignore it. */
+    }
+
+
 
   /* Read all attribute name/value pairs */
   while (*atts)
     {
-      for (i = 0; i < *depthPtr; i++)
-        putchar(' ');
       printf ("(name=%s ", *atts++);
       printf ("value=%s)", *atts++);
     }  
