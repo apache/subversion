@@ -11,46 +11,11 @@ Subversion is in pre-Alpha state, and there are plenty of known bugs
 href="http://subversion.tigris.org/servlets/ProjectIssues">Issues</a>
 page for a complete list).  Frankly, you should probably read over all
 the open issues.  But since you're probably not going to do that, we
-list below some of the ones most likely to annoy you, and their
-workarounds.  These will be fixed soon, sooner the more people are
-working on them (hint, hint).
+list below some of the ones most likely to annoy you.
 
-<p>
+</p>
 
 <ol>
-   <li><b>"svn up" fails if too much svndiff data received.</b>
-   <p>
-   While we speculate that the problem is with neon not being able
-   handle certain large request results properly, we're not really
-   sure.  What we do know is that when doing an update of the working
-   copy, you might see:
-   <p>
-   <pre>
-   svn_error: #21073 : <RA layer's server request failed>
-     The REPORT request failed (/repos/svn/trunk/doc/.)
-
-   svn_error: #21073 : <RA layer's server request failed>
-     neon: Could not read response body: connection was closed by server.
-   </pre>
-   <p>
-   Obvious fixes include updating invidual file targets (in theory, to
-   make the responses to the update request smaller), or re-checking
-   out your working copy.
-   <p>
-   See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=472">
-   Issue #472</a> for more details.
-   </li>
- <p>
-   <li><b>Checkout of url ending in slash ("/") makes a lossy wc.</b>
-   <p>
-   This is a buglet we have seen before and just not gotten around to
-   fixing.  Please be careful (for now) to leave off the trailing
-   slash from the URLs you use in checking out from a Subversion
-   repository.  Should be a trivial fix.
-   <p>
-   See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=471">
-   Issue #471</a> for more details.
-   </li>
  <p>
    <li><b>Bug in nested wc deletions.</b><br>
    Ah, the joys and pains of versioning directories.  If you delete a
@@ -60,21 +25,28 @@ working on them (hint, hint).
    See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=387">
    Issue #387</a> for more details.
    </li>
+  </p>
+
  <p>
-   <li><b>can't check out arbitrary revisions, only head</b>
-   <p>
-   Pretty self-explanatory.  Yes, this is a <i>major</i> annoyance,
-   and is up near the top of the list of post-M3 fixes.
-   <p>
-   However, after checking out the Head revision, you <i>can</i> run
-   "svn up -r N" to update your working copy to an older revision N.
-   Just be careful about the first annoyance getting in the way here.
-   <p>
-   See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=411">
-   Issue #411</a> for more details.
+   <li><b>Incomplete error messages</b><br>
+   When you do see an error, it won't always be clear what the real
+   problem is.  Subversion has a system for throwing and catching
+   errors, but as errors are thrown up the callstack, not every
+   routine attaches a coherent error message.  The error messages will
+   improve over time.
    </li>
+ </p>
+ 
  <p>
-</ul>
+   <li><b>Metadata props not yet fully working</b><br>
+   Subversion allows you to attach arbitrary name/value pairs to files
+   and directories;  right now, this feature works when talking to a
+   local repository, but not yet over a network.  This bug is being
+   actively worked on now.
+   </li>
+ </p>
+
+</ol>
 
 
 
