@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os, shutil, re
+import stat, string, sys, os, shutil, re
 
 # Our testing module
 import svntest
@@ -781,6 +781,56 @@ def mv_and_revert_directory(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
 
+
+#----------------------------------------------------------------------
+# Issue 982.  When copying a file with the executable bit set, the copied
+# file should also have its executable bit set.
+def copy_preserve_executable_bit(sbox):
+  "executable bit should be preserved when copying"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Create two paths
+  newpath1 = os.path.join(wc_dir, 'newfile1')
+  newpath2 = os.path.join(wc_dir, 'newfile2')
+
+  # Create the first file.
+  svntest.main.file_append(newpath1, "a new file")
+  svntest.main.run_svn(None, 'add', newpath1)
+
+  mode1 = os.stat(newpath1)[stat.ST_MODE]
+  
+  # Doing this to get the executable bit set on systems that support
+  # that -- the property itself is not the point.
+  svntest.main.run_svn(None, 'propset', 'svn:executable', 'on', newpath1)
+
+  mode2 = os.stat(newpath1)[stat.ST_MODE]
+
+  if mode1 == mode2:
+    print "setting svn:executable did not change file's permissins"
+    return 1
+
+  # Commit the file
+  svntest.main.run_svn(None, 'ci', '-m', 'create file and set svn:executable',
+                       wc_dir)
+
+  # Copy the file
+  svntest.main.run_svn(None, 'cp', newpath1, newpath2)
+
+  mode3 = os.stat(newpath2)[stat.ST_MODE]
+
+  # The mode on the original and copied file should be identical
+  if mode2 != mode3:
+    print "permissions on the copied file are not identical to original file"
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -797,6 +847,7 @@ test_list = [ None,
               copy_files_with_properties,
               copy_delete_commit,
               mv_and_revert_directory,
+              Skip(copy_preserve_executable_bit, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
