@@ -101,6 +101,41 @@ def test_misc(sbox):
 
   expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))
 
+  # check if the 'svnlook tree' output can be expanded to
+  # the 'svnlook tree --full-paths' output if demanding the whole repository
+  treelist = run_svnlook('tree', repo_dir)
+  treelistfull = run_svnlook('tree', '--full-paths', repo_dir)
+  path = ''
+  n = 0
+  for entry in treelist:
+    len1 = len(entry)
+    len2 = len(entry.lstrip())
+    path = path[0:2*(len1-len2)-1] + entry.strip()
+    test = treelistfull[n].rstrip()
+    if n != 0:
+      test = "/" + test
+    if not path == test:
+      print "Unexpected result from tree with --full-paths:"
+      print "  entry            : %s" % entry.rstrip('\n')
+      print "  with --full-paths: %s" % treelistfull[n].rstrip('\n')
+      raise svntest.Failure
+    n = n + 1
+
+  # check if the 'svnlook tree' output is the ending of
+  # the 'svnlook tree --full-paths' output if demanding
+  # any part of the repository
+  n = 0
+  treelist = run_svnlook('tree', repo_dir, '/A/B')
+  treelistfull = run_svnlook('tree', '--full-paths', repo_dir, '/A/B')
+  for entry in treelist:
+    if not treelistfull[n].endswith(entry.lstrip()):
+      print "Unexpected result from tree with --full-paths:"
+      print "  entry            : %s" % entry.rstrip('\n')
+      print "  with --full-paths: %s" % treelistfull[n].rstrip()
+      raise svntest.Failure
+    n = n + 1
+
+
   expect('propget svn:log', [ 'log msg' ],
       run_svnlook('propget', '--revprop', repo_dir, 'svn:log'))
 
