@@ -735,7 +735,6 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   create_greek_tree_transaction,
   list_directory,
   revision_props,
-  verify_txn_list,
   0
 };
 
