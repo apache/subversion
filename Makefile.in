@@ -134,6 +134,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	    if ( cd $$progdir && $$runprog ) >> $$logfile ; then \
 		echo "SUCCESS" ; \
 	    else \
+		echo "FAILURE" ; \
 		failed=yes; \
 	    fi; \
 	    echo "END: $$progbase" >> $$logfile ; \
