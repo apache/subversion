@@ -80,7 +80,7 @@ section for approved changes.)
      Fix the erroneous username prompt if store-auth-creds=no
      Justification: Fix obvious silly bug, low risk.
      Votes:
-      +1: bliss, kfogel
+      +1: bliss, kfogel, jszakmeister
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
