@@ -1127,7 +1127,7 @@ def format_date(date):
   return time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(date))
 
 
-def make_revision_props(symbolic_name, is_tag):
+def make_revision_props(ctx, symbolic_name, is_tag):
   """Return a dictionary of revision properties for the manufactured
   commit that finished SYMBOLIC_NAME.  If IS_TAG is true, write the
   log message as though for a tag, else as though for a branch."""
@@ -1145,7 +1145,7 @@ def make_revision_props(symbolic_name, is_tag):
   log = "This commit was manufactured by cvs2svn to create %s%s'%s'." \
         % (type, space_or_newline, symbolic_name)
   
-  return { 'svn:author' : 'unknown',
+  return { 'svn:author' : ctx.username,
            'svn:log' : log,
            'svn:date' : format_date(time.time())}
 
@@ -1517,7 +1517,7 @@ class SymbolicNameTracker:
         if (rev != parent_rev):
           parent_rev = rev
           if jit_new_rev and jit_new_rev[0]:
-            dumper.start_revision(make_revision_props(name, is_tag))
+            dumper.start_revision(make_revision_props(ctx, name, is_tag))
             jit_new_rev[0] = None
           dumper.copy_path(src_path, parent_rev, copy_dst, val)
           # Record that this copy is done:
@@ -2153,7 +2153,10 @@ def usage(ctx):
         % ctx.tags_base
   print '  --no-prune       don\'t prune empty directories'
   print '  --dump-only      just produce a dumpfile, don\'t commit to a repos'
-  print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
+  print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' \
+        % ctx.encoding
+  print '  --username=NAME  default name when CVS repos has no name (default: %s)' \
+        % ctx.username
   sys.exit(1)
 
 
@@ -2175,10 +2178,12 @@ def main():
   ctx.branches_base = "branches"
   ctx.encoding = "ascii"
   ctx.svnadmin = "svnadmin"
+  ctx.username = "unknown"
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
                                [ "create", "trunk=",
+                                 "username=",
                                  "branches=", "tags=", "encoding=",
                                  "trunk-only", "no-prune", "dump-only"])
   except getopt.GetoptError:
@@ -2222,6 +2227,8 @@ def main():
       ctx.dump_only = 1
     elif opt == '--encoding':
       ctx.encoding = value
+    elif opt == '--username':
+      ctx.username = value
 
   # Consistency check for options.
   if (not ctx.target) and (not ctx.dump_only):
