@@ -423,7 +423,7 @@ get_dir_entries (apr_hash_t **entries_p,
    entry is allocated in TRAIL->pool or in the same pool as PARENT;
    the caller should copy if it cares.  */
 static svn_error_t *
-dir_entry_id_from_node (svn_fs_id_t **id_p, 
+dir_entry_id_from_node (const svn_fs_id_t **id_p, 
                         dag_node_t *parent,
                         const char *name,
                         trail_t *trail)
@@ -1107,7 +1107,7 @@ svn_fs__dag_link (dag_node_t *parent,
                   trail_t *trail)
 {
   svn_boolean_t is_mutable;
-  svn_fs_id_t *entry_id;
+  const svn_fs_id_t *entry_id;
 
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
@@ -1335,7 +1335,7 @@ svn_fs__dag_open (dag_node_t **child_p,
                   const char *name,
                   trail_t *trail)
 {
-  svn_fs_id_t *node_id;
+  const svn_fs_id_t *node_id;
 
   /* Ensure that NAME exists in PARENT's entry list. */
   SVN_ERR (dir_entry_id_from_node (&node_id, parent, name, trail));
