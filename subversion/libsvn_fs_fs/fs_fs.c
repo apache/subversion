@@ -969,6 +969,67 @@ get_root_changes_offset (apr_off_t *root_offset,
   return SVN_NO_ERROR;
 }
 
+/* Move a file into place from OLD_FILENAME in the transactions
+   directory to its final location NEW_FILENAME in the repository.  On
+   Unix, match the permissions of the new file to the permissions of
+   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+static svn_error_t *
+move_into_place (const char *old_filename, const char *new_filename,
+                 const char *perms_reference, apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+#ifndef WIN32
+  apr_status_t status;
+  apr_finfo_t finfo;
+  
+  /* Match the perms on the old file to the perms reference file. */
+  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
+  status = apr_file_perms_set (old_filename, finfo.protection);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), old_filename);
+#endif
+
+  /* Move the file into place. */
+  err = svn_io_file_rename (old_filename, new_filename, pool);
+  if (err && APR_STATUS_IS_EXDEV (err->apr_err))
+    {
+      apr_file_t *file;
+
+      /* Can't rename across devices; fall back to copying. */
+      svn_error_clear (err);
+      SVN_ERR (svn_io_copy_file (old_filename, new_filename, TRUE, pool));
+
+      /* Flush the target of the copy to disk. */
+      SVN_ERR (svn_io_file_open (&file, new_filename, APR_READ,
+                                 APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_flush_to_disk (file, pool));
+      SVN_ERR (svn_io_file_close (file, pool));
+    }
+
+#ifdef __linux__
+  {
+    /* Linux has the unusual feature that fsync() on a file is not
+       enough to ensure that a file's directory entries have been
+       flushed to disk; you have to fsync the directory as well.
+       On other operating systems, we'd only be asking for trouble
+       by trying to open and fsync a directory. */
+    const char *dirname;
+    apr_file_t *file;
+
+    dirname = svn_path_dirname (new_filename, pool);
+    SVN_ERR (svn_io_file_open (&file, dirname, APR_READ, APR_OS_DEFAULT,
+                               pool));
+    SVN_ERR (svn_io_file_flush_to_disk (file, pool));
+    SVN_ERR (svn_io_file_close (file, pool));
+  }
+#endif
+
+  return err;
+}
+
 svn_error_t *
 svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
                          svn_fs_t *fs,
@@ -1017,7 +1078,12 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
            (&f, &tmp_path, final_path, ".tmp", FALSE, pool));
   SVN_ERR (svn_hash_write (proplist, f, pool));
   SVN_ERR (svn_io_file_close (f, pool));
-  SVN_ERR (svn_io_file_rename (tmp_path, final_path, pool));
+  /* We use the rev file of this revision as the perms reference,
+     because when setting revprops for the first time, the revprop
+     file won't exist and therefore can't serve as its own reference.
+     (Whereas the rev file should already exist at this point.) */ 
+  SVN_ERR (move_into_place (tmp_path, final_path,
+                            path_rev (fs, rev, pool), pool));
   
   return SVN_NO_ERROR;
 }  
@@ -3325,67 +3391,6 @@ write_final_changed_path_info (apr_off_t *offset_p,
   *offset_p = offset;
   
   return SVN_NO_ERROR;
-}
-
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL. */
-static svn_error_t *
-move_into_place (const char *old_filename, const char *new_filename,
-                 const char *perms_reference, apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-#ifndef WIN32
-  apr_status_t status;
-  apr_finfo_t finfo;
-  
-  /* Match the perms on the old file to the perms reference file. */
-  status = apr_stat (&finfo, perms_reference, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't stat '%s'"), perms_reference);
-  status = apr_file_perms_set (old_filename, finfo.protection);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't chmod '%s'"), old_filename);
-#endif
-
-  /* Move the file into place. */
-  err = svn_io_file_rename (old_filename, new_filename, pool);
-  if (err && APR_STATUS_IS_EXDEV (err->apr_err))
-    {
-      apr_file_t *file;
-
-      /* Can't rename across devices; fall back to copying. */
-      svn_error_clear (err);
-      SVN_ERR (svn_io_copy_file (old_filename, new_filename, TRUE, pool));
-
-      /* Flush the target of the copy to disk. */
-      SVN_ERR (svn_io_file_open (&file, new_filename, APR_READ,
-                                 APR_OS_DEFAULT, pool));
-      SVN_ERR (svn_io_file_flush_to_disk (file, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
-    }
-
-#ifdef __linux__
-  {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    const char *dirname;
-    apr_file_t *file;
-
-    dirname = svn_path_dirname (new_filename, pool);
-    SVN_ERR (svn_io_file_open (&file, dirname, APR_READ, APR_OS_DEFAULT,
-                               pool));
-    SVN_ERR (svn_io_file_flush_to_disk (file, pool));
-    SVN_ERR (svn_io_file_close (file, pool));
-  }
-#endif
-
-  return err;
 }
 
 /* Update the current file to hold the correct next node and copy_ids
