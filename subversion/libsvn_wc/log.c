@@ -591,37 +591,6 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
 }
 
 
-static svn_error_t *
-log_do_updated (struct log_runner *loggy,
-                const char *name,
-                const XML_Char **atts)
-{
-  svn_error_t *err;
-  const char *t = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_TEXT_REJFILE, atts);
-  const char *p = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_PROP_REJFILE, atts);
-
-  if (t)
-    {
-      err = conflict_if_rejfile (loggy->path, t, name,
-                                 SVN_WC__LOG_ATTR_TEXT_REJFILE,
-                                 loggy->pool);
-      if (err)
-        return err;
-    }
-
-  if (p)
-    {
-      err = conflict_if_rejfile (loggy->path, p, name,
-                                 SVN_WC__LOG_ATTR_PROP_REJFILE,
-                                 loggy->pool);
-      if (err)
-        return err;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Note:  assuming that svn_wc__log_commit() is what created all of
    the <committed...> commands, the `name' attribute will either be a
    file or SVN_WC_ENTRY_THIS_DIR. */
@@ -996,9 +965,6 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry (loggy, name);
-  }
-  else if (strcmp (eltname, SVN_WC__LOG_UPDATED) == 0) {
-    err = log_do_updated (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_COMMITTED) == 0) {
     err = log_do_committed (loggy, name, atts);

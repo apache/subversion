@@ -390,17 +390,6 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 /* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_APPEND              "append"
 
-
-/* Handle closure after an update completes successfully:  
- *
- *   If SVN_WC__LOG_ATTR_TEXT_REJFILE exists and has >0 size, then
- *   mark the entry as textually conflicted; else remove a 0 byte
- *   reject file.
- *
- *   Similarly for SVN_WC__LOG_ATTR_PROP_REJFILE.
- */
-#define SVN_WC__LOG_UPDATED            "updated"
-
 /* Handle closure after a commit completes successfully:  
  *
  *   If SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
