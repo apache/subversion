@@ -1,10 +1,12 @@
+SUBVERSION HACKING INFORMATION		[$Date: 2000-12-19 03:47:25 $]	-*-text-*-
+
 If you are contributing code to the Subversion project, please read
 this first.
 
                      ============================
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
-              Last updated:  $Date: 2000-12-18 16:26:20 $
+              Last updated:  $Date: 2000-12-19 03:47:25 $
 
 
 TABLE OF CONTENTS
@@ -365,3 +367,96 @@ APR Status Codes:
 Always check for APR status codes (except APR_SUCCESS) with the
 APR_STATUS_IS_...() macros, not by direct comparison. This is
 required for portability to non-Unix platforms.
+
+
+Compiling mod_dav_svn:
+======================
+
+To compile the mod_dav_svn module, the configure script needs to be
+pointed at an Apache 2.0 source tree or installation area. Without
+this, mod_dav_svn will be skipped in the normal build process.
+
+Note that you will need at *least* Apache 2.0a9 for this, and
+preferably the latest CVS version. To fetch the Apache 2.0 CVS tree,
+you can use:
+
+$ cvs -d :pserver:anoncvs@apache.org:/home/cvspublic login
+ (password 'anoncvs')
+$ cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co httpd-2.0
+
+When Apache 2.0 is installed, it creates a Perl script named "apxs"
+which is used by external (third-party) modules to discover
+compilation, link, and directory information about the installed
+Apache. apxs is also used to install third-party modules into the
+Apache install directories. The apxs script is the key for the
+configure process.
+
+By default, configure will automatically look in /usr/sbin and
+/usr/local/apache/bin for the apxs script. If it isn't found, then you 
+must use the --with-apxs=FILE switch to say where it is located (or
+plain --with-apxs to look in the current PATH). For example:
+
+$ ./configure --with-apxs=/usr/local/apache2/bin/apxs
+
+The configure script will verify that apxs actually refers to an
+Apache 2.0 installation, and then gather the necessary parameters. It
+will then enable the build and installation of mod_dav_svn.
+
+When building mod_dav_svn for an install Apache, you MUST build it as
+a dynamic library. This means that you cannot pass --disable-shared to 
+the configure script.
+
+An alternative is to work with an Apache 2.0 source directory. There
+is no default for this, so you must specify the directory explicity
+using the --with-apache switch. For example:
+
+$ ./configure --with-apache=/home/gstein/src/httpd-2.0
+
+The configure script will gather up the right information and enable
+the build/install of mod_dav_svn. In this form, the module will be
+built as a static library and then linked into the Apache
+executable. Therefore, you cannot pass --disable-static to the
+configure script.
+
+Once mod_dav_svn is actually built, it must be installed. For the apxs
+style (working against an installed Apache), the apxs script will be
+used to perform the actual installation of the module into the Apache
+install tree. apxs will also tweak your httpd.conf file to add a
+LoadModule directive. With this style, you can change, build and
+install mod_dav_svn without any changes to Apache itself (since it is
+already installed). As a result, this is the preferable form, and will
+be the "standard" install when Subversion ships.
+
+If you are building directly against a source tree (statically), then
+the install will copy mod_dav_svn into the tree along with a number of 
+files for Apache's config/build system. After each change and build of 
+mod_dav_svn, it must be installed and Apache needs to be relinked to
+pick up the changes. You will also need to put an AddModule line into
+your httpd.conf file (see below).
+
+Since mod_dav_svn links against libsvn_subr and libsvn_fs, these must
+be built and INSTALLED for mod_dav_svn to work. Nothing special is
+done for apxs-style builds, which generally means the two libraries
+will be placed into /usr/local/lib/. If you are building a static
+library for direct linking into Apache, then the libsvn_subr and
+libsvn_fs targets will also place copies of the static (.a) libraries
+into the Apache source tree.
+
+After mod_dav_svn has been installed (or linked into Apache), then
+your httpd.conf file must be updated to get Apache to use the
+module. This is actually quite simple to do. Here is an example:
+
+  <Location /svn/repos>
+    DAV svn
+    SVNPath /home/gstein/dav/svnrepos
+  </Location>
+
+This tells Apache about a location named /svn/repos, that it is
+DAV-enabled and should use the "svn" DAV back end, and that the
+repository for this location is in the /home/gstein/dav/svnrepos
+directory. The net effect is that you now have a Subversion server
+located at:
+
+    http://some.host.name/svn/repos
+
+Further config magic and usage is an exercise for the reader.
