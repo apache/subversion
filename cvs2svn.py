@@ -12,6 +12,15 @@ import time
 import fileinput
 import string
 import getopt
+import statcache
+
+from svn import fs, util, _delta, _repos
+
+### these should go somewhere else. should have SWIG export them.
+svn_node_none = 0
+svn_node_file = 1
+svn_node_dir = 2
+svn_node_unknown = 3
 
 
 trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
@@ -146,6 +155,8 @@ def visit_file(arg, dirname, files):
       continue
     pathname = os.path.join(dirname, fname)
     if dirname[-6:] == ATTIC:
+      # drop the 'Attic' portion from the pathname
+      ### we should record this so we can easily insert it back in
       cd.set_fname(os.path.join(dirname[:-6], fname))
     else:
       cd.set_fname(pathname)
@@ -153,6 +164,34 @@ def visit_file(arg, dirname, files):
       print pathname
     p.parse(open(pathname), cd)
     stats[0] = stats[0] + 1
+
+class RevInfoParser(rcsparse.Sink):
+  def __init__(self):
+    self.authors = { }	# revision -> author
+    self.logs = { }	# revision -> log message
+
+  def define_revision(self, revision, timestamp, author, state,
+                      branches, next):
+    self.authors[revision] = author
+
+  def set_revision_info(self, revision, log, text):
+    self.logs[revision] = log
+
+  def parse_cvs_file(self, rcs_pathname):
+    try:
+      rcsfile = open(rcs_pathname, 'r')
+    except:
+      try:
+        dirname, fname = os.path.split(rcs_pathname)
+        rcs_pathname = os.path.join(dirname, "Attic", fname)
+        rcsfile = open(rcs_pathname, 'r')
+      except:
+        ### should use a better error
+        raise RuntimeError, ('error: %s appeared to be under CVS control, '
+                             'but the RCS file is inaccessible.'
+                             % rcs_pathname)
+
+    rcsparse.Parser().parse(rcsfile, self)
 
 class BuildRevision(rcsparse.Sink):
   def __init__(self, rev, get_metadata=0):
@@ -245,14 +284,154 @@ class Commit:
       # OP_DELETE
       self.deletes.append((file, rev))
 
-  def commit(self):
+  def get_metadata(self, pool):
+    # by definition, the author and log message must be the same for all
+    # items that went into this commit. therefore, just grab any item from
+    # our record of changes/deletes.
+    if self.changes:
+      file, rev = self.changes[0]
+    else:
+      # there better be one...
+      file, rev = self.deletes[0]
+
+    # now, fetch the author/log from the ,v file
+    rip = RevInfoParser()
+    rip.parse_cvs_file(file)
+    author = rip.authors[rev]
+    log = rip.logs[rev]
+
+    # format the date properly
+    a_t = util.apr_ansi_time_to_apr_time(self.t_max)[1]
+    date = util.svn_time_to_nts(a_t, pool)
+
+    return author, log, date
+
+  def commit(self, t_fs, ctx):
     # commit this transaction
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min),
                                                self.t_max - self.t_min)
+
+    # create a pool for the entire commit
+    c_pool = util.svn_pool_create(ctx.pool)
+
+    rev = fs.youngest_rev(t_fs, c_pool)
+    txn = fs.begin_txn(t_fs, rev, c_pool)
+    root = fs.txn_root(txn, c_pool)
+
+    lastcommit = (None, None)
+
+    # create a pool for each file; it will be cleared on each iteration
+    f_pool = util.svn_pool_create(c_pool)
+
     for f, r in self.changes:
-      print '    changing %s : %s' % (r, f)
+      # compute a repository path. ensure we have a leading "/" and drop
+      # the ,v from the file name
+      repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
+      #print 'DEBUG:', repos_path
+
+      print '    changing %s : %s' % (r, repos_path)
+
+      ### hmm. need to clarify OS path separators vs FS path separators
+      dirname = os.path.dirname(repos_path)
+      if dirname != '/':
+        # get the components of the path (skipping the leading '/')
+        parts = string.split(dirname[1:], os.sep)
+        for i in range(1, len(parts) + 1):
+          # reassemble the pieces, adding a leading slash
+          parent_dir = '/' + string.join(parts[:i], '/')
+          if fs.check_path(root, parent_dir, f_pool) == svn_node_none:
+            print '    making dir:', parent_dir
+            fs.make_dir(root, parent_dir, f_pool)
+
+      if fs.check_path(root, repos_path, f_pool) == svn_node_none:
+        created_file = 1
+        fs.make_file(root, repos_path, f_pool)
+      else:
+        created_file = 0
+
+      handler, baton = fs.apply_textdelta(root, repos_path, f_pool)
+
+      # figure out the real file path for "co"
+      try:
+        statcache.stat(f)
+      except os.error:
+        dirname, fname = os.path.split(f)
+        f = os.path.join(dirname, 'Attic', fname)
+        statcache.stat(f)
+
+      pipe = os.popen('co -q -p%s %s' % (r, f), 'r', 102400)
+
+      # if we just made the file, we can send it in one big hunk, rather
+      # than streaming it in.
+      ### we should watch out for file sizes here; we don't want to yank
+      ### in HUGE files...
+      if created_file:
+        _delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
+      else:
+        # open an SVN stream onto the pipe
+        stream2 = util.svn_stream_from_stdio(pipe, f_pool)
+
+        # Get the current file contents from the repo, or, if we have
+        # multiple CVS revisions to the same file being done in this
+        # single commit, then get the contents of the previous
+        # revision from co, or else the delta won't be correct because
+        # the contents in the repo won't have changed yet.
+        if repos_path == lastcommit[0]:
+          infile2 = os.popen("co -q -p%s %s" % (lastcommit[1], f), "r", 102400)
+          stream1 = util.svn_stream_from_stdio(infile2, f_pool)
+        else:
+          stream1 = fs.file_contents(root, repos_path, f_pool)
+
+        txstream = _delta.svn_txdelta(stream1, stream2, f_pool)
+        _delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
+
+        # shut down the previous-rev pipe, if we opened it
+        infile2 = None
+
+      # shut down the current-rev pipe
+      pipe.close()
+
+      # wipe the pool. this will get rid of the pipe streams and the delta
+      # stream, and anything the FS may have done.
+      util.svn_pool_clear(f_pool)
+
+      # remember what we just did, for the next iteration
+      lastcommit = (repos_path, r)
+
     for f, r in self.deletes:
-      print '    deleting %s : %s' % (r, f)
+      # compute a repository path. ensure we have a leading "/" and drop
+      # the ,v from the file name
+      repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
+
+      print '    deleting %s : %s' % (r, repos_path)
+
+      # If the file was initially added on a branch, the first mainline
+      # revision will be marked dead, and thus, attempts to delete it will
+      # fail, since it doesn't really exist.
+      if r != '1.1':
+        ### need to discriminate between OS paths and FS paths
+        fs.delete(root, repos_path, f_pool)
+
+      # wipe the pool, in case the delete loads it up
+      util.svn_pool_clear(f_pool)
+
+    # get the metadata for this commit
+    author, log, date = self.get_metadata(c_pool)
+    fs.change_txn_prop(txn, 'svn:author', author, c_pool)
+    fs.change_txn_prop(txn, 'svn:log', log, c_pool)
+
+    conflicts, new_rev = fs.commit_txn(txn)
+
+    # set the time to the proper (past) time
+    fs.change_rev_prop(t_fs, new_rev, 'svn:date', date, c_pool)
+
+    ### how come conflicts is a newline?
+    if conflicts != '\n':
+      print '    CONFLICTS:', `conflicts`
+    print '    new revision:', new_rev
+
+    # done with the commit and file pools
+    util.svn_pool_destroy(c_pool)
 
 def read_resync(fname):
   "Read the .resync file into memory."
@@ -354,12 +533,22 @@ def pass3(ctx):
                               ctx.log_fname_base + SORTED_REVS_SUFFIX))
 
 def pass4(ctx):
+  # create the target repository
+  t_repos = _repos.svn_repos_create(ctx.target, ctx.pool)
+  t_fs = _repos.svn_repos_fs(t_repos)
+
   # process the logfiles, creating the target
   commits = { }
   count = 0
 
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
     timestamp, id, op, rev, fname = parse_revs_line(line)
+
+    ### only handle changes on the trunk for now
+    if not trunk_rev.match(rev):
+      ### technically, the timestamp on this could/should cause a flush.
+      ### don't worry about it; the next item will handle it
+      continue
 
     if commits.has_key(id):
       c = commits[id]
@@ -376,7 +565,17 @@ def pass4(ctx):
 
     process.sort()
     for t_max, c in process:
-      c.commit()
+      c.commit(t_fs, ctx)
+    count = count + len(process)
+
+  # if there are any pending commits left, then flush them
+  if commits:
+    process = [ ]
+    for id, c in commits.items():
+      process.append((c.t_max, c))
+    process.sort()
+    for t_max, c in process:
+      c.commit(t_fs, ctx)
     count = count + len(process)
 
   if ctx.verbose:
@@ -392,12 +591,13 @@ _passes = [
 class _ctx:
   pass
 
-def convert(cvsroot, target=SVNROOT, log_fname_base=DATAFILE, start_pass=1,
-            verbose=0):
+def convert(pool, cvsroot,
+            target=SVNROOT, log_fname_base=DATAFILE, start_pass=1, verbose=0):
   "Convert a CVS repository to an SVN repository."
 
   # prepare the operation context
   ctx = _ctx()
+  ctx.pool = pool
   ctx.cvsroot = cvsroot
   ctx.target = target
   ctx.log_fname_base = log_fname_base
@@ -417,15 +617,17 @@ def convert(cvsroot, target=SVNROOT, log_fname_base=DATAFILE, start_pass=1,
     print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
 def usage():
-  print 'USAGE: %s [-p pass] repository-path' % sys.argv[0]
+  print 'USAGE: %s [-v] [-p pass] repository-path' % sys.argv[0]
   sys.exit(1)
 
 def main():
   opts, args = getopt.getopt(sys.argv[1:], 'p:v')
   if len(args) != 1:
     usage()
+
   verbose = 0
   start_pass = 1
+
   for opt, value in opts:
     if opt == '-p':
       start_pass = int(value)
@@ -435,7 +637,8 @@ def main():
         sys.exit(1)
     elif opt == '-v':
       verbose = 1
-  convert(args[0], start_pass=start_pass, verbose=verbose)
+
+  util.run_app(convert, args[0], start_pass=start_pass, verbose=verbose)
 
 if __name__ == '__main__':
   main()
