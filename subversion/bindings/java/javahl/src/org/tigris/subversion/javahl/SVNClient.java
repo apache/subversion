@@ -292,11 +292,7 @@ public class SVNClient implements SVNClientInterface
     public static native int versionMinor();
     public static native int versionMicro();
 
-    public static final class LogLevel
+    public static final class LogLevel implements SVNClientLogLevel
     {
-        public static final int NoLog = 0;
-        public static final int ErrorLog = 1;
-        public static final int ExceptionLog = 2;
-        public static final int EntryLog = 3;
     }
 }
