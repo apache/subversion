@@ -165,12 +165,22 @@ typedef struct
 
 } svn_auth_cred_username_t;
 
-/** SSL client authentication - this provider just uses neon to load
-    in a cert, and sets @a loaded to nonzero if it has done so */
+/** SSL client authentication - this provides @a cert_file and
+    optionally @a key_file (if the private key is separate), and sets
+    @a cert_type for the type of certificate file to load */
 #define SVN_AUTH_CRED_CLIENT_SSL "svn:ssl:client-cert"
 typedef struct
 {
-  int loaded;
+  const char *cert_file;
+  const char *key_file;
+  enum svn_auth_ssl_cert_type_t
+    {
+      svn_auth_ssl_unknown_cert_type,
+      svn_auth_ssl_pem_cert_type,
+      svn_auth_ssl_pkcs12_cert_type
+
+    } cert_type;
+
 } svn_auth_cred_client_ssl_t;
 
 /** SSL client passphrase.

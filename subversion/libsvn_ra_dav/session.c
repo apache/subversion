@@ -159,13 +159,13 @@ server_ssl_file_first_credentials(void **credentials,
 
   cred->failures_allow = 0;
   temp_setting = get_server_setting(cfg, server_group, 
-                                    "ignore-ssl-unknown-ca", NULL);
+                                    "ssl-ignore-unknown-ca", NULL);
   cred->failures_allow = temp_setting ? NE_SSL_UNKNOWNCA : 0;
   temp_setting = get_server_setting(cfg, server_group, 
-                                    "ignore-ssl-host-mismatch", NULL);
+                                    "ssl-ignore-host-mismatch", NULL);
   cred->failures_allow |= temp_setting ? NE_SSL_CNMISMATCH : 0;
   temp_setting = get_server_setting(cfg, server_group, 
-                                    "ignore-ssl-invalid-date", NULL);
+                                    "ssl-ignore-invalid-date", NULL);
   cred->failures_allow |= temp_setting ? (NE_SSL_NOTYETVALID|NE_SSL_EXPIRED) : 0;
   return NULL;
 }
@@ -179,8 +179,34 @@ client_ssl_cert_file_first_credentials(void **credentials,
                                        apr_hash_t *parameters,
                                        apr_pool_t *pool)
 {
-  /* does nothing so far */
-  *credentials = NULL;
+  svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters, SVN_AUTH_PARAM_SERVER_GROUP, APR_HASH_KEY_STRING);
+  svn_auth_cred_client_ssl_t *cred =
+    apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_t));
+  
+  const char* cert_type;
+
+  cred->cert_file = get_server_setting(cfg, server_group,
+				 "ssl-client-cert-file", NULL);
+  cred->key_file = get_server_setting(cfg, server_group,
+				"ssl-client-key-file", NULL);
+  cert_type = get_server_setting(cfg, server_group,
+				"ssl-client-cert-type", "pem");
+  if ((strcmp(cert_type, "pem") == 0) ||
+      (strcmp(cert_type, "PEM") == 0))
+    {
+      cred->cert_type = svn_auth_ssl_pem_cert_type;
+    }
+  else if ((strcmp(cert_type, "pkcs12") == 0) ||
+	   (strcmp(cert_type, "PKCS12") == 0))
+    {
+      cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
+    }
+  else
+  {
+    cred->cert_type = svn_auth_ssl_unknown_cert_type;
+  }
+  *credentials = cred;
   return NULL;
 }
 
@@ -193,8 +219,20 @@ client_ssl_pw_file_first_credentials(void **credentials,
                                      apr_hash_t *parameters,
                                      apr_pool_t *pool)
 {
-  /* does nothing so far */
-  *credentials = NULL;
+  svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters, SVN_AUTH_PARAM_SERVER_GROUP, APR_HASH_KEY_STRING);
+
+  const char *password = get_server_setting(cfg, server_group,
+					    "ssl-client-cert-password", NULL);
+  if (password)
+    {
+      svn_auth_cred_client_ssl_pass_t *cred =
+	apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_pass_t));
+      
+      /* does nothing so far */
+      *credentials = cred;
+    }
+  else *credentials = NULL;
   return NULL;
 }
 
@@ -309,12 +347,19 @@ client_ssl_callback(void *userdata, ne_session *sess,
   svn_auth_iterstate_t *state;
   apr_pool_t *pool;
   svn_error_t *error;
-
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
                                      SVN_AUTH_CRED_CLIENT_SSL,
                                      ras->callbacks->auth_baton,
                                      pool);
+  if(credentials->cert_type == svn_auth_ssl_pem_cert_type)
+    {
+      ne_ssl_load_pem(sess, credentials->cert_file, credentials->key_file);
+    }
+  else
+    {
+      ne_ssl_load_pkcs12(sess, credentials->cert_file);
+    }
   apr_pool_destroy(pool);
 }
 
