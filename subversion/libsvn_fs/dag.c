@@ -1514,6 +1514,9 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev->predecessor_id = svn_fs__id_copy (src_id, trail->pool);
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
+      to_noderev->created_path = 
+        svn_path_join (svn_fs__dag_get_created_path (to_node), entry, 
+                       trail->pool);
       SVN_ERR (svn_fs__create_successor (&id, fs, src_id, to_noderev,
                                          copy_id, txn_id, trail));
 
