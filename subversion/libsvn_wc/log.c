@@ -1355,7 +1355,9 @@ svn_wc_cleanup (const char *path,
         {
           /* Recurse */
           const char *subdir = svn_path_join (path, key, pool);
-          SVN_ERR (svn_wc_cleanup (subdir, adm_access, pool));
+          SVN_ERR (svn_io_check_path (subdir, &kind, pool));
+          if (kind == svn_node_dir)
+            SVN_ERR (svn_wc_cleanup (subdir, adm_access, pool));
         }
     }
 
