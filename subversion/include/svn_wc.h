@@ -80,8 +80,9 @@
    one versioned entity. */
 typedef struct svn_wc_entry_t
 {
-  /* Note that the entry's name is not stored here, because it is the
-     hash key for which this is the value. */
+  /* Note that the entry's name does not get its own field here,
+     because it is usually the key for which this is the value.  If
+     you really need it, look in the attributes. */
 
   svn_revnum_t revision;       /* Base revision.  (Required) */
   svn_string_t *ancestor;      /* Base path.  (Required) */
@@ -89,9 +90,8 @@ typedef struct svn_wc_entry_t
 
   int flags;                   /* Marks an entry with A, D, C, etc. */
 
-  apr_time_t timestamp;        /* When the entries file thinks the
-                                  local working file last changed.
-                                  (NULL means not available) */ 
+  apr_time_t timestamp;        /* When the entry was last up-to-date.
+                                  (Zero means not available) */ 
 
   apr_hash_t *attributes;      /* All XML attributes, both those
                                   duplicated above and any others.
