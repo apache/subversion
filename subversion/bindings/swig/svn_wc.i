@@ -118,7 +118,6 @@
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_wc.h
 %{
 #include "svn_wc.h"
 
@@ -133,4 +132,10 @@
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_wc.h

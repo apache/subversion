@@ -25,7 +25,37 @@
 %include typemaps.i
 
 %{
+#include <apr.h>
+#include <apr_general.h>
+
+#include "svn_io.h"
+#include "svn_pools.h"
+#include "svn_version.h"
+#include "svn_time.h"
+#include "svn_props.h"
 #include "svn_opt.h"
+#include "svn_auth.h"
+#include "svn_config.h"
+#include "svn_version.h"
+#include "svn_md5.h"
+#include "svn_diff.h"
+#include "svn_error_codes.h"
+
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
+
+#ifdef SWIGJAVA
+#include "swigutil_java.h"
+#endif
+
+#ifdef SWIGPERL
+#include "swigutil_pl.h"
+#endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
 
 /* We don't want to hear about supposedly bad constant values */
@@ -431,36 +461,6 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_diff.h
 %include svn_error.h
 #endif
-
-%{
-#include <apr.h>
-#include <apr_general.h>
-
-#include "svn_io.h"
-#include "svn_pools.h"
-#include "svn_version.h"
-#include "svn_time.h"
-#include "svn_props.h"
-#include "svn_opt.h"
-#include "svn_auth.h"
-#include "svn_config.h"
-#include "svn_version.h"
-#include "svn_md5.h"
-#include "svn_diff.h"
-#include "svn_error_codes.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-%}
 
 #ifdef SWIGPYTHON
 %init %{

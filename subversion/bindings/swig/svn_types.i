@@ -484,7 +484,6 @@
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_types.h
 %{
 #include "svn_types.h"
 #include "svn_time.h"
@@ -500,4 +499,10 @@
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_types.h
