@@ -302,7 +302,9 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 /*** Recursively do log things. ***/
 
 svn_error_t *
-svn_wc__cleanup (svn_string_t *path, apr_pool_t *pool)
+svn_wc__cleanup (svn_string_t *path,
+                 svn_boolean_t bail_on_lock,
+                 apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
@@ -336,7 +338,7 @@ svn_wc__cleanup (svn_string_t *path, apr_pool_t *pool)
                                   svn_path_local_style,
                                   pool);
 
-          err = svn_wc__cleanup (subdir, pool);
+          err = svn_wc__cleanup (subdir, bail_on_lock, pool);
           if (err)
             return err;
         }

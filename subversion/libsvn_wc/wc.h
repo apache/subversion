@@ -315,10 +315,25 @@ svn_error_t *svn_wc__log_commit (svn_string_t *path,
                                  apr_pool_t *pool);
 
 
-/* Recurse from path, cleaning up unfinished log business. */
-/* todo: this, along with all other recursers, will want to use the
-   svn_wc__compose_paths() convention eventually. */
-svn_error_t *svn_wc__cleanup (svn_string_t *path, apr_pool_t *pool);
+/* Recurse from path, cleaning up unfinished log business. 
+ * Log cleanup follows some very particular rules.  In each directory,
+ * starting from PATH, do the following:
+ *
+ *   1. If the dir is locked, error out if BAIL_ON_LOCK is set.
+ *      Otherwise, proceed to step 2.
+ * 
+ *   2. If there is a log, run each item in the log, in order.  When
+ *      done, rm the log.
+ *
+ *   3. Clean out any remaining regular files in SVN/tmp/.
+ *      And if BAIL_ON_LOCK is not set, remove any lock file as well.
+ *
+ * todo: this, along with all other recursers, will want to use the
+ * svn_wc__compose_paths() convention eventually. 
+ */
+svn_error_t *svn_wc__cleanup (svn_string_t *path,
+                              svn_boolean_t bail_on_lock,
+                              apr_pool_t *pool);
 
 /* Process the instructions in the log file for PATH. */
 svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
