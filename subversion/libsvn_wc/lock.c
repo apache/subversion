@@ -287,7 +287,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       SVN_ERR (svn_io_check_path (path, &node_kind, pool));
       if (node_kind != svn_node_dir)
         return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, NULL,
-                                  "lock path is not a directory (%s)",
+                                  "lock path is not a directory: '%s'",
                                   path);
 
       lock = adm_access_alloc (svn_wc__adm_access_unlocked, path, pool);
