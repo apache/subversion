@@ -124,10 +124,13 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
   /*** From here on, any problems that occur require us to cd back!! ***/
 
-  /* Ask the working copy for a temporary file */
+  /* Ask the working copy for a temporary file.  Note that the
+     filename is carefully chosen so editors can recognize it and
+     automatically customize for operating on a Subversion commit
+     message. */
   err = svn_io_open_unique_file 
     (&tmp_file, &tmpfile_name,
-     "msg", ".tmp", FALSE, pool);
+     "svncommit", ".tmp", FALSE, pool);
   if (err)
     goto cleanup2;
 
