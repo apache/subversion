@@ -3,7 +3,7 @@
 # gen-make.py -- generate makefiles for building Subversion
 #
 # USAGE:
-#    gen-make.py [-s] BUILD-CONFIG
+#    gen-make.py [-s] [BUILD-CONFIG]
 #
 
 import os, sys
@@ -30,16 +30,17 @@ def _usage_exit():
 if __name__ == '__main__':
   argc = len(sys.argv)
 
-  if argc == 1:
-    _usage_exit()
-  if sys.argv[1] == '-s':
-    if argc == 2:
-      _usage_exit()
+  fname = "build.conf"
+  skip = 0
+  optind = 1
+  if argc > optind and sys.argv[optind] == '-s':
     skip = 1
-    fname = sys.argv[2]
-  else:
-    skip = 0
-    fname = sys.argv[1]
+    optind += 1
+  if argc > optind:
+    fname = sys.argv[optind]
+    optind += 1
+  if argc > optind:
+    _usage_exit()
   main(fname, skip_depends=skip)
 
 
