@@ -523,12 +523,12 @@ def rev_update_switched_things(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(routine_switching),
-              XFail(commit_switched_things),
-              XFail(full_update),
-              XFail(full_rev_update),
-              XFail(update_switched_things),
-              XFail(rev_update_switched_things),
+              routine_switching,
+              commit_switched_things,
+              full_update,
+              full_rev_update,
+              update_switched_things,
+              rev_update_switched_things,
               ]
 
 if __name__ == '__main__':

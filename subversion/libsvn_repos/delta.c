@@ -951,7 +951,9 @@ delta_dirs (struct context *c,
 
           if (c->recurse || (! is_dir))
             {
-              SVN_ERR (delete (c, dir_baton, s_fullpath, subpool));
+              const char *delpath = 
+                svn_path_join (target_path, s_entry->name, subpool);
+              SVN_ERR (delete (c, dir_baton, delpath, subpool));
             }
 
           /* Clear out our subpool for the next iteration... */
