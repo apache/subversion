@@ -28,7 +28,7 @@ Candidate changes:
       Without this fix and with r10788 and friends, httpd can crash on
       exit.
     Votes:
-      +1: ghudson, lundblad
+      +1: ghudson, lundblad, jszakmeister
 
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
@@ -53,4 +53,13 @@ Candidate changes:
     Notes:
       r11490 is just cleanups.  But makes it merge cleanly.
     Votes:
-      +1: breser
+      +1: breser, jszakmeister
+
+  * r11483 (Issue #2091)
+    Unitialized variable on Win98.
+    Justification:
+      It was causing random failures for our Win98 users.  The fix
+      also correctly sets the locale path now, making locale stuff
+      work as well.
+    Votes:
+      +1: jszakmeister
