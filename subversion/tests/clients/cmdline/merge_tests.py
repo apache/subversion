@@ -2,17 +2,6 @@
 #
 #  merge_tests.py:  testing merge
 #
-#  ################################################################
-#  ###                                                          ###
-#  ###                    *** NOTE ***                          ###
-#  ###                                                          ###
-#  ###       This works fine for ra_local "make check", but     ###
-#  ###       may have problems over ra_dav, because the         ###
-#  ###       "current" wc symlinking conventions don't know     ###
-#  ###       how to handle the ".other" wc yet.                 ###
-#  ###                                                          ###
-#  ################################################################
-#
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
 #    
