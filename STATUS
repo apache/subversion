@@ -129,6 +129,13 @@ Candidate changes:
     Votes:
       +1: pmayweg
 
+  * r13193
+    Fix runaway memory usage when auto-merging a large tree.
+    Justification:
+      currently dumps core on our 27k rev / 70k files tree
+    Votes:
+      +1: epg
+
 Approved changes (further review is welcome, but not required):
 
   * r12489
