@@ -164,32 +164,27 @@ check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         "URLs have no schemas:\n"
-         "   '%s'\n"
-         "   '%s'", url, ent->url);
+         "URLs have no schema ('%s' and '%s')", url, ent->url);
     }
   else if (idx1 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         "URL has no schema: '%s'\n", url);
+         "URL has no schema: '%s'", url);
     }
   else if (idx2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         "URL has no schema: '%s'\n", ent->url);
+         "URL has no schema: '%s'", ent->url);
     }
   else if (((idx1 - url) != (idx2 - ent->url))
            || (strncmp (url, ent->url, idx1 - url) != 0))
     {
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Access method (schema) mixtures not yet supported:\n"
-         "   '%s'\n"
-         "   '%s'\n"
-         "See http://subversion.tigris.org/issues/show_bug.cgi?id=1321 "
-         "for details.", url, ent->url);
+         "Access schema mixtures not yet supported ('%s' and '%s')", 
+	 url, ent->url);
     }
 
   /* else */
@@ -1173,8 +1168,8 @@ convert_to_url (const char **url,
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "convert_to_url: '%s' is not versioned", path);
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              "'%s' is not versioned", path);
 
   if (entry->url)  
     *url = apr_pstrdup (pool, entry->url);
@@ -1219,8 +1214,8 @@ do_merge (const char *URL1,
       || (revision2->kind == svn_opt_revision_unspecified))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         "do_merge: caller failed to specify all revisions");
+        (SVN_ERR_CLIENT_BAD_REVISION, NULL, 
+	 "Not all required revisions specified");
     }
 
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, target_wcpath, pool));
@@ -1475,8 +1470,8 @@ diff_wc_wc (const apr_array_header_t *options,
     return unsupported_diff_error
       (svn_error_create 
        (SVN_ERR_INCORRECT_PARAMS, NULL,
-        "diff_wc_wc: we only support diffs between a path's text-base "
-        "and its working files at this time"));
+        "Only diffs between a path's text-base "
+        "and its working files are supported at this time"));
 
   SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
   SVN_ERR (svn_io_check_path (path1, &kind, pool));
@@ -1809,7 +1804,7 @@ do_diff (const apr_array_header_t *options,
   if ((revision1->kind == svn_opt_revision_unspecified)
       || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                             "do_diff: not all revisions are specified");
+                             "Not all required revisions are specified");
 
   /* Revisions can be said to be local or remote.  BASE and WORKING,
      for example, are local.  */
@@ -2007,9 +2002,8 @@ svn_client_merge (const char *source1,
 
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, adm_access, FALSE, pool));
   if (entry == NULL)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                              "Can't merge changes into '%s':"
-                              "it's not under version control.", 
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              "'%s' is not under version control", 
                               target_wcpath);
 
   merge_cmd_baton.force = force;

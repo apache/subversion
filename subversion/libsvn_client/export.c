@@ -521,10 +521,7 @@ close_file (void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             "close_file: checksum mismatch for resulting fulltext\n"
-             "(%s):\n"
-             "   expected checksum:  %s\n"
-             "   actual checksum:    %s\n",
+             "Checksum mismatch for '%s'; expected: '%s', actual: '%s'\n",
              fb->path, text_checksum, actual_checksum);
         }
     }

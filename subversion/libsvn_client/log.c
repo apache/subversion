@@ -71,7 +71,7 @@ svn_client_log (const apr_array_header_t *targets,
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-         "svn_client_log: caller failed to supply revision");
+         "Missing required revision specification");
     }
 
   start_revnum = end_revnum = SVN_INVALID_REVNUM;
@@ -141,7 +141,7 @@ svn_client_log (const apr_array_header_t *targets,
           if (! entry->url)
             return svn_error_createf
               (SVN_ERR_ENTRY_MISSING_URL, NULL,
-              "svn_client_log: entry '%s' has no URL", target);
+              "Entry '%s' has no URL", target);
           URL = apr_pstrdup (pool, entry->url);
           SVN_ERR (svn_wc_adm_close (adm_access));
           (*((const char **)apr_array_push (target_urls))) = URL;

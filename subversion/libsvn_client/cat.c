@@ -80,7 +80,7 @@ svn_client_cat (svn_stream_t *out,
 
   if (url_kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                             "URL \"%s\" refers to directory", url);
+                             "URL '%s' refers to a directory", url);
 
   /* Grab some properties we need to know in order to figure out if anything 
      special needs to be done with this file. */
@@ -123,7 +123,7 @@ svn_client_cat (svn_stream_t *out,
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);
       if (apr_err)
-        return svn_error_createf (apr_err, NULL, "seek failed on '%s'.",
+        return svn_error_createf (apr_err, NULL, "Seek failed on '%s'.",
                                   tmp_filename);
 
       if (eol_style)

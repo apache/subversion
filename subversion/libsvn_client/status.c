@@ -114,7 +114,7 @@ svn_client_status (svn_revnum_t *youngest,
   else if (! update)
     svn_path_split (path, &anchor, &target, pool);
   else
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                               "'%s' is not a versioned resource", path);
   
   /* Close up our ADM area.  We'll be re-opening soon. */
@@ -156,12 +156,12 @@ svn_client_status (svn_revnum_t *youngest,
       SVN_ERR (svn_wc_entry (&entry, anchor, anchor_access, FALSE, pool));
       if (! entry)
         return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           "svn_client_status: '%s' is not under version control", anchor);
+          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+           "'%s' is not under version control", anchor);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
-           "svn_client_status: entry '%s' has no URL", anchor);
+           "Entry '%s' has no URL", anchor);
       URL = apr_pstrdup (pool, entry->url);
 
       /* Get the RA library that handles URL. */
