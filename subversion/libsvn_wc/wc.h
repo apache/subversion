@@ -393,7 +393,7 @@ typedef struct svn_wc__entry_t
   svn_string_t *ancestor;      /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
-  int flags;                   /* Is entry marked for addition, deletion? */
+  int flags;                   /* Marks an entry with A, D, C, etc. */
 
   apr_time_t timestamp;        /* When the entries file thinks the
                                   local working file last changed.
@@ -406,8 +406,9 @@ typedef struct svn_wc__entry_t
 
 /* Bitmasks stored in the `flags' field above.  */
 #define SVN_WC__ENTRY_CLEAR     1     /* special flag, means clear flags */
-#define SVN_WC__ENTRY_ADD       2     /* file added */
-#define SVN_WC__ENTRY_DELETE    4     /* file deleted */
+#define SVN_WC__ENTRY_ADD       2     /* entry marked for addition */
+#define SVN_WC__ENTRY_DELETE    4     /* entry marked for deletion */
+#define SVN_WC__ENTRY_CONFLICT  8     /* entry in a state of conflict */
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC__ENTRIES_THIS_DIR       ""
