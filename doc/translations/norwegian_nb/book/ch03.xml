@@ -142,7 +142,8 @@
       revisjonen du &#248;nsker (<command>svn --revision REV</command> eller 
       du kan spesifisere et omr&#229;de ved &#229; separere to revisjoner med et 
       kolon (<command>svn --revision REV1:REV2</command>).
-      Og Subversion lar deg referere til disse revisjonene via nummer, n&#248;kkelord eller dato.</para>
+      Og Subversion lar deg referere til disse revisjonene via nummer, 
+      n&#248;kkelord eller dato.</para>
     
     <sect2 id="svn-ch-3-sect-3.1">
       <!-- @ENGLISH {{{
@@ -273,8 +274,8 @@ Committed revision 3.
             <para>The last revision in which an item changed before (or
               at) <literal>BASE</literal>.</para>
             @ENGLISH }}} -->
-            <para>Den siste revisjonen som et element forandret seg i f&#248;r 
-              (eller p&#229;) <literal>BASE</literal>.</para>
+            <para>Den siste revisjonen som et element forandret seg i 
+              f&#248;r (eller p&#229;) <literal>BASE</literal>.</para>
           </listitem>
         </varlistentry>
         
@@ -622,11 +623,10 @@ Checked out revision 2499.
         more about in <xref linkend="svn-ch-4"/>.</para>
       @ENGLISH }}} -->
       <title>Oppbygning av depotet</title>
-      <para>Hvis du lurer p&#229; hva det er med 
-        <literal>trunk</literal> i URLen ovenfor, s&#229; er den en del av 
-        m&#229;ten vi anbefaler du legger opp Subversiondepotet, noe som vi 
-        vil snakke en god del mer om i <xref 
-        linkend="svn-ch-4"/>.</para>
+      <para>Hvis du lurer p&#229; hva det er med <literal>trunk</literal> i 
+        URLen ovenfor, s&#229; er den en del av m&#229;ten vi anbefaler du legger 
+        opp Subversiondepotet, noe som vi vil snakke en god del mer om i 
+        <xref linkend="svn-ch-4"/>.</para>
 
     </sidebar>
 
@@ -1309,8 +1309,8 @@ Updated to revision 2.
           forandringene du gj&#248;r for at depotet skal bli i stand til &#229; 
           gjengi disse forandringene.
           Det er ikke helt sant &#8212; det <emphasis>er</emphasis> noen 
-          tilfeller som legger inn treforandringer til 
-          depotet med en gang.
+          tilfeller som legger inn treforandringer til depotet med en 
+          gang.
           Dette skjer bare n&#229;r en delkommando opererer direkte mot en 
           URL istedenfor en sti i en arbeidskopi.
           I s&#230;rdeleshet, spesifikk bruk av <command>svn mkdir</command>, 
@@ -1331,8 +1331,8 @@ Updated to revision 2.
           arbeidskopien som et slags <quote>anleggsomr&#229;de</quote> der du 
           gj&#248;r i stand forandringene f&#248;r du legger dem inn i depotet.
           Kommandoer som opererer p&#229; URLer har ikke denne luksusen, s&#229; 
-          n&#229;r du opererer direkte mot en URL, representerer alle de ovennevnte 
-          operasjonene en &#248;yeblikkelig innlegging.</para>
+          n&#229;r du opererer direkte mot en URL, representerer alle de 
+          ovennevnte operasjonene en &#248;yeblikkelig innlegging.</para>
 
       </sidebar>
 
