@@ -335,7 +335,7 @@ count_and_verify_instructions (int *ninst,
                                apr_size_t new_len)
 {
   int n = 0;
-  svn_txdelta_op_t op = { 0 };
+  svn_txdelta_op_t op;
   apr_size_t tpos = 0, npos = 0;
 
   while (p < end)
@@ -396,6 +396,58 @@ count_and_verify_instructions (int *ninst,
   return SVN_NO_ERROR;
 }
 
+/* Given the five integer fields of a window header and a pointer to
+   the remainder of the window contents, fill in a delta window
+   structure *WINDOW.  New allocations will be performed in POOL;
+   the new_data field of *WINDOW will refer directly to memory pointed
+   to by DATA. */
+static svn_error_t *
+decode_window (svn_txdelta_window_t *window, svn_filesize_t sview_offset,
+               apr_size_t sview_len, apr_size_t tview_len, apr_size_t inslen,
+               apr_size_t newlen, const unsigned char *data, apr_pool_t *pool)
+{
+  const unsigned char *end;
+  int ninst;
+  apr_size_t npos;
+  svn_txdelta_op_t *ops, *op;
+  svn_string_t *new_data;
+
+  window->sview_offset = sview_offset;
+  window->sview_len = sview_len;
+  window->tview_len = tview_len;
+
+  /* Count the instructions and make sure they are all valid.  */
+  end = data + inslen;
+  SVN_ERR (count_and_verify_instructions (&ninst, data, end, sview_len, 
+                                          tview_len, newlen));
+
+  /* Allocate a buffer for the instructions and decode them. */
+  ops = apr_palloc (pool, ninst * sizeof (*ops));
+  npos = 0;
+  window->src_ops = 0;
+  for (op = ops; op < ops + ninst; op++)
+    {
+      data = decode_instruction (op, data, end);
+      if (op->action_code == svn_txdelta_source)
+        ++window->src_ops;
+      else if (op->action_code == svn_txdelta_new)
+        {
+          op->offset = npos;
+          npos += op->length;
+        }
+    }
+
+  window->ops = ops;
+  window->num_ops = ninst;
+
+  new_data = apr_palloc (pool, sizeof (*new_data));
+  new_data->data = (const char *) data;
+  new_data->len = newlen;
+  window->new_data = new_data;
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 write_handler (void *baton,
                const char *buffer,
@@ -404,10 +456,8 @@ write_handler (void *baton,
   struct decode_baton *db = (struct decode_baton *) baton;
   const unsigned char *p, *end;
   svn_filesize_t sview_offset;
-  apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
+  apr_size_t sview_len, tview_len, inslen, newlen, remaining;
   apr_size_t buflen = *len;
-  svn_txdelta_op_t *op;
-  int ninst;
 
   /* Chew up four bytes at the beginning for the header.  */
   if (db->header_bytes < 4)
@@ -441,9 +491,7 @@ write_handler (void *baton,
   while (1)
     {
       apr_pool_t *newpool;
-      svn_txdelta_window_t window = { 0 };
-      svn_string_t new_data;
-      svn_txdelta_op_t *ops;
+      svn_txdelta_window_t window;
 
       /* Read the header, if we have enough bytes for that.  */
       p = (const unsigned char *) db->buffer->data;
@@ -489,48 +537,15 @@ write_handler (void *baton,
       if ((apr_size_t) (end - p) < inslen + newlen)
         return SVN_NO_ERROR;
 
-      /* Count the instructions and make sure they are all valid.  */
-      end = p + inslen;
-      SVN_ERR (count_and_verify_instructions (&ninst, p, end, sview_len, 
-                                              tview_len, newlen));
-
-      /* Build the window structure.  */
-      window.sview_offset = sview_offset;
-      window.sview_len = sview_len;
-      window.tview_len = tview_len;
-
-      ops = apr_palloc (db->subpool, ninst * sizeof (*ops));
-      npos = 0;
-      for (op = ops; op < ops + ninst; op++)
-        {
-          /* ### Why don't we use a build baton and svn_txdelta__make_window
-                 like everyone else?  --xbc */
-          /* FIXME: The way things stand now, every svndiff insn is decoded
-             twice. We should integrate what count_and_verify_instructions
-             does here, instead.  --xbc */
-          p = decode_instruction (op, p, end);
-          if (op->action_code == svn_txdelta_source)
-            ++window.src_ops;
-          else if (op->action_code == svn_txdelta_new)
-            {
-              op->offset = npos;
-              npos += op->length;
-            }
-        }
-      window.num_ops = ninst;
-      window.ops = ops;
-
-      new_data.data = (const char *)p;
-      new_data.len = newlen;
-      window.new_data = &new_data;
-
-      /* Send it off.  */
-      SVN_ERR(db->consumer_func (&window, db->consumer_baton));
+      /* Decode the window and send it off. */
+      SVN_ERR (decode_window (&window, sview_offset, sview_len, tview_len,
+                              inslen, newlen, p, db->subpool));
+      SVN_ERR (db->consumer_func (&window, db->consumer_baton));
 
       /* Make a new subpool and buffer, saving aside the remaining
          data in the old buffer.  */
       newpool = svn_pool_create (db->pool);
-      p += newlen;
+      p += inslen + newlen;
       remaining = db->buffer->data + db->buffer->len - (const char *) p;
       db->buffer = 
         svn_stringbuf_ncreate ((const char *) p, remaining, newpool);
@@ -595,4 +610,115 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
   svn_stream_set_write (stream, write_handler);
   svn_stream_set_close (stream, close_handler);
   return stream;
+}
+
+
+/* Routines for reading one svndiff window at a time. */
+
+/* Read one byte from STREAM into *BYTE. */
+static svn_error_t *
+read_one_byte (unsigned char *byte, svn_stream_t *stream)
+{
+  char c;
+  apr_size_t len = 1;
+
+  SVN_ERR (svn_stream_read (stream, &c, &len));
+  if (len == 0)
+    return svn_error_create (SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
+                             "Unexpected end of svndiff input");
+  *byte = (unsigned char) c;
+  return SVN_NO_ERROR;
+}
+
+/* Read and decode one integer from STREAM into *SIZE. */
+static svn_error_t *
+read_one_size (apr_size_t *size, svn_stream_t *stream)
+{
+  unsigned char c;
+
+  *size = 0;
+  while (1)
+    {
+      SVN_ERR (read_one_byte (&c, stream));
+      *size = (*size << 7) | (c & 0x7f);
+      if (!(c & 0x80))
+        break;
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Read a window header from STREAM and check it for integer overflow. */
+static svn_error_t *
+read_window_header (svn_stream_t *stream, svn_filesize_t *sview_offset,
+                    apr_size_t *sview_len, apr_size_t *tview_len,
+                    apr_size_t *inslen, apr_size_t *newlen)
+{
+  unsigned char c;
+
+  /* Read the source view offset by hand, since it's not an apr_size_t. */
+  *sview_offset = 0;
+  while (1)
+    {
+      SVN_ERR (read_one_byte (&c, stream));
+      *sview_offset = (*sview_offset << 7) | (c & 0x7f);
+      if (!(c & 0x80))
+        break;
+    }
+
+  /* Read the four size fields. */
+  SVN_ERR (read_one_size (sview_len, stream));
+  SVN_ERR (read_one_size (tview_len, stream));
+  SVN_ERR (read_one_size (inslen, stream));
+  SVN_ERR (read_one_size (newlen, stream));
+
+  /* Check for integer overflow.  */
+  if (*sview_offset < 0 || *inslen + *newlen < *inslen
+      || *sview_len + *tview_len < *sview_len
+      || *sview_offset + *sview_len < *sview_offset)
+    return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, NULL, 
+                             "Svndiff contains corrupt window header");
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
+                                 svn_stream_t *stream,
+                                 int svndiff_version,
+                                 apr_pool_t *pool)
+{
+  svn_filesize_t sview_offset;
+  apr_size_t sview_len, tview_len, inslen, newlen, len;
+  unsigned char *buf;
+
+  SVN_ERR (read_window_header (stream, &sview_offset, &sview_len, &tview_len,
+                               &inslen, &newlen));
+  len = inslen + newlen;
+  buf = apr_palloc(pool, len);
+  SVN_ERR (svn_stream_read (stream, buf, &len));
+  if (len < inslen + newlen)
+    return svn_error_create (SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
+                             "Unexpected end of svndiff input");
+  *window = apr_palloc (pool, sizeof(**window));
+  SVN_ERR (decode_window (*window, sview_offset, sview_len, tview_len, inslen,
+                          newlen, buf, pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_txdelta_skip_svndiff_window (apr_file_t *file,
+                                 int svndiff_version,
+                                 apr_pool_t *pool)
+{
+  svn_stream_t *stream = svn_stream_from_aprfile(file, pool);
+  svn_filesize_t sview_offset;
+  apr_size_t sview_len, tview_len, inslen, newlen;
+  apr_off_t offset;
+
+  SVN_ERR (read_window_header (stream, &sview_offset, &sview_len, &tview_len,
+                               &inslen, &newlen));
+
+  offset = inslen + newlen;
+  return svn_io_file_seek (file, APR_CUR, &offset, pool);
 }
