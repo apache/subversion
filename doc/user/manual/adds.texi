@@ -81,9 +81,11 @@ As usual, your commit will be rejected if any server-side conflicts
 result from your own working copy being out-of-date.
 
 One final rule: you cannot commit an added item if any of its parents
-are scheduled for addition.  This may sound bizarre at first, but it
-makes sense.  To commit added items that are nested, you must commit
-from the @emph{top} of the nesting.
+are scheduled for addition but are not included in the same commit.
+This is because it would be meaningless to commit a new item to the
+repository without a parent to hold that item.  Therefore, to commit
+added items that are nested, you must commit from the @emph{top} of the
+nesting.
 
 For example, recall our old working copy:
 
@@ -148,11 +150,11 @@ Commit succeeded.
 During an update, new files and directories may be added to your working
 copy.  This is no surprise.
 
-The only problems that may occur are those times when the items
-being added have the same names as pre-existing, non-versioned
-resources.  As a rule, Subversion will never lose any data in your
-working copy -- versioned or not.  Thus in order for the update to
-succeed, you'll have to move your unversioned items "out of the way".
+The only problems that may occur are those times when the items being
+added have the same names as non-versioned items already present in your
+working copy.  As a rule, Subversion never loses nor hides data in your
+working copy -- versioned or not.  Thus for the update to succeed,
+you'll have to move your unversioned items out of the way.
 
 
 @c ------------------------------------------------------------------
