@@ -85,6 +85,7 @@ svn_cl__blame (apr_getopt_t *os,
   svn_stream_t *out;
   blame_baton_t bl;
   int i;
+  svn_boolean_t is_head_or_base = FALSE;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -108,7 +109,7 @@ svn_cl__blame (apr_getopt_t *os,
           opt_state->start_revision.value.number = 1;
         }
       else
-        opt_state->end_revision.kind = svn_opt_revision_head;
+        is_head_or_base = TRUE;
     }
 
   if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
@@ -129,6 +130,13 @@ svn_cl__blame (apr_getopt_t *os,
       const char *target = ((const char **) (targets->elts))[i];
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
+      if (is_head_or_base)
+        {
+          if (svn_path_is_url (target))
+            opt_state->end_revision.kind = svn_opt_revision_head;
+          else
+            opt_state->end_revision.kind = svn_opt_revision_base;
+        }
       err = svn_client_blame (target,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
