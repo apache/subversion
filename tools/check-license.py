@@ -13,15 +13,15 @@
 #
 
 OLD_LICENSE = '''\
- * ====================================================================
- * Copyright (c) 2000 CollabNet.  All rights reserved.
- *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution.  The terms
- * are also available at http://subversion.tigris.org/license-1.html.
- * If newer versions of this license are posted there, you may use a
- * newer version instead, at your option.
- * ====================================================================
+ \* ====================================================================
+ \* Copyright \(c\) (200[01]|2000-2001) CollabNet.  All rights reserved.
+ \*
+ \* This software is licensed as described in the file COPYING, which
+ \* you should have received as part of this distribution.  The terms
+ \* are also available at http://subversion.tigris.org/license-1.html.
+ \* If newer versions of this license are posted there, you may use a
+ \* newer version instead, at your option.
+ \* ====================================================================
 '''
 
 NEW_LICENSE = '''\
@@ -33,19 +33,22 @@ NEW_LICENSE = '''\
 '''
 
 import sys
-import string
+import re
+
+re_OLD = re.compile(OLD_LICENSE)
 
 def check_file(fname):
   s = open(fname).read()
-  if string.find(s, OLD_LICENSE) == -1:
+  if not re_OLD.search(s):
     print fname
 
 def change_license(fname):
   s = open(fname).read()
-  if string.find(s, OLD_LICENSE) == -1:
+  m = re_OLD.search(s)
+  if not m:
     print 'ERROR: missing old license:', fname
   else:
-    s = string.replace(s, OLD_LICENSE, NEW_LICENSE)
+    s = s[:m.start()] + NEW_LICENSE + s[m.end():]
     open(fname, 'w').write(s)
     print 'Changed:', fname
 
