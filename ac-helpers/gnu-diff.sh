@@ -26,6 +26,17 @@ fi
 
 patch=$1
 
+# Determine how to tell echo not to print the trailing \n.
+# This is similar to Autoconf's @ECHO_C@ and @ECHO_N@; however, we
+# don't generate this file from `gnu-diff.sh.in', so we just do
+# something similar inline.
+case `echo "testing\c"; echo 1,2,3`,`echo -n testing; echo 1,2,3` in
+  *c*,-n*) ECHO_N= ECHO_C='
+' ECHO_T='	' ;;
+  *c*,*  ) ECHO_N=-n ECHO_C= ECHO_T= ;;
+  *)      ECHO_N= ECHO_C='\c' ECHO_T= ;;
+esac
+
 # Loop over $PATH, looking for `diff' binaries
 
 IFS=':'
@@ -36,11 +47,11 @@ for searchdir in $PATH; do
 	diff=$searchdir/$name
 	if test -x $diff; then
 	    # create two identical one-line files (no newline endings)
-	    echo -n "some text, no newline" > foofile
+	    echo $ECHO_N "some text, no newline$ECHO_C" > foofile
 	    cp foofile foofile2
 
 	    # append to the first file
-	    echo -n "...extra text, still no newline" >> foofile
+	    echo $ECHO_N "...extra text, still no newline$ECHO_C" >> foofile
 
 	    # do a diff, create a patch.
 	    $diff -u foofile foofile2 > foofile.patch 2>/dev/null
