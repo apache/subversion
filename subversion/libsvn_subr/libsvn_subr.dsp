@@ -147,6 +147,10 @@ SOURCE=.\utf.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\validate.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\xml.c
 # End Source File
 # End Group
