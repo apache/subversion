@@ -771,7 +771,7 @@ svn_wc_delete (const char *path,
           if (dir_access != adm_access)
             {
               SVN_ERR (svn_wc_remove_from_revision_control
-                       (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE,
+                       (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, FALSE,
                         cancel_func, cancel_baton, pool));
             }
           else
@@ -1468,7 +1468,7 @@ svn_wc_revert (const char *path,
         {
           was_deleted = entry->deleted;
           SVN_ERR (svn_wc_remove_from_revision_control (parent_access, bname,
-                                                        FALSE,
+                                                        FALSE, FALSE,
                                                         cancel_func,
                                                         cancel_baton,
                                                         pool));
@@ -1502,7 +1502,7 @@ svn_wc_revert (const char *path,
             }
           else
             SVN_ERR (svn_wc_remove_from_revision_control 
-                     (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE,
+                     (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, FALSE,
                       cancel_func, cancel_baton, pool));
         }
       else  /* Else it's `none', or something exotic like a symlink... */
@@ -1664,6 +1664,7 @@ svn_error_t *
 svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      const char *name,
                                      svn_boolean_t destroy_wf,
+                                     svn_boolean_t instant_error,
                                      svn_cancel_func_t cancel_func,
                                      void *cancel_baton,
                                      apr_pool_t *pool)
@@ -1688,9 +1689,12 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
       full_path = svn_path_join (full_path, name, pool);
 
       /* Check for local mods. before removing entry */
-      if (destroy_wf)
-        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
-                                         FALSE, adm_access, pool));
+      SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
+                                       FALSE, adm_access, pool));
+      if (text_modified_p && instant_error)
+        return svn_error_createf (SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
+                                  "file '%s' has local modifications.",
+                                  name);
 
       /* Remove NAME from PATH's entries file: */
       SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
@@ -1726,7 +1730,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
         SVN_ERR (remove_file_if_present (svn_thang, pool));
       }
 
-      /* If we were asked to destory the working file, do so unless
+      /* If we were asked to destroy the working file, do so unless
          it has local mods. */
       if (destroy_wf)
         {
@@ -1742,36 +1746,24 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
     {
       apr_pool_t *subpool = svn_pool_create (pool);
       apr_hash_index_t *hi;
+      svn_wc_entry_t *incomplete_entry
+        = apr_pcalloc (pool, sizeof (*incomplete_entry));
 
       /* ### sanity check:  check 2 places for DELETED flag? */
-
-      /* Remove self from parent's entries file, but only if parent is
-         a working copy.  If it's not, that's fine, we just move on. */
-      {
-        const char *parent_dir, *base_name;
-        svn_boolean_t is_root;
-
-        SVN_ERR (svn_wc_is_wc_root (&is_root, full_path, adm_access, pool));
-
-        /* If full_path is not the top of a wc, then its parent
-           directory is also a working copy and has an entry for
-           full_path.  We need to remove that entry: */
-        if (! is_root)
-          {
-            svn_wc_adm_access_t *parent_access;
-
-            svn_path_split (full_path, &parent_dir, &base_name, pool);
             
-            SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access,
-                                          parent_dir, pool));
-            SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE,
-                                          pool));
-            svn_wc__entry_remove (entries, base_name);
-            SVN_ERR (svn_wc__entries_write (entries, parent_access, pool));
-          }
-      }
+      /* Before we start removing entries from this dir's entries
+         file, mark this directory as "incomplete".  This allows this
+         function to be interruptible and the wc recoverabel by 'svn
+         up' later on. */
+      incomplete_entry->incomplete = TRUE;
+      SVN_ERR (svn_wc__entry_modify (adm_access,
+                                     SVN_WC_ENTRY_THIS_DIR,
+                                     incomplete_entry,
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                                     TRUE, /* sync to disk immediately */
+                                     pool));
       
-      /* Recurse on each file and dir entry. */
+      /* Walk over every entry. */      
       SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
       
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -1791,13 +1783,20 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           if (current_entry->kind == svn_node_file)
             {
               err = svn_wc_remove_from_revision_control
-                (adm_access, current_entry_name, destroy_wf,
+                (adm_access, current_entry_name, destroy_wf, instant_error,
                  cancel_func, cancel_baton, subpool);
 
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
-                  svn_error_clear (err);
-                  left_something = TRUE;
+                  if (instant_error)
+                    {
+                      return err;
+                    }
+                  else
+                    {
+                      svn_error_clear (err);
+                      left_something = TRUE;
+                    }
                 }
               else if (err)
                 return err;
@@ -1824,12 +1823,19 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
                   err = svn_wc_remove_from_revision_control 
                     (entry_access, SVN_WC_ENTRY_THIS_DIR, destroy_wf,
-                     cancel_func, cancel_baton, subpool);
+                     instant_error, cancel_func, cancel_baton, subpool);
 
                   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                     {
-                      svn_error_clear (err);
-                      left_something = TRUE;
+                      if (instant_error)
+                        {
+                          return err;
+                        }
+                      else
+                        {
+                          svn_error_clear (err);
+                          left_something = TRUE;
+                        }
                     }
                   else if (err)
                     return err;
@@ -1840,6 +1846,32 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
       /* At this point, every directory below this one has been
          removed from revision control. */
+
+      /* Remove self from parent's entries file, but only if parent is
+         a working copy.  If it's not, that's fine, we just move on. */
+      {
+        const char *parent_dir, *base_name;
+        svn_boolean_t is_root;
+
+        SVN_ERR (svn_wc_is_wc_root (&is_root, full_path, adm_access, pool));
+
+        /* If full_path is not the top of a wc, then its parent
+           directory is also a working copy and has an entry for
+           full_path.  We need to remove that entry: */
+        if (! is_root)
+          {
+            svn_wc_adm_access_t *parent_access;
+
+            svn_path_split (full_path, &parent_dir, &base_name, pool);
+            
+            SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access,
+                                          parent_dir, pool));
+            SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE,
+                                          pool));
+            svn_wc__entry_remove (entries, base_name);
+            SVN_ERR (svn_wc__entries_write (entries, parent_access, pool));
+          }
+      }
 
       /* Remove the entire administrative .svn area, thereby removing
          _this_ dir from revision control too.  */

@@ -584,7 +584,8 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
         {
           err = svn_wc_remove_from_revision_control (adm_access,
                                                      SVN_WC_ENTRY_THIS_DIR,
-                                                     TRUE,
+                                                     TRUE, /* destroy */
+                                                     TRUE, /* instant_error */
                                                      NULL, NULL,
                                                      loggy->pool);
         }
@@ -592,17 +593,13 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
   else if (entry->kind == svn_node_file)
     {
       err = svn_wc_remove_from_revision_control (loggy->adm_access, name,
-                                                 TRUE,
+                                                 TRUE, /* destroy */
+                                                 TRUE, /* instant_error */
                                                  NULL, NULL,
                                                  loggy->pool);
     }
-    
-  /* It's possible that locally modified files were left behind during
-     the removal.  That's okay;  just check for this special case. */
-  if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-    svn_error_clear (err);
-  else if (err)
-    return err;
+
+  return err;
 
   /* (## Perhaps someday have the client print a warning that "locally
      modified files were not deleted" ?) */    
@@ -709,7 +706,7 @@ log_do_committed (struct log_runner *loggy,
           svn_wc_entry_t tmp_entry;
 
           SVN_ERR (svn_wc_remove_from_revision_control (loggy->adm_access,
-                                                        name, FALSE,
+                                                        name, FALSE, FALSE,
                                                         NULL, NULL,
                                                         pool));
           
@@ -801,7 +798,8 @@ log_do_committed (struct log_runner *loggy,
              ### If they were available, it would be nice to use them. */
           if (base_name)
             SVN_ERR (svn_wc_remove_from_revision_control 
-                     (entry_access, base_name, FALSE, NULL, NULL, pool));
+                     (entry_access, base_name, FALSE, FALSE,
+                      NULL, NULL, pool));
         }
     }
 
@@ -1285,7 +1283,9 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
          ### If they were available, it would be nice to use them. */
       SVN_ERR (svn_wc_remove_from_revision_control (adm_access,
                                                     SVN_WC_ENTRY_THIS_DIR,
-                                                    TRUE, NULL, NULL, pool));
+                                                    TRUE, /* destroy */
+                                                    FALSE, /* no instant err */
+                                                    NULL, NULL, pool));
 
       /* If revnum of this dir is greater than parent's revnum, then
          recreate 'deleted' entry in parent. */

@@ -103,7 +103,7 @@ relegate_external (const char *path,
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE, pool));
   err = svn_wc_remove_from_revision_control (adm_access,
                                              SVN_WC_ENTRY_THIS_DIR,
-                                             TRUE,
+                                             TRUE, FALSE,
                                              cancel_func,
                                              cancel_baton,
                                              pool);
@@ -261,7 +261,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
-        (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE,
+        (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE, FALSE,
          ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->pool);
 
       /* ### Ugly. Unlock only if not going to return an error. Revisit */

@@ -631,11 +631,13 @@ delete_entry (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
+  svn_error_t *err;
   apr_file_t *log_fp = NULL;
   const char *base_name = svn_path_basename (path, pool);
   const char *tgt_rev_str = NULL;
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
+  const char *logfile_path;
   const char *full_path = svn_path_join (pb->path, base_name, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
@@ -643,6 +645,27 @@ delete_entry (const char *path,
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
                                 pb->path, pool));
+
+  logfile_path = svn_wc__adm_path (pb->path, FALSE, pool,
+                                   SVN_WC__ADM_LOG, NULL);
+
+  /* If trying to delete a locally-modified file, throw an 'obstructed
+     update' error. */
+  if (kind == svn_node_file)
+    {
+      svn_boolean_t tmodified_p, pmodified_p;
+      SVN_ERR (svn_wc_text_modified_p (&tmodified_p, full_path, FALSE,
+                                       adm_access, pool));
+      SVN_ERR (svn_wc_props_modified_p (&pmodified_p, full_path,
+                                        adm_access, pool));
+
+      if (tmodified_p || pmodified_p)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           "failed to delete file '%s': file has local modifications.",
+           base_name);
+    }
+
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   pb->path,
                                   SVN_WC__ADM_LOG,
@@ -724,7 +747,6 @@ delete_entry (const char *path,
       if (kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
-          svn_error_t *err;
 
           SVN_ERR (svn_wc_adm_retrieve
                    (&child_access, pb->edit_baton->adm_access,
@@ -733,17 +755,46 @@ delete_entry (const char *path,
           err = svn_wc_remove_from_revision_control
             (child_access,
              SVN_WC_ENTRY_THIS_DIR,
-             TRUE,
+             TRUE, /* destroy */
+             TRUE, /* instant error */
              pb->edit_baton->cancel_func,
              pb->edit_baton->cancel_baton,
              pool);
           
-          if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
+          if (err && err->child && err->child->child
+              && (err->child->child->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+            {
+              SVN_ERR (svn_io_remove_file (logfile_path, pool));
+
+              return svn_error_createf
+                (SVN_ERR_WC_OBSTRUCTED_UPDATE, err->child->child,
+                 "failed to delete dir '%s': local mods found within.",
+                 pb->path);              
+            }
+          else if (err)
             return err;
         }
     }
 
-  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
+  err = svn_wc__run_log (adm_access, NULL, pool);
+  if (err && err->child && err->child->child 
+      && (err->child->child->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+    {
+      /* This means the loggy call to remove_from_revision_control()
+         found a locally modified file, and bailed out completely.  We
+         don't want the logfile hanging around, though; a user
+         shouldn't have to run 'svn cleanup' to continue.  Simply
+         moving the obstruction and re-running 'svn up' should finish
+         the job. */
+      SVN_ERR (svn_io_remove_file (logfile_path, pool));
+
+      return svn_error_createf
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, err->child->child,
+         "failed to delete dir '%s': local mods found within.",
+         pb->path);              
+    }
+  else if (err)
+    return err;
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then

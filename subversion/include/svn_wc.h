@@ -1360,6 +1360,11 @@ svn_error_t *svn_wc_add_repos_file (const char *dst_path,
  * @c SVN_ERR_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
  * check for this special return value if @a destroy_wf is true.)
  *
+ * If @a instant_error is TRUE, then return @c
+ * SVN_ERR_WC_LEFT_LOCAL_MOD the instant a locally modified file is
+ * encountered.  Otherwise, leave locally modified files in place and
+ * return the error only after all the recursion is complete.
+
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the removal.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
@@ -1372,6 +1377,7 @@ svn_error_t *
 svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      const char *name,
                                      svn_boolean_t destroy_wf,
+                                     svn_boolean_t instant_error,
                                      svn_cancel_func_t cancel_func,
                                      void *cancel_baton,
                                      apr_pool_t *pool);
