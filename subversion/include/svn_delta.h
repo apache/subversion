@@ -615,8 +615,8 @@ typedef struct
    * identified by @a parent_baton). The subdirectory is specified by
    * @a path. The callback must store a value in @a *child_baton that 
    * should be used as the @a parent_baton for subsequent changes in this
-   * subdirectory.  If set, @a base_revision is the current revision of
-   * the subdirectory.
+   * subdirectory.  If a valid revnum, @a base_revision is the current
+   * revision of the subdirectory.
    *
    * Allocations for the returned @a child_baton should be performed in
    * @a dir_pool. It is also typical to (possibly) save this pool for later
@@ -658,8 +658,7 @@ typedef struct
    *
    * We are going to add a new file named @a path.  The callback can
    * store a baton for this new file in @a **file_baton; whatever value
-   * it stores there should be passed through to @c apply_textdelta
-   * and/or @c apply_propdelta.
+   * it stores there should be passed through to @c apply_textdelta.
    *
    * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
    * copy), and the origin of the copy may be recorded as
@@ -683,8 +682,8 @@ typedef struct
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
-   * apply_textdelta and/or apply_propdelta.  If set, @a base_revision is
-   * the current revision of the file.
+   * apply_textdelta.  If a valid revnum, @a base_revision is the
+   * current revision of the file.
    *
    * Allocations for the returned @a file_baton should be performed in
    * @a file_pool. It is also typical to save this pool for later usage
