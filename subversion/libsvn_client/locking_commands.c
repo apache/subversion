@@ -89,12 +89,14 @@ struct lock_baton
 
 
 /* This callback is called by the ra_layer with BATON, the PATH being
- * locked, and the LOCK itself.  This function stores the locks in the
- * working copy.
+ * locked, and the LOCK itself.  If DO_LOCK is TRUE, this function
+ * stores the locks in the working copy, else, any lock token on PATH
+ * is removed from the wc.
  */
 static svn_error_t *
 store_locks_callback (void *baton, 
                       const char *path, 
+                      svn_boolean_t do_lock,
                       const svn_lock_t *lock)
 {
   struct lock_baton *lb = baton;
@@ -107,11 +109,14 @@ store_locks_callback (void *baton,
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, lb->adm_access,
                                       abs_path, lb->pool));
 
-  SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
+  if (do_lock)
+    SVN_ERR (svn_wc_add_lock (abs_path, lock, adm_access, lb->pool));
+  else
+    SVN_ERR (svn_wc_remove_lock (abs_path, adm_access, lb->pool));
 
   /* Call our callback, if we've got one. */
   if (lb->nested_callback)
-    SVN_ERR (lb->nested_callback (lb->nested_baton, path, lock));
+    SVN_ERR (lb->nested_callback (lb->nested_baton, path, do_lock, lock));
 
   return SVN_NO_ERROR;
 }
@@ -121,24 +126,29 @@ store_locks_callback (void *baton,
  * setting PARENT_ENTRY_P and PARENT_ADM_ACCESS_P to the entry and
  * adm_access of the common parent.  PARENT_ADM_ACCESS_P is associated
  * with all other adm_access's that are locked in the working copy
- * while we lock the path in the repository.
+ * while we lock the path in the repository.  DO_LOCK should be TRUE
+ * if you're locking TARGETS, and FALSE when unlocking them.  FORCE is
+ * TRUE if we're breaking or stealing locks, and FALSE otherwise.
  *
- * Each key in PATH_REVS_P is a path (relative to the common parent),
- * and each value is the corresponding base revision in the working
- * copy.
+ * Each key in HASH_P is a path (relative to the common parent).
+ * If DO_LOCK is true, the value is the corresponding base_revision
+ * for the path.  Otherwise, the value is the lock token ("" if no
+ * token is found in the wc).
  */
 static svn_error_t *
 open_lock_targets (const svn_wc_entry_t **parent_entry_p,
                    svn_wc_adm_access_t **parent_adm_access_p,
-                   apr_hash_t **path_revs_p,
+                   apr_hash_t **path_hash_p,
                    apr_array_header_t *targets,
+                   svn_boolean_t do_lock,
+                   svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   int i;
   const char *common_parent;
   apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
-  apr_hash_t *path_revs = apr_hash_make(pool);
+  apr_hash_t *path_hash = apr_hash_make(pool);
 
   /* Get the common parent and all relative paths */
   SVN_ERR (svn_path_condense_targets (&common_parent, &paths, targets, 
@@ -148,10 +158,10 @@ open_lock_targets (const svn_wc_entry_t **parent_entry_p,
      1 member, so we special case that. */
   if (apr_is_empty_array (paths))
     {
-      char *basename = svn_path_basename (common_parent, pool);
+      char *base_name = svn_path_basename (common_parent, pool);
       common_parent = svn_path_dirname (common_parent, pool);
 
-      APR_ARRAY_PUSH(paths, char *) = basename;
+      APR_ARRAY_PUSH(paths, char *) = base_name;
     }
 
   /* Open the common parent. */
@@ -166,17 +176,23 @@ open_lock_targets (const svn_wc_entry_t **parent_entry_p,
   for (i = 0; i < paths->nelts; i++)
     {
       svn_wc_adm_access_t *adm_access;
-      svn_revnum_t *revnum;
       const svn_wc_entry_t *entry;
       const char *target = ((const char **) (paths->elts))[i];
       const char *abs_path;
 
       if (svn_path_is_url (target))
-        return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                  _("Locking non-local target '%s' "
-                                    "not supported"),
-                                  target);
-
+        {
+          if (do_lock)
+            return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                      _("Locking non-local target '%s' "
+                                        "not supported"),
+                                      target);
+          else
+            return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                      _("Unlocking non-local target '%s' "
+                                        "not supported"),
+                                      target);
+        }
       abs_path = svn_path_join (svn_wc_adm_access_path (*parent_adm_access_p), 
                                 target, pool);
 
@@ -195,14 +211,39 @@ open_lock_targets (const svn_wc_entry_t **parent_entry_p,
                                   _("'%s' has no URL"),
                                   svn_path_local_style (target, pool));
 
-      revnum = apr_palloc (pool, sizeof (* revnum));
-      *revnum = entry->revision;
+      if (do_lock) /* Lock. */
+        {
+          svn_revnum_t *revnum;
+          revnum = apr_palloc (pool, sizeof (* revnum));
+          *revnum = entry->revision;
 
-      apr_hash_set (path_revs, apr_pstrdup (pool, target),
-                    APR_HASH_KEY_STRING, revnum);
+          apr_hash_set (path_hash, apr_pstrdup (pool, target),
+                        APR_HASH_KEY_STRING, revnum);
+        }
+      else /* Unlock. */
+        {
+          /* If not force, get the lock token from the WC entry. */
+          if (! force)
+            {
+              if (! entry->lock_token)
+                return svn_error_createf 
+                  (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
+                   _("'%s' is not locked in this working copy"), target);
+
+              apr_hash_set (path_hash, apr_pstrdup (pool, target),
+                            APR_HASH_KEY_STRING, 
+                            apr_pstrdup (pool, entry->lock_token));
+            }
+          else
+            {
+              /* If breaking a lock, we shouldn't pass any lock token. */
+              apr_hash_set (path_hash, apr_pstrdup (pool, target),
+                            APR_HASH_KEY_STRING, "");
+            }
+        }
     }
 
-  *path_revs_p = path_revs;
+  *path_hash_p = path_hash;
 
   return SVN_NO_ERROR;
 }
@@ -222,7 +263,7 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
   struct lock_baton cb;
 
   SVN_ERR (open_lock_targets (&entry, &adm_access, &path_revs, 
-                              targets, ctx, pool));
+                              targets, TRUE, force, ctx, pool));
 
   /* Open an RA session to the common parent of TARGETS. */
   SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url,
@@ -251,55 +292,34 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
 }
 
 svn_error_t *
-svn_client_unlock (const char *path, svn_boolean_t force,
+svn_client_unlock (apr_array_header_t *targets, svn_boolean_t force,
+                   svn_lock_callback_t unlock_func, void *lock_baton,
                    svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  const char *lock_token;
   svn_ra_session_t *ra_session;
+  apr_hash_t *path_tokens;
+  struct lock_baton cb;
 
-  /* ### TODO Support unlock on URL with --force. */
-  if (svn_path_is_url (path))
-    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                              _("Unlocking non-local target '%s' not "
-                                "supported"), path);
-  SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, path, TRUE, 0, pool));
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), 
-                              svn_path_local_style (path, pool));
-  if (! entry->url)
-    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("'%s' has no URL"),
-                              svn_path_local_style (path, pool));
-  /* If not force, get the lock token from the WC entry. */
-  if (! force)
-    {
-      if (! entry->lock_token)
-        return svn_error_createf (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
-                                  _("'%s' is not locked in this working copy"),
-                                  path);
-      lock_token = entry->lock_token;
-    }
-  else
-    {
-      /* If breaking a lock, we shouldn't pass any lock token. */
-      lock_token = NULL;
-    }
+  SVN_ERR (open_lock_targets (&entry, &adm_access, &path_tokens, 
+                              targets, FALSE, force, ctx, pool));
 
   /* Open an RA session. */
   SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url,
                                         svn_wc_adm_access_path (adm_access),
-                                        adm_access, NULL, FALSE, FALSE,
+                                        NULL, NULL, FALSE, FALSE,
                                         ctx, pool));
 
-  /* Unlock the path. */
-  SVN_ERR (svn_ra_unlock (ra_session, "", lock_token, force, pool));
+  cb.pool = pool;
+  cb.nested_callback = unlock_func;
+  cb.nested_baton = lock_baton;
+  cb.adm_access = adm_access;
 
-  /* Remove any lock token from the WC. */
-  SVN_ERR (svn_wc_remove_lock (path, adm_access, pool));
+  /* Unlock the paths. */
+  SVN_ERR (svn_ra_unlock (ra_session, path_tokens, force, 
+                          store_locks_callback, &cb, pool));
 
   return SVN_NO_ERROR;
 }
+

@@ -444,6 +444,9 @@ typedef struct svn_lock_t
  *
  * Callback function type for locking and unlocking actions.
  * 
+ * @a do_lock should be TRUE when locking @a path, and FALSE
+ * otherwise.
+ * 
  * @a lock is a lock for @a path.
  *
  * @a baton is a closure object; it should be provided by the
@@ -451,6 +454,7 @@ typedef struct svn_lock_t
  */
 typedef svn_error_t *(*svn_lock_callback_t) (void *baton,
                                              const char *path,
+                                             svn_boolean_t do_lock,
                                              const svn_lock_t *lock);
 
 #ifdef __cplusplus

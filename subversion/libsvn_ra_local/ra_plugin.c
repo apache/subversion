@@ -1093,7 +1093,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR (lock_func (lock_baton, path, lock));
+        SVN_ERR (lock_func (lock_baton, path, TRUE, lock));
 
       /* Add lock to the array of locks */
       APR_ARRAY_PUSH (locks, svn_lock_t *) = lock;
@@ -1105,25 +1105,46 @@ svn_ra_local__lock (svn_ra_session_t *session,
 }
 
 
-
 static svn_error_t *
 svn_ra_local__unlock (svn_ra_session_t *session,
-                      const char *path,
-                      const char *token,
+                      apr_hash_t *path_tokens,
                       svn_boolean_t force,
+                      svn_lock_callback_t lock_func, 
+                      void *lock_baton,
                       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path;
+  apr_hash_index_t *hi;
 
   /* A username is absolutely required to unlock a path. */
   SVN_ERR (get_username (session, pool));
 
-  /* Get the absolute path. */
-  abs_path = svn_path_join (sess->fs_path, path, pool);
+  for (hi = apr_hash_first (pool, path_tokens); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *path;
+      apr_ssize_t keylen;
+      void *val;
+      const char *abs_path, *token;
+ 
+      apr_hash_this (hi, &key, &keylen, &val);
+      path = key;
+      /* Since we can't store NULL values in a hash, we turn "" to
+         NULL here. */
+      if (strcmp (val, "") != 0)
+        token = val;
+      else
+        token = NULL;
 
-  /* This wrapper will call pre- and post-unlock hooks. */
-  SVN_ERR (svn_repos_fs_unlock (sess->repos, abs_path, token, force, pool));
+      abs_path = svn_path_join (sess->fs_path, path, pool);
+
+      /* This wrapper will call pre- and post-unlock hooks. */
+      SVN_ERR (svn_repos_fs_unlock (sess->repos, abs_path, token, force, pool));
+
+      /* Run the lock callback if we have one. */
+      if (lock_func)
+        SVN_ERR (lock_func (lock_baton, abs_path, FALSE, NULL));
+    }
 
   return SVN_NO_ERROR;
 }

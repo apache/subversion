@@ -1781,7 +1781,7 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
 
 /** @since New in 1.2.
  *
- * Unlock @a path in the repository.
+ * Unlock @a targets in the repository.
  *
  * If @a force is false, the working copy must contain a lock for @a path.
  * If this is not the case, or the working copy lock doesn't match the
@@ -1790,10 +1790,14 @@ svn_client_lock (apr_array_header_t **locks_p, apr_array_header_t *targets,
  * If @a force is true, the lock will be broken in the repository.  In
  * both cases, the lock, if any, will be removed from the working copy.
  *
+ * Call @a svn_lock_callback_t/lock_baton once for each file target is
+ * locked.
+ *
  * Use @a pool for temporary allocations.
  */
 svn_error_t *
-svn_client_unlock (const char *path, svn_boolean_t force,
+svn_client_unlock (apr_array_header_t *targets, svn_boolean_t force,
+                   svn_lock_callback_t unlock_func, void *lock_baton,
                    svn_client_ctx_t *ctx, apr_pool_t *pool);
 
 /** @} */

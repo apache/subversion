@@ -100,6 +100,7 @@ struct lock_baton
 static svn_error_t *
 print_lock_info (void *baton,
                  const char *path,
+                 svn_boolean_t do_lock,
                  const svn_lock_t *lock)
 {
   svn_error_t *err;

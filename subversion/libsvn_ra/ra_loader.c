@@ -505,12 +505,14 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
-                            const char *path,
-                            const char *token,
+                            apr_hash_t *path_tokens,
                             svn_boolean_t force,
+                            svn_lock_callback_t lock_func, 
+                            void *lock_baton,
                             apr_pool_t *pool)
 {
-  return session->vtable->unlock (session, path, token, force, pool);
+  return session->vtable->unlock (session, path_tokens, force, 
+                                  lock_func, lock_baton, pool);
 }
 
 svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,

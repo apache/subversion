@@ -32,6 +32,44 @@
 
 /*** Code. ***/
 
+
+struct lock_baton
+{
+  svn_boolean_t had_print_error;
+  apr_pool_t *pool;
+};
+
+/* This callback is called by the client layer with BATON, and the
+ * PATH being locked.  The LOCK itself should be NULL (We're just
+ * conforming to the svn_lock_callback_t prototype).  DO_LOCK should
+ * always be false since we're unlocking files here.
+ */
+static svn_error_t *
+print_unlock_info (void *baton,
+                   const char *path,
+                   svn_boolean_t do_lock,
+                   const svn_lock_t *lock)
+{
+  svn_error_t *err;
+  struct lock_baton *lb = baton;
+
+  err = svn_cmdline_printf (lb->pool, _("Unlocked '%s'.\n"), path);
+
+  if (err)
+    {
+      /* Print if it is the first error. */
+      if (!lb->had_print_error)
+        {
+          lb->had_print_error = TRUE;
+          svn_handle_error (err, stderr, FALSE);
+        }
+      svn_error_clear (err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__unlock (apr_getopt_t *os,
@@ -41,8 +79,8 @@ svn_cl__unlock (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  int i;
-  apr_pool_t *subpool = svn_pool_create (pool);
+  struct lock_baton lb;
+
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
                                           opt_state->targets, pool));
@@ -51,18 +89,10 @@ svn_cl__unlock (apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *path = ((const char **) (targets->elts))[i];
-
-      svn_pool_clear (subpool);
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-
-      /* ### TODO: Print warning on error and continue. */
-      SVN_ERR (svn_client_unlock (path, opt_state->force, ctx, subpool));
-      SVN_ERR (svn_cmdline_printf (subpool, _("Unlocked '%s'.\n"), path));
-    }
-  svn_pool_destroy (subpool);
+  lb.had_print_error = FALSE;
+  lb.pool = pool;
+  SVN_ERR (svn_client_unlock (targets, opt_state->force, 
+                              print_unlock_info, &lb, ctx, pool));
 
   return SVN_NO_ERROR;
 }

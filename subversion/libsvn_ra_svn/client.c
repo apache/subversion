@@ -1448,7 +1448,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, lock));
+        SVN_ERR(lock_func(lock_baton, path, TRUE, lock));
 
       /* Add lock to the array of locks */
       APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
@@ -1460,23 +1460,50 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
-                                  const char *path,
-                                  const char *token,
+                                  apr_hash_t *path_tokens,
                                   svn_boolean_t force,
+                                  svn_lock_callback_t lock_func, 
+                                  void *lock_baton,
                                   apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session->priv;
   svn_ra_svn_conn_t* conn = sess->conn;
+  apr_hash_index_t *hi;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "c(?c)b",
-                               path, token, force));
+  /* ###TODO send all the lock tokens over the wire at once.  This
+        loop is just a temporary shim. */
+  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *path;
+      apr_ssize_t keylen;
+      void *val;
+      const char *token;
 
-  /* Servers before 1.2 doesn't support locking.  Check this here. */
-  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
-                                 _("Server doesn't support the unlocks "
-                                   "command")));
+      apr_hash_this(hi, &key, &keylen, &val);
+      path = key;
+      if (strcmp (val, "") != 0)
+        token = val;
+      else
+        token = NULL;
 
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+
+      SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "c(?c)b",
+                                   path, token, force));
+
+      /* Servers before 1.2 don't support locking.  Check this here. */
+      SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                     _("Server doesn't support the unlock "
+                                       "command")));
+
+      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+
+      /* Run the lock callback if we have one. */
+      if (lock_func)
+        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL));
+
+    }
+
   return SVN_NO_ERROR;
 }
 
