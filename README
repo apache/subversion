@@ -26,6 +26,8 @@ A rough guide to the source tree:
       Public header files for users of subversion libraries.
    subversion/libsvn_fs/
       The versioning "filesystem" API.
+   subversion/libsvn_repos/
+      Repository functionality built around the `libsvn_fs' core.
    subversion/libsvn_delta/
       Common code for tree deltas, text deltas, and property deltas.
    subversion/libsvn_wc/
