@@ -15,6 +15,9 @@ will be Apache interacting with the Subversion server libraries.  The
 ``server'' computer will be any machine running this special Apache
 process.  (@xref{Protocol}.)
 
+There are two main libraries:  the @dfn{Subversion Filesystem} library,
+and the @dfn{Main Subversion} library.
+
 @menu
 * Filesystem::                The Subversion Filesystem.
 * Main Library::              The highest-level server interface.
@@ -28,12 +31,12 @@ process.  (@xref{Protocol}.)
 
 @subsection Overview
 
-@itemize
+@itemize @bullet
 @item
   @b{Requires:}
   @itemize
   @item
-    the Subversion database interface
+    a reasonable about of writable disk space
   @item
     an operating system that supports interprocess communication (IPC)
   @end itemize
@@ -51,18 +54,18 @@ process.  (@xref{Protocol}.)
 
 
 The @dfn{Subversion Filesystem} (abbreviated: @dfn{svn_fs}) gives us an
-abstract way of thinking about the way files are stored and versioned in
-a repository -- independent of the actual means of storage.  
+programmatic interface to talk about the storage and versioning of files
+in a repository -- independent of the actual means of storage.
 
-Like any typical UNIX-like filesystem, files are stored in a tree.
-However, while CVS uses the actual UNIX filesystem to hold a repository,
-svn_fs implements files and directories as database objects
-(@xref{Database}.)  This not only gives us low-level transactions,
-but allows us to store @dfn{properties} ( or ``meta-data'') with each
-file, directory, directory entry, and even version number.  (For
-example, some useful properties might be @{author, creation date,
-modification date, Access Control List (ACL), file type (text, binary),
-file encoding, ...@}.)
+Like any typical UNIX-like filesystem, files are stored in a tree
+structure.  However, while CVS uses the actual UNIX filesystem to hold a
+repository, svn_fs implements filesystem objects abstractly.  This not
+only allows us to guarantee atomic writes to the repository, but also
+allows us to store @dfn{properties} (or ``meta-data'') with each file,
+directory, directory entry, and version number.  (For example, some
+useful properties might be @{author, creation date, modification date,
+Access Control List (ACL), file type (text, binary), file encoding,
+...@}.)
 
 @subsection Schema
 
@@ -266,6 +269,11 @@ properties of a file, dirent, or dir.
  return a delta object which converts subtree X into subtree Y
 @item diff get_diff (user, versionX, pathX, versionY, pathY)
  return a diff between any two files in the repository
+@item skelta status (user, skelta)
+ walk the latest tree in the repository, compare to the skelta tree, and
+ return any version differences in a new skelta
+@item delta update (user, skelta)
+ same as status, but returns a filled delta object
 @end table
 
 
@@ -385,15 +393,21 @@ When the lock manager has no more open server connections, it dies.
 
 @subsection Implementation
 
-For the initial release of Subversion, we will implement the filesystem
-library on UNIX.  The lock manager will communicate with other processes
-via UNIX domain sockets.  Transactions will be handled in the ``back
-end'' by the Berkeley Database library, which works on top of the UNIX
-filesystem.@footnote{In the future, of course, contributors are free
-modify the Subversion filesystem to operate with more powerful SQL
-database.}  (For information, see @uref{http://www.sleepycat.com,
-Sleepycat Software}.)
+For the initial release of Subversion,
 
+@itemize @bullet
+@item 
+  The filesystem will be implemented as a library on UNIX.
+@item
+  The lock manager will communicate with other processes via UNIX domain 
+  sockets.  
+@item
+  The filesystem's data will probably be stored in a collection of .db
+  files, using the Berkeley Database library.@footnote{In the future, of
+  course, contributors are free modify the Subversion filesystem to
+  operate with more powerful SQL database.}  (For more information, see
+  @uref{http://www.sleepycat.com, Sleepycat Software}.)
+@end itemize
 
 
 @c ----------------------------------------------------------------
@@ -401,14 +415,44 @@ Sleepycat Software}.)
 @node Main Library
 @section Main Library
 
-A @dfn{repository} (@dfn{repos}) represents the name of a particular
-repository. 
 
-The Main Subversion Library (@dfn{svn_main}) provides a high-level
-server API to the Subversion client.
+@subsection Overview
+
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize
+  @item
+    the Subversion Filesystem interface
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize
+  @item
+    the ability to interact with any repository on a system
+  @item
+    the ability to enforce server-side ``policies'' (via a config file)
+  @item
+    the ability to load server-side ``plug-ins'' (via a config file)
+  @end itemize
+@end itemize
+
+
+The Main Subversion Library (@dfn{svn_main}), in its simplest sense,
+acts a basic multiplexer for the repository API calls coming from the
+Subversion client.  (@xref{The repository access library}.)
+
+Specifically, note that all of the client's 
+
+
 
 In general, it provides an API that maps to CVS concepts whereever
 possible.
+
+A @dfn{repository} (@dfn{repos}) represents the name of a particular
+repository. 
+
+
 
 @subsection Methods
 
