@@ -1768,7 +1768,7 @@ restore_file (svn_stringbuf_t *file_path,
               apr_pool_t *pool)
 {
   svn_stringbuf_t *text_base_path, *tmp_text_base_path;
-  svn_io_keywords_t *keywords;
+  svn_wc_keywords_t *keywords;
   enum svn_wc__eol_style eol_style;
   const char *eol;
 
@@ -1787,7 +1787,7 @@ restore_file (svn_stringbuf_t *file_path,
      sure to do any eol translations or keyword substitutions,
      as dictated by the property values.  If these properties
      are turned off, then this is just a normal copy. */
-  SVN_ERR (svn_io_copy_and_translate (tmp_text_base_path->data,
+  SVN_ERR (svn_wc_copy_and_translate (tmp_text_base_path->data,
                                       file_path->data,
                                       eol, FALSE, /* don't repair */
                                       keywords,

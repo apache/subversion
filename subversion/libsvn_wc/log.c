@@ -63,7 +63,7 @@ enum svn_wc__xfer_action {
 
      - setting REPAIR indicates that inconsistent line endings in SRC
        are translated to EOL_STR; else error is returned.  (For more
-       info, read the docstring of svn_io_copy_and_translate).  
+       info, read the docstring of svn_wc_copy_and_translate).  
 
      - setting EXPAND indicates a desire to expand keywords, else you
        wish to contract them.  
@@ -75,7 +75,7 @@ file_xfer_under_path (svn_stringbuf_t *path,
                       enum svn_wc__xfer_action action,
                       const char *eol_str,
                       svn_boolean_t repair,
-                      svn_io_keywords_t *keywords,
+                      svn_wc_keywords_t *keywords,
                       svn_boolean_t expand,
                       apr_pool_t *pool)
 {
@@ -94,7 +94,7 @@ file_xfer_under_path (svn_stringbuf_t *path,
       return svn_io_append_file (full_from_path, full_dest_path, pool);
       
     case svn_wc__xfer_cp:
-      return svn_io_copy_and_translate (full_from_path->data,
+      return svn_wc_copy_and_translate (full_from_path->data,
                                         full_dest_path->data,
                                         eol_str,
                                         repair,
@@ -126,7 +126,7 @@ replace_text_base (svn_stringbuf_t *path,
   svn_stringbuf_t *tmp_text_base;
   svn_error_t *err;
   enum svn_node_kind kind;
-  svn_io_keywords_t *keywords;
+  svn_wc_keywords_t *keywords;
 
   filepath = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (filepath, name, svn_path_local_style);
@@ -182,7 +182,7 @@ replace_text_base (svn_stringbuf_t *path,
           (apr_err, 0, NULL, pool,
            "replace_text_base: error closing %s", tmp_wfile->data);
 
-      SVN_ERR (svn_io_copy_and_translate (tmp_text_base->data,
+      SVN_ERR (svn_wc_copy_and_translate (tmp_text_base->data,
                                           tmp_wfile->data,
                                           eol_str,
                                           FALSE, /* don't repair eol */
@@ -331,7 +331,7 @@ log_do_file_xfer (struct log_runner *loggy,
   const char *dest = NULL, *eol_str_val = NULL, *eol_str = NULL;
   const char *revision = NULL, *date = NULL, *author = NULL, *url = NULL;
   const char *repair = NULL, *expand = NULL;
-  svn_io_keywords_t *keywords = NULL;
+  svn_wc_keywords_t *keywords = NULL;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);

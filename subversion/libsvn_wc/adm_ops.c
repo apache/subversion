@@ -886,7 +886,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
-          svn_io_keywords_t *keywords;
+          svn_wc_keywords_t *keywords;
           enum svn_wc__eol_style eol_style;
           const char *eol;
           pthing = svn_wc__text_base_path (fullpath, 0, pool);
@@ -900,7 +900,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
              sure to do any eol translations or keyword substitutions,
              as dictated by the property values.  If these properties
              are turned off, then this is just a normal copy. */
-          if ((err = svn_io_copy_and_translate (pthing->data,
+          if ((err = svn_wc_copy_and_translate (pthing->data,
                                                 fullpath->data,
                                                 eol, FALSE, /* don't repair */
                                                 keywords,

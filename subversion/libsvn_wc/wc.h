@@ -556,7 +556,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
    function, that field in the entry structure will not be modified at
    all.  Note that in the descriptions below, the "valid values"
    restrictions on a field only apply when that field is being
-   "noticed" via the MODIFY_FLAGS.
+   "noticed" via the MODIFY_FLAGS.  See SVN_WC__ENTRY_MODIFY_*.
  
    - REVISION is the entry's revision number.  
 
@@ -585,7 +585,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
      
    Remaining (const char *) arguments are attributes to be removed
    from the entry, terminated by a final NULL.  These will be removed
-   even if they also appear in ATTS.
+   even if they also appear in ATTS.  See SVN_WC_ENTRY_ATTR_*.
      
    NOTE: when you call this function, the entries file will be read,
    tweaked, and written back out.  */
@@ -816,21 +816,22 @@ void svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
 void svn_wc__eol_value_from_string (const char **value,
                                     const char *eol);
 
-/* Expand keywords for the file at PATH, by parsing some
-   SVN_PROP_KEYWORDS value.  If any keywords are found, allocate
-   *KEYWORDS from POOL, and then populate its entries with the related
-   keyword values (also allocated in POOL).
+/* Expand keywords for the file at PATH, by parsing a
+   whitespace-delimited list of keywords.  If any keywords are found
+   in the list, allocate *KEYWORDS from POOL, and then populate its
+   entries with the related keyword values (also allocated in POOL).
+   If no keywords are found in the list, or if there is no list, set
+   *KEYWORDS to NULL.
 
-   If the caller provides OPTIONAL_VALUE, parse it.  Else if the
-   caller sets OPTIONAL_PATH to NULL, then query the SVN_PROP_KEYWORDS
-   property attached to PATH.  In either case, use PATH to expand
-   necessary keyword values.
-
-   (If the property is not present at all, the value is considered
-   NULL, an thus all pointers will be set to NULL.)  */
-svn_error_t *svn_wc__get_keywords (svn_io_keywords_t **keywords,
+   If FORCE_LIST is non-null, use it as the list; else use the
+   SVN_PROP_KEYWORDS property for PATH.  In either case, use PATH to
+   expand keyword values.  If a keyword is in the list, but no
+   corresponding value is available, set that element of *KEYWORDS to
+   the empty string ("").
+*/
+svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
                                    char *path,
-                                   char *optional_value,
+                                   char *force_list,
                                    apr_pool_t *pool);
 
 

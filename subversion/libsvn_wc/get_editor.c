@@ -1138,7 +1138,7 @@ make_translation_open_tag (svn_stringbuf_t **entry_accum,
                            const svn_stringbuf_t *dest,
                            const char *eol_str,
                            svn_boolean_t repair,
-                           svn_io_keywords_t *keywords,
+                           svn_wc_keywords_t *keywords,
                            svn_boolean_t expand)
 {
   apr_hash_t *hash = apr_hash_make (pool);
@@ -1200,7 +1200,7 @@ make_translation_open_tag (svn_stringbuf_t **entry_accum,
    KEYWORDS field point to this new value. */
 static void
 latest_keyword_data (apr_array_header_t *props,
-                     svn_io_keywords_t *keywords,
+                     svn_wc_keywords_t *keywords,
                      apr_pool_t *pool)
 {
   int i;
@@ -1264,7 +1264,7 @@ close_file (void *file_baton)
   apr_hash_t *prop_conflicts;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
-  svn_io_keywords_t *keywords = NULL;
+  svn_wc_keywords_t *keywords = NULL;
 
   /* Lock the working directory while we change things. */
   SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
@@ -1598,7 +1598,7 @@ close_file (void *file_baton)
 
                   /* Copy *LF-translated* text-base files to these
                      reserved locations. */
-                  SVN_ERR (svn_io_copy_and_translate (txtb_full_path->data,
+                  SVN_ERR (svn_wc_copy_and_translate (txtb_full_path->data,
                                                       tr_txtb->data,
                                                       SVN_WC__DEFAULT_EOL_MARKER,
                                                       TRUE, /* repair */
@@ -1606,7 +1606,7 @@ close_file (void *file_baton)
                                                       FALSE,
                                                       fb->pool));
                   
-                  SVN_ERR (svn_io_copy_and_translate (tmp_txtb_full_path->data,
+                  SVN_ERR (svn_wc_copy_and_translate (tmp_txtb_full_path->data,
                                                       tr_tmp_txtb->data,
                                                       SVN_WC__DEFAULT_EOL_MARKER,
                                                       TRUE, /* repair */ 
