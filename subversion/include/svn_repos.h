@@ -612,8 +612,8 @@ svn_error_t *svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * Similar to @c svn_repos_get_commit_editor2, but with @a txn_name
- * always set to @c NULL.
+ * Similar to @c svn_repos_get_commit_editor2, but with @a txn always
+ * set to @c NULL.
  */
 svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           void **edit_baton,
