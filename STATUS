@@ -128,6 +128,7 @@ Candidate changes:
     Votes:
       +1: pmayweg
       +0: breser (without r10517)
+      +0: kfogel (with r10517, since r10505 is now approved)
 
   * r10502
     Fix issue 1986:  'svn cp dir1 dir2' when dir1 contains versioned symlink.
