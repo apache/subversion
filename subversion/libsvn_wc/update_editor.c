@@ -834,12 +834,12 @@ do_entry_deletion (struct edit_baton *eb,
                    apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
-  const char *base_name = svn_path_basename (path, pool);
+  const char *base_name;
   const char *tgt_rev_str = NULL;
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
   const char *logfile_path;
-  const char *full_path = svn_path_join (parent_path, base_name, pool);
+  const char *full_path = svn_path_join (eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
   SVN_ERR (svn_io_check_path (full_path, &kind, pool));
@@ -864,7 +864,7 @@ do_entry_deletion (struct edit_baton *eb,
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "Won't delete locally modified file '%s'",
-           base_name);
+           path);
     }
 
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -879,6 +879,7 @@ do_entry_deletion (struct edit_baton *eb,
      log commands talk *only* about paths relative (and below)
      parent_path, i.e. where the log is being executed.  */
 
+  base_name = svn_path_basename (path, pool);
   svn_xml_make_open_tag (&log_item,
                          pool,
                          svn_xml_self_closing,
