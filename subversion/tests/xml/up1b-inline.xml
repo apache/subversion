@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <delta-pkg>
   <tree-delta>
-    <replace name="iota" ver="5">
+    <replace name="iota">
       <file>
-        <text-delta>This is v5 of 'iota'.</text-delta>
+        <text-delta>Another update of 'iota'.</text-delta>
       </file>
     </replace>
     <replace name="A">
       <dir>
         <tree-delta>
-          <replace name="mu" ver="5">
+          <replace name="mu">
             <file>
-              <text-delta>This is v5 of 'mu'.</text-delta>
+              <text-delta>Another update of 'mu'.</text-delta>
             </file>
           </replace>
           <replace name="B">
@@ -20,14 +20,14 @@
                 <replace name="E">
                   <dir>
                     <tree-delta>
-                      <replace name="beta" version="37">
+                      <replace name="beta">
                         <file>
-                          <text-delta>This is v37 of 'beta'.</text-delta>
+                          <text-delta>Another update of 'beta'.</text-delta>
                         </file>
                       </replace>
-                      <add name="sigma" version="37">
+                      <add name="sigma">
                         <file>
-                          <text-delta>A new file, `sigma', v37.</text-delta>
+                          <text-delta>A new file, `sigma'.</text-delta>
                         </file>
                       </add>
                     </tree-delta>
@@ -42,9 +42,9 @@
                 <replace name="G">
                   <dir>
                     <tree-delta>
-                      <replace name="rho" version="12">
+                      <replace name="rho">
                         <file>
-                          <text-delta>This is v12 of 'rho'.</text-delta>
+                          <text-delta>Another update of 'rho'.</text-delta>
                         </file>
                       </replace>
                     </tree-delta>
