@@ -211,18 +211,17 @@
       only prints information about files that are updated,
       <emphasis>not</emphasis> local modifications.</para>
 
-    <para>Here's a quick guide to <command>svn status</command>.  We
-      encourage all new Subversion users to use it early and often:</para>
+    <para><command>svn status</command> prints all files that have
+      local modifications.  By default, the repository is not
+      contacted.  While this subcommand accepts a fair number of
+      options, the following are the most commonly used ones:</para>
 
     <variablelist>
-      <title><command>svn status</command> Prints All Files That Have
-        Local Modifications: The Network is not Accessed by
-        Default</title>
-      
       <varlistentry>
         <term><option>-u</option></term>
         <listitem>
-          <para>Add out-of-dateness information from repository.</para>
+          <para>Contact the repository to determine, and then display,
+            out-of-dateness information.</para>
         </listitem>
       </varlistentry>
       
@@ -237,10 +236,10 @@
       <varlistentry>
         <term><option>-N</option></term>
         <listitem>
-          <para>Nonrecursive.</para>
+          <para>Run non-recursively (do not descend into
+            subdirectories).</para>
         </listitem>
       </varlistentry>
-
     </variablelist>
 
     <para>The status command has two output formats.  In the default
