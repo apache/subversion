@@ -71,7 +71,7 @@ typedef apr_int32_t time_t;
 %apply long long { apr_time_t };
 
 /* 'apr_time_t *' will always be an OUTPUT parameter */
-%typemap(java,in,numinputs=0) apr_time_t * (apr_time_t temp)
+%typemap(in,numinputs=0) apr_time_t * (apr_time_t temp)
     "$1 = &temp;";
 
 %typemap(python,argout,fragment="t_output_helper") apr_time_t *
