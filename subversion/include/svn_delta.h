@@ -64,6 +64,10 @@
 
 /*** Stuff used throughout the delta interface.  ***/
 
+/* The three possible delta-ish actions. */
+enum { svn_delta_add = 1, svn_delta_delete, svn_delta_replace };
+
+
 /* A typedef for functions resembling the POSIX `read' system call,
    representing a incoming stream of bytes, in caller-pulls form.
 
