@@ -1,9 +1,0 @@
-Debug
-Release
-SVNCOM.h
-SVNCOM.tlb
-SVNCOM_i.c
-*.o
-*~
-.*~
-

@@ -1,9 +1,0 @@
-Debug
-Release
-*.lo
-*.la
-.libs
-*.la-a
-*.o
-*~
-.*~
