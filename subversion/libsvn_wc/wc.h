@@ -64,6 +64,12 @@
 svn_error_t *svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool);
 
 
+/* Set *MODIFIED_P to non-zero if FILENAME has been locally modified,
+   else set to zero. */
+svn_error_t *svn_wc__file_modified_p (svn_boolean_t *modified_p,
+                                      svn_string_t *filename,
+                                      apr_pool_t *pool);
+
 
 /*** Locking. ***/
 
@@ -95,6 +101,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_README              "README"
 #define SVN_WC__ADM_REPOSITORY          "repository"
+#define SVN_WC__ADM_ANCESTOR            "ancestor"
 #define SVN_WC__ADM_VERSIONS            "versions"
 #define SVN_WC__ADM_PROPERTIES          "properties"
 #define SVN_WC__ADM_DELTA_HERE          "delta-here"
@@ -183,6 +190,11 @@ svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
                                       apr_pool_t *pool);
 
 
+/* Atomically rename a temporary text-base file to its canonical
+   location.  The tmp file should be closed already. */
+svn_error_t *
+svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool);
+
 
 /* Ensure that PATH is a locked working copy directory.
  *
@@ -196,6 +208,8 @@ svn_error_t *svn_wc__close_text_base (apr_file_t *fp,
  */
 svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
                                 svn_string_t *repository,
+                                svn_string_t *ancestor_path,
+                                svn_vernum_t ancestor_version,
                                 apr_pool_t *pool);
 
 
@@ -209,6 +223,8 @@ svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
  */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
+                                 svn_string_t *ancestor_path,
+                                 svn_vernum_t ancestor_version,
                                  apr_pool_t *pool);
 
 

@@ -81,12 +81,17 @@
 svn_error_t *
 svn_wc__ensure_wc (svn_string_t *path,
                    svn_string_t *repository,
+                   svn_string_t *ancestor_path,
+                   svn_vernum_t ancestor_version,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
-  int existed_already;
 
-  err = svn_wc__ensure_adm (path, repository, pool);
+  err = svn_wc__ensure_adm (path,
+                            repository,
+                            ancestor_path,
+                            ancestor_version,
+                            pool);
   if (err)
     return err;
 
