@@ -223,10 +223,11 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 /** Set @a *logfiles to array of <tt>const char *</tt> log file names
  * of Berkeley DB-based Subversion filesystem.
  *
- * If @a only_unused is used is @c TRUE, @a *logfiles will contain
- * only the names of Berkeley DB log files still in use by the
- * filesystem.  Otherwise, all log files (used and unused) are returned.
- *
+ * If @a only_unused is @c TRUE, set @a *logfiles to an array which
+ * contains only the names of Berkeley DB log files no longer in use
+ * by the filesystem.  Otherwise, all log files (used and unused) are
+ * returned.
+ 
  * This function wraps the Berkeley DB 'log_archive' function
  * called by the db_archive binary.  Repository administrators may
  * want to run this function periodically and delete the unused log
@@ -538,14 +539,11 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * discarded, and the filesystem is left unchanged.  Use @a pool for
  * any necessary allocations.
  *
- * Use @a pool for any necessary allocations.
- *
- * NOTE: This function first sets the state of the transaction to
- * "dead", and then attempts to the purge the txn and any related data
- * from the filesystem.  If some part of the cleanup process fails,
- * the transaction and some portion of its data may remain in the
- * database after this function returns.  Use @c svn_fs_purge_txn() to
- * retry the transaction cleanup.
+ * NOTE: This function first sets the state of @a txn to "dead", and
+ * then attempts to purge it and any related data from the filesystem.
+ * If some part of the cleanup process fails, @a txn and some portion
+ * of its data may remain in the database after this function returns.
+ * Use @c svn_fs_purge_txn() to retry the transaction cleanup.
  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
                                apr_pool_t *pool);
@@ -569,10 +567,7 @@ svn_error_t *svn_fs_txn_name (const char **name_p,
                               svn_fs_txn_t *txn,
                               apr_pool_t *pool);
 
-
-/** Return @a txn's base revision.  If @a txn's base root id is an mutable
- * node, return 0.
- */
+/** Return @a txn's base revision. */
 svn_revnum_t svn_fs_txn_base_revision (svn_fs_txn_t *txn);
 
 
@@ -815,7 +810,7 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
  * NOTE: If this is the first call to svn_fs_history_prev() for the @a
  * history object, it could return a history object whose location is
  * the same as the original.  This will happen if the original
- * location was an interested one (where the node was modified, or
+ * location was an interesting one (where the node was modified, or
  * took place in a copy event).  This behavior allows looping callers
  * to avoid the calling svn_fs_history_location() on the object
  * returned by svn_fs_node_history(), and instead go ahead and begin
@@ -1447,9 +1442,9 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  *
  * Locks can be created with an optional 'timeout', meaning that they
  * expire after a certain amount of time.  If a lock has an expiration
- * date, then act of fetching/reading it might cause it automatically
- * expire, returning either nothing or an expiration error (depending
- * on the API).
+ * date, then the act of fetching/reading it might cause it to
+ * automatically expire, returning either nothing or an expiration
+ * error (depending on the API).
  */
 
 
@@ -1524,8 +1519,7 @@ svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
  * If @a token doesn't point to a lock, return SVN_ERR_FS_BAD_LOCK_TOKEN.
  *
  * If @a token points to a lock that has expired, then return
- * SVN_ERR_FS_LOCK_EXPIRED.  (And incidentally, the lock is really
- * gone.)
+ * SVN_ERR_FS_LOCK_EXPIRED.
  */
 svn_error_t *svn_fs_get_lock_from_token (svn_lock_t **lock,
                                         svn_fs_t *fs,
