@@ -160,7 +160,7 @@ typedef enum
   write,
   abandon,
   get_delta,
-  get_diff
+  get_diff,
   status,
   update
 } svn_svr_action_t;
