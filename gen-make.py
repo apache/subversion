@@ -169,9 +169,8 @@ def main(fname, oname=None, skip_depends=0):
   ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
   for area, inst_targets in install.items():
-    files = [ ]
-    for t in inst_targets:
-      files.append(t.output)
+    # get the output files for these targets, sorted in dependency order
+    files = _sorted_files(inst_targets)
 
     if area == 'apache-mod':
       ofile.write('install-mods-shared: %s\n' % (string.join(files),))
@@ -435,6 +434,50 @@ def _scan_for_includes(fname, limit):
       if h in limit:
         hdrs[match.group(1)] = None
   return hdrs
+
+def _sorted_files(targets):
+  "Given a list of targets, sort them based on their dependencies."
+
+  # we're going to just go with a naive algorithm here. these lists are
+  # going to be so short, that we can use O(n^2) or whatever this is.
+
+  # first we need our own copy of the target list since we're going to
+  # munge it.
+  targets = targets[:]
+
+  # the output list of the targets' files
+  files = [ ]
+
+  # loop while we have targets remaining:
+  while targets:
+    # find a target that has no dependencies in our current targets list.
+    for t in targets:
+      for d in t.deps:
+        if d in targets:
+          break
+      else:
+        # no dependencies found in the targets list. this is a good "base"
+        # to add to the files list now.
+        files.append(t.output)
+
+        # don't consider this target any more
+        targets.remove(t)
+
+        # break out of search through targets
+        break
+    else:
+      # we went through the entire target list and everything had at least
+      # one dependency on another target. thus, we have a circular dependency
+      # tree. somebody messed up the .conf file, or the app truly does have
+      # a loop (and if so, they're screwed; libtool can't relink a lib at
+      # install time if the dependent libs haven't been installed yet)
+      raise CircularDependencies()
+
+  return files
+
+class CircularDependencies(Exception):
+  pass
+
 
 if __name__ == '__main__':
   if sys.argv[1] == '-s':
