@@ -59,17 +59,21 @@
 
 #define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
 
-/* Used as type argument to svn_xml_make_tag() and friends. */
-enum svn_xml_tag_type {
-  svn_xml_open_tag = 1,     /* <tag ...>  */
-  svn_xml_close_tag,        /* </tag>     */
-  svn_xml_self_close_tag    /* <tag .../> */
+/* Used as style argument to svn_xml_make_open_tag() and friends. */
+enum svn_xml_open_tag_style {
+  svn_xml_normal = 1,           /* <tag ...> */
+  svn_xml_protect_pcdata,       /* <tag ...>, no cosmetic newline */
+  svn_xml_self_closing          /* <tag .../>  */
 };
 
 
 /* A utility function to escape a string so that it may be used in XML
-   output as character data or as an attribute value */
-svn_string_t *svn_xml_escape_string (svn_string_t *string, apr_pool_t *pool);
+   output as character data or as an attribute value.  *outstr must be
+   NULL (in which case a new string is created), or it must point to
+   an existing string to append to.  */
+void svn_xml_escape_string (svn_string_t **outstr,
+			    svn_string_t *string,
+			    apr_pool_t *pool);
 
 /*---------------------------------------------------------------*/
 
@@ -177,46 +181,36 @@ void svn_xml_hash_atts_overlaying (const char **atts,
    something like 
            <?xml version="1.0" encoding="utf-8"?>
    
-   This function returns such a header.
-*/
-svn_string_t *svn_xml_make_header (apr_pool_t *pool);
+   This function returns such a header.  *STR must either be NULL, in
+   which case a new string is created, or it must point to an existing
+   string to be appended to.  */
+void svn_xml_make_header (svn_string_t **str, apr_pool_t *pool);
 
 
-/* Appends an XML tag named TAGNAME to STR.  Varargs are used to
-   specify a NULL-terminated list of alternating const char *Key and
+/* Makes an XML open tag named TAGNAME.  Varargs are used to specify a
+   NULL-terminated list of alternating const char *Key and
    svn_string_t *Val.
 
-   TAGTYPE must be one of the enumerated types in svn_xml_tag_type. */
-void svn_xml_append_tag (svn_string_t *str,
-			 apr_pool_t *pool,
-			 enum svn_xml_tag_type tagtype,
-			 const char *tagname,
-			 ...);
-
-/* Like svn_xml_append_tag, but creates a new string. */
-svn_string_t *svn_xml_make_tag (apr_pool_t *pool,
-				enum svn_xml_tag_type tagtype,
-				const char *tagname,
-				...);
+   STYLE must be one of the enumerated styles in svn_xml_open_tag_style. */
+void svn_xml_make_open_tag (svn_string_t **str,
+			    apr_pool_t *pool,
+			    enum svn_xml_open_tag_style style,
+			    const char *tagname,
+			    ...);
 
 
-/* Like svn_xml_append_tag, but takes a va_list instead of being variadic. */
-void svn_xml_append_tag_v (svn_string_t *str,
-			   apr_pool_t *pool,
-			   enum svn_xml_tag_type tagtype,
-			   const char *tagname,
-			   va_list ap);
+/* Like svn_xml_make_open_tag, but takes a va_list instead of being
+   variadic. */
+void svn_xml_make_open_tag_v (svn_string_t **str,
+			      apr_pool_t *pool,
+			      enum svn_xml_open_tag_style style,
+			      const char *tagname,
+			      va_list ap);
 
 
-/* Like svn_xml_append_tag_v, but creates a new string. */
-svn_string_t *svn_xml_make_tag_v (apr_pool_t *pool,
-				  enum svn_xml_tag_type tagtype,
-				  const char *tagname,
-				  va_list ap);
-
-/* Like svn_xml_append_tag, but takes a hash table of attributes. 
+/* Like svn_xml_make_tag, but takes a hash table of attributes. 
  *
- * You might ask, why not just provide svn_xml_append_tag_atts()?
+ * You might ask, why not just provide svn_xml_make_tag_atts()?
  *
  * The reason is that a hash table is the most natural interface to an
  * attribute list; the fact that Expat uses char **atts instead is
@@ -231,30 +225,17 @@ svn_string_t *svn_xml_make_tag_v (apr_pool_t *pool,
  * svn_xml_make_att_hash_overlaying().  Callers should use those to
  * convert Expat attr lists into hashes when necessary.
  */
-void svn_xml_append_tag_hash (svn_string_t *str,
-			      apr_pool_t *pool,
-                              enum svn_xml_tag_type tagtype,
-                              const char *tagname,
-                              apr_hash_t *attributes);
-
-svn_string_t *svn_xml_make_tag_hash (apr_pool_t *pool,
-				     enum svn_xml_tag_type tagtype,
-				     const char *tagname,
-				     apr_hash_t *attributes);
+void svn_xml_make_open_tag_hash (svn_string_t **str,
+				 apr_pool_t *pool,
+				 enum svn_xml_open_tag_style style,
+				 const char *tagname,
+				 apr_hash_t *attributes);
 
 
-/* COMPATIBILITY FUNCTIONS so I don't break the tree.  Karl, nuke this
-   when you fix up libsvn_wc.  */
-svn_error_t *svn_xml_write_tag_hash (apr_file_t *file,
-				     apr_pool_t *pool,
-				     enum svn_xml_tag_type tagtype,
-				     const char *tagname,
-				     apr_hash_t *attributes);
-svn_error_t *svn_xml_write_tag (apr_file_t *file,
-				apr_pool_t *pool,
-				enum svn_xml_tag_type tagtype,
-				const char *tagname,
-				...);
-svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
+/* Makes a close tag.  */
+void svn_xml_make_close_tag (svn_string_t **str,
+			     apr_pool_t *pool,
+			     const char *tagname);
+
 
 #endif /* SVN_XML_H */

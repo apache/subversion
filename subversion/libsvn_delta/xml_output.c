@@ -191,7 +191,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
   /* Unwind.  Start from the leaves and go back as far as necessary.  */
   if (eb->elem == elem_file_prop_delta && elem != elem_file_prop_delta)
     {
-      svn_xml_append_tag (str, pool, svn_xml_close_tag, "prop-delta", NULL);
+      svn_xml_make_close_tag (&str, pool, "prop-delta");
       eb->elem = elem_file;
     }
   if (eb->elem == elem_file && elem != elem_file
@@ -205,15 +205,17 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
           char buf[128];
           svn_string_t *idstr;
 
+          /* Leak a little memory from pool to create idstr; all of our
+             callers are using temporary pools anyway.  */
           fb->txdelta_id = eb->txdelta_id_counter++;
           sprintf (buf, "%d", fb->txdelta_id);
           idstr = svn_string_create (buf, pool);
-          svn_xml_append_tag (str, pool, svn_xml_self_close_tag,
-                              "text-delta-ref", "id", idstr, NULL);
+          svn_xml_make_open_tag (&str, pool, svn_xml_self_closing,
+                                 "text-delta-ref", "id", idstr, NULL);
         }
-      svn_xml_append_tag (str, pool, svn_xml_close_tag, "file", NULL);
+      svn_xml_make_close_tag (&str, pool, "file");
       outertag = (fb->addreplace == elem_add) ? "add" : "replace";
-      svn_xml_append_tag (str, pool, svn_xml_close_tag, outertag, NULL);
+      svn_xml_make_close_tag (&str, pool, outertag);
       fb->closed = 1;
       eb->curfile = NULL;
       eb->elem = elem_tree_delta;
@@ -221,30 +223,26 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
   if (eb->elem == elem_tree_delta
       && (elem == elem_dir || elem == elem_dir_prop_delta))
     {
-      svn_xml_append_tag (str, pool, svn_xml_close_tag, "tree-delta", NULL);
+      svn_xml_make_close_tag (&str, pool, "tree-delta");
       eb->elem = elem_dir;
     }
   if (eb->elem == elem_dir_prop_delta && elem != elem_dir_prop_delta)
     {
-      svn_xml_append_tag (str, pool, svn_xml_close_tag, "prop-delta", NULL);
+      svn_xml_make_close_tag (&str, pool, "prop-delta");
       eb->elem = elem_dir;
     }
 
   /* Now wind.  */
   if (eb->elem == elem_dir && elem == elem_tree_delta)
     {
-      svn_xml_append_tag (str, pool, svn_xml_open_tag, "tree-delta", NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_normal, "tree-delta", NULL);
       eb->elem = elem_tree_delta;
     }
-  if (eb->elem == elem_dir && elem == elem_dir_prop_delta)
+  if (eb->elem == elem_dir && (elem == elem_dir_prop_delta
+                               || elem == elem_file_prop_delta))
     {
-      svn_xml_append_tag (str, pool, svn_xml_open_tag, "prop-delta", NULL);
-      eb->elem = elem_dir_prop_delta;
-    }
-  if (eb->elem == elem_file && elem == elem_file_prop_delta)
-    {
-      svn_xml_append_tag (str, pool, svn_xml_open_tag, "prop-delta", NULL);
-      eb->elem = elem_file_prop_delta;
+      svn_xml_make_open_tag (&str, pool, svn_xml_normal, "prop-delta", NULL);
+      eb->elem = elem;
     }
 
   /* If we didn't make it to the type of element the caller asked for,
@@ -255,11 +253,6 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
   return str;
 }
 
-
-svn_string_t *svn_xml_make_tag_hash (apr_pool_t *pool,
-                                     enum svn_xml_tag_type tagtype,
-                                     const char *tagname,
-                                     apr_hash_t *attributes);
 
 /* Output XML for adding or replacing a file or directory.  Also set
    EB->elem to the value of DIRFILE for consistency.  */
@@ -277,8 +270,8 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
   const char *innertag = (dirfile == elem_dir) ? "dir" : "file";
 
   str = get_to_elem (eb, elem_tree_delta, pool);
-  svn_xml_append_tag (str, pool, svn_xml_open_tag, outertag,
-                      "name", name, NULL);
+  svn_xml_make_open_tag (&str, pool, svn_xml_normal, outertag,
+                         "name", name, NULL);
 
   att = apr_make_hash (pool);
   if (ancestor_path != NULL)
@@ -288,7 +281,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
       sprintf (buf, "%lu", (unsigned long) ancestor_version);
       apr_hash_set (att, "ver", strlen("ver"), svn_string_create (buf, pool));
     }
-  svn_xml_append_tag_hash (str, pool, svn_xml_open_tag, innertag, att);
+  svn_xml_make_open_tag (&str, pool, svn_xml_normal, innertag, att);
 
   eb->elem = dirfile;
 
@@ -314,14 +307,14 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
   str = get_to_elem (eb, elem, pool);
   if (value != NULL)
     {
-      svn_xml_append_tag (str, pool, svn_xml_open_tag, "set",
-                          "name", name, NULL);
-      svn_string_appendstr (str, svn_xml_escape_string (value, pool), pool);
-      svn_xml_append_tag (str, pool, svn_xml_close_tag, "set", NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, "set",
+                             "name", name, NULL);
+      svn_xml_escape_string (&str, value, pool);
+      svn_xml_make_close_tag (&str, pool, "set");
     }
   else
-    svn_xml_append_tag (str, pool, svn_xml_self_close_tag, "delete",
-                        "name", name, NULL);
+    svn_xml_make_open_tag (&str, pool, svn_xml_self_closing, "delete",
+                           "name", name, NULL);
 
   len = str->len;
   err = eb->output (eb->output_baton, str->data, &len, eb->pool);
@@ -336,12 +329,12 @@ replace_root (void *edit_baton,
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   apr_pool_t *pool = svn_pool_create (eb->pool, NULL);
-  svn_string_t *str;
+  svn_string_t *str = NULL;
   apr_size_t len;
   svn_error_t *err;
 
-  str = svn_xml_make_header (pool);
-  svn_xml_append_tag (str, pool, svn_xml_open_tag, "delta-pkg", NULL);
+  svn_xml_make_header (&str, pool);
+  svn_xml_make_open_tag (&str, pool, svn_xml_normal, "delta-pkg", NULL);
 
   *dir_baton = make_dir_baton (eb, elem_delta_pkg);
   eb->elem = elem_dir;
@@ -364,8 +357,8 @@ delete (svn_string_t *name, void *parent_baton)
   apr_size_t len;
 
   str = get_to_elem (eb, elem_tree_delta, pool);
-  svn_xml_append_tag (str, pool, svn_xml_self_close_tag, "delete",
-                      "name", name, NULL);
+  svn_xml_make_open_tag (&str, pool, svn_xml_self_closing, "delete",
+                         "name", name, NULL);
 
   len = str->len;
   err = eb->output (eb->output_baton, str->data, &len, eb->pool);
@@ -432,8 +425,8 @@ close_directory (void *dir_baton)
     {
       /* Not the root directory.  */
       const char *outertag = (db->addreplace == elem_add) ? "add" : "replace";
-      svn_xml_append_tag (str, db->pool, svn_xml_close_tag, "dir", NULL);
-      svn_xml_append_tag (str, db->pool, svn_xml_close_tag, outertag, NULL);
+      svn_xml_make_close_tag (&str, db->pool, "dir");
+      svn_xml_make_close_tag (&str, db->pool, outertag);
       eb->elem = elem_tree_delta;
     }
   else
@@ -496,9 +489,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
      include an insert_new instruction, but not for real deltas such
      as the ones generated by svn_txdelta ().  */
   if (window != NULL)
-    str = svn_xml_escape_string (window->new, pool);
+    svn_xml_escape_string (&str, window->new, pool);
   else
-    str = svn_xml_make_tag (pool, svn_xml_close_tag, "text-delta", NULL);
+    svn_xml_make_close_tag (&str, pool, "text-delta");
 
   len = str->len;
   err = eb->output (eb->output_baton, str->data, &len, pool);
@@ -524,7 +517,8 @@ apply_textdelta (void *file_baton,
       /* We are inside a file element (possibly in a prop-delta) and
          are outputting a text-delta inline.  */
       str = get_to_elem (eb, elem_file, pool);
-      svn_xml_append_tag (str, pool, svn_xml_open_tag, "text-delta", NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, "text-delta",
+                             NULL);
     }
   else
     {
@@ -533,8 +527,8 @@ apply_textdelta (void *file_baton,
          text-delta.  */
       char buf[128];
       sprintf(buf, "%d", fb->txdelta_id);
-      str = svn_xml_make_tag (pool, svn_xml_open_tag, "text-delta",
-                              "id", svn_string_create (buf, pool), NULL);
+      svn_xml_make_open_tag (&str, pool, svn_xml_protect_pcdata, "text-delta",
+                             "id", svn_string_create (buf, pool), NULL);
     }
   fb->txdelta_id = -1;
 
@@ -574,8 +568,8 @@ close_file (void *file_baton)
     {
       const char *outertag = (fb->addreplace == elem_add) ? "add" : "replace";
       str = get_to_elem (eb, elem_file, fb->pool);
-      svn_xml_append_tag (str, fb->pool, svn_xml_close_tag, "file", NULL);
-      svn_xml_append_tag (str, fb->pool, svn_xml_close_tag, outertag, NULL);
+      svn_xml_make_close_tag (&str, fb->pool, "file");
+      svn_xml_make_close_tag (&str, fb->pool, outertag);
 
       len = str->len;
       err = eb->output (eb->output_baton, str->data, &len, fb->pool);
@@ -592,10 +586,10 @@ close_edit (void *edit_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   svn_error_t *err;
-  svn_string_t *str;
+  svn_string_t *str = NULL;
   apr_size_t len;
 
-  str = svn_xml_make_tag (eb->pool, svn_xml_close_tag, "delta-pkg", NULL);
+  svn_xml_make_close_tag (&str, eb->pool, "delta-pkg");
   len = str->len;
   err = eb->output (eb->output_baton, str->data, &len, eb->pool);
   apr_destroy_pool (eb->pool);
