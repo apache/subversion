@@ -134,9 +134,21 @@ svn_error_t *svn_fs__rep_contents_clear (svn_fs_t *fs,
                                          trail_t *trail);
 
 
-/* stabilize_rep */
-/* ### todo: yes, precisely.  This should be here, instead of in
-   node-rev.c:deltify(). */
+
+/*** Deltified storage. ***/
+
+/* Offer TARGET the chance to store its contents as a delta against
+   SOURCE, in FS, as part of TRAIL.  TARGET and SOURCE are both
+   representation keys.
+
+   This usually results in REP_KEY's data being stored as a diff
+   against BASE_REP_KEY; but it might not, if it turns out to be
+   more efficient to store the contents some other way.  */
+svn_error_t *svn_fs__rep_deltify (svn_fs_t *fs,
+                                  const char *target,
+                                  const char *source,
+                                  trail_t *trail);
+
 
 #endif /* SVN_LIBSVN_FS_REPS_STRINGS_H */
 
