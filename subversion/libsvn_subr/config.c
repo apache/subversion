@@ -105,40 +105,62 @@ svn_config_read (svn_config_t **cfgp, const char *file,
 
 
 
-/* Read various configuration sources into *CFGP, in this order, so
- * that later reads overriding the results of earlier ones:
+/* Read various configuration sources into *CFGP, in this order, with
+ * later reads overriding the results of earlier ones:
  *
- *    1. SYS_REGISTRY_PATH, or SYS_FILE_PATH whichever applies (can't
- *       have both)
+ *    1. SYS_REGISTRY_PATH   (only on SVN_WIN32)
  *
- *    2. USR_REGISTRY_PATH
+ *    2. USR_REGISTRY_PATH   (only on SVN_WIN32)
  *
- *    3. USR_FILE_PATH   (ignored if NULL)
+ *    2. SYS_FILE_PATH       (everywhere, but ignored if NULL)
  *
- * Allocate *CFGP in POOL.
+ *    3. USR_FILE_PATH       (everywhere, but ignored if NULL)
+ *
+ * Allocate *CFGP in POOL.  Even if no configurations are read,
+ * allocate an empty *CFGP.
  */
 static svn_error_t *
 read_all (svn_config_t **cfgp,
 #ifdef SVN_WIN32
           const char *sys_registry_path,
           const char *usr_registry_path,
-#else  /* ! SVN_WIN32 */
-          const char *sys_file_path,
 #endif /* SVN_WIN32 */
+          const char *sys_file_path,
           const char *usr_file_path,
           apr_pool_t *pool)
 {
+  svn_boolean_t red_config = FALSE;  /* "red" is the past tense of "read" */
 
 #ifdef SVN_WIN32
-  svn_config_read (cfgp, sys_registry_path, FALSE, pool);
-  svn_config_merge (*cfgp, usr_registry_path, FALSE);
-#else  /* ! SVN_WIN32 */
-  svn_config_read (cfgp, sys_file_path, FALSE, pool);
+  SVN_ERR (svn_config_read (cfgp, sys_registry_path, FALSE, pool));
+  red_config = TRUE;
+  SVN_ERR (svn_config_merge (*cfgp, usr_registry_path, FALSE));
 #endif  /* SVN_WIN32 */
 
-  /* Try user config file in both Windows and non-Windows. */
+  if (sys_file_path)
+    {
+      if (red_config)
+        SVN_ERR (svn_config_merge (*cfgp, sys_file_path, FALSE));
+      else
+        {
+          svn_config_read (cfgp, sys_file_path, FALSE, pool);
+          red_config = TRUE;
+        }
+    }
+
   if (usr_file_path)
-    SVN_ERR (svn_config_merge (*cfgp, usr_file_path, FALSE));
+    {
+      if (red_config)
+        SVN_ERR (svn_config_merge (*cfgp, usr_file_path, FALSE));
+      else
+        {
+          SVN_ERR (svn_config_read (cfgp, usr_file_path, FALSE, pool));
+          red_config = TRUE;
+        }
+    }
+
+  if (! red_config)
+    *cfgp = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -148,7 +170,11 @@ svn_error_t *
 svn_config_read_proxies (svn_config_t **cfgp, apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *usr_cfg_path;
+  const char *usr_cfg_path, *sys_cfg_path;
+
+  SVN_ERR (svn_config__sys_config_path (&sys_cfg_path,
+                                         SVN_CONFIG__USR_PROXY_FILE,
+                                         pool));
 
   SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
                                          SVN_CONFIG__USR_PROXY_FILE,
@@ -159,9 +185,8 @@ svn_config_read_proxies (svn_config_t **cfgp, apr_pool_t *pool)
 #ifdef SVN_WIN32
                   SVN_REGISTRY_SYS_CONFIG_PROXY_PATH,
                   SVN_REGISTRY_USR_CONFIG_PROXY_PATH,
-#else  /* ! SVN_WIN32 */
-                  SVN_CONFIG__SYS_PROXY_PATH,
 #endif /* SVN_WIN32 */
+                  sys_cfg_path,
                   usr_cfg_path,
                   pool);
 

@@ -89,20 +89,37 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 
 #else  /* ! SVN_WIN32 */
 
-/* System-wide configuration directory. */
+/* System-wide configuration directory.  NOTE: Don't use this
+   directly; use svn_config__sys_config_path() instead. */
 #  define SVN_CONFIG__SYS_DIRECTORY "/etc/subversion"
-#  define SVN_CONFIG__SYS_PROXY_PATH  SVN_CONFIG__SYS_DIRECTORY "/" "proxies"
 
 #endif /* SVN_WIN32 */
 
 /* Subversion's config subdir in the user's home directory. */
-#define SVN_CONFIG__USR_DIRECTORY     ".subversion"
+#ifdef SVN_WIN32
+#  define SVN_CONFIG__USR_DIRECTORY     "Subversion"
+#else  /* ! SVN_WIN32 */
+#  define SVN_CONFIG__USR_DIRECTORY     ".subversion"
+#endif /* SVN_WIN32 */
 
 /* The description/instructions file in the config directory. */
 #define SVN_CONFIG__USR_README_FILE    "README"
 
 /* The proxy config file in SVN_CONFIG__DIRECTORY. */
 #define SVN_CONFIG__USR_PROXY_FILE    "proxies"
+
+
+/* Set *PATH_P to the path to config file FNAME in the system
+   configuration area, allocated in POOL.  If FNAME is NULL, set
+   *PATH_P to the directory name of the system config area, either
+   allocated in POOL or a static constant string.
+
+   If the system configuration area cannot be located (possible under
+   Win32), set *PATH_P to NULL regardless of FNAME.  */
+svn_error_t *
+svn_config__sys_config_path (const char **path_p,
+                             const char *fname,
+                             apr_pool_t *pool);
 
 
 /* Set *PATH_P to the path to config file FNAME in the user's personal

@@ -251,19 +251,50 @@ parse_section_name (int *pch, parse_context_t *ctx)
 
 
 svn_error_t *
+svn_config__sys_config_path (const char **path_p,
+                             const char *fname,
+                             apr_pool_t *pool)
+{
+#ifdef SVN_WIN32
+
+  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=579
+     for more on how this will be done. */
+  *path_p = NULL;
+
+#else  /* ! SVN_WIN32 */
+
+  /* No reason to use svn's path lib here; we know what the separator
+     is in this case. */
+  if (fname)
+    *path_p = apr_psprintf (pool, "%s/%s", SVN_CONFIG__SYS_DIRECTORY, fname);
+  else
+    *path_p = SVN_CONFIG__SYS_DIRECTORY;
+
+#endif /* SVN_WIN32 */
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_config__user_config_path (const char **path_p,
                               const char *fname,
                               apr_pool_t *pool)
 {
-  /* This code requires APR_HAS_USER to be defined.  Does anyone not
-     define it?  Apparently even Win32 does, though functions about
-     users may or may not return useful results there. */
-  
   apr_status_t apr_err;
   apr_uid_t uid;
   apr_gid_t gid;
   char *username;
   char *homedir;
+  
+  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=579
+     for details on how to make this function meaningful under Win32.
+     Most likely strategy is to divide it into Win32 and non-Win32
+     sections, as with svn_config__user_config_path() above. */
+
+  /* This code requires APR_HAS_USER to be defined.  Does anyone not
+     define it?  Apparently even Win32 does, though functions about
+     users may or may not return useful results there. */
   
   *path_p = NULL;
   
@@ -279,7 +310,7 @@ svn_config__user_config_path (const char **path_p,
   if (apr_err)
     return SVN_NO_ERROR;
   
-  /* ### No compelling reason to use svn's path lib here? */
+  /* ### Any compelling reason to use svn's path lib here? */
   if (fname)
     {
       *path_p = apr_psprintf
