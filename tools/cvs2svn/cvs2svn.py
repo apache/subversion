@@ -351,8 +351,11 @@ def visit_file(arg, dirname, files):
       cd.set_fname(pathname)
     if verbose:
       print pathname
-    p.parse(open(pathname), cd)
-    stats[0] = stats[0] + 1
+    try:
+      p.parse(open(pathname), cd)
+      stats[0] = stats[0] + 1
+    except rcsparse.common.RCSExpected:
+      print "Warning: '%s' is not a valid ,v file, ignoring" % pathname
 
 
 def is_vendor_first_revision(cvs_rev):

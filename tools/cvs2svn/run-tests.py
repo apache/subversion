@@ -320,6 +320,16 @@ def overlapping_branch():
     raise svntest.Failure
 
 
+def tolerate_corruption():
+  "convert as much as can, despite a corrupt ,v file"
+  repos, wc, logs = ensure_conversion('corrupt')
+  if not ((logs[1].changed_paths.get('/trunk') == 'A')
+          and (logs[1].changed_paths.get('/trunk/good') == 'A')
+          and (len(logs[1].changed_paths) == 2)):
+    print "Even the valid good,v was not converted."
+    raise svntest.Failure
+
+
 def space_fname():
   "conversion of filename with a space"
   repos, wc, logs = ensure_conversion('main')
@@ -668,6 +678,7 @@ test_list = [ None,
               show_usage,
               bogus_tag,
               overlapping_branch,
+              tolerate_corruption,
               attr_exec,
               space_fname,
               two_quick,
