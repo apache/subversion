@@ -49,6 +49,10 @@ extern "C" {
    Modify for every released patch. */
 #define SVN_VER_MICRO      2
 
+/* Library version number.
+   Modify whenever there's an incompatible change in the library ABI. */
+#define SVN_VER_LIBRARY    1
+
 
 /* Version tag: a string describing the version.
    This tag remains "dev build" in the repository so that we can always

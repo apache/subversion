@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 #include <apr_dso.h>
 
+#include "svn_version.h"
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_ra.h"
@@ -89,7 +90,8 @@ load_ra_module (svn_ra_init_func_t *func,
     apr_status_t status;
 
     /* ### fix the .so part */
-    libname = apr_psprintf (pool, "libsvn_ra_%s.so", ra_name);
+    libname = apr_psprintf (pool, "libsvn_ra_%s-%d.so",
+                            ra_name, SVN_VER_LIBRARY);
     funcname = apr_psprintf (pool, "svn_ra_%s_init", ra_name);
 
     /* find/load the specified library */

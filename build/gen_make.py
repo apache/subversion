@@ -21,8 +21,8 @@ class MakefileGenerator(gen_base.GeneratorBase):
     ('script', 'object'): '',
     }
 
-  def __init__(self, fname, oname):
-    gen_base.GeneratorBase.__init__(self, fname)
+  def __init__(self, fname, verfname, oname):
+    gen_base.GeneratorBase.__init__(self, fname, verfname)
 
     self.ofile = open(oname, 'w')
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
