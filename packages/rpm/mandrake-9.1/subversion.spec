@@ -58,8 +58,10 @@
 @JAVAHL@
 @JDK_PATH@
 
-%define create_doc  %{?docbook:1}%{!?docbook:0}
-%define fop_install %{?fop_src:1}%{!?fop_src:0}
+%define create_doc     %{?docbook:1}%{!?docbook:0}
+%define copy_doc       %{?docbook:0}%{!?docbook:1}
+%define create_javahl  %{?javahl:1}%{!?javahl:0}
+%define fop_install    %{?fop_src:1}%{!?fop_src:0}
 
 %define name subversion
 %define version      @VERSION@
@@ -79,6 +81,7 @@
 %define svn_java    svn-java.patch-%{namever}
 %define svn_jar     svnjavahl.jar
 
+Prefix:         %{usr}
 Summary:	Wicked CVS Replacement
 Name:		%{name}
 Version:	%{version}
@@ -93,7 +96,9 @@ Source3: %{?fop_src}
 %endif
 Patch0:		%{svn_patch}
 Patch1:		%{svn_version}
+%if %{create_javahl}
 Patch2:		%{svn_java}
+%endif
 Packager:	Shamim Islam <files@poetryunlimited.com>
 BuildRoot:      %{svn_root}
 BuildRequires:	apache2-devel >= %{apache_ver}
@@ -102,7 +107,7 @@ BuildRequires:	%{db4_rpm}-devel >= %{db4_ver}
 BuildRequires:	texinfo
 BuildRequires:	zlib-devel
 BuildRequires:	autoconf2.5 >= 2.50
-%if %{javahl}
+%if %{create_javahl}
 BuildRequires:	%{automake_rpm} >= 1.7.2
 %endif
 BuildRequires:	bison
@@ -147,13 +152,21 @@ components.
 %if %{create_doc}
 %package doc
 Provides: %{name}-doc = %{fullver}
+%else
+%package raw-doc
+Provides: %{name}-raw-doc = %{fullver}
+%endif
 BuildRequires: libxslt-proc >= 1.0.0
 BuildRequires: libxslt1     >= 1.0.0
 BuildRequires: docbook-style-xsl >= 1.6.0
 Group:    Development/Other
 Summary:  Documentation for subversion
+%if %{create_doc}
 %description doc
 This package contains all the compiled documentation.
+%else
+%description raw-doc
+This package contains all the uncompiled documentation.
 %endif
 
 %if %{not_just_docs}
@@ -235,7 +248,7 @@ This package contains a myriad tools for subversion. This package also contains
 The package also contains all of the python bindings for the subersion API, 
 required by several of the tools.
 
-%if %{javahl}
+%if %{create_javahl}
 %package javahl
 Summary: Subversion javal bindings
 Group: Development/Other
@@ -254,26 +267,26 @@ like subclipse which use java.
 %if %{not_just_docs}
 %files base
 %defattr(-,root,root)
-%if %{create_doc}
 %doc BUGS CHANGES COPYING HACKING README %{?ideas}
-%else
-%doc doc BUGS CHANGES COPYING HACKING README %{?ideas}
-%endif
+%docdir %{_mandir}/man1
+%{_mandir}/man1
 %{_libdir}/libsvn_delta-*so*
 %{_libdir}/libsvn_fs-*so*
 %{_libdir}/libsvn_subr-*so*
 %{_libdir}/libsvn_wc-*so*
 %{_libdir}/libsvn_diff-*so*
-%{_mandir}/man1/svnadmin.*
 %{_bindir}/svnversion
 %{_bindir}/svnserve
 %endif
 
 %if %{create_doc}
 %files doc
-%defattr(-,root,root)
-%doc %{_docdir}/%{fullname} BUGS CHANGES COPYING HACKING README %{?ideas}
+%else
+%files raw-doc
 %endif
+%defattr(-,root,root)
+%docdir %{_docdir}/%{fullname}
+%{_docdir}/%{fullname}
 
 %if %{not_just_docs}
 %files repos
@@ -307,7 +320,7 @@ like subclipse which use java.
 %{_datadir}/%{fullname}/tools
 %{_libdir}/libsvn_swig_py*so*
 
-%if %{javahl}
+%if %{create_javahl}
 %files javahl
 %defattr(-,root,root)
 %{_libdir}/libsvnjavahl.a
@@ -338,7 +351,7 @@ like subclipse which use java.
 %setup -q -n %{fullsrc}
 %patch0 -p1
 %patch1 -p1
-%if %{javahl}
+%if %{create_javahl}
 %patch2 -p1
 %endif
 %if %{not_just_docs}
@@ -377,7 +390,7 @@ LDFLAGS="-L%{lib_dir}/libsvn_client/.libs \
 DESTDIR="$RPM_BUILD_ROOT" \
   %make -e %{?silent_flag}
 
-%if %{javahl}
+%if %{create_javahl}
 # subversion/bindings/java no longer has a
 cd subversion/bindings/java/javahl
 WANT_AUTOCONF_2_5=1 ./autogen.sh
@@ -396,6 +409,7 @@ cd $RPM_BUILD_DIR/%{fullsrc}
 %endif
 
 %if %{create_doc}
+mkdir -p "$RPM_BUILD_ROOT%{_docdir}/%{fullname}"
 %if %{fop_install}
 %{fop_arc} -C doc/book/tools
 cd doc/book/tools
@@ -435,7 +449,7 @@ DESTDIR="$RPM_BUILD_ROOT" \
 	swig_py_libdir=%{usr}/lib \
 	make -e %{?silent_flag} install 
 
-%if %{javahl}
+%if %{create_javahl}
 cd subversion/bindings/java/javahl
 DESTDIR="$RPM_BUILD_ROOT" \
 	prefix=%{usr} \
@@ -452,8 +466,10 @@ cd $RPM_BUILD_DIR/%{fullsrc}
 %endif
 %endif
 	
-%if %{create_doc}
-cp -ar doc %{_docdir}/%{fullname}
+# Copy raw documentation if we're not compiling
+%if %{copy_doc}
+mkdir -p "$RPM_BUILD_ROOT%{_docdir}/%{fullname}"
+cp -ar doc "$RPM_BUILD_ROOT%{_docdir}/%{fullname}"
 %endif
 
 %if %{use_apache2}
@@ -465,13 +481,6 @@ cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_conf}
 # copy everything in tools into a share directory
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/%{fullname}
 cp -r tools $RPM_BUILD_ROOT%{_datadir}/%{fullname}
-# This file is installed incorrectly by the make process
-#%if %{javahl}
-#if [ -f "$RPM_BUILD_ROOT%{_datadir}/%{svn_jar}" ] ; then
-  #echo Moving jar file to correct directory
-  #mv "$RPM_BUILD_ROOT%{_datadir}/%{svn_jar}" "$RPM_BUILD_ROOT/%{_datadir}/%{fullname}"
-#fi
-#%endif
 %endif
 
 %clean
@@ -483,6 +492,9 @@ rm -rf $RPM_BUILD_ROOT
 %if %{not_just_docs}
 %post base -p /sbin/ldconfig
 %postun base -p /sbin/ldconfig
+if [  $(( `ls "%{_docdir}/%{fullname}/*" | wc -l` + 0 )) -eq 0 ] ; then
+  rmdir "%{_docdir}/%{fullname}"
+fi
 
 %post devel -p /sbin/ldconfig
 %postun devel -p /sbin/ldconfig
@@ -545,6 +557,27 @@ if [ -x "$APACHECTL" ] && [ "$USER" == "root" ] ; then
   fi
 else
   echo Unable to stop apache - need to be root
+fi
+
+%if %{create_javahl}
+%postun javahl
+if [  $(( `ls "%{_datadir}/%{fullname}/*" | wc -l` + 0 )) -eq 0 ] ; then
+  rmdir "%{_datadir}/%{fullname}"
+fi
+%endif
+
+%postun tools
+if [  $(( `ls "%{_datadir}/%{fullname}/*" | wc -l` + 0 )) -eq 0 ] ; then
+  rmdir "%{_datadir}/%{fullname}"
+fi
+
+%if %{create_doc}
+%postun doc
+%else
+%postun raw-doc
+%endif
+if [  $(( `ls "%{_docdir}/%{fullname}/*" | wc -l` + 0 )) -eq 0 ] ; then
+  rmdir "%{_docdir}/%{fullname}"
 fi
 
 %endif
