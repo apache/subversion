@@ -168,7 +168,7 @@ fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
       svn_error_clear (err);
-      fs_type = DEFAULT_FS_TYPE;
+      fs_type = SVN_FS_TYPE_BDB;
     }
   else if (err)
     return err;
@@ -316,11 +316,11 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Create the FS directory and write out the fsap-name file. */
   SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, fs->pool));
-  SVN_ERR (write_fs_type (path, DEFAULT_FS_TYPE, fs->pool));
+  SVN_ERR (write_fs_type (path, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Perform the actual creation. */
   return vtable->create (fs, path, fs->pool);
@@ -331,7 +331,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
   return vtable->open (fs, path, fs->pool);
 }
 
@@ -346,7 +346,7 @@ svn_fs_delete_berkeley (const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
   return vtable->delete_fs (path, pool);
 }
 
@@ -356,9 +356,9 @@ svn_fs_hotcopy_berkeley (const char *src_path, const char *dest_path,
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
   SVN_ERR (vtable->hotcopy (src_path, dest_path, clean_logs, pool));
-  SVN_ERR (write_fs_type (dest_path, DEFAULT_FS_TYPE, pool));
+  SVN_ERR (write_fs_type (dest_path, SVN_FS_TYPE_BDB, pool));
   return SVN_NO_ERROR;
 }
 
@@ -367,7 +367,7 @@ svn_fs_berkeley_recover (const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
   return vtable->bdb_recover (path, pool);
 }
 
@@ -377,7 +377,7 @@ svn_fs_set_berkeley_errcall (svn_fs_t *fs,
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, fs->pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
   return vtable->bdb_set_errcall (fs, handler);
 }
 
@@ -389,7 +389,7 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, DEFAULT_FS_TYPE, pool));
+  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
   return vtable->bdb_logfiles (logfiles, path, only_unused, pool);
 }
 
@@ -807,7 +807,7 @@ svn_fs_parse_id (const char *data, apr_size_t len, apr_pool_t *pool)
   fs_library_vtable_t *vtable;
   svn_error_t *err;
 
-  err = get_library_vtable (&vtable, DEFAULT_FS_TYPE, pool);
+  err = get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool);
   if (err)
     {
       svn_error_clear(err);
