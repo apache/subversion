@@ -174,13 +174,11 @@ typedef struct
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
 
-  /* If this node-rev is a copy, how was it created? */
-  svn_fs__copy_kind_t copykind;
-  
   /* Helper for history tracing, root of the parent tree from whence
      this node-rev was copied. */
-  const svn_fs_id_t *copyroot;
-
+  svn_revnum_t copyroot_rev;
+  const char *copyroot_path;
+  
   /* number of predecessors this node revision has (recursively), or
      -1 if not known (for backward compatibility). */
   int predecessor_count;

@@ -19,7 +19,6 @@
 #define SVN_LIBSVN_FS_DAG_H
 
 #include "svn_fs.h"
-#include "fs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -294,7 +293,7 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       const char *name,
                                       const char *copy_id,
                                       const char *txn_id,
-                                      svn_boolean_t is_copy,
+                                      svn_boolean_t is_parent_copyroot,
                                       apr_pool_t *pool);
 
 
@@ -513,7 +512,8 @@ svn_error_t *svn_fs__dag_is_parent (svn_boolean_t *is_ancestor,
 
 /* Set *NODE_ID to the node-id of the coyproot of node NODE, or NULL
    if no copyroot exists.  Get any temporary allocations from POOL. */
-svn_error_t *svn_fs__dag_get_copyroot (const svn_fs_id_t **node_id,
+svn_error_t *svn_fs__dag_get_copyroot (svn_revnum_t *rev,
+                                       const char **path,
                                        dag_node_t *node,
                                        apr_pool_t *pool);
 
@@ -528,12 +528,6 @@ svn_error_t *svn_fs__dag_get_copyfrom_rev (svn_revnum_t *rev,
 svn_error_t *svn_fs__dag_get_copyfrom_path (const char **path,
                                             dag_node_t *node,
                                             apr_pool_t *pool);
-
-/* Set *COPY_KIND to the copykind associated with NODE.  Get any
-   temporary allocations from POOL. */
-svn_error_t *svn_fs__dag_get_copy_kind (svn_fs__copy_kind_t *copy_kind,
-                                        dag_node_t *node,
-                                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

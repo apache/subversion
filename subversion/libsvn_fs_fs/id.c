@@ -227,6 +227,15 @@ svn_fs_check_related (const svn_fs_id_t *id1,
     return TRUE;
   if (id1->node_id == id2->node_id)
     return TRUE;
+  /* If both node_ids start with _ and they have differing transaction
+     IDs, then it is impossible for them to be related. */
+  if ((id1->node_id[0] == '_'))
+    {
+      if (id1->txn_id && id2->txn_id &&
+          (strcmp (id1->txn_id, id2->txn_id) != 0))
+        return FALSE;
+    }
+  
   return (strcmp (id1->node_id, id2->node_id) == 0) ? TRUE : FALSE;
 }
 

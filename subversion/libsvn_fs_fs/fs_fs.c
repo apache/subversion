@@ -622,11 +622,24 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
   value = apr_hash_get (headers, SVN_FS_FS__COPYROOT, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
-      noderev->copyroot = NULL;
+      noderev->copyroot_path = apr_pstrdup (pool, noderev->created_path);
+      noderev->copyroot_rev = svn_fs__id_rev (noderev->id);
     }
   else
     {
-      noderev->copyroot = svn_fs_parse_id (value, strlen (value), pool);
+      char *str, *last_str;
+
+      str = apr_strtok (value, " ", &last_str);
+      if (str == NULL)
+          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                   "Malformed copyroot line in node-rev");
+
+      noderev->copyroot_rev = atoi (str);
+      
+      if (last_str == NULL)
+        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                                 "Malformed copyroot line in node-rev");
+      noderev->copyroot_path = apr_pstrdup (pool, last_str);
     }
 
   /* Get the copyfrom. */
@@ -634,6 +647,7 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
   if (value == NULL)
     {
       noderev->copyfrom_path = NULL;
+      noderev->copyfrom_rev = SVN_INVALID_REVNUM;
     }
   else
     {
@@ -644,38 +658,16 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
           return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                    "Malformed copyfrom line in node-rev");
 
-      if (strcmp (str, SVN_FS_FS__SOFT) == 0)
-        {
-          noderev->copykind = svn_fs__copy_kind_soft;
-        }
-      else if (strcmp (str, SVN_FS_FS__HARD) == 0)
-        {
-          noderev->copykind = svn_fs__copy_kind_real;
-        }
-      else
-        {
-          return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                   "Malformed copyfrom line in node-rev");
-        }
-
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed copyfrom line in node-rev");
       noderev->copyfrom_rev = atoi (str);
       
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
+      if (last_str == NULL)
         return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                  "Malformed copyfrom line in node-rev");
-      noderev->copyfrom_path = apr_pstrdup (pool, str);
+      noderev->copyfrom_path = apr_pstrdup (pool, last_str);
     }
 
   if ((noderev->kind == svn_node_dir) && noderev->data_rep)
     noderev->data_rep->is_directory_contents = TRUE;
-
-  if (! noderev->copyroot)
-    noderev->copyroot = svn_fs__id_copy (noderev->id, pool);
   
   *noderev_p = noderev;
   
@@ -745,17 +737,17 @@ write_noderev_txn (apr_file_t *file,
                               noderev->created_path));
 
   if (noderev->copyfrom_path)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYFROM ": %s %"
+    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYFROM ": %"
                                 SVN_REVNUM_T_FMT " %s\n",
-                                (noderev->copykind == svn_fs__copy_kind_real) ?
-                                SVN_FS_FS__HARD : SVN_FS_FS__SOFT,
                                 noderev->copyfrom_rev,
                                 noderev->copyfrom_path));
 
-  if (svn_fs_compare_ids (noderev->copyroot, noderev->id) != 0)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYROOT ": %s\n",
-                                svn_fs_unparse_id (noderev->copyroot,
-                                                   pool)->data));
+  if ((noderev->copyroot_rev != svn_fs__id_rev (noderev->id)) ||
+      (strcmp (noderev->copyroot_path, noderev->created_path) != 0))
+    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYROOT ": %"
+                                SVN_REVNUM_T_FMT " %s\n",
+                                noderev->copyroot_rev,
+                                noderev->copyroot_path));
 
   SVN_ERR (svn_stream_printf (outfile, pool, "\n"));
 
@@ -1783,10 +1775,7 @@ create_new_txn_noderev_from_rev (svn_fs_t *fs,
   noderev->copyfrom_path = NULL;
   noderev->copyfrom_rev = SVN_INVALID_REVNUM;
 
-  /* For the transaction root, the copyroot is always the copyroot of
-     the predecessor transaction root. */
-  if (! noderev->copyroot)
-    noderev->copyroot = svn_fs__id_copy (noderev->id, pool);
+  /* For the transaction root, the copyroot never changes. */
 
   my_id = svn_fs__id_copy (noderev->id, pool);
   my_id->txn_id = apr_pstrdup (pool, txn_id);
@@ -2462,8 +2451,12 @@ svn_fs__fs_create_successor (const svn_fs_id_t **new_id_p,
                           pool);
 
   new_noderev->id = id;
-  if (! new_noderev->copyroot)
-    new_noderev->copyroot = svn_fs__id_copy (id, pool);
+
+  if (! new_noderev->copyroot_path)
+    {
+    new_noderev->copyroot_path = apr_pstrdup (pool, new_noderev->created_path);
+    new_noderev->copyroot_rev = svn_fs__id_rev (new_noderev->id);
+    }
 
   SVN_ERR (svn_fs__fs_put_node_revision (fs, new_noderev->id, new_noderev,
                                          pool));
@@ -2711,12 +2704,13 @@ write_final_rev (const svn_fs_id_t **new_id_p,
       strcpy (my_copy_id, noderev->id->copy_id);
     }
 
+  if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
+    noderev->copyroot_rev = rev;
+
   my_txn_id = apr_psprintf (pool, "r%" SVN_REVNUM_T_FMT "/%" APR_OFF_T_FMT,
                             rev, my_offset);
 
   new_id = svn_fs__create_id (my_node_id, my_copy_id, my_txn_id, pool);
-  if (svn_fs_compare_ids (noderev->id, noderev->copyroot) == 0)
-    noderev->copyroot = svn_fs__id_copy (new_id, pool);
 
   noderev->id = new_id;
 
