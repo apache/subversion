@@ -145,6 +145,60 @@ hash_read (apr_hash_t *hash,
     } /* while (1) */
 }
 
+/* Write a text representation of an apr_hash from hash object HASH
+   into stream STREAM.  Allocations are from POOL.  This is copied
+   directly from svn_hash_write, with file writes replaced by stream
+   writes. */
+static svn_error_t *
+hash_write (apr_hash_t *hash, svn_stream_t *stream, apr_pool_t *pool)
+{
+  apr_hash_index_t *this;      /* current hash entry */
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create (pool);
+
+  for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t keylen;
+      const char* buf;
+      const svn_string_t *value;
+      apr_size_t limit;
+
+      svn_pool_clear (iterpool);
+
+      /* Get this key and val. */
+      apr_hash_this (this, &key, &keylen, &val);
+      /* Output name length, then name. */
+      buf = apr_psprintf (iterpool, "K %" APR_SSIZE_T_FMT "\n", keylen);
+
+      limit = strlen (buf);
+      SVN_ERR (svn_stream_write (stream, buf, &limit));
+
+      SVN_ERR (svn_stream_write (stream, (const char *) key, &keylen));
+      SVN_ERR (svn_stream_printf (stream, iterpool, "\n"));
+
+      /* Output value length, then value. */
+      value = val;
+
+      buf = apr_psprintf (iterpool, "V %" APR_SIZE_T_FMT "\n", value->len);
+      limit = strlen (buf);
+      SVN_ERR (svn_stream_write (stream, buf, &limit));
+
+      limit = value->len;
+      SVN_ERR (svn_stream_write (stream, value->data, &limit));
+
+      SVN_ERR (svn_stream_printf (stream, iterpool, "\n"));
+    }
+
+  svn_pool_destroy (iterpool);
+
+  SVN_ERR (svn_stream_printf (stream, pool, "END\n"));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -295,6 +349,75 @@ open_and_seek_revision (apr_file_t **file,
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   *file = rev_file;
+
+  return SVN_NO_ERROR;
+}
+
+/* Open the representation for a node-revision in transaction TXN_ID
+   in filesystem FS and store the newly opened file in FILE.  Seek to
+   location OFFSET before returning.  Perform temporary allocations in
+   POOL. */
+static svn_error_t *
+open_and_seek_transaction (apr_file_t **file,
+                           svn_fs_t *fs,
+                           const svn_fs_id_t *id,
+                           const char *txn_id,
+                           apr_off_t offset,
+                           svn_boolean_t directory_contents,
+                           apr_pool_t *pool)
+{
+  const char *filename;
+  apr_file_t *rev_file;
+
+  filename = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                 apr_pstrcat (pool, txn_id,
+                                              SVN_FS_FS__TXNS_EXT, NULL),
+                                 NULL);
+
+  if (! directory_contents)
+    {
+      filename = svn_path_join (filename, SVN_FS_FS__REV, pool);
+    }
+  else
+    {
+      filename = svn_path_join (filename,
+                                apr_psprintf (pool, "%s.%s"
+                                              SVN_FS_FS__CHILDREN_EXT,
+                                              id->node_id, id->copy_id),
+                                pool);
+    }
+
+  SVN_ERR (svn_io_file_open (&rev_file, filename,
+                             APR_READ, APR_OS_DEFAULT, pool));
+
+  SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
+
+  *file = rev_file;
+
+  return SVN_NO_ERROR;
+}
+
+/* Given a node-id ID, and a representation REP in filesystem FS, open
+   the correct file and seek to the correction location.  Store this
+   file in *FILE_P.  Perform any allocations in POOL. */
+static svn_error_t *
+open_and_seek_representation (apr_file_t **file_p,
+                              svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              svn_fs__representation_t *rep,
+                              apr_pool_t *pool)
+{
+  if (! rep->txn_id)
+    {
+      SVN_ERR (open_and_seek_revision (file_p, fs, rep->revision, rep->offset,
+                                       pool));
+    }
+  else
+    {
+      SVN_ERR (open_and_seek_transaction (file_p, fs, id, rep->txn_id,
+                                          rep->offset,
+                                          rep->is_directory_contents, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -967,6 +1090,7 @@ read_contents_write_handler (void *baton,
 static svn_error_t *
 rep_read_get_baton (struct rep_read_baton **rb_p,
                     svn_fs_t *fs,
+                    const svn_fs_id_t *id,
                     svn_fs__representation_t *rep,
                     apr_pool_t *pool)
 {
@@ -988,8 +1112,7 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   b->is_delta = FALSE;
 
   /* Open the revision file. */
-  SVN_ERR (open_and_seek_revision (&b->rep_file, fs, rep->revision, 
-                                   rep->offset, pool));
+  SVN_ERR (open_and_seek_representation (&b->rep_file, fs, id, rep, pool));
 
   /* Read in the REP line. */
   SVN_ERR (read_rep_line (&rep_args, b->rep_file, pool));
@@ -1125,6 +1248,7 @@ rep_read_contents (void *baton,
 static svn_error_t *
 get_representation_at_offset (svn_stream_t **contents_p,
                               svn_fs_t *fs,
+                              const svn_fs_id_t *id,
                               svn_fs__representation_t *rep,
                               apr_pool_t *pool)
 {
@@ -1136,7 +1260,7 @@ get_representation_at_offset (svn_stream_t **contents_p,
     }
   else
     {
-      SVN_ERR (rep_read_get_baton (&rb, fs, rep, pool));
+      SVN_ERR (rep_read_get_baton (&rb, fs, id, rep, pool));
       *contents_p = svn_stream_create (rb, pool);
       svn_stream_set_read (*contents_p, rep_read_contents);
       svn_stream_set_close (*contents_p, rep_read_contents_close);
@@ -1151,8 +1275,8 @@ svn_fs__fs_get_contents (svn_stream_t **contents_p,
                          svn_fs__node_revision_t *noderev,
                          apr_pool_t *pool)
 {
-  SVN_ERR (get_representation_at_offset (contents_p, fs, noderev->data_rep,
-                                         pool));
+  SVN_ERR (get_representation_at_offset (contents_p, fs, noderev->id,
+                                         noderev->data_rep, pool));
   
   return SVN_NO_ERROR;
 }
@@ -1233,7 +1357,7 @@ svn_fs__fs_get_proplist (apr_hash_t **proplist_p,
 
   proplist = apr_hash_make (pool);
 
-  SVN_ERR (get_representation_at_offset (&stream, fs, 
+  SVN_ERR (get_representation_at_offset (&stream, fs, noderev->id,
                                          noderev->prop_rep, pool));
   
   SVN_ERR (hash_read (proplist, stream, pool));
@@ -1944,6 +2068,44 @@ svn_fs__fs_purge_txn (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Given a hash ENTRIES of dirent structions, return a hash in
+   *STR_ENTRIES_P, that has svn_string_t as the values in the format
+   specified by the fs_fs directory contents file.  Perform
+   allocations in POOL. */
+static svn_error_t *
+unparse_dir_entries (apr_hash_t **str_entries_p,
+                     apr_hash_t *entries,
+                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *str_entries_p = apr_hash_make (pool);
+
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const svn_string_t *new_val;
+
+      apr_hash_this (hi, &key, &klen, &val);
+
+      dirent = val;
+
+      new_val = svn_string_createf (pool, "%s %s",
+                                    (dirent->kind == svn_node_file) ?
+                                    SVN_FS_FS__FILE : SVN_FS_FS__DIR,
+                                    svn_fs_unparse_id (dirent->id,
+                                                       pool)->data);
+
+      apr_hash_set (*str_entries_p, key, klen, new_val);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs__fs_set_entry (svn_fs_t *fs,
                       const char *txn_id,
@@ -1953,7 +2115,22 @@ svn_fs__fs_set_entry (svn_fs_t *fs,
                       svn_node_kind_t kind,
                       apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *entries, *str_entries;
+  svn_fs_dirent_t *dirent;
+  svn_stream_t *out_stream;
+
+  /* First read in the existing directory entry. */
+  SVN_ERR (svn_fs__fs_rep_contents_dir (&entries, fs, parent_noderev, pool));
+
+  dirent = apr_pcalloc (pool, sizeof (*dirent));
+  dirent->id = svn_fs__id_copy (id, pool);
+  dirent->kind = kind;
+  apr_hash_set (entries, name, APR_HASH_KEY_STRING, dirent);
+
+  SVN_ERR (unparse_dir_entries (&str_entries, entries, pool));
+  SVN_ERR (svn_fs__fs_set_contents (&out_stream, fs, parent_noderev, pool));
+  SVN_ERR (hash_write (str_entries, out_stream, pool));
+  SVN_ERR (svn_stream_close (out_stream));
 
   return SVN_NO_ERROR;
 }
@@ -1968,18 +2145,263 @@ svn_fs__fs_add_change (svn_fs_t *fs,
                        svn_boolean_t prop_mod,
                        apr_pool_t *pool)
 {
-  abort ();
+  apr_file_t *file;
+  svn_stream_t *stream;
+  const char *txn_dir, *change_string;
+
+  txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                apr_pstrcat (pool, id->txn_id,
+                                             SVN_FS_FS__TXNS_EXT, NULL),
+                                NULL);
+
+  SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir, SVN_FS_FS__CHANGES,
+                                                   pool),
+                             APR_APPEND | APR_WRITE | APR_CREATE,
+                             APR_OS_DEFAULT, pool));
+
+  stream = svn_stream_from_aprfile (file, pool);
+
+  switch (change_kind)
+    {
+    case svn_fs_path_change_modify:
+      change_string = SVN_FS_FS__ACTION_MODIFY;
+      break;
+    case svn_fs_path_change_add:
+      change_string = SVN_FS_FS__ACTION_ADD;
+      break;
+    case svn_fs_path_change_delete:
+      change_string = SVN_FS_FS__ACTION_DELETE;
+      break;
+    case svn_fs_path_change_replace:
+      change_string = SVN_FS_FS__ACTION_REPLACE;
+      break;
+    case svn_fs_path_change_reset:
+      change_string = SVN_FS_FS__ACTION_RESET;
+      break;
+    }
+
+  SVN_ERR (svn_stream_printf (stream, pool, "%s %s %s %s %s\n",
+                              svn_fs_unparse_id (id, pool)->data,
+                              change_string,
+                              text_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
+                              prop_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
+                              path));
+
+  SVN_ERR (svn_stream_close (stream));
 
   return SVN_NO_ERROR;
 }
-    
+
+/* This baton is used by the representation writing streams.  It keeps
+   track of the checksum information as well as the total size of the
+   representation so far. */
+struct rep_write_baton
+{
+  /* The FS we are writing to. */
+  svn_fs_t *fs;
+
+  /* Location of the representation we are writing. */
+  svn_stream_t *rep_stream;
+
+  /* Where is this representation stored. */
+  apr_off_t rep_offset;
+
+  /* How many bytes have been written to this rep already. */
+  svn_filesize_t rep_size;
+
+  /* The node revision for which we're writing out info. */
+  svn_fs__node_revision_t *noderev;
+
+  /* Is this the data representation? */
+  svn_boolean_t is_data_rep;
+
+  struct apr_md5_ctx_t md5_context;
+
+  apr_pool_t *pool;
+};
+
+/* Handler for the write method of the representation writable stream.
+   BATON is a rep_write_baton, DATA is the data to write, and *LEN is
+   the length of this data. */
+static svn_error_t *
+rep_write_contents (void *baton,
+                    const char *data,
+                    apr_size_t *len)
+{
+  struct rep_write_baton *b = baton;
+
+  apr_md5_update (&b->md5_context, data, *len);
+
+  SVN_ERR (svn_stream_write (b->rep_stream, data, len));
+  b->rep_size += *len;
+
+  return SVN_NO_ERROR;
+}
+
+/* Open the correct writable file to append a representation for
+   node-id ID in filesystem FS.  If this representation is for a
+   directory node's contents, IS_DIRECTORY_CONTENTS should be TRUE.
+   Store the resulting writable file in *FILE_P.  Perform allocations
+   in POOL. */
+static svn_error_t *
+open_and_seek_representation_write (apr_file_t **file_p,
+                                    svn_fs_t *fs,
+                                    const svn_fs_id_t *id,
+                                    svn_boolean_t is_directory_contents,
+                                    apr_pool_t *pool)
+{
+  apr_file_t *file;
+  const char *txn_dir;
+
+  txn_dir = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
+                                apr_pstrcat (pool, id->txn_id,
+                                             SVN_FS_FS__TXNS_EXT, NULL),
+                                NULL);
+
+  /* If this is a normal representation, i.e. not directory contents,
+     then just open up the rev file in append mode. */
+  if (! is_directory_contents)
+    {
+      SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir,
+                                                       SVN_FS_FS__REV,
+                                                       pool),
+                                 APR_APPEND | APR_WRITE | APR_CREATE,
+                                 APR_OS_DEFAULT, pool));
+    }
+  else
+    {
+      const char *children_name;
+
+      children_name = svn_path_join (txn_dir,
+                                     apr_psprintf (pool, "%s.%s"
+                                                   SVN_FS_FS__CHILDREN_EXT,
+                                                   id->node_id, id->copy_id),
+                                     pool);
+
+      SVN_ERR (svn_io_file_open (&file, children_name,
+                                 APR_WRITE | APR_TRUNCATE | APR_CREATE,
+                                 APR_OS_DEFAULT, pool));
+    }
+
+  *file_p = file;
+
+  return SVN_NO_ERROR;
+}
+
+/* Get a rep_write_baton and store it in *WB_P for the representation
+   indicated by NODEREV and IS_DATA_REP in filesystem FS.  Perform
+   allocations in POOL. */
+static svn_error_t *
+rep_write_get_baton (struct rep_write_baton **wb_p,
+                     svn_fs_t *fs,
+                     svn_fs__node_revision_t *noderev,
+                     svn_boolean_t is_data_rep,
+                     apr_pool_t *pool)
+{
+  struct rep_write_baton *b;
+  apr_file_t *file;
+
+  b = apr_pcalloc (pool, sizeof (*b));
+
+  apr_md5_init (&(b->md5_context));
+
+  b->fs = fs;
+  b->pool = pool;
+  b->rep_size = 0;
+  b->is_data_rep = is_data_rep;
+  b->noderev = noderev;
+
+  /* Open the file we are writing to. */
+  SVN_ERR (open_and_seek_representation_write (&file, fs, noderev->id,
+                                               (noderev->kind == svn_node_dir)
+                                               && is_data_rep,
+                                               pool));
+
+
+  b->rep_stream = svn_stream_from_aprfile (file, pool);
+
+  SVN_ERR (svn_stream_printf (b->rep_stream, pool, "\n"));
+
+  b->rep_offset = 0;
+  SVN_ERR (svn_io_file_seek (file, APR_CUR, &b->rep_offset, pool));
+
+  /* Write out the REP line. */
+  SVN_ERR (svn_stream_printf (b->rep_stream, pool, "PLAIN\n"));
+
+  *wb_p = b;
+
+  return SVN_NO_ERROR;
+}
+
+/* Close handler for the representation write stream.  BATON is a
+   rep_write_baton.  Writes out a new node-rev that correctly
+   references the representation we just finished writing. */
+static svn_error_t *
+rep_write_contents_close (void *baton)
+{
+  struct rep_write_baton *b = baton;
+  svn_fs__representation_t *rep;
+
+  rep = apr_pcalloc (b->pool, sizeof (*rep));
+  rep->offset = b->rep_offset;
+  rep->size = b->rep_size;
+  rep->expanded_size = b->rep_size;
+  rep->txn_id = b->noderev->id->txn_id;
+  rep->revision = SVN_INVALID_REVNUM;
+  if ((b->noderev->kind == svn_node_dir) && b->is_data_rep)
+    rep->is_directory_contents = TRUE;
+
+  apr_md5_final (rep->checksum, &b->md5_context);
+
+  if (b->is_data_rep)
+    {
+      b->noderev->data_rep = rep;
+      if (b->noderev->kind != svn_node_dir)
+        SVN_ERR (svn_stream_printf (b->rep_stream, b->pool, "END\n"));
+    }
+  else
+    {
+      b->noderev->prop_rep = rep;
+    }
+
+  SVN_ERR (svn_stream_close (b->rep_stream));
+
+  /* Write out the new node-rev information. */
+  SVN_ERR (svn_fs__fs_put_node_revision (b->fs, b->noderev->id, b->noderev,
+                                         b->pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Store a writable stream in *CONTENTS_P that will receive all data
+   written and store it as the representation referenced by NODEREV
+   and IS_DATA_REP in filesystem FS.  Perform temporary allocations in
+   POOL. */
+static svn_error_t *
+set_representation (svn_stream_t **contents_p,
+                    svn_fs_t *fs,
+                    svn_fs__node_revision_t *noderev,
+                    svn_boolean_t is_data_rep,
+                    apr_pool_t *pool)
+{
+  struct rep_write_baton *wb;
+
+  SVN_ERR (rep_write_get_baton (&wb, fs, noderev, is_data_rep, pool));
+
+  *contents_p = svn_stream_create (wb, pool);
+  svn_stream_set_write (*contents_p, rep_write_contents);
+  svn_stream_set_close (*contents_p, rep_write_contents_close);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_set_contents (svn_stream_t **stream,
                          svn_fs_t *fs,
                          svn_fs__node_revision_t *noderev,
                          apr_pool_t *pool)
 {
-  abort ();
+  SVN_ERR (set_representation (stream, fs, noderev, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
