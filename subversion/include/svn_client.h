@@ -139,9 +139,14 @@ void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
  * @a pool.
  *
  * This is like svn_client_get_simmple_provider, except that, when
- * running on Window 2000 or newer, the provider encrypts the password
- * before storing it to disk. On earler versions of Windows, the
- * provider does nothing.
+ * running on Window 2000 or newer (or any other Windows version that
+ * includes the CryptoAPI), the provider encrypts the password before
+ * storing it to disk. On earler versions of Windows, the provider
+ * does nothing.
+ *
+ * @note An administrative password reset may invalidate the account's
+ * secret key. This function will detect that situation and behave as
+ * if the password were not cached at all.
  */
 void svn_client_get_windows_simple_provider (
   svn_auth_provider_object_t **provider,

@@ -68,12 +68,18 @@ get_os_username (apr_pool_t *pool)
 
 
 /* A function that takes a password IN, mangles it as per spec, and
-   returns it in OUT. The mangled password may be allocated in
-   POOL. */
+   returns the mangled password in *OUT.  *OUT is either allocated in
+   POOL, or is the same as IN. */
 typedef svn_boolean_t (*password_mangler_t) (const char **out, const char *in,
                                              apr_pool_t *pool);
 
 
+/* Common implementation for simple_first_creds and
+   windows_simple_first_creds. Uses PARAMETERS, REALMSTRING and the
+   simple auth provider's username and password cache to fill a set of
+   CREDENTIALS. MANGLE_PASSWORD transforms the cached password value
+   to its in-memory representation. PASSTYPE identifies the type of
+   the cached password. CREDENTIALS are allocated from POOL. */
 static svn_error_t *
 simple_first_creds_helper (void **credentials,
                            void **iter_baton,
@@ -177,6 +183,12 @@ simple_first_creds_helper (void **credentials,
 }
 
 
+/* Common implementation for simple_save_creds and
+   windows_simple_save_creds. Uses PARAMETERS and REALMSTRING to save
+   a set of CREDENTIALS to the simple auth provider's username and
+   password cache. MANGLE_PASSWORD transforms the in-memory
+   representation of the password to its cached form. PASSTYPE
+   identifies the type of the cached password. Allocates from POOL. */
 static svn_error_t *
 simple_save_creds_helper (svn_boolean_t *saved,
                           void *credentials,
@@ -245,7 +257,8 @@ simple_save_creds_helper (svn_boolean_t *saved,
   return SVN_NO_ERROR;
 }
 
-
+/* A no-op implementation of password_mangler_t for
+   simple_first_creads and simple_save_creds. */
 static svn_boolean_t
 simple_password_mangler (const char **out, const char *in, apr_pool_t *pool)
 {
@@ -254,6 +267,7 @@ simple_password_mangler (const char **out, const char *in, apr_pool_t *pool)
   return TRUE;
 }
 
+/* Get cached (unencrypted) credentials from the simple provider's cache. */
 static svn_error_t *
 simple_first_creds (void **credentials,
                     void **iter_baton,
@@ -270,6 +284,7 @@ simple_first_creds (void **credentials,
                                     pool);
 }
 
+/* Save (unencrypted) credentials to the simple provider's cache. */
 static svn_error_t *
 simple_save_creds (svn_boolean_t *saved,
                    void *credentials,
@@ -497,16 +512,25 @@ svn_client_get_simple_prompt_provider (
 
 
 /*-----------------------------------------------------------------------*/
-/* Windows simple provider                                               */
+/* Windows simple provider, encrypts the password on Win2k and later.    */
 /*-----------------------------------------------------------------------*/
 
 #ifdef WIN32
 #include <wincrypt.h>
 #include <apr_base64.h>
 
+/* The description string that's combined with unencrypted data by the
+   Windows CryptoAPI. Used during decryption to verify that the
+   encrypted data were valid. */
 static const WCHAR description[] = L"auth_svn.simple.wincrypt";
+
+/* The password type used by the windows simple auth provider, passed
+   into simple_first_creds_helper and simple_save_creds_helper. */
 static const char windows_crypto_type[] = "wincrypt";
 
+/* Dynamically load the address of function NAME in PDLL into
+   PFN. Return TRUE if the function name was found, otherwise
+   FALSE. Equivalent to dlsym(). */
 static svn_boolean_t
 get_crypto_function (const char *name, HINSTANCE *pdll, FARPROC *pfn)
 {
@@ -525,6 +549,8 @@ get_crypto_function (const char *name, HINSTANCE *pdll, FARPROC *pfn)
   return FALSE;
 }
 
+/* Implementation of password_mangler_t that encrypts the incoming
+   password using the Windows CryptoAPI. */
 static svn_boolean_t
 windows_password_encrypter (const char **out, const char *in, apr_pool_t *pool)
 {
@@ -563,6 +589,8 @@ windows_password_encrypter (const char **out, const char *in, apr_pool_t *pool)
   return crypted;
 }
 
+/* Implementation of password_mangler_t that decrypts the incoming
+   password using the Windows CryptoAPI and verifies its validity. */
 static svn_boolean_t
 windows_password_decrypter (const char **out, const char *in, apr_pool_t *pool)
 {
@@ -604,6 +632,7 @@ windows_password_decrypter (const char **out, const char *in, apr_pool_t *pool)
   return decrypted;
 }
 
+/* Get cached encrypted credentials from the simple provider's cache. */
 static svn_error_t *
 windows_simple_first_creds (void **credentials,
                             void **iter_baton,
@@ -620,6 +649,7 @@ windows_simple_first_creds (void **credentials,
                                     pool);
 }
 
+/* Save encrypted credentials to the simple provider's cache. */
 static svn_error_t *
 windows_simple_save_creds (svn_boolean_t *saved,
                            void *credentials,
