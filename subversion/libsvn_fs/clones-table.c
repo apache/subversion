@@ -154,6 +154,10 @@ svn_fs__record_clone (svn_fs_t *fs,
   skel_t *clone;
   DBT key, value;
 
+  /* The logic here is wrong.  A `cloned' entry can override a `moved'
+     entry, but not another `cloned' entry.  */
+  abort ();
+
   /* Assemble the CLONE skel.  */
   clone = svn_fs__make_empty_list (pool);
   svn_fs__prepend (svn_fs__mem_atom (clone_id_string->data,
@@ -167,6 +171,7 @@ svn_fs__record_clone (svn_fs_t *fs,
 				     svn_fs__str_to_dbt (&key, key_str),
 				     svn_fs__skel_to_dbt (&value, clone, pool),
 				     0)));
+
 
   return 0;
 }
@@ -201,6 +206,10 @@ svn_fs__record_rename (svn_fs_t *fs,
 				     svn_fs__str_to_dbt (&key, key_str),
 				     svn_fs__skel_to_dbt (&value, clone, pool),
 				     0)));
+
+  /* The logic here is wrong.  A `moved' entry can override another
+     `moved' entry, but not a `cloned' entry.  */
+  abort ();
 
   return 0;
 }
