@@ -175,11 +175,13 @@ AC_ARG_ENABLE(experimental-libtool,
 if test "$experimental_libtool" = "yes"; then
   echo "using APR's libtool"
   LIBTOOL="`$apr_config --apr-libtool`"
-  AC_SUBST(LIBTOOL)
+  SVN_LIBTOOL="`$apr_config --apr-libtool`"
 else
-  dnl libtoolize requires that the following not be indented
+  SVN_LIBTOOL='$(SHELL) $(abs_builddir)/libtool'
+  dnl libtoolize requires that the following line not be indented
 AC_PROG_LIBTOOL
 fi
+AC_SUBST(SVN_LIBTOOL)
 
 dnl Before configuring libtool check for --enable-all-static option
 AC_ARG_ENABLE(all-static,
