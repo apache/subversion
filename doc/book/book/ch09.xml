@@ -4665,6 +4665,10 @@ Modified: trunk/vendors/deli/sandwich.txt
 @@ -0,0 +1 @@
 +Don't forget the mayo!
 
+Modified: trunk/vendors/deli/logo.jpg
+==============================================================================
+(Binary files differ)
+
 Deleted: trunk/vendors/deli/chips.txt
 ==============================================================================
 
@@ -4672,6 +4676,10 @@ Deleted: trunk/vendors/deli/pickle.txt
 ==============================================================================
 </screen>
           
+       <para>
+       If a file has a non-textual <literal>svn:mime-type</literal>
+       property, then the differences are not explicitly shown.
+       </para>
         </refsect1>
       </refentry>
 
