@@ -93,7 +93,7 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
-* Sat Dec 27 2003 David Summers <david@summersoft.fay.ar.us> 0.32.5-8104
+* Sat Dec 27 2003 David Summers <david@summersoft.fay.ar.us> 0.35.1-8104
 - Patch by Ben Reser <ben@reser.org> to get documentation to build again.
 - Updated to apache 2.0.48 (apr/apr-util 0.9.5).
 - Added svnserve and svnserve.conf man pages.
