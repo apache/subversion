@@ -48,6 +48,7 @@ add_dir_recursive (const char *dirname,
   apr_pool_t *subpool;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   svn_wc_adm_access_t *dir_access;
+  apr_array_header_t *ignores;
 
   /* Add this directory to revision control. */
   SVN_ERR (svn_wc_add (dirname, adm_access,
@@ -55,6 +56,8 @@ add_dir_recursive (const char *dirname,
                        ctx->notify_func, ctx->notify_baton, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
+
+  SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
 
   /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create (pool);
@@ -76,6 +79,9 @@ add_dir_recursive (const char *dirname,
       if (this_entry.name[0] == '.'
           && (this_entry.name[1] == '\0'
               || (this_entry.name[1] == '.' && this_entry.name[2] == '\0')))
+        continue;
+
+      if (svn_wc_is_ignored (this_entry.name, ignores))
         continue;
 
       /* Construct the full path of the entry. */
