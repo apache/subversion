@@ -25,9 +25,7 @@
 
 /* THINGS TODO:  Currently the code herein gives only a slight nod to
    fully supporting directory deltas that involve renames, copies, and
-   such, and has no real handling for the case where a file entry in a
-   source directory might have the same name as a directory entry in
-   the associated target directory, or vice versa.  */
+   such.  */
  
 
 /* Some datatypes and declarations used throughout the file.  */
@@ -126,11 +124,11 @@ static svn_error_t *replace_file_or_dir (struct context *c,
                                          svn_string_t *source_path, 
                                          svn_string_t *source_name);
 
-static svn_error_t *replace (struct context *c, 
-                             void *dir_baton,
-                             svn_string_t *source_path, 
-                             svn_string_t *target_path,
-                             svn_fs_dirent_t *t_entry);
+static svn_error_t *replace_with_nearest (struct context *c, 
+                                          void *dir_baton,
+                                          svn_string_t *source_path, 
+                                          svn_string_t *target_path,
+                                          svn_fs_dirent_t *t_entry);
 
 static svn_error_t *delta_dirs (struct context *c, 
                                 void *dir_baton,
@@ -189,6 +187,24 @@ svn_fs_dir_delta (svn_fs_root_t *source_root,
         (SVN_ERR_FS_PATH_SYNTAX, 0, 0, pool,
          "directory delta target path is invalid");
     }
+
+  {
+    int is_dir;
+
+    SVN_ERR (svn_fs_is_dir (&is_dir, source_root, source_path, pool));
+    if (! is_dir)
+      return
+        svn_error_create
+        (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+         "directory delta source path is not a directory");
+
+    SVN_ERR (svn_fs_is_dir (&is_dir, target_root, target_path, pool));
+    if (! is_dir)
+      return
+        svn_error_create
+        (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+         "directory delta target path is not a directory");
+  }      
     
   source_path_str = svn_string_create (source_path, pool);
   target_path_str = svn_string_create (target_path, pool);
@@ -614,6 +630,11 @@ replace_file_or_dir (struct context *c, void *dir_baton,
       target_full_path = svn_string_dup (target_path, c->pool);
       svn_path_add_component 
         (target_full_path, target_name, svn_path_repos_style);
+
+      /* Is the target a file or a directory?  */
+      SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
+                              target_full_path->data, c->pool));
+
     }
 
   if (source_path && source_name)
@@ -628,10 +649,6 @@ replace_file_or_dir (struct context *c, void *dir_baton,
                                               source_full_path,
                                               c->pool);
     }
-
-  /* Is the target a file or a directory?  */
-  SVN_ERR (svn_fs_is_dir (&is_dir, c->target_root, 
-                          target_full_path->data, c->pool));
 
   if (is_dir)
     {
@@ -663,9 +680,9 @@ replace_file_or_dir (struct context *c, void *dir_baton,
    TARGET_PATH.  Emit a replace_dir or replace_file as needed.  Choose
    an appropriate ancestor, or describe the file/tree from scratch.  */
 static svn_error_t *
-replace (struct context *c, void *dir_baton,
-         svn_string_t *source_path, svn_string_t *target_path,
-         svn_fs_dirent_t *t_entry)
+replace_with_nearest (struct context *c, void *dir_baton,
+                      svn_string_t *source_path, svn_string_t *target_path,
+                      svn_fs_dirent_t *t_entry)
 {
   apr_hash_t *s_entries;
   apr_hash_index_t *hi;
@@ -791,11 +808,32 @@ delta_dirs (struct context *c, void *dir_baton,
       if (s_entries 
           && ((s_entry = apr_hash_get (s_entries, key, klen)) != 0))
         {
-          /* Compare the ids to check for a noop situation */
-          if (! svn_fs_id_eq (s_entry->id, t_entry->id))
+          int distance;
+
+          /* Check the distance between the ids.  0 means they are the
+             same id, and this is a noop.  -1 means they are
+             unrelated, so we'll try to find a relative somewhere else
+             in the directory.  Any other positive value means they
+             are related through ancestry, so we'll go ahead and
+             do the replace directly.  */
+          distance = svn_fs_id_distance (s_entry->id, t_entry->id);
+          if (distance == 0)
             {
-              SVN_ERR (replace (c, dir_baton, source_path, 
-                                target_path, t_entry));
+              /* no-op */
+            }
+          else if (distance == -1)
+            {
+              SVN_ERR (replace_with_nearest (c, dir_baton, source_path, 
+                                             target_path, t_entry));
+            }
+          else
+            {
+              SVN_ERR (replace_file_or_dir
+                       (c, dir_baton, 
+                        source_path, 
+                        svn_string_create (s_entry->name, c->pool),
+                        target_path,
+                        svn_string_create (t_entry->name, c->pool)));
             }
 
           /*  Remove the entry from the source_hash. */
@@ -805,7 +843,7 @@ delta_dirs (struct context *c, void *dir_baton,
         {
           /* We didn't find an entry with this name in the source
              entries hash.  This must be something new that needs to
-             be added. */
+             be added.  */
           SVN_ERR (add_file_or_dir 
                    (c, dir_baton, target_path, 
                     svn_string_create (t_entry->name, c->pool)));
