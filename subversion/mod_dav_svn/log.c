@@ -177,7 +177,7 @@ static svn_error_t * log_receiver(void *baton,
 
             case 'M':
               SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
-                                         "<S:modified-path>%s",
+                                         "<S:modified-path>%s"
                                          "</S:modified-path>" DEBUG_CR,
                                          apr_xml_quote_string(pool, path, 0)) );
               break;
