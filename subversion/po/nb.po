@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-06-19 02:22+0200\n"
+"POT-Creation-Date: 2004-06-21 09:04+0200\n"
 "PO-Revision-Date: 2004-06-19 02:20+0200\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2591,8 +2591,8 @@ msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
 #: libsvn_client/diff.c:1206 libsvn_client/diff.c:1848
 #: libsvn_client/diff.c:2283 libsvn_client/diff.c:2388
-#: libsvn_client/prop_commands.c:170 libsvn_client/prop_commands.c:386
-#: libsvn_client/prop_commands.c:537 libsvn_client/prop_commands.c:859
+#: libsvn_client/prop_commands.c:171 libsvn_client/prop_commands.c:387
+#: libsvn_client/prop_commands.c:538 libsvn_client/prop_commands.c:881
 #: libsvn_client/revisions.c:92 libsvn_client/status.c:120
 #: libsvn_client/status.c:169 libsvn_client/switch.c:114
 #: libsvn_client/update.c:85 libsvn_wc/adm_ops.c:2067 libsvn_wc/copy.c:291
@@ -2896,26 +2896,26 @@ msgstr "Ingen get(dir) tilgjengelig for URL-klasse"
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL-en '%s' finnes ikke i den revisjonen"
 
-#: libsvn_client/prop_commands.c:147
+#: libsvn_client/prop_commands.c:148
 #, c-format
 msgid "Revision property '%s' not allowed in this context"
 msgstr "Revisjonsegenskapen '%s' er ikke tillatt i denne sammenhengen."
 
-#: libsvn_client/prop_commands.c:157
+#: libsvn_client/prop_commands.c:158
 #, c-format
 msgid "Setting property on non-local target '%s' not yet supported"
 msgstr "Å sette egenskap på ikke-lokalt mål '%s' er foreløpig ikke støttet"
 
-#: libsvn_client/prop_commands.c:163 libsvn_client/prop_commands.c:218
+#: libsvn_client/prop_commands.c:164 libsvn_client/prop_commands.c:219
 #, c-format
 msgid "Bad property name: '%s'"
 msgstr "Ugyldig navn på egenskap: '%s'"
 
-#: libsvn_client/prop_commands.c:214
+#: libsvn_client/prop_commands.c:215
 msgid "Value will not be set unless forced"
 msgstr "Verdien blir ikke satt uten tvang"
 
-#: libsvn_client/prop_commands.c:440 libsvn_client/prop_commands.c:684
+#: libsvn_client/prop_commands.c:441 libsvn_client/prop_commands.c:689
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "Ukjent node-type for '%s'"
