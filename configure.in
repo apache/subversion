@@ -413,12 +413,10 @@ if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   svn_ra_lib_deps="\$(RA_DAV_DEPS)"
   svn_ra_lib_link="\$(RA_DAV_LINK)"
 
-  if /bin/false; then
-    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
-        [Defined if libsvn_client should link against libsvn_ra_svn])
-    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
-    svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
-  fi
+  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
+      [Defined if libsvn_client should link against libsvn_ra_svn])
+  svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
+  svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
 
   if test "$enable_ra_pipe" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_PIPE, 1,

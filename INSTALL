@@ -935,9 +935,3 @@ III.  BUILDING A SUBVERSION SERVER
 
       Expect the server invocation options to change incompatibly
       before they are finalized.
-
-      If subversion/svnserve/ and subversion/libsvn_ra_svn/ aren't
-      compiled by the default build process, you can activate them by
-      uncommenting the [libsvn_ra_svn] and [svnserve] sections of
-      build.conf, and unblock the "if" statement of the ra_svn clause
-      within configure.in.
