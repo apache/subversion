@@ -50,8 +50,8 @@ extern "C" {
 #ifdef SVN_NEED_SWIG_TYPES
 
 typedef struct _unnamed swig_type_info;
-jobject *SWIG_NewPointerObj(JNIEnv *jenv, void *, swig_type_info *, int own);
-swig_type_info *SWIG_TypeQuery(JNIEnv *jenv, const char *name);
+jobject SWIG_NewPointerObj(void *, swig_type_info *, int own);
+swig_type_info *SWIG_TypeQuery(const char *name);
 
 #endif /* SVN_NEED_SWIG_TYPES */
 
