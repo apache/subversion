@@ -150,7 +150,7 @@ typedef struct
    working copy (in which case, DO_STORE and USE_ADMIN should both
    be FALSE, and BASE_ACCESS should be null).
 
-   The calling application's authentication baton is provided in AUTH_BATON,
+   The calling application's authentication baton is provided in CTX,
    and allocations related to this session are performed in POOL.  */
 svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            const svn_ra_plugin_t *ra_lib,
@@ -161,7 +161,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
                                            svn_boolean_t read_only_wc,
-                                           svn_client_auth_baton_t *auth_baton,
+                                           svn_client_ctx_t *ctx,
                                            apr_pool_t *pool);
 
 

@@ -236,7 +236,7 @@ svn_client__open_ra_session (void **session_baton,
                              svn_boolean_t do_store,
                              svn_boolean_t use_admin,
                              svn_boolean_t read_only_wc,
-                             svn_client_auth_baton_t *auth_baton,
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
@@ -249,7 +249,7 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
 
-  cb->auth_baton = auth_baton;
+  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &(cb->auth_baton)));
   cb->base_dir = base_dir;
   cb->base_access = base_access;
   cb->do_store = do_store;

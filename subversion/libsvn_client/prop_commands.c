@@ -148,7 +148,6 @@ svn_client_revprop_set (const char *propname,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const char *auth_dir;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data,
@@ -156,10 +155,9 @@ svn_client_revprop_set (const char *propname,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -463,15 +461,13 @@ svn_client_propget (apr_hash_t **props,
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
       svn_opt_revision_t new_revision;  /* only used in one case */
-      svn_client_auth_baton_t *auth_baton;
 
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
                                             auth_dir, NULL, NULL, TRUE,
-                                            FALSE, FALSE, auth_baton, pool));
+                                            FALSE, FALSE, ctx, pool));
 
       *props = apr_hash_make (pool);
 
@@ -592,17 +588,15 @@ svn_client_revprop_get (const char *propname,
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const char *auth_dir;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -855,14 +849,12 @@ svn_client_proplist (apr_array_header_t **props,
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
       svn_opt_revision_t new_revision;  /* only used in one case */
-      svn_client_auth_baton_t *auth_baton;
 
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
                                             NULL, NULL, NULL, TRUE,
-                                            FALSE, FALSE, auth_baton, pool));
+                                            FALSE, FALSE, ctx, pool));
 
       /* Default to HEAD. */
       if (revision->kind == svn_opt_revision_unspecified)
@@ -966,16 +958,14 @@ svn_client_revprop_list (apr_hash_t **props,
   svn_ra_plugin_t *ra_lib;
   apr_hash_t *proplist;
   apr_hash_index_t *hi;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
                                         NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */

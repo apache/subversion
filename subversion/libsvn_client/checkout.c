@@ -86,7 +86,6 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                                        pool));
 
     {
-      svn_client_auth_baton_t *auth_baton;
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
 
@@ -94,14 +93,12 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       /* Open an RA session to URL. Note that we do not have an admin area
          for storing temp files.  We do, however, want to store auth data
          after the checkout builds the WC. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, path,
                                             NULL, NULL, TRUE, FALSE, TRUE,
-                                            auth_baton, pool));
+                                            ctx, pool));
 
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));

@@ -61,7 +61,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                 svn_revnum_t *youngest,
                                 const char *path,
                                 svn_wc_adm_access_t *adm_access,
-                                svn_client_auth_baton_t *auth_baton,
+                                svn_client_ctx_t *ctx,
                                 svn_boolean_t descend,
                                 apr_pool_t *pool)
 {
@@ -105,7 +105,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
                                         anchor_access, NULL, TRUE, TRUE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Tell RA to drive a status-editor; this will fill in the
      repos_status_* fields in each status struct. */
@@ -170,15 +170,12 @@ svn_client_status (apr_hash_t **statushash,
 
   if (update)    
     {
-      svn_client_auth_baton_t *auth_baton;
-
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       /* Add "dry-run" update information to our existing structures.
          (Pass the DESCEND flag here, since we may want to ignore update
          info that is below PATH.)  */
-      SVN_ERR (add_update_info_to_status_hash (hash, youngest, path, adm_access,
-                                               auth_baton, descend, pool));
+      SVN_ERR (add_update_info_to_status_hash (hash, youngest, path,
+                                               adm_access, ctx,
+                                               descend, pool));
     }
 
   SVN_ERR (svn_wc_adm_close (adm_access));

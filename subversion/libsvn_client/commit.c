@@ -468,7 +468,7 @@ get_ra_editor (void **ra_baton,
                svn_revnum_t *latest_rev,
                const svn_delta_editor_t **editor,
                void **edit_baton,
-               svn_client_auth_baton_t *auth_baton,
+               svn_client_ctx_t *ctx,
                const char *base_url,
                const char *base_dir,
                svn_wc_adm_access_t *base_access,
@@ -490,7 +490,7 @@ get_ra_editor (void **ra_baton,
                                         base_url, base_dir, base_access,
                                         commit_items, is_commit,
                                         is_commit, !is_commit,
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Fetch the latest revision if requested. */
   if (latest_rev)
@@ -577,16 +577,13 @@ svn_client_import (svn_client_commit_info_t **commit_info,
     {
       svn_node_kind_t kind;
       const char *base_dir = path;
-      svn_client_auth_baton_t *auth_baton;
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       if (kind == svn_node_file)
         svn_path_split (path, &base_dir, NULL, pool);
 
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                              &editor, &edit_baton, auth_baton, url, base_dir,
+                              &editor, &edit_baton, ctx, url, base_dir,
                               NULL, log_msg, NULL, &committed_rev,
                               &committed_date, &committed_author, 
                               FALSE, pool));
@@ -754,7 +751,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
-  svn_client_auth_baton_t *auth_baton;
   const char *display_dir = "";
   int i;
 
@@ -789,8 +785,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
                             pool));
-
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
@@ -846,7 +840,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                                &editor, &edit_baton, auth_baton,
+                                &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
                                 log_msg, commit_items, &committed_rev, 
                                 &committed_date, &committed_author, 

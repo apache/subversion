@@ -766,7 +766,6 @@ do_merge (svn_wc_notify_func_t notify_func,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   const char *auth_dir;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -779,14 +778,12 @@ do_merge (svn_wc_notify_func_t notify_func,
 
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, target_wcpath, pool));
 
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
   /* Establish first RA session to URL1. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
            (&start_revnum, ra_lib, session, revision1, NULL, pool));
@@ -801,7 +798,7 @@ do_merge (svn_wc_notify_func_t notify_func,
      this limitation. */
   SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL1, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
-                                        auth_baton, pool));
+                                        ctx, pool));
   
   SVN_ERR (svn_client__get_diff_editor (target_wcpath,
                                         adm_access,
@@ -866,7 +863,6 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   enum svn_wc_merge_outcome_t merge_outcome;
   const char *auth_dir;
-  svn_client_auth_baton_t *auth_baton;
 
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -888,11 +884,9 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
 
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
   SVN_ERR (svn_client__open_ra_session (&session1, ra_lib, URL1, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
   SVN_ERR (svn_client__get_revision_number
            (&rev1, ra_lib, session1, revision1, NULL, pool));
   SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, NULL, &props1));
@@ -904,7 +898,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL2, pool));
   SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
   SVN_ERR (svn_client__get_revision_number
            (&rev2, ra_lib, session2, revision2, NULL, pool));
   SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL, &props2));
@@ -1066,7 +1060,6 @@ do_diff (const apr_array_header_t *options,
       const char *url_anchor, *url_target;
       svn_wc_adm_access_t *adm_access, *dir_access;
       svn_node_kind_t kind;
-      svn_client_auth_baton_t *auth_baton;
 
       /* Sanity check -- path2 better be a working-copy path. */
       if (svn_path_is_url (path2))
@@ -1099,12 +1092,10 @@ do_diff (const apr_array_header_t *options,
 
       SVN_ERR (svn_client__default_auth_dir (&auth_dir, path2, pool));
 
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url_anchor,
                                             auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE,
-                                            auth_baton, pool));
+                                            ctx, pool));
       
       /* Set up diff editor according to path2's anchor/target. */
       SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE, TRUE, pool));
@@ -1156,7 +1147,6 @@ do_diff (const apr_array_header_t *options,
       svn_boolean_t path1_is_url, path2_is_url;
       svn_node_kind_t path2_kind;
       void *session2;
-      svn_client_auth_baton_t *auth_baton;
 
       /* The paths could be *either* wcpaths or urls... */
       SVN_ERR (convert_to_url (&URL1, path1, pool));
@@ -1169,13 +1159,12 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1, pool));
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
       SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL2, auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
 
       /* Do the right thing in resolving revisions;  if the caller
          does something foolish like pass in URL@committed, then they
@@ -1249,7 +1238,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor1,
                                             auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
 
 
       /* Open a second session used to request individual file
@@ -1257,7 +1246,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, anchor1,
                                             auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE,
-                                            auth_baton, pool));      
+                                            ctx, pool));      
 
       /* Set up the repos_diff editor on path2's anchor, assuming
          path2 is a wc_dir.  if path2 is a URL, then we want to anchor

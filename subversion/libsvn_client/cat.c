@@ -47,20 +47,17 @@ svn_client_cat (svn_stream_t* out,
   svn_string_t *eol_style;
   apr_hash_t *props;
   const char *auth_dir;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
-
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir, NULL,
                                         NULL, FALSE, FALSE, FALSE,
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Resolve REVISION into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
