@@ -535,7 +535,6 @@ cl_status (VALUE self, VALUE aPath,
   pool = svn_pool_create (NULL);
   path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  /* ### todo: `youngest' is tossed right now. */
   err = svn_client_status (&statushash, &youngest, path, auth_baton,
                            RTEST (descend), RTEST (get_all),
                            RTEST (update), pool);
@@ -546,7 +545,14 @@ cl_status (VALUE self, VALUE aPath,
       svn_ruby_raise (err);
     }
 
-  obj = svn_ruby_wc_to_statuses (statushash, pool);
+  if (RTEST (update))
+    {
+      obj = rb_ary_new2 (2);
+      rb_ary_store (obj, 0, INT2NUM (youngest));
+      rb_ary_store (obj, 1, svn_ruby_wc_to_statuses (statushash, pool));
+    }
+  else
+    obj = svn_ruby_wc_to_statuses (statushash, pool);
   return obj;
 }
 
