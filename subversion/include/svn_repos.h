@@ -29,6 +29,7 @@ extern "C" {
 #include "svn_error.h"
 
 
+/* ---------------------------------------------------------------*/
 
 /* Making changes to a filesystem, editor-style.  */
 
@@ -63,6 +64,59 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                                    svn_repos_commit_hook_t *hook,
                                    void *hook_baton,
                                    apr_pool_t *pool);
+
+/* ---------------------------------------------------------------*/
+
+/* The `reporter' vtable routines (for updates). */
+
+
+/* A structure used by the routines within the `reporter' vtable,
+   driven by the client as it describes its working copy revisions. */
+typedef struct svn_repos_report_baton_t
+{
+  /* The transaction being built in the repository, a mirror of the
+     working copy. */
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  /* The location under which all reporting will happen (in the fs) */
+  svn_string_t *base_path;
+
+  /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
+     decide which revision to compare the transaction against. */
+  svn_revnum_t revnum_to_update_to;
+
+  /* The working copy editor driven by svn_fs_dir_delta(). */
+  const svn_delta_edit_fns_t *update_editor;
+  void *update_edit_baton;
+
+  /* This hash describes the mixed revisions in the transaction; it
+     maps pathnames (char *) to revision numbers (svn_revnum_t). */
+  apr_hash_t *path_rev_hash;
+
+  /* Pool from the session baton. */
+  apr_pool_t *pool;
+
+} svn_repos_report_baton_t;
+
+
+
+/* Given a properly constructed REPORT_BATON, this routine will build
+   REVISION:PATH into the current transaction.  This routine is called
+   multiple times to create a transaction that is a "mirror" of a
+   working copy. */
+svn_error_t *
+svn_repos_set_path (void *report_baton,
+                    svn_string_t *path,
+                    svn_revnum_t revision);
+
+
+/* Make the filesystem compare the transaction to a revision and have
+   it drive an update editor (using svn_repos_delta_dirs()).  Then
+   abort the transaction. */
+svn_error_t *
+svn_repos_finish_report (void *report_baton);
 
 
 

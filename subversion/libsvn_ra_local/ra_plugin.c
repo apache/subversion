@@ -57,8 +57,8 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
 
 static const svn_ra_reporter_t ra_local_reporter = 
 {
-  svn_ra_local__set_path,
-  svn_ra_local__finish_report
+  svn_repos_set_path,
+  svn_repos_finish_report
 };
 
 
@@ -240,7 +240,7 @@ do_update (void *session_baton,
            void *update_baton)
 {
   svn_revnum_t revnum_to_update_to;
-  svn_ra_local__report_baton_t *rbaton;
+  svn_repos_report_baton_t *rbaton;
   svn_ra_local__session_baton_t *sbaton = 
     (svn_ra_local__session_baton_t *) session_baton;
   svn_revnum_t *rev_ptr = apr_pcalloc (sbaton->pool, sizeof(*rev_ptr));
