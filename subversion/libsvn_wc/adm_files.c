@@ -865,7 +865,8 @@ check_adm_exists (svn_boolean_t *exists,
     {
       /* If got an error other than dir non-existence, then
          something's weird and we should return a genuine error. */
-      return svn_error_create (APR_ENOTDIR, NULL, tmp_path);
+      return svn_error_createf (APR_ENOTDIR, NULL,
+                                "'%s' is not a directory", tmp_path);
     }
   else if (kind == svn_node_none)
     {

@@ -1544,9 +1544,7 @@ svn_io_detect_mimetype (const char **mimetype,
   /* Read a block of data from FILE. */
   apr_err = apr_file_read (fh, block, &amt_read);
   if (apr_err && ! APR_STATUS_IS_EOF(apr_err))
-    return svn_error_createf (apr_err, NULL,
-                              "svn_io_detect_mimetype: error reading '%s'",
-                              file);
+    return svn_error_wrap_apr (apr_err, "Can't read '%s'", file);
 
   /* Now close the file.  No use keeping it open any more.  */
   apr_file_close (fh);
@@ -2143,7 +2141,7 @@ svn_io_read_version_file (int *version,
   len = sizeof(buf);
   apr_err = apr_file_read (format_file, buf, &len);
   if (apr_err)
-    return svn_error_createf (apr_err, 0, "reading '%s'", path);
+    return svn_error_wrap_apr (apr_err, "Can't read '%s'", path);
 
   /* If there was no data in PATH, return an error. */
   if (len == 0)

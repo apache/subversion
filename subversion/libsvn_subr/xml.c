@@ -361,7 +361,7 @@ svn_xml_parse (svn_xml_parser_t *svn_parser,
     {
       err = svn_error_createf
         (SVN_ERR_XML_MALFORMED, NULL, 
-         "%s at line %d",
+         "Malformed XML: %s at line %d",
          XML_ErrorString (XML_GetErrorCode (svn_parser->parser)),
          XML_GetCurrentLineNumber (svn_parser->parser));
       

@@ -586,7 +586,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                           target, subpool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
       if (! entry)
-        return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, target);
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                  "'%s' is not under version control", target);
       if (! entry->url)
         return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL, 
                                   "Entry for '%s' has no URL", target);
@@ -710,8 +711,9 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   /* Read the entry for TARGET. */
   SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
   if (! entry)
-    return svn_error_create 
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL, target);
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL, "'%s' is not under version control",
+       target);
       
   /* Handle our TARGET. */
   SVN_ERR (harvest_committables (*committables, target, adm_access,

@@ -752,8 +752,7 @@ check_entries (apr_hash_t *entries,
   if (! default_entry)
     return svn_error_createf
       (SVN_ERR_WC_CORRUPT, NULL,
-       "'%s' has no default entry",
-       path);
+       "Corrupt working copy: '%s' has no default entry", path);
 
   /* Validate DEFAULT_ENTRY's current schedule. */
   switch (default_entry->schedule)
@@ -769,7 +768,7 @@ check_entries (apr_hash_t *entries,
       /* This is an invalid state */
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT, NULL,
-         "Directory '%s' has an invalid schedule",
+         "Corrupt working copy: directory '%s' has an invalid schedule",
          path);
     }
   
@@ -803,6 +802,7 @@ check_entries (apr_hash_t *entries,
           /* This is an invalid state */
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT, NULL,
+             "Corrupt working copy: "
              "'%s' in directory '%s' has an invalid schedule",
              name, path);
         }
@@ -811,24 +811,24 @@ check_entries (apr_hash_t *entries,
           && (this_entry->schedule != svn_wc_schedule_add))
         return svn_error_createf
           (SVN_ERR_WC_CORRUPT, NULL,
-           "'%s' in directory '%s' (which is scheduled for addition) "
-           "is not itself scheduled for addition",
+           "Corrupt working copy: '%s' in directory '%s' (which is scheduled "
+           "for addition) is not itself scheduled for addition",
            name, path);
   
       if ((default_entry->schedule == svn_wc_schedule_delete)
           && (this_entry->schedule != svn_wc_schedule_delete))
         return svn_error_createf
           (SVN_ERR_WC_CORRUPT, NULL,
-           "'%s' in directory '%s' (which is scheduled for deletion) "
-           "is not itself scheduled for deletion",
+           "Corrupt working copy: '%s' in directory '%s' (which is scheduled "
+           "for deletion) is not itself scheduled for deletion",
            name, path);
 
       if ((default_entry->schedule == svn_wc_schedule_replace)
           && (this_entry->schedule == svn_wc_schedule_normal))
         return svn_error_createf
           (SVN_ERR_WC_CORRUPT, NULL,
-           "'%s' in directory '%s' (which is scheduled for replacement) "
-           "has in invalid schedule",
+           "Corrupt working copy: '%s' in directory '%s' (which is scheduled "
+           "for replacement) has in invalid schedule",
            name, path);
     }
   

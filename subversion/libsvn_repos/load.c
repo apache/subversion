@@ -338,7 +338,7 @@ parse_text_block (svn_stream_t *stream,
             {
               /* Uh oh, didn't write as many bytes as we read. */
               return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Error pushing textual contents.");
+                                       "Unexpected EOF writing contents");
             }
         }
     }
