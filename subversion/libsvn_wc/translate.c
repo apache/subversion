@@ -436,19 +436,20 @@ svn_wc_copy_and_translate (const char *src,
   char       src_format[2] = { 0 };
   apr_size_t src_format_len = 0;
 
-#if 0 /* ### todo:  here's a little shortcut */
   if (! (eol_str || keywords))
     return svn_io_copy_file (src, dst, pool);
 
-#endif /* 0 */
   /* Open source file. */
-  apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
+  apr_err = apr_file_open (&s, src, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool);
   if (apr_err)
     return translate_err (apr_err, "opening", src, pool);
   
   /* Open dest file. */
-  apr_err = apr_file_open (&d, dst, APR_WRITE | APR_CREATE | APR_TRUNCATE, 
-                           APR_OS_DEFAULT, pool);
+  apr_err
+    = apr_file_open (&d, dst,
+                     APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
+                     APR_OS_DEFAULT, pool);
   if (apr_err)
     {
       apr_file_close (s); /* toss */
@@ -689,10 +690,10 @@ svn_wc_copy_and_translate (const char *src,
 
  cleanup:
   if (s)
-    apr_file_close (s); /* toss */
+    apr_file_close (s); /* toss error */
   if (d)
-    apr_file_close (d); /* toss */
-  apr_file_remove (dst, pool); /* toss */
+    apr_file_close (d); /* toss error */
+  apr_file_remove (dst, pool); /* toss error */
   return err;
 #endif /* ! SVN_TRANSLATE */
 }
