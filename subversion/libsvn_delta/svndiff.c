@@ -363,7 +363,6 @@ write_handler (void *baton,
   const unsigned char *p, *end;
   apr_off_t val, sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen, remaining, npos;
-  svn_error_t *err;
   svn_txdelta_op_t *op;
   int ninst;
 
@@ -489,7 +488,7 @@ write_handler (void *baton,
       window.new_data = &new_data;
 
       /* Send it off.  */
-      err = db->consumer_func (&window, db->consumer_baton);
+      SVN_ERR(db->consumer_func (&window, db->consumer_baton));
 
       /* Make a new subpool and buffer, saving aside the remaining
          data in the old buffer.  */
@@ -512,7 +511,7 @@ write_handler (void *baton,
       db->subpool = newpool;
     }
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
