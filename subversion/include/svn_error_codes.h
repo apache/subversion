@@ -771,12 +771,12 @@ SVN_ERROR_START
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_UNREADABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 1,
-              "Item is not readable.")
+              "Item is not readable")
 
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_PARTIALLY_READABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 2,
-              "Item is partially readable.")
+              "Item is partially readable")
 
 
   /* svndiff errors */

@@ -1013,7 +1013,7 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
   status = apr_stat (&finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't get default file perms "
-                                         "for file at '%s' (file stat error"),
+                                         "for file at '%s' (file stat error)"),
                                path);
 
   apr_file_close(fd);

@@ -151,7 +151,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
                  svn_path_local_style (path, pool));
               if (entry->incomplete)
                 errmsg = apr_pstrcat
-                  (pool, errmsg, _("; run 'svn update' to complete it."), NULL);
+                  (pool, errmsg, _("; run 'svn update' to complete it"), NULL);
 
               return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                                        errmsg);

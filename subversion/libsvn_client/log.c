@@ -318,7 +318,7 @@ svn_client_log (const apr_array_header_t *targets,
       /* Log receivers are free to handle revision 0 specially... But
          just in case some don't, we make up a message here. */
       SVN_ERR (receiver (receiver_baton,
-                         NULL, 0, "", "", _("No commits in repository."),
+                         NULL, 0, "", "", _("No commits in repository"),
                          pool));
     }
 

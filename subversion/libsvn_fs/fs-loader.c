@@ -803,7 +803,7 @@ svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters."));      
+           _("Lock comment has illegal characters"));      
     }
 
   return fs->vtable->lock (lock, fs, path, token, comment, timeout,

@@ -293,7 +293,7 @@ svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
     {
       return svn_error_createf 
         (SVN_ERR_AUTHZ_UNREADABLE, NULL,
-         _("Write denied:  not authorized to read all of revision %ld."), rev);
+         _("Write denied:  not authorized to read all of revision %ld"), rev);
     }
 
   return SVN_NO_ERROR;
