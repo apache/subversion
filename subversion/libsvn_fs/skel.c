@@ -531,6 +531,38 @@ svn_fs__list_length (skel_t *skel)
 
 
 
+/* Comparing skels. */
+
+int
+svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
+{
+  if (skel1->is_atom && skel2->is_atom)
+    {
+      if ((skel1->len == skel2->len)
+          && (strncmp (skel1->data, skel2->data, skel1->len)))
+        return 1;
+      else
+        return 0;
+    }
+  else if (((! skel1->is_atom) && (! skel2->is_atom))
+           && ((svn_fs__list_length (skel1)) == (svn_fs__list_length (skel2))))
+    {
+      int len = svn_fs__list_length (skel1);
+      int i;
+      
+      for (i = 0; i < len; i++)
+        if (! svn_fs__skels_are_equal ((skel1->children) + i,
+                                       (skel2->children) + i))
+          return 0;
+
+      return 1;
+    }
+  else
+    return 0;
+}
+
+
+
 /* Copying skels.  */
 
 
