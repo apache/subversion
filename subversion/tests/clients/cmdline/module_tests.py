@@ -34,9 +34,10 @@ import svntest
 def externals_test_setup(sbox):
   """Set up a repository in which some directories have the externals property,
   and set up another repository, referred to by some of those externals.
-  Both repositories contain greek trees, but only the first has any
-  externals properties.  ### Later, test putting externals on the
-                             second repository. ###
+  Both repositories contain greek trees with five revisions worth of
+  random changes, then in the sixth revision the first repository --
+  and only the first -- has some externals properties set.  ### Later,
+  test putting externals on the second repository. ###
 
   The arrangement of the externals in the first repository is:
 
@@ -45,7 +46,7 @@ def externals_test_setup(sbox):
 
      /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
                     exdir_A/G        <schema>:///<other_repos>/A/D/G
-                    exdir_A/H  -r 1  <schema>:///<other_repos>/A/D/H
+                    exdir_A/H  -r 3  <schema>:///<other_repos>/A/D/H
                     x/y/z/blah       <schema>:///<other_repos>/A/B/E
 
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
@@ -55,36 +56,81 @@ def externals_test_setup(sbox):
   if sbox.build():
     return 1
 
-  wc_dir         = sbox.wc_dir + ".init"  # just for setting up props
+  shutil.rmtree(sbox.wc_dir) # The test itself will recreate this
+
+  wc_init_dir    = sbox.wc_dir + ".init"  # just for setting up props
   repo_dir       = sbox.repo_dir
   repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
   other_repo_dir = repo_dir + ".other"
   other_repo_url = repo_url + ".other"
   
-  B_path = os.path.join(wc_dir, "A/B")
-  D_path = os.path.join(wc_dir, "A/D")
+  # These files will get changed in revisions 2 through 5.
+  mu_path = os.path.join(wc_init_dir, "A/mu")
+  pi_path = os.path.join(wc_init_dir, "A/D/G/pi")
+  lambda_path = os.path.join(wc_init_dir, "A/B/lambda")
+  omega_path = os.path.join(wc_init_dir, "A/D/H/omega")
 
-  # Create the "other" repository, the one to which the first
-  # repository's `svn:externals' properties refer.
-  shutil.copytree(repo_dir, other_repo_dir)
+  # These are the directories on which `svn:externals' will be set, in
+  # revision 6 on the first repo.
+  B_path = os.path.join(wc_init_dir, "A/B")
+  D_path = os.path.join(wc_init_dir, "A/D")
 
-  stdout_lines, stderr_lines = svntest.main.run_svn \
-                               (None, 'checkout', repo_url, '-d', wc_dir)
-  if len(stderr_lines) != 0:
+  # Create a working copy.
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'checkout', repo_url, '-d', wc_init_dir)
+  if err_lines:
     return 1
+
+  # Make revisions 2 through 5, but don't bother with pre- and
+  # post-commit status checks.
+
+  svntest.main.file_append(mu_path, "\nAdded to mu in revision 2.\n")
+  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
+                                              '--quiet', wc_init_dir)
+  if (err_lines):
+    return 1
+
+  svntest.main.file_append(pi_path, "\nAdded to pi in revision 3.\n")
+  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
+                                              '--quiet', wc_init_dir)
+  if (err_lines):
+    return 1
+
+  svntest.main.file_append(lambda_path, "\nAdded to lambda in revision 4.\n")
+  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
+                                              '--quiet', wc_init_dir)
+  if (err_lines):
+    return 1
+
+  svntest.main.file_append(omega_path, "\nAdded to omega in revision 5.\n")
+  out_lines, err_lines = svntest.main.run_svn(None, 'ci', '-m', 'log msg', \
+                                              '--quiet', wc_init_dir)
+  if (err_lines):
+    return 1
+
+  # Get the whole working copy to revision 5.
+  out_lines, err_lines = svntest.main.run_svn(None, 'up', wc_init_dir)
+  if (err_lines):
+    return 1
+
+  # Now copy the initial repository to create the "other" repository,
+  # the one to which the first repository's `svn:externals' properties
+  # will refer.  After this, both repositories have five revisions
+  # of random stuff, with no svn:externals props set yet.
+  shutil.copytree(repo_dir, other_repo_dir)
 
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
            "exdir_D       " + os.path.join(other_repo_url, "A/D/G") + "\n" + \
            "exdir_H  -r1  " + os.path.join(other_repo_url, "A/D/H") + "\n"
 
-  tmp_f = os.tempnam(wc_dir, 'tmp')
+  tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
-  stdout_lines, stderr_lines = svntest.main.run_svn \
-                               (None, 'propset', '-F', tmp_f,
-                                'svn:externals', B_path)
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'propset', '-F', tmp_f,
+                          'svn:externals', B_path)
 
-  if len(stderr_lines) != 0:
+  if err_lines:
     return 1
    
   os.remove(tmp_f)
@@ -100,10 +146,10 @@ def externals_test_setup(sbox):
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
-  stdout_lines, stderr_lines = svntest.main.run_svn \
-                               (None, 'propset', '-F', tmp_f,
-                                'svn:externals', D_path)
-  if len(stderr_lines) != 0:
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'propset', '-F', tmp_f,
+                          'svn:externals', D_path)
+  if err_lines:
     return 1
 
   os.remove(tmp_f)
@@ -114,34 +160,30 @@ def externals_test_setup(sbox):
                   [D_path, None, {}, {'verb' : 'Sending' }]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list = svntest.actions.get_virginal_status_list(wc_init_dir, '5')
   for item in status_list:
-    item[3]['repos_rev'] = '2'
+    item[3]['repos_rev'] = '6'
     if ((item[0] == B_path) or (item[0] == D_path)):
-      item[3]['wc_rev'] = '2'
+      item[3]['wc_rev'] = '6'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
-  return svntest.actions.run_and_verify_commit(wc_dir,
+  return svntest.actions.run_and_verify_commit(wc_init_dir,
                                                expected_output_tree,
                                                expected_status_tree,
                                                None, None, None, None, None,
-                                               wc_dir)
+                                               wc_init_dir)
 
 
 def externals_test_cleanup(sbox):
   """Clean up the 'other' repository for SBOX."""
-  # It appears that shutil.rmtree() ignores its `ignore_error'
-  # argument under certain circumstances, making it not quite as
-  # robust as "rm -rf".  I've already submitted a patch, see
-  #
-  # http://sourceforge.net/tracker/index.php?func=detail&aid=566517&group_id=5470&atid=305470
-  # 
-  # Meanwhile, we'll just catch any exceptions ourselves.
-  try:
-    shutil.rmtree(sbox.repo_dir + ".other", 1)
-    shutil.rmtree(sbox.wc_dir + ".init", 1)
-  except:
-    pass
+  if os.path.exists(sbox.repo_dir):
+    shutil.rmtree(sbox.repo_dir)
+  if os.path.exists(sbox.wc_dir):
+    shutil.rmtree(sbox.wc_dir)
+  if os.path.exists(sbox.repo_dir + ".other"):
+    shutil.rmtree(sbox.repo_dir + ".other")
+  if os.path.exists(sbox.wc_dir + ".init"):
+    shutil.rmtree(sbox.wc_dir + ".init")
 
 #----------------------------------------------------------------------
 
@@ -152,16 +194,15 @@ def checkout(sbox):
   if externals_test_setup(sbox):
     return 1
 
-  wc_dir = sbox.wc_dir
+  wc_dir         = sbox.wc_dir
+  repo_dir       = sbox.repo_dir
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
 
-#  stdout_lines, stderr_lines = svntest.main.run_svn \
-#                               (None, 'propget',
-#                                'svn:externals',
-#                                os.path.join (wc_dir + ".init", "A/B"))
-#  if (stdout_lines):
-#     map (sys.stdout.write, stdout_lines)
-#  else:
-#    print "Where are the properties?"
+  # Create a working copy.
+  out_lines, err_lines = svntest.main.run_svn (None, 'checkout', repo_url, \
+                                               '-d', wc_dir)
+  if err_lines:
+    return 1
 
   return 0
 

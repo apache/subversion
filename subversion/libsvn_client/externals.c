@@ -133,7 +133,7 @@ parse_externals_description (apr_hash_t **externals_p,
               item->url = APR_ARRAY_IDX (line_parts, 3, const char *);
             }
 
-          if (! r_part_1)
+          if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
             goto parse_error;
 
           if (! r_part_2)  /* "-rN" */
