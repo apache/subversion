@@ -461,10 +461,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   rv = ne_read_file(sess, url_str->data, fetch_file_reader, &frc);
   if (rv != NE_OK)
     {
-      /* ### other GET responses? */
-
-      /* ### need an SVN_ERR here */
-      err = svn_error_create(APR_EGENERAL, 0, NULL, pool, ne_get_error(sess));
+      err = svn_ra_dav__convert_error(sess, "fetching a file", rv, pool);
     }
   /* else: err == NULL */
 
@@ -643,12 +640,8 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
      userdata. */
   rv = ne_read_file(ras->sess, final_url, get_file_reader, stream);
   if (rv != NE_OK)
-    {
-      /* ### other GET responses? */
-      /* ### need more specific SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, ras->pool,
-                              ne_get_error(ras->sess));
-    }  
+    return svn_ra_dav__convert_error(ras->sess, "fetching one file", rv,
+                                     ras->pool);
 
   return SVN_NO_ERROR;
 }

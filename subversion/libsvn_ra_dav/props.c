@@ -349,22 +349,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
   if (rv != NE_OK)
     {
-      switch (rv)
-        {
-        case NE_CONNECT:
-          /* ### need an SVN_ERR here */
-          return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
-                                   "Could not connect to server for '%s'",
-                                   url_str->data);
-        case NE_AUTH:
-          return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL, 
-                                  pool,
-                                  "Authentication failed on server.");
-        default:
-          /* ### need an SVN_ERR here */
-          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                                  ne_get_error(sess));
-        }
+      const char *msg = apr_psprintf(pool, "PROPFIND of %s", url_str->data);
+      return svn_ra_dav__convert_error(sess, msg, rv, pool);
     }
 
   if (404 == status_code)
