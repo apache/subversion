@@ -1006,7 +1006,7 @@ svn_repos_create (svn_repos_t **repos_p,
   SVN_ERR_W (create_repos_structure (repos, path, pool),
              _("Repository creation failed"));
   
-  /* Create a Berkeley DB environment for the filesystem. */
+  /* Create an environment for the filesystem. */
   if ((err = svn_fs_create (&repos->fs, repos->db_path, fs_config, pool)))
     {
       /* If there was an error making the filesytem, e.g. unknown/supported
@@ -1122,7 +1122,7 @@ get_repos (svn_repos_t **repos_p,
     SVN_ERR_W (err, _("Error opening db lockfile"));
   }
 
-  /* Open up the Berkeley filesystem only after obtaining the lock. */
+  /* Open up the filesystem only after obtaining the lock. */
   if (open_fs)
     SVN_ERR (svn_fs_open (&repos->fs, repos->db_path, NULL, pool));
 
@@ -1178,7 +1178,7 @@ svn_repos_delete (const char *path,
 {
   const char *db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
 
-  /* Delete the Berkeley environment... */
+  /* Delete the filesystem environment... */
   SVN_ERR (svn_fs_delete_fs (db_path, pool));
 
   /* ...then blow away everything else.  */
