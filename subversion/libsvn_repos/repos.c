@@ -238,15 +238,15 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# the same.\n"
       "# \n"
       "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "#\n"
-      "# REPOS=${1}\n"
-      "# USER=${2}\n"
-      "#\n"
-      "# commit-allower.pl --repository ${REPOS} --user ${USER} || exit 1\n"
-      "# special-auth-check.py --user ${USER} --auth-level 3 || exit 1\n"
-      "#\n"
+      "\n"
+      "REPOS=\"$1\"\n"
+      "USER=\"$2\"\n"
+      "\n"
+      "commit-allower.pl --repository \"$REPOS\" --user \"$USER\" || exit 1\n"
+      "special-auth-check.py --user \"$USER\" --auth-level 3 || exit 1\n"
+      "\n"
       "# All checks passed, so allow the commit.\n"
-      "# exit 0\n";
+      "exit 0\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -310,22 +310,22 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# the same.\n"
       "#\n"
       "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "#\n"
-      "# REPOS=${1}\n"
-      "# TXN=${2}\n"
-      "#\n"
-      "# ## Make sure that the log message contains some text.\n"
-      "# SVNLOOK=/usr/local/bin/svnlook\n"
-      "# LOG=`${SVNLOOK} ${REPOS} txn ${TXN} log`\n"
-      "# echo \"${LOG}\" | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
-      "#\n"
-      "# ## Check that the author of this commit has the rights to perform\n"
-      "# ## the commit on the files and directories being modified.\n"
-      "# commit-access-control.pl ${REPOS} ${TXN} commit-access-control.cfg "
+      "\n"
+      "REPOS=\"$1\"\n"
+      "TXN=\"$2\"\n"
+      "\n"
+      "# Make sure that the log message contains some text.\n"
+      "SVNLOOK=/usr/local/bin/svnlook\n"
+      "LOG=`$SVNLOOK \"$REPOS\" txn \"$TXN\" log`\n"
+      "echo \"$LOG\" | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
+      "\n"
+      "# Check that the author of this commit has the rights to perform\n"
+      "# the commit on the files and directories being modified.\n"
+      "commit-access-control.pl \"$REPOS\" \"$TXN\" commit-access-control.cfg "
       "|| exit 1\n"
-      "#\n"
+      "\n"
       "# All checks passed, so allow the commit.\n"
-      "# exit 0\n";
+      "exit 0\n";
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -390,12 +390,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# the same.\n"
       "# \n"
       "# Here is an example hook script, for a Unix /bin/sh interpreter:\n"
-      "#\n"
-      "# REPOS=${1}\n"
-      "# REV=${2}\n"
-      "#\n"
-      "# commit-email.pl ${REPOS} ${REV} commit-watchers@example.org\n"
-      "# log-commit.py --repository ${REPOS} --revision ${REV}\n";
+      "\n"
+      "REPOS=\"$1\"\n"
+      "REV=\"$2\"\n"
+      "\n"
+      "commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org\n"
+      "log-commit.py --repository \"$REPOS\" --revision \"$REV\"\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
