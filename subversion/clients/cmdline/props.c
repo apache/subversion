@@ -53,7 +53,7 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       propkey = svn_stringbuf_ncreate (key, klen, pool);
       propval = (svn_stringbuf_t *) val;
 
-      printf ("%s : %s\n", propkey->data, propval->data);
+      printf ("  %s : %s\n", propkey->data, propval->data);
     } 
 }
 

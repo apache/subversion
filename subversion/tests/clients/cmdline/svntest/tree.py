@@ -218,9 +218,11 @@ def get_props(path):
   # respecting the black-box paradigm.
 
   props = {}
-  output, errput = main.run_svn(None, "proplist", path)
+  output, errput = main.run_svn(1, "proplist", path)
 
   for line in output:
+    if line.startswith('Properties on '):
+      continue
     name, value = line.split(' : ')
     name = string.strip(name)
     value = string.strip(value)

@@ -38,7 +38,6 @@ svn_cl__proplist (apr_getopt_t *os,
                   svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_array_header_t *targets;
   int i;
 
@@ -50,13 +49,18 @@ svn_cl__proplist (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-      apr_hash_t *prop_hash = apr_hash_make (pool);
+      apr_array_header_t *props;
+      int j;
 
-      err = svn_wc_prop_list (&prop_hash, target, pool);
-      if (err)
-        return err;
+      SVN_ERR (svn_client_proplist(&props, target, opt_state->recursive, pool));
 
-      svn_cl__print_prop_hash (prop_hash, pool);
+      for (j = 0; j < props->nelts; ++j)
+        {
+          svn_client_proplist_item_t *item 
+              = ((svn_client_proplist_item_t **)props->elts)[j];
+          printf("Properties on '%s':\n", item->node_name->data);
+          svn_cl__print_prop_hash (item->prop_hash, pool);
+        }
     }
 
   return SVN_NO_ERROR;
