@@ -648,9 +648,9 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 
   err = sync_adm_file (path,
                        pool,
-                       2,
                        SVN_WC__ADM_TEXT_BASE,
-                       last_component->data);
+                       last_component->data,
+                       NULL);
   
   /* Restore caller's path unconditionally. */
   svn_path_add_component (path, last_component,
