@@ -2,9 +2,7 @@
 #
 # gen-make.py -- generate makefiles for building Subversion
 #
-# USAGE:
-#    gen-make.py [-s] [BUILD-CONFIG]
-#
+
 
 import os
 import sys
