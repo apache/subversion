@@ -76,6 +76,13 @@ Outline Mode:
   STATUS: Karl is waiting on Ben's props-over-DAV work, then will do
           (though volunteers welcome!)
 
+*** binary updates
+
+   Make sure we don't try to run 'diff' and 'patch' when we receive a
+   new version of a binary file.  Just copy the new version out into
+   the working copy and rename one of them.
+
+
 *** cross-process read/write lock function for DB_RUN_RECOVERY. (gstein)
 
   ESTIMATE: 1 programmer week.  Might be less, betting conservatively.
@@ -112,6 +119,9 @@ Outline Mode:
   htaccess file?
 
   ESTIMATE: ?  Need to start discussion on the list about this.
+
+** optimize deltification if time permits.
+
 
 * ALPHA items
 
