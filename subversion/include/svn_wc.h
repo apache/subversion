@@ -1120,13 +1120,17 @@ typedef struct svn_wc_entry_t
   /** last commit author of this item */
   const char *cmt_author;
 
-  /** lock token or NULL if path not locked in this WC */
+  /** @since New in 1.2
+   *  lock token or NULL if path not locked in this WC */
   const char *lock_token;
-  /** lock owner, or NULL if not locked in this WC */
+  /** @since New in 1.2
+   *  lock owner, or NULL if not locked in this WC */
   const char *lock_owner;
-  /** lock comment or NULL if not locked in this WC or no comment */
+  /** @since New in 1.2
+   *  lock comment or NULL if not locked in this WC or no comment */
   const char *lock_comment;
-  /** Lock creation date or 0 if not locked in this WC */
+  /** @since New in 1.2
+   *  Lock creation date or 0 if not locked in this WC */
   apr_time_t lock_crt_date;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup to see
