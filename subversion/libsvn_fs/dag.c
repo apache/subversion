@@ -512,7 +512,7 @@ set_entry (dag_node_t *parent,
 {
   svn_fs__node_revision_t *parent_noderev;
   const char *rep_key, *mutable_rep_key;
-  apr_hash_t *entries;
+  apr_hash_t *entries = NULL;
   svn_stream_t *wstream;
   apr_size_t len;
   svn_string_t raw_entries;
@@ -540,11 +540,7 @@ set_entry (dag_node_t *parent,
 
   /* If the new representation inherited nothing, start a new entries
      list for it.  Else, go read its existing entries list. */
-  if (! rep_key)
-    {
-      entries = apr_hash_make (trail->pool);
-    }
-  else
+  if (rep_key)
     {
       SVN_ERR (svn_fs__rep_contents (&raw_entries, fs, 
                                      mutable_rep_key, trail));
@@ -553,9 +549,11 @@ set_entry (dag_node_t *parent,
       if (entries_skel)
         SVN_ERR (svn_fs__parse_entries_skel (&entries, entries_skel, 
                                              trail->pool));
-      else
-        entries = apr_hash_make (trail->pool);
     }
+
+  /* If we still have no ENTRIES hash, make one here.  */
+  if (! entries)
+    entries = apr_hash_make (trail->pool);
 
   /* Now, add our new entry to the entries list. */
   apr_hash_set (entries, name, APR_HASH_KEY_STRING, (void *) id);
