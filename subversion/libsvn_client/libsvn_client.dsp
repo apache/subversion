@@ -115,6 +115,10 @@ SOURCE=.\commit.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\commit_util.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\copy.c
 # End Source File
 # Begin Source File
