@@ -52,17 +52,19 @@
 
 
 /* 
- * NOT EXPORTED.
- * 
- * Input:  an open file, a bytestring ptr, and a pool.
- * 
- * Returns:  either APR_EOF or APR_SUCCESS, and a filled-in bytestring
- *           containing the next line of the file.
- * 
- * (Note that the same bytestring can be reused in multiple
- * calls to this routine, because the bytestring is cleared at
- * the beginning.)  
- */
+   NOT EXPORTED.
+
+   Input:  an open file, a bytestring ptr, and a pool.
+
+   Returns:  either APR_EOF or APR_SUCCESS, and a filled-in bytestring
+             containing the next line of the file.
+
+         (Note that the same bytestring can be reused in multiple
+         calls to this routine, because the bytestring is cleared at
+         the beginning.)  
+*/
+
+
 ap_status_t
 my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 {
@@ -98,19 +100,20 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 
 
 /* 
- * NOT EXPORTED.
- *
- * Input:  a bytestring, a handle for returning a bytestring, the
- *         starting search offset, the search character, and pool
- *
- * Returns:  1. The offset of the search character (-1 if no match)
- *           2. A newly allocated substring in *substr (NULL if no match)
- *             - This substring starts at `start' and goes to the offset
- *             -This substring has no whitespace at either end
- *
- * If used repeatedly, this routine is like a poor man's `split' 
- * (combined with chomp).
- */
+   NOT EXPORTED.
+
+   Input:  a bytestring, a handle for returning a bytestring, the
+           starting search offset, search character, and pool 
+
+   Returns:  1. the offset of the search character (-1 if no match)
+             2. a newly allocated substring in "substr" (NULL if no match)
+                * This substring starts at `start' and goes to the offset
+                * This substring has no whitespace at either end
+
+     If used repeatedly, this routine is like a poor man's `split' 
+     (combined with chomp).
+*/
+
 int
 slurp__to (const svn_string_t *searchstr,
            svn_string_t **substr,
@@ -128,6 +131,8 @@ slurp__to (const svn_string_t *searchstr,
     {
       if (searchstr->data[i] == sc)
         {
+          /*          printf ("found character '%c' at offset %d\n", sc, i);*/
+
           svn_string_appendbytes (*substr,               /* new substring */
                                   searchstr->data + start,/* start copy */
                                   (i - start),        /* number to copy */
@@ -140,30 +145,36 @@ slurp__to (const svn_string_t *searchstr,
     }
 
   /* If we get here, then the bytestring doesn't contain our search
-     character. */
+     character.  This is bogus. */
   
   *substr = NULL;
   return -1;
 }
 
 
-/* svn_parse()                        (finally)
- * 
- * Input:  a filename and pool
- * 
- * Output: a pointer to a hash of hashes, all built within the pool
- * 
- * This routine parses a file which conforms to the standard
- * Subversion config file format (see notes/svn-config-files).
- * 
- * The hash returned is a mapping from section-names to hash pointers;
- * each hash contains the keys/vals for each section.  All
- * section-names, keys and vals are stored as svn_string_t pointers.
- * (These bytestrings are allocated in the same pool as the hashes.)
- * 
- * This routine makes no attempt to understand the sections, keys or
- * values.
- */
+
+
+
+/* 
+   svn_parse()                        (finally)
+
+
+   Input:  a filename and pool
+
+   Output: a pointer to a hash of hashes, all built within the pool
+
+   This routine parses a file which conforms to the standard
+   Subversion config file format (look in notes/).  
+
+   The hash returned is a mapping from section-names to hash pointers;
+   each hash contains the keys/vals for each section.  All
+   section-names, keys and vals are stored as svn_string_t pointers.
+   (These bytestrings are allocated in the same pool as the hashes.)
+
+   This routine makes no attempt to understand the sections, keys or
+   values.  :) */
+
+
 ap_hash_t *
 svn_parse (svn_string_t *filename, ap_pool_t *pool)
 {
@@ -183,7 +194,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
   result = ap_open (&FILE,
                     svn_string_2cstring (filename, pool),
                     APR_READ,
-                    APR_OS_DEFAULT, /* TODO: WHAT IS THIS? */
+                    APR_OS_DEFAULT, /*TODO: WHAT IS THIS? */
                     pool);
   
   if (result != APR_SUCCESS)

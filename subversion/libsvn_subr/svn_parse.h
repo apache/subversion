@@ -60,17 +60,23 @@
 #include <ctype.h>           /* isspace() */
 
 
-/* Returns a hash of hashes. (see `notes/svn-config-files' for format). */
+/* 
+   Returns a hash of hashes.
+
+   For file format, see `notes/svn-config-files'
+*/
+
 ap_hash_t * svn_parse (svn_string_t *filename, ap_pool_t *pool);
 
 
-/* ****** Stuff below is mainly for testing. ****** */
-
 /* Prints a hash, assuming all keys/vals are (svn_string_t *) */
+
 void svn_hash_print (ap_hash_t *hash, FILE *stream);
 
-/* Prints uberhash returned from svn_parse(), assuming each key is
-   (svn_string_t *) and each val is printable by svn_hash_print(). */
+/* Prints uberhash returned from svn_parse(),
+   assuming each key is (svn_string_t *)
+   and each val is printable by svn_hash_print(). */
+
 void svn_uberhash_print (ap_hash_t *uberhash, FILE *stream);
 
 
