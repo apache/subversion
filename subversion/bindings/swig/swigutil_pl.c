@@ -51,9 +51,9 @@ static void *convert_pl_obj (SV *value, swig_type_info *tinfo, apr_pool_t *pool)
 }
 
 /* perl -> c hash convertors */
-static const apr_hash_t *svn_swig_pl_to_hash(SV *source,
-                                             pl_element_converter_t cv,
-                                             void *ctx, apr_pool_t *pool)
+static apr_hash_t *svn_swig_pl_to_hash(SV *source,
+                                       pl_element_converter_t cv,
+                                       void *ctx, apr_pool_t *pool)
 {
     apr_hash_t *hash;
     HV *h;
@@ -76,24 +76,24 @@ static const apr_hash_t *svn_swig_pl_to_hash(SV *source,
     return hash;
 }
 
-const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
-					   apr_pool_t *pool)
+apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
+                                     apr_pool_t *pool)
 {
 
     return svn_swig_pl_to_hash(source, (pl_element_converter_t)convert_pl_obj,
                                tinfo, pool);
 }
 
-const apr_hash_t *svn_swig_pl_strings_to_hash(SV *source, apr_pool_t *pool)
+apr_hash_t *svn_swig_pl_strings_to_hash(SV *source, apr_pool_t *pool)
 {
 
     return svn_swig_pl_to_hash(source, convert_pl_string, NULL, pool);
 }
 
 
-const apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
-						   const char *typename,
-						   apr_pool_t *pool)
+apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
+                                             const char *typename,
+                                             apr_pool_t *pool)
 {
     swig_type_info *tinfo = SWIG_TypeQuery(typename);
     return svn_swig_pl_objs_to_hash (source, tinfo, pool);
@@ -669,7 +669,7 @@ static svn_error_t * thunk_abort_edit(void *edit_baton,
     return close_baton(edit_baton, "abort_edit");
 }
 
-void svn_delta_make_editor(const svn_delta_editor_t **editor,
+void svn_delta_make_editor(svn_delta_editor_t **editor,
 			   void **edit_baton,
 			   SV *perl_editor,
 			   apr_pool_t *pool)

@@ -53,18 +53,25 @@
 %typemap(python, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
-%typemap(perl5, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
+%typemap(perl5, in, numinputs=0) enum SWIGTYPE *OUTENUM (long temp) {
     $1 = ($1_ltype)&temp;
 }
+
+%typemap(perl5, argout) enum SWIGTYPE *OUTENUM {
+    if (argvi >= items) {
+        EXTEND(sp,1);
+    }
+    $result = sv_newmortal();
+    sv_setiv($result,(IV) *($1));
+    argvi++;
+}
+
 %typemap(java, in) enum SWIGTYPE *OUTENUM ($*1_type temp) {
     $1 = ($1_ltype)&temp;
 }
 %typemap(python, argout, fragment="t_output_helper") enum SWIGTYPE *OUTENUM {
     $result = t_output_helper($result, PyInt_FromLong(*$1));
 }
-#ifdef SWIGPERL
-%apply long *OUTPUT { enum SWIGTYPE *OUTENUM };
-#endif
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -146,7 +153,8 @@
 /* -----------------------------------------------------------------------
    'svn_revnum_t *' and 'svn_boolean_t *' will always be an OUTPUT parameter
 */
-%apply long *OUTPUT { svn_revnum_t *, svn_boolean_t * };
+%apply long *OUTPUT { svn_revnum_t * };
+%apply int *OUTPUT { svn_boolean_t * };
 
 /* -----------------------------------------------------------------------
    Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
@@ -203,7 +211,14 @@
   }
 
 %typemap(perl5, in) (const char *PTR, apr_size_t LEN) {
-    /* ### FIXME-perl ptr/len */
+    if (SvPOK($input)) {
+        $1 = SvPV($input, $2);
+    } else {
+        /* set to 0 to avoid warning */
+        $1 = 0;
+        $2 = 0;
+        SWIG_croak("Expecting a string");
+    }
 }
 /* -----------------------------------------------------------------------
    Define a generic arginit mapping for pools.
@@ -321,7 +336,7 @@
             rev.kind = svn_opt_revision_committed;
         else if (strcasecmp(input, "PREV") == 0)
             rev.kind = svn_opt_revision_previous;
-        else if (*input = '{') {
+        else if (*input == '{') {
             time_t tm;
             char *end = strchr(input,'}');
             if (!end)
@@ -390,6 +405,7 @@
 %include svn_types.h
 %{
 #include "svn_types.h"
+#include "svn_time.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"

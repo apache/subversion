@@ -76,13 +76,13 @@ SV *svn_swig_pl_convert_hash (apr_hash_t *hash, swig_type_info *tinfo);
 const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool);
 
-const apr_hash_t *svn_swig_pl_strings_to_hash(SV *source,
-                                              apr_pool_t *pool);
-const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
-					   apr_pool_t *pool);
-const apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
-						   const char *typename,
-						   apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_strings_to_hash(SV *source,
+                                        apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
+                                     apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
+                                             const char *typename,
+                                             apr_pool_t *pool);
 const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     swig_type_info *tinfo,
                                                     apr_pool_t *pool);
@@ -172,7 +172,7 @@ svn_error_t *thunk_get_wc_prop (void *baton,
                                 apr_pool_t *pool);
 
 /* helper for making the editor */
-void svn_delta_make_editor(const svn_delta_editor_t **editor,
+void svn_delta_make_editor(svn_delta_editor_t **editor,
                            void **edit_baton,
                            SV *perl_editor,
                            apr_pool_t *pool);

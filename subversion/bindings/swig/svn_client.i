@@ -297,7 +297,12 @@
  */
 %typemap(perl5, in) apr_hash_t *config {
   $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-                                         svn_swig_pl_make_pool (NULL));
+                                         svn_swig_pl_make_pool ((SV *)NULL));
+}
+
+%typemap(perl5, out) apr_hash_t *config {
+  $result = svn_swig_pl_convert_hash($1, SWIG_TypeQuery("svn_config_t *"));
+  argvi++;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -318,6 +323,7 @@
 
 %{
 #include "svn_client.h"
+#include "svn_time.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
