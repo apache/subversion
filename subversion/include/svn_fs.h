@@ -783,7 +783,7 @@ svn_error_t *svn_fs_node_created_rev (svn_revnum_t *revision,
                                       const char *path,
                                       apr_pool_t *pool);
 
-/** Set @a *created_path to the path at with @a path under @root was
+/** Set @a *created_path to the path at which @a path under @a root was
  * created.  Use @a pool for all allocations.  Callers may use this
  * function in conjunction with svn_fs_node_created_rev() perform a
  * reverse lookup of the mapping of (path, revision) -> node-id that
