@@ -138,28 +138,31 @@
       a través de la red, mientras que libsvn_ra_local accede
       directamente.</para>
 
-    <para>The client itself also highlights modularity in the
-      Subversion design.  While Subversion currently comes with only a
-      command-line client program, there are already a few other
-      programs being developed by third parties to act as GUIs for
-      Subversion.  Again, these GUIs use the same APIs that the stock
-      command-line client does.  Subversion's libsvn_client library is
-      the one-stop shop for most of the functionality necessary for
-      designing a working Subversion client (see <xref
-      linkend="svn-ch-8-sect-1.3"/>).</para>
+    <para>El propio cliente es una muestra de la modularidad del
+      diseño de Subversion.  A pesar de que Subversion por ahora
+      sólo viene con un programa cliente de línea de comando, ya
+      hay en desarrollo unos cuantos programas por parte de terceros
+      que actúan como interfaces gráficas de Subversion. De nuevo,
+      estos GUIs usan las mismas APIs que el cliente de línea
+      de comando que viene de serie. La librería de Subversion
+      libsvn_client es como una tienda de paso con la mayor parte
+      de la funcionalidad necesaria para diseñar un cliente de
+      Subversion (vea <xref linkend="svn-ch-8-sect-1.3"/>).</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-1.1">
-      <title>Repository Layer</title>
+      <title>Capa de repositorio</title>
 
-      <para>When referring to Subversion's Repository Layer, we're
-        generally talking about two libraries&mdash;the repository
-        library, and the filesystem library.  These libraries provide
-        the storage and reporting mechanisms for the various revisions
-        of your version-controlled data.  This layer is connected to
-        the Client Layer via the Repository Access Layer, and is, from
-        the perspective of the Subversion user, the stuff at the
-        <quote>other end of the line.</quote></para>
+      <para>Cuando nos referimos a la capa de respositorio de
+        Subversion, en general estamos hablando de dos
+        librerías&mdash;la librería de repositorio, y la librería
+        del sistema de ficheros. Estas librerías proporcionan
+        los mecanismos de almacenamiento e informe <!--TODO
+        reporting? --> para las varias revisiones de sus datos
+        bajo control de versiones. Esta capa está conectada a la
+        capa cliente vía capa de acceso al repositorio, y son,
+        desde el punto de vista del usuario de Subversion, las
+        cosas <quote>al otro lado de la línea.</quote></para>
 
       <para>The Subversion Filesystem is accessed via the libsvn_fs
         API, and is not a kernel-level filesystem that one would
