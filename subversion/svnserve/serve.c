@@ -25,6 +25,7 @@
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_user.h>
+#include <apr_file_info.h>
 
 #include <svn_types.h>
 #include <svn_string.h>
@@ -35,6 +36,7 @@
 #include <svn_repos.h>
 #include <svn_path.h>
 #include <svn_time.h>
+#include <svn_utf.h>
 
 #include "server.h"
 
@@ -841,7 +843,10 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                const char **fs_path, apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_status_t apr_err;
   const char *client_path, *full_path, *candidate;
+  const char *client_path_native, *root_native;
+  char *buffer;
 
   /* Decode any escaped characters in the URL. */
   url = svn_path_uri_decode(url, pool);
@@ -855,10 +860,25 @@ static svn_error_t *find_repos(const char *url, const char *root,
   client_path = strchr(url + 6, '/');
   client_path = (client_path == NULL) ? "" : client_path + 1;
 
+  SVN_ERR(svn_utf_cstring_from_utf8(&client_path_native,
+                                    svn_path_canonicalize(client_path, pool),
+                                    pool));
+
+  SVN_ERR(svn_utf_cstring_from_utf8(&root_native,
+                                    svn_path_canonicalize(root, pool),
+                                    pool));
+
   /* Join the server-configured root with the client path. */
-  full_path = svn_path_join(svn_path_canonicalize(root, pool),
-                            svn_path_canonicalize(client_path, pool),
-                            pool);
+  apr_err = apr_filepath_merge(&buffer, root_native, client_path_native,
+                               APR_FILEPATH_SECUREROOT, pool);
+
+  if(apr_err)
+    return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
+                            "Couldn't determine repository path.");
+  
+  SVN_ERR(svn_utf_cstring_to_utf8(&full_path,
+                                  svn_path_canonicalize (buffer, pool),
+                                  NULL, pool));
 
   /* Search for a repository in the full path. */
   candidate = full_path;
