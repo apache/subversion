@@ -1,0 +1,46 @@
+This file tracks the status of changes proposed for inclusion in 1.0.
+Each candidate consists of a short identifying block (e.g., a revision
+number, maybe an issue number), a brief description of the change, and
+an at-most-one-line justification of why it should be in 1.0, followed
+by the votes.  For example:
+
+   * r98765 (issue #56789)
+     Use an opaque type for svn_ra_get_ansible(), instead of void *.
+     Justification: API stability
+     See mailing list thread http://...
+     Votes:
+       +1 ghudson
+       +1 bliss
+
+A change needs three +1 votes from full committers, and no vetoes, to
+go into the release.
+
+Voting for a change doesn't just mean you approve of it in principle.
+It means you have thoroughly reviewed the change, and find it correct
+and as nondisruptive as possible.  When it is committed to the release
+branch, the log message will include the names of all who voted for
+it, as well as the original author and the person making the commit.
+All of these people are considered equally answerable for bugs.
+
+-*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
+   * r8016, r8019, r8028
+     Copyright notice fixes.
+     Justification: Why have copyright notices at all unless legally proper?
+     Votes:
+
+
+   * r8053, r8054
+     Constructor for svn_client_ctx_t
+     Justification: Constructor helps with backward compatibility.
+     Votes:
+
+
+   * Issue #999
+     Anchor/target split may use NULL for target.
+     Justification: API consistency
+     Notes: Greg Hudson has said he has no intention of merging this
+            into trunk unless it goes into 1.0 too, as doesn't want
+            trunk to start out its new life with an API divergence.
+            (http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml)
+     Votes:
