@@ -489,7 +489,7 @@ typedef struct svn_repos_node_t
 
    Allocate the tree and its contents in NODE_POOL; do all other
    allocation in POOL.  */
-svn_error_t *svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
+svn_error_t *svn_repos_node_editor (const svn_delta_editor_t **editor,
                                     void **edit_baton,
                                     svn_repos_t *repos,
                                     svn_fs_root_t *base_root,
