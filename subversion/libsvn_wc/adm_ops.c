@@ -192,17 +192,6 @@ svn_wc_set_wc_prop (const char *path,
 }
 
 
-
-/* Process an absolute PATH that has just been successfully committed.
-   
-   Specifically, its working revision will be set to NEW_REVNUM;  if
-   REV_DATE and REV_AUTHOR are both non-NULL, then three entry values
-   will be set (overwritten):  'committed-rev', 'committed-date',
-   'last-author'. 
-
-   If RECURSE is true (assuming PATH is a directory), this post-commit
-   processing will happen recursively down from PATH. 
-*/
 svn_error_t *
 svn_wc_process_committed (svn_stringbuf_t *path,
                           svn_boolean_t recurse,
@@ -213,9 +202,15 @@ svn_wc_process_committed (svn_stringbuf_t *path,
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  svn_stringbuf_t *log_parent, *logtag, *basename;
+  svn_stringbuf_t *log_parent, *logtags, *basename;
   apr_file_t *log_fp = NULL;
   char *revstr = apr_psprintf (pool, "%ld", new_revnum);
+  svn_stringbuf_t *checksum = NULL;
+
+  /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
+     REV_AUTHOR are both non-NULL, then set the 'committed-rev',
+     'committed-date', and 'last-author' entry values; and set the
+     checksum if a file. */
 
   /* Write a log file in the adm dir of path. */
 
@@ -225,10 +220,12 @@ svn_wc_process_committed (svn_stringbuf_t *path,
   err = svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
                                (APR_WRITE | APR_APPEND | APR_CREATE),
                                pool);
-  if (err)
+  if (err)   /* ### should check for specific error(s) */
     {
       /* (Ah, PATH must be a file.  So create a logfile in its
-         parent instead.) */      
+         parent instead.) */
+
+      svn_stringbuf_t *tmp_text_base;
 
       svn_error_clear_all (err);
       svn_path_split (path, &log_parent, &basename, pool);
@@ -238,6 +235,22 @@ svn_wc_process_committed (svn_stringbuf_t *path,
       SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
                                       (APR_WRITE|APR_APPEND|APR_CREATE),
                                       pool));
+
+      /* We know that the new text base is sitting in the adm tmp area
+         by now, because the commit succeeded. */
+      tmp_text_base = svn_wc__text_base_path (path, TRUE, pool);
+
+      /* It would be more efficient to compute the checksum as part of
+         some other operation that has to process all the bytes anyway
+         (such as copying or translation).  But that would make a lot
+         of other code more complex, since the relevant copy and/or
+         translation operations happened elsewhere, a long time ago.
+         If we were to obtain the checksum then/there, we'd still have
+         to somehow preserve it until now/here, which would result in
+         unexpected and hard-to-maintain dependencies.  Ick.
+
+         So instead we just do the checksum from scratch.  Ick. */
+      svn_io_file_checksum (&checksum, tmp_text_base->data, pool);
 
       /* Oh, and recursing at this point isn't really sensible. */
       recurse = FALSE;
@@ -269,16 +282,17 @@ svn_wc_process_committed (svn_stringbuf_t *path,
                                      SVN_WC__ENTRY_MODIFY_REVISION, pool));
     }
 
-  logtag = svn_stringbuf_create ("", pool);
+  logtags = svn_stringbuf_create ("", pool);
 
   /* Append a log command to set (overwrite) the 'committed-rev',
-     'committed-date', and 'last-author' attributes in the entry.
+     'committed-date', 'last-author', and possibly `checksum'
+     attributes in the entry.
 
      Note: it's important that this log command come *before* the
      LOG_COMMITTED command, because log_do_committed() might actually
      remove the entry! */
   if (rev_date && rev_author)
-    svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
+    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
                            SVN_WC__LOG_MODIFY_ENTRY,
                            SVN_WC__LOG_ATTR_NAME, basename,
                            SVN_WC__ENTRY_ATTR_CMT_REV,
@@ -289,11 +303,18 @@ svn_wc_process_committed (svn_stringbuf_t *path,
                            svn_stringbuf_create (rev_author, pool),
                            NULL);
 
+  if (checksum)
+    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                           SVN_WC__LOG_MODIFY_ENTRY,
+                           SVN_WC__LOG_ATTR_NAME, basename,
+                           SVN_WC__ENTRY_ATTR_CHECKSUM,
+                           checksum,
+                           NULL);
 
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp.)  */
-  svn_xml_make_open_tag (&logtag, pool, svn_xml_self_closing,
+  svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
                          SVN_WC__LOG_COMMITTED,
                          SVN_WC__LOG_ATTR_NAME, basename,
                          SVN_WC__LOG_ATTR_REVISION, 
@@ -301,7 +322,7 @@ svn_wc_process_committed (svn_stringbuf_t *path,
                          NULL);
 
 
-  apr_err = apr_file_write_full (log_fp, logtag->data, logtag->len, NULL);
+  apr_err = apr_file_write_full (log_fp, logtags->data, logtags->len, NULL);
   if (apr_err)
     {
       apr_file_close (log_fp);

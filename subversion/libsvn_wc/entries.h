@@ -48,7 +48,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_KIND          "kind"
 #define SVN_WC__ENTRY_ATTR_TEXT_TIME     "text-time"
 #define SVN_WC__ENTRY_ATTR_PROP_TIME     "prop-time"
-#define SVN_WC__ENTRY_ATTR_CHECKSUM      "checksum"     /* ### not used */
+#define SVN_WC__ENTRY_ATTR_CHECKSUM      "checksum"
 #define SVN_WC__ENTRY_ATTR_SCHEDULE      "schedule"
 #define SVN_WC__ENTRY_ATTR_COPIED        "copied"
 #define SVN_WC__ENTRY_ATTR_COPYFROM_URL  "copyfrom-url"
@@ -77,11 +77,12 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
                                     apr_pool_t *pool);
 
 
-/* Create a new entry from the attributes hash ATTS.  Use POOL for all
-   allocations, EXCEPT that **NEW_ENTRY->attributes will simply point
-   to the ATTS passed to the function -- this hash is not copied into
-   a new pool!  MODIFY_FLAGS are set to the fields that were
-   explicitly modified by the attribute hash.  */
+/* Set *NEW_ENTRY to a new entry, taking attributes from ATTS.
+   Allocate the entry itself in POOL, but don't copy attributes into
+   POOL.  Instead, (*NEW_ENTRY)->attributes and any allocated members
+   in *NEW_ENTRY will refer directly to ATTS and its values.
+
+   Set MODIFY_FLAGS to reflect the fields that were present in ATTS. */
 svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                     apr_uint32_t *modify_flags,
                                     apr_hash_t *atts,

@@ -335,6 +335,14 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
 
+  /* Checksum. */
+  {
+    entry->checksum = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CHECKSUM,
+                                    APR_HASH_KEY_STRING);
+    if (entry->checksum)
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+  }
+
   /* Setup last-committed values. */
   {
     svn_stringbuf_t *cmt_datestr, *cmt_revstr;
@@ -870,6 +878,11 @@ write_entry (svn_stringbuf_t **output,
                     svn_stringbuf_create (timestr, pool));
     }
 
+  /* Checksum */
+  if (entry->checksum)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CHECKSUM, APR_HASH_KEY_STRING,
+                  entry->checksum);
+
   /* Last-commit Stuff */
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
@@ -1071,6 +1084,12 @@ fold_entry (apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     cur_entry->schedule = entry->schedule;
 
+  /* Checksum */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_CHECKSUM)
+    cur_entry->checksum = entry->checksum
+                          ? svn_stringbuf_dup (entry->checksum, pool) 
+                          : NULL;
+  
   /* Copy-related stuff */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
     cur_entry->copied = entry->copied;
