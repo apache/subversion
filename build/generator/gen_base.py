@@ -757,9 +757,10 @@ class TargetJavaClasses(TargetJava):
             break
           i = i - 1
         if i < 0:
-              raise GenError('Unable to find Java package root in path')
+          raise GenError('Unable to find Java package root in path "' +
+                         objname + '"')
       else:
-        raise GenError('ERROR: unknown file extension on ' + src)
+        raise GenError('ERROR: unknown file extension on "' + src + '"')
 
       ofile = ObjectFile(objname, self.compile_cmd)
       sfile = SourceFile(src, reldir)
