@@ -62,4 +62,4 @@ Candidate changes:
     Justification: Avoids any problems with downstream packagers having to
     work to comply with our license.
     Votes:
-      +1: kfogel, sussman
+      +1: kfogel, sussman, philip
