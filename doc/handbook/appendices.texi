@@ -620,9 +620,3 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 This software consists of voluntary contributions made by many
 individuals on behalf of CollabNet.
-
-
-
-
-
-

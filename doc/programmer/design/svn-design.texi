@@ -18,10 +18,10 @@
 @c  documentation and/or other materials provided with the distribution.
 @c  
 @c  3. The end-user documentation included with the redistribution, if
-@c  any, must include the following acknowlegement: "This product includes
+@c  any, must include the following acknowledgment: "This product includes
 @c  software developed by CollabNet (http://www.Collab.Net/)."
-@c  Alternately, this acknowlegement may appear in the software itself, if
-@c  and wherever such third-party acknowlegements normally appear.
+@c  Alternately, this acknowledgment may appear in the software itself, if
+@c  and wherever such third-party acknowledgments normally appear.
 @c  
 @c  4. The hosted project names must not be used to endorse or promote
 @c  products derived from this software without prior written
