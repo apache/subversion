@@ -93,13 +93,6 @@ the section for unapproved changes.)
 
    [none pending right now]
 
-    * r8333
-      Change 'expl' to 'expt' to avoid conflict with C99 builtins.
-      Justification: avoids compile warnings, trivial & low risk
-      Votes:
-        +1: kfogel, ghudson, mbk
-
-
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
 
 These changes are to Subversion bindings.  Many are dependent on
