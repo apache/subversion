@@ -98,25 +98,3 @@ Chapter 5
             could well be merged into.  If that doesn't work, I would
             consider moving it up to the front of this chapter.
 
-Chapter 6
-
-    Section svn-ch-6-sect-4
-
-        #1) Blair
-
-            In this sentence:
-
-                The result is a standardized,
-                robust system that is conveniently packaged as part of the
-                Apache 2.0 software, is supported by numerous pieces of core
-                operating system and third-party products, and which doesn't
-                require network administrators to open up yet another custom
-                port.
-
-            What does this mean "is supported by numerous pieces of
-            core operating system ... products"?  It would seem that
-            Apache supports running on these OSes.
-
-            Maybe changing it to read "is supported by numerous
-            operating systems and third-party products, and which ..." 
-            makes more sense.
