@@ -666,6 +666,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       else:
         sys.stderr.write('Could not find installed SWIG,'
                          ' assuming version %s\n' % base_version)
+        self.swig_libdir = ''
     finally:
       outfp.close()
 
