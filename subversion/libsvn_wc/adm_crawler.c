@@ -570,13 +570,9 @@ entry_callback (void *loop_baton,
   /* Find out if this entry has been added, deleted, or modified. */
   svn_string_t *full_path_to_entry = svn_string_dup (path, pool);
 
-  /* We don't want to call add_component on a NULL entry name. */
-  svn_string_t *emptyname = svn_string_create ("", crawlbaton->pool);
-  if (current_entry_name == NULL)
-    current_entry_name = emptyname;
-
-  svn_path_add_component (full_path_to_entry, current_entry_name,
-                          svn_path_local_style, pool);
+  if (current_entry_name != NULL)
+    svn_path_add_component (full_path_to_entry, current_entry_name,
+                            svn_path_local_style, pool);
   err = set_entry_flags (full_path_to_entry,
                          current_entry_type,
                          current_entry_hash,
@@ -616,13 +612,17 @@ entry_callback (void *loop_baton,
           if (err) return err;
           
           /* Recurse, using the new, extended path and new dir_baton. */
-          svn_path_add_component (crawlbaton->path,
-                                  current_entry_name,
-                                  svn_path_local_style, pool);
+          if (current_entry_name != NULL)
+            svn_path_add_component (crawlbaton->path,
+                                    current_entry_name,
+                                    svn_path_local_style, pool);
           crawlbaton->dir_baton = new_dir_baton;
 
           err = process_subdirectory (crawlbaton);
           if (err) return err;
+
+          /* Remove the extra path component when done recursing */
+          svn_path_remove_component (crawlbaton->path, svn_path_local_style);
         }
       
       /* Adding a new file: */
@@ -657,8 +657,9 @@ entry_callback (void *loop_baton,
           /* Store the file's full pathname and baton for safe keeping
              (to be used later for postfix text-deltas) */
           longpath = svn_string_dup (path, pool);
-          svn_path_add_component (longpath, current_entry_name,
-                                  svn_path_local_style, pool);
+          if (current_entry_name != NULL)
+            svn_path_add_component (longpath, current_entry_name,
+                                    svn_path_local_style, pool);
           apr_hash_set (crawlbaton->filehash, longpath->data, longpath->len,
                         file_baton);
         }
@@ -712,8 +713,9 @@ entry_callback (void *loop_baton,
       /* Store the file's full pathname and baton for safe keeping (to
          be used later for postfix text-deltas) */
       longpath = svn_string_dup (path, pool);
-      svn_path_add_component (longpath, current_entry_name,
-                              svn_path_local_style, pool);
+      if (current_entry_name != NULL)
+        svn_path_add_component (longpath, current_entry_name,
+                                svn_path_local_style, pool);
       apr_hash_set (crawlbaton->filehash, longpath->data, longpath->len,
                     file_baton);
     }
@@ -722,18 +724,22 @@ entry_callback (void *loop_baton,
      modified file.  However, if the this entry is a directory, we
      must recurse! */
   else if ((current_entry_type == svn_dir_kind) 
-           && (! svn_string_isempty (current_entry_name)))
+           && (current_entry_name != NULL))
     {
       /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
          will later force a call to do_dir_replaces() and get the
          _correct_ dir baton for the child directory. */
-      svn_path_add_component (crawlbaton->path,
-                              current_entry_name,
-                              svn_path_local_style, pool);
+      if (current_entry_name != NULL)
+        svn_path_add_component (crawlbaton->path,
+                                current_entry_name,
+                                svn_path_local_style, pool);
       crawlbaton->dir_baton = NULL;
 
       err = process_subdirectory (crawlbaton);
       if (err) return err;
+
+      /* Remove the extra path component when done recursing */
+      svn_path_remove_component (crawlbaton->path, svn_path_local_style);
     }
   
 
