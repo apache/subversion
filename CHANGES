@@ -23,7 +23,7 @@ http://svn.collab.net/repos/svn/tags/0.29.0
  * tree re-org:  non-core utilities split into 'tools' and 'contrib' areas.
  * some gen_make.py/gen-base.py improvements
  * configure.in CFLAGS bugfix (r6963)
- * stop callng deprecated APIs in APR, in preparation for upcoming APR-1.0.
+ * stop calling deprecated APIs in APR, in preparation for upcoming APR-1.0.
 
 
 Version 0.28.2 (released 29 Aug 2003, revision 6946)
