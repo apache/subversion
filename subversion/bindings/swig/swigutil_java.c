@@ -28,6 +28,7 @@
 #include "svn_string.h"
 #include "svn_delta.h"
 
+#define SVN_SWIG_JAVA_DEFINE_CACHE
 #include "swigutil_java.h"
 
 /* FIXME: Need java.swg for the JCALL macros.  The following was taken
@@ -796,15 +797,11 @@ static svn_error_t *write_outputstream(void *baton,
   stream_baton_t *stream_baton;
   JNIEnv *jenv;
   jthrowable exc;
-  jclass cls_outputstream;
-  jmethodID MID_write;
   jbyteArray bytearray;
   svn_error_t *result;
 
   stream_baton = (stream_baton_t *) baton;
   jenv = stream_baton->jenv;
-  cls_outputstream = JCALL1(FindClass, jenv, "java/io/OutputStream"); /* ### FIXME */
-  MID_write = JCALL3(GetMethodID, jenv, cls_outputstream, "write", "([B)V"); /* ### FIXME */
   bytearray = JCALL1(NewByteArray, jenv, (jsize) *len);
   if (bytearray == NULL)
     {
@@ -818,7 +815,7 @@ static svn_error_t *write_outputstream(void *baton,
       goto error;
     }
 
-  JCALL3(CallVoidMethod, jenv, stream_baton->stream, MID_write, bytearray);
+  JCALL3(CallVoidMethod, jenv, stream_baton->stream, svn_swig_java_mid_outputstream_write, bytearray);
   exc = JCALL0(ExceptionOccurred, jenv);
   if (exc)
     {
@@ -866,16 +863,12 @@ static svn_error_t *read_inputstream(void *baton,
   stream_baton_t *stream_baton;
   JNIEnv *jenv;
   jthrowable exc;
-  jclass cls_inputstream;
-  jmethodID MID_read;
   jbyteArray bytearray;
   jsize read_len;
   svn_error_t *result;
 
   stream_baton = (stream_baton_t *) baton;
   jenv = stream_baton->jenv;
-  cls_inputstream = JCALL1(FindClass, jenv, "java/io/InputStream"); /* ### FIXME */
-  MID_read = JCALL3(GetMethodID, jenv, cls_inputstream, "read", "([B)I"); /* ### FIXME */
   bytearray = JCALL1(NewByteArray, jenv, (jsize) *len);
   if (bytearray == NULL) 
     {
@@ -883,7 +876,7 @@ static svn_error_t *read_inputstream(void *baton,
     }
 
   read_len = JCALL3(CallIntMethod, jenv, stream_baton->stream, 
-                    MID_read, bytearray);
+                    svn_swig_java_mid_inputstream_read, bytearray);
   exc = JCALL0(ExceptionOccurred, jenv);
   if (exc)
     {
@@ -1005,4 +998,29 @@ svn_stream_t *svn_swig_java_inputstream_to_stream(JNIEnv *jenv,
   svn_stream_set_close(stream, close_inputstream);
 
   return stream;
+}
+
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void *reserved)
+{
+    JNIEnv *jenv;
+    if ((*jvm)->GetEnv(jvm, (void **) &jenv, JNI_VERSION_1_2)) 
+      {
+	  return JNI_ERR;
+      }
+#define SVN_SWIG_JAVA_INIT_CACHE
+#include "swigutil_java_cache.h"
+
+    return JNI_VERSION_1_2;
+}
+
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm, void *reserved)
+{
+    JNIEnv *jenv;
+    if ((*jvm)->GetEnv(jvm, (void **) &jenv, JNI_VERSION_1_2)) 
+      {
+	  return ;
+      } 
+#define SVN_SWIG_JAVA_TERM_CACHE
+#include "swigutil_java_cache.h"
 }
