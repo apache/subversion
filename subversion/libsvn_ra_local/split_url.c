@@ -54,17 +54,25 @@ svn_ra_local__split_URL (svn_repos_t **repos,
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
        _("Local URL '%s' contains only a hostname, no path"), URL);
 
-  /* Currently, the only hostnames we are allowing are the empty
-     string and 'localhost' */
+  /* Treat localhost as an empty hostname. */
   if (hostname != path)
     {
       hostname = svn_path_uri_decode (apr_pstrmemdup (pool, hostname,
                                                      path - hostname), pool);
-        if ((strncmp (hostname, "localhost", 9) != 0))
-          return svn_error_createf
-            (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-             _("Local URL '%s' contains unsupported hostname"), URL);
+        if (strncmp (hostname, "localhost", 9) == 0)
+	  hostname = NULL;
     }
+  else
+    hostname = NULL;
+  
+#ifndef WIN32
+  /* Currently, the only hostnames we are allowing on non-Win32 platforms
+     are the empty string and 'localhost'. */
+  if (hostname)
+    return svn_error_createf
+      (SVN_ERR_RA_ILLEGAL_URL, NULL, 
+       _("Local URL '%s' contains unsupported hostname"), URL);
+#endif
 
   /* Duplicate the URL, starting at the top of the path.
      At the same time, we URI-decode the path. */
@@ -81,12 +89,15 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     Note that, at least on WinNT and above,  file:////./X:/path  will
     also work, so we must make sure the transformation doesn't break
     that, and  file:///path  (that looks within the current drive
-    only) should also keep working. */
+    only) should also keep working.
+    If we got a non-empty hostname other than localhost, we convert this
+    into an UNC path.  In this case, we obviously don't strip the slash
+    even if the path looks like it starts with a drive letter. */
   {
     static const char valid_drive_letters[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     char *dup_path = svn_path_uri_decode (path, pool);
-    if (dup_path[1] && strchr(valid_drive_letters, dup_path[1])
+    if (!hostname && dup_path[1] && strchr(valid_drive_letters, dup_path[1])
         && (dup_path[2] == ':' || dup_path[2] == '|')
         && dup_path[3] == '/')
       {
@@ -97,7 +108,11 @@ svn_ra_local__split_URL (svn_repos_t **repos,
         if (dup_path[1] == '|')
           dup_path[1] = ':';
       }
-    repos_root = dup_path;
+    if (hostname)
+      /* We still know that the path starts with a slash. */
+      repos_root = apr_pstrcat (pool, "//", hostname, path, NULL);
+    else
+      repos_root = dup_path;
   }
 #endif /* WIN32 */
 
@@ -119,8 +134,12 @@ svn_ra_local__split_URL (svn_repos_t **repos,
      REPOS_URL.  FS_PATH is what we've hacked off in the process.
      Note that path is not encoded and what we gave to svn_root_find_root_path
      may have been destroyed by that function.  So we have to decode it once
-     more.  But then, it is ours... */
-  *fs_path = svn_path_uri_decode (path, pool) + strlen (repos_root);
+     more.  But then, it is ours...
+     We want the suffix of path after the repos root part.  Note that
+     repos_root may contain //hostname, but path doesn't.  */
+  *fs_path = svn_path_uri_decode (path, pool)
+    + (strlen (repos_root)
+       - (hostname ? strlen (hostname) + 2 : 0));
 
   /* Remove the path components in *fs_path from the original URL, to get
      the URL to the repository root. */
