@@ -36,6 +36,16 @@ Karl working copy todo:
 Ben and Karl more later:
    - xml dtd, for both xml deltas and wc formats
 
+   - CURRENT BUGS of the evening:
+        * merge_sync can't use varargs; it needs a hash.  When log.c
+          tries to execute LOG_MODIFY_ENTRY, it needs to pass "extra"
+          attributes (like "reject-file") to merge_sync.
+        * for some reason merge_sync isn't setting flags -- at least
+          not when flags == 16.  (?)
+        * when do we put timestamps into entries?  always?  they're
+          being put on "added" files, but not "updated" files right
+          now.
+
 Greg:
    - mod_dav_svn:
       - repository hooks. defer mkcol/copy/move/delete.
