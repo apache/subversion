@@ -94,6 +94,17 @@ svn_error_t *svn_repos_delete (const char *path, apr_pool_t *pool);
 /** Return the filesystem associated with repository object @a repos. */
 svn_fs_t *svn_repos_fs (svn_repos_t *repos);
 
+
+/** Make a hot copy of the Subversion repository found at @a src_path 
+ * to @a dst_path. 
+ *
+ * @copydoc svn_fs_hotcopy_berkeley()
+ */
+svn_error_t * svn_repos_hotcopy (const char *src_path,
+                                 const char *dst_path,
+                                 svn_boolean_t clean_logs,
+                                 apr_pool_t *pool);
+
 /** Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
@@ -132,6 +143,9 @@ const char *svn_repos_lock_dir (svn_repos_t *repos, apr_pool_t *pool);
 
 /** Return path to @a repos's db lockfile, allocated in @a pool. */
 const char *svn_repos_db_lockfile (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return path to @a repos's db logs lockfile, allocated in @a pool. */
+const char *svn_repos_db_logs_lockfile (svn_repos_t *repos, apr_pool_t *pool);
 
 /** Return the path to @a repos's hook directory, allocated in @a pool. */
 const char *svn_repos_hook_dir (svn_repos_t *repos, apr_pool_t *pool);

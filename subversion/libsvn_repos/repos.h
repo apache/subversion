@@ -46,6 +46,7 @@ extern "C" {
 
 /* Things for which we keep lockfiles. */
 #define SVN_REPOS__DB_LOCKFILE "db.lock" /* Our Berkeley lockfile. */
+#define SVN_REPOS__DB_LOGS_LOCKFILE "db-logs.lock" /* BDB logs lockfile. */
 
 /* In the repository hooks directory, look for these files. */
 #define SVN_REPOS__HOOK_START_COMMIT    "start-commit"

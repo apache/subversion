@@ -628,6 +628,127 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   return svn_err;
 }
 
+
+/* Copying a live Berkeley DB-base filesystem.  */
+
+/**
+ * Delete all unused log files from DBD enviroment at @a live_path that exist 
+ * in @a backup_path.
+ */
+svn_error_t *
+svn_fs__clean_logs(const char *live_path, 
+                   const char *backup_path, 
+                   apr_pool_t *pool) 
+{
+  apr_array_header_t *logfiles;
+
+  SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
+                                     live_path,
+                                     TRUE,        /* Only unused logs */
+                                     pool));
+
+  if (logfiles == NULL)
+    return SVN_NO_ERROR;
+
+  {  /* Process unused logs from live area */
+    int log;
+    apr_pool_t *sub_pool = svn_pool_create (pool);
+
+    /* Process log files. */
+    for (log = 0; log < logfiles->nelts; log++)
+      {
+        const char *log_file = APR_ARRAY_IDX (logfiles, log, const char *);
+        const char *live_log_path;
+        const char *backup_log_path;
+
+        live_log_path = svn_path_join (live_path, log_file, sub_pool);
+        backup_log_path = svn_path_join (backup_path, log_file, sub_pool);
+
+        { /* Compare files. No point in using MD5 and waisting CPU cycles as we 
+             got full copies of both logs */
+          
+          svn_boolean_t files_match = FALSE;
+          svn_node_kind_t kind;
+
+          /* Check to see if there is a corresponding log file in the backup 
+             directory */
+          SVN_ERR (svn_io_check_path (backup_log_path, &kind, pool));
+          
+          /* If the copy of the log exists, compare them */
+          if (kind == svn_node_file)
+            SVN_ERR (svn_io_files_contents_same_p (&files_match, 
+                                                   live_log_path, 
+                                                   backup_log_path, 
+                                                   sub_pool));
+                                                   
+        /* If log files do not match, go to the next log filr. */
+        if (files_match == FALSE)
+          continue;
+      }
+
+      SVN_ERR (svn_io_remove_file (live_log_path, sub_pool));
+      svn_pool_clear (sub_pool);
+    }
+
+    svn_pool_destroy (sub_pool);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_hotcopy_berkeley (const char *src_path, 
+                         const char *dest_path, 
+                         svn_boolean_t clean_logs, 
+                         apr_pool_t *pool)
+{
+  /* Check DBD version, just in case */
+  SVN_ERR (check_bdb_version (pool));
+
+  /* Copy the DB_CONFIG file. */
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"DB_CONFIG", pool));
+  
+  /* Copy the databases.  */
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"nodes", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"revisions", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"transactions", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"copies", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"changes", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"representations", 
+                                 pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"strings", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"uuids", pool));
+
+  {
+    apr_array_header_t *logfiles;
+    int log;
+
+    SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
+                                       src_path,
+                                       FALSE,   /* All logs */
+                                       pool));
+
+    if (logfiles == NULL)
+      return SVN_NO_ERROR;
+
+    /* Process log files. */
+    for (log = 0; log < logfiles->nelts; log++)
+      {
+        SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, 
+                                       APR_ARRAY_IDX (logfiles, log,
+                                                      const char *),
+                                       pool));
+      }
+  }
+
+  /* Since this is a copy we will have exclusive access to the repository. */
+  SVN_ERR (svn_fs_berkeley_recover (dest_path, pool));
+
+  if (clean_logs == TRUE)
+    SVN_ERR (svn_fs__clean_logs (src_path, dest_path, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Running recovery on a Berkeley DB-based filesystem.  */

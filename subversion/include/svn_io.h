@@ -283,7 +283,30 @@ svn_error_t *svn_io_files_contents_same_p (svn_boolean_t *same,
                                            const char *file2,
                                            apr_pool_t *pool);
 
+/** Create file at @a file with contents @a contents.
+ * will be created.  Path @a file is utf8-encoded.
+ * Use @a pool for memory allocations.
+ */
+svn_error_t *svn_io_file_create (const char *file,
+                                 const char *contents,
+                                 apr_pool_t *pool);
 
+/** Lock file at @a lock_file. If @exclusive is TRUE,
+ * obtain exclusive lock, otherwise obtain shared lock.
+ * Lock will be automaticaly released when @a pool is cleared or destroyed.
+ * Use @a pool for memory allocations.
+ */
+svn_error_t *svn_io_file_lock (const char *lock_file,
+                               svn_boolean_t exclusive,
+                               apr_pool_t *pool);
+
+/** Copy file @a file from location @a src_path to location @a dest_path.
+ * Use @a pool for memory allocations.
+ */
+svn_error_t *svn_io_dir_file_copy (const char *src_path, 
+                                   const char *dest_path, 
+                                   const char *file,
+                                   apr_pool_t *pool);
 
 
 /** Generic byte-streams
