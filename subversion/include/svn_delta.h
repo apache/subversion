@@ -117,7 +117,7 @@ typedef struct svn_delta_op_t {
        the target file.  It must be the case that 0 <= OFFSET < OFFSET
        + LEN <= length of NEW.  */
     svn_delta_new
-  } op;
+  } action_code;
   
   apr_off_t offset;
   apr_off_t length;
@@ -167,15 +167,15 @@ typedef svn_error_t *svn_delta_read_fn_t (void *baton,
 /* A function to consume a series of delta windows.  This function
    will typically apply each delta window to produce some file, or
    save it somewhere.  */
-typedef svn_error_t *(svn_delta_handler_t) (svn_delta_window_t *window,
-                                            void *baton);
+typedef svn_error_t *(svn_text_delta_window_handler_t)
+     (svn_delta_window_t *window, void *baton);
 
 /* A vcdiff parser object.  */
 typedef struct svn_vcdiff_parser_t 
 {
   /* Once the vcdiff parser has enough data buffered to create a
      "window", it passes this window to the caller's consumer routine.  */
-  svn_delta_handler_t *consumer_func;
+  svn_text_delta_window_handler_t *consumer_func;
   void *consumer_baton;
 
   /* Pool to create subpools from; each developing window will be a
@@ -288,7 +288,7 @@ typedef struct svn_delta_walk_t
 			    svn_string_t *base_path,
 			    svn_vernum_t base_version,
 			    svn_pdelta_t *pdelta,
-                            svn_delta_handler_t **handler,
+                            svn_text_delta_window_handler_t **handler,
 			    void **handler_baton);
 
   /* We are going to change the directory entry named NAME to a file.
@@ -299,7 +299,7 @@ typedef struct svn_delta_walk_t
 				svn_string_t *base_path,
 				svn_vernum_t base_version,
 				svn_pdelta_t *pdelta,
-                                svn_delta_handler_t **handler,
+                                svn_text_delta_window_handler_t **handler,
                                 void **handler_baton);
 
 

@@ -62,10 +62,10 @@
    svn_delta_window_t, we pass it to HANDLER, along with
    HANDLER_BATON.  POOL is used to create individual sub-pools to hold
    each window of vcdiff data.*/
-extern svn_vcdiff_parser_t *svn_make_vcdiff_parser (svn_delta_handler_t
-                                                    * handler,
-                                                    void *handler_baton,
-                                                    apr_pool_t *pool);
+extern svn_vcdiff_parser_t *
+svn_make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
+                        void *handler_baton,
+                        apr_pool_t *pool);
 
 /* Parse another block of bytes in the vcdiff-format stream managed by
    PARSER.  When we've accumulated enough data for a complete window,

@@ -70,25 +70,32 @@ test_read_fn (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
   svn_error_t *err;
   apr_status_t stat;
 
-  stat = apr_full_read (src, buffer,
-                        (apr_size_t) *len,
-                        (apr_size_t *) len);
+  stat = apr_full_read (src, buffer, (apr_size_t) *len, (apr_size_t *) len);
 
-  if (stat)
-    return svn_create_error
-      (stat, 0, "error reading incoming delta stream", NULL, pool);
-  else
-    return 0;
+  if (stat && (stat != APR_EOF))
+    return
+      svn_create_error (stat, 0, "error reading incoming delta stream",
+                        NULL, pool);
+  
+  else 
+    return 0;  
 }
 
 
 int
-main (void)
+main (int argc, char **argv)
 {
   apr_pool_t *pool = NULL;
+  apr_status_t apr_err = 0;
   apr_file_t *src = NULL;     /* init to NULL very important! */
   svn_error_t *err = NULL;
   svn_string_t *target = NULL;
+
+  if (argc < 2)
+    {
+      fprintf (stderr, "need TARGET argument\n");
+      return 1;
+    }
 
   apr_initialize ();
   apr_create_pool (&pool, NULL);
@@ -102,14 +109,24 @@ main (void)
    * Check out apr_put_os_file() in apr_portable.h
    */
 
-  apr_open (&src, "checkout-1.delta",
-            (APR_READ | APR_CREATE),
-            APR_OS_DEFAULT,
-            pool);
+  apr_err = apr_open (&src, "checkout-1.delta",
+                      (APR_READ | APR_CREATE),
+                      APR_OS_DEFAULT,
+                      pool);
 
-  target = svn_string_create ("todo", pool);
+  if (apr_err)
+    {
+      fprintf (stderr, "error opening checkout-1.delta: %s",
+               apr_canonical_error (apr_err));
+      exit (1);
+    }
+
+  target = svn_string_create (argv[1], pool);
 
   err = svn_wc_apply_delta (src, test_read_fn, target, pool);
+
+  if (err)
+    svn_handle_error (err, stdout);
 
   apr_close (src);
 

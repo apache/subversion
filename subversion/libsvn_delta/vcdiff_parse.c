@@ -89,7 +89,7 @@
    HANDLER_BATON.  POOL will be used to by PARSER to buffer the
    incoming vcdiff data and create windows to send off.  */
 svn_vcdiff_parser_t *
-svn_make_vcdiff_parser (svn_delta_handler_t *handler,
+svn_make_vcdiff_parser (svn_text_delta_window_handler_t *handler,
                         void *handler_baton,
                         apr_pool_t *pool)
 {
@@ -138,7 +138,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
   
   /* Right now, we have only one kind of vcdiff operation:
      "create new text" :) */
-  new_op->op = svn_delta_new;  /* append new text */
+  new_op->action_code = svn_delta_new;  /* append new text */
   new_op->offset = 0;
   new_op->length = len;
   
@@ -150,13 +150,14 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
                                     consumer... it will free the whole
                                     subpool later on. */
   
-  /* Pass this new window to the caller's consumer routine */
-  err = (* (parser->consumer_func)) (window, parser->consumer_baton);
-  if (err)
-    return 
-      svn_quick_wrap_error (err, 
-                            "svn_vcdiff_send_window: consumer_func choked.");
-
+  /* Pass this new window to the caller's consumer routine, if any */
+  if (parser->consumer_func)
+    {
+      err = (* (parser->consumer_func)) (window, parser->consumer_baton);
+      if (err)
+        return svn_quick_wrap_error 
+          (err, "svn_vcdiff_send_window: consumer_func choked.");
+    }
   
   /* It's now the _consumer routine's_ responsiblity to deallocate the
      whole subpool containing {parser->buffer, window, new_op}.  In
@@ -165,7 +166,6 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
   parser->subpool = apr_make_sub_pool (parser->pool, NULL);
 
   parser->buffer = svn_string_create ("", parser->subpool);
-
   
   return SVN_NO_ERROR;
 }
@@ -205,14 +205,14 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
 
       else  /* don't yet have enough bytes for a window */
         {
+          /* kff todo: in real life, eat more than a byte at a time */
           /* So just copy the next byte in BUFFER to PARSER->BUFFER */
           svn_string_appendbytes (parser->buffer, 
                                   (buffer + i), 1,
                                   parser->subpool);
+          i++;
         }
       
-      i++;  /* And of course, increment our buffer offset */
-
     } while (i < *len);
 
 

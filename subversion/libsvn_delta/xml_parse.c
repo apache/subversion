@@ -370,9 +370,9 @@ do_directory_callback (svn_delta_digger_t *digger,
   svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
-  if (replace_p && !(digger->walker->replace_directory))
+  if (replace_p && (! digger->walker->replace_directory))
     return SVN_NO_ERROR;
-  if (!(replace_p) && !(digger->walker->add_directory))
+  if ((! replace_p) && (! digger->walker->add_directory))
     return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
@@ -470,7 +470,7 @@ do_file_callback (svn_delta_digger_t *digger,
 {
   svn_error_t *err;
   const char *ancestor, *ver;
-  svn_delta_handler_t *window_consumer;
+  svn_text_delta_window_handler_t *window_consumer;
   void *consumer_baton = NULL;
   svn_pdelta_t *pdelta = NULL;
   svn_string_t *base_path = NULL;
@@ -478,9 +478,9 @@ do_file_callback (svn_delta_digger_t *digger,
   svn_string_t *dir_name = NULL;
 
   /* Only proceed if the walker callback exists. */
-  if (replace_p && !(digger->walker->replace_file))
+  if (replace_p && (! digger->walker->replace_file))
     return SVN_NO_ERROR;
-  if (!(replace_p) && !(digger->walker->add_file))
+  if ((! replace_p) && (! digger->walker->add_file))
     return SVN_NO_ERROR;
 
   /* Retrieve the "name" field from the previous <new> or <replace> tag */
@@ -501,7 +501,7 @@ do_file_callback (svn_delta_digger_t *digger,
   if (ver)
     base_version = atoi (ver);
 
-  /* Call our walker's callback, and get back a vcdiff handler & baton. */
+  /* Call our walker's callback, and get back a window handler & baton. */
   if (replace_p)
     err = (* (digger->walker->replace_file)) (dir_name,
                                               digger->walk_baton,
@@ -524,7 +524,7 @@ do_file_callback (svn_delta_digger_t *digger,
     return err;
   
   /* Now create a vcdiff parser that sends windows of data to the
-     vcdiff handler.  Store the new parser in digger.  This vcdiff
+     window handler.  Store the new parser in digger.  This vcdiff
      parser is good *only* for the immediate file we're about to
      receive. */
   if (window_consumer == NULL)

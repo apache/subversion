@@ -19,8 +19,8 @@ apr_pool_t *globalpool;
 
 
 /* A dummy routine designed to consume windows of vcdiff data, (of
-   type svn_delta_handler_t).  This will be called by the vcdiff
-   parser everytime it has a window ready to go. */
+   type svn_text_delta_window_handler_t).  This will be called by the
+   vcdiff parser everytime it has a window ready to go. */
 svn_error_t *
 my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 {
@@ -31,7 +31,7 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
   /* Delve into the vcdiff window and print the data. */
   for (i = 0; i < window->num_ops; i++)
     {
-      switch (window->ops[i].op)
+      switch (window->ops[i].action_code)
         {
         case svn_delta_new:
           {
@@ -132,7 +132,7 @@ test_add_file (svn_string_t *name,
                svn_string_t *base_path,
                long int base_version,
                svn_pdelta_t *pdelta,
-               svn_delta_handler_t **handler,
+               svn_text_delta_window_handler_t **handler,
                void **handler_baton)
 {
   printf ("ADD_FILE event:  name '%s', ancestor '%s' version %d\n",
@@ -154,7 +154,7 @@ test_replace_file (svn_string_t *name,
                    svn_string_t *base_path,
                    long int base_version,
                    svn_pdelta_t *pdelta,
-                   svn_delta_handler_t **handler,
+                   svn_text_delta_window_handler_t **handler,
                    void **handler_baton)
 {
   printf ("REPLACE_FILE event:  name '%s', ancestor '%s' version %d\n",
