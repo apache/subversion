@@ -365,9 +365,9 @@ dump_core (const char **msg,
 
                          "",
 
-                         "--- foo2\n"
-                         "+++ bar2\n"
-                         "@@ -1,3 +0,0 @@\n"
+                         "--- foo2" APR_EOL_STR
+                         "+++ bar2" APR_EOL_STR
+                         "@@ -1,3 +0,0 @@" APR_EOL_STR
                          "-Aa\n"
                          "-Bb\n"
                          "-Cc\n",
@@ -380,9 +380,9 @@ dump_core (const char **msg,
                          "Bb\n"
                          "Cc\n",
 
-                         "--- foo3\n"
-                         "+++ bar3\n"
-                         "@@ -0,0 +1,3 @@\n"
+                         "--- foo3" APR_EOL_STR
+                         "+++ bar3" APR_EOL_STR
+                         "@@ -0,0 +1,3 @@" APR_EOL_STR
                          "+Aa\n"
                          "+Bb\n"
                          "+Cc\n",
@@ -408,9 +408,9 @@ test_two_way_unified (const char **msg,
                          "Bb\n"
                          "Cc\n",
 
-                         "--- foo4\n"
-                         "+++ bar4\n"
-                         "@@ -1 +1,3 @@\n"
+                         "--- foo4" APR_EOL_STR
+                         "+++ bar4" APR_EOL_STR
+                         "@@ -1 +1,3 @@" APR_EOL_STR
                          " Aa\n"
                          "+Bb\n"
                          "+Cc\n",
@@ -423,9 +423,9 @@ test_two_way_unified (const char **msg,
                          "Bb\n"
                          "Cc\n",
 
-                         "--- foo4b\n"
-                         "+++ bar4b\n"
-                         "@@ -1 +1,3 @@\n"
+                         "--- foo4b" APR_EOL_STR
+                         "+++ bar4b" APR_EOL_STR
+                         "@@ -1 +1,3 @@" APR_EOL_STR
                          "+Aa\n"
                          "+Bb\n"
                          " Cc\n",
@@ -438,9 +438,9 @@ test_two_way_unified (const char **msg,
 
                          "Aa\n",
 
-                         "--- foo5\n"
-                         "+++ bar5\n"
-                         "@@ -1,3 +1 @@\n"
+                         "--- foo5" APR_EOL_STR
+                         "+++ bar5" APR_EOL_STR
+                         "@@ -1,3 +1 @@" APR_EOL_STR
                          " Aa\n"
                          "-Bb\n"
                          "-Cc\n",
@@ -453,9 +453,9 @@ test_two_way_unified (const char **msg,
 
                          "Cc\n",
 
-                         "--- foo5b\n"
-                         "+++ bar5b\n"
-                         "@@ -1,3 +1 @@\n"
+                         "--- foo5b" APR_EOL_STR
+                         "+++ bar5b" APR_EOL_STR
+                         "@@ -1,3 +1 @@" APR_EOL_STR
                          "-Aa\n"
                          "-Bb\n"
                          " Cc\n",
@@ -482,9 +482,9 @@ test_two_way_unified (const char **msg,
                          "Xx\n"
                          "Cc\n",
 
-                         "--- foo6b\n"
-                         "+++ bar6b\n"
-                         "@@ -1,3 +1,3 @@\n"
+                         "--- foo6b" APR_EOL_STR
+                         "+++ bar6b" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
                          " Aa\n"
                          "-Bb\n"
                          "+Xx\n"
@@ -500,9 +500,9 @@ test_two_way_unified (const char **msg,
                          "Xx\r\n"
                          "Cc\r\n",
 
-                         "--- foo6c\n"
-                         "+++ bar6c\n"
-                         "@@ -1,3 +1,3 @@\n"
+                         "--- foo6c" APR_EOL_STR
+                         "+++ bar6c" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
                          " Aa\r\n"
                          "-Bb\r\n"
                          "+Xx\r\n"
@@ -514,9 +514,9 @@ test_two_way_unified (const char **msg,
 
                          "Bb\n",
 
-                         "--- foo7\n"
-                         "+++ bar7\n"
-                         "@@ -1 +1 @@\n"
+                         "--- foo7" APR_EOL_STR
+                         "+++ bar7" APR_EOL_STR
+                         "@@ -1 +1 @@" APR_EOL_STR
                          "-Aa\n"
                          "+Bb\n",
                          pool));
@@ -528,9 +528,9 @@ test_two_way_unified (const char **msg,
                          "Bb\n"
                          "Cc\n",
 
-                         "--- foo7a\n"
-                         "+++ bar7a\n"
-                         "@@ -1,2 +1,2 @@\n"
+                         "--- foo7a" APR_EOL_STR
+                         "+++ bar7a" APR_EOL_STR
+                         "@@ -1,2 +1,2 @@" APR_EOL_STR
                          "-Aa\n"
                          "+Bb\n"
                          " Cc\n",
@@ -544,9 +544,9 @@ test_two_way_unified (const char **msg,
                          "Xx\n"
                          "Yy\n",
 
-                         "--- foo8\n"
-                         "+++ bar8\n"
-                         "@@ -1,3 +1,2 @@\n"
+                         "--- foo8" APR_EOL_STR
+                         "+++ bar8" APR_EOL_STR
+                         "@@ -1,3 +1,2 @@" APR_EOL_STR
                          "-Aa\n"
                          "-Bb\n"
                          "-Cc\n"
@@ -561,9 +561,9 @@ test_two_way_unified (const char **msg,
 
                          "Bb\n",
 
-                         "--- foo9\n"
-                         "+++ bar9\n"
-                         "@@ -1,3 +1 @@\n"
+                         "--- foo9" APR_EOL_STR
+                         "+++ bar9" APR_EOL_STR
+                         "@@ -1,3 +1 @@" APR_EOL_STR
                          "-Aa\n"
                          " Bb\n"
                          "-Cc\n",
@@ -578,13 +578,13 @@ test_two_way_unified (const char **msg,
                          "Xx\n"
                          "Yy\n",
 
-                         "--- foo10\n"
-                         "+++ bar10\n"
-                         "@@ -1,3 +1,3 @@\n"
+                         "--- foo10" APR_EOL_STR
+                         "+++ bar10" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
                          " Aa\n"
                          "-Bb\n"
-                         "-Cc\n"
-                         "\\ No newline at end of file\n"
+                         "-Cc" APR_EOL_STR
+                         "\\ No newline at end of file" APR_EOL_STR
                          "+Xx\n"
                          "+Yy\n",
                          pool));
@@ -598,15 +598,15 @@ test_two_way_unified (const char **msg,
                          "Bb\n"
                          "Cc",
 
-                         "--- foo11\n"
-                         "+++ bar11\n"
-                         "@@ -1,3 +1,3 @@\n"
+                         "--- foo11" APR_EOL_STR
+                         "+++ bar11" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
                          " Aa\n"
                          "-Xx\n"
                          "-Yy\n"
                          "+Bb\n"
-                         "+Cc\n"
-                         "\\ No newline at end of file\n",
+                         "+Cc" APR_EOL_STR
+                         "\\ No newline at end of file" APR_EOL_STR,
                          pool));
 
   SVN_ERR (two_way_diff ("foo12", "bar12",
@@ -618,16 +618,16 @@ test_two_way_unified (const char **msg,
                          "Bb\n"
                          "Cc",
 
-                         "--- foo12\n"
-                         "+++ bar12\n"
-                         "@@ -1,3 +1,3 @@\n"
+                         "--- foo12" APR_EOL_STR
+                         "+++ bar12" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
                          " Aa\n"
                          "-Xx\n"
-                         "-Yy\n"
-                         "\\ No newline at end of file\n"
+                         "-Yy" APR_EOL_STR
+                         "\\ No newline at end of file" APR_EOL_STR
                          "+Bb\n"
-                         "+Cc\n"
-                         "\\ No newline at end of file\n",
+                         "+Cc" APR_EOL_STR
+                         "\\ No newline at end of file" APR_EOL_STR,
                          pool));
 
   SVN_ERR (two_way_diff ("foo13", "bar13",
@@ -649,14 +649,14 @@ test_two_way_unified (const char **msg,
                          "Gg\n"
                          "Yy\n",
 
-                         "--- foo13\n"
-                         "+++ bar13\n"
-                         "@@ -1,3 +1,4 @@\n"
+                         "--- foo13" APR_EOL_STR
+                         "+++ bar13" APR_EOL_STR
+                         "@@ -1,3 +1,4 @@" APR_EOL_STR
                          "+Xx\n"
                          " Aa\n"
                          " Bb\n"
                          " Cc\n"
-                         "@@ -5,3 +6,4 @@\n"
+                         "@@ -5,3 +6,4 @@" APR_EOL_STR
                          " Ee\n"
                          " Ff\n"
                          " Gg\n"
@@ -680,9 +680,9 @@ test_two_way_unified (const char **msg,
                          "Gg\n"
                          "Ff\n",
 
-                         "--- foo14\n"
-                         "+++ bar14\n"
-                         "@@ -1,7 +1,7 @@\n"
+                         "--- foo14" APR_EOL_STR
+                         "+++ bar14" APR_EOL_STR
+                         "@@ -1,7 +1,7 @@" APR_EOL_STR
                          "+Bb\n"
                          " Aa\n"
                          "-Bb\n"
@@ -703,9 +703,9 @@ test_two_way_unified (const char **msg,
                          "Bb\n"
                          "Cc\n",
 
-                         "--- foo16\n"
-                         "+++ bar16\n"
-                         "@@ -1,3 +1,3 @@\n"
+                         "--- foo16" APR_EOL_STR
+                         "+++ bar16" APR_EOL_STR
+                         "@@ -1,3 +1,3 @@" APR_EOL_STR
                          " Aa\n"
                          "-\n"
                          "+Bb\n"
@@ -745,9 +745,9 @@ test_two_way_unified_suspect (const char **msg,
                          "Hh\n"
                          "Ii\n",
 
-                         "--- foo15a\n"
-                         "+++ bar15a\n"
-                         "@@ -2,7 +2,6 @@\n"
+                         "--- foo15a" APR_EOL_STR
+                         "+++ bar15a" APR_EOL_STR
+                         "@@ -2,7 +2,6 @@" APR_EOL_STR
                          " Bb\n"
                          " Cc\n"
                          " Dd\n"
@@ -780,9 +780,9 @@ test_two_way_unified_suspect (const char **msg,
                          "Hh\n"
                          "Ii\n",
 
-                         "--- foo15b\n"
-                         "+++ bar15b\n"
-                         "@@ -3,6 +3,8 @@\n"
+                         "--- foo15b" APR_EOL_STR
+                         "+++ bar15b" APR_EOL_STR
+                         "@@ -3,6 +3,8 @@" APR_EOL_STR
                          " Cc\n"
                          " Dd\n"
                          " Ee\n"
@@ -815,9 +815,9 @@ test_two_way_unified_suspect (const char **msg,
                          "Hh\n"
                          "Ii\n",
 
-                         "--- foo15c\n"
-                         "+++ bar15c\n"
-                         "@@ -2,7 +2,8 @@\n"
+                         "--- foo15c" APR_EOL_STR
+                         "+++ bar15c" APR_EOL_STR
+                         "@@ -2,7 +2,8 @@" APR_EOL_STR
                          " Bb\n"
                          " Cc\n"
                          " Dd\n"
@@ -1224,15 +1224,15 @@ test_three_way_merge_with_conflict (const char **msg,
 
                             "",
 
-                            "<<<<<<< dug2\n"
+                            "<<<<<<< dug2" APR_EOL_STR
                             "Aa\n"
                             "Bb\n"
                             "Cc\n"
                             "Dd\n"
                             "Ee\n"
                             "Ff\n"
-                            "=======\n"
-                            ">>>>>>> dag2\n",
+                            "=======" APR_EOL_STR
+                            ">>>>>>> dag2" APR_EOL_STR,
                             pool));
 
   SVN_ERR (three_way_merge ("dig3", "dug3", "dag3",
@@ -1252,13 +1252,13 @@ test_three_way_merge_with_conflict (const char **msg,
 
                             "Aa\n"
                             "Bb\n"
-                            "<<<<<<< dug3\n"
+                            "<<<<<<< dug3" APR_EOL_STR
                             "Cc\n"
                             "Dd\n"
                             "Ee\n"
                             "Ff\n"
-                            "=======\n"
-                            ">>>>>>> dag3\n",
+                            "=======" APR_EOL_STR
+                            ">>>>>>> dag3" APR_EOL_STR,
                             pool));
 
   SVN_ERR (three_way_merge ("dig4", "dug4", "dag4",
@@ -1279,9 +1279,9 @@ test_three_way_merge_with_conflict (const char **msg,
                             "Aa\n"
                             "Bb\n"
                             "Cc\n"
-                            "<<<<<<< dug4\n"
-                            "Dd=======\n"
-                            "Ee>>>>>>> dag4\n",
+                            "<<<<<<< dug4" APR_EOL_STR
+                            "Dd=======" APR_EOL_STR
+                            "Ee>>>>>>> dag4" APR_EOL_STR,
                             pool));
 
   return SVN_NO_ERROR;
