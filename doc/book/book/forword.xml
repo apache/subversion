@@ -1,0 +1,118 @@
+<!-- There doesn't seem to be a 'forword' element similar to the
+'preface' element.  Not sure what to use instead; I guess 'preface' is
+the best solution for now, even though there's also a real preface in
+ch00.xml. -->
+
+<preface id="svn-forword">
+    <title>Forword</title>
+
+  <simplesect>
+
+    <para>A bad Frequently Asked Questions (FAQ) sheet is one that is
+    composed not of the questions people actually asked, but of the
+    questions the FAQ's author <emphasis>wished</emphasis> people had
+    asked.  Perhaps you've seen the type before: </para>
+
+    <blockquote>
+    Q: How can I use Glorbosoft XYZ to maximize team productivity?
+    </blockquote>
+
+    <blockquote>
+    A: Many of our customers want to know how they can maximize
+    productivity through our patented office groupware innovations.
+    The answer is simple: first, click on 
+    <guimenu>File</guimenu>--&gt;<guimenuitem>Increase&nbsp;Productivity</guimenuitem>, then&hellip;
+    </blockquote>
+
+    <para>The problem with such FAQs is that they are not, in a
+    literal sense, FAQs at all.  No one ever called the tech support
+    line and asked "How can we maximize productivity?".  Rather,
+    people asked highly specific questions, like "How can we change
+    the calendaring system to send reminders two days in advance
+    instead of one?" and so on.  But it's a lot easier to make up
+    imaginary Frequently Asked Questions than it is to discover the
+    real ones.  Compiling a true FAQ sheet requires a sustained,
+    organized effort: over the lifetime of the software, incoming
+    questions must be tracked, responses monitored, and all gathered
+    into a coherent, searchable whole that reflects the collective
+    experience of users in the wild.  It calls for the patient,
+    observant attitude of a field naturalist.  No grand hypothesizing,
+    no visionary pronouncements here&mdash;open eyes and accurate
+    note-taking are what's needed most. </para>
+
+    <para>What I love about this book is that it grew out of just such
+    a process, and shows it on every page.  It is the direct result of
+    the authors' encounters with users.  It began with Ben
+    Collins-Sussman's observation that people were asking the same
+    basic questions over and over on the Subversion mailing lists:
+    What are the standard workflows to use with Subversion?  Do
+    branches and tags work the same way as in other version control
+    systems?  How can I find out who made a particular change? </para>
+
+    <para>Frustrated at seeing the same questions day after day, Ben
+    worked intensely over a month in the summer of 2002 to write
+    <citetitle>The Subversion Handbook</citetitle>, a sixty page
+    manual that covered all the basics of using Subversion.  The
+    manual made no pretense of being complete, but it was distributed
+    with Subversion and got users over that initial hump in the
+    learning curve.  When O'Reilly and Associates decided to publish a
+    full-length Subversion book, the path of least resistance was
+    obvious: just expand the Subversion handbook. </para>
+
+    <para>The three co-authors of the new book were thus presented
+    with an unusual opportunity.  Officially, their task was to write
+    a book top-down, starting from a table of contents and an initial
+    draft.  But they also had access to a steady stream&mdash;indeed,
+    an uncontrollable geyser&mdash;of bottom-up source material.
+    Subversion was already in the hands of thousands of early
+    adopters, and those users were giving tons of feedback, not only
+    about Subversion, but about its existing documentation. </para>
+
+    <para>During the entire time they wrote this book, Ben, Mike, and
+    Brian haunted the Subversion mailing lists and chat rooms
+    incessantly, carefully noting the problems real people were having
+    in real situations.  The book they produced reflects this.
+    Grounded firmly in the bedrock of experience, not in the shifting
+    sands of wishful thinking, it combines the best aspects of user
+    manual and FAQ sheet.  This duality might not be noticeable on a
+    first reading.  Taken in order, front to back, the book is simply
+    a straightforward description of a piece of software.  There's the
+    overview, the obligatory guided tour, the chapter on
+    administrative configuration, some advanced topics, and of course
+    a command reference and troubleshooting guide.  Only when you come
+    back to it later, seeking the solution to some specific problem,
+    does its authenticity shine out: the telling details that can only
+    result from encounters with the unexpected, the examples honed
+    from genuine use cases, and most of all the sensitivity to the
+    user's needs and the user's point of view. </para>
+
+    <para> Of course, no one can promise that this book will answer
+    every question you have about Subversion.  Sometimes, the
+    precision with which it anticipates your questions will seem
+    eerily telepathic; yet occasionally, you will stumble into a hole
+    in the community's knowledge, and come away empty-handed.  When
+    this happens, the best thing you can do is email
+    <email>users@subversion.tigris.org</email> and present your
+    problem.  The authors are still there, still watching, and they
+    include not just the three listed on the cover, but many others
+    who contributed corrections and original material.  From the
+    community's point of view, solving your problem is merely a
+    pleasant side effect of a much larger project&mdash;namely, slowly
+    adjusting this book, and ultimately Subversion itself, to more
+    closely match the way people actually use it.  They are eager to
+    hear from you not merely because they can help you, but because
+    you can help them.  With Subversion as with all active free
+    software projects, <emphasis>you are not alone</emphasis>.
+    </para>
+
+    <para>Let this book be your first companion. </para>
+
+  </simplesect>
+
+</preface>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "forword")
+end:
+-->
