@@ -410,13 +410,11 @@ print_diff_tree (svn_fs_root_t *root,
       printf ("\n");
     }
   
-  /* Now, delete any temporary files.
+  /* Now, delete any temporary files. */
   if (fname1)
     apr_file_remove (fname1->data, pool);
   if (fname2)
     apr_file_remove (fname2->data, pool);
-  */
-      
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;

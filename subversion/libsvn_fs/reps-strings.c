@@ -318,6 +318,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       int i;
       apr_size_t len_read = 0;
       apr_size_t copy_amt;
+      apr_size_t discard_amt = (wb->req_offset > wb->cur_offset) 
+                                ? (wb->req_offset - wb->cur_offset)
+                                : 0;
 
       /* For each op, we must check to see what portion of that op's output
          is meant for the "discard pile."  */
@@ -356,30 +359,33 @@ window_handler (svn_txdelta_window_t *window, void *baton)
                  op->action_code);
             }
 
-          /* Figure out how much data we would copy into the output
-             buffer if we were going to do so right now.  If we've
-             read enough to "fill the request", stop handling ops
+          /* If we've at least read into the caller's requested range
+             of data, figure out how much data we would copy into the
+             output buffer were we going to do so right now.  If that
+             amount is enough to "fill the request", stop handling ops
              here. */
-          copy_amt = len_read - (wb->req_offset - wb->cur_offset);
-          if (copy_amt >= (wb->len_req - wb->len_read))
+          if (len_read >= discard_amt)
             {
-              copy_amt = wb->len_req - wb->len_read;
-              break;
+              copy_amt = len_read - discard_amt;
+              if (copy_amt > (wb->len_req - wb->len_read))
+                {
+                  copy_amt = wb->len_req - wb->len_read;
+                  break;
+                }
             }
         }
 
       /* Copy our requested range into the output buffer. */
-      memcpy (wb->buf + wb->len_read,
-              tbuf + (wb->req_offset - wb->cur_offset),
-              copy_amt);
+      memcpy (wb->buf + wb->len_read, tbuf + discard_amt, copy_amt);
       wb->len_read += copy_amt;
+
+      /* If this window looks past relevant data, then we're done. */
+      wb->cur_offset += copy_amt;
+      if (wb->cur_offset >= (wb->req_offset + wb->len_req))
+        wb->done = TRUE;
+
     }
   }
-    
-  /* If this window looks past relevant data, then we're done. */
-  wb->cur_offset += window->tview_len;
-  if (wb->cur_offset >= (wb->req_offset + wb->len_req))
-    wb->done = TRUE;
     
   /* Clear out the window baton's pool. */
   svn_pool_clear (wb->pool);
