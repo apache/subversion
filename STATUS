@@ -43,7 +43,7 @@ Candidate changes:
     Branch:
       1.1.x-svndumpfilter r12655:12656
     Votes:
-      +1: maxb, sussman
+      +1: maxb, sussman, dionisos
 
   * r12636
     Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
@@ -55,7 +55,7 @@ Candidate changes:
       Does not itself conflict, but present on branch so that does not
       cause conflicts in the merge of later revisions.
     Votes:
-      +1: maxb
+      +1: maxb, dionisos
 
   * r12637, r12640
     Very bad memory handling in svndumpfilter - caches an entire revision
@@ -73,7 +73,7 @@ Candidate changes:
       1.1.x-svndumpfilter r12657:12659
       (Each merged revision committed to branch seperately)
     Votes:
-      +1: maxb, sussman
+      +1: maxb, sussman, dionisos
 
   * r12499, r12542, plus branch-only modification in r12670
     Make mailer.py work on Windows.
