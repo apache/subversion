@@ -9,6 +9,7 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       id.c			\
 		       nodes-table.c		\
 		       skel.c			\
+		       trail.c			\
 		       tree.c
 
 # Set aside for the moment:
