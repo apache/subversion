@@ -183,7 +183,8 @@ svn_client_propget (apr_table_t **props,
     {
       svn_stringbuf_t *propval;
       SVN_ERR (svn_wc_prop_get (&propval, propname, target, pool));
-      apr_table_set(prop_table, target->data, propval->data);
+      if (propval)
+        apr_table_set(prop_table, target->data, propval->data);
     }
 
   *props = prop_table;
