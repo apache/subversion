@@ -154,17 +154,13 @@ make_dir_baton (const char *path,
                 apr_pool_t *pool)
 {
   struct dir_baton *dir_baton = apr_pcalloc (pool, sizeof (*dir_baton));
-  struct edit_baton *eb = parent_baton->edit_baton;
 
   dir_baton->dir_baton = parent_baton;
-  dir_baton->edit_baton = eb;
+  dir_baton->edit_baton = parent_baton->edit_baton;
   dir_baton->added = added;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup (pool, path);
   dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
-
-  dir_baton->path = svn_path_join (apr_pstrdup (pool, eb->target->data), path,
-                                   pool);
 
   return dir_baton;
 }
@@ -180,17 +176,14 @@ make_file_baton (const char *path,
                  void *edit_baton,
                  apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
   struct file_baton *file_baton = apr_pcalloc (pool, sizeof (*file_baton));
 
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
   file_baton->pool = pool;
+  file_baton->path = apr_pstrdup (pool, path);
   file_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
-  file_baton->path = svn_path_join (apr_pstrdup (pool, eb->target->data), path,
-                                    pool);
-  
   return file_baton;
 }
 
