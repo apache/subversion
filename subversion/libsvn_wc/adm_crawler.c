@@ -642,50 +642,49 @@ bail_if_unresolved_conflict (svn_stringbuf_t *full_path,
                              apr_hash_t *locks,
                              apr_pool_t *pool)
 {
-  if (entry->conflicted)
+  svn_boolean_t text_conflict_p, prop_conflict_p;
+  svn_stringbuf_t *parent_dir = NULL;
+
+  /* If there are no reject filenames stored, we'll call ourselves
+     conflict-free. */
+  if (! (entry->prejfile || entry->conflict_old 
+         || entry->conflict_new || entry->conflict_wrk))
+    return SVN_NO_ERROR;
+
+  /* We must decide if either component is "conflicted", based
+     on whether reject files are mentioned and/or continue to
+     exist.  Luckily, we have a function to do this.  :) */
+  if (entry->kind == svn_node_dir)
     {
-      /* We must decide if either component is "conflicted", based
-         on whether reject files are mentioned and/or continue to
-         exist.  Luckily, we have a function to do this.  :) */
-      svn_boolean_t text_conflict_p, prop_conflict_p;
-      svn_stringbuf_t *parent_dir = NULL;
-      
-      if (entry->kind == svn_node_dir)
-        parent_dir = full_path;
-      else  /* non-directory, that's all we need to know */
-        {
-          parent_dir = svn_stringbuf_dup (full_path, pool);
-          svn_path_remove_component (parent_dir);
-        }
-      
-      SVN_ERR (svn_wc_conflicted_p (&text_conflict_p,
-                                    &prop_conflict_p,
-                                    parent_dir,
-                                    entry,
-                                    pool));
-
-      if ((! text_conflict_p) && (! prop_conflict_p))
-        return SVN_NO_ERROR;
-
-      else /* a tracked .rej or .prej file still exists */
-        {
-          svn_error_t *err;
-          svn_error_t *final_err;
-          
-          final_err = svn_error_createf 
-            (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
-             "Aborting commit: '%s' remains in conflict.",
-             full_path->data);
-          
-          err = remove_all_locks (locks, pool);
-          if (err)
-            final_err->child = err; /* nestle them */
-          
-          return final_err;
-        }
+      parent_dir = full_path;
     }
-  
-  return SVN_NO_ERROR;
+  else  /* non-directory, that's all we need to know */
+    {
+      parent_dir = svn_stringbuf_dup (full_path, pool);
+      svn_path_remove_component (parent_dir);
+    }
+
+  /* Defer the conflicted question to someone else.  Not "laziness",
+     no ... "modularity"!  */
+  SVN_ERR (svn_wc_conflicted_p (&text_conflict_p,
+                                &prop_conflict_p,
+                                parent_dir,
+                                entry,
+                                pool));
+
+  if ((! text_conflict_p) && (! prop_conflict_p))
+    return SVN_NO_ERROR;
+
+  /* If we get there, that mans a tracked reject file stills exist.
+     So, we'll at least return one error describing this problem, and
+     that may potentially have a child error that results from some
+     failure to clean up locks.  This nested error interface is just
+     too cool. */
+  return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, 
+                            remove_all_locks (locks, pool),
+                            pool,
+                            "Aborting commit: '%s' remains in conflict.",
+                            full_path->data);
 }
 
 
@@ -799,10 +798,7 @@ derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
   /* Walk down the stack until we find a non-NULL dir baton. */
   while (1)  
     {
-      root_copyfrom_url = 
-        (svn_stringbuf_t *) apr_hash_get (stackptr->this_dir->attributes,
-                                          SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                                          APR_HASH_KEY_STRING);      
+      root_copyfrom_url = stackptr->this_dir->copyfrom_url;
       if (root_copyfrom_url != NULL)
         /* found the nearest copy history, so move on. */
         break;
@@ -1000,7 +996,7 @@ report_single_mod (const char *name,
 
   /* These will be filled in (if necessary) later on, if we end up
      doing an add-with-history. */
-  svn_stringbuf_t *copyfrom_url = NULL, *copyfrom_rev_str = NULL;
+  svn_stringbuf_t *copyfrom_url = NULL;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* By default, assume we're only going to look for local mods. */
@@ -1027,16 +1023,8 @@ report_single_mod (const char *name,
       do_add = TRUE;
       
       /* If the entry itself has 'copyfrom' args, find them now. */
-      copyfrom_url = 
-        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
-                                          SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                                          APR_HASH_KEY_STRING);      
-      copyfrom_rev_str = 
-        (svn_stringbuf_t *) apr_hash_get (entry->attributes,
-                                          SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-                                          APR_HASH_KEY_STRING);
-      if (copyfrom_rev_str)
-        copyfrom_rev = SVN_STR_TO_REV (copyfrom_rev_str->data);
+      copyfrom_url = entry->copyfrom_url;
+      copyfrom_rev = entry->copyfrom_rev;
     }
   
   /* If the entry is part of a 'copied' subtree, and isn't scheduled
@@ -1381,12 +1369,10 @@ crawl_dir (svn_stringbuf_t *path,
      
      Unless, of course, the add has 'copyfrom' history; when we enter
      a 'copied' subtree, we want to notice all things. */
-  if ((this_dir_entry->schedule == svn_wc_schedule_add)
-      || (this_dir_entry->schedule == svn_wc_schedule_replace))
-    if ((apr_hash_get (this_dir_entry->attributes,
-                       SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                       APR_HASH_KEY_STRING)) == NULL)
-      adds_only = TRUE;
+  if (((this_dir_entry->schedule == svn_wc_schedule_add)
+       || (this_dir_entry->schedule == svn_wc_schedule_replace))
+      && (! this_dir_entry->copyfrom_url))
+    adds_only = TRUE;
 
   /* Push the current {path, baton, this_dir} to the top of the stack */
   push_stack (stack, path, dir_baton, this_dir_entry, top_pool);
@@ -2069,15 +2055,8 @@ crawl_as_copy (svn_stringbuf_t *parent,
   SVN_ERR (editor->open_root (edit_baton, p_entry->revision, &root_baton));
 
   /* Make our entry look like it's slated to be copied. */
-  {
-    svn_stringbuf_t *revstr = 
-      svn_stringbuf_createf (pool, "%ld", p_entry->revision);
-    
-    apr_hash_set (p_entry->attributes, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                  APR_HASH_KEY_STRING, p_entry->url);
-    apr_hash_set (p_entry->attributes, SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-                  APR_HASH_KEY_STRING, revstr);
-  }
+  entry->copyfrom_url = svn_stringbuf_dup (p_entry->url, pool);
+  entry->copyfrom_rev = p_entry->revision;
 
   /* Push the anchor's stackframe onto the stack. */
   push_stack (&stack, parent, root_baton, p_entry, pool);

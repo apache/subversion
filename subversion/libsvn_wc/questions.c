@@ -622,8 +622,6 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_wc_entry_t *entry,
                      apr_pool_t *pool)
 {
-  svn_stringbuf_t *old_file, *new_file, *wrk_file;  /* textual conflicts */
-  svn_stringbuf_t *prej_file;                       /* prop conflicts */
   svn_stringbuf_t *path;
   enum svn_node_kind kind;
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -637,65 +635,44 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
      conflict state, but since the entry->conflicted flag is about to
      go away anyway, that's fine. */
 
-  if (entry->conflicted)
+  /* Look for any text conflict, exercising only as much effort as
+     necessary to obtain a definitive answer.  This only applies to
+     files, but we don't have to explicitly check that entry is a
+     file, since these attributes would never be set on a directory
+     anyway.  */
+  if (entry->conflict_old)
     {
-      /* Look for any text conflict, exercising only as much effort as
-         necessary to obtain a definitive answer.  This only applies to
-         files, but we don't have to explicitly check that entry is a
-         file, since these attributes would never be set on a directory
-         anyway.  */
-      old_file = apr_hash_get (entry->attributes,
-                               SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                               APR_HASH_KEY_STRING);
-      if (old_file)
-        {
-          path = svn_stringbuf_dup (dir_path, subpool);
-          svn_path_add_component (path, old_file);
-          SVN_ERR (svn_io_check_path (path, &kind, subpool));
-          if (kind == svn_node_file)
-            *text_conflicted_p = TRUE;
-        }
-      else
-        {
-          new_file = apr_hash_get (entry->attributes,
-                                   SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                                   APR_HASH_KEY_STRING);
-          if (new_file)
-            {
-              path = svn_stringbuf_dup (dir_path, subpool);
-              svn_path_add_component (path, new_file);
-              SVN_ERR (svn_io_check_path (path, &kind, subpool));
-              if (kind == svn_node_file)
-                *text_conflicted_p = TRUE;
-            }
-          else
-            {
-              wrk_file = apr_hash_get (entry->attributes,
-                                       SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                                       APR_HASH_KEY_STRING);
-              if (wrk_file)
-                {
-                  path = svn_stringbuf_dup (dir_path, subpool);
-                  svn_path_add_component (path, wrk_file);
-                  SVN_ERR (svn_io_check_path (path, &kind, subpool));
-                  if (kind == svn_node_file)
-                    *text_conflicted_p = TRUE;
-                }
-            }
-        }
+      path = svn_stringbuf_dup (dir_path, subpool);
+      svn_path_add_component (path, entry->conflict_old);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      if (kind == svn_node_file)
+        *text_conflicted_p = TRUE;
+    }
+  else if (entry->conflict_new)
+    {
+      path = svn_stringbuf_dup (dir_path, subpool);
+      svn_path_add_component (path, entry->conflict_new);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      if (kind == svn_node_file)
+        *text_conflicted_p = TRUE;
+    }
+  else if (entry->conflict_wrk)
+    {
+      path = svn_stringbuf_dup (dir_path, subpool);
+      svn_path_add_component (path, entry->conflict_wrk);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      if (kind == svn_node_file)
+        *text_conflicted_p = TRUE;
+    }
 
-      /* What about prop conflicts? */
-      prej_file = apr_hash_get (entry->attributes,
-                                SVN_WC__ENTRY_ATTR_PREJFILE,
-                                APR_HASH_KEY_STRING);
-      if (prej_file)
-        {
-          path = svn_stringbuf_dup (dir_path, subpool);
-          svn_path_add_component (path, prej_file);
-          SVN_ERR (svn_io_check_path (path, &kind, subpool));
-          if (kind == svn_node_file)
-            *prop_conflicted_p = TRUE;
-        }
+  /* What about prop conflicts? */
+  if (entry->prejfile)
+    {
+      path = svn_stringbuf_dup (dir_path, subpool);
+      svn_path_add_component (path, entry->prejfile);
+      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      if (kind == svn_node_file)
+        *prop_conflicted_p = TRUE;
     }
   
   svn_pool_destroy (subpool);

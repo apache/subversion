@@ -273,20 +273,20 @@ svn_client_proplist (apr_array_header_t **props,
                      apr_pool_t *pool)
 {
   apr_array_header_t *prop_list
-      = apr_array_make (pool, 5, sizeof(svn_client_proplist_item_t *));
-  svn_wc_entry_t *node;
+      = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
+  svn_wc_entry_t *entry;
 
   /* ### be nice to avoid this */
   svn_stringbuf_t *target_buf = svn_stringbuf_create (target, pool);
 
-  SVN_ERR (svn_wc_entry(&node, target_buf, pool));
-  if (!node)
+  SVN_ERR (svn_wc_entry (&entry, target_buf, pool));
+  if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
                               "'%s' -- not a versioned resource", 
                               target);
 
 
-  if (recurse && node->kind == svn_node_dir)
+  if (recurse && entry->kind == svn_node_dir)
       SVN_ERR (recursive_proplist (prop_list, target_buf, pool));
   else 
       SVN_ERR (add_to_proplist (prop_list, target, pool));

@@ -522,23 +522,28 @@ svn_error_t *svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
 #define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
 
-/* The names of the XML attributes for storing entries' information */
-#define SVN_WC__ENTRY_ATTR_NAME         "name"
-#define SVN_WC__ENTRY_ATTR_REVISION     "revision"
-#define SVN_WC__ENTRY_ATTR_KIND         "kind"
-#define SVN_WC__ENTRY_ATTR_TEXT_TIME    "text-time"
-#define SVN_WC__ENTRY_ATTR_PROP_TIME    "prop-time"
-#define SVN_WC__ENTRY_ATTR_CHECKSUM     "checksum"
-#define SVN_WC__ENTRY_ATTR_SCHEDULE     "schedule"
-#define SVN_WC__ENTRY_ATTR_CONFLICTED   "conflicted"
-#define SVN_WC__ENTRY_ATTR_COPIED       "copied"
-#define SVN_WC__ENTRY_ATTR_URL          "url"
-#define SVN_WC__ENTRY_ATTR_CONFLICT_OLD "conflict-old" /* saved old file */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_NEW "conflict-new" /* saved new file */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_WRK "conflict-wrk" /* saved working file */
-#define SVN_WC__ENTRY_ATTR_PREJFILE     "prop-reject-file"
-#define SVN_WC__ENTRY_ATTR_COPYFROM_URL "copyfrom-url"
-#define SVN_WC__ENTRY_ATTR_COPYFROM_REV "copyfrom-rev"
+
+/* The names of the XML attributes for storing entries' information.
+   ### If you add or remove items here, you probably want to make sure
+   to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
+#define SVN_WC__ENTRY_ATTR_NAME          "name"
+#define SVN_WC__ENTRY_ATTR_REVISION      "revision"
+#define SVN_WC__ENTRY_ATTR_URL           "url"
+#define SVN_WC__ENTRY_ATTR_KIND          "kind"
+#define SVN_WC__ENTRY_ATTR_TEXT_TIME     "text-time"
+#define SVN_WC__ENTRY_ATTR_PROP_TIME     "prop-time"
+#define SVN_WC__ENTRY_ATTR_CHECKSUM      "checksum"     /* ### not used */
+#define SVN_WC__ENTRY_ATTR_SCHEDULE      "schedule"
+#define SVN_WC__ENTRY_ATTR_COPIED        "copied"
+#define SVN_WC__ENTRY_ATTR_COPYFROM_URL  "copyfrom-url"
+#define SVN_WC__ENTRY_ATTR_COPYFROM_REV  "copyfrom-rev"
+#define SVN_WC__ENTRY_ATTR_CONFLICT_OLD  "conflict-old" /* saved old file */
+#define SVN_WC__ENTRY_ATTR_CONFLICT_NEW  "conflict-new" /* saved new file */
+#define SVN_WC__ENTRY_ATTR_CONFLICT_WRK  "conflict-wrk" /* saved wrk file */
+#define SVN_WC__ENTRY_ATTR_PREJFILE      "prop-reject-file"
+#define SVN_WC__ENTRY_ATTR_CMT_REV       "committed-rev"
+#define SVN_WC__ENTRY_ATTR_CMT_DATE      "committed-date"
+#define SVN_WC__ENTRY_ATTR_CMT_AUTHOR    "last-author"
 
 
 /* Initialize an entries file based on URL, in th adm area for
@@ -561,88 +566,63 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
    a new pool!  MODIFY_FLAGS are set to the fields that were
    explicitly modified by the attribute hash.  */
 svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
-                                    apr_uint16_t *modify_flags,
+                                    apr_uint32_t *modify_flags,
                                     apr_hash_t *atts,
                                     apr_pool_t *pool);
 
 
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
-   pay attention to. */
-#define SVN_WC__ENTRY_MODIFY_REVISION      0x0001
-#define SVN_WC__ENTRY_MODIFY_KIND          0x0002
-#define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x0004
-/* unused                                  0x0008 */
-#define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
-#define SVN_WC__ENTRY_MODIFY_COPIED        0x0020
-#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0040
-#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0080
-#define SVN_WC__ENTRY_MODIFY_URL           0x0100
-#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0200
+   pay attention to.  ### These should track the changes made to the
+   SVN_WC__ENTRY_ATTR_* #defines! */
+#define SVN_WC__ENTRY_MODIFY_REVISION      0x00000001
+#define SVN_WC__ENTRY_MODIFY_URL           0x00000002
+#define SVN_WC__ENTRY_MODIFY_KIND          0x00000004
+#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x00000008
+#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x00000010
+#define SVN_WC__ENTRY_MODIFY_CHECKSUM      0x00000020
+#define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x00000040
+#define SVN_WC__ENTRY_MODIFY_COPIED        0x00000080
+#define SVN_WC__ENTRY_MODIFY_COPYFROM_URL  0x00000100
+#define SVN_WC__ENTRY_MODIFY_COPYFROM_REV  0x00000200
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_OLD  0x00000400
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_NEW  0x00000800
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK  0x00001000
+#define SVN_WC__ENTRY_MODIFY_PREJFILE      0x00002000
+#define SVN_WC__ENTRY_MODIFY_CMT_REV       0x00004000
+#define SVN_WC__ENTRY_MODIFY_CMT_DATE      0x00008000
+#define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR    0x00010000
+
 
 /* ...or perhaps this to mean all of those above... */
-#define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF
+#define SVN_WC__ENTRY_MODIFY_ALL           0x7FFFFFFF
 
 /* ...ORed together with this to mean "I really mean this, don't be
    trying to protect me from myself on this one." */
-#define SVN_WC__ENTRY_MODIFY_FORCE         0x8000
+#define SVN_WC__ENTRY_MODIFY_FORCE         0x80000000
 
 
-/* Your one-stop shopping for changing an entry:
+/* Modify an entry for NAME in parent dir PATH by folding ("merging")
+   in changes, and sync those changes to disk.  New values for the
+   entry are pulled from their respective fields in ENTRY, and
+   MODIFY_FLAGS is a bitmask to specify which of those field to pay
+   attention to.  
 
-   For PATH's entries file, create or modify an entry NAME by folding
-   (merging) changes into it.
+   - ENTRY->kind specifies the node kind for this entry, and is
+     *required* to be set to one of the following valid values:
+     'svn_node_dir', 'svn_node_file'.
 
-   Use MODIFY_FLAGS to denote which of the following function
-   arguments to pay attention to and how to interpret those arguments.
-   If the flag that corresponds to the argument is not passed to the
-   function, that field in the entry structure will not be modified at
-   all.  Note that in the descriptions below, the "valid values"
-   restrictions on a field only apply when that field is being
-   "noticed" via the MODIFY_FLAGS.  See SVN_WC__ENTRY_MODIFY_*.
- 
-   - REVISION is the entry's revision number.  
+   - NAME can be NULL to specify that the caller wishes to modify the
+     "this dir" entry in PATH.
 
-   - KIND is the node type of this entry.  Valid values are
-     svn_node_dir and _file.
+   Perform all allocations in POOL.
 
-   - SCHEDULE is the scheduled action pending on this entry.  When the
-     _MODIFY_FORCE flag is set, valid values are
-     svn_wc_schedule_normal, _add, _delete, and _replace.
-
-   - CONFLICTED reflects whether or not this entry stands in a state
-     of conflict with the repository.
-
-   - COPIED indicates if the entry was (possibly implicitly) scheduled
-     for addition by being part of a 'copied' subtree.
-
-   - TEXT_TIME is the entry's textual timestamp.
-
-   - PROP_TIME is the entry's property timestamp.
-
-   - ATTRIBUTES is a hash of properties on the entry.  The keys are
-     (const char *) and the values are (svn_stringbuf_t *).  These
-     overwrite where they collide with existing attributes.
-     
-   Remaining (const char *) arguments are attributes to be removed
-   from the entry, terminated by a final NULL.  These will be removed
-   even if they also appear in ATTS.  See SVN_WC_ENTRY_ATTR_*.
-     
    NOTE: when you call this function, the entries file will be read,
    tweaked, and written back out.  */
 svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
                                    svn_stringbuf_t *name,
-                                   apr_uint16_t modify_flags,
-                                   svn_revnum_t revision,
-                                   enum svn_node_kind kind,
-                                   enum svn_wc_schedule_t schedule,
-                                   svn_boolean_t conflicted,
-                                   svn_boolean_t copied,
-                                   apr_time_t text_time,
-                                   apr_time_t prop_time,
-                                   svn_stringbuf_t *url,
-                                   apr_hash_t *attributes,
-                                   apr_pool_t *pool,
-                                   ...);
+                                   svn_wc_entry_t *entry,
+                                   apr_uint32_t modify_flags,
+                                   apr_pool_t *pool);
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
 void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);

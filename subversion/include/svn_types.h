@@ -203,20 +203,10 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 */
 #define SVN_PROP_ENTRY_PREFIX  SVN_PROP_PREFIX "entry:"
 
-/* Define specific entry-property names.  Normally, entry fields
-   are defined in svn_wc.h.  But the RA layers need to generate these
-   so-called 'properties', and we can't have RA depending on WC.  */
-#define SVN_ENTRY_ATTR_COMMITTED_REV      "committed-rev"
-#define SVN_ENTRY_ATTR_COMMITTED_DATE     "committed-date"
-#define SVN_ENTRY_ATTR_LAST_AUTHOR        "last-author"
-
-#define SVN_PROP_ENTRY_COMMITTED_REV     SVN_PROP_ENTRY_PREFIX \
-                                         SVN_ENTRY_ATTR_COMMITTED_REV
-#define SVN_PROP_ENTRY_COMMITTED_DATE    SVN_PROP_ENTRY_PREFIX \
-                                         SVN_ENTRY_ATTR_COMMITTED_DATE
-#define SVN_PROP_ENTRY_LAST_AUTHOR       SVN_PROP_ENTRY_PREFIX \
-                                         SVN_ENTRY_ATTR_LAST_AUTHOR
-
+/* Define specific entry-property names.  */
+#define SVN_PROP_ENTRY_COMMITTED_REV     SVN_PROP_ENTRY_PREFIX "committed-rev"
+#define SVN_PROP_ENTRY_COMMITTED_DATE    SVN_PROP_ENTRY_PREFIX "committed-date"
+#define SVN_PROP_ENTRY_LAST_AUTHOR       SVN_PROP_ENTRY_PREFIX "last-author"
 
 
 /* When custom, user-defined properties are passed over the wire, they will

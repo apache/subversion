@@ -40,6 +40,7 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_private_config.h"
+#include "svn_time.h"
 
 #include "wc.h"
 
@@ -267,6 +268,11 @@ maybe_bump_dir_revision (struct edit_baton *eb,
      or a directory is not yet "done".  */
   for ( ; bdi != NULL; bdi = bdi->parent)
     {
+      svn_wc_entry_t tmp_entry;
+
+      tmp_entry.revision = eb->target_revision;
+      tmp_entry.kind = svn_node_dir;
+
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
@@ -277,20 +283,8 @@ maybe_bump_dir_revision (struct edit_baton *eb,
       if (eb->is_checkout || bdi->parent)
         {
           svn_stringbuf_set (pathbuf, bdi->path);
-
-          SVN_ERR (svn_wc__entry_modify (pathbuf,
-                                         NULL,
-                                         SVN_WC__ENTRY_MODIFY_REVISION,
-                                         eb->target_revision,
-                                         svn_node_dir,
-                                         svn_wc_schedule_normal,
-                                         FALSE, FALSE,
-                                         0,
-                                         0,
-                                         NULL,
-                                         NULL,
-                                         pool,
-                                         NULL));
+          SVN_ERR (svn_wc__entry_modify (pathbuf, NULL, &tmp_entry,
+                                         SVN_WC__ENTRY_MODIFY_REVISION, pool));
         }
 
       /* If this directory is newly added it doesn't have an entry in the
@@ -299,24 +293,11 @@ maybe_bump_dir_revision (struct edit_baton *eb,
       if (bdi->added && bdi->parent)
         {
           svn_stringbuf_t *namebuf;
-
           svn_stringbuf_set (pathbuf, bdi->parent->path);
           namebuf = svn_stringbuf_create (svn_path_basename (bdi->path, pool),
                                           pool);
-
-          SVN_ERR (svn_wc__entry_modify (pathbuf,
-                                         namebuf,
-                                         SVN_WC__ENTRY_MODIFY_KIND,
-                                         SVN_INVALID_REVNUM,
-                                         svn_node_dir,
-                                         svn_wc_schedule_normal,
-                                         FALSE, FALSE,
-                                         0,
-                                         0,
-                                         NULL,
-                                         NULL,
-                                         pool,
-                                         NULL));
+          SVN_ERR (svn_wc__entry_modify (pathbuf, namebuf, &tmp_entry,
+                                         SVN_WC__ENTRY_MODIFY_KIND, pool));
         }
     }
   /* we exited the for loop because there are no more parents */
@@ -707,27 +688,33 @@ change_dir_prop (void *dir_baton,
      on with life.  It's not a regular user property. */
   else if (svn_wc_is_entry_prop (name))
     {
-      apr_hash_t *att_hash = apr_hash_make (pool);
-      svn_stringbuf_t *local_name = svn_stringbuf_create (name, pool);
+      svn_wc_entry_t entry;
+      apr_uint32_t modify_flags = 0;
 
-      /* remove the 'svn:wc:entry:' prefix from the property name. */
-      svn_wc__strip_entry_prefix (local_name);
+      entry.kind = svn_node_dir;
 
-      /* push the property into the att hash. */
-      apr_hash_set (att_hash, local_name->data, local_name->len, 
-                    svn_stringbuf_create (value ? value->data : "", pool));
+      /* a NULL-valued entry prop means the information was not
+         available.  We don't remove this field from the entries file;
+         we have convention just leave it empty. */
+      if ((! strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV)) && value)
+        {
+          entry.cmt_rev = SVN_STR_TO_REV (value->data);
+          modify_flags = SVN_WC__ENTRY_MODIFY_CMT_REV;
+        }
+      else if ((! strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE)) && value)
+        {
+          entry.cmt_date = svn_time_from_nts (value->data);
+          modify_flags = SVN_WC__ENTRY_MODIFY_CMT_DATE;
+        }
+      else if ((! strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR)) && value)
+        {
+          entry.cmt_author = svn_stringbuf_create_from_string (value, pool);
+          modify_flags = SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
+        }
 
-      /* write out the new attribute (via the hash) to the directory's
-         THIS_DIR entry. */
-      SVN_ERR (svn_wc__entry_modify (db->path, NULL,
-                                     SVN_WC__ENTRY_MODIFY_ATTRIBUTES,
-                                     SVN_INVALID_REVNUM, svn_node_none,
-                                     svn_wc_schedule_normal, FALSE, FALSE,
-                                     0, 0, NULL,
-                                     att_hash,
-                                     pool, NULL));
-
-      return SVN_NO_ERROR;
+      if (modify_flags)
+        return svn_wc__entry_modify (db->path, NULL, &entry,
+                                     modify_flags, pool);
     }
 
   /* Else, it's a real ("normal") property... */
@@ -1242,21 +1229,34 @@ svn_wc_install_file (const char *file_path,
       for (i = 0; i < entry_props->nelts; i++)
         {
           const svn_prop_t *prop;
-          svn_stringbuf_t *propname;
           svn_stringbuf_t *propval;
           enum svn_prop_kind kind;
+          const char *entry_field = NULL;
           int prefix_len;
 
-          prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
-          propname = svn_stringbuf_create (prop->name, pool);
+          prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
           kind = svn_property_kind (&prefix_len, prop->name);
-                    
-          if (prop->value)
-            propval = svn_stringbuf_create_from_string(prop->value, pool);
+
+          /* A prop value of NULL means the information was not
+             available.  We don't remove this field from the entries
+             file; we have convention just leave it empty.  So let's
+             just skip those entry props that have no values.
+          */
+          if (! prop->value)
+            continue;
+
+          if (! strcmp (prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
+            entry_field = SVN_WC__ENTRY_ATTR_CMT_AUTHOR;
+          else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
+            entry_field = SVN_WC__ENTRY_ATTR_CMT_REV;
+          else if (! strcmp (prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
+            entry_field = SVN_WC__ENTRY_ATTR_CMT_DATE;
           else
-            /* a NULL-valued entry prop means the information was not
-               available.  We don't remove this field from the entries
-               file; we have convention just leave it empty. */
+            continue;
+
+          if (prop->value)
+            propval = svn_stringbuf_create_from_string (prop->value, pool);
+          else
             propval = svn_stringbuf_create ("", pool);
           
           /* append a command to the log which will write the
@@ -1267,8 +1267,7 @@ svn_wc_install_file (const char *file_path,
                                  SVN_WC__LOG_MODIFY_ENTRY,
                                  SVN_WC__LOG_ATTR_NAME,
                                  basename,
-                                 /* strip 'svn:entry:' prefix */
-                                 (propname->data + prefix_len),
+                                 entry_field,
                                  propval,
                                  NULL);         
         }

@@ -146,7 +146,8 @@ print_short_format (const char *path,
 static void 
 print_long_format (const char *path,
                    svn_boolean_t show_last_committed,
-                   svn_wc_status_t *status)
+                   svn_wc_status_t *status,
+                   apr_pool_t *pool)
 {
   char str_status[5];
   char str_rev[7];
@@ -170,33 +171,21 @@ print_long_format (const char *path,
   else
     local_rev = SVN_INVALID_REVNUM;
 
-  /* If we are printing the last-committed stuff... */
-  if (show_last_committed)
+  /* If we are printing the last-committed stuff ... */
+  if ((show_last_committed) && (status->entry))
     {
       svn_stringbuf_t *revstr = NULL, *s_author = NULL;
+      
+      s_author = status->entry->cmt_author;
+      if (SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
+        revstr = svn_stringbuf_createf (pool, "%ld", status->entry->cmt_rev);
 
-      /* Try to get the CR, if it's in the entry. */
-      if (status->entry)
-        {
-          revstr = apr_hash_get (status->entry->attributes,
-                                 SVN_ENTRY_ATTR_COMMITTED_REV,
-                                 APR_HASH_KEY_STRING);
-          s_author = apr_hash_get (status->entry->attributes,
-                                   SVN_ENTRY_ATTR_LAST_AUTHOR,
-                                   APR_HASH_KEY_STRING);
-        }
-      if (status->entry)
-        sprintf (last_committed, "%6.6s   %8.8s   ",
-                 revstr ? revstr->data : "    ? ",
-                 s_author ? s_author->data : "      ? ");
-      else
-        sprintf (last_committed, "%6.6s   %8.8s   ",
-                 revstr ? revstr->data : "      ",
-                 s_author ? s_author->data : "        ");
-        
+      sprintf (last_committed, "%6.6s   %8.8s   ",
+               revstr ? revstr->data : "    ? ",
+               s_author ? s_author->data : "      ? ");
     }
   else
-    strcpy (last_committed, "                 ");
+    strcpy (last_committed, "                    ");
 
   /* Set the update character. */
   update_char = ' ';
@@ -255,7 +244,7 @@ svn_cl__print_status_list (apr_hash_t *statushash,
         continue;
 
       if (detailed)
-        print_long_format (item->key, show_last_committed, status);
+        print_long_format (item->key, show_last_committed, status, pool);
       else
         print_short_format (item->key, status);
     }

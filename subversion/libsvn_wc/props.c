@@ -38,7 +38,7 @@
 #include "svn_io.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
-
+#include "svn_time.h"
 #include "wc.h"
 
 
@@ -342,15 +342,13 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
                                        const char *name,
                                        apr_pool_t *pool)
 {
-  apr_hash_t *entries, *atts;
+  apr_hash_t *entries;
   svn_wc_entry_t *the_entry;
-  svn_stringbuf_t *filebuf;
 
   /* ### be nice to get rid of this */
   svn_stringbuf_t *pathbuf = svn_stringbuf_create (path, pool);
 
-  SVN_ERR( svn_wc_entries_read (&entries, pathbuf, pool) );
-
+  SVN_ERR (svn_wc_entries_read (&entries, pathbuf, pool));
   the_entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
 
   if (! the_entry)
@@ -359,13 +357,9 @@ svn_wc__get_existing_prop_reject_file (const svn_string_t **reject_file,
        "get_existing_reject_prop_reject_file: can't find entry '%s' in '%s'",
        name, path);
 
-  atts = the_entry->attributes;
-
-  /* ### be nice if these attributes weren't stringbuf... */
-  filebuf = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE,
-                          APR_HASH_KEY_STRING);
-
-  *reject_file = svn_string_create_from_buf (filebuf, pool);
+  *reject_file = the_entry->prejfile 
+                 ? svn_string_create_from_buf (the_entry->prejfile, pool)
+                 : NULL;
   return SVN_NO_ERROR;
 }
 
@@ -749,8 +743,6 @@ svn_wc__merge_prop_diffs (const char *path,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
                              entryname_buf,
-                             SVN_WC__ENTRY_ATTR_CONFLICTED,
-                             svn_stringbuf_create ("true", pool),
                              SVN_WC__ENTRY_ATTR_PREJFILE,
                              reject_pathbuf,
                              NULL);      
@@ -1026,27 +1018,18 @@ svn_wc_prop_set (const char *name,
 
       if (svn_wc_keywords_differ (old_keywords, new_keywords, FALSE))
         {
+          svn_stringbuf_t *pdir, *basename;
+          svn_wc_entry_t tmp_entry;
+
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          svn_stringbuf_t *pdir, *basename;
-
           svn_path_split (pathbuf, &pdir, &basename, pool);
-          SVN_ERR (svn_wc__entry_modify (pdir,
-                                         basename,
+          tmp_entry.kind = svn_node_file;
+          tmp_entry.text_time = 0;
+          SVN_ERR (svn_wc__entry_modify (pdir, basename, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                                         SVN_INVALID_REVNUM,
-                                         svn_node_file,
-                                         svn_wc_schedule_normal,
-                                         FALSE,
-                                         FALSE,
-                                         0, /* text time */
-                                         0, /* prop time ... ignore */
-                                         NULL,
-                                         NULL,
-                                         pool,
-                                         SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                                         NULL));
+                                         pool));
         }
     }
 
@@ -1227,47 +1210,30 @@ expand_keyword (svn_wc_keywords_t *keywords,
   if ((! strcmp (keyword, SVN_KEYWORD_REVISION_LONG))
       || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
     {
-      if (entry)
-        value = (svn_stringbuf_t *)
-          apr_hash_get (entry->attributes, 
-                        SVN_ENTRY_ATTR_COMMITTED_REV,
-                        APR_HASH_KEY_STRING);
-
-      if (! value)
+      if ((entry) && (entry->cmt_rev))
+        keywords->revision = svn_string_createf (pool, "%ld", entry->cmt_rev);
+      else
         /* We found a recognized keyword, so it needs to be expanded
            no matter what.  If the expansion value isn't available,
            we at least send back an empty string.  */
         keywords->revision = svn_string_create ("", pool);
-      else
-        keywords->revision = svn_string_create_from_buf (value, pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
            || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
-      if (entry)
-        value = (svn_stringbuf_t *)
-          apr_hash_get (entry->attributes, 
-                        SVN_ENTRY_ATTR_COMMITTED_DATE,
-                        APR_HASH_KEY_STRING);
-      
-      if (! value)
-        keywords->date = svn_string_create ("", pool);
+      if (entry && (entry->cmt_date))
+        keywords->date = svn_wc__friendly_date 
+          (svn_time_to_nts (entry->text_time, pool), pool);
       else
-        keywords->date = svn_wc__friendly_date (value->data, pool);
+        keywords->date = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
            || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
     {
-      if (entry) 
-        value = (svn_stringbuf_t *)
-          apr_hash_get (entry->attributes, 
-                        SVN_ENTRY_ATTR_LAST_AUTHOR,
-                        APR_HASH_KEY_STRING);
-      
-      if (! value)
-        keywords->author = svn_string_create ("", pool);
-      else
+      if (entry && (entry->cmt_author))
         keywords->author = svn_string_create_from_buf (value, pool);
+      else
+        keywords->author = svn_string_create ("", pool);
     }
   else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
            || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))

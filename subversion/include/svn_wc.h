@@ -138,43 +138,47 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 /*** Entries and status. ***/
 
-enum svn_wc_schedule_t
+typedef enum svn_wc_schedule_t
 {
   svn_wc_schedule_normal,       /* Nothing special here */
   svn_wc_schedule_add,          /* Slated for addition */
   svn_wc_schedule_delete,       /* Slated for deletion */
   svn_wc_schedule_replace       /* Slated for replacement (delete + add) */
-};
+
+} svn_wc_schedule_t;
 
 
 /* A working copy entry -- that is, revision control information about
    one versioned entity. */
 typedef struct svn_wc_entry_t
 {
-  /* Note that the entry's name does not get its own field here,
-     because it is usually the key for which this is the value.  If
-     you really need it, look in the attributes. */
+  /* General Attributes */
+  svn_stringbuf_t *name;         /* entry's name */
+  svn_revnum_t revision;         /* base revision */
+  svn_stringbuf_t *url;          /* base path */
+  svn_node_kind_t kind;          /* node kind (file, dir, ...) */
 
-  svn_revnum_t revision;       /* Base revision.  (Required) */
-  svn_stringbuf_t *url;        /* Base path.  (Required) */
-  enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
+  /* State information */
+  svn_wc_schedule_t schedule;    /* scheduling (add, delete, replace ...) */
+  svn_boolean_t copied;          /* in a copied state */
+  svn_stringbuf_t *copyfrom_url; /* copyfrom location */
+  svn_revnum_t copyfrom_rev;     /* copyfrom revision */
+  svn_stringbuf_t *conflict_old; /* old version of conflicted file */
+  svn_stringbuf_t *conflict_new; /* new version of conflicted file */
+  svn_stringbuf_t *conflict_wrk; /* wroking version of conflicted file */
+  svn_stringbuf_t *prejfile;     /* property reject file */
 
-  /* State information. */
-  enum svn_wc_schedule_t schedule;
-  svn_boolean_t conflicted;
-  svn_boolean_t copied;
+  /* Timestamps (0 means no information available) */
+  apr_time_t text_time;          /* last up-to-date time for text contents */
+  apr_time_t prop_time;          /* last up-to-date time for properties */
 
-  apr_time_t text_time;        /* When the file's text was last
-                                  up-to-date.  (Zero means not
-                                  available) */
-
-  apr_time_t prop_time;        /* When the file's properties were last
-                                  up-to-date.  (Zero means not
-                                  available) */
-
-  apr_hash_t *attributes;      /* All XML attributes, both those
-                                  duplicated above and any others.
-                                  (Required) */
+  /* "Entry props" */
+  svn_revnum_t cmt_rev;          /* last revision this was changed */
+  apr_time_t cmt_date;           /* last date this was changed */
+  svn_stringbuf_t *cmt_author;   /* last commit author of this item 
+                                    ### should this be svn_string_t or
+                                    ### perhaps just a const char * ? */
+  
 } svn_wc_entry_t;
 
 

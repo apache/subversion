@@ -1279,25 +1279,10 @@ svn_wc__ensure_adm (svn_stringbuf_t *path,
                     svn_revnum_t revision,
                     apr_pool_t *pool)
 {
-  svn_error_t *err;
   int exists_already;
 
-  err = check_adm_exists (&exists_already,
-                          path,
-                          url,
-                          revision,
-                          pool);
-  if (err)
-    return err;
-
-  if (! exists_already)
-    {
-      err = init_adm (path, url, pool);
-      if (err)
-        return err;
-    }
-        
-  return SVN_NO_ERROR;
+  SVN_ERR (check_adm_exists (&exists_already, path, url, revision, pool));
+  return (exists_already ? SVN_NO_ERROR : init_adm (path, url, pool));
 }
 
 

@@ -44,6 +44,7 @@ svn_wc_merge (const char *parent,
   const char *eol;
   apr_status_t apr_err;
   int exit_code;
+  svn_wc_entry_t *entry;
 
   /* We need temporary fullpaths of our three basenames, so that we
      pass them as arguments to svn_io_copy_*, svn_wc_entry,
@@ -56,15 +57,11 @@ svn_wc_merge (const char *parent,
   svn_path_add_component_nts (full_right_path, right);
 
   /* Sanity check:  the merge target must be under revision control. */
-  {
-    svn_wc_entry_t *ignored_ent;
-    
-    SVN_ERR (svn_wc_entry (&ignored_ent, full_tgt_path, pool));
-    if (ignored_ent == NULL)
-      return svn_error_createf
-        (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-         "svn_wc_merge: `%s' not under revision control", full_tgt_path->data);
-  }
+  SVN_ERR (svn_wc_entry (&entry, full_tgt_path, pool));
+  if (! entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "svn_wc_merge: `%s' not under revision control", full_tgt_path->data);
 
   /* Decide if the merge target is a text or binary file. */
   SVN_ERR (svn_wc_has_binary_prop (&is_binary, full_tgt_path, pool));
@@ -123,7 +120,6 @@ svn_wc_merge (const char *parent,
           apr_file_t *lcopy_f, *rcopy_f, *tcopy_f;
           svn_stringbuf_t *left_copy, *right_copy, *target_copy;
           svn_stringbuf_t *parentt, *left_base, *right_base, *target_base;
-          apr_hash_t *atthash = apr_hash_make (pool);
       
           /* I miss Lisp. */
 
@@ -214,26 +210,18 @@ svn_wc_merge (const char *parent,
           svn_path_split (left_copy, &parentt, &left_base, pool);
           svn_path_split (right_copy, &parentt, &right_base, pool);
           svn_path_split (target_copy, &parentt, &target_base, pool);
-          apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                        APR_HASH_KEY_STRING, left_base);
-          apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                        APR_HASH_KEY_STRING, right_base);
-          apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                        APR_HASH_KEY_STRING, target_base);
+          entry->conflict_old = left_base;
+          entry->conflict_new = right_base;
+          entry->conflict_wrk = target_base;
 
           /* Mark merge_target's entry as "Conflicted", and start tracking
-             the 3 backup files in the entry as well. */
-          SVN_ERR (svn_wc__entry_modify (parentt, 
-                                         svn_stringbuf_create (merge_target,
-                                                               pool),
-                                         (SVN_WC__ENTRY_MODIFY_CONFLICTED
-                                          | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
-                                         -1, svn_node_none,
-                                         svn_wc_schedule_normal,
-                                         TRUE, /* Conflicted */
-                                         FALSE, 0, 0, NULL,
-                                         atthash, /* has the 3 backup files */
-                                         pool, NULL));
+             the backup files in the entry as well. */
+          SVN_ERR (svn_wc__entry_modify 
+                   (parentt, svn_stringbuf_create (merge_target, pool), entry,
+                    SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+                    pool));
         }
 
       /* Unconditionally replace MERGE_TARGET with the new merged file,
@@ -270,7 +258,6 @@ svn_wc_merge (const char *parent,
       apr_file_t *lcopy_f, *rcopy_f;
       svn_stringbuf_t *left_copy, *right_copy;
       svn_stringbuf_t *parentt, *left_base, *right_base;
-      apr_hash_t *atthash = apr_hash_make (pool);
       
       /* reserve names for backups of left and right fulltexts */
       SVN_ERR (svn_io_open_unique_file (&lcopy_f,
@@ -307,24 +294,18 @@ svn_wc_merge (const char *parent,
       /* Derive the basenames of the the backup files. */
       svn_path_split (left_copy, &parentt, &left_base, pool);
       svn_path_split (right_copy, &parentt, &right_base, pool);
-      apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                    APR_HASH_KEY_STRING, left_base);
-      apr_hash_set (atthash, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                    APR_HASH_KEY_STRING, right_base);
+      entry->conflict_old = left_base;
+      entry->conflict_new = right_base;
+      entry->conflict_wrk = NULL;
 
       /* Mark merge_target's entry as "Conflicted", and start tracking
-         the 2 backup files in the entry as well. */
-      SVN_ERR (svn_wc__entry_modify (parentt, 
-                                     svn_stringbuf_create (merge_target,
-                                                           pool),
-                                     (SVN_WC__ENTRY_MODIFY_CONFLICTED
-                                      | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
-                                     -1, svn_node_none,
-                                     svn_wc_schedule_normal,
-                                     TRUE, /* Conflicted */
-                                     FALSE, 0, 0, NULL,
-                                     atthash, /* has the 2 backup files */
-                                     pool, NULL));
+         the backup files in the entry as well. */
+      SVN_ERR (svn_wc__entry_modify 
+               (parentt, svn_stringbuf_create (merge_target, pool), entry,
+                SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+                | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+                | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+                pool));
 
       exit_code = 1;  /* a conflict happened */
     }

@@ -468,7 +468,7 @@ log_do_modify_entry (struct log_runner *loggy,
   svn_stringbuf_t *sname = svn_stringbuf_create (name, loggy->pool);
   svn_stringbuf_t *tfile = svn_stringbuf_dup (loggy->path, loggy->pool);
   svn_wc_entry_t *entry;
-  apr_uint16_t modify_flags;
+  apr_uint32_t modify_flags;
   svn_stringbuf_t *valuestr;
 
   /* Convert the attributes into an entry structure. */
@@ -495,13 +495,13 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-           "error checking path %s", tfile->data);
+           "error checking path `%s'", tfile->data);
           
       err = svn_io_file_affected_time (&text_time, tfile, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-           "error getting file affected time on %s", tfile->data);
+           "error getting file affected time on `%s'", tfile->data);
 
       entry->text_time = text_time;
     }
@@ -525,36 +525,23 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-           "error checking path %s", pfile->data);
+           "error checking path `%s'", pfile->data);
       
       err = svn_io_file_affected_time (&prop_time, tfile, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-           "error getting file affected time on %s", pfile->data);
+           "error getting file affected time on `%s'", pfile->data);
 
       entry->prop_time = prop_time;
     }
 
   /* Now write the new entry out */
-  err = svn_wc__entry_modify (loggy->path,
-                              sname,
-                              modify_flags,
-                              entry->revision,
-                              entry->kind,
-                              entry->schedule,
-                              entry->conflicted,
-                              entry->copied,
-                              entry->text_time,
-                              entry->prop_time,
-                              entry->url,
-                              entry->attributes,
-                              loggy->pool,
-                              NULL);
-
+  err = svn_wc__entry_modify (loggy->path, sname, entry, modify_flags, 
+                              loggy->pool);
   if (err)
-    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-                              "error merge_syncing entry %s", name);
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
+                              "error merge_syncing entry `%s'", name);
 
   return SVN_NO_ERROR;
 }
@@ -617,6 +604,8 @@ log_do_committed (struct log_runner *loggy,
   svn_error_t *err;
   const char *revstr
     = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
+  svn_wc_entry_t tmp_entry;
+  svn_boolean_t wc_root;
 
   if (! revstr)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
@@ -645,8 +634,7 @@ log_do_committed (struct log_runner *loggy,
         if (! is_this_dir)
           svn_path_add_component (full_path, sname);
         SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
-        if ((! is_this_dir) 
-            && (entry->kind != svn_node_file))
+        if ((! is_this_dir) && (entry->kind != svn_node_file))
           return svn_error_createf 
             (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
              "log command for directory '%s' mislocated", name);
@@ -872,83 +860,67 @@ log_do_committed (struct log_runner *loggy,
 
           /* Files have been moved, and timestamps are found.  Time
              for The Big Entry Modification. */
-          err = svn_wc__entry_modify
-            (loggy->path,
-             sname,
-             (SVN_WC__ENTRY_MODIFY_REVISION 
-              | SVN_WC__ENTRY_MODIFY_SCHEDULE 
-              | SVN_WC__ENTRY_MODIFY_CONFLICTED
-              | SVN_WC__ENTRY_MODIFY_COPIED
-              | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-              | SVN_WC__ENTRY_MODIFY_PROP_TIME
-              | SVN_WC__ENTRY_MODIFY_FORCE),
-             SVN_STR_TO_REV (revstr),
-             svn_node_none,
-             svn_wc_schedule_normal,
-             FALSE, /* conflicted */
-             FALSE, /* copied */
-             text_time,
-             prop_time,
-             NULL, NULL,
-             loggy->pool,
-             /* Remove all these attributes: */
-             SVN_WC__ENTRY_ATTR_CONFLICT_OLD,   /* ### should we remove */
-             SVN_WC__ENTRY_ATTR_CONFLICT_NEW,   /*     these files from */
-             SVN_WC__ENTRY_ATTR_CONFLICT_WRK,   /*     disk as well?    */
-             SVN_WC__ENTRY_ATTR_PREJFILE,
-             SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-             SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-             NULL);
+          tmp_entry.revision = SVN_STR_TO_REV (revstr);
+          tmp_entry.kind = is_this_dir ? svn_node_dir : svn_node_file;
+          tmp_entry.schedule = svn_wc_schedule_normal;
+          tmp_entry.copied = FALSE;
+          tmp_entry.text_time = text_time;
+          tmp_entry.prop_time = prop_time;
+          tmp_entry.conflict_old = NULL;
+          tmp_entry.conflict_new = NULL;
+          tmp_entry.conflict_wrk = NULL;
+          tmp_entry.prejfile = NULL;
+          tmp_entry.copyfrom_url = NULL;
+          tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
+          err = svn_wc__entry_modify (loggy->path, sname, &tmp_entry,
+                                      (SVN_WC__ENTRY_MODIFY_REVISION 
+                                       | SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                                       | SVN_WC__ENTRY_MODIFY_COPIED
+                                       | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                                       | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
+                                       | SVN_WC__ENTRY_MODIFY_PREJFILE
+                                       | SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                       | SVN_WC__ENTRY_MODIFY_PROP_TIME
+                                       | SVN_WC__ENTRY_MODIFY_FORCE),
+                                      loggy->pool);
           if (err)
             return svn_error_createf
               (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                "error modifying entry %s", name);
 
-          /* Also, if this is a directory, don't forget to reset the
-             state in the parent's entry for this directory. */
+          /* Get outta here if we aren't looking at "this dir".  From
+             here on out, it's all about a directory's entry in its
+             parent.  */
           if (! is_this_dir)
             return SVN_NO_ERROR;
 
-          svn_path_split (loggy->path, &pdir, &basename, loggy->pool);
-          if (svn_path_is_empty (pdir))
+          /* Also, if this is a directory, don't forget to reset the
+             state in the parent's entry for this directory (unless
+             the current directory is a `WC root' (meaning, our parent
+             directory on disk is not our parent in Version Control
+             Land). */
+          SVN_ERR (svn_wc_is_wc_root (&wc_root, loggy->path, loggy->pool));
+          if (wc_root)
             return SVN_NO_ERROR;
+          svn_path_split (loggy->path, &pdir, &basename, loggy->pool);
 
           /* Make sure our entry exists in the parent (if the parent
-             is even a SVN working copy directory). 
-
-             ### todo:  perhaps some year when our API calls return
-             predictable error messages, we can pay attention to the
-             difference between "The parent directory is not a SVN
-             working copy" and "My God, there's radioactive waste
-             dripping on your forehead!" */
-          err = svn_wc_entries_read (&entries, pdir, loggy->pool);
-          if (! err)
+             is even a SVN working copy directory). */
+          SVN_ERR (svn_wc_entries_read (&entries, pdir, loggy->pool));
+          if (apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING))
             {
-              if (apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING))
-                {
-                  err = svn_wc__entry_modify
-                    (pdir,
-                     basename,
-                     (SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                      | SVN_WC__ENTRY_MODIFY_COPIED
-                      | SVN_WC__ENTRY_MODIFY_FORCE),
-                     SVN_INVALID_REVNUM,
-                     svn_node_dir,
-                     svn_wc_schedule_normal,
-                     FALSE, /* conflicted */
-                     FALSE, /* copied */
-                     0,
-                     0,
-                     NULL, NULL,
-                     loggy->pool,
-                     SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                     SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-                     NULL);
-                  if (err)
-                    return svn_error_createf
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                       "error merge_syncing %s", name);
-                }
+              err = svn_wc__entry_modify (pdir, basename, &tmp_entry,
+                                          (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                                           | SVN_WC__ENTRY_MODIFY_COPIED
+                                           | SVN_WC__ENTRY_MODIFY_FORCE),
+                                          loggy->pool);
+              if (err)
+                return svn_error_createf
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
+                   "error merge_syncing %s", name);
             }
         }
     }
