@@ -336,12 +336,9 @@ class Generator(gen_base.GeneratorBase):
     for objname, sources in swig_c_deps:
       deps = string.join(map(str, sources))
       source = build_path_join('$(abs_srcdir)', str(sources[0]))
-      if objname.target.include_runtime:
-        cmd = '$(RUN_SWIG_%s)'
-      else:
-        cmd = '$(RUN_SWIG_NORUN_%s)'
-      cmd = cmd % string.upper(gen_base.lang_abbrev[objname.target.lang])
-      self.ofile.write('%s: %s\n\t%s %s\n\n' % (objname, deps, cmd, source))
+      self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
+                       % (objname, deps, string.upper(objname.lang_abbrev),
+                          source))
 
     # write dependencies and build rules (when not using suffix rules)
     # for all other generated files which will not be installed
