@@ -89,3 +89,13 @@ Candidate changes:
       BFI, ls-R didn't work at all in this case, affects many GUI clients.
     Votes:
       +1: lundblad
+
+  * r11233, r11260
+    Fix eol-style conversion for propedit.
+    Justification:
+      Editing props with newlines (svn:ignore, svn:log...) is annoying without
+      this.
+    Note:
+      This also fixes --encoding with propedit.
+    Votes:
+      +1: lundblad
