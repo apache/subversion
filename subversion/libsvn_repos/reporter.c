@@ -736,6 +736,19 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (fetch_path_info (b, &name, &info, e_path, subpool));
       if (!name)
         break;
+
+      if (info && !SVN_IS_VALID_REVNUM (info->rev))
+        {
+          /* We want to perform deletes before non-replacement adds,
+             for graceful handling of case-only renames on
+             case-insensitive client filesystems.  So, if the report
+             item is a delete, remove the entry from the source hash,
+             but don't update the entry yet. */
+          if (s_entries)
+            apr_hash_set (s_entries, name, APR_HASH_KEY_STRING, NULL);
+          continue;
+        }
+
       e_fullpath = svn_path_join (e_path, name, subpool);
       t_fullpath = svn_path_join (t_path, name, subpool);
       t_entry = apr_hash_get (t_entries, name, APR_HASH_KEY_STRING);
@@ -758,7 +771,30 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         svn_pool_destroy (info->pool);
     }
 
-  /* Loop over the remaining dirents in the target. */
+  /* Remove any deleted entries.  Do this before processing the
+     target, for graceful handling of case-only renames. */
+  if (s_entries)
+    {
+      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
+        {
+          svn_pool_clear (subpool);
+          apr_hash_this (hi, NULL, NULL, &val);
+          s_entry = val;
+
+          if (apr_hash_get (t_entries, s_entry->name,
+                            APR_HASH_KEY_STRING) == NULL)
+            {
+              /* There is no corresponding target entry, so delete. */
+              e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
+              if (b->recurse || s_entry->kind != svn_node_dir)
+                SVN_ERR (b->editor->delete_entry (e_fullpath,
+                                                  SVN_INVALID_REVNUM,
+                                                  dir_baton, subpool));
+            }
+        }
+    }
+
+  /* Loop over the dirents in the target. */
   for (hi = apr_hash_first (pool, t_entries); hi; hi = apr_hash_next (hi))
     {
       svn_pool_clear (subpool);
@@ -778,27 +814,6 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR (update_entry (b, s_rev, s_fullpath, s_entry, t_fullpath,
                              t_entry, dir_baton, e_fullpath, NULL,
                              b->recurse, subpool));
-
-      /* Don't revisit this name in the source entries. */
-      if (s_entries)
-        apr_hash_set (s_entries, t_entry->name, APR_HASH_KEY_STRING, NULL);
-    }
-
-  /* Loop over the remaining dirents in the source. */
-  if (s_entries)
-    {
-      for (hi = apr_hash_first (pool, s_entries); hi; hi = apr_hash_next (hi))
-        {
-          svn_pool_clear (subpool);
-          apr_hash_this (hi, NULL, NULL, &val);
-          s_entry = val;
-
-          /* We know there is no corresponding target entry, so just delete. */
-          e_fullpath = svn_path_join (e_path, s_entry->name, subpool);
-          if (b->recurse || s_entry->kind != svn_node_dir)
-            SVN_ERR (b->editor->delete_entry (e_fullpath, SVN_INVALID_REVNUM,
-                                              dir_baton, subpool));
-        }
     }
 
   /* Destroy iteration subpool. */

@@ -767,8 +767,7 @@ def failed_anchor_is_target(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
-  expected_status.tweak('A/D/H/chi', 'A/D/H/omega', switched='S')
-  expected_status.remove('A/D/H/psi')
+  expected_status.remove('A/D/H/psi', 'A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
     'A/D/H/pi'      : Item(status='  ', wc_rev=2, repos_rev=2),
     'A/D/H/tau'     : Item(status='  ', wc_rev=2, repos_rev=2),
@@ -793,7 +792,6 @@ def failed_anchor_is_target(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      G_url, H_path)
 
-  expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.tweak('A/D/H', status='  ') # remains switched
   expected_status.add({ 'A/D/H/psi' : Item(status='  ',
                                            switched=None,
