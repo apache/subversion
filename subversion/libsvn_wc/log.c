@@ -497,17 +497,18 @@ log_do_detect_conflict (struct log_runner *loggy,
          entry as conflicted! */
       apr_hash_t *atthash = svn_xml_make_att_hash (atts, loggy->pool);
 
-      err = svn_wc__entry_merge_sync (loggy->path,
-                                      svn_string_create (name, loggy->pool),
-                                      SVN_INVALID_REVNUM, /* ignore */
-                                      svn_node_none,      /* ignore */
-                                      SVN_WC_ENTRY_CONFLICTED,
-                                      0,                  /* ignore */
-                                      0,                  /* ignore */
-                                      loggy->pool,
-                                      atthash,  /* contains
-                                                   SVN_WC_ATTR_REJFILE */
-                                      NULL);
+      err = svn_wc__entry_fold_sync_intelligently
+        (loggy->path,
+         svn_string_create (name, loggy->pool),
+         SVN_INVALID_REVNUM, /* ignore */
+         svn_node_none,      /* ignore */
+         SVN_WC_ENTRY_CONFLICTED,
+         0,                  /* ignore */
+         0,                  /* ignore */
+         loggy->pool,
+         atthash,  /* contains
+                      SVN_WC_ATTR_REJFILE */
+         NULL);
     }
 
   return SVN_NO_ERROR;
@@ -551,7 +552,7 @@ log_do_modify_entry (struct log_runner *loggy,
   /* kff todo: similar to code in entries.c:handle_start().
              Would be nice to either write a function mapping string
              to kind, and/or write an equivalent of
-             svn_wc__entry_merge_sync() that takes a hash and does the
+             svn_wc__entry_fold_sync() that takes a hash and does the
              same thing, without all the specialized args. */
   if (! kindstr)
     kind = svn_node_none;
@@ -592,7 +593,7 @@ log_do_modify_entry (struct log_runner *loggy,
             
     /* Scenario 1:  no timestamp mentioned at all */
     if (! text_timestr)
-      text_time = 0;  /* this tells merge_sync to ignore the
+      text_time = 0;  /* this tells fold_sync to ignore the
                          field */
             
     /* Scenario 2:  use the working copy's timestamp */
@@ -664,16 +665,16 @@ log_do_modify_entry (struct log_runner *loggy,
   /** End of Timestamp deductions **/
 
           /* Now write the new entry out */
-  err = svn_wc__entry_merge_sync (loggy->path,
-                                  sname,
-                                  new_revision,
-                                  kind,
-                                  state,
-                                  text_time,
-                                  prop_time,
-                                  loggy->pool,
-                                  ah,
-                                  NULL);
+  err = svn_wc__entry_fold_sync_intelligently (loggy->path,
+                                               sname,
+                                               new_revision,
+                                               kind,
+                                               state,
+                                               text_time,
+                                               prop_time,
+                                               loggy->pool,
+                                               ah,
+                                               NULL);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                               "error merge_syncing entry %s", name);
@@ -755,7 +756,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
                "conflict_if_rejfile: trouble removing %s",
                rejfile_full_path->data);
 
-          err = svn_wc__entry_merge_sync
+          err = svn_wc__entry_fold_sync_intelligently
             (parent_dir,
              svn_string_create (entry, pool),
              SVN_INVALID_REVNUM,
@@ -778,7 +779,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
                         rejfile_type, APR_HASH_KEY_STRING,
                         svn_string_create (rejfile, pool));
 
-          err = svn_wc__entry_merge_sync 
+          err = svn_wc__entry_fold_sync_intelligently
             (parent_dir,
              svn_string_create (entry, pool),
              SVN_INVALID_REVNUM,
@@ -1002,19 +1003,20 @@ log_do_committed (struct log_runner *loggy,
 
           /* Files have been moved, and timestamps are found.  Time
              for The Big Merge Sync. */
-          err = svn_wc__entry_merge_sync (loggy->path,
-                                          sname,
-                                          atoi (revstr),
-                                          svn_node_none,
-                                          SVN_WC_ENTRY_CLEAR_ALL,
-                                          text_time,
-                                          prop_time,
-                                          loggy->pool,
-                                          NULL,
-                                          /* remove the rejfile atts! */
-                                          SVN_WC_ENTRY_ATTR_REJFILE,
-                                          SVN_WC_ENTRY_ATTR_PREJFILE,
-                                          NULL);
+          err = svn_wc__entry_fold_sync_intelligently 
+            (loggy->path,
+             sname,
+             atoi (revstr),
+             svn_node_none,
+             SVN_WC_ENTRY_CLEAR_ALL,
+             text_time,
+             prop_time,
+             loggy->pool,
+             NULL,
+             /* remove the rejfile atts! */
+             SVN_WC_ENTRY_ATTR_REJFILE,
+             SVN_WC_ENTRY_ATTR_PREJFILE,
+             NULL);
           if (err)
             return svn_error_createf
               (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,

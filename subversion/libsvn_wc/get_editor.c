@@ -153,16 +153,18 @@ free_dir_baton (struct dir_baton *dir_baton)
   struct dir_baton *parent = dir_baton->parent_baton;
 
   /* Bump this dir to the new revision. */
-  err = svn_wc__entry_merge_sync (dir_baton->path,
-                                  NULL,
-                                  dir_baton->edit_baton->target_revision,
-                                  svn_node_dir,
-                                  0,
-                                  0,
-                                  0,
-                                  dir_baton->pool,
-                                  NULL,
-                                  NULL);
+  err = svn_wc__entry_fold_sync_intelligently
+    (dir_baton->path,
+     NULL,
+     dir_baton->edit_baton->target_revision,
+     svn_node_dir,
+     0,
+     0,
+     0,
+     dir_baton->pool,
+     NULL,
+     NULL);
+  
    if (err)
      return err;
 
@@ -475,16 +477,16 @@ add_directory (svn_string_t *name,
 
   /* Notify the parent that this child dir exists.  This can happen
      right away, there is no need to wait until the child is done. */
-  err = svn_wc__entry_merge_sync (parent_dir_baton->path,
-                                  this_dir_baton->name,
-                                  SVN_INVALID_REVNUM,
-                                  svn_node_dir,
-                                  0,
-                                  0,
-                                  0,
-                                  parent_dir_baton->pool,
-                                  NULL,
-                                  NULL);
+  err = svn_wc__entry_fold_sync_intelligently (parent_dir_baton->path,
+                                               this_dir_baton->name,
+                                               SVN_INVALID_REVNUM,
+                                               svn_node_dir,
+                                               0,
+                                               0,
+                                               0,
+                                               parent_dir_baton->pool,
+                                               NULL,
+                                               NULL);
   if (err)
     return err;
 
