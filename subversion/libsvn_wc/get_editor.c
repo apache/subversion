@@ -729,7 +729,10 @@ change_dir_prop (void *dir_baton,
   /* Push a new propchange to the directory baton's array of propchanges */
   propchange = apr_array_push (db->propchanges);
   propchange->name = local_name->data;
-  propchange->value = svn_string_create_from_buf (local_value, db->pool);
+  if (local_value)
+    propchange->value = svn_string_create_from_buf (local_value, db->pool);
+  else
+    propchange->value = NULL;
 
   /* Let close_dir() know that propchanges are waiting to be
      applied. */
