@@ -483,11 +483,11 @@ class RepositoryMirror:
   def change_path(self, path, tags, branches,
                   intermediate_dir_func=None,
                   copyfrom_path=None, copyfrom_rev=None,
-                  entries_after_copy=None):
+                  expected_entries=None):
     """Record a change to PATH.  PATH may not have a leading slash.
 
     Return a tuple of three or four elements.  The first three are
-    always present, and the fourth only when ENTRIES_AFTER_COPY is
+    always present, and the fourth only when EXPECTED_ENTRIES is
     present:
 
        op, closed_tags, closed_branches, [deleted_entries]
@@ -513,17 +513,16 @@ class RepositoryMirror:
     behavior for callers is instead to report that nothing was done,
     by returning '-' for OP, so that's what we do.
 
-    If there is copyfrom information, and ENTRIES_AFTER_COPY is not
-    None, then it is full set of entries expected to be in the copy
-    dst after the copy.  Any entries in the new dst but not in
-    ENTRIES_AFTER_COPY will be removed (ignoring keys beginning with
-    '/'), and those entries are returned in [deleted_entries].
+    It is an error for only one copyfrom argument to be present.
 
-    No action is taken for keys in ENTRIES_AFTER_COPY but not in the
+    If EXPECTED_ENTRIES is not None, then it holds entries expected
+    to be in the dst after the copy.  Any entries in the new dst but
+    not in EXPECTED_ENTRIES will be removed (ignoring keys beginning
+    with '/'), and the removed entries returned in [deleted_entries].
+
+    No action is taken for keys in EXPECTED_ENTRIES but not in the
     dst; it is assumed that the caller will compensate for these by
-    calling change_path again with other arguments.
-
-    It is an error for only one copyfrom argument to be present."""
+    calling change_path again with other arguments."""
     if ((copyfrom_rev and not copyfrom_path) or
         (copyfrom_path and not copyfrom_rev)):
       sys.stderr.write("error: change_path() called with one copyfrom "
@@ -584,28 +583,28 @@ class RepositoryMirror:
     else:
       old_names = [], []
     last_component = components[-1]
+    new_val = { }
     if parent.has_key(last_component):
       # The contract for copying over existing nodes is to do nothing
       # and return:
       if copyfrom_path:
-        if entries_after_copy:
+        if expected_entries:
           return OP_NOOP, old_names[0], old_names[1], []
         else:
           return OP_NOOP, old_names[0], old_names[1]
       # else
       op = OP_CHANGE
+      new_val = marshal.loads(self.nodes_db[parent[last_component]])
 
     leaf_key = gen_key()
     deletions = []
     if copyfrom_path:
       new_val = self.probe_path(copyfrom_path, copyfrom_rev)
-      if entries_after_copy:
-        for ent in new_val.keys():
-          if (ent[0] != '/') and (not entries_after_copy.has_key(ent)):
-            del new_val[ent]
-            deletions.append(ent)
-    else:
-      new_val = { }
+    if expected_entries:
+      for ent in new_val.keys():
+        if (ent[0] != '/') and (not expected_entries.has_key(ent)):
+          del new_val[ent]
+          deletions.append(ent)
     parent[last_component] = leaf_key
     self.nodes_db[parent_key] = marshal.dumps(parent)
     self.symroots_db[path] = marshal.dumps((tags, branches))
@@ -613,7 +612,7 @@ class RepositoryMirror:
     s = marshal.dumps(new_val)
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
 
-    if entries_after_copy:
+    if expected_entries:
       return op, old_names[0], old_names[1], deletions
     else:
       return op, old_names[0], old_names[1]
@@ -917,7 +916,20 @@ class Dumper:
         self.dumpfile.write('Node-path: %s\n'
                             'Node-action: delete\n'
                             '\n' % (svn_dst_path + '/' + ent))
-        
+
+  def prune_entries(self, path, expected):
+    """Delete any entries in PATH that are not in list EXPECTED.
+    PATH need not be a directory, but of course nothing will happen if
+    it's a file.  Entries beginning with '/' are ignored as usual."""
+    ign1, ign2, ign3, deletions = self.repos_mirror.change_path(path,
+                                                                [], [],
+                                                                self.add_dir,
+                                                                None, None,
+                                                                expected)
+    for ent in deletions:
+      self.dumpfile.write('Node-path: %s\n'
+                          'Node-action: delete\n'
+                          '\n' % (path + '/' + ent))
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
                          tags, branches):
@@ -1423,23 +1435,34 @@ class SymbolicNameTracker:
       # and see if it differs from parent's best rev.
       scores = self.score_revisions(val.get(opening_key), val.get(closing_key))
       rev = self.best_rev(scores)
-      if (rev != SVN_INVALID_REVNUM) and (rev != parent_rev):
-        parent_rev = rev
+
+      if rev == SVN_INVALID_REVNUM:
+        return  # name is a branch, but we're doing a tag, or vice versa
+
+      else:
         if is_tag:
           copy_dst = make_path(ctx, dst_path, None, name)
         else:
           copy_dst = make_path(ctx, dst_path, name, None)
-        if jit_new_rev and jit_new_rev[0]:
-          dumper.start_revision(make_revision_props(name, is_tag))
-          jit_new_rev[0] = None
-        dumper.copy_path(src_path, parent_rev, copy_dst, val)
-        # Record that this copy is done:
-        val[copyfrom_rev_key] = parent_rev
-        if val.has_key(opening_key):
-          del val[opening_key]
-        if val.has_key(closing_key):
-          del val[closing_key]
-        self.db[key] = marshal.dumps(val)
+
+        if (rev != parent_rev):
+          parent_rev = rev
+          if jit_new_rev and jit_new_rev[0]:
+            dumper.start_revision(make_revision_props(name, is_tag))
+            jit_new_rev[0] = None
+          dumper.copy_path(src_path, parent_rev, copy_dst, val)
+          # Record that this copy is done:
+          val[copyfrom_rev_key] = parent_rev
+          if val.has_key(opening_key):
+            del val[opening_key]
+          if val.has_key(closing_key):
+            del val[closing_key]
+          self.db[key] = marshal.dumps(val)
+        else:
+          # Even if we kept the already-present revision of this entry
+          # instead of copying a new one, we still need to prune out
+          # anything that's not part of the symbolic name.
+          dumper.prune_entries(copy_dst, val)
 
     for ent in val.keys():
       if not ent[0] == '/':
