@@ -111,15 +111,15 @@ SOURCE=.\commit.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\copy.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\delete.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\diff.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\clients\cmdline\feedback.c
 # End Source File
 # Begin Source File
 

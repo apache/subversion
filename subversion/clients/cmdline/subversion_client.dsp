@@ -106,6 +106,10 @@ SOURCE=".\commit-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\copy-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\delete-cmd.c"
 # End Source File
 # Begin Source File
@@ -115,6 +119,10 @@ SOURCE=".\diff-cmd.c"
 # Begin Source File
 
 SOURCE=.\diff.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\feedback.c
 # End Source File
 # Begin Source File
 
