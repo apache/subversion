@@ -331,17 +331,6 @@ def update_modified_with_translation(sbox):
 8
 9
 10
-||||||| .r3
-1
-2
-3
-4
-4.5
-5
-6
-7
-8
-9
 =======
 This is the file 'rho'.>>>>>>> .r1
 """

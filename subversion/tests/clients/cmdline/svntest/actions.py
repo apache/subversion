@@ -167,8 +167,8 @@ def run_and_verify_update(wc_dir_name,
                           b_baton = None,
                           check_props = 0,
                           *args):
-  """Update WC_DIR_NAME into a new directory WC_DIR_NAME.  *ARGS are
-  any extra optional args to the update subcommand.
+  """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
+  update subcommand.  
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional

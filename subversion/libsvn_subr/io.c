@@ -1136,15 +1136,16 @@ svn_io_run_diff3 (const char *dir,
   
   /* Set up diff3 command line. */
   args[0] = SVN_CLIENT_DIFF3;
-  args[1] = "-A";               /* this can be "-E" if we want 2-part
-                                   conflict markers instead of 3-part
-                                   ones.  see issue #647 */
+  args[1] = "-E";               /* We tried "-A" here, but that caused
+                                   overlapping identical changes to
+                                   conflict.  See issue #682. */
   args[2] = "-m";
   args[3] = "-L";
   args[4] = mine_label;
   args[5] = "-L";
   args[6] = older_label;        /* note:  this label is ignored if
-                                   using 2-part markers. */
+                                   using 2-part markers, which is the
+                                   case with "-E". */
   args[7] = "-L";
   args[8] = yours_label;
   args[9] = mine;
