@@ -100,7 +100,7 @@ allocate_txn_id (const char **id_p,
 {
   DBT query, result;
   apr_size_t len;
-  char next_key[200];
+  char next_key[SVN_FS__MAX_KEY_SIZE];
   int db_err;
 
   svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);

@@ -175,7 +175,7 @@ svn_fs__new_node_id (svn_fs_id_t **id_p,
   DBT key, value;
   svn_fs_id_t *id;
   const char *node_id;
-  char next_key[200];
+  char next_key[SVN_FS__MAX_KEY_SIZE];
   apr_size_t len;
 
   /* TXN_ID is required! */
