@@ -3490,13 +3490,13 @@ Updated to revision 30.
 
       <refentry>
         <refnamediv>
-          <refname>svnadmin archive</refname>
+          <refname>svnadmin list-unused-dblogs</refname>
           <refpurpose>Ask Berkeley DB which logfiles can be safely
           deleted.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnadmin archive REPOS_PATH</programlisting>
+          <programlisting>svnadmin list-unused-dblogs REPOS_PATH</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -3515,12 +3515,12 @@ Updated to revision 30.
           <para>Remove all unused logfiles from a repository:</para>
 
         <screen>
-$ svnadmin archive /path/to/repos
+$ svnadmin list-unused-dblogs /path/to/repos
 /path/to/repos/log.0000000031
 /path/to/repos/log.0000000032
 /path/to/repos/log.0000000033
 
-$ svnadmin archive /path/to/repos | xargs rm
+$ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 ## disk space reclaimed!
         </screen>
 
