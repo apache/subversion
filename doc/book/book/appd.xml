@@ -230,7 +230,7 @@
             then basic WebDAV clients (i.e. those unaware of
             versioning) can still write to the server, and the server
             will silently perform versioning anyway.  In the simplest
-            example, a ignorant <literal>PUT</literal> from a basic
+            example, an ignorant <literal>PUT</literal> from a basic
             WebDAV client might be translated by the server as a
             <literal>CHECKOUT</literal>, <literal>PUT</literal>,
             <literal>CHECKIN</literal>.</para>
@@ -331,7 +331,7 @@
         few DeltaV clients in the world; RFC 3253 is still relatively
         new.  However users do have access to <quote>generic</quote>
         clients, because almost every modern operating system now has
-        a integrated basic WebDAV client.  With this in mind,
+        an integrated basic WebDAV client.  With this in mind,
         Subversion developers realized that if Subversion 1.0 was to
         have <emphasis>any</emphasis> interoperability features,
         support for DeltaV autoversioning would be the best

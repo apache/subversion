@@ -1644,7 +1644,7 @@ if (open LASTDUMPED, $last_dumped)
 
 # Query the youngest revision in the repos.
 my $youngest = `svnlook youngest $repos_path`;
-defined $youngest && $youngest =~ /^\d+$/
+defined $youngest &amp;&amp; $youngest =~ /^\d+$/
   or die "$0: 'svnlook youngest $repos_path' cannot get youngest revision.\n";
 chomp $youngest;
 
@@ -2131,10 +2131,9 @@ $
           password for their respective username, would be allowed to
           do anything with the Subversion repository.</para>
     
-        <para>Sometimes you don't need to run such a tight ship.  The
-          repository at <systemitem
-          class="url">http://svn.collab.net/repos/svn</systemitem>
-          that holds the Subversion source code, for example, allows
+        <para>Sometimes you don't need to run such a tight ship.  For
+          example, Subversion's own source code repository at <systemitem
+          class="url">http://svn.collab.net/repos/svn</systemitem> allows
           anyone in the world to perform read-only repository tasks
           (like checking out working copies and browsing the
           repository with a web browser), but restricts all write

@@ -40,7 +40,7 @@ To be fixed by cmpilato:
     use-case that shows how to use svndumpfilter as an alternative to
     'svnadmin obliterate.'
 
-  - ch07: maybe a explanation for the person writing a new main()
+  - ch07: maybe an explanation for the person writing a new main()
     application... what are all those callbacks in the ctx_t used for?
     people have asked this in irc.  what sort of things does an
     application *have* to set up in the cxt_t in order to call an
