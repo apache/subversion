@@ -871,9 +871,10 @@ $ svnlook tree path/to/repos --show-ids
         <para>The <command>svnadmin</command> program is the
           repository administrator's best friend.  Besides providing
           the ability to create Subversion repositories, this program
-          allows you perform several maintenance operations on those
-          repositories.  The syntax of <command>svnadmin</command> is
-          similar to that of <command>svnlook</command>:</para>
+          allows you to perform several maintenance operations on
+          those repositories.  The syntax of
+          <command>svnadmin</command> is similar to that of
+          <command>svnlook</command>:</para>
 
         <screen>
 $ svnadmin help
