@@ -1470,7 +1470,7 @@ add_or_open_file (const char *path,
   if ((! adding) && (! entry))
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                               "File '%s' in directory '%s' "
-			      "is not a versioned resource",
+                              "is not a versioned resource",
                               fb->name, pb->path);
   
   /* ### todo:  right now the incoming copyfrom* args are being

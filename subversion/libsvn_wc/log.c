@@ -667,7 +667,7 @@ log_do_committed (struct log_runner *loggy,
       || ((! is_this_dir) && (orig_entry->kind != svn_node_file)))
     return svn_error_createf (pick_error_code (loggy), NULL,
                               "Log command for directory '%s' is mislocated", 
-			      name);
+                              name);
 
   entry = svn_wc_entry_dup (orig_entry, pool);
 
@@ -1191,7 +1191,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
                                    NULL,
                                    "Unrecognized logfile element '%s' in '%s'",
                                    eltname,
-				   svn_wc_adm_access_path (loggy->adm_access)));
+                                   svn_wc_adm_access_path (loggy->adm_access)));
       return;
     }
 

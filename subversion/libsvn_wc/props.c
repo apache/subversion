@@ -162,8 +162,8 @@ svn_wc__load_prop_file (const char *propfile_path,
       apr_file_t *propfile = NULL;
 
       SVN_ERR (svn_io_file_open (&propfile, propfile_path,
-				 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-				 pool));
+                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                                 pool));
 
       status = svn_hash_read (hash, propfile, pool);
       if (status)
@@ -190,9 +190,9 @@ svn_wc__save_prop_file (const char *propfile_path,
   apr_file_t *prop_tmp;
 
   SVN_ERR (svn_io_file_open (&prop_tmp, propfile_path,
-			     (APR_WRITE | APR_CREATE | APR_TRUNCATE
-			      | APR_BUFFERED),
-			     APR_OS_DEFAULT, pool));
+                             (APR_WRITE | APR_CREATE | APR_TRUNCATE
+                              | APR_BUFFERED), 
+                             APR_OS_DEFAULT, pool));
 
   apr_err = svn_hash_write (hash, prop_tmp, pool);
   if (apr_err)

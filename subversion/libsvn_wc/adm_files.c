@@ -659,7 +659,7 @@ svn_wc__open_props (apr_file_t **handle,
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              "No such thing as 'base' "
-			     "working copy properties!");
+                             "working copy properties!");
 
   else if (base)
     {
@@ -734,7 +734,7 @@ svn_wc__close_props (apr_file_t *fp,
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              "No such thing as 'base' "
-			     "working copy properties!");
+                             "working copy properties!");
 
   else if (base)
     {
@@ -798,7 +798,7 @@ svn_wc__sync_props (const char *path,
   if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                              "No such thing as 'base' "
-			     "working copy properties!");
+                             "working copy properties!");
 
   else if (base)
     {
