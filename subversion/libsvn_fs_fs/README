@@ -46,24 +46,27 @@ simplicity and robustness, as well as the flexibility to make commits
 work without write access to existing revisions.  Skip deltas and
 delta combination will mitigate the checkout cost.
 
-In-progress transactions will be represented with a file for the
-changed-file data (appended to as changed files come in) and a
-directory tree mirroring the changed part of the transaction.
+In-progress transactions will be represented with a prototype rev flie
+containing only the new text representations of files (appended to as
+changed file contents come in) and an efficiently mutable
+representation of the node-revisions, directory contents, and
+property-lists which have been modified by the transaction so far.
 
 To commit a transaction, the FS code must:
 
   * Perform an auto-merge against any new revs.
   * Grab a write lock on the repository.
-  * Marshal the changed-directory data onto the changed-file data.
+  * Marshal the changed property lists, directory contents, and
+    node-revisions onto the end of the rev file.
   * Move the new file into place.
   * Release the write lock.
 
 (As a possible variation, we could grab the write lock one step later;
 if a rev is committed between the auto-merge and the write lock, we
-truncate the rev file back to the end of the changed-file data and go
-back to the beginning.  This would prevent large commits from blocking
-small ones, but would also mean large commits could take a long time
-to finalize.)
+truncate the rev file back to the end of the text representation data
+and go back to the beginning.  This would prevent large commits from
+blocking small ones, but would also mean large commits could take a
+long time to finalize.)
 
 Workplan
 --------
