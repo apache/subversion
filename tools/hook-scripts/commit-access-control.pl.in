@@ -6,6 +6,11 @@
 # commit in repository REPOS using the permissions listed in the
 # configuration file CONF_FILE.
 #
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+#
 # Usage: commit-access-control.pl REPOS TXN-NAME CONF_FILE
 #    
 # ====================================================================

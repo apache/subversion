@@ -1,5 +1,6 @@
 ## Example configuration file for svnperms.py. ##
 
+# $Id$
 #
 # Multiple global [groups] sections are accepted, but be aware
 # that it's the same as concatenating them all in a single entry.
