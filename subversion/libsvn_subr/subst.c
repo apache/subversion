@@ -757,7 +757,7 @@ detranslate_special_file (const char *src,
        contents. */
     SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
                                APR_OS_DEFAULT, pool));
-    src_stream = svn_stream_from_aprfile (d, pool);
+    src_stream = svn_stream_from_aprfile (s, pool);
 
     SVN_ERR (svn_stream_copy (src_stream, dst_stream, pool));
     break;
