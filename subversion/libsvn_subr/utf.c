@@ -54,19 +54,11 @@ get_xlate_handle (apr_xlate_t **ret,
   /* If we already have a handle, just return it. */
   if (userdata_key)
     {
-      apr_pool_t *search_pool = pool;
-      while (search_pool)
+      apr_pool_userdata_get (&old_handle, userdata_key, pool);
+      if (old_handle != NULL)
         {
-          apr_pool_userdata_get (&old_handle, userdata_key, search_pool);
-          if (old_handle != NULL)
-            {
-              *ret = old_handle;
-              if (search_pool != pool)
-                apr_pool_userdata_set (*ret, userdata_key,
-                                       apr_pool_cleanup_null, pool);
-              return SVN_NO_ERROR;
-            }
-          search_pool = apr_pool_get_parent (search_pool);
+          *ret = old_handle;
+          return SVN_NO_ERROR;
         }
     }
 
