@@ -23,6 +23,7 @@ import popen2
 import cStringIO
 import smtplib
 import re
+import tempfile
 
 import svn.fs
 import svn.delta
@@ -32,7 +33,7 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fp, repos_dir, rev, author, propname):
+def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
@@ -42,7 +43,7 @@ def main(pool, cmd, config_fp, repos_dir, rev, author, propname):
     # Override the repos revision author with the author of the propchange
     repos.author = author
     cfg = Config(config_fp, repos, { 'author' : author })
-    messenger = PropChange(pool, cfg, repos, author, propname)
+    messenger = PropChange(pool, cfg, repos, author, propname, action)
   else:
     raise UnknownSubcommand(cmd)
 
@@ -326,11 +327,30 @@ class Commit(Messenger):
     svn.core.svn_pool_destroy(subpool)
 
 
+try:
+  from tempfile import NamedTemporaryFile
+except ImportError:
+  # NamedTemporaryFile was added in Python 2.3, so we need to emulate it
+  # for older Pythons.
+  class NamedTemporaryFile:
+    def __init__(self):
+      self.name = tempfile.mktemp()
+      self.file = open(self.name, 'w+b')
+    def __del__(self):
+      os.remove(self.name)
+    def write(self, data):
+      self.file.write(data)
+    def flush(self):
+      self.file.flush()
+
+
 class PropChange(Messenger):
-  def __init__(self, pool, cfg, repos, author, propname):
+  def __init__(self, pool, cfg, repos, author, propname, action):
     Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
     self.author = author
     self.propname = propname
+    self.action = action
+    self.cfg = cfg
 
     ### hunh. this code isn't actually needed for StandardOutput. refactor?
     # collect the set of groups and the unique sets of params for the options
@@ -344,13 +364,34 @@ class PropChange(Messenger):
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
 
   def generate(self):
+    actions = { 'A': 'added', 'M': 'modified', 'D': 'deleted' }
     for (group, param_tuple), params in self.groups.items():
       self.output.start(group, params)
-      self.output.write('Author: %s\nRevision: %s\nProperty Name: %s\n\n'
-                        % (self.author, self.repos.rev, self.propname))
-      propvalue = self.repos.get_rev_prop(self.propname)
-      self.output.write('New Property Value:\n')
-      self.output.write(propvalue)
+      self.output.write('Author: %s\n'
+                        'Revision: %s\n'
+                        'Property Name: %s\n'
+                        'Action: %s\n'
+                        '\n'
+                        % (self.author, self.repos.rev, self.propname,
+                           actions.get(action, 'Unknown (\'%s\')' % action)))
+      if action == 'A':
+        self.output.write('Property value:\n')
+        propvalue = self.repos.get_rev_prop(self.propname)
+        self.output.write(propvalue)
+      elif action != 'D':
+        self.output.write('Property diff:\n')
+        tempfile1 = NamedTemporaryFile()
+        tempfile1.write(sys.stdin.read())
+        tempfile1.flush()
+        tempfile2 = NamedTemporaryFile()
+        tempfile2.write(self.repos.get_rev_prop(self.propname))
+        tempfile2.flush()
+        self.output.run(self.cfg.get_diff_cmd({
+          'label_from' : 'old property value',
+          'label_to' : 'new property value',
+          'from' : tempfile1.name,
+          'to' : tempfile2.name,
+          }))
       self.output.finish()
 
 
@@ -760,7 +801,7 @@ if __name__ == '__main__':
   def usage():
     sys.stderr.write(
 """USAGE: %s commit     REPOS-DIR REVISION [CONFIG-FILE]
-       %s propchange REPOS-DIR REVISION AUTHOR PROPNAME [CONFIG-FILE]
+       %s propchange REPOS-DIR REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
 file in REPOS-DIR/conf/.  Failing that, it will search the directory in which
@@ -781,6 +822,7 @@ will be provided via standard input.
   config_fname = None
   author = None
   propname = None
+  action = 'M'
 
   if cmd == 'commit':
     if len(sys.argv) > 5:
@@ -788,12 +830,13 @@ will be provided via standard input.
     if len(sys.argv) > 4:
       config_fname = sys.argv[4]
   elif cmd == 'propchange':
-    if len(sys.argv) < 6 or len(sys.argv) > 7:
+    if len(sys.argv) < 6 or len(sys.argv) > 8:
       usage()
     author = sys.argv[4]
     propname = sys.argv[5]
-    if len(sys.argv) > 6:
-      config_fname = sys.argv[6]
+    action = sys.argv[6]
+    if len(sys.argv) > 7:
+      config_fname = sys.argv[7]
   else:
     usage()
 
@@ -815,7 +858,7 @@ will be provided via standard input.
 
   ### run some validation on these params
   svn.core.run_app(main, cmd, config_fp, repos_dir, revision,
-                   author, propname)
+                   author, propname, action)
 
 # ------------------------------------------------------------------------
 # TODO
