@@ -633,11 +633,17 @@ def diff_only_property_change(sbox):
 
   result = 0
 
-  if os.system(svntest.main.svn_binary + " diff -r1:2"):
-    result = 1
+  output, errput = svntest.main.run_svn(None, 'diff', '-r1:2')
+  if len (errput) > 0:
+    print "error forward diffing a prop change"
+    print errput
+    return 1
 
-  if not result and os.system(svntest.main.svn_binary + " diff -r2:1"):
-    result = 1
+  output, errput = svntest.main.run_svn(None, 'diff', '-r2:1')
+  if len (errput) > 0:
+    print "error reverse diffing a prop change"
+    print errput
+    return 1
 
   os.chdir(current_dir)
   return result
