@@ -158,23 +158,16 @@ update_dir_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
   if (! dir)
     {
       /* kff todo: make an error */
+      printf ("Unable to get a dir.\n");
     }
 
   /* Else, make the directory. */
-
-#if 0
-  if (apr_create_pool (&pglobal, NULL) != APR_SUCCESS)
-    {
-      printf ("apr_create_pool() failed.\n");
-      exit (1);
-    }
-#endif
- 
+  printf ("Got dir \"%s\".\n", dir->data);  /* kff todo */
 }
 
 
 
-/* Do an update/checkout, with src delta streaming from SRC, to DST.
+/* Do an update/checkout, with src delta streaming from SRC, to DST (a path).
  * 
  * SRC must be already opened.
  * 
@@ -187,9 +180,12 @@ update_dir_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
  *
  * (And if DST is NULL, the above rules apply with DST set to the top
  * directory mentioned in the delta.) 
+ *
+ * kff todo: instead of apr_file_t *SRC, use a generic streamer like
+ * JimB made for the text delta interface.
  */
 svn_error_t *
-update (ap_file_t *src, svn_string_t *dst, apr_pool_t *pool)
+update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
   char buf[BUFSIZ];
   apr_status_t status;
