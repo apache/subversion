@@ -27,10 +27,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r13939, r13940
-    Doxygen tweaks.
-    Notes:
-      Depends on r13936.
-    Votes:
-      +1: maxb, dlr, lundblad
-

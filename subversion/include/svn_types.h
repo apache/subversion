@@ -159,10 +159,12 @@ typedef apr_int64_t svn_filesize_t;
 /** In @c printf()-style functions, format file sizes using this. */
 #define SVN_FILESIZE_T_FMT APR_INT64_T_FMT
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 /* Parse a base-10 numeric string into a 64-bit unsigned numeric value. */
 /* NOTE: Private. For use by Subversion's own code only. See issue #1644. */
 /* FIXME: APR should supply a function to do this, such as "apr_atoui64". */
 #define svn__atoui64(X) ((apr_uint64_t) apr_atoi64(X))
+#endif
 
 
 /** YABT:  Yet Another Boolean Type */

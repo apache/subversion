@@ -50,6 +50,10 @@ typedef struct svn_config_t svn_config_t;
 
 /*** Configuration Defines ***/
 
+/** @{
+ * Strings for the names of files, sections, and options in the
+ * client configuration files.
+ */
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
 #define SVN_CONFIG_SECTION_GLOBAL               "global"
@@ -84,7 +88,12 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
+/** @} */
 
+/** @{
+ * Strings for the names of sections and options in the
+ * repository conf directory configuration files.
+ */
 /* For repository svnserve.conf files */
 #define SVN_CONFIG_SECTION_GENERAL              "general"
 #define SVN_CONFIG_OPTION_ANON_ACCESS               "anon-access"
@@ -94,6 +103,7 @@ typedef struct svn_config_t svn_config_t;
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"
+/** @} */
 
 /*** Configuration Default Values ***/
 
