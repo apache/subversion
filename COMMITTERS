@@ -1,4 +1,4 @@
-﻿The following people have commit access to the Subversion sources.
+The following people have commit access to the Subversion sources.
 Note that this is not a full list of Subversion's authors, however --
 for that, you'd need to look over the log messages to see all the
 patch contributors.
@@ -90,7 +90,7 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <mchvs@hotmail.com>           (po: pt_BR)
         pynoos   Hojin Choi <pynoos@users.kldp.net>          (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
-        hynnet   YingNing Huang <hyn@bao.hynnet.ocm>         (po: zh_CN)
+        hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
      beerfrick   Ariel Arjona <beerfrick@gmail.com>          (doc: es)
         gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
