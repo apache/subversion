@@ -238,7 +238,7 @@ enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
 };
 
-const char *dav_svn_build_uri(const dav_resource *resource,
+const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
                               const char *path,

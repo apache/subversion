@@ -546,7 +546,8 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
       /* Set up the proper URI. Most likely, we arrived here via a VCC,
          so the URI will be incorrect. Set the canonical form. */
       /* ### assuming a baseline */
-      comb->res.uri = dav_svn_build_uri(&comb->res, DAV_SVN_BUILD_URI_BASELINE,
+      comb->res.uri = dav_svn_build_uri(comb->priv.repos,
+                                        DAV_SVN_BUILD_URI_BASELINE,
                                         comb->priv.root.rev, NULL,
                                         0 /* add_href */,
                                         comb->res.pool);

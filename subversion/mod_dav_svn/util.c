@@ -32,15 +32,15 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
     return derr;
 }
 
-const char *dav_svn_build_uri(const dav_resource *resource,
+const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
                               const char *path,
                               int add_href,
                               apr_pool_t *pool)
 {
-  const char *root_path = resource->info->repos->root_path;
-  const char *special_uri = resource->info->repos->special_uri;
+  const char *root_path = repos->root_path;
+  const char *special_uri = repos->special_uri;
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
