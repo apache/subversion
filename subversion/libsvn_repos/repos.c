@@ -1281,7 +1281,7 @@ lock_db_logs_file (svn_repos_t *repos,
      repositories created before hotcopy functionality.  */
   svn_error_clear (create_db_logs_lock (repos, pool));
 
-  SVN_ERR (svn_io_file_lock (lock_file, exclusive, pool));
+  SVN_ERR (svn_io_file_lock2 (lock_file, exclusive, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

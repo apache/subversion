@@ -163,7 +163,10 @@ svn_error_t * svn_repos_hotcopy (const char *src_path,
                                  svn_boolean_t clean_logs,
                                  apr_pool_t *pool);
 
-/** Run database recovery procedures on the repository at @a path,
+/**
+ * @deprecated Provided for backward compatibility with the 1.1.0 API.
+ *
+ * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
  *

@@ -3423,7 +3423,7 @@ get_write_lock (svn_fs_t *fs,
   if ((kind == svn_node_unknown) || (kind == svn_node_none))
     SVN_ERR (svn_io_file_create (lock_filename, "", pool));
   
-  SVN_ERR (svn_io_file_lock (lock_filename, TRUE, pool));
+  SVN_ERR (svn_io_file_lock2 (lock_filename, TRUE, FALSE, pool));
   
   return SVN_NO_ERROR;
 }
