@@ -1317,7 +1317,7 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
 /* Context for parsing server's response. */
 typedef struct {
   svn_lock_t *current_lock;        /* the lock being constructed */
-  svn_stringbuf_t cdata_accum;     /* a place to accumulate cdata */
+  svn_stringbuf_t *cdata_accum;    /* a place to accumulate cdata */
   const char *encoding;            /* normally NULL, else the value of
                                       'encoding' attribute on cdata's tag.*/
   apr_hash_t *lock_hash;           /* the final hash returned */
@@ -1392,7 +1392,7 @@ static int getlocks_cdata_handler(void *userdata, int state,
     case ELEM_lock_creationdate:
     case ELEM_lock_expirationdate:
       /* accumulate cdata in the scratchpool. */
-      svn_stringbuf_appendbytes(&(baton->cdata_accum), cdata, len);
+      svn_stringbuf_appendbytes(baton->cdata_accum, cdata, len);
       break;
     }
 
@@ -1436,25 +1436,27 @@ static int getlocks_end_element(void *userdata, int state,
       
     case ELEM_lock_path:
       /* neon has already xml-unescaped the cdata for us. */
-      baton->current_lock->path = apr_pstrdup(baton->pool,
-                                              baton->cdata_accum.data);
+      baton->current_lock->path = apr_pstrmemdup(baton->pool,
+                                                 baton->cdata_accum->data,
+                                                 baton->cdata_accum->len);
       /* clean up the accumulator. */
-      svn_stringbuf_setempty(&(baton->cdata_accum));
+      svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
       break;
 
     case ELEM_lock_token:
       /* neon has already xml-unescaped the cdata for us. */
-      baton->current_lock->token = apr_pstrdup(baton->pool,
-                                               baton->cdata_accum.data);
+      baton->current_lock->token = apr_pstrmemdup(baton->pool,
+                                                  baton->cdata_accum->data,
+                                                  baton->cdata_accum->len);
       /* clean up the accumulator. */
-      svn_stringbuf_setempty(&(baton->cdata_accum));
+      svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
       break;
 
     case ELEM_lock_creationdate:
       err = svn_time_from_cstring(&(baton->current_lock->creation_date),
-                                  baton->cdata_accum.data,
+                                  baton->cdata_accum->data,
                                   baton->scratchpool);
       if (err)
         {
@@ -1462,13 +1464,13 @@ static int getlocks_end_element(void *userdata, int state,
           return NE_XML_ABORT;
         }
       /* clean up the accumulator. */
-      svn_stringbuf_setempty(&(baton->cdata_accum));
+      svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
       break;
 
     case ELEM_lock_expirationdate:
       err = svn_time_from_cstring(&(baton->current_lock->expiration_date),
-                                  baton->cdata_accum.data,
+                                  baton->cdata_accum->data,
                                   baton->scratchpool);
       if (err)
         {
@@ -1476,7 +1478,7 @@ static int getlocks_end_element(void *userdata, int state,
           return NE_XML_ABORT;
         }
       /* clean up the accumulator. */
-      svn_stringbuf_setempty(&(baton->cdata_accum));
+      svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
       break;
 
@@ -1493,7 +1495,7 @@ static int getlocks_end_element(void *userdata, int state,
                 svn_string_t *encoded_val;
                 const svn_string_t *decoded_val;
 
-                encoded_val = svn_string_create_from_buf(&(baton->cdata_accum),
+                encoded_val = svn_string_create_from_buf(baton->cdata_accum,
                                                          baton->scratchpool);
                 decoded_val = svn_base64_decode_string(encoded_val,
                                                        baton->scratchpool);
@@ -1508,7 +1510,7 @@ static int getlocks_end_element(void *userdata, int state,
         else
           {
             /* neon has already xml-unescaped the cdata for us. */            
-            final_val = baton->cdata_accum.data;
+            final_val = baton->cdata_accum->data;
           }
 
         if (elm->id == ELEM_lock_owner)
@@ -1517,7 +1519,7 @@ static int getlocks_end_element(void *userdata, int state,
           baton->current_lock->comment = apr_pstrdup(baton->pool, final_val);
 
         /* clean up the accumulator. */
-        svn_stringbuf_setempty(&(baton->cdata_accum));
+        svn_stringbuf_setempty(baton->cdata_accum);
         svn_pool_clear(baton->scratchpool);
         break;
       }      
@@ -1550,11 +1552,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   baton.err = NULL;
   baton.current_lock = NULL;
   baton.encoding = NULL;
-
-  baton.cdata_accum.pool = baton.scratchpool;
-  baton.cdata_accum.data = NULL;
-  baton.cdata_accum.len = 0;
-  baton.cdata_accum.blocksize = 0;
+  baton.cdata_accum = svn_stringbuf_create("", pool);
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
