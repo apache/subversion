@@ -48,8 +48,10 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              apr_pool_t *pool,
              svn_boolean_t is_update)
 {
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
+  const svn_delta_edit_fns_t *wrap_editor;
   void *edit_baton;
+  void *wrap_edit_baton;
   svn_error_t *err;
 
   /* If not given an ancestor path, we will (for the time being)
@@ -83,19 +85,24 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   if (err)
     return err;
 
-  svn_delta_wrap_editor (&editor,
-                         &edit_baton,
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         editor, edit_baton, pool);
+
+  svn_delta_wrap_editor (&wrap_editor,
+                         &wrap_edit_baton,
                          before_editor,
                          before_edit_baton,
-                         editor,
-                         edit_baton,
+                         wrap_editor,
+                         wrap_edit_baton,
                          after_editor,
                          after_edit_baton,
                          pool);
 
   return svn_delta_xml_auto_parse (delta,
-                                   editor,
-                                   edit_baton,
+                                   wrap_editor,
+                                   wrap_edit_baton,
                                    ancestor_path->data,
                                    ancestor_revision,
                                    pool);

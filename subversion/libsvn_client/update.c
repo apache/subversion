@@ -67,8 +67,10 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
-  const svn_delta_edit_fns_t *update_editor;
+  const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   svn_wc_entry_t *entry;
@@ -114,10 +116,16 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                                      &update_edit_baton,
                                      pool));
 
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         update_editor, update_edit_baton, pool);
+
+
   /* Wrap it up with outside editors. */
-  svn_delta_wrap_editor (&update_editor, &update_edit_baton,
+  svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
                          before_editor, before_edit_baton,
-                         update_editor, update_edit_baton,
+                         wrap_editor, wrap_edit_baton,
                          after_editor, after_edit_baton, pool);
 
   /* Using an RA layer */
@@ -146,7 +154,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                                   revnum,
                                   target,
                                   recurse,
-                                  update_editor, update_edit_baton));
+                                  wrap_editor, wrap_edit_baton));
 
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
@@ -183,8 +191,8 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
          tag.  Otherwise, a valid revnum will be stored in the wc,
          assuming there's no <delta-pkg> tag to override it. */
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
-                                      update_editor,
-                                      update_edit_baton,
+                                      wrap_editor,
+                                      wrap_edit_baton,
                                       URL->data,
                                       revnum,
                                       pool);
