@@ -788,7 +788,7 @@ svn_error_t *svn_wc_get_wc_prop (const char *path,
                                  apr_pool_t *pool);
 
 /* This is a function of type svn_ra_set_wc_prop_func_t. Set property
-   NAME to VALUE on PATH.  
+   NAME to VALUE on PATH.  If VALUE is null, remove property NAME.
 
    NOTE: This is only for wc properties, that is, properties for
    which svn_wc_is_wc_prop(NAME) would return true.  See the comments
@@ -1090,16 +1090,17 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                apr_pool_t *pool);
 
 
-/* Set *VALUE to the value of wc property NAME for PATH, allocating
-   *VALUE in POOL.  If no such prop, set *VALUE to NULL. */
+/* Set *VALUE to the value of regular property NAME for PATH,
+   allocating *VALUE in POOL.  If no such prop, set *VALUE to NULL. */
 svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               const char *name,
                               const char *path,
                               apr_pool_t *pool);
 
-/* Set wc property NAME to VALUE for PATH.  Do any temporary
-   allocation in POOL. If NAME is not a valid property for PATH, return
-   SVN_ERR_ILLEGAL_TARGET. */
+/* Set regular property NAME to VALUE for PATH.  Do any temporary
+   allocation in POOL.  If NAME is not a valid property for PATH,
+   return SVN_ERR_ILLEGAL_TARGET.  If VALUE is null, remove property
+   NAME. */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
                               const char *path,

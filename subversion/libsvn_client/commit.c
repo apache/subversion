@@ -487,7 +487,7 @@ get_ra_editor (void **ra_baton,
                                         is_commit, !is_commit,
                                         auth_baton, pool));
   
-  /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
+  /* Fetch RA commit editor. */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
                                        committed_rev, committed_date, 
                                        committed_author, log_msg);

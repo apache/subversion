@@ -162,6 +162,10 @@ svn_error_t *svn_ra_dav__do_check_path(
 /* store the URL of the version resource (from the DAV:checked-in property) */
 #define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
 
+/* The entry committed rev an item must have for us to consider that
+   item's SVN_RA_DAV__LP_VSN_URL valid. */
+#define SVN_RA_DAV__LP_VSN_URL_REV  SVN_RA_DAV__LP_NAMESPACE "version-url-rev"
+
 
 /*
 ** SVN_RA_DAV__PROP_*: properties that we fetch from the server

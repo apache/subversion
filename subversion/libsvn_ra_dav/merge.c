@@ -144,12 +144,17 @@ static svn_boolean_t okay_to_bump_path (const char *path,
 }
 
 
+/* If committed PATH appears in MC->valid_targets, and an MC->set_prop
+ * function exists, then store VSN_URL as the SVN_RA_DAV__LP_VSN_URL
+ * property on PATH, and MC->rev as its SVN_RA_DAV__LP_VSN_URL_REV
+ * property.
+ *
+ * Otherwise, just return SVN_NO_ERROR.
+ */
 static svn_error_t *bump_resource(merge_ctx_t *mc,
                                   const char *path,
                                   char *vsn_url)
 {
-  svn_string_t vsn_url_str;
-
   /* no sense in doing any more work if there's no property setting
      function at our disposal. */
   if (mc->set_prop == NULL)
@@ -162,14 +167,80 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
   if (! okay_to_bump_path (path, mc->valid_targets, mc->pool))
     return SVN_NO_ERROR;
 
-  /* the property setter wants an svn_string_t */
-  vsn_url_str.data = vsn_url;
-  vsn_url_str.len = strlen(vsn_url);
- 
-  /* store the version URL */
-  return (*mc->set_prop)(mc->cb_baton, path,
-                         SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
-                         mc->pool);
+  /* First clear the old version url, to avoid a temporary window
+     where the new mc->rev is validating the old version url. */
+  SVN_ERR( (*mc->set_prop)(mc->cb_baton, path,
+                           SVN_RA_DAV__LP_VSN_URL, NULL,
+                           mc->pool) );
+
+  /* Now set the new valid rev. */
+  {
+    /* 
+     * ### Possibly unreliable assumption being made here:
+     * 
+     * Experiments verified that mc->rev is always set by the time we
+     * get here.  I guess the server sends ELEM_baseline early, so we
+     * hit the mc->rtype == RTYPE_BASELINE case in handle_resource()
+     * before the first call to bump_resource() ever happens.
+     *
+     * So for http://subversion.tigris.org/issues/show_bug.cgi?id=797,
+     * the easy solution is to just unconditionally use mc->rev as the
+     * new SVN_RA_DAV__LP_VSN_URL_REV.
+     *
+     * However, this makes us dependent on a quirk of our server --
+     * the fact that the new revision number is returned early in the
+     * merge response, before we get any of the vsn-rsrc-urls.  Now,
+     * we wrote the server, so this isn't so bad (and by "we" I mean
+     * Greg Stein, who is hopefully reviewing this commit like his
+     * life depends on it).
+     *
+     * Let's try a thought experiment: what happens if mc->rev is
+     * unset when we get here?  That means it's in its initial state,
+     * SVN_INVALID_REVNUM.  So we'll store SVN_INVALID_REVNUM ("-1")
+     * as the required revision for accepting the vsn-rsrc-url.  No
+     * entry committed-rev will ever match that, of course, so the
+     * vsn-rsrc-url will never be deemed acceptable, which is
+     * precisely what we want.  This isn't so bad, just means that our
+     * cache doesn't cache as much as it could.  But at least it's not
+     * incorrect.
+     */
+
+    svn_string_t valid_rev_str;  /* prop setter wants an svn_string_t */
+    char revnum_str[1024];  /* I dunno, hard to imagine needing more... */
+    int printed;
+
+    printed = snprintf(revnum_str, 1024, "%" SVN_REVNUM_T_FMT, mc->rev);
+    if (printed == -1)
+      {
+        /* Something's very wrong here; snprintf claims there was not
+           enough room.  Let's see how svn_error_createf handles it :-). */
+        return svn_error_createf
+          (SVN_ERR_BAD_REVISION, 0, NULL, mc->pool,
+           "bump_resource: unable to format revision " SVN_REVNUM_T_FMT,
+           mc->rev);
+      }
+
+    valid_rev_str.data = (const char *)revnum_str;
+    valid_rev_str.len = printed;
+
+    SVN_ERR( (*mc->set_prop)(mc->cb_baton, path,
+                             SVN_RA_DAV__LP_VSN_URL_REV, &valid_rev_str,
+                             mc->pool) );
+  }
+
+  /* Okay, NOW set the new version url. */
+  {
+    svn_string_t vsn_url_str;  /* prop setter wants an svn_string_t */
+
+    vsn_url_str.data = vsn_url;
+    vsn_url_str.len = strlen(vsn_url);
+
+    SVN_ERR( (*mc->set_prop)(mc->cb_baton, path,
+                             SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
+                             mc->pool) );
+  }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)

@@ -886,8 +886,6 @@ wcprop_list (apr_hash_t **props,
 }
 
 
-/* This is what RA_DAV will use to fetch 'wc' properties.  It will be
-   passed to ra_session_baton->do_commit(). */
 svn_error_t *
 svn_wc__wcprop_get (const svn_string_t **value,
                     const char *name,
@@ -912,9 +910,6 @@ svn_wc__wcprop_get (const svn_string_t **value,
 }
 
 
-
-/* This is what RA_DAV will use to store 'wc' properties.  It will be
-   passed to ra_session_baton->do_commit(). */
 svn_error_t *
 svn_wc__wcprop_set (const char *name,
                     const svn_string_t *value,
@@ -927,7 +922,8 @@ svn_wc__wcprop_set (const char *name,
   apr_file_t *fp = NULL;
 
   /* ### be nice to eliminate this... */
-  svn_stringbuf_t *valuebuf = svn_stringbuf_create_from_string (value, pool);
+  svn_stringbuf_t *valuebuf
+    = value ? svn_stringbuf_create_from_string (value, pool) : NULL;
 
   err = wcprop_list (&prophash, path, pool);
   if (err)
