@@ -86,7 +86,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "do not cache authentication tokens"},
     {"non-interactive", svn_cl__non_interactive_opt, 0,
                       "do no interactive prompting"},
-    {"dry-run",       svn_cl__dry_run, 0, "try operation but make no changes"},
+    {"dry-run",       svn_cl__dry_run_opt, 0,
+                      "try operation but make no changes"},
     {0,               0, 0, 0}
   };
 
@@ -262,7 +263,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    revisions N and M, defines the two sources to be compared.\n\n"
     "  * WCPATH is the working-copy path that will receive the changes.\n"
     "    If omitted, a default value of '.' is assumed.\n\n",
-    {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run,
+    {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt} },
   
@@ -618,7 +619,7 @@ main (int argc, const char * const *argv)
       case svn_cl__force_opt:
         opt_state.force = TRUE;
         break;
-      case svn_cl__dry_run:
+      case svn_cl__dry_run_opt:
         opt_state.dry_run = TRUE;
         break;
       case 'R':
