@@ -93,6 +93,8 @@ svn_fs__is_single_path_component (const char *name)
     {
       /* Can't have any forward slashes `/' */
       if (*c == '/') return 0;
+
+      c++;
     }
   return 1;
 }
