@@ -40,6 +40,7 @@ VERSION = `grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | s
 
 CC = @CC@
 
+SHELL = @SHELL@
 LIBTOOL = $(SHELL) $(abs_builddir)/libtool
 LTFLAGS = --silent
 LT_LDFLAGS =
