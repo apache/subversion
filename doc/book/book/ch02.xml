@@ -28,7 +28,7 @@
     <para>Subversion is a centralized system for sharing information.
       At its core is a <firstterm>repository</firstterm>, which is a
       central store of data.  The repository stores information in the
-      form of a <firstterm>filesystem tree</firstterm> -- a typical
+      form of a <firstterm>filesystem tree</firstterm>&mdash;a typical
       hierarchy of files and directories.  Any number of
       <firstterm>clients</firstterm> connect to the repository, and
       then read or write to these files.  By writing data, a client
@@ -144,10 +144,13 @@
             Jane simultaneously locks and edits file B.  But suppose
             that A and B depend on one another, and the changes made
             to each are semantically incompatible.  Suddenly A and B
-            don't work together anymore, and the locking system was
-            powerless to prevent it&mdash;yet the locking system somehow
-            provided a sense of false security, when it shouldn't
-            have.</para></listitem>
+            don't work together anymore. The locking system was
+            powerless to prevent the problem&mdash;yet it somehow
+            provided a sense of false security.  It's easy for Joe and
+            Jane to imagine that by locking files, each is beginning a
+            safe, insulated task, and thus inhibits them from
+            discussing their incompatible changes early
+            on.</para></listitem>
       </itemizedlist>
 
       </sect2>
@@ -199,10 +202,10 @@
         able to see both sets of conflicting changes, and manually
         choose between them.  Note that software can't automatically
         resolve conflicts; only humans are capable of understanding
-        and making intelligent choices.  Once Joe has manually
-        resolved the overlapping changes (perhaps by discussing the
-        conflict with Jane!), he can safely save the hand-merged file
-        back to the repository.</para>
+        and making the necessary intelligent choices.  Once Joe has
+        manually resolved the overlapping changes (perhaps by
+        discussing the conflict with Jane!), he can safely save the
+        merged file back to the repository.</para>
 
       <para>The copy-modify-merge model may sound a bit chaotic, but
         in practice, it runs extremely smoothly.  Users can work in
@@ -301,8 +304,10 @@ $ ls -a calc
 Makefile  integer.c  button.c  .svn/
 </screen>
 
-      <para>Your working copy is a personal copy of the repository's
-        <filename>/calc</filename> directory, with one additional
+      <para>The list of letter A's indicates that Subversion is adding
+        a number of items to your working copy.  You now have a
+        personal copy of the repository's <filename>/calc</filename>
+        directory, with one additional
         entry&mdash;<filename>.svn</filename>&mdash;which holds the
         extra information needed by Subversion, as mentioned
         earlier.</para>
@@ -313,7 +318,7 @@ Makefile  integer.c  button.c  .svn/
         tell that you've changed the file.  However, Subversion does
         not make your changes public until you explicitly tell it to.
         The act of publishing your changes is more commonly known as
-        <firstterm>committing</firstterm> or (<firstterm>checking
+        <firstterm>committing</firstterm> (or <firstterm>checking
         in</firstterm>) changes to the repository.</para>
 
       <para>To publish your changes to others, you can use
@@ -335,7 +340,7 @@ Committed revision 57.
         working copy of <filename>/calc</filename> at the same time
         you did.  When you commit your change to
         <filename>button.c</filename>, Sally's working copy is left
-        unchanged; Subversion only modifies working directories at the
+        unchanged; Subversion only modifies working copies at the
         user's request.</para>
 
       <para>To bring her project up to date, Sally can ask
@@ -553,9 +558,56 @@ calc/Makefile:6
      
     </sect2>
     
+    <sect2 id="svn-ch-2-sect-3.4">
+      <title>The limitations of mixed revisions</title>
+
+      <para>As a general principle, Subversion tries to be as flexible
+        as possible.  One special kind of flexibility is the ability
+        to have a working copy containing mixed revision
+        numbers.</para>
+
+      <para>At first, it may not be entirely clear why this sort of
+        flexibliity is considered a feature, and not a liability.
+        After completing a commit to the repository, the freshly
+        committed files and directories are at more recent working
+        revision than the rest of the working copy.  It looks like a
+        bit of a mess.  As demonstrated earlier, the working copy can
+        always be brought to a single working revision by running
+        <command>svn update</command>.  Why would someone
+        <emphasis>deliberately</emphasis> want a mixture of working
+        revisions?</para>
+
+      <para>Assuming your project is sufficiently complex, you'll
+        discover that it's sometimes nice to forcibly
+        <quote>backdate</quote> portions of your working copy to an
+        earlier revision; you'll learn how to do that in Chapter 3.
+        Perhaps you'd like to test an earlier version of a sub-module,
+        contained in a subdirectory, or perhaps you'd like to examine
+        a number of previous versions of a file in the context of the
+        latest tree.</para>
+        
+      <para>However you make use of mixed-revisions in your working
+        copy, there are limitations to this flexibility.</para>
+
+      <para>First, you cannot commit the deletion of a file or
+        directory which isn't fully up-to-date.  If a newer version of
+        the item exists in the repository, your attempt to delete will
+        be rejected, to prevent you from accidentally
+        destroying changes you've not yet seen.</para>
+
+      <para>Second, you cannot commit a metadata change to a directory
+        unless it's fully up-to-date.  You'll learn about attaching
+        <quote>properties</quote> to items in Chapter 6.  A
+        directory's working revision defines a specific set of entries
+        and properties, and thus committing a property change to an
+        out-of-date directory may destroy properties you've not yet
+        seen.</para>
+
+    </sect2>
+
   </sect1>
 
-  <sect1 id="svn-ch-2-sect-">
+  <sect1 id="svn-ch-2-sect-4">
     <title>Summary</title>
     
     <para>We've covered a number of fundamental Subversion concepts in

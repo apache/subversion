@@ -1,5 +1,3 @@
-<?xml version="1.0"?>
-<!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd">
 <!-- This is currently being roughed out.  Suggestions and comments
 are more than welcome, but patches are probably a bit premature at
 this point. -->
@@ -732,7 +730,7 @@ $ svn cleanup /path/to/working-copy
               <command>svn</command> will launch your editor for you
               to compose acommit message.  See the
               <literal>editor-cmd</literal> section in <xref
-              linkend="svn-ch-6-sect-1.3.2">.</para>
+              linkend="svn-ch-6-sect-1.3.2"/>.</para>
           </refsect1>
           
           <refsect1>
