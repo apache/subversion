@@ -104,16 +104,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, epg
 
-  * r11862, r11921, r12061 (part of issue #1997)
-    Fix encoding bug in svnserve -h.
-    Justification:
-      Encoding bugs look ugly.
-    Note:
-      r12061 is just a docstring clarification.
-    Votes:
-      +1: lundblad, maxb, epg
-      +0: nori (not r12061)
-
   * r12172
     Create FSFS write-lock file when repository is created.
     Justification:

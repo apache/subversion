@@ -138,7 +138,8 @@ svn_opt_print_generic_help (const char *header,
 
 /**
  * Print an option @a opt nicely into a @a string allocated in @a pool.  
- * If @a doc is set, include the generic documentation string of option.
+ * If @a doc is set, include the generic documentation string of @a opt,
+ * localized to the current locale if a translation is available.
  */
 void
 svn_opt_format_option (const char **string,
