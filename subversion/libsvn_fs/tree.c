@@ -553,44 +553,6 @@ parent_path_path (parent_path_t *parent_path,
          : path_so_far;
 }
 
-static svn_error_t *
-get_id_path (const char **path,
-             svn_fs_t *fs,
-             const svn_fs_id_t *id,
-             trail_t *trail)
-{
-  apr_hash_t *changes;
-  apr_hash_index_t *hi;
-
-  /* Initialize returned value. */
-  *path = NULL;
-
-  /* Fetch all the changes that occured in the transaction that child
-     appeared in.  Find the change whose node revision id is ID, and
-     return the path associated with it.  If no such change exists,
-     return the default value. */
-  SVN_ERR (svn_fs__bdb_changes_fetch (&changes, fs, 
-                                      svn_fs__id_txn_id (id), trail));
-  for (hi = apr_hash_first (trail->pool, changes); hi; hi = apr_hash_next (hi))
-    {
-      svn_fs_path_change_t *change;
-      void *val;
-      const void *key;
-      const char *change_path;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      change_path = key;
-      change = val;
-      if (svn_fs_compare_ids (change->node_rev_id, id) == 0)
-        {
-          *path = change_path;
-          break;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Choose a copy ID inheritance method *INHERIT_P to be used in the
    event that immutable node CHILD in FS needs to be made mutable.  If
@@ -608,7 +570,7 @@ choose_copy_id (copy_id_inherit_t *inherit_p,
 {
   const svn_fs_id_t *child_id, *parent_id;
   const char *child_copy_id, *parent_copy_id;
-  const char *child_path = NULL, *id_path = NULL;
+  const char *id_path = NULL;
   svn_fs__copy_t *copy;
 
   /* Make some assertions about the function input. */
@@ -648,13 +610,10 @@ choose_copy_id (copy_id_inherit_t *inherit_p,
   if (svn_fs_compare_ids (copy->dst_noderev_id, child_id) == -1)
     return SVN_NO_ERROR;
 
-  /* Fetch all the changes that occured in the transaction that child
-     appeared in.  Find the change whose node revision ID is the
-     child, so we can determine if we are looking at the child via its
-     original path or as a subtree item of a copied tree. */
-  SVN_ERR (get_id_path (&id_path, fs, child_id, trail));
-  child_path = parent_path_path (child, trail->pool);
-  if (id_path && child_path && (strcmp (child_path, id_path) == 0))
+  /* Determine if we are looking at the child via its original path or
+     as a subtree item of a copied tree. */
+  id_path = svn_fs__dag_get_created_path (child->node);
+  if (strcmp (id_path, parent_path_path (child, trail->pool)) == 0)
     {
       *inherit_p = copy_id_inherit_self;
       return SVN_NO_ERROR;
