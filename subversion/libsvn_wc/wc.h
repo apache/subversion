@@ -578,6 +578,45 @@ svn_error_t *svn_wc__gnudiff_patcher (void *diff,
 
 
 
+/*** Routines that deal with properties ***/
+
+/* Given two property hashes (working copy and `base'), deduce what
+   propchanges the user has made since the last update.  Return these
+   changes as a series of (svn_propchange_t *) objects stored in
+   LOCAL_PROPCHANGES, allocated from POOL.  */
+svn_error_t *
+svn_wc__get_local_propchanges (apr_array_header_t **local_propchanges,
+                               apr_hash_t *localprops,
+                               apr_hash_t *baseprops,
+                               apr_pool_t *pool);
+
+
+/* Given two propchange objects, return TRUE iff they conflict. */
+svn_boolean_t
+svn_wc__conflicting_propchanges_p (svn_propdelta_t *change1,
+                                   svn_propdelta_t *change2);
+
+
+/* If PROPFILE_PATH exists (and is a file), assume it's full of
+   properties and load this file into HASH.  Otherwise, leave HASH
+   untouched.  */
+svn_error_t *
+svn_wc__load_prop_file (svn_string_t *propfile_path,
+                        apr_hash_t *hash,
+                        apr_pool_t *pool);
+
+
+
+/* Given a HASH full of property name/values, write them to a file
+   located at PROPFILE_PATH */
+svn_error_t *
+svn_wc__save_prop_file (svn_string_t *propfile_path,
+                        apr_hash_t *hash,
+                        apr_pool_t *pool);
+
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")

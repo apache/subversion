@@ -13,7 +13,7 @@ libsvn_wc_la_SOURCES = get_editor.c                      \
                        lock.c util.c questions.c         \
                        log.c local_changes.c             \
                        entries.c status.c                \
-                       adm_crawler.c
+                       adm_crawler.c props.c
 
 ## Build flags ---------
 
