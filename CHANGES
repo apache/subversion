@@ -26,7 +26,7 @@ Version 0.13.3 [Pre-Alpha] (released ?? July 2002, revision ???)
  * lots of branch work on the delta-combiner and on libsvn_wc rewrite
  * numerous bugfixes: 'svn merge .' bug (#748), bug #764, two new
    ghudson-dirversioning bugs, #756, #675, #783, #796, wc-root bugs,
-   #799, #800, #797, directory-removal bug (#611)
+   #799, #800, #797, directory-removal bugs (#611, #687)
 
 Version 0.13.2 [Pre-Alpha] (released 28 June 2002, revision 2376)
 

@@ -838,13 +838,16 @@ def basic_delete(sbox):
   Q_path = os.path.join(Q_parent_path, 'Q')
   os.mkdir(Q_path)
 
-  # added directory hierarchy
+  # added directory hierarchies
   X_parent_path =  os.path.join(wc_dir, 'A', 'B')
   X_path = os.path.join(X_parent_path, 'X')
   svntest.main.run_svn(None, 'mkdir', X_path)
   X_child_path = os.path.join(X_path, 'xi')
   svntest.main.file_append(X_child_path, 'added xi')
   svntest.main.run_svn(None, 'add', X_child_path)
+  Y_parent_path = os.path.join(wc_dir, 'A', 'D')
+  Y_path = os.path.join(Y_parent_path, 'Y')
+  svntest.main.run_svn(None, 'mkdir', Y_path)
 
   # check status
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -854,6 +857,7 @@ def basic_delete(sbox):
   expected_output.add({
     'A/B/X' : Item(status='A ', wc_rev=0, repos_rev=1),
     'A/B/X/xi' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_output):
@@ -985,10 +989,27 @@ def basic_delete(sbox):
                         'A/C',
                         'iota',
                         'A/D/gamma', status='D ')
+  expected_status.add({
+    'A/D/Y' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     print "Status check 3 failed"
     return 1
+
+  # issue 687 delete directory with uncommitted directory child
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
+                                                    Y_parent_path)
+  if len (stderr_lines) != 0:
+    print "Forced delete 6 failed"
+    return 1
+
+  expected_status.tweak('A/D', status='D ')
+  expected_status.remove('A/D/Y')
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    print "Status check 4 failed"
+    return 1
+
 
   # check files have been removed
   if can_open_file(rho_path):

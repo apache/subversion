@@ -468,9 +468,17 @@ mark_tree (const char *dir,
   
   /* Handle "this dir" for states that need it done post-recursion. */
   entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-  entry->schedule = schedule;
-  entry->copied = copied;
-  SVN_ERR (svn_wc__entry_modify (dir, NULL, entry, modify_flags, subpool));
+
+  /* Uncommitted directories (schedule add) that are to be scheduled for
+     deletion are a special case, they don't need to be changed as they
+     will be removed from their parent's entry list. */
+  if (! (entry->schedule == svn_wc_schedule_add
+         && schedule == svn_wc_schedule_delete))
+  {
+     entry->schedule = schedule;
+     entry->copied = copied;
+     SVN_ERR (svn_wc__entry_modify (dir, NULL, entry, modify_flags, subpool));
+  }
   
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
