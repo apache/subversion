@@ -443,8 +443,7 @@ check_greek_tree_under_root (svn_fs_root_t *rev_root)
 
 
 /* Helper for the various functions that operate on the Greek Tree:
-   creates the Greek Tree under TXN_ROOT.  See ../xml/co1.txt for a
-   diagram of the tree. */ 
+   creates the Greek Tree under TXN_ROOT.  See ../greek-tree.txt.  */
 static svn_error_t *
 greek_tree_under_root (svn_fs_root_t *txn_root)
 {
@@ -1253,8 +1252,6 @@ abort_txn (const char **msg)
 
   *msg = "abort a transaction";
 
-  /* kff todo: test that txn IDs don't get reused. */
-
   /* Prepare two txns to receive the Greek tree. */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-abort-txn"));
   SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
@@ -1451,6 +1448,161 @@ abort_txn (const char **msg)
 }
 
 
+/* Attempt a merge using arguments 2 through N.  If CONFLICT_EXPECTED
+   is false, return an error if there is any indication of a conflict
+   having happened.  Else if CONFLICT_EXPECTED is true, return an
+   error if no conflict occurred in the merge.  
+
+   If the merge appeared to have inconsistent results, such as
+   flagging no conflict but failing to set the conflict information
+   pointer to null, then this function returns an error. */
+static svn_error_t *
+attempt_merge (svn_boolean_t conflict_expected,
+               const char **conflict_p,
+               svn_fs_root_t *source_root,
+               const char *source_path,
+               svn_fs_root_t *target_root,
+               const char *target_path,
+               svn_fs_root_t *ancestor_root,
+               const char *ancestor_path,
+               apr_pool_t *subpool)
+{
+  svn_error_t *err;
+
+  err = svn_fs_merge (conflict_p,
+                      source_root, source_path,
+                      target_root, target_path,
+                      ancestor_root, ancestor_path,
+                      subpool);
+
+  if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
+    {
+      if (! conflict_expected)
+        {
+          return svn_error_create
+            (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+             "conflict flagged unexpectedly");
+        }
+    }
+  else if (err)
+    {
+      /* A non-conflict error.  Just return it unconditionally. */
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+         "non-conflict error returned unexpectedly");
+    }
+  else if (conflict_expected)  /* no error, but should have gotten an error */
+    {
+      return svn_error_create
+        (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+         "failed to get expected conflict");
+    }
+
+  /* Maybe the merge didn't flag a conflict error, but conflict
+     information got sent anyway.  That's bad.*/
+
+  if (*conflict_p != NULL)
+    {
+      if (conflict_expected)
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+             "conflict information returned, but without conflict error!");
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_FS_GENERAL, 0, NULL, subpool,
+             "conflict information returned unexpectedly");
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Test svn_fs_merge(). */
+static svn_error_t *
+merge_trees (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *source_txn, *target_txn, *ancestor_txn;
+  svn_fs_root_t *source_root, *target_root, *ancestor_root;
+  const char
+    *source_path = "",
+    *target_path = "",
+    *ancestor_path = "";
+  const char *conflict;
+
+  *msg = "merge trees";
+
+  /* Prepare three txns to receive a greek tree each. */
+  SVN_ERR (create_fs_and_repos (&fs, "test-repo-merge-trees"));
+  SVN_ERR (svn_fs_begin_txn (&source_txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn (&target_txn, fs, 0, pool));
+  SVN_ERR (svn_fs_begin_txn (&ancestor_txn, fs, 0, pool));
+
+  /* Make roots. */
+  SVN_ERR (svn_fs_txn_root (&source_root, source_txn, pool));
+  SVN_ERR (svn_fs_txn_root (&target_root, target_txn, pool));
+  SVN_ERR (svn_fs_txn_root (&ancestor_root, ancestor_txn, pool));
+
+  /* Create greek trees. */
+  SVN_ERR (greek_tree_under_root (source_root));
+  SVN_ERR (greek_tree_under_root (target_root));
+  SVN_ERR (greek_tree_under_root (ancestor_root));
+
+  /* Test #1: Non-conflicting changes.
+   * 
+   * Leave ANCESTOR alone.  In TARGET,
+   *
+   *    - add /target_theta
+   *    - add /A/D/target_zeta
+   *    - del /A/D/G/pi
+   *    - del /A/D/H/omega
+   * 
+   * In SOURCE,
+   *
+   *    - add /source_theta
+   *    - add /A/D/source_zeta
+   *    - del /A/D/gamma
+   *    - del /A/D/G/rho
+   *    - del /A/D/H/chi
+   *    - del /A/D/H/psi
+   * 
+   * Note that after the merge, two of three files in /A/D/G/ should
+   * be gone, leaving only tau, but all three files in /A/D/H/ will be
+   * gone, leaving H an empty directory.
+   */
+  
+  /* Do some things in target. */
+  SVN_ERR (svn_fs_make_file (target_root, "target_theta", pool));
+  SVN_ERR (svn_fs_make_file (target_root, "A/D/target_zeta", pool));
+  SVN_ERR (svn_fs_delete (target_root, "A/D/G/pi", pool));
+  SVN_ERR (svn_fs_delete (target_root, "A/D/H/omega", pool));
+
+  /* Do some things in source. */
+  SVN_ERR (svn_fs_make_file (source_root, "source_theta", pool));
+  SVN_ERR (svn_fs_make_file (source_root, "A/D/source_zeta", pool));
+  SVN_ERR (svn_fs_delete (source_root, "A/D/gamma", pool));
+  SVN_ERR (svn_fs_delete (source_root, "A/D/G/rho", pool));
+  SVN_ERR (svn_fs_delete (source_root, "A/D/H/chi", pool));
+  SVN_ERR (svn_fs_delete (source_root, "A/D/H/psi", pool));
+
+  SVN_ERR (attempt_merge (FALSE, &conflict,
+                          source_root, source_path,
+                          target_root, target_path,
+                          ancestor_root, ancestor_path,
+                          pool));
+
+  /* Test #2-N: should go through the cases enumerated svn_fs_merge,
+     cook up a scenario for each one.  But we'll need commits working
+     to really do this right.  */
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Fetch the youngest revision from a repos. */
 static svn_error_t *
 fetch_youngest_rev (const char **msg)
@@ -1553,6 +1705,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   node_props,
   delete_mutables,
   abort_txn,
+  merge_trees,
   /* fetch_youngest_rev, */
   /* commit_transaction, */
   0
