@@ -732,10 +732,9 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
   else
     {
-      /* ### hard-coding "svnadmin" as the user-name.  */
       SVN_ERR (svn_repos_fs_change_rev_prop 
                (repos, opt_state->start_revision.value.number,
-                "svnadmin", SVN_PROP_REVISION_LOG, log_contents, pool));
+                NULL, SVN_PROP_REVISION_LOG, log_contents, pool));
     }
 
   return SVN_NO_ERROR;
