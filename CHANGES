@@ -1,3 +1,33 @@
+Version 0.13.3 [Pre-Alpha] (released ?? July 2002, revision ???)
+
+ User-visible changes:
+ * mostly done with i18n (UTF-8) support;  ready to start testing.
+ * add --recursive options to 'svn info' and 'svn resolve'
+ * new syntax for 'svn switch' and 'svn co'
+ * new 'svn-config' file installed
+ * new commit-access-control.pl utility (feature #775)
+ * lots of work on svn_load_dirs.pl (provides vendor-branch-like features)
+ * new --message-encoding option for logfiles given by -F
+ * support win32 drive-letters in file:/// urls
+ * first draft of unified documentation:  Subversion Handbook
+
+ Developer-visible changes:
+ * UTF-8 changes
+      - all libraries now assume UTF-8 input paths and log msgs
+      - many apr calls are now abstracted into new svn_io_* wrappers
+ * fs schema change
+      - cache each revision's changed-paths in a new 'changes' table
+      - another repository dump/load is required
+ * a number of fs-dumper bugfixes and redesigns
+ * test suite is now all python, so it can run on win32
+ * reduce huge memory consumption of mod_dav_svn during checkouts
+ * memory optimizations for prop-reading and 'svn diff'
+ * bugfixes for commit-email.pl and tweak-log.cgi
+ * lots of branch work on the delta-combiner and on libsvn_wc rewrite
+ * numerous bugfixes: 'svn merge .' bug (#748), bug #764, two new
+   ghudson-dirversioning bugs, #756, #675, #783, #796, wc-root bugs,
+   #799, #800, #797, directory-removal bug (#611)
+
 Version 0.13.2 [Pre-Alpha] (released 28 June 2002, revision 2376)
 
  User-visible changes:
