@@ -68,27 +68,24 @@ print_dirents (apr_hash_t *dirents,
                                           utf8_entryname, pool));      
       if (verbose)
         {
-          const char *native_author;
+          apr_time_exp_t exp_time;
+          apr_status_t apr_err;
+          apr_size_t size;
+          const char *native_author = NULL;
+          
+          if (dirent->last_author)
+            SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
+                                                dirent->last_author, pool));
 
-          SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
-                                              dirent->last_author, pool));
+          /* svn_time_to_human_cstring gives us something *way* to long
+             to use for this, so we have to roll our own. */
+          apr_time_exp_lt (&exp_time, dirent->time);
+          apr_err = apr_strftime (timestr, &size, sizeof (timestr),
+                                  "%b %d %H:%M", &exp_time);
 
-          {
-            /* svn_time_to_human_cstring gives us something *way* to long
-               to use for this, so we have to roll our own. */
-            apr_time_exp_t exp_time;
-            apr_status_t apr_err;
-            apr_size_t size;
-
-            apr_time_exp_lt (&exp_time, dirent->time);
-
-            apr_err = apr_strftime (timestr, &size, sizeof (timestr),
-                                    "%b %d %H:%M", &exp_time);
-
-            /* if that failed, just zero out the string and print nothing */
-            if (apr_err)
-              timestr[0] = '\0';
-          }
+          /* if that failed, just zero out the string and print nothing */
+          if (apr_err)
+            timestr[0] = '\0';
 
           printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
                   dirent->has_props ? 'P' : '_',

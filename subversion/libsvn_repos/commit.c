@@ -526,7 +526,9 @@ close_edit (void *edit_baton,
                                    new_revision, SVN_PROP_REVISION_AUTHOR,
                                    eb->pool));
 
-    SVN_ERR ((*eb->callback) (new_revision, date->data, author->data,
+    SVN_ERR ((*eb->callback) (new_revision, 
+                              date ? date->data : NULL, 
+                              author ? author->data : NULL,
                               eb->callback_baton));
   }
 
@@ -579,7 +581,7 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->user = apr_pstrdup (subpool, user);
+  eb->user = user ? apr_pstrdup (subpool, user) : NULL;
   eb->log_msg = apr_pstrdup (subpool, log_msg);
   eb->callback = callback;
   eb->callback_baton = callback_baton;

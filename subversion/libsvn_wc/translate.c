@@ -278,19 +278,20 @@ expand_keyword (svn_subst_keywords_t *keywords,
     }
   else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
     {
-      if (entry && (entry->cmt_rev && entry->cmt_date
-                    && entry->cmt_author && entry->url))
+      if (entry && (entry->cmt_date || entry->cmt_author || entry->url))
         {
-          char *base_name = svn_path_basename (entry->url, pool);
-          svn_string_t *rev = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT,
-                                                   entry->cmt_rev);
-          const char *date = time_to_keyword_time (entry->cmt_date, pool);
+          const char *base_name = entry->url 
+                                    ? svn_path_basename (entry->url, pool)
+                                    : "";
+          const char *rev = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                          entry->cmt_rev);
+          const char *date = entry->cmt_date 
+                               ? time_to_keyword_time (entry->cmt_date, pool)
+                               : "";
+          const char *author = entry->cmt_author ? entry->cmt_author : "";
 
           keywords->id = svn_string_createf (pool, "%s %s %s %s",
-                                             base_name,
-                                             rev->data,
-                                             date,
-                                             entry->cmt_author);
+                                             base_name, rev, date, author);
         }
       else
         keywords->id = svn_string_create ("", pool);

@@ -368,11 +368,24 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                         ### we need to tell the client to look at *this*
                         ### resource for the version-name. */
                      "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR
-                     "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR
-                     "<D:creationdate>", creationdate->data, 
-                                     "</D:creationdate>" DEBUG_CR
-                     "<D:creator-displayname>", creator_displayname->data,
-                                     "</D:creator-displayname>" DEBUG_CR
+                     "<D:version-name>", revbuf, "</D:version-name>" DEBUG_CR,
+                     NULL);
+  if (creationdate)
+    {
+      (void) ap_fputstrs(output, bb,
+                         "<D:creationdate>", creationdate->data, 
+                         "</D:creationdate>" DEBUG_CR,
+                         NULL);
+    }
+  if (creator_displayname)
+    {
+      (void) ap_fputstrs(output, bb,
+                         "<D:creator-displayname>", 
+                         creator_displayname->data,
+                         "</D:creator-displayname>" DEBUG_CR,
+                         NULL);
+    }
+  (void) ap_fputstrs(output, bb,
                      "</D:prop>" DEBUG_CR
                      "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                      "</D:propstat>" DEBUG_CR

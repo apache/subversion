@@ -292,11 +292,15 @@ def check_log_chain (chain, start, end):
     msg = log_item['msg']
     # The most important check is that the revision is right:
     if expect_rev != saw_rev: return 1
-    # Check that author and date look at least vaguely right:
-    author_re = re.compile ('[a-zA-Z]+')
+    # Check that date looks at least vaguely right:
     date_re = re.compile ('[0-9]+')
-    if (not author_re.search (author)): return 1
     if (not date_re.search (date)): return 1
+    # Authors are a little harder, since they might not exist over ra-dav.
+    # Well, it's not much of a check, but we'll do what we can.
+    author_re = re.compile ('[a-zA-Z]+')
+    if (not (author_re.search (author)
+             or author == ''
+             or author == '(no author)')): return 1
     # Check that the log message looks right:
     msg_re = re.compile ('Log message for revision ' + `saw_rev`)
     if (not msg_re.search (msg)): return 1

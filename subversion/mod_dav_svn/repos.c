@@ -1164,8 +1164,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   repos->special_uri = dav_svn_get_special_uri(r);
 
   /* Remember who is making this request */
-  if ((repos->username = r->user) == NULL)
-    repos->username = "anonymous";
+  repos->username = r->user;
 
   /* open the SVN FS */
   serr = svn_repos_open(&(repos->repos), fs_path, r->pool);

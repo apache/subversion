@@ -82,17 +82,18 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
      these properties will be copied into the newly created revision. */
   {
     /* User (author). */
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen (author);
-      
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                       &val, pool));
-    }
+    if (author)
+      {
+        svn_string_t val;
+        val.data = author;
+        val.len = strlen (author);
+        
+        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                         &val, pool));
+      }
     
     /* Log message. */
-    if (log_msg != NULL)
+    if (log_msg)
       {
         /* Heh heh -- this is unexpected fallout from changing most
            code to use plain strings instead of svn_stringbuf_t and
@@ -130,14 +131,15 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
      on the txn. */
   {
     /* User (author). */
-    {
-      svn_string_t val;
-      val.data = author;
-      val.len = strlen (author);
-      
-      SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
-                                       &val, pool));
-    }    
+    if (author)
+      {
+        svn_string_t val;
+        val.data = author;
+        val.len = strlen (author);
+        
+        SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_AUTHOR,
+                                         &val, pool));
+      }
   }
 
   return SVN_NO_ERROR;

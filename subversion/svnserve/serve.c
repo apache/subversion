@@ -364,7 +364,12 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, FALSE,
                                   &aborted));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "rcc", new_rev, date, author));
+  /* ### todo: let NULL be NULL, not empty string.  cmpilato dunno how
+         ra-svn wants to handle this -- does the protocol have a
+         representation for NULL strings? */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "rcc", new_rev, 
+                                 date ? date : "", 
+                                 author ? author : ""));
   return SVN_NO_ERROR;
 }
 
@@ -906,6 +911,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
   svn_repos_t *repos;
   server_baton_t b;
   const char *uuid;
+  svn_boolean_t valid_mech = FALSE;
 
   /* Send greeting, saying we only support protocol version 1, the
    * anonymous authentication mechanism, and no extensions. */
@@ -953,13 +959,14 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                                          "Requested username does not match"));
           return SVN_NO_ERROR;
         }
+      valid_mech = TRUE;
     }
 #endif
 
   if (strcmp(mech, "ANONYMOUS") == 0)
-    user = "anonymous";
+    valid_mech = TRUE;
 
-  if (!user)  /* Client gave us an unlisted mech. */
+  if (!valid_mech)  /* Client gave us an unlisted mech. */
     return SVN_NO_ERROR;
 
   /* Write back a success notification. */
