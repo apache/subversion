@@ -49,6 +49,15 @@ appC:
    the REPORT response now.
 
 
+appA:
+
+   http://svnbook.red-bean.com/svnbook/apas09.html
+   What do you mean by "changing the definition of a module"?
+
+   http://svnbook.red-bean.com/svnbook/apas10.html
+   Authentication: Can I use subversion via ssh?
+
+
 -----------------------------------------------
 
 The 1.1 Book Fork

@@ -11,6 +11,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: working copies now shareable by multiple users (issue #1509)
  * fixed: diff and other subcommands correctly follow renames (issue #1093)
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
+     - now able to compare working copy with URL: 'svn diff --old WC --new URL'
  * new framework for localized error/info/help messages, initial translations:
      - German, Spanish, Polish, Swedish, Norwegian Bokmål
  * speed improvements:
@@ -60,6 +61,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: disallow non-recursive directory commit (issue #1797)
  * fixed: allow propget of props with colon in name (issue #1807)
  * fixed: 'svnadmin load' computation of copyfrom-rev (issue #1795)
+ * fixed: runtime config files created with proper line-endings (issue #1803)
  * general improvement and normalization of error messages
  * many improvements to contributed tools:  mailer.py, psvn.el, etc.
 
