@@ -53,8 +53,12 @@ this interface.
 
 There are a few notable differences from the C API.  Most C function
 calls take a svn_client_ctx_t pointer as the next to last parameter.
-The perl method calls take a SVN::Client object as the first parameter.
-This allows method call invocation of the methods to be possible.
+The Perl method calls take a SVN::Client object as the first parameter.
+This allows method call invocation of the methods to be possible.  For
+example, the following are equivalent:
+
+  SVN::Client::add($ctx,$path, $recursive, $pool);
+  $ctx->add($path, $recursive, $pool);
 
 Many of the C API calls also take a apr_pool_t pointer as their last
 argument.  The Perl bindings generally deal with this for you and
@@ -146,9 +150,9 @@ methods described below:
 
     KEY                    DEFAULT
     ----------             ----------------------------------------
-    auth                   auth_baton initiated to provide the
-                           provider that read cached authentication
-                           options from the subversion config only.
+    auth                   auth_baton initiated with providers that
+                           read cached authentication options from
+                           the subversion config only.
 
     cancel                 undef
                            
@@ -265,9 +269,9 @@ You can create an svn_error_t object with SVN::Error::create().
 Outputs the content of the file identified by $target and $revision to the
 FILEHANDLE.  FILEHANDLE is a reference to a filehandle. 
 
-If $target is not a local path, then if $revision is 'PREV' (or
-some other kind that requires a local path), an error be raised, because the 
-desired revision can not be determined.
+If $target is not a local path and if $revision is 'PREV' (or some
+other kind that requires a local path), then an error will be raised,
+because the desired revision can not be determined.
 
 =item $ctx-E<gt>checkout($url, $path, $revision, $recursive, $pool);
 
@@ -289,8 +293,8 @@ operations, removing lockfiles, etc.
 Commit files or directories referenced by target.  Will use the log_msg
 callback to obtain the log message for the commit.
 
-If $targets has no paths (zero elements), then does nothing and immediately
-returns without error.
+If $targets contains no paths (zero elements), then does nothing and
+immediately returns without error.
 
 Calls the notify callback as the commit progresses with any of the following
 actions: $SVN::Wc::Notify::Action::commit_modified,
@@ -302,9 +306,9 @@ $SVN::Wc::Notify::Action::commit_postfix_txdelta.
 Use $nonrecursive to indicate that subdirectories of directory targets
 should be ignored.
 
-Returns a svn_client_commit_info_t object.  If the revision member of the commit
-info object is $SVN::Core::INVALID_REVNUM and no error was raised, then the
-commit was a no-op; nothing needed to be committed.
+Returns a svn_client_commit_info_t object.  If the revision member of the
+commit information object is $SVN::Core::INVALID_REVNUM and no error was
+raised, then the commit was a no-op; nothing needed to be committed.
 
 =item $ctx-E<gt>copy($src_target, $src_revision, $dst_target, $pool);
 
@@ -314,11 +318,12 @@ $src_target must be a file or directory under version control, or the URL
 of a versioned item in the repository.  If $src_target is a URL,
 $src_revision is used to choose the revision from which to copy the
 $src_target.  $dst_path must be a file or directory under version control,
-or a repository URL, existent or not.
+or a repository URL, existing or not.
 
-If $dst_target is a URL immediately attempt to commit the copy action
+If $dst_target is a URL, immediately attempt to commit the copy action
 to the repository.  The log_msg callback will be called to query for a commit
-log message. If the commit succeeds, return a svn_client_commit_info_t object.
+log message.  If the commit succeeds, return a svn_client_commit_info_t
+object.
 
 If $dst_target is not a URL, then this is just a variant of $ctx-E<gt>add(),
 where the $dst_path items are scheduled for addition as copies.  No changes
@@ -332,10 +337,11 @@ the new, relative path of the added item.
 
 Delete items from a repository or working copy.
 
-If the paths in $targets are URLs, immediate attempt to commit a deletion of the
-URLs from the repository.  The log_msg callback will be called to query for
-a commit log message.  If the commit succeeds, return a svn_client_commit_info_t object.
-Every path must belong to the same repository.
+If the paths in $targets are URLs, immediately attempt to commit a deletion
+of the URLs from the repository.  The log_msg callback will be called to
+query for a commit log message.  If the commit succeeds, return a
+svn_client_commit_info_t object.  Every path must belong to the same
+repository.
 
 Else, schedule the working copy paths in $targets for removal from the
 repository.  Each path's parent must be under revision control.  This is
@@ -359,20 +365,20 @@ $revision1 and $target2 at $revision2.  They both must represent the same
 node type (i.e. they most both be directories or files).  The revisions
 must not be undef.  
 
-Prints the output of the diff to the filename or filehandle passed as $outfile, and
-any errors to the filename or filehandle passed as $errfile.
+Prints the output of the diff to the filename or filehandle passed as
+$outfile, and any errors to the filename or filehandle passed as $errfile.
 
 Use $ignore_ancestry to control whether or not items being diffed will be
-checked for relatedness first. Unrelated items are typically transmitted to the
-editor as a deletion of one thing and the addition of another, but if this flag
-is true, unrelated items will be diffed as if they were related.
+checked for relatedness first.  Unrelated items are typically transmitted to
+the editor as a deletion of one thing and the addition of another, but if this
+flag is true, unrelated items will be diffed as if they were related.
 
 If $no_diff_deleted is true, then no diff output will be generated on deleted
 files.
 
 $diff_options is a reference to an array of additional arguments to pass to
 diff process invoked to compare files.  You'll usually just want to use [] to
-pass an empty array.
+pass an empty array to return a unified context diff (like `diff -u`).
 
 Has no return.
 
@@ -430,9 +436,9 @@ Invoke the log_receiver subroutine on each log_message from $start to $end in
 turn, inclusive (but will never invoke receiver on a given log message more
 than once).
 
-$targets is a reference to an array containing all the paths or URLs for which the
-log messages are desired.  The log_receiver is only invoked on messages whose
-revisions involved a change to some path in $targets.
+$targets is a reference to an array containing all the paths or URLs for
+which the log messages are desired.  The log_receiver is only invoked on
+messages whose revisions involved a change to some path in $targets.
 
 If $discover_changed_paths is set, then the changed_paths argument to the
 log_receiver routine will be passed on each invocation.
@@ -471,9 +477,8 @@ objects.
 
 Returns a hash of svn_dirent_t objects for $target at $revision.
 
-If $target is a directory, returns entries for all of
-the directories contents.  If $recursive is true, it will
-recurse subdirectories in $target.
+If $target is a directory, returns entries for all of the directories'
+contents.  If $recursive is true, it will recurse subdirectories in $target.
 
 If $target is a file only return an entry for the file.
 
@@ -521,7 +526,7 @@ Has no return.
 
 Create a directory, either in a repository or a working copy.
 
-If $targets contains URLs immediately attempts to commit the creation of the
+If $targets contains URLs, immediately attempts to commit the creation of the
 directories in $targets in the repository.  Returns a svn_client_commit_info_t
 object.
 
@@ -575,7 +580,7 @@ of the new location of the node.
 =item $ctx-E<gt>propget($propname, $target, $revision, $recursive, $pool);
 
 Returns a reference to a hash containing paths or URLs, prefixed by $target (a
-working copy or URL), of items of which the property $propname is set, and
+working copy or URL), of items for which the property $propname is set, and
 whose values represent the property value for $propname at that path.
 
 =item $ctx-E<gt>proplist($target, $revision, $recursive, $pool);
@@ -628,7 +633,7 @@ resolve.
 
 If $path is not in a state of conflict to begin with, do nothing.
 
-If $path's conflict state is removed  call the notify callback with the
+If $path's conflict state is removed, call the notify callback with the
 $path.
 
 =item $ctx-E<gt>revert($paths, $recursive, $pool); 
@@ -678,15 +683,17 @@ Note that unlike its cousin $ctx-E<gt>propset(), this routine doesn't affect
 the working copy at all; it's a pure network operation that changes an
 B<unversioned> property attached to a revision.  This can be used to tweak
 log messages, dates, authors, and the like.  Be careful: it's a lossy
-operation.
+operation, meaning that any existing value is replaced with the new value,
+with no way to retrieve the prior value.
 
 Also note that unless the administrator creates a pre-revprop-change hook
 in the repository, this feature will fail.
 
 =item $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
 
-Given $path to a working copy directory (or single file), call status_func with a set of
-svn_wc_status_t objects which describe the status of $path and its children.
+Given $path to a working copy directory (or single file), call status_func()
+with a set of svn_wc_status_t objects which describe the status of $path and
+its children.
 
 If $recursive is true, recurse fully, else do only immediate children.
 
@@ -695,13 +702,14 @@ entries (local mods and/or out-of-date).
 
 If $update is set, contact the repository and augment the status objects with
 information about out-of-dateness (with respect to $revision).  Also, will
-return the value of the actual revision against with the working copy was compared.
-(The return will be undef if $update is not set).
+return the value of the actual revision against with the working copy was
+compared.  (The return will be undef if $update is not set).
 
 The function recurses into externals definitions ('svn:externals') after
 handling the main target, if any exist.  The function calls the notify callback
-with $SVN::Wc::Notify::Action::status_external action before handling each externals
-definition, and with $SVN::Wc::Notify::Action::status_completed after each.
+with $SVN::Wc::Notify::Action::status_external action before handling each
+externals definition, and with $SVN::Wc::Notify::Action::status_completed
+after each.
 
 The status_func subroutine takes the following parameters:
 $path, $status
@@ -861,13 +869,13 @@ current value.
 
 =item $ctx-E<gt>auth(SVN::Client::get_username_provider());
 
-Provides access the auth_baton in the svn_client_ctx_t attached to the
+Provides access to the auth_baton in the svn_client_ctx_t attached to the
 SVN::Client object.
 
 This method will accept an array or array ref of values returned from the
-authentication provider functions see L</"AUTHENTICATION PROVIDERS">.  Which it
-will convert to an auth_baton for you.  This is the preferred method of setting
-the auth_baton.
+authentication provider functions see L</"AUTHENTICATION PROVIDERS">, which
+it will convert to an auth_baton for you.  This is the preferred method of
+setting the auth_baton.
 
 It will also accept a scalar that references a _p_svn_auth_baton_t such as
 those returned from SVN::Core::auth_open and SVN::Core::auth_open_helper.
@@ -915,8 +923,8 @@ integer specifying the type of action taken.  See L<SVN::Wc> for a list of the
 possible actions values and what they mean.  The 3rd is an integer specifying
 the kind of node the path is, which can be: $SVN::Node::none, $SVN::Node::file,
 $SVN::Node::dir, $SVN::Node::unknown.  The fourth parameter is the mime-type of
-the file or undef if the mime-type is unknown, it will always be undef for
-directories.  The 5th parameter is the state of the file, again see L<SVN::Wc>
+the file or undef if the mime-type is unknown (it will always be undef for
+directories).  The 5th parameter is the state of the file, again see L<SVN::Wc>
 for a list of the possible states.  The 6th and final parameter is the numeric
 revision number of the changed file.  The revision number will be -1 except
 when the action is $SVN::Wc::Notify::Action::update_completed.
@@ -970,7 +978,7 @@ Sets the log_msg callback for the client context to a code reference that you
 pass.  It always returns the current codereference set.
 
 The subroutine pointed to by this value will be called to see if the operation
-should be canceled.  If the operation should be canceled the function may
+should be canceled.  If the operation should be canceled, the function may
 return one of the following values:
 
 An svn_error_t object made with SVN::Error::create.
@@ -983,8 +991,8 @@ A string, in which case the bindings will generate an svn_error_t object for you
 with the error code of SVN_ERR_CANCELLED and the string set to the string you
 returned.
 
-Any other value will be interpreted as wanting to continue the operation.  Generally,
-it's best to return 0 to continue the operation.
+Any other value will be interpreted as wanting to continue the operation.
+Generally, it's best to return 0 to continue the operation.
 
 =cut
 
@@ -999,8 +1007,8 @@ sub cancel {
 
 =item $ctx-E<gt>pool(new SVN::Pool);
 
-Method that sets or gets the pool that is passed to method calls requiring a
-pool but that you didn't pass one.
+Method that sets or gets the default pool that is passed to method calls
+requiring a pool, but which were not explicitly passed one.
 
 See L<SVN::Core> for more information about how pools are managed
 in this interface.
@@ -1021,10 +1029,10 @@ sub pool
 =item $ctx-E<gt>config(SVN::Core::config_get_config(undef));
 
 Method that allows access to the config member of the svn_client_ctx_t.
-Accepts a perl hash to set, which is what functions like
+Accepts a Perl hash to set, which is what functions like
 SVN::Core:config_get_config() will return.
 
-It will return a _p_arp_hash_t scalar.  THis is a temporary
+It will return a _p_arp_hash_t scalar.  This is a temporary
 situation.  The return value is not particular useful.  In
 the future, this value will be tied to the actual hash used
 by the C API.
@@ -1055,7 +1063,7 @@ call a subroutine to allow you to prompt the user for the
 information.
 
 The functions that return the svn_auth_provider_object_t for prompt style
-providers take a reference to a perl subroutine to use for the callback.  The
+providers take a reference to a Perl subroutine to use for the callback.  The
 first parameter each of these subroutines receive is a credential object.  The
 subroutines return the response by setting members of that object.  Members may
 be set like so: $cred-E<gt>username("breser");  These functions and credential
@@ -1087,10 +1095,10 @@ sessions.  Takes no parameters or one pool parameter.
 
 =item SVN::Client::get_simple_prompt_provider
 
-Returns a simple provider that prompts the user via a callback. Takes two or
+Returns a simple provider that prompts the user via a callback.  Takes two or
 three parameters, the first is the callback subroutine, the 2nd is the number
 of retries to allow, the 3rd is optionally a pool.  The subroutine gets called
-with the following parameters.  A svn_auth_cred_simple_t object, a realm string,
+with the following parameters: a svn_auth_cred_simple_t object, a realm string,
 a default username, may_save, and a pool.  The svn_auth_cred_simple has the
 following members: username, password, and may_save.
 
@@ -1101,10 +1109,10 @@ sessions.  Takes no parameters or one pool parameter.
 
 =item SVN::Client::get_username_prompt_provider
 
-Returns a username provider that prompts the user via a callback. Takes two or
+Returns a username provider that prompts the user via a callback.  Takes two or
 three parameters, the first is the callback subroutine, the 2nd is the number
 of retries to allow, the 3rd is optionally a pool.  The subroutine gets called
-with the following parameters.  A svn_auth_cred_username_t object, a realm
+with the following parameters: a svn_auth_cred_username_t object, a realm
 string, a default username, may_save, and a pool.  The svn_auth_cred_username
 has the following members: username and may_save.
 
@@ -1135,7 +1143,7 @@ $SVN::Auth::SSL::UNKNOWNCA
 $SVN::Auth::SSL::OTHER
 
 You reply by setting the accepted_failures of the cred object with an integer 
-of the values for what you want to accept bitwise anded together.
+of the values for what you want to accept bitwise AND'd together.
 
 =item SVN::Client::get_ssl_cert_file_provider
 
@@ -1145,7 +1153,7 @@ cached sessions.  Takes no parameters or optionally a pool parameter.
 =item SVN::Client::get_ssl_cert_prompt_provider
 
 Returns a client certificate provider that prompts the user via a callback.
-Takes two or three parameters, the first is the callback subroutine, the 2nd is
+Takes two or three parameters: the first is the callback subroutine, the 2nd is
 the number of retries to allow, the 3rd is optionally a pool parameter.  The
 subroutine gets called with the following parameters.  A
 svn_auth_cred_ssl_client_cert object, a realm string, may_save, and a pool.
@@ -1174,7 +1182,7 @@ may_save.
 
 These are some of the object types that are returned from the methods
 and functions.  Others are documented in L<SVN::Core> and L<SVN::Wc>.
-If an object is not documented it is more than likely opaque and 
+If an object is not documented, it is more than likely opaque and 
 not something you can do anything with, except pass to other functions
 that require such objects.
 
