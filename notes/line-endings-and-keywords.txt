@@ -205,3 +205,48 @@ Phase 1:  gathering the values of the keywords.
 
 
 
+--------------------------------
+
+Greg's EOL system.
+
+Assume the EOL-style property means "desired style of file in the
+working copy".  (The former meaning was "style of file in the
+repository.")  If this property is not present, then the application
+assumes that the file's desired EOL-style is whatever is 'native' to
+the application's OS.
+
+The text-base still reflects exactly what is in the repository.
+
+1.  When the user commits a file, the *exact* contents of the working
+    file is sent to the repository.  (Yes, this means a lot of
+    flip-flopping in the repository, and larger-than-necessary binary
+    diffs both over the wire and in the repo.  But also means that
+    data can never be corrupted, ever.)
+
+2.  When user checks out a file, a 'translated' copy of text-base is
+    provided as the working file.  (Note: the working copy doesn't
+    know what style text-base has; instead, it just always attempts to
+    convert text-base to the file's desired EOL-style.  This
+    translation might be a no-op.)
+
+3.  When the user updates a file and a merge is necessary, here's what
+    happens.  The new text-base arrives.  Then both the old and new
+    text-bases are blindly copied & translated into the desired
+    EOL-style, and a context diff is produced.  (Either or both
+    translations might be no-ops.)  The copies are then tossed, and
+    the context diff is applied to the working file.  The new
+    text-base replaces the old text-base.
+
+4.  The same logic as in #3 applies to any situation where we ever
+    want to examine the text-base:
+
+     - To see if the user made a local mod, we compare a *translated*
+       copy of text-base with the working file.
+
+     - To compare two arbitrary revisions of a file, we must always
+       compare translated copies of them.
+ 
+
+
+
+
