@@ -3617,7 +3617,7 @@ $ svnadmin create /usr/local/svn/repos
             Dump revisions LOWER rev through UPPER rev.  If no
             revisions are given, dump all revision trees.  If only
             LOWER is given, dump that one revision tree.  See <xref
-            linkend="svn-ch-5-sect-3.4"/> for a practical use. </para>
+            linkend="svn-ch-5-sect-3.5"/> for a practical use. </para>
             </refsect1>
         <refsect1>
           <title>Switches</title>
