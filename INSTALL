@@ -29,21 +29,21 @@ I.    BUILD REQUIREMENTS
       ==================
 
       Subversion depends on a number of third party tools and libraries.
-      If you are bootstrapping from a tarball or an RPM then you will
-      already have everything you require to get a Subversion client. So
-      long as you don't plan to build a new client from the latest source
-      or to build a Subversion server, you can go directly to section
-      II.A.
+      If you are bootstrapping from a tarball, zipfile or an RPM then
+      you will already have everything you require to get a Subversion
+      client.  So long as you don't plan to build a new client from the
+      latest source or to build a Subversion server, you can go directly
+      to section II.A.
 
       Otherwise, you need to read the following so that you can determine
       what other tools and libraries will be required so that Subversion
       can be built with the set of features you want.
 
-      The './configure' script will tell you if you are missing the
-      correct version of any of the required libraries or tools, so if
-      you are in a real hurry to get building, you can skip straight to
-      section II. If you want to gather the pieces you will need before
-      starting out, however, you should read the following.
+      On Unix systems, the './configure' script will tell you if you are
+      missing the correct version of any of the required libraries or
+      tools, so if you are in a real hurry to get building, you can skip
+      straight to section II.  If you want to gather the pieces you will
+      need before starting out, however, you should read the following.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -167,20 +167,23 @@ I.    BUILD REQUIREMENTS
       repository, you don't need it.
 
       You'll need Berkeley DB 4.0.14 installed on your system.  You can
-      get it from http://www.sleepycat.com/.
+      get it from:
+
+          http://www.sleepycat.com/.
 
       If you already have another version of Berkeley DB installed and
       don't want to downgrade, you can unpack the Berkeley 4.0.14
       distribution into a subdir named `db' in the top-level of the
       Subversion source tree.  Then Subversion will ignore the system
       DB and use the one it found in its own source tree.
+
       Alternatively, you can add this flag
 
           --with-berkeley-db=/usr/local/BerkeleyDB.4.0
 
       to your `configure' switches, and the build process will use the
-      named Berkeley.  You may need to use a different path, of
-      course.
+      Berkeley library in the named directory.  You may need to use a
+      different path, of course.
 
       If you are on the Windows platform and want to build Subversion,
       a precompiled version of the Berkeley DB library is available for
@@ -239,6 +242,69 @@ I.    BUILD REQUIREMENTS
       the cygwin1.dll file into the same directory.
 
 
+      11. Libraries for our libraries
+
+      Some of the libraries that Subversion depends on themselves have
+      optional dependencies that can add features to what Subversion
+      can do.  Here are some examples.
+
+      The Neon library has support for SSL encryption by relying on the
+      OpenSSL library.  When Neon is created with this dependency, then
+      the Subversion client inherits the ability to support SSL
+      connections.  Neon also has support for sending compressed data
+      using the zlib library which a Subversion client can take
+      advantage of.
+
+      With Unix-based systems, you can enable this support from the
+      Subversion build provided that you are building Neon in the
+      "./neon/" directory as described above in section I.5.  You also
+      need the OpenSSL and/or zlib library installed on your system,
+      depending on which features you want.  Just add "--with-ssl" or
+      "--with-zlib" as parameters when you run Subversion's
+      "./configure", and they will be passed on to the Neon build
+      system.  Consult the Neon documentation for more information on
+      how to use these parameters and versions of libraries you need.
+
+      Under Windows, you have to edit a batch file available in your
+      Subversion source tree (the root of which is labelled <SVN>
+      below):
+
+          <SVN>\build\win32\build_neon.bat
+
+      and point it to the appropriate directories.
+
+      You can also add support for these features to a Subversion server
+      and you can even use the same support libraries.  The Subversion
+      build system will not provide them, however.  You add them by
+      specifying parameters to the "./configure" script of the Apache
+      Server instead.
+
+      For getting SSL on your server, you would add the "--enable-ssl"
+      or "--with-ssl=/path/to/lib" option to Apache's "./configure"
+      script.  Apache enables zlib support by default, but you can
+      specify a nonstandard location for the library with the
+      "--with-z=/path/to/dir" option.  Consult the Apache documentation
+      for more details, and for other modules you may wish to install
+      to enhance your Subversion server.
+
+      If you don't already have it, you can get a copy of OpenSSL,
+      including instructions for building and packaging on both Unix
+      systems and Windows, at:
+
+          http://www.openssl.org/
+
+      Many Unix systems already come with zlib, but if you need it it
+      is available from:
+
+          http://www.gzip.org/zlib/
+
+      Windows users should just get the pre-built package:
+
+          http://www.gzip.org/zlib/contrib/zlib113-Win32.zip
+
+      The neon build scripts on Windows are set up to use those
+      libraries.
+
 
 II.   INSTALLATION
       ============
@@ -268,7 +334,7 @@ II.   INSTALLATION
       After compiling, you will have a large 'svn' binary sitting in
       the tree.  Use it to check out a real Subversion working copy:
 
-          $ subversion-X.Y/subversion/clients/cmdline/svn checkout \
+          $ subversion-rXXXX/subversion/clients/cmdline/svn checkout \
             http://svn.collab.net/repos/svn/trunk -d svn
 
           A  svn/dist.sh
@@ -468,13 +534,8 @@ II.   INSTALLATION
       supported at this time.
 
       To build the client components, you'll need a copy of neon
-      0.18.5. The sources are available at
-
-          http://www.webdav.org/neon/neon-0.18.5.tar.gz
-
-      Unpack the distribution into the root directory of the Subversion
-      source tree (henceforth know as <SVN> -- that's where you found
-      this file) and rename the directory neon-0.18.5 to neon.
+      0.18.5.  See section I.5 for details on where to get one and what
+      to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
           and on-the-wire compression with zlib. If you want to use
@@ -484,29 +545,12 @@ II.   INSTALLATION
 
           to point to the appropriate directories.
 
-          You can get a copy of OpenSSL, including instructions for
-          building and packaging on Windows, at
-
-              http://www.openssl.org/
-
-          Zlib is available from
-
-              http://www.gzip.org/zlib/
-
-          but I recommend just using the pre-build package,
-
-              http://www.gzip.org/zlib/contrib/zlib-Win32.zip
-
-          The neon build scripts are set up to use those libraries.]
+          See Section I.11 for more details.
 
       If you want to build the (local) server components, you'll also
-      need a copy of Berkeley DB, version 4.0.14 or newer. The sources
-      are available at
-
-          http://www.sleepycat.com
-
-      For your convenience, there is also a binary distibution on the
-      Subversion downloads page
+      need a copy of Berkeley DB, version 4.0.14 or newer.  Details are
+      in Section I.6. For your convenience, there is also a binary
+      distibution on the Subversion downloads page
 
           http://subversion.tigris.org/ProjectDownloadList
 
@@ -599,6 +643,10 @@ III.  BUILDING A SUBVERSION SERVER
       This note assumes you have installed Berkeley DB 4.0.14
       at its default locations.  For more info about the db requirement,
       see section I.6.
+
+      You may also want to include other modules in your build. Add
+      --enable-ssl to turn on SSL support, for example.  Consult the
+      Apache documentation for more details.
 
       All instructions below assume you configured Apache to install
       under /usr/local/apache2/; substitute appropriately if you
