@@ -135,7 +135,7 @@ svn_txdelta__copy_window (const svn_txdelta_window_t *window,
 
 void
 svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
-                        int opcode,
+                        enum svn_delta_action opcode,
                         apr_size_t offset,
                         apr_size_t length,
                         const char *new_data,
