@@ -54,6 +54,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
+#include <apr_strings.h>
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -70,7 +71,9 @@
  * error condition, return an svn error containing that apr error.
  */
 svn_error_t *
-check_existence (svn_string_t path, apr_status_t err_to_report)
+check_existence (svn_string_t *path,
+                 apr_status_t err_to_report,
+                 apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *tmp_f;
@@ -82,13 +85,13 @@ check_existence (svn_string_t path, apr_status_t err_to_report)
   if (apr_err == APR_EEXIST)
     {
       svn_error_t *err 
-        = svn_create_error (err_to_report, 0, path, NULL, pool);
+        = svn_create_error (err_to_report, 0, path->data, NULL, pool);
       return err;
     }
   else if (apr_err)  /* some error other than APR_EEXIST */
     {
       svn_error_t *err 
-        = svn_create_error (apr_err, 0, path, NULL, pool);
+        = svn_create_error (apr_err, 0, path->data, NULL, pool);
       return err;
     }
   else              /* path definitely does not exist */
@@ -121,15 +124,16 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
       if (stack->content_kind == svn_content_dir)   /* it's "<dir ...>" */
         {
           char dirsep = SVN_DIR_SEPARATOR;
-          path = svn_string_appendbytes (path, &dirsep, 1, pool);
-          path = svn_string_appendstr (path, stack->name, pool);
+          svn_string_appendbytes (path, &dirsep, 1, pool);
+          svn_string_appendstr (path, stack->name, pool);
           
           if (stack->next)
             {
               /* Return the current path, having recursively appended
                  whatever path remains. */
-            return svn_string_appendstr
-              (path, delta_stack_to_path (stack->next, pool), pool);
+              svn_string_appendstr 
+                (path, delta_stack_to_path (stack->next, pool), pool);
+              return path;
             }
           else
             return path;
@@ -137,7 +141,8 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
       if (stack->content_kind == svn_content_file)  /* it's "<file ...>" */
         {
           /* Don't recurse past a non-directory, just return. */
-          return svn_string_appendstr (path, stack->name, pool);
+          svn_string_appendstr (path, stack->name, pool);
+          return path;
         }
     }
   else if (stack->next)  /* Not an edit_content, so skip to next if can... */
@@ -150,10 +155,10 @@ delta_stack_to_path (svn_delta_stackframe_t *stack, apr_pool_t *pool)
 
 
 static svn_error_t *
-update_dir_handler (svn_digger_t *diggy, svn_edit_content_t *eddy);
+update_dir_handler (svn_delta_digger_t *diggy, svn_delta_stackframe_t *frame)
 {
   svn_delta_stackframe_t *stack = diggy->stack;
-  svn_string_t *dir = delta_stack_to_path (frame);
+  svn_string_t *dir = delta_stack_to_path (stack, diggy->pool);
 
   if (! dir)
     {
@@ -188,14 +193,16 @@ svn_error_t *
 update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
 {
   char buf[BUFSIZ];
-  apr_status_t status;
+  apr_status_t err;
+  int len;
   int done;
   apr_file_t *tmp_f;
   svn_delta_digger_t diggy;
   XML_Parser parsimonious;
 
+  diggy.unknown_elt_handler = NULL;
   diggy.pool = pool;
-  diggy.data_handler = update_data_handler;
+  diggy.data_handler = NULL;
   diggy.dir_handler = update_dir_handler;
 
   /* Make a parser with the usual shared handlers and diggy as userData. */
@@ -206,7 +213,7 @@ update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
   if (dst)
     {
       svn_error_t *err;
-      err = check_existence (dst, SVN_ERR_OBSTRUCTED_UPDATE);
+      err = check_existence (dst, SVN_ERR_OBSTRUCTED_UPDATE, pool);
 
       /* Whether or not err->apr_err == SVN_ERR_OBSTRUCTED_UPDATE, we
          want to return it to caller. */
@@ -225,16 +232,13 @@ update (apr_file_t *src, svn_string_t *dst, apr_pool_t *pool)
     /* Parse the chunk of stream. */
     if (! XML_Parse (parsimonious, buf, len, done))
     {
-      char *msg
-        = svn_string_create
-        (apr_psprintf (pool, "%s at line %d",
+      svn_error_t *err
+        = svn_create_error
+        (SVN_ERR_MALFORMED_XML, 0,
+         apr_psprintf (pool, "%s at line %d",
                        XML_ErrorString (XML_GetErrorCode (parsimonious)),
                        XML_GetCurrentLineNumber (parsimonious)),
-         pool);
-
-      svn_error_t *err
-        = svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
-      
+         NULL, pool);
       XML_ParserFree (parsimonious);
       return err;
     }
