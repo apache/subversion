@@ -66,18 +66,24 @@
    that in APR: from APR_OS_START_USEERR to APR_OS_START_SYSERR (see
    apr_errno.h).
 */
-#define SVN_WARNING                              (APR_OS_START_USEERR + 1)
-#define SVN_ERR_NOT_AUTHORIZED                   (APR_OS_START_USEERR + 2)
-#define SVN_ERR_PLUGIN_LOAD_FAILURE              (APR_OS_START_USEERR + 3)
-#define SVN_ERR_UNKNOWN_FS_ACTION                (APR_OS_START_USEERR + 4)
-#define SVN_ERR_UNEXPECTED_EOF                   (APR_OS_START_USEERR + 5)
-#define SVN_ERR_MALFORMED_FILE                   (APR_OS_START_USEERR + 6)
+enum svn_errno_t {
+  SVN_WARNING = (APR_OS_START_USEERR + 1),
+  SVN_ERR_NOT_AUTHORIZED,
+  SVN_ERR_PLUGIN_LOAD_FAILURE,
+  SVN_ERR_UNKNOWN_FS_ACTION,
+  SVN_ERR_UNEXPECTED_EOF,
+  SVN_ERR_MALFORMED_FILE,
 
-/* The xml delta we got was not valid. */
-#define SVN_ERR_MALFORMED_XML                    (APR_OS_START_USEERR + 7)
+  /* The xml delta we got was not valid. */
+  SVN_ERR_MALFORMED_XML,
 
-/* Can't do this update or checkout, because something was in the way. */
-#define SVN_ERR_OBSTRUCTED_UPDATE                (APR_OS_START_USEERR + 8)
+  /* Can't do this update or checkout, because something was in the way. */
+  SVN_ERR_OBSTRUCTED_UPDATE,
+
+  /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
+     error code, and `message' is an error message.  */
+  SVN_ERR_BERKELEY_DB
+};
 
 
 
