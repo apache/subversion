@@ -176,19 +176,6 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
                                      int sync,
                                      apr_pool_t *pool);
 
-/* Append an adm ITEM to administrative file FP.  Arguments
- * (attributes) follow in pairs: name, value, name, value, and so on,
- * terminated by a single null.  Each name is a char *, but values are
- * svn_string_t *.
- *
- * Since adm items share a common format (XML), this abstracts the
- * content from the format.
- */
-svn_error_t *svn_wc__write_adm_item (apr_file_t *fp,
-                                     apr_pool_t *pool,
-                                     const char *item,
-                                     ...);
-
 /* Remove `PATH/<adminstrative_subdir>/THING'. */
 svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
                                       apr_pool_t *pool,

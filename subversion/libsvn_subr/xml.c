@@ -329,7 +329,7 @@ svn_xml_hash_atts_preserving (const char **atts,
 svn_error_t *
 svn_xml_write_tag_hash (apr_file_t *file,
                         apr_pool_t *pool,
-                        const int tagtype,
+                        enum svn_xml_tag_type tagtype,
                         const char *tagname,
                         apr_hash_t *attributes)
 {
@@ -342,7 +342,7 @@ svn_xml_write_tag_hash (apr_file_t *file,
 
   xmlstring = svn_string_create ("<", subpool);
 
-  if (tagtype == svn_xml__close_tag)
+  if (tagtype == svn_xml_close_tag)
     svn_string_appendcstr (xmlstring, "/", subpool);
 
   svn_string_appendcstr (xmlstring, tagname, subpool);
@@ -363,7 +363,7 @@ svn_xml_write_tag_hash (apr_file_t *file,
       svn_string_appendcstr (xmlstring, "\"", subpool);
     }
 
-  if (tagtype == svn_xml__self_close_tag)
+  if (tagtype == svn_xml_self_close_tag)
     svn_string_appendcstr (xmlstring, "/", subpool);
 
   svn_string_appendcstr (xmlstring, ">\n", subpool);
@@ -384,7 +384,7 @@ svn_xml_write_tag_hash (apr_file_t *file,
 svn_error_t *
 svn_xml_write_tag_v (apr_file_t *file,
                      apr_pool_t *pool,
-                     const int tagtype,
+                     enum svn_xml_tag_type tagtype,
                      const char *tagname,
                      va_list ap)
 {
@@ -397,7 +397,7 @@ svn_xml_write_tag_v (apr_file_t *file,
 svn_error_t *
 svn_xml_write_tag (apr_file_t *file,
                    apr_pool_t *pool,
-                   const int tagtype,
+                   enum svn_xml_tag_type tagtype,
                    const char *tagname,
                    ...)
 {

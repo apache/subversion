@@ -399,8 +399,8 @@ sync_adm_file (svn_string_t *path,
                apr_pool_t *pool,
                ...)
 {
-  /* kff todo: big code duplication with close_adm_file(), see comment
-     there */
+  /* Some code duplication with close_adm_file() seems unavoidable,
+     given how C va_lists work. */
 
   svn_string_t *tmp_path = svn_string_dup (path, pool);
   apr_status_t apr_err;
@@ -473,17 +473,11 @@ svn_wc__text_base_path (svn_string_t *path,
 /* Open a file somewhere in the adm area for directory PATH.
  * First, the adm subdir is appended as a path component, then each of
  * the varargs (they are char *'s) is appended as a path component,
- * and the resulting file opened.  The path to it is guaranteed,
- * caller does not have to worry if all components existed on disk
- * before this call.
+ * and the resulting file opened.  
  *
- * kff todo: finish documenting this function.
- *
- * kff todo: in general, we have a dichotomy between svn_string_t for
- * vs char * for filenames.  To convert the former to the latter we
- * just take svn_string_t_ptr->data (it's a deliberately open
- * structure interface), which I don't think is ever a problem in
- * practice, but maybe there's a better general solution...
+ * If FLAGS indicates writing, then the file is opened in the adm tmp
+ * area, whence it must be renamed, either by passing the sync flag to
+ * close_adm_file() or with an explicit call to sync_adm_file().
  */
 static svn_error_t *
 open_adm_file (apr_file_t **handle,
@@ -496,9 +490,6 @@ open_adm_file (apr_file_t **handle,
   apr_status_t apr_err = 0;
   int components_added;
   va_list ap;
-
-  /* kff todo: it is assumed that either both APR_WRITE and APR_APPEND
-     are set, or none.  Is this a safe assumption? */
 
   /* If we're writing, always do it to a tmp file. */
   if (flags & APR_WRITE)
@@ -550,7 +541,11 @@ open_adm_file (apr_file_t **handle,
 }
 
 
-/* kff todo: finish documenting this function. */
+/* Close the file indicated by FP (PATH is passed to make error
+ * reporting better).  If SYNC is non-zero, then the file will be
+ * sync'd from the adm tmp area to its permanent location, otherwise
+ * it will remain in the tmp area.  See open_adm_file().
+ */
 static svn_error_t *
 close_adm_file (apr_file_t *fp,
                 svn_string_t *path,
@@ -581,10 +576,8 @@ close_adm_file (apr_file_t *fp,
      be renamed after closing. */
   if (sync)
     {
-      /* kff todo: this is a big code duplication with
-         sync_adm_file(), perhaps temporary if certain
-         properties I hope for in va_lists turn out to be present.
-         Will talk to greg or jimb, they probably know. */
+      /* Some code duplication with sync_adm_file() seems unavoidable,
+         given how C va_lists work. */
 
       svn_string_t *tmp_path = svn_string_dup (path, pool);
       apr_status_t apr_err;
@@ -691,7 +684,6 @@ svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
 }
 
 
-/* kff todo: might be good to put this somewhere generic. */
 svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
                                     svn_string_t *path,
                                     apr_pool_t *pool)
@@ -715,96 +707,6 @@ svn_error_t *svn_wc__file_exists_p (svn_boolean_t *exists,
   apr_close (f);
   *exists = 1;
   return SVN_NO_ERROR;
-}
-
-
-
-/*** Writing administrative XML. ***/
-
-static svn_error_t *
-v_write_adm_item (apr_file_t *fp,
-                  apr_pool_t *pool,
-                  const char *item,
-                  va_list ap)
-{
-  apr_status_t apr_err;
-  const char *attr_name;
-  const char *start_item = "<";
-  const char *end_item = "/>\n";
-
-  /* Open the item. */
-  apr_err = apr_full_write (fp, start_item, strlen (start_item), NULL);
-  if (apr_err)
-    goto error;
-
-  /* Write out the item title. */
-  apr_err = apr_full_write (fp, item, strlen (item), NULL);
-  if (apr_err)
-    goto error;
-  
-  /* Write out all attributes. */
-  while ((attr_name = va_arg (ap, const char *)) != NULL)
-    {
-      svn_string_t *attr_value  = va_arg (ap, svn_string_t *);
-      const char *begin = "\n   ";
-      const char *middle = "=\"";
-      const char *end = "\"";
-
-      assert (attr_value != NULL);
-
-      /* Indent attributes nicely. */
-      apr_err = apr_full_write (fp, begin, strlen (begin), NULL);
-      if (apr_err)
-        goto error;
-  
-      /* Attr name.  kff todo: XML escape it! */
-      apr_err = apr_full_write (fp, attr_name, strlen (attr_name), NULL);
-      if (apr_err)
-        goto error;
-  
-      /* The equal sign and open quote. */
-      apr_err = apr_full_write (fp, middle, strlen (middle), NULL);
-      if (apr_err)
-        goto error;
-
-      /* Attr value.  kff todo: XML escape it! */
-      apr_err = apr_full_write (fp, attr_value->data, attr_value->len, NULL);
-      if (apr_err)
-        goto error;
-
-      /* Close quote. */
-      apr_err = apr_full_write (fp, end, strlen (end), NULL);
-      if (apr_err)
-        goto error;
-    }
-
-  /* Close the item. */
-  apr_err = apr_full_write (fp, end_item, strlen (end_item), NULL);
-  if (apr_err)
-    goto error;
-  
-  return SVN_NO_ERROR;
-
- error:
-  return svn_error_create (apr_err, 0, NULL, pool,
-                           "writing adm area item");
-}
-
-
-svn_error_t *
-svn_wc__write_adm_item (apr_file_t *fp,
-                        apr_pool_t *pool,
-                        const char *item,
-                        ...)
-{
-  svn_error_t *err = NULL;
-  va_list ap;
-
-  va_start (ap, item);
-  err = v_write_adm_item (fp, pool, item, ap);
-  va_end (ap);
-  
-  return err;
 }
 
 
