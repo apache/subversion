@@ -134,6 +134,10 @@ SOURCE=".\import-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\log-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=.\main.c
 # End Source File
 # Begin Source File
