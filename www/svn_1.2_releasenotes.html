@@ -286,7 +286,7 @@ passphrases for client SSL certificates.</p>
 
 
 <dt><h4>Bugfixes:</h4></dt>
-<dd>More than N bugs fixed.  See the <a
+<dd>More than 50 new bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
       for details.</dd>
 
@@ -296,11 +296,43 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 <dd>
    <dl>
       <dt><tt>svn log --limit N</tt></dt>
-      <dd>display only N revisions, then stop.  (<em>Note: a 1.2
+      <dd>Display only N revisions, then stop.  (<em>Note: a 1.2
       server isn't required for this, but strongly recommended.  A
       non-1.2 server will still attempt to deliver all revisions over
       the network, even though the 1.2 client isn't displaying them.</em>)</dd>
 
+      <dt><tt>svn info --revision (-r)</tt></dt>
+      <dd>Show detailed info on older versions of items.</dd>
+
+      <dt><tt>svn list --xml</tt></dt>
+      <dd>Output listing in XML.</dd>
+
+      <dt><tt>svn propset --force</tt></dt>
+      <dd>Allow unusual propsets, such as svn:eol-style on a file with
+          a binary svn:mime-type..</dd>
+
+      <dt><tt>svn diff --force</tt></dt>
+      <dd>Show differences even on files with binary mime-types.</dd>
+
+      <dt><tt>svn checkout/update/status/switch --ignore-externals</tt></dt>
+      <dd>Don't process any svn:externals during operation.</dd>
+
+      <dt><tt>svn export --non-recursive (-N)</tt></dt>
+      <dd>Don't export subdirectories.</dd>
+
+      <dt><tt>svnversion --help</tt></dt>
+      <dd>Show help on <tt>svnversion</tt>.</dd>
+
+      <dt><tt>svnlook diff --no-diff-deleted</tt></dt>
+      <dd>Don't show deleted files in the diffs.  Companion to
+          <tt>--no-diff-added</tt>.</dd>
+
+      <dt><tt>svnlook propget/proplist --revprop</tt></dt>
+      <dd>Examine revision props, instead of normal versioned properties.</dd>
+
+      <dt><tt>svnadmin load --use-pre-commit-hook / --use-post-commit-hook</tt></dt>
+      <dd>Invoke <tt>pre-commit</tt> or <tt>post-commit</tt> hooks
+          when loading a dumpfile into a repository.</dd>
    </dl>
 </dl>
 
@@ -315,11 +347,12 @@ functions are now usable directly in the form
 <tt>svn_ra_do_foo()</tt>. This also has the nice side-effect of
 making svn_ra.h available via SWIG. </p>
 
-<p>As with svn 1.1, a number of new 1.2 functions have been introduced
-with the "2" suffix, and the older versions are now marked deprecated
-(and will be removed in Subversion 2.0).  See the <a
+<p>As with svn 1.1, a number of new 1.2 functions have been
+introduced, and older versions are now marked deprecated (and will be
+removed in Subversion 2.0).  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
-for details.</p>
+for details.  The full list of new 1.2 APIs is <a
+href="http://svn.haxx.se/dev/archive-2005-04/0319.shtml">here</a>.</p>
 
 <p>There has been extensive work on the python, perl, and java
 bindings.  We also now have a preliminary set of ruby bindings.  -->
