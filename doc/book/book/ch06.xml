@@ -3,7 +3,42 @@
      while certainly influencing the resultant chapter, might
      themselves get lost in the mix. -->
 <chapter id="svn-ch-6">
-<title>Advanced Topics</title>
+  <title>Advanced Topics</title>
+
+  <simplesect id="svn-ch-6-sect-0">
+
+    <para>If you've been reading this book chapter by chapter, from
+      start to finish, you should by now have acquired enough
+      knowledge to use the Subversion client to perform the most
+      common version control operations.  You understand how to
+      checkout a working copy from a Subversion repository.  You are
+      comfortable with submitting and receiving changes using the
+      <command>svn commit</command> and <command>svn update</command>
+      functions.  You've probably even developed a reflex which causes
+      you to run the <command>svn status</command> command almost
+      unconsciously.  For all intents and purposes, you are ready to
+      use Subversion in a typical environment.</para>
+
+    <para>But the Subversion feature set doesn't stop at "common
+      version control operations".</para>
+
+    <para>This chapter highlights some of Subversion's features which
+      aren't quite so regularly used.  In it, we will discuss
+      Subversion's property (or <quote>metadata</quote>) support, and
+      how to modify Subversion's default behaviors by tweaking its
+      run-time configuration area.  We will describe how you can use
+      module definitions to instruct Subversion to pull data from
+      multiple repositories.  We'll cover in detail some of the
+      additional client- and server-side tools that are part of the
+      Subversion distribution.  And by the end of this chapter, you'll
+      be a Subversion power-user&mdash;or we'll refund your money!
+      <footnote>
+        <para>This offer applies only to those who, like most folks,
+          pay nothing for Subversion.</para>
+      </footnote>
+    </para>
+
+  </simplesect>
 
   <!-- ******************************************************************* -->
   <!-- *** SECTION 1:  RUNTIME CONFIGURATION AREA                      *** -->
@@ -11,93 +46,308 @@
   <sect1 id="svn-ch-6-sect-1">
     <title>Run-time Configuration Area</title>
     
-    <para>When you first run the <command>svn</command> command-line
-      client, it creates a per-user <firstterm>configuration
-      area</firstterm>.  On Unix-like systems, a
-      <filename>.subversion/</filename> directory is created in the
-      user's home directory.  On Win32 systems, a
-      <filename>Subversion</filename> folder is created wherever its
-      appropriate to do so (typically somewhere within
-      <filename>Documents and Settings\username</filename>, although
-      it depends on the system.)</para>
+    <para>Subversion provides many optional behaviors that can be
+      controlled by the user.  Many of these options are of the kind
+      that a user would wish to apply to all Subversion operations.
+      So, rather than forcing users to remember command-line arguments
+      for specifying these options, and to use them for each and every
+      operation they perform, Subversion uses configuration files,
+      segregated into a Subversion configuration area.</para>
+
+    <para>The Subversion <firstterm>configuration area</firstterm> is
+      a two-tiered heirarchy of option names and their values.
+      Usually, this boils down to a special directory which contains
+      <firstterm>configuration files</firstterm> (the first tier),
+      which are just text files in standard INI format (with
+      <quote>sections</quote> providing the second tier).  These files
+      can be easily edited using your favorite text editor (such as
+      emacs or vi), and contain directives read by the client to
+      determine which of several optional behaviors the user
+      prefers.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.1">
-      <title>Proxies</title>
-      
-      <para>At the time of writing, the configuration area only
-        contains one item: a <filename>proxies</filename> file.  By
-        setting values in this file, your Subversion client can
-        operate through an http proxy.  (Read the file itself for
-        details; it should be self-documenting.)</para><!-- ###TODO
-      This is already inaccurate. -Fitz :) -->
-      
+      <title>Configuration Area Layout</title>
+
+      <para>The first time that the <command>svn</command>
+        command-line client is executed, it creates a per-user
+        configuration area.  On Unix-like systems, this area appears
+        as a directory named <filename>.subversion</filename> in the
+        user's home directory.  On Win32 systems, Subversion creates a
+        folder named <filename>Subversion</filename>, typically inside
+        the <filename>Application Data</filename> area of the user's
+        profile directory.  However, on this platform the exact
+        location differs from system to system, and is dictated by the
+        Windows registry.  We will refer to the per-user configuration
+        area using its Unix name,
+        <filename>.subversion</filename>.</para>
+
+      <para>In addition to the per-user configuration area, Subversion
+        also recognizes the existence of a system-wide configuration
+        area.  The gives system administrators the ability to
+        establish defaults for all users on a given machine.  Note
+        that the system-wide configuration area does not alone dictate
+        mandatory policy&mdash;the settings in the per-user
+        configuration area override those in the system-wide one, and
+        command-line arguments supplied to <command>svn</command>
+        program have the final word on behavior.  On Unix-like
+        platforms, the sytem-wide configuration area is expected to be
+        the <filename>/etc/subversion</filename> directory; on Windows
+        machines, it again looks for a <filename>Subversion</filename>
+        directory inside the common Application Data location (again,
+        as specified by the Windows Registry).  Unlike the per-user
+        case, the <command>svn</command> program does not attempt to
+        create the system-wide configuration area.</para>
+
+      <para>The <filename>.subversion</filename> directory currently
+        contains three files&mdash;two configuration files
+        (<filename>config</filename> and
+        <filename>servers</filename>), and a
+        <filename>README</filename> file which describes the INI
+        format.  At the time of their creation, the files contain
+        default values for each of the supported Subversion options,
+        mostly commented out and grouped with textual descriptions
+        about how the values for the key affect Subversion's behavior.
+        To change a certain behavior, you need only to load the
+        appropriate configuration file into a text editor, and modify
+        the desired option value.  If at any time you wish to have the
+        default settings restore to one or more of the configuration
+        files, you can simply delete the file, and run some innocuous
+        <command>svn</command> command, such as <command>svn
+        --version</command>, and the missing file will be recreated in
+        its default state.</para>
+
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.2">
-      <title>Config</title>
+      <title>Configuration and the Windows Registry</title>
 
-      <para>Soon&mdash;very soon&mdash;a <filename>config</filename>
-        file will exist in this area for defining general user
-        preferences.  For example, the preferred
-        <command>$EDITOR</command> to use, options to pass through to
-        <command>svn diff</command>, preferences for date/time
-        formats, and so on.  </para> <!-- ###TODO This is already
-        inaccurate. See issue 668 -Fitz :) -->
+      <para>In addition to the usual INI-based configuration area,
+        Subversion clients running on Windows platforms may also use
+        the Windows registry to hold the configuration data.  The
+        option names and their values are the same as in the INI
+        files.  The <quote>file/section</quote> heirarchy is
+        preserved as well, though addressed in a slightly different
+        fashion&mdash;in this schema, files and sections are just
+        levels in the registry key tree.</para>
+
+      <para>Subversion looks for system-wide configuration values
+        under the
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion</literal>
+        key.  For example, the <literal>compression</literal> option,
+        which is in the <literal>miscellany</literal> section of the
+        <filename>config</filename> file, would be found at
+        <literal>HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Config\Miscellany\compression</literal>.
+        Per-user configuration values should be stored under
+        <literal>HKEY_CURRENT_USER\Software\Tigris.org\Subversion</literal>.
+      </para>
+
+      <para>Registry-based configuration options are parsed
+        <emphasis>before</emphasis> their file-based counterparts,
+        so are overridden by values found in the configuration
+        files.  In other words, configuration priority is granted in
+        the following order on a Windows system:</para>
+      
+      <orderedlist>
+        <listitem>
+          <para>Command-line options</para>
+        </listitem>
+        <listitem>
+          <para>The per-user INI files</para>
+        </listitem>
+        <listitem>
+          <para>The pre-user Registry values</para>
+        </listitem>
+        <listitem>
+          <para>The system-wide INI files</para>
+        </listitem>
+        <listitem>
+          <para>The system-wide Registry values</para>
+        </listitem>
+      </orderedlist>
+
+      <para>Also, the Windows Registry doesn't really support the
+        notion of something being <quote>commented out</quote>.
+        However, Subversion will ignore any option key whose name
+        begins with a hash (<literal>#</literal>) character.  This
+        allows you to effectively comment out a Subversion option
+        without deleting the entire key from the Registry, obviously
+        simplifying the process of restoring that option.</para>
+
+      <para>The <command>svn</command> command-line client never
+        attempts to write to the Windows Registry, and will not
+        attempt to create a default configuration area there.  You can
+        create the keys you need using the <command>REGEDIT</command>
+        program.  Alternatively, you can create a
+        <filename>.REG</filename> file, and then double-click on that
+        file from the Explorer shell, which will cause the data to be
+        merged into your registry.</para>
+
+      <example id="svn-ch-6-sect-1.2-ex-1">
+        <title>Sample registration entries (.REG) file.</title>
+
+        <programlisting>
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\Software\Tigris.org\Subversion\Servers\DEFAULT]
+"#http-proxy-host"=""
+"#http-proxy-port"=""
+"#http-proxy-username"=""
+"#http-proxy-password"=""
+"#http-proxy-timeout"="0"
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auth]
+"#store-password"="no"
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\helpers]
+"#editor-cmd"="notepad"
+
+[HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\miscellany]
+"#global-ignores"="*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+"#compression"="yes"
+</programlisting>
+      </example>
+
+      <para>The previous example shows the contents of a
+        <filename>.REG</filename> file which contains some of most
+        commonly used configuration options and their default values.
+        Note the presence of both system-wide (for network
+        proxy-related options) and per-user settings (editor programs
+        and passoword storage, among others).  Also note that all the
+        options are effectively commented out.  You need only to
+        remove the hash character (<literal>#</literal>) from the
+        beginning of the option names, and set the values as you
+        desire.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-6-sect-1.3">
-      <title>Multiple config areas</title>
+      <title>The Configuration Options</title>
       
-      <para>On Unix, an administrator can create <quote>global</quote>
-        Subversion preferences by creating and populating an
-        <filename>/etc/subversion/</filename> area.  The per-user
-        <filename>~/.subversion/</filename> configuration will still
-        override these defaults, however.</para>
+      <simplesect>
+        <para>In this section, we will discuss the currently supported
+          run-time configuration options.  If you </para>
 
-      <para>On Win32, an administrator has the option of creating
-        three other locations: a global
-        <filename>Subversion</filename> folder in the <quote>All
-        Users</quote> area, a collection of global registry settings,
-        or a collection of per-user registry settings.  The registry
-        settings are set in:</para>
+      </simplesect>
 
-      <screen>
-HKCU\Software\Tigris.org\Subversion\Proxies
-HKCU\Software\Tigris.org\Subversion\Config
-etc.
-      </screen>
+      <sect3 id="svn-ch-6-sect-1.3.1">
+        <title>Servers</title>
 
-      <para>To clarify, here is the order Subversion searches for
-        run-time settings on Win32.  Each subsequent location
-        overrides the previous one:</para>
+        <para>The <filename>servers</filename> file contains
+          Subversion configuration options related to the network
+          layers.  There are two special section names in this
+          file&mdash;<literal>groups</literal> and
+          <literal>default</literal>.  The <literal>groups</literal>
+          section is cross-reference table of sort.  The keys in this
+          section are the names of other sections in the file; their
+          values are globs which are compared against the hostnames of
+          the machine to which Subversion requests are sent.</para>
 
-      <itemizedlist>
+        <programlisting>
+[groups]
+beanie-babies = *.red-bean.com
+collabnet = svn.collab.net
 
-        <listitem>
-          <para>global registry</para>
-        </listitem>
+[beanie-babies]
+&hellip;
 
-        <listitem>
-          <para>global <filename>Subversion</filename> folder
-          </para>
-        </listitem>
+[collabnet]
+&hellip;
+</programlisting>
 
-        <listitem>
-          <para>user registry
-          </para>
-        </listitem>
+        <para>When Subversion is used over a network, it attempts to
+          match the name of the server it is trying to reach with a
+          group name under the <literal>groups</literal> section.  If
+          a match is made, Subversion then looks for a section in the
+          <filename>servers</filename> file whose name is the matched
+          group's name.  From that section it reads the actual network
+          configuration settions.</para>
 
-        <listitem>
-          <para>user <filename>Subversion</filename> folder
-          </para>
-        </listitem>
+        <para>The <literal>default</literal> section contains the
+          settings which are meant for all of the servers not matched
+          by one of the globs under the <literal>groups</literal>
+          section.  The available options under this section are
+          exactly the same as those valid for the other server
+          sections in the file (except, of course, the special
+          <literal>groups</literal> section), and are as
+          follows:</para>
 
-      </itemizedlist>
+        <variablelist>
+          <varlistentry>
+            <term><literal>http-proxy-host</literal></term>
+            <listitem>
+              <para>This specifies the hostname of the proxy computer
+                through which your HTTP-based Subversion requests must
+                pass.  It defaults to an empty value, which means that
+                Subversion will not attempt to route HTTP requests
+                through a proxy computer, and will instead attempt to
+                contact the destination machine directly.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-proxy-port</literal></term>
+            <listitem>
+              <para>This specifies the port number on the proxy host
+                to use.  It defaults to an empty value.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-proxy-username</literal></term>
+            <listitem>
+              <para>This specifies the username to supply to the proxy
+                machine.  It defaults to an empty value.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-proxy-password</literal></term>
+            <listitem>
+              <para>This specifies the password to supply to the proxy
+                machine.  It defaults to an empty value.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>http-timeout</literal></term>
+            <listitem>
+              <para>This specifies the amount of time, in seconds, to
+                wait for a server response.  If you experience
+                problems with a slow network connection causing
+                Subversion operations to timeout, you should increase
+                the value of this option.  The default value is
+                <literal>0</literal>, which instructs the underlying
+                HTTP library, Neon, to use its default timeout
+                setting.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term><literal>neon-debug-mask</literal></term>
+            <listitem>
+              <para>This is an integer mask which the underlying HTTP
+                library, Neon, uses for choosing what type of
+                debugging output to yield.  The default value is
+                <literal>0</literal>, which will silence all debugging
+                output.</para>
+            </listitem>
+          </varlistentry>
+          <!--
+          <varlistentry>
+            <term><literal>svn-tunnel-agent</literal></term>
+            <listitem>
+              <para>This specifies the external agent program through
+                which to tunnel SVN protocol requests.</para>
+            </listitem>
+          </varlistentry>
+          -->
+        </variablelist>
 
+      </sect3>
+      <sect3 id="svn-ch-6-sect-1.3.2">
+        <title>Config</title>
+
+        <para>### WRITE THIS ###</para>
+
+      </sect3>
     </sect2>
   </sect1>
 
