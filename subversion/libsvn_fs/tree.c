@@ -597,7 +597,8 @@ mutable_root_node (dag_node_t **node_p,
 
 typedef enum copy_id_inherit_t
 {
-  copy_id_inherit_self = 0,
+  copy_id_inherit_unknown = 0,
+  copy_id_inherit_self,
   copy_id_inherit_parent,
   copy_id_inherit_new
 
@@ -648,13 +649,14 @@ parent_path_path (parent_path_t *parent_path,
    the inheritance method is copy_id_inherit_new, also return a
    *COPY_SRC_PATH on which to base the new copy ID (else return NULL
    for that path).  CHILD must have a parent (it cannot be the root
-   node), and must be immutable (if it is mutable, it has already
-   inherited its copy ID).  */
+   node).  TXN_ID is the transaction in which these items might be
+   mutable.  */
 static svn_error_t *
 get_copy_inheritance (copy_id_inherit_t *inherit_p,
                       const char **copy_src_path,
                       svn_fs_t *fs,
                       parent_path_t *child,
+                      const char *txn_id,
                       trail_t *trail)
 {
   const svn_fs_id_t *child_id, *parent_id;
@@ -663,13 +665,21 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
   svn_fs__copy_t *copy;
 
   /* Make some assertions about the function input. */
-  assert (child && child->parent);
+  assert (child && child->parent && txn_id);
 
   /* Initialize some convenience variables. */
   child_id = svn_fs__dag_get_id (child->node);
   parent_id = svn_fs__dag_get_id (child->parent->node);
   child_copy_id = svn_fs__id_copy_id (child_id);
   parent_copy_id = svn_fs__id_copy_id (parent_id);
+
+  /* If this child is already mutable, we have nothing to do. */
+  if (svn_fs__key_compare (svn_fs__id_txn_id (child_id), txn_id) == 0)
+    {
+      *inherit_p = copy_id_inherit_self;
+      *copy_src_path = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* From this point on, we'll assume that the child will just take
      its copy ID from its parent. */
@@ -729,6 +739,8 @@ make_parent_path (dag_node_t *node,
   parent_path->node = node;
   parent_path->entry = entry;
   parent_path->parent = parent;
+  parent_path->copy_inherit = copy_id_inherit_unknown;
+  parent_path->copy_src_path = NULL;
   return parent_path;
 }
 
@@ -796,6 +808,12 @@ typedef enum open_path_flags_t {
    TRAIL->pool.  The resulting *PARENT_PATH_P value is guaranteed to
    contain at least one element, for the root directory.
 
+   If resulting *PARENT_PATH_P will eventually be made mutable and
+   modified, or if copy ID inheritance information is otherwise
+   needed, TXN_ID should be the ID of the mutability transaction.  If
+   TXN_ID is NULL, no copy ID in heritance information will be
+   calculated for the *PARENT_PATH_P chain.
+
    If FLAGS & open_path_last_optional is zero, return the error
    SVN_ERR_FS_NOT_FOUND if the node PATH refers to does not exist.  If
    non-zero, require all the parent directories to exist as normal,
@@ -813,6 +831,7 @@ open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
            const char *path,
            int flags,
+           const char *txn_id,
            trail_t *trail)
 {
   svn_fs_t *fs = root->fs;
@@ -829,6 +848,8 @@ open_path (parent_path_t **parent_path_p,
   SVN_ERR (root_node (&here, root, trail));
   id = svn_fs__dag_get_id (here);
   parent_path = make_parent_path (here, 0, 0, pool);
+  parent_path->copy_inherit = copy_id_inherit_self;
+  
   rest = canon_path + 1; /* skip the leading '/', it saves in iteration */
 
   /* Whenever we are at the top of this loop:
@@ -901,10 +922,13 @@ open_path (parent_path_t **parent_path_p,
 
           /* Now, make a parent_path item for CHILD. */
           parent_path = make_parent_path (child, entry, parent_path, pool);
-          SVN_ERR (get_copy_inheritance (&inherit, &copy_path, 
-                                         fs, parent_path, trail));
-          parent_path->copy_inherit = inherit;
-          parent_path->copy_src_path = apr_pstrdup (pool, copy_path);
+          if (txn_id)
+            {
+              SVN_ERR (get_copy_inheritance (&inherit, &copy_path, 
+                                             fs, parent_path, txn_id, trail));
+              parent_path->copy_inherit = inherit;
+              parent_path->copy_src_path = apr_pstrdup (pool, copy_path);
+            }
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
@@ -975,9 +999,13 @@ make_path_mutable (svn_fs_root_t *root,
           break;
 
         case copy_id_inherit_self:
-        default:
           copy_id = NULL;
           break;
+
+        case copy_id_inherit_unknown:
+        default:
+          abort(); /* uh-oh -- somebody didn't calculate copy-ID
+                      inheritance data. */
         }
           
       /* Now make this node mutable.  */
@@ -1036,7 +1064,7 @@ get_dag (dag_node_t **dag_node_p,
     {
       /* Call open_path with no flags, as we want this to return an error
          if the node for which we are searching doesn't exist. */
-      SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+      SVN_ERR (open_path (&parent_path, root, path, 0, NULL, trail));
       node = parent_path->node;
 
       /* No need to cache our find -- open_path() will do that for us. */
@@ -1397,7 +1425,7 @@ txn_body_change_node_prop (void *baton,
   apr_hash_t *proplist;
   const char *txn_id = svn_fs_txn_root_name (args->root, trail->pool);
 
-  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
+  SVN_ERR (open_path (&parent_path, args->root, args->path, 0, txn_id, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
 
@@ -2879,7 +2907,7 @@ txn_body_make_dir (void *baton,
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
-                      trail));
+                      txn_id, trail));
 
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
@@ -2942,7 +2970,7 @@ txn_body_delete (void *baton,
   parent_path_t *parent_path;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, trail));
 
   if (! svn_fs_is_txn_root (root))
     return not_txn (root);
@@ -3036,6 +3064,7 @@ txn_body_copy (void *baton,
   const char *to_path = args->to_path;
   dag_node_t *from_node;
   parent_path_t *to_parent_path;
+  const char *txn_id = svn_fs_txn_root_name (to_root, trail->pool);
 
   if (! svn_fs_is_revision_root (from_root))
     return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -3048,8 +3077,7 @@ txn_body_copy (void *baton,
      component does not exist, it's not that big a deal.  We'll just
      make one there. */
   SVN_ERR (open_path (&to_parent_path, to_root, to_path, 
-                      open_path_last_optional, trail));
-
+                      open_path_last_optional, txn_id, trail));
 
   /* If the destination node already exists as the same node as the
      source (in other words, this operation would result in nothing
@@ -3063,7 +3091,6 @@ txn_body_copy (void *baton,
   if (svn_fs_is_revision_root (from_root))
     {
       svn_fs_path_change_kind_t kind;
-      const char *txn_id = svn_fs_txn_root_name (to_root, trail->pool);
       dag_node_t *new_node;
 
       /* If TO_PATH already existed prior to the copy, note that this
@@ -3224,7 +3251,7 @@ txn_body_make_file (void *baton,
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
-                      trail));
+                      txn_id, trail));
 
   /* If there's already a file by that name, complain.
      This also catches the case of trying to make a file named `/'.  */
@@ -3543,7 +3570,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
-  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, trail));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
@@ -3721,7 +3748,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
-  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, trail));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
@@ -4029,6 +4056,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
   const char *end_copy_id = NULL;
   struct revision_root_args rr_args;
   svn_boolean_t reported = history->is_interesting;
+  const char *txn_id;
 
   /* Initialize our return value. */
   *prev_history = NULL;
@@ -4052,8 +4080,10 @@ txn_body_history_prev (void *baton, trail_t *trail)
   rr_args.rev = revision;
   SVN_ERR (txn_body_revision_root (&rr_args, trail));
 
-  /* Open PATH/REVISION, and get its node and a bunch of other goodies.  */
-  SVN_ERR (open_path (&parent_path, root, path, 0, trail));
+  /* Open PATH/REVISION, and get its node and a bunch of other
+     goodies.  */
+  SVN_ERR (svn_fs__rev_get_txn_id (&txn_id, fs, revision, trail));
+  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, trail));
   node = parent_path->node;
   node_id = svn_fs__dag_get_id (node);
   commit_path = svn_fs__dag_get_created_path (node);
