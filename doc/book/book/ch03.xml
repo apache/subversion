@@ -1556,7 +1556,9 @@ Committed revision 4.
       <tip>
         <para>If you're in your editor writing a commit message and
           decide that you want to cancel your commit, you can just
-          quit your editor without saving changes.</para>
+          quit your editor without saving changes.  If you've already
+          saved your commit message, simply delete the text and save
+          again.</para>
 
         <screen>
 $ svn commit
