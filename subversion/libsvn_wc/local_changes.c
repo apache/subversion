@@ -58,40 +58,46 @@
 
 
 
+/*** Storing the diff between calls. ***/
+
 struct svn_wc__diff_holder
 {
-  apr_pool_t *pool;
+  svn_string_t *patchfile;  /* Where to find the result of diff -c */
 };
 
 
+
+
+
+
+
 svn_error_t *
-svn_wc__generic_differ (void *user_data,
-                        void **result,
+svn_wc__gnudiff_differ (void **result,
                         svn_string_t *src,
-                        svn_string_t *target)
+                        svn_string_t *target,
+                        apr_pool_t *pool)
 {
-  struct svn_wc__diff_holder *holder;
-  apr_pool_t *pool = (apr_pool_t *) user_data;
+  struct svn_wc__diff_holder *dh = apr_pcalloc (pool, sizeof (*dh));
 
   /* kff todo: someday, do "diff -c SVN/text-base/foo ./foo" and store
-     the result in *RESULT. */
+     the result in a file, store the filename in dh->patchfile, and
+     store dh in *RESULT. */
   
-  holder = apr_pcalloc (pool, sizeof (*holder));
-  holder->pool = pool;
-  *result = holder;
+  *result = dh;
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__generic_patcher (void *user_data,
+svn_wc__gnudiff_patcher (void *user_data,
                          svn_string_t *src,
-                         svn_string_t *target)
+                         svn_string_t *target,
+                         apr_pool_t *pool)
 {
-  struct svn_wc__diff_holder *holder 
-    = (struct svn_wc__diff_holder *) user_data;
-  apr_pool_t *pool = holder->pool;
+#if 0
+  struct svn_wc__diff_holder *dh = (struct svn_wc__diff_holder *) user_data;
+#endif
   apr_status_t apr_err;
 
   /* kff todo: someday, take CHANGES, which are the result of "diff -c
@@ -99,17 +105,13 @@ svn_wc__generic_patcher (void *user_data,
      file.  If any hunks fail, that's a conflict, do what CVS does. */
 
   /* kff todo: "Patch?  We don't need no stinkin' patch."  Just
-     overwrite local mods for now. */
+     overwrite local mods for now, like the barbarians we are. */
 
   apr_err = apr_copy_file (src->data, target->data, pool);
   if (apr_err)
-    {
-      /* kff todo: write svn_io_copy_file ? */
-      char *msg = apr_psprintf (pool, "copying %s to %s",
-                                src->data, target->data);
-      return svn_error_create (apr_err, 0, NULL, pool, msg);
-    }
-
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "copying %s to %s", src->data, target->data);
+  
   return SVN_NO_ERROR;
 }
 
@@ -120,19 +122,38 @@ svn_wc__get_local_changes (svn_wc_diff_fn_t *diff_fn,
                            svn_string_t *path,
                            apr_pool_t *pool)
 {
-  return (*diff_fn) (pool, result, path, svn_wc__text_base_path (path, pool));
+  return (*diff_fn) (result,
+                     path,
+                     svn_wc__text_base_path (path, 0, pool),
+                     pool);
 }
 
 
 svn_error_t *
 svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
-                             void *changes,
+                             void *diff,
                              svn_string_t *path,
                              apr_pool_t *pool)
 {
-  /* kff todo: this will be reworked.  for now, just reverse source
-     and dest to achieve desired effect. */
-  return (*patch_fn) (changes, svn_wc__text_base_path (path, pool), path);
+  /* kff todo: the real recipe here is something like:
+
+        1. apply the diff to ./SVN/tmp/text-base/newfile...
+        2. ... and store the result in ./newfile
+        
+     That's right -- we don't want to update SVN/text-base/newfile
+     until after the merge, because once that's updated, the ability
+     to do any merging is lost, as we won't have the old ancestor
+     locally anymore.
+
+     But for now, we just copy the tmp text-base over to the real
+     file.
+  */
+     
+
+  return (*patch_fn) (diff,
+                      svn_wc__text_base_path (path, 1, pool),
+                      path,
+                      pool);
 }
 
 

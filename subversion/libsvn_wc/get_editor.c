@@ -664,7 +664,7 @@ close_file (void *file_baton)
   */
 
   /* Save local mods. */
-  err = svn_wc__get_local_changes (svn_wc__generic_differ,
+  err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
                                    &local_changes,
                                    fb->path,
                                    fb->pool);
@@ -762,31 +762,12 @@ close_file (void *file_baton)
   if (err)
     return err;
 
-  /* kff todo: here, we do by hand the work that run_log will do. */ 
-
-  /* Update the text-base copy. */
-  if (fb->text_changed)
-    {
-      err = svn_wc__sync_text_base (fb->path, fb->pool);
-      if (err)
-        return (err);
-    }
-
-  /* Restore from text-base, attempting to apply local_mods. */
-  err = svn_wc__merge_local_changes (svn_wc__generic_patcher,
-                                     local_changes,
-                                     fb->path,
-                                     fb->pool);
-  if (err)
-    return (err);
-
-  /* kff todo: if run_log were really implemented, it would have done
-     the stuff above all by itself: */
+  /* Run the log. */
   err = svn_wc__run_log (fb->dir_baton->path, fb->pool);
   if (err)
     return err;
 
-  /* Unlock, we're done with this file. */
+  /* Unlock, we're done with this whole file-update. */
   err = svn_wc__unlock (fb->dir_baton->path, fb->pool);
   if (err)
     return err;

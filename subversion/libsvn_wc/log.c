@@ -71,23 +71,69 @@ struct log_runner
 /*** The XML handlers. ***/
 
 static svn_error_t *
-merge_text (svn_string_t *path, const char *name, const char *saved_mods)
+merge_text (svn_string_t *path,
+            const char *name,
+            const char *saved_mods,
+            apr_pool_t *pool)
 {
-  printf ("   LOG MERGE_TEXT: %s/%s (%s)\n", path->data, name, saved_mods);
-  return SVN_NO_ERROR;
+  svn_string_t *filepath;
+  svn_error_t *err;
+  void *diff;
+
+  filepath = svn_string_dup (path, pool);
+  svn_path_add_component_nts (filepath, name, SVN_PATH_LOCAL_STYLE, pool);
+
+  /* Get the local edits. */
+  err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
+                                   &diff,
+                                   filepath,
+                                   pool);
+  if (err)
+    return err;
+
+  /* Merge local edits into the updated version. */
+  return svn_wc__merge_local_changes (svn_wc__gnudiff_patcher,
+                                      diff,
+                                      filepath,
+                                      pool);
+  if (err)
+    return err;
 }
 
 
 static svn_error_t *
-replace_text_base (svn_string_t *path, const char *name)
+replace_text_base (svn_string_t *path,
+                   const char *name,
+                   apr_pool_t *pool)
 {
-  printf ("   LOG REPLACE_TEXT_BASE: %s/%s\n", path->data, name);
-  return SVN_NO_ERROR;
+  svn_string_t *filepath;
+  svn_error_t *err;
+
+  filepath = svn_string_dup (path, pool);
+  svn_path_add_component_nts (filepath, name, SVN_PATH_LOCAL_STYLE, pool);
+
+  err = svn_wc__sync_text_base (filepath, pool);
+
+  printf ("*** kff first: %p ***\n", err);
+  if (err && (err->apr_err == APR_EEXIST))
+    {
+      /* If this operation appears to have been done already, that's
+         not an error, it just means we're mopping up after some
+         unexpected interrupt. */
+      printf ("*** kff here ***\n");
+      svn_error_free (err);
+      return SVN_NO_ERROR;
+    }
+  
+  return err;
 }
 
 
 static svn_error_t *
-set_version (svn_string_t *path, const char *name, svn_vernum_t version)
+set_version (svn_string_t *path,
+             const char *name,
+             svn_vernum_t version,
+             apr_pool_t *pool)
 {
   printf ("   LOG SET_VERSION: %s/%s, %d\n", path->data, name, (int) version);
   return SVN_NO_ERROR;
@@ -133,7 +179,7 @@ start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
       if (! name)  /* note that saved_mods is allowed to be NULL */
         set_error (loggy);
       else
-        loggy->error = merge_text (loggy->path, name, saved_mods);
+        loggy->error = merge_text (loggy->path, name, saved_mods, loggy->pool);
     }
   else if (strcmp (name, "replace-text-base") == 0)
     {
@@ -142,7 +188,7 @@ start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
       if (! name)
         set_error (loggy);
       else
-        loggy->error = replace_text_base (loggy->path, name);
+        loggy->error = replace_text_base (loggy->path, name, loggy->pool);
     }
   else if (strcmp (name, "set-version") == 0)
     {
@@ -152,7 +198,10 @@ start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
       if ((! name) || (! verstr))
         set_error (loggy);
       else
-        loggy->error = set_version (loggy->path, name, atoi (verstr));
+        loggy->error = set_version (loggy->path,
+                                    name,
+                                    atoi (verstr),
+                                    loggy->pool);
     }
   else
       set_error (loggy);

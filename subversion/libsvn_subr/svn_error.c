@@ -234,7 +234,7 @@ svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 
 
 void
-svn_free_error (svn_error_t *err)
+svn_error_free (svn_error_t *err)
 {
   apr_destroy_pool (err->pool);
 }

@@ -204,9 +204,10 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool);
 
 
 /* Return a path to PATH's text-base file.
-   kff todo: this exists only for the benefit of temporary diff/merge
-   code right now; not sure if it should really stay forever. */
-svn_string_t *svn_wc__text_base_path (svn_string_t *path, apr_pool_t *pool);
+   If TMP is set, return a path to the tmp text-base file. */
+svn_string_t *svn_wc__text_base_path (svn_string_t *path,
+                                      svn_boolean_t tmp,
+                                      apr_pool_t *pool);
 
 
 /* Ensure that PATH is a locked working copy directory.
@@ -313,32 +314,55 @@ apr_status_t apr_copy_file (const char *src,
 
 /*** Diffing and merging ***/
 
-/* Note: diffing and merging is about discovering local changes to a
- * file and merging them back into an updated version of that file,
- * not about txdeltas.
+/* Nota bene: here, diffing and merging is about discovering local changes
+ * to a file and merging them back into an updated version of that
+ * file, not about txdeltas.
  */
 
-/* Get local changes. */
+/* Get local changes to a working copy file.
+ *
+ * DIFF_FN stores its results in *RESULT, which will later be passed
+ * to a matching patch function.  (Note that DIFF_FN will be invoked
+ * on two filenames, a source and a target). 
+ */
 svn_error_t *svn_wc__get_local_changes (svn_wc_diff_fn_t *diff_fn,
                                         void **result,
                                         svn_string_t *path,
                                         apr_pool_t *pool);
 
-/* An svn_wc_diff_fn_t for above. */
-svn_error_t *svn_wc__generic_differ (void *user_data,
-                                     void **result,
-                                     svn_string_t *src,
-                                     svn_string_t *target);
 
-/* Re-apply local changes to a copy that may have been updated. */
+/* An implementation of the `svn_wc_diff_fn_t' interface.
+ * Store the diff between SRC and TARGET in *RESULT.  (What gets
+ * stored isn't necessarily the actual diff data -- it might be the
+ * name of a tmp file containing the data, for example.)
+ */
+svn_error_t *svn_wc__gnudiff_differ (void **result,
+                                     svn_string_t *src,
+                                     svn_string_t *target,
+                                     apr_pool_t *pool);
+
+
+/* Re-apply local changes to a working copy file that may have been
+ * updated.
+ *
+ * PATCH_FN is a function, such as svn_wc__gnudiff_patcher, that can
+ * use CHANGES to patch the file PATH (note that PATCH_FN will be
+ * invoked on two filenames, a source and a target).
+ */
 svn_error_t *svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
                                           void *changes,
                                           svn_string_t *path,
                                           apr_pool_t *pool);
-/* An svn_wc_patch_fn_t for above. */
-svn_error_t *svn_wc__generic_patcher (void *user_data,
+
+
+
+/* An implementation of the `svn_wc_patch_fn_t' interface.
+ * Patch SRC with DIFF to yield TARGET.
+ */
+svn_error_t *svn_wc__gnudiff_patcher (void *diff,
                                       svn_string_t *src,
-                                      svn_string_t *target);
+                                      svn_string_t *target,
+                                      apr_pool_t *pool);
 
 
 
