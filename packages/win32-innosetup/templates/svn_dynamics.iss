@@ -26,6 +26,7 @@
 ; Uncomment the defines if true
 #define inc_dbgsyms
 #define VC7
+#define inc_locale
 
 ; Apache Server: The minimum required version
 #define apache_ver_min "2.0.49"
