@@ -15,6 +15,7 @@ libmod_dav_svn_la_SOURCES = dav_svn.h activity.c deadprops.c liveprops.c \
 ### shared libs are being built. libtool barfs on us. we need to upgrade
 ### to libtool 1.4 when it gets released
 libmod_dav_svn_la_LIBADD = \
+	-L$(top_builddir)/subversion/libsvn_repos/.libs -lsvn_repos \
 	-L$(top_builddir)/subversion/libsvn_fs/.libs -lsvn_fs \
 	-L$(top_builddir)/subversion/libsvn_delta/.libs -lsvn_delta \
 	-L$(top_builddir)/subversion/libsvn_subr/.libs -lsvn_subr
