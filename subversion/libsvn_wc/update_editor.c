@@ -579,12 +579,15 @@ add_directory (const char *path,
       || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM (copyfrom_revision))))
     abort();
 
-  /* Check that a non-directory object by this name doesn't already exist. */
+  /* The directory may exist if this is a checkout, otherwise there should
+     be nothing with this name. */
   SVN_ERR (svn_io_check_path (db->path, &kind, db->pool));
-  if (kind != svn_node_none && kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-                              "failed to add dir`%s': object already exists",
-                              db->path);
+  if (kind != svn_node_none
+      && !(pb->edit_baton->is_checkout && kind == svn_node_dir))
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+       "failed to add directory '%s': object of the same name already exists",
+       db->path);
 
   /* Either we got real copyfrom args... */
   if (copyfrom_path || SVN_IS_VALID_REVNUM (copyfrom_revision))
@@ -596,8 +599,8 @@ add_directory (const char *path,
          copied tree.  Someday! */      
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-         "failed to add dir`%s': copyfrom args not yet supported",
-         pb->path);
+         "failed to add directory '%s': copyfrom args not yet supported",
+         db->path);
     }
   else  /* ...or we got invalid copyfrom args. */
     {
@@ -835,9 +838,9 @@ add_or_open_file (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
-  apr_hash_t *dirents;
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
+  enum svn_node_kind kind;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -852,8 +855,6 @@ add_or_open_file (const char *path,
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
 
-  SVN_ERR (svn_io_get_dirents (&dirents, pb->path, subpool));
-
   /* ### It would be nice to get the dirents and entries *once* and stash
      ### them in the directory baton.  But an important question is,
      ### are we re-reading the entries each time because we need to be
@@ -861,19 +862,20 @@ add_or_open_file (const char *path,
      ### Are editor drives guaranteed not to mention the same name
      ### twice in the same dir baton?  Don't know.  */
 
+  SVN_ERR (svn_io_check_path (fb->path, &kind, subpool));
   SVN_ERR (svn_wc_entry (&entry, fb->path, FALSE, subpool));
   
   /* Sanity checks. */
 
-  /* If adding, make sure there isn't already a disk entry here with the
-     same name.  This error happen if either a) the user changed the
-     filetype of the working file and ran 'update', or b) the
-     update-driver is very confused. */
-  if (adding && apr_hash_get (dirents, fb->name, APR_HASH_KEY_STRING))
+  /* If adding there may be a file with this name if this is a checkout,
+     otherwise there should be nothing with this name. */
+  if (adding
+      && kind != svn_node_none
+      && !(fb->edit_baton->is_checkout && kind == svn_node_file))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
-       "Can't add '%s':\n object of same name already exists in '%s'",
-       fb->name, pb->path);
+       "failed to add file '%s': object of the same name already exists",
+       fb->path);
 
   /* sussman sez: If we're trying to add a file that's already in
      `entries' (but not on disk), that's okay.  It's probably because
