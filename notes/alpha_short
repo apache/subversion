@@ -89,6 +89,8 @@ We just don't have enough tests for this yet.
 same name, but not necessarily the same fs type.  Deal with this
 scenario in both the commit and update case.
 
+*** making directory removals and re-adds work correctly.
+
 
 ** new 'libsvn_repos':  utils built on *top* of libsvn_fs
 
@@ -149,7 +151,15 @@ changing arguments, etc).
   Apache security directives into the <Location> tag and build an
   htaccess file?
 
+** 'svn cleanup' command
 
+  Often when svn segfaults, it leaves the working copy locked.
+  Normally this is no big deal, we just blow away the working copy and
+  do the test over again.
+
+  But in M3, this is not an option!  We need graceful crash recovery
+  -- we need to be able to run 'svn cleanup', which will run orphaned
+  logs and remove locks.
 
 
 
@@ -197,14 +207,12 @@ subdirs, or hide them under a cvs-like interface?
 
 ** misc subcommands
 
-   svn cleanup, log, export, diff, rdiff, blame, merge, revert,
+   svn log, export, diff, rdiff, blame, merge, revert,
        rollback, unadd, undel.  (Chicago office)
 
    We are purposely ignoring:  history, edit, watch, editors.
 
   Notes:  
-
-   - 'cleanup' is a subcommand, not automatically run by other subcommands.
 
    - 'merge' will probably need to use delta_dirs()
 
