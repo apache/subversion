@@ -150,7 +150,7 @@ typedef struct
 /** Specific types of credentials **/
 
 /** A simple username/password pair. */
-#define SVN_AUTH_CRED_SIMPLE "svn:simple"
+#define SVN_AUTH_CRED_SIMPLE "svn.simple"
 typedef struct
 {
   const char *username;
@@ -159,7 +159,7 @@ typedef struct
 } svn_auth_cred_simple_t;
 
 /** Just a username. */
-#define SVN_AUTH_CRED_USERNAME "svn:username"
+#define SVN_AUTH_CRED_USERNAME "svn.username"
 typedef struct
 {
   const char *username;
@@ -170,7 +170,7 @@ typedef struct
     optionally @a key_file (if the private key is separate) as the
     full paths to the files, and sets @a cert_type for the type of
     certificate file to load */
-#define SVN_AUTH_CRED_CLIENT_SSL "svn:ssl:client-cert"
+#define SVN_AUTH_CRED_CLIENT_SSL "svn.ssl.client-cert"
 typedef enum
   {
     svn_auth_ssl_unknown_cert_type,
@@ -191,7 +191,7 @@ typedef struct
  * @a password gets set with the appropriate password for the
  * certificate.
  */
-#define SVN_AUTH_CRED_CLIENT_PASS_SSL "svn:ssl:client-passphrase"
+#define SVN_AUTH_CRED_CLIENT_PASS_SSL "svn.ssl.client-passphrase"
 typedef struct
 {
   const char *password;
@@ -216,8 +216,8 @@ typedef struct
 #define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
 #define SVN_AUTH_SSL_FAILMASK    (0x0f)
 
-#define SVN_AUTH_CRED_SERVER_SSL "svn:ssl:server"
-#
+#define SVN_AUTH_CRED_SERVER_SSL "svn.ssl.server"
+
 typedef struct
 {
   int failures_allow;
