@@ -32,7 +32,6 @@
     void **,
     svn_txdelta_window_t **,
     const svn_delta_editor_t **,
-    struct svn_pipe_edit_baton **,
     svn_txdelta_window_handler_t *
 };
 

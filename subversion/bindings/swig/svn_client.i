@@ -45,7 +45,8 @@
     PyObject *list;
     PyObject *rev, *date, *author;
     if (!(*$1)) {
-        return Py_None;
+        $result = Py_None;
+        Py_INCREF(Py_None);
     }
     list = PyList_New(3);
     rev = PyInt_FromLong((*$1)->revision);
@@ -55,7 +56,7 @@
         Py_XDECREF(rev);
         Py_XDECREF(date);
         Py_XDECREF(author);
-        Py_DECREF(list);
+        Py_XDECREF(list);
         return NULL;
     }       
     PyList_SET_ITEM(list, 0, rev);

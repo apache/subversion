@@ -750,10 +750,10 @@ void svn_swig_py_notify_func(void *baton,
 }
 
 svn_error_t *
-svn_swig_py_get_commit_log_func (const char **log_msg,
-                                 apr_array_header_t *commit_items,
-                                 void *baton,
-                                 apr_pool_t *pool)
+svn_swig_py_get_commit_log_func(const char **log_msg,
+                                apr_array_header_t *commit_items,
+                                void *baton,
+                                apr_pool_t *pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -792,7 +792,8 @@ svn_swig_py_get_commit_log_func (const char **log_msg,
     }
   else if (PyString_Check(result)) 
     {
-      *log_msg = PyString_AS_STRING(result);
+      *log_msg = apr_pstrdup(pool, PyString_AS_STRING(result));
+      Py_DECREF(result);
       return SVN_NO_ERROR;
     }
      
