@@ -2608,7 +2608,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
-  apr_pool_t *params_subpool;
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -2662,8 +2661,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   repos_len = ctx->repos_path->len;
 
   /* fetch this collection's children */
-  params_subpool = svn_pool_create(params->pool);
-
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
                             ctx->info.repos_path, params->pool);
   if (serr != NULL)
@@ -2726,11 +2723,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
-
-      svn_pool_clear(params_subpool);
     }
-
-  svn_pool_destroy(params_subpool);
 
   return NULL;
 }
