@@ -46,12 +46,49 @@ trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
 branch_tag = re.compile('^[0-9.]+\\.0\\.[0-9]+$')
 vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
+# This really only matches standard '1.1.1.*'-style vendor revisions.
+# One could conceivably have a file whose default branch is 1.1.3 or
+# whatever, or was that at some point in time, with vendor revisions
+# 1.1.3.1, 1.1.3.2, etc.  But with the default branch gone now (which 
+# is the only time this regexp gets used), we'd have no basis for
+# assuming that the non-standard vendor branch had ever been the
+# default branch anyway, so we don't want this to match them anyway.
+vendor_revision = re.compile('^(1\\.1\\.1)\\.([0-9])+$')
+
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 
 # Skeleton version of an svn filesystem.
+# See class RepositoryMirror for how these work.
 SVN_REVISIONS_DB = 'cvs2svn-revisions.db'
 NODES_DB = 'cvs2svn-nodes.db'
+
+# Record the default RCS branches, if any, for CVS filepaths.
+#
+# The keys are CVS filepaths, the values are vendor branch revisions,
+# such as '1.1.1.1', or '1.1.1.2', or '1.1.1.96'.  The vendor branch
+# revision represents the highest vendor branch revision thought to
+# have ever been head of the default branch.
+#
+# The reason we record a specific vendor revision, rather than a
+# default branch number, is that there are two cases to handle.
+#
+# One is simple: the RCS file lists a default branch explicitly in its
+# header, such as '1.1.1'.  In this case, we know that every revision
+# on the vendor branch is to be treated as head of trunk at that point
+# in time.
+#
+# But there's also a degenerate case: the RCS file does not currently
+# have a default branch, yet we can deduce that for some period in the
+# past it probably *did* have one.  For example, the file has vendor
+# revisions 1.1.1.1 -> 1.1.1.96, all of which are dated before 1.2,
+# and then it has 1.1.1.97 -> 1.1.1.100 dated after 1.2.  In this
+# case, we should record 1.1.1.96 as the last vendor revision to have
+# been the head of the default branch.
+DEFAULT_BRANCHES_DB = 'cvs2svn-default-branches.db'
+
+# Records the origin ranges for branches and tags.
+# See class RepositoryMirror for how this works.
 SYMBOLIC_NAME_ROOTS_DB = 'cvs2svn-symroots.db'
 
 # See class SymbolicNameTracker for details.
@@ -90,10 +127,11 @@ symbolic_name_re = re.compile('^[a-zA-Z].*$')
 symbolic_name_transtbl = string.maketrans('/\\',',;')
 
 class CollectData(rcsparse.Sink):
-  def __init__(self, cvsroot, log_fname_base):
+  def __init__(self, cvsroot, log_fname_base, default_branches_db):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
+    self.default_branches_db = default_branches_db
     # See set_fname() for initializations of other variables.
 
   def set_fname(self, fname):
@@ -122,6 +160,13 @@ class CollectData(rcsparse.Sink):
     # so that's what we call it, even though the rcsparse API setter
     # method is still 'set_principal_branch'.
     self.default_branch = None
+
+    # If the RCS file doesn't have a default branch anymore, but does
+    # have vendor revisions, then we make an educated guess that those
+    # revisions *were* the head of the default branch up until the
+    # commit of 1.2, at which point the file's default branch became
+    # trunk.  This records the date at which 1.2 was committed.
+    self.first_non_vendor_revision_date = None
 
   def set_principal_branch(self, branch):
     self.default_branch = branch
@@ -216,6 +261,22 @@ class CollectData(rcsparse.Sink):
       self.prev[next] = revision
     for b in branches:
       self.prev[b] = revision
+
+    # Ratchet up the highest vendor head revision, if necessary.
+    if self.default_branch:
+      if revision.find(self.default_branch) == 0:
+        # This revision is on the default branch, so record that it is
+        # the new highest vendor head revision.
+        self.default_branches_db[self.fname] = revision
+    else:
+      # No default branch, so make an educated guess.
+      if revision == '1.2':
+        self.first_non_vendor_revision_date = timestamp
+      else:
+        m = vendor_revision.match(revision)
+        if m and ((not self.first_non_vendor_revision_date)
+                  or (timestamp < self.first_non_vendor_revision_date)):
+            self.default_branches_db[self.fname] = revision
 
     # Check for unlabeled branches, record them.  We tried to collect
     # all branch names when we parsed the symbolic name header
@@ -2162,7 +2223,7 @@ def write_revs_line(output, timestamp, digest, op, revision,
 
 
 def pass1(ctx):
-  cd = CollectData(ctx.cvsroot, DATAFILE)
+  cd = CollectData(ctx.cvsroot, DATAFILE, ctx.default_branches_db)
   p = rcsparse.Parser()
   stats = [ 0 ]
   os.path.walk(ctx.cvsroot, visit_file, (cd, p, stats))
@@ -2402,6 +2463,7 @@ def main():
   ctx.print_help = 0
   ctx.skip_cleanup = 0
   ctx.cvs_revnums = 0
+  ctx.default_branches_db = anydbm.open(DEFAULT_BRANCHES_DB, 'n')
 
   start_pass = 1
 
