@@ -234,22 +234,28 @@ svn_io_file_writer (void *filehandle,
 
 /*** Copying and appending files. ***/
 
-#ifndef apr_copy_file
+#ifndef apr_transfer_file_contents
 /**
- * copy one file to another
+ * copy or append one file to another
+ * [This is a helper routine for apr_copy_file() and apr_append_file().]
  * @param from_path The full path to the source file (using / on all systems)
  * @param to_path The full path to the dest file (using / on all systems)
+ * @flags the flags with which to open the dest file
  * @param pool The pool to use.
- * @tip If a file exists at the new location, then it will be overwritten.  
  * @tip The source file will be copied until EOF is reached, not until
  *      its size at the time of opening is reached.
- * @tip The dest file's permissions will be the same as the source file's.
+ * @tip The dest file will be created if it does not exist.
  */
-apr_status_t
-apr_copy_file (const char *src, const char *dst, apr_pool_t *pool);
+apr_status_t apr_transfer_file_contents (const char *src,
+                                         const char *dst,
+                                         apr_int32_t flags,
+                                         apr_pool_t *pool);
 
 apr_status_t
-apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
+apr_transfer_file_contents (const char *src,
+                            const char *dst,
+                            apr_int32_t flags,
+                            apr_pool_t *pool)
 {
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
@@ -274,7 +280,7 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
     perms = finfo.protection;
 
   /* Open dest file. */
-  apr_err = apr_open (&d, dst, (APR_WRITE | APR_CREATE), perms, pool);
+  apr_err = apr_open (&d, dst, flags, perms, pool);
   if (apr_err)
     {
       apr_close (s);  /* toss */
@@ -321,7 +327,55 @@ apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
 
   return 0;
 }
+#endif /* apr_transfer_file_contents */
+
+
+#ifndef apr_copy_file
+/**
+ * copy one file to another
+ * @param from_path The full path to the source file (using / on all systems)
+ * @param to_path The full path to the dest file (using / on all systems)
+ * @param pool The pool to use.
+ * @tip If a file exists at the new location, then it will be
+ *      overwritten, else it will be created.
+ * @tip The source file will be copied until EOF is reached, not until
+ *      its size at the time of opening is reached.
+ */
+apr_status_t
+apr_copy_file (const char *src, const char *dst, apr_pool_t *pool);
+
+apr_status_t
+apr_copy_file (const char *src, const char *dst, apr_pool_t *pool)
+{
+  return apr_transfer_file_contents (src, dst,
+                                     (APR_WRITE | APR_CREATE),
+                                     pool);
+}
 #endif /* apr_copy_file */
+
+
+#ifndef apr_append_file
+/**
+ * append src file's onto dest file
+ * @param from_path The full path to the source file (using / on all systems)
+ * @param to_path The full path to the dest file (using / on all systems)
+ * @param pool The pool to use.
+ * @tip If a file exists at the new location, then it will be appended
+ *      to, else it will be created.
+ * @tip The source file will be copied until EOF is reached, not until
+ *      its size at the time of opening is reached.
+ */
+apr_status_t
+apr_append_file (const char *src, const char *dst, apr_pool_t *pool);
+
+apr_status_t
+apr_append_file (const char *src, const char *dst, apr_pool_t *pool)
+{
+  return apr_transfer_file_contents (src, dst,
+                                     (APR_WRITE | APR_APPEND | APR_CREATE),
+                                     pool);
+}
+#endif /* apr_append_file */
 
 
 svn_error_t *
@@ -333,7 +387,8 @@ svn_io_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
   if (apr_err)
     {
       const char *msg
-        = apr_psprintf (pool, "copying %s to %s", src->data, dst->data);
+        = apr_psprintf (pool, "svn_io_copy_file: copying %s to %s",
+                        src->data, dst->data);
       return svn_error_create (apr_err, 0, NULL, pool, msg);
     }
   
@@ -341,6 +396,22 @@ svn_io_copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 }
 
 
+svn_error_t *
+svn_io_append_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  apr_err = apr_append_file (src->data, dst->data, pool);
+  if (apr_err)
+    {
+      const char *msg
+        = apr_psprintf (pool, "svn_io_append_file: appending %s to %s",
+                        src->data, dst->data);
+      return svn_error_create (apr_err, 0, NULL, pool, msg);
+    }
+  
+  return SVN_NO_ERROR;
+}
 
 
 
