@@ -55,7 +55,8 @@ typedef enum {
   svn_cl__xml_opt,
   svn_cl__strict_opt,
   svn_cl__no_ignore_opt,
-  svn_cl__no_auth_cache_opt
+  svn_cl__no_auth_cache_opt,
+  svn_cl__non_interactive_opt
 } svn_cl__longopt_t;
 
 
@@ -82,6 +83,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
+  svn_boolean_t non_interactive; /* do no interactive prompting */
   svn_boolean_t version;         /* print version information */
   svn_boolean_t verbose;         /* be verbose */
   svn_boolean_t update;          /* contact the server for the full story */

@@ -168,13 +168,25 @@ enum svn_ra_auth_method
    (matches type svn_ra_auth_username above.)  */
 typedef struct svn_ra_username_authenticator_t
 {
-  /* Get a username from the client. */
+  /* Set *USERNAME to a username, allocated in POOL, and cache it in
+     AUTH_BATON.  If FORCE_PROMPT is set, then if possible prompt for
+     the username (i.e., do not attempt to get the information any
+     other way, such as from a file cache).  An implementation which
+     is not able to prompt is not required to prompt.
+
+     This routine always sets *USERNAME something (possibly just "")
+     or returns error.
+     
+     If this routine is NULL, that means the client is unable, or
+     unwilling, to get the username. */
   svn_error_t *(*get_username) (char **username,
                                 void *auth_baton,
                                 svn_boolean_t force_prompt,
                                 apr_pool_t *pool);
 
-  /* Store a username in the client. */
+  /* Store USERNAME permanently (e.g., in the working copy).
+     If this routine is NULL, that means the client is unable, or
+     unwilling, to store the username. */
   svn_error_t *(*store_username) (const char *username,
                                   void *auth_baton);
 
@@ -186,24 +198,29 @@ typedef struct svn_ra_username_authenticator_t
    (matches type svn_ra_auth_simple_password above.)  */
 typedef struct svn_ra_simple_password_authenticator_t
 {
-  /* Get a username and password from the client.  If FORCE_PROMPT is
-     set, then a prompt will be displayed to the user automatically
-     (rather than looking for cached info from command-line or file.)
-     
-     *USERNAME and *PASSWORD will not only be returned to the RA
-     layer, but libsvn_client will also cache them in the AUTH_BATON.  */
+  /* Return username and password in *USERNAME and *PASSWORD, and
+     cache them in AUTH_BATON.  If FORCE_PROMPT is set, then if
+     possible prompt the user for the information (i.e., do not
+     attempt to get the information any other way, such as from a file
+     cache).  An implementation which is not able to prompt is not
+     required to prompt.
+
+     This routine always sets *USERNAME and *PASSWORD to something
+     (possibly just ""), or returns error.
+
+     If this routine is NULL, that means the client is unable, or
+     unwilling, to get the username and password. */
   svn_error_t *(*get_user_and_pass) (char **username,
                                      char **password,
                                      void *auth_baton,
                                      svn_boolean_t force_prompt,
                                      apr_pool_t *pool);
 
-  /* If any authentication info has been cached in AUTH_BATON (as a
-     result of calling get_user_and_pass), ask the client to store it
-     in the working copy.
+  /* If any authentication info is cached in AUTH_BATON, store it
+     permanently (e.g., in the working copy).
 
-     If this routine is NULL, that means the client is unable (or
-     unwilling) to store auth data. */
+     If this routine is NULL, that means the client is unable, or
+     unwilling, to store auth data. */
   svn_error_t *(*store_user_and_pass) (void *auth_baton);
 
 } svn_ra_simple_password_authenticator_t;
