@@ -45,21 +45,21 @@ Candidate changes:
     Justification:
       Regression and annoying for people using non-ASCII chars in log messages.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
   * r11181
     Fix encoding regression since 1.0.x
     Justification:
       It's a regression.
     Votes:
-      +1: dionisos, lundblad
+      +1: dionisos, lundblad, brane
 
   * r11202, r11243
     Fix eol-style translation error for propget.
     Justification:
       Simple fix.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
   * r11190
     Make it possible to set SVNPathAuthz to Off.
@@ -74,7 +74,7 @@ Candidate changes:
     Justification:
       Positively huge performance regression.
     Votes:
-      +1: bliss
+      +1: bliss, brane
 
   * r11224 (Issue 2070)
     Exporting symlinks with use-commit times set fails.
@@ -88,7 +88,7 @@ Candidate changes:
     Justification:
       BFI, ls-R didn't work at all in this case, affects many GUI clients.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
   * r11233, r11260
     Fix eol-style conversion for propedit.
@@ -98,7 +98,7 @@ Candidate changes:
     Note:
       This also fixes --encoding with propedit.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
   * r11262
     Fix issue #2012.
@@ -106,3 +106,11 @@ Candidate changes:
       Regression fix.
     Votes:
       +1: lundblad
+
+  * r11215, r11264
+      SVN has needed a good packaging script for Win32 since forever.
+    Justification:
+      This and the related build and test script changes will make
+      creating 1.1.x Win32 binary packages a lot easier.
+    Votes:
+      +1: brane
