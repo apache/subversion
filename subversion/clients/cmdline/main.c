@@ -161,7 +161,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Output the content of specified files or\n"
     "URLs with revision and author information in-line.\n"
     "usage: blame TARGET...\n",
-    {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+    {'r', 'v', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"

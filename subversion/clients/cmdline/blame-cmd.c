@@ -22,7 +22,14 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
+#include "svn_time.h"
 #include "cl.h"
+
+typedef struct
+{
+  svn_cl__opt_state_t *opt_state;
+  svn_stream_t *out;
+} blame_baton_t;
 
 
 /*** Code. ***/
@@ -35,12 +42,30 @@ blame_receiver (void *baton,
                 const char *line,
                 apr_pool_t *pool)
 {
-  svn_stream_t *out = baton;
+  svn_cl__opt_state_t *opt_state =
+    ((blame_baton_t *) baton)->opt_state;
+  svn_stream_t *out = ((blame_baton_t *)baton)->out;
+  apr_time_t atime;
+  const char *time_utf8;
+  const char *time_stdout;
   const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
                         ? apr_psprintf (pool, "%6" SVN_REVNUM_T_FMT, revision)
                         : "     -";
-  return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
-                            author ? author : "         -", line);
+  
+  if (opt_state->verbose)
+    {
+      SVN_ERR (svn_time_from_cstring (&atime, date, pool));
+      time_utf8 = svn_time_to_human_cstring (atime, pool);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&time_stdout, time_utf8, pool));
+      return svn_stream_printf (out, pool, "%s %10s %s %s\n", rev_str, 
+                                author ? author : "         -", 
+                                time_stdout , line);
+    }
+  else
+    {
+      return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
+                                author ? author : "         -", line);
+    }
 }
  
 
@@ -55,6 +80,7 @@ svn_cl__blame (apr_getopt_t *os,
   apr_pool_t *subpool;
   apr_array_header_t *targets;
   svn_stream_t *out;
+  blame_baton_t bl;
   int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -89,7 +115,9 @@ svn_cl__blame (apr_getopt_t *os,
     }
 
   SVN_ERR (svn_stream_for_stdout (&out, pool));
-
+  bl.opt_state = opt_state;
+  bl.out = out;
+  
   subpool = svn_pool_create (pool);
 
   for (i = 0; i < targets->nelts; i++)
@@ -101,7 +129,7 @@ svn_cl__blame (apr_getopt_t *os,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
                               blame_receiver,
-                              out,
+                              &bl,
                               ctx,
                               subpool);
       if (err)
