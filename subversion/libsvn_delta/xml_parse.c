@@ -697,7 +697,7 @@ do_begin_textdelta (svn_xml__digger_t *digger, svn_stringbuf_t *encoding)
 
   /* Now create an svndiff parser based on the consumer/baton we got. */
   intermediate = svn_txdelta_parse_svndiff (window_consumer, consumer_baton,
-                                            digger->pool);
+                                            TRUE, digger->pool);
   if (encoding == NULL || strcmp(encoding->data, "base64") == 0)
     digger->svndiff_parser = svn_base64_decode (intermediate, digger->pool);
   else if (encoding != NULL && strcmp(encoding->data, "quoted-printable") == 0)

@@ -227,9 +227,13 @@ void svn_txdelta_to_svndiff (svn_stream_t *output,
 
 /* Return a writable generic stream which will parse svndiff-format
    data into a text delta, invoking HANDLER with HANDLER_BATON
-   whenever a new window is ready.  */
+   whenever a new window is ready.  If ERROR_ON_EARLY_CLOSE is TRUE,
+   attempting to close this stream before it has handled the entire
+   svndiff data set will result in SVN_ERR_SVNDIFF_UNEXPECTED_END,
+   else this error condition will be ignored.  */
 svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                                          void *handler_baton,
+                                         svn_boolean_t error_on_early_close,
                                          apr_pool_t *pool);
 
 

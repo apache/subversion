@@ -423,7 +423,6 @@ rep_read_range (svn_fs_t *fs,
       apr_size_t off;        /* offset into svndiff data */
       apr_size_t amt;        /* how much svndiff data to/was read */
       const char *base_rep;  /* representation this delta is based against */
-      svn_error_t *err;
       
       /* Extract the base rep key from this rep. */
       base_rep = apr_pstrndup (trail->pool,
@@ -443,7 +442,8 @@ rep_read_range (svn_fs_t *fs,
       wb.pool          = svn_pool_create (trail->pool);
 
       /* Set up a window handling stream for the svndiff data. */
-      wstream = svn_txdelta_parse_svndiff (window_handler, &wb, trail->pool);
+      wstream = svn_txdelta_parse_svndiff (window_handler, &wb, 
+                                           FALSE, trail->pool);
 
       /* Run through the svndiff data, at least as far as necessary. */
       off = 0;
@@ -454,13 +454,10 @@ rep_read_range (svn_fs_t *fs,
         SVN_ERR (svn_stream_write (wstream, chunk, &amt));
       } while ((wb.done == FALSE) && (amt != 0));
 
-      /* Close the stream.  The only error allowable here is an
-         unexpected end of data, which we know might happen if we fill
-         the caller's buffer up before we finish using all the svndiff
-         data. */
-      err = svn_stream_close (wstream);
-      if (err && (err->apr_err != SVN_ERR_SVNDIFF_UNEXPECTED_END))
-        return err;
+      /* Close the stream.  We should not get an error for closing the
+         stream early because we explicitly told the stream handlers
+         not to care in the call to svn_txdelta_parse_svndiff() above.  */
+      SVN_ERR (svn_stream_close (wstream));
 
       *len = wb.len_read;
 

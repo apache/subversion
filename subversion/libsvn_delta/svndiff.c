@@ -230,6 +230,12 @@ struct decode_baton
   /* We have to discard four bytes at the beginning for the header.
      This field keeps track of how many of those bytes we have read.  */
   int header_bytes;
+
+  /* Do we want an error to occur when we close the stream that
+     indicates we didn't send the whole svndiff data?  If you plan to
+     not transmit the whole svndiff data stream, you will want this to
+     be FALSE. */
+  svn_boolean_t error_on_early_close;
 };
 
 
@@ -480,8 +486,10 @@ close_handler (void *baton)
   struct decode_baton *db = (struct decode_baton *) baton;
   svn_error_t *err;
 
-  /* Make sure that we're at a plausible end of stream.  */
-  if (db->header_bytes < 4 || db->buffer->len != 0)
+  /* Make sure that we're at a plausible end of stream, returning an
+     error if we are expected to do so.  */
+  if ((db->error_on_early_close)
+      && (db->header_bytes < 4 || db->buffer->len != 0))
     return svn_error_create (SVN_ERR_SVNDIFF_UNEXPECTED_END, 0, NULL, db->pool,
                              "unexpected end of svndiff input");
 
@@ -495,6 +503,7 @@ close_handler (void *baton)
 svn_stream_t *
 svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                            void *handler_baton,
+                           svn_boolean_t error_on_early_close,
                            apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -509,6 +518,7 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
   db->last_sview_offset = 0;
   db->last_sview_len = 0;
   db->header_bytes = 0;
+  db->error_on_early_close = error_on_early_close;
   stream = svn_stream_create (db, pool);
   svn_stream_set_write (stream, write_handler);
   svn_stream_set_close (stream, close_handler);

@@ -165,7 +165,7 @@ main (int argc, const char * const *argv)
                          pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
-      stream = svn_txdelta_parse_svndiff (handler, handler_baton, pool);
+      stream = svn_txdelta_parse_svndiff (handler, handler_baton, TRUE, pool);
 
       /* Make stage 2: encode the text delta in svndiff format.  */
       svn_txdelta_to_svndiff (stream, pool, &handler, &handler_baton);
