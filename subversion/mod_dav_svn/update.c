@@ -898,6 +898,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
   serr = svn_repos_finish_report(rbaton);
+  if (serr)
+    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                               "A failure occurred while "
+                               "driving the update report editor");
 
   /* The potential "resource walk" part of the update-report. */
   if (dst_path && resource_walk)  /* this was a 'switch' operation */
