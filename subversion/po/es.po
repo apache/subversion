@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-05-07 01:39-0300\n"
-"PO-Revision-Date: 2004-05-07 02:06-0300\n"
+"PO-Revision-Date: 2004-05-07 11:11+0200\n"
 "Last-Translator: Nicolás Lichtmaier <nick@reloco.com.ar>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2356,8 +2356,7 @@ msgstr "Error abortando el reporte"
 #: libsvn_wc/adm_crawler.c:674
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
-msgstr ""
-"Suma de verificación errónea para '%s'; esperada: '%s', presente: '%s'\n"
+msgstr "Suma de verificación errónea para '%s'; esperada: '%s', presente: '%s'"
 
 #: libsvn_wc/adm_crawler.c:699
 msgid "Error opening local file"
