@@ -936,11 +936,21 @@ def update_receive_illegal_name(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mv', '-m', 'log msg',
                                      legal_url, illegal_url)
-  out, err = svntest.main.run_svn(1, 'up', wc_dir)
-  for line in err:
-    if line.find("Obstructed update") != -1:
-      break
-  else:
+
+  # Do the update twice, both should fail.  After the first failure
+  # the wc will be marked "incomplete".
+  for n in range(2):
+    out, err = svntest.main.run_svn(1, 'up', wc_dir)
+    for line in err:
+      if line.find("Obstructed update") != -1:
+        break
+    else:
+      raise svntest.Failure
+
+  # At one stage an obstructed update in an incomplete wc would leave
+  # a txn behind
+  out, err = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
+  if out or err:
     raise svntest.Failure
 
 #----------------------------------------------------------------------

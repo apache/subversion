@@ -440,8 +440,12 @@ svn_repos_delete_path (void *report_baton,
 
 
 
-svn_error_t *
-svn_repos_finish_report (void *report_baton)
+/* Implements the bulk of svn_repos_finish_report, that's everything except
+ * aborting any txns.  This function can return an error and still rely on
+ * any txns being aborted.
+ */
+static svn_error_t *
+finish_report (void *report_baton)
 {
   svn_fs_root_t *root1, *root2;
   svn_repos_report_baton_t *rbaton = report_baton;
@@ -493,16 +497,24 @@ svn_repos_finish_report (void *report_baton)
                                 TRUE,
                                 rbaton->ignore_ancestry,
                                 rbaton->pool));
-  
-  /* Still here?  Great!  Throw out the transactions. */
-  if (rbaton->txn)
-    SVN_ERR (svn_fs_abort_txn (rbaton->txn));
-  if (rbaton->txn2)
-    SVN_ERR (svn_fs_abort_txn (rbaton->txn2));
-    
   return SVN_NO_ERROR;
 }
-
+  
+/* Wrapper to call finish_report, and then abort any txns even if
+ * finish_report returns an error.
+ */
+svn_error_t *
+svn_repos_finish_report (void *report_baton)
+{
+  svn_error_t *err1 = finish_report (report_baton);
+  svn_error_t *err2 = svn_repos_abort_report (report_baton);
+  if (err1)
+    {
+      svn_error_clear (err2);
+      return err1;
+    }
+  return err2;
+}
 
 
 svn_error_t *
@@ -510,7 +522,9 @@ svn_repos_abort_report (void *report_baton)
 {
   svn_repos_report_baton_t *rbaton = report_baton;
 
-  /* If we have transactions, then abort them. */
+  /* ### To avoid uncommitted txns, perhaps we should we try to abort the
+     ### second transacation even if aborting the first returns an
+     ### error? */
   if (rbaton->txn)
     SVN_ERR (svn_fs_abort_txn (rbaton->txn));
   if (rbaton->txn2)
