@@ -1,0 +1,29 @@
+Investigar tipo de carácteres MIME según
+http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=79794
+¿Quizás esto permita enviar diffs en emails con la codificación
+correcta?
+
+Estandarizar el uso de nombres como Harry o Sally. No me acuerdo
+cuáles se usaban en la literatura Española, pero no son esos. El
+caso es que estos nombres van empotrados en las imágenes de ejemplo,
+así que va a ser problemático. Consultar en la lista de subversion
+sobre la traducción de imágenes.
+
+Documentar en alguna parte la forma en la que se contacta con los
+autores de http://svnbook.red-bean.com/ y cómo reciben parches.
+
+Mandar mensajes periódicos a la lista de correo indicando el estado
+de la traducción y buscando revisores... cuando el trabajo haya
+pasado al servidor principal.
+
+Licencias creative commons en español. ¿Merece la pena pegarse por esto?
+ http://creativecommons.org/license/results-one?lang=en&jurisdiction=es&license_code=by
+ http://creativecommons.org/licenses/by/2.0/es/legalcode.es
+
+Contactar editores en España. ¿Les interesa este proyecto? ¿Tienen
+pensado o están haciendo algo al respecto? ¿Tema de la licencia?
+
+Anunciar proyecto en alguna lista de castellano, tipo lucas,
+y ¿quizás barrapunto?
+
+Añadir mecanismo aspell para verificar ortografía básica.

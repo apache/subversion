@@ -1,0 +1,47 @@
+Estado de la traducción.
+
+Como se puede ver hay en principio cuatro secciones en las que se
+puede encontrar un fichero (ignorando el estado de "no traducido"),
+aunque en realidad sólo hay dos estados: en traducción y traducido.
+
+Cuando un fichero comienza a ser traducido, se indica en la primera
+sección. Una vez completada la traducción, se pasa a la siguiente
+sección. Traducción básica significa que todavía puede haber marcas
+tipo <!-- TODO blah blah -->. De hecho, estas marcas pueden seguir
+ahí indefinidamente hasta que sean resueltas. Una vez alcanzado
+ese estado, no se elimina de esa lista.
+
+No obstante, ese fichero ahora debe ser revisado por al menos
+una persona diferente (de ahí que se guarde quién tradujo qué)
+en dos tipos diferentes de revisión (e idealmente cada tipo de
+revisión sería llevado por personas diferentes, aunque puede que
+sea mucho pedir).
+
+Para que un fichero se de apruebe como traducción, debe aparecer
+en el estado de traducido y en ambas secciones de revisión, y
+no debe tener marcas <!-- TODO ... --> pendientes por resolver,
+aunque puede tener perfectamente marcas de otro tipo, por ejemplo
+para aclarar detalles en la traducción realizada.
+
+
+Ficheros en proceso de traducción:
+----------------------------------
+ch02.xml: por Ariel Arjona
+ch03.xml: por Rubén Gómez
+ch04.xml: por Grzegorz Adam Hankiewicz.
+
+
+Ficheros que han completado al menos una traducción básica:
+-----------------------------------------------------------
+book.xml: por Grzegorz Adam Hankiewicz.
+foreword.xml: por Grzegorz Adam Hankiewicz.
+ch00.xml: por Grzegorz Adam Hankiewicz.
+ch01.xml: por Rubén Gómez
+
+
+Ficheros revisados sin verificar el original:
+---------------------------------------------
+
+
+Ficheros revisados verificando el original:
+-------------------------------------------

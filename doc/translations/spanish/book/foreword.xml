@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- originated from English revision 10817 -->
+<!-- There doesn't seem to be a 'foreword' element similar to the
+'preface' element.  Not sure what to use instead; I guess 'preface' is
+the best solution for now, even though there's also a real preface in
+ch00.xml. -->
+
+<preface id="svn-foreword">
+  <title>Prólogo</title>
+
+  <simplesect>
+
+    <para>Una mala lista de Preguntas y respuestas frequentes (FAQ) es
+      aquella compuesta a partir de las preguntas que el autor del FAQ
+      <emphasis>desearía</emphasis> que la gente hiciese, en lugar de
+      las preguntas que la gente realiza realmente. Quizás haya visto
+      una de estas antes:</para>
+
+    <blockquote>
+      <para>P: ¿Cómo puedo usar Glorbosoft XZY para maximizar la
+        productividad de mi equipo?</para>
+    </blockquote>
+
+    <blockquote>
+      <para>R: Muchos de nuestros clientes desean saber cómo maximizar
+        su productividad a través de nuestras patentadas innovaciones
+        de software para trabajo en grupo. La respuesta es simple:
+        primero, haga click en el menú
+        <quote><literal>Archivo</literal></quote>, baje hasta
+        <quote><literal>Incrementar&nbsp;productividad</literal></quote>,
+        entonces&hellip;</para>
+    </blockquote>
+
+    <para>El problema con FAQs de este estilo es que no son, en un
+      sentido literal, FAQs en absoluto. Nunca nadie llamó a la línea
+      de soporte técnico y preguntó, <quote>¿Cómo podemos maximizar
+      la productividad?</quote>. En su lugar, la gente realizó preguntas
+      altamente específicas, como, <quote>¿Cómo podemos modificar el
+      sistema de calendario para enviar recordatorios con dos días de
+      antelación en lugar de uno?</quote> y similares. Pero es mucho más
+      fácil inventar preguntas y respuestas frecuentes que descubrirlas
+      de verdad. Compilar una verdadera hoja de preguntas y respuestas
+      frecuentes requiere una esfuerzo sostenido y organizado: durante
+      el tiempo de vida del software las preguntas realizadas deben ser
+      archivadas, las respuestas monitorizadas, y todo ello recogido en
+      un todo coherente e indexado que refleje la experiencia colectiva
+      de los usuarios reales. Una tarea para los pacientes, con una
+      actitud observante de un campo naturalista. Sin grandes hipótesis
+      ni discursos visionarios&mdash;ojos abiertos y tomar notas con
+      detalle es lo que más se necesita.</para>
+
+    <para>Lo que me encanta de este libro es que creció justo de un
+      proceso similar, y se puede apreciar en cada página. Es el
+      resultado directo de los encuentros que tuvieron los autores con
+      los usuarios. Comenzó con la observación de Ben Collins-Sussman,
+      que las mismas preguntas básicas estaban siendo realizadas una y
+      otra vez en la lista de correo de Subversion: ¿Cuál es el flujo
+      de trabajo estándar recomendado con Subversion? ¿Funcionan las
+      etiquetas y ramas del mismo modo que en otros sistemas de control
+      de versiones? ¿Cómo puedo averiguar quién ha hecho un cambio en
+      particular?</para>
+
+    <para>Frustrado por ver las mismas preguntas día tras otro, Ben
+      trabajó intensamente durante un mes en verano del 2002 para
+      escribir <!-- TODO traducir citas? --><citetitle>The Subversion
+      Handbook</citetitle>, un manual de sesenta páginas que cubría el
+      uso básico de Subversion. El manual no tenía pretensiones de ser
+      una obra completa, pero fue distribuído con Subversion y ayudó a
+      los usuarios a superar ese bache inicial en su curva de
+      aprendizaje. Cuando <!-- TODO traducir título empresa? -->
+      O'Reilly and Associates decidió publicar un libro completo sobre
+      Subversion, el camino del mínimo esfuerzo era obvio: expandir el
+      manual de Subversion.<!-- TODO traducir handbook de la cita
+      anterior?--></para>
+
+    <para>A los tres coautores del nuevo libro se les presentó una
+      oportunidad sin igual. Oficialmente, su tarea consistía en
+      escribir un libro<!-- TODO eliminadas las expresiones top-down y
+      bottom-up por falta de ideas. En el futuro, mirar cómo lo han
+      traducido otros traductores (ej: francés o alemán)-->,
+      comenzando a partir de una tabla de contenidos y borrador inicial.
+      Pero también tenían acceso a un flujo constante&mdash;de hecho,
+      un geiser incontrolable&mdash;de material práctico. Subversion
+      ya estaba en manos de miles de usuarios, y éstos estaban
+      proporcionando toneladas de críticas, no sólo sobre Subversion,
+      sino también sobre la documentación existente.<!--TODO revisar
+      en diccionarios cómo traducir feedback, críticas no suena muy
+      bien--></para>
+
+    <para>Durante el tiempo que llevó escribir este libro, Ben, Mike y
+      Brian <!-- TODO haunted != observaron --> observaron las listas
+      de correo y sesiones de chat de Subversion incesantemente,
+      anotando cuidadosamente los problemas que estaban teniendo los
+      usuarios en situaciones de la vida real. Monitorizar tal respuesta
+      es de todos modos parte de la descripción de su puesto de trabajo
+      en CollabNet, y les dio una gran ventaja cuando comenzaron a
+      documentar Subversion. El libro producido está firmemente
+      establecido sobre unos cimientos de experiencia, no en las
+      arenas movedizas de las <!-- ref wishful thinking: artículo de
+      Javier en LEAME y http://www.proz.com/?sp=h&id=41158-->puras
+      ilusiones; combina las mejores características de un manual de
+      usuario y una lista de preguntas y respuestas frecuentes. Esta
+      dualidad quizás no sea advertida durante una primera lectura.
+      Leído en orden, de principio a fin, el libro es simplemente una
+      descripción sencilla de una pieza de software. Hay un sumario,
+      <!-- TODO: overview == sumario? -->el obligado tour guiado, un
+      capítulo sobre administración, algunos temas avanzados, y por
+      supuesto una referencia de los comandos y una guía para resolver
+      problemas <!-- TODO: troubleshooting? -->.  Sólo cuando se vuelve
+      a revisar se ve brillar su autenticidad: los detalles que sólo
+      pueden resultar de encuentros con lo desconocido, ejemplos
+      extraídos de genuínos casos de uso, y sobre todo, la sensibilidad
+      hacia la necesidad del usuario y su punto de vista.</para>
+
+    <para>Por supuesto, nadie puede garantizar que este libro responderá
+      cualquier pregunta que tenga sobre Subversion. A veces, la
+      precisión con la que se anticipa a sus dudas le parecerá
+      misteriosamente telepática; pero ocasionalmente, se
+      topará con un agujero en el conocimiento de la comunidad
+      de usuarios y se quedará con las manos vacías. Cuando
+      esto ocurra, lo mejor que puede hacer es mandar un email
+      a <email>users@subversion.tigris.org</email> y exponer
+      su problema.  Los autores aun siguen ahí, observando, y
+      esto no sólo incluye a los tres que aparecen en la portada,
+      sino muchos otros que contribuyeron correcciones al material
+      original.  Desde el punto de vista de la comunidad de usuarios,
+      solucionar su problema es meramente un efecto colateral de un
+      proyecto mucho mayor&mdash;en concreto, ajustar ligeramente
+      este libro, y en definitiva Subversion, para que se adapte
+      mejor a la forma en que la gente realmente lo usa. Están
+      deseosos de escucharle, no únicamente porque le pueden ayudar,
+      sino porque usted puede ayudarles a ellos. Con Subversion,
+      como con todos los proyectos de software libre en activo,
+      <emphasis>usted no está solo</emphasis>.</para>
+
+    <para>Deje que este libro sea su primer compañero.</para>
+
+    <para>&mdash;
+      <author>
+        <firstname>Karl</firstname>
+        <surname>Fogel</surname>
+      </author>, Chicago, 14 de Marzo, 2004</para>
+
+  </simplesect>
+
+</preface>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "foreword")
+end:
+-->

@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- originated from English revision 10817 -->
+<chapter id="svn-ch-1">
+
+  <title>Introducción</title>
+
+  <simplesect>
+    <para> El control de versiones es el arte del manejo de los cambios
+      en la información. Ha sido durante mucho tiempo una herramienta critica
+      para los programadores, quienes normalmente gastaban su tiempo haciendo
+      pequeños cambios al software y después deshaciendo esos cambios al día
+      siguiente. Pero la utilidad del software de control de versiones se
+      extendía mas alla de los limites del mundo del desarrollo de software.
+      En cualquier caso puede encontrarse a gente usando ordenadores para
+      manejar información que cambia a menudo, <!-- TODO: there is room
+      for version control.--> son situaciones para el control de versiones.
+      Y aqui es donde entra en juego Subversion.
+    </para>
+
+    <para>Este capítulo contiene una introdución <!--TODO: a high-level 
+      introduction-->de alto nivel a Subversion &mdash; qué es; qué hace;
+      cómo conseguirlo.
+    </para>
+
+  </simplesect>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 1 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-1">
+
+    <title>¿Qué es Subversion?</title>
+      
+    <para>Subversion es un sistema de control de versiones libre/código 
+      fuente abierto.<!--TODO:Subversion is a free/open-source version 
+      control system.-->Esto es, Subversion maneja ficheros y directorios 
+      a traves del tiempo. Hay un árbol de ficheros en un <firstterm>
+      repositorio</firstterm> central. El repositorio es como un servidor 
+      de ficheros ordinario, excepto porque recuerda todos los cambios 
+      hechos a sus ficheros y directorios. Esto le permite recuperar 
+      versiones antiguas de sus datos, o examinar la historia de cómo han 
+      cambiado (sus datos). En este aspecto, mucha gente piensa en los 
+      sistemas de versiones como en un tipo de <quote>máquina del tiempo
+      </quote>.</para>
+    
+    <para>Subversion puede acceder a su repositorio a través de redes,lo que
+      permite ser usado por la gente desde distintos ordenadores.
+      <!--TODO: At some level,-->En cierto modo, la capacidad para que
+      varias personas puedan modificar y administrar el mismo sistema de
+      datos desde sus respectivas localizaciones fomenta la colaboración.
+      Se puede progresar mas rapidamente sin un único conducto por el cual
+      deban pasar todas las modificaciones.<!--TODO:without a single
+      conduit through which all modifications must occur.--> <!--TODO:And 
+      because the work is versioned, you need not fear that quality is the
+      trade-off for losing that conduit&mdash;-->Y como el trabajo está en 
+      versiones, no debe temer que la calidad sea la compensación por la 
+      pérdida de ese conducto&mdash;si se ha hecho un cambio incorrecto a
+      los datos, simplemente deshaga ese cambio.</para>
+
+    <para>Algunos sistemas de control de versiones también son sistemas de
+      administración de configuración de software.<!--TODO: also software
+      configuration management (SCM) systems.-->Estos sistemas son creados
+      específicamente <!--TODO:are specifically tailored to manage trees -->
+      para la administración de árboles de código fuente, y tienen muchas
+      características que son específicas del desarrollo de software&mdash;
+      tales como <!--TODO:such as natively understanding programming 
+      languages,-->el entendimiento nativo de lenguajes de programación, o 
+      el suministro de herramientras para la construcción de software. Sin 
+      embargo, Subversion no es uno de estos sistemas. Subversion es un 
+      sistema general que puede ser usado para administrar <emphasis>
+      cualquier</emphasis> <!--TODO:collection of files--> conjunto de 
+      ficheros. Para usted, esos ficheros pueden ser código fuente&mdash;
+      para otros, cualquier cosa desde la lista de la compra de comestibles 
+      hasta las combinaciones de video digital y más allá.<!--TODO:for 
+      others, anything from grocery shopping lists to digital video 
+      mixdowns and beyond. Esta frase me ha matado :p--></para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 2 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-2">
+
+    <title>Historia de Subversion</title>
+
+    <para>A principios del 2000, CollabNet, Inc. (<systemitem class="url">
+      http://www.collab.net</systemitem>) comenzó a buscar desarrolladores 
+      para escribir una alternativa<!--TODO:replacement... o "reemplazo"
+      mejor?--> a CVS. CollabNet ofrece un suite <!--TODO:suite-->de 
+      software de colaboración llamado SourceCast, del cuál un componente 
+      es un contról de versiones. Aunque SourceCast usaba CVS como su 
+      sistema de contról de versiones inicial, las limitaciones de CVS 
+      fueron obvias <!--TODO: obvious..."evidentes" mejor?--> desde el 
+      principio, y CollabNet sabía que tendría que encontrar algo mejor. 
+      Desafortunadamente, CVS se habia convertido en el estandard 
+      <foreignphrase>de facto</foreignphrase> en el mundo del codigo 
+      abierto <!--TODO: open source... codigo abierto--> porque <emphasis> 
+      no habia </emphasis> <!--TODO:there <emphasis> wasn't</emphasis> 
+      anything--> nada mejor, al menos no bajo una licencia libre. 
+      Así CollabNet decidió escribir un nuevo sistema de control de
+      versiones <!--TODO: from scratch... "desde el principio" o "desde 
+      cero"?-->desde cero, <!--TODO: retaining...manteniendo--> manteniendo
+      las ideas básicas de CVS, pero sin los <!--TODO: bugs and misfeatures
+      --> fallos y faltas de características.
+    </para>
+
+    <para>En Febrero del 2000, contactaron con Karl Fogel, autor de
+      <citetitle> Open Source Development with CVS</citetitle>
+      (Coriolis, 1999), <!--TODO: Poner el titulo en castellano?-->
+      y le preguntaron si le gustaría trabajar en este nuevo proyecto.
+      Coincidentemente, <!--TODO: coincidentally...no se me ocurre
+      nada mejor para poner--> al mismo tiempo Karl estaba ya
+      discutiendo un nuevo diseño para un nuevo sistema de control
+      de versiones con su amigo Jim Blandy. En 1995, los dos habían
+      fundado <!--TODO:had started Cyclic Software-->Cyclic Software,
+      compañía que hacia contratos de soporte de CVS, y aunque después
+      vendieron el negocio, seguían usando CVS todos los días en sus
+      trabajos. Su frustración<!--TODO:Their frustration--> con CVS
+      había conducido a Jim a pensar cuidadosamente acerca de mejores
+      vías para administrar versiones de datos <!--TODO:to manage
+      versioned data-->, y no solo se vino arriba con el nombre
+      <!--TODO:and he'd already come up with not only the name-->
+      <quote>Subversion</quote>, sino también con el <!--TODO:but also
+      with-->diseño básico del repositorio de Subversion. Cuando
+      CollabNet llamo, Karl acepto inmediatamente a trabajar en el
+      proyecto, <!--TODO:and Jim got his employer--> y Jim consiguio que
+      su empresa, RedHat Software, <!--TODO:to essentially donate him to
+      the project-->le donaran al proyecto por un periodo de tiempo
+      indefinido. Collabnet contrató <!--TODO: hired-->a Karl y a Ben
+      Collins-Sussman, y el trabajo detallado de diseño comenzó en Mayo.
+      Con la ayuda de algunos <!--TODO:some well-placed prods-->
+      ajustes bien colocados de Brian Behlendorf y Jason Robbins de
+      CollabNet, y Greg Stein <!--TODO: (at the time...)--> (por aquel
+      entonces un activo desarrollador independiente del proceso de
+      espeficación de WebDAV/DeltaV), Subversion rapidamente atrajo a
+      una comunidad activa de desarrolladores. Esto mostró <!--TODO:
+      It turned out that many people--> que mucha gente había tenido
+      la misma experiencia frustrante con CVS, y dieron la bienvenida
+      <!--TODO:and welcomed the chance to finally do something about
+      it--> a la ocasión de hacer algo sobre esto.</para>
+
+    <para>El equipo de diseño original fijó <!--TODO:settled on some
+      simple goals-->algunos objetivos simples. No querían <!--TODO:
+      want to break new ground in version control methodology-->romper
+      el nuevo suelo en la metodología del contról de versiones, solo
+      querían <!--TODO:they just wanted--> corregir CVS. Decidieron que
+      Subversion <!--TODO:Subversion would match CVS's features-->
+      coincidiría con las características de CVS, y preservaría el mismo
+      modelo de desarrollo, pero sin duplicar los defectos obvios de CVS.
+      Y aunque no necesitaba ser <!--TODO:drop-in replacement--> un
+      reemplazo exacto de CVS, debía ser lo bastante similar para que
+      cualquier usuario de CVS <!--TODO:could make the switch--> pudiera
+      hacer el cambio con poco esfuerzo.</para>
+
+    <para>Después de catorce meses de codificación, <!--TODO:of coding...
+      no sería mejor "de escribir codigo?"--> Subversion se convirtió
+      en <quote>auto-hospedado</quote> <!--TODO:self-hosting-->el 31 de
+      Agosto del 2001. Esto es, los desarrolladores de Subversion dejaron
+      de usar CVS para la administración del propio código fuente de
+      Subversion, y en su lugar empezaron a usar Subversion.<!--TODO:
+      and started using Subversion instead--></para>
+
+    <para>Mientras que CollabNet comenzó el proyecto, y todavía financia
+      una gran parte del trabajo <!--TODO:and still funds a large
+      chunk of the work--> (paga el salario de unos pocos desarrolladores
+      a tiempo completo de Subversion), Subversion funciona como la mayoría
+      de proyectos de codigo abierto, dirigido por un <!--TODO: governed
+      by a loose, transparent set of rules that encourage meritocracy-->
+      libre conjunto de reglas transparentes que fomentan el merito.
+      La licencia copyright de CollabNet es completamente compatible con las
+      Directrices de Software libre de Debian. <!--TODO:Debian Free Software
+      Guidelines... dejarlo traducido o en ingles?--> En otras palabras,
+      cualquier persona es libre de descargar, modificar, y redistribuir
+      Subversion como le satisfaga; <!--TODO: as he pleases...o mejor "como
+      le agrade"?-->no se requiere ningún permiso de CollabNet o de cualquier
+      persona.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 3 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-3">
+
+    <title>Características de Subversion</title>
+
+    <para>Al discutir acerca de las características que Subversion aporta
+      al mundo <!--TODO:to the version control table--> del control de
+      versiones, es a menudo útil hablar de ellas en términos de cómo han
+      mejorado sobre el diseño de CVS. Si no está familiarizado con CVS,
+      puede no entender todas estas características. Y si no está
+      familiarizado con el control de versiones, <!--TODO:version control
+      at all-->se le pueden nublar los ojos a menos que lea primero <xref
+      linkend="svn-ch-2"/>, donde proporcionamos una introducción gradual
+      <!--TODO: gentle introduction-->al control de versiones en general.
+    </para>
+
+    <para>Subversion proporciona:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term>Versionamiento de directorios</term> <!--TODO:Directory
+           versioning-->
+        <listitem>
+          <para>CVS solamente sigue la historia de ficheros individuales,
+            pero Subversion implementa <!--TODO:a <quote>virtual</quote>
+            versioned filesystem that tracks changes to whole directory trees
+            over time-->un sistema de ficheros de versiones <quote>virtual
+            </quote> que sigue los cambios por todo el árbol de directorios
+            sobre el tiempo. Ficheros <emphasis>y</emphasis> directorios
+            son versionados.<!--TODO: versioned--></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Historial real de versiones</term>
+              <!--TODO:True version history-->
+        <listitem>
+          <para>Desde que CVS está limitado al versionamiento de ficheros
+            <!--TODO:to file versioning-->, operaciones como copiar y
+            renombrar&mdash;las cuales pueden ocurrir a ficheros, pero
+            que realmente son cambios al contenido de un directorio
+            <!--TODO:changes to the contents of some containing directory-->
+            &mdash;no son soportadas en CVS. Adicionalmente,<!--TODO:además-->
+            en CVS usted no puede reemplazar un fichero versionado con
+            cosas nuevas con el mismo nombre sin el nuevo elemento que
+            hereda la historia del viejo <!--TODO:in CVS you cannot replace
+            a versioned file with some new thing of the same name
+            without the new item inheriting the history of the old-->
+            &mdash;quizás totalmente sin relacionar&mdash;fichero. Con
+            Subversion, usted puede añadir, borrar, copiar, y renombrar
+            ficheros y directorios.<!--TODO:both files and directories-->
+            Y cada fichero nuevo agregado comienza con una nueva, limpia
+            historia enteramente suya.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Envios atomicos</term><!--TODO:Atomic commits-->
+        <listitem>
+          <para>Una colección de modificaciones cualquiera entra en el
+            repositorio completamente, o no del todo. Esto permite a los
+            desarrolladores construir y enviar los cambios como trozos
+            <!--TODO:chunks... trozos no queda muy fino--> lógicos, y
+            previene problemas que pueden ocurrir cuando solo una porción
+            de cambios son enviados al repositorio satisfactoriamente.
+            <!--TODO:when only a portion of a set of changes is successfully
+            sent to the repository--></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Metadata versionada</term> <!--TODO:Versioned metadata-->
+        <listitem>
+          <para>Cada fichero y directorio tiene un conjunto de propiedades
+            &mdash;claves y sus valores <!--TODO:keys and their values-->
+            &mdash;asociado con él. Usted puede crear y almacenar cualquier
+            par arbitrario de clave/valor que desee. Las propiedades son
+            versionadas a traves del tiempo <!--TODO:over time-->, justo
+            como el contenido de los ficheros.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Opciones de las capas de red</term>
+             <!--TODO:Choice of network layers-->
+        <listitem>
+          <para>Subversion tiene una noción abstracta del acceso al
+            repositorio, haciendo facil para las personas el implementar
+            nuevos mecanismos de red. Subversion puede conectarse <!--TODO:
+            can plug into--> al Servidor de HTTP Apache como un modulo de
+            extensión. Esto da a Subversion una gran ventaja en estabilidad
+            e interoperabilidad, y acceso instantaneo a las características
+            existentes que ofrece este servidor&mdash;autentificación,
+            autorización, comprensión del hilo <!--TODO:wire compression,
+            and so on-->, etcétera. También está disponible un proceso
+            más ligero, un servidor de Subversion independiente.
+            <!--TODO: A more lightweight, standalone Subversion server
+            process is also available.-->Este servidor habla <!--TODO:this
+            server speaks a custom protocol--> un protocolo propio el
+            cual puede ser facilmente tunelizado a traves de SSH.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Manipulación consistente de datos</term>
+             <!--TODO:Consistent data handling-->
+        <listitem>
+          <para>Subversion expresa las diferencias del fichero usando un
+            algoritmo diferenciador de binarios, <!--TODO:binary
+            differencing algorithm--> que funcionan identicamente con
+            ficheros de texto (legibles por los humanos) <!--TODO:human-
+            -readable--> y ficheros binarios (no legibles por los humanos).
+            Ambos tipos de ficheros son guardados igualmente comprimidos
+            en el repositorio, y las diferencias son transmitidas en ambas
+            direcciones a través de la red.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Ramificación y etiquetación eficientes</term>
+        <!--TODO:Efficient branching and tagging-->
+        <listitem>
+          <para>
+            El coste de ramificación y etiquetación no necesita ser
+            proporcional al tamaño del proyecto. Subversion crea ramas y
+            etiquetas simplemente copiando el proyecto, usando un mecanismo
+            similar al enlace-duro.<!--TODO:hard-link.-->De este modo estas
+            operaciones toman solamente una pequeña cantidad de tiempo
+            constante.<!--TODO:take only a very small, constant amount of
+            time.--></para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Hackability</term><!--TODO:Como se traduce esto?-->
+        <listitem>
+          <para>Subversion no tiene un paquete historico;<!--TODO:baggage-->
+            está implementado como una colección de librerías compartidas de
+            C con una API <!--TODO:traducir API?-->bien definida. Esto hace
+            de Subversion extremadamente mantenible y usable por otras
+            aplicaciones y lenguajes.</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-4">
+
+    <title>Arquitectura de Subversion</title>
+
+    <para><xref linkend="svn-ch-1-dia-1"/> ilustra lo que uno puede llamar
+      como una vista <quote>desde una milla de alto</quote> <!--TODO:a mile-
+      -high view--> del diseño de Subversion.</para>
+    
+    <figure id="svn-ch-1-dia-1">
+      <title>Arquitectura de Subversion</title>
+      <graphic fileref="images/ch01dia1.png"/>
+    </figure>
+
+    <para>En un extremo <!--TODO:on one end--> está un repositorio de
+      Subversion que conserva <!--TODO:that holds all of your versioned
+      data--> todas las versiones de sus datos. En el otro extremo está su
+      programa cliente Subversion, el cual administra <!--TODO: reflections
+      of portions of that versioned data--> reflejos de porciones de esas
+      versiones de datos (llamados <quote>copias de trabajo</quote>).
+      Entre estos extremos hay multiples rutas a traves de varias capas de
+      Acceso a Repositorios (AR).<!--TODO:Repository Access (RA)--> Algunas
+      de estas rutas van a través de redes de ordenadores y a través de
+      servidores de red que después acceden al repositorio. Otras se desvian
+      del conjunto de red y acceden al repositorio directamente<!--TODO:
+      Others bypass the network altogether and access the repository
+      directly.--></para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-5">
+
+    <title>Instalando Subversion</title>
+
+    <para>Subversion está construido en una capa de portabilidad llamada APR
+      (la libreria Apache Portable Runtime) <!--TODO:traducir este nombre?-->
+      esto significa que Subversion debería funcionar en cualquier sistema
+      operativo donde corra el servidor httpd Apache: Windows, Linux, todos
+      los sabores de BSD, Mac OS X, Netware y otros.</para>
+
+    <para>La manera más sencilla de conseguir Subversion es descargando un
+      paquete binario construido para su sistema operativo. La página web
+      de Subversion <!--TODO: como traducir "website"??-->(<systemitem
+      class="url">http://subversion.tigris.org</systemitem>) tiene a menudo
+      estos paquetes disponibles para la descarga, publicados por
+      voluntarios. El site <!--TODO: como traducir "site"?--> contiene
+      generalmente paquetes de instaladores graficos para los usuarios del
+      sistema operativo de Microsoft. Si usted <!--TODO:if you run a
+      Unix-like--> ejecuta un sistema operativo Unix-like, puede usar el
+      sistema nativo de distribución de paquetes de su sistema (RPMs, DEBs,
+      el árbol de ports, etc.) para conseguir Subversion.</para>
+
+    <para>Alternativamente, usted puede construir Subversion directamente del
+      código fuente. Del website <!--TODO: como traducir website?--> de
+      Subversion, descargue la ultima versión <!--TODO: release... o sería
+      mejor "publicacion"?--> del código fuente. Después de desempaquetarlo,
+      siga las instrucciones del fichero <filename>INSTALL</filename> para
+      construirlo. <!--TODO:ahora me suena mal construir para decir "build",
+      algúna alternativa?-->Observe que <!--TODO:a released source package-->
+      un paquete de codigo liberado contiene todo lo que usted necesita
+      para construir un cliente de linea de comandos capaz de hablar a un
+      repositorio romoto (en particular, las librerias apr, apr-util y neon).
+      Pero partes opcionales de Subversion tienen muchas otras dependencias,
+      tales como Berkeley DB <!--TODO: o se pone mejor "la DB de Berkeley"?
+      --> y posiblemente el httpd de Apache. Si usted quiere hacer una
+      construcción completa <!--TODO: "complete build"... suena mal como
+      construcción-->, asegurese que tiene todos los paquetes documentados
+      en el fichero <filename>INSTALL</filename>. Si planéa trabajar en el
+      propio Subversion <!--TODO:on Subversion itself-->, puede usar su
+      programa cliente para coger el último, aún sangrante codigo fuente
+      <!--TODO:to grab the latest, bleeding-edge...no se me ocurría otra
+      cosa-->. Esto está documentado en <xref linkend="svn-ch-8-sect-6.2"/>.
+    </para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-6">
+
+    <title>Componentes de Subversion</title>
+    
+    <para>Subversion, una vez instalado, tiene un número diferente de piezas.
+      Lo que sigue es una descripción rápida de lo que usted consigue. No
+      se alarme si las breves descripciones le confunden <!--TODO:scratching
+      your head...y esto como se traduce?--> &mdash;hay <emphasis> abundancia
+      </emphasis> de páginas <!--TODO:there are <emphasis>plenty</emphasis>
+      more pages--> en este libro dedicadas a aliviarle esa confusión.
+    </para>
+
+    <variablelist>
+      <varlistentry>
+        <term>svn</term>
+        <listitem>
+          <para>El programa cliente de linea de comandos.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnversion</term>
+        <listitem>
+          <para>Programa para reportar el estado (en términos de revisiones
+            de los elementos presentes) <!--TODO:in terms of revisions of
+            the items present-->de una copia de trabajo.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnlook</term>
+        <listitem>
+          <para>Una herramienta para inspeccionar un repositorio de
+            Subversion.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnadmin</term>
+        <listitem>
+          <para>Herramienta para crear, tweaking <!--TODO:tweaking... ni idea
+            de lo que es-->o reparar un repositorio de Subversion.</para>
+            <!--TODO:A tool for creating, tweaking or repairing.... quizás
+            esté mejor "herramienta para la creacion, bla o reparación-->
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svndumpfilter</term>
+        <listitem>
+          <para>Un programa para filtrar <!--TODO:A program for filtering
+            Subversion repository dumpfile format streams.....no sé
+            traducirlo :-o -->
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>mod_dav_svn</term>
+        <listitem>
+          <para>Un módulo <!--TODO:A plug-in module for--> para el
+            Servidor HTTP Apache, usado para hacer disponible su
+            repositorio a otros a través de una red.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnserve</term>
+        <listitem>
+          <para>Un programa servidor propio independiente,<!--TODO:A
+            custom standalone server program--> ejecutable como proceso
+            demonio o invocable por SSH; otra manera de hacer que su
+            repositorio esté disponible para otros a través de una
+            red.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <para>Suponiendo que ha instalado Subversion correctamente, debería
+      estar preparado para comenzar. Los próximos dos capítulos le
+      guiarán a través del uso de <command>svn</command> <!--TODO:
+      chapters will walk you through the use of-->, el programa
+      cliente de Subversion de linea de comandos.</para>
+
+  </sect1>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECCIÓN 7 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-7">
+
+    <title>Un comienzo rápido</title>
+    
+    <para>Algunas personas tienen problemas para absorber una nueva
+      tecnología leyendo la clase de enfoque "arriba a abajo"
+      proporcionado por este libro <!--TODO:reading the sort of "top
+      down" approach provided by this book-->. Esta sección es una muy
+      breve introducción a Subversion, y está diseñada para dar a los
+      principiantes ocasión de luchar <!--TODO:and is designed to give
+      "bottom up" learners a fighting chance-->. Si usted es uno de esa
+      gente que prefiere aprender por la experimentación<!--TODO:one of
+      those folks who prefers-->, la siguiente demostración le pondrá
+      en marcha<!--TODO:the following demonstration will get you up and
+      running-->. A lo largo del camino,<!--TODO:Along the way--> le
+      damos enlaces de los capítulos relevantes de este libro.</para>
+
+    <para>Si usted es nuevo al concepto entero de control de versiones
+      o al modelo <quote>copiar-modificar-unir</quote><!--copy-modify-
+      -merge--> usado por ambos <!--TODO:used by both CVS and
+      Subversion--> CVS y Subversion, entonces debería leer
+      <xref linkend="svn-ch-2"/> antes de ir más lejos.</para>
+      
+    <note>
+      <para>El siguiente ejemplo asume que usted tiene listo
+        <command>svn</command>,el cliente de linea de comandos de
+        Subversion, y <command>svnadmin</command>, la herramienta
+        administrativa <!--TODO:the administrative tool-->. También
+        asume que su cliente <command>svn</command> ha sido compildo
+        contra Berkeley DB <!--TODO:has been compiled against
+        Berkeley DB-->. Para comprobar esto, ejecute <command>svn
+        --version</command> y asegurese que el modulo
+        <literal>ra_local</literal> esté disponible. Sin este modulo,
+        el cliente no podrá acceder a URLs <literal>file://</literal>
+        <!--TODO:the client cannot access <literal>file://</literal>
+        URLs.--></para>
+    </note>
+
+    <para>Subversion almacena todos los datos versionados en un
+      repositorio central. Para comenzar, cree un nuevo repositorio:
+    </para>
+
+    <screen>
+$ svnadmin create /path/to/repos <!--TODO:poner "/path/al/repos"??-->
+$ ls /path/to/repos
+conf/  dav/  db/  format  hooks/  locks/  README.txt
+</screen>
+
+    <para>Este comando crea un nuevo directorio
+      <filename>/path/to/repos</filename> que contiene un repositorio de
+      Subversion. Asegurese que este directorio vive en un disco local,
+      <emphasis>no</emphasis> compartido en red. Este nuevo directorio
+      contiene principalmente una colección de ficheros de la base de
+      datos Berkeley DB. Para más información sobre la creación y
+      mantenimiento de repositorios, vea <xref linkend="svn-ch-5"/>.
+    </para>
+
+    <para>Después, cree un árbol de ficheros y directorios para
+      importar dentro del repositorio. Por razones que serán claras
+      después (vea <xref linkend="svn-ch-4"/>), su estructura debería
+      contener tres directorios principales <!--TODO:top-level-->
+      llamados <filename>branches</filename>,<filename>tags</filename>,
+      y <filename>trunk</filename>:<!--TODO:traducir "branches", "tags" y
+      "trunk"?-->
+    </para>
+
+    <screen>
+/tmp/project/branches/
+/tmp/project/tags/
+/tmp/project/trunk/
+               foo.c
+               bar.c
+               Makefile
+               &hellip;
+</screen>
+
+    <para>Una vez usted tenga un árbol de datos listo para continuar
+      <!--TODO:ready to go-->, importe los datos dentro del repositorio
+      con el comando <command>svn import</command> (vea <xref
+      linkend="svn-ch-3-sect-7.3"/>):
+    </para>
+
+    <screen>
+$ svn import /tmp/project file:///path/to/repos -m "initial import"
+Adding         /tmp/project/branches
+Adding         /tmp/project/tags
+Adding         /tmp/project/trunk
+Adding         /tmp/project/trunk/foo.c
+Adding         /tmp/project/trunk/bar.c
+Adding         /tmp/project/trunk/Makefile
+&hellip;
+Committed revision 1.
+$ 
+</screen>
+
+    <para>Ahora el repositorio contiene este árbol de datos. Observe
+      que el directorio original <filename>/tmp/project</filename>
+      está sin cambios<!--TODO: is unchanged-->; Subversion es ajeno
+      a esto <!--TODO-: Subversion is unaware of it-->. (de hecho,
+      usted puede incluso borrar ese directorio si lo desea.)
+      Para comenzar a manipular datos del repositorio, usted necesita
+      crear una nueva <quote>copia de trabajo</quote> de los datos,
+      una especie de espacio de trabajo privado <!--TODO: a sort of
+      private workspace-->. Pregunte a subversion que <quote>descargue
+      </quote><!--TODO:check out, lo ideal sería dejarlo en ingles, o
+      ponerlo en castellano y entre parentesis en ingles-->una copia de
+      trabajo del directorio <filename>trunk</filename> del repositorio:
+    </para>
+
+    <screen>
+$ svn checkout file:///path/to/repos/trunk project
+A  project/foo.c
+A  project/bar.c
+A  project/Makefile
+&hellip;
+Checked out revision 1.
+</screen>
+
+    <para>Ahora usted tiene una copia personal de parte del repositorio
+      en un nuevo directorio llamado <filename>project</filename>. Usted
+      puede editar los ficheros en su copia de trabajo y después
+      depositar<!--TODO:and then commit those changes--> esos cambios
+      en el repositorio.</para>
+
+    <itemizedlist>
+      <listitem><para>Entre en su copia de trabajo y edite el contenido
+        de un fichero.</para></listitem>
+      <listitem><para>Ejecute <command>svn diff</command>para ver
+        la salida unificada de las diferencias de sus cambios.</para>
+      </listitem>
+        <!--TODO:to see unified diff output of your changes.-->
+      <listitem><para>Ejecute <command>svn commit</command> para depositar
+        la nueva versión de su fichero en el repositorio.</para></listitem>
+      <listitem><para>Ejecute <command>svn update</command> para <quote>
+        actualizar</quote> su copia de trabajo con el repositorio.</para>
+        </listitem>
+    </itemizedlist>
+
+    <para>Para un recorrido completo con todas las cosas que puede hacer
+      con su copia de trabajo, lea <xref linkend="svn-ch-3"/>.</para>
+
+    <para>En este punto, usted tiene la opción de hacer disponible a otros
+      su repositorio a través de una red. Mire <xref linkend="svn-ch-6"/>
+      para aprender acerca de los diferentes tipos de procesos servidor
+      disponibles y cómo configurarlos.</para>
+
+  </sect1>
+
+
+</chapter>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->
