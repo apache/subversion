@@ -147,7 +147,7 @@ get_wc_prop (void *baton,
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
           if (! strcmp (relpath, 
                         svn_path_uri_decode (item->url, pool)))
-            return svn_wc_prop_get (value, name, item->path, pool);
+            return svn_wc_get_wc_prop (item->path, name, value, pool);
         }
 
       return SVN_NO_ERROR;
@@ -157,9 +157,8 @@ get_wc_prop (void *baton,
   else if (cb->base_dir == NULL)
     return SVN_NO_ERROR;
 
-  return svn_wc_prop_get (value, name,
-                          svn_path_join (cb->base_dir, relpath, pool),
-                          pool);
+  return svn_wc_get_wc_prop (svn_path_join (cb->base_dir, relpath, pool),
+                             name, value, pool);
 }
 
 /* This implements the `svn_ra_set_wc_prop_func_t' interface. */
@@ -184,13 +183,7 @@ set_wc_prop (void *baton,
           if (! strcmp (relpath, 
                         svn_path_uri_decode (item->url, pool)))
             return svn_wc_set_wc_prop (item->path, name, value, pool);
-
-          /* ### svn_wc_set_wc_prop() is deprecated, and the above
-             call will soon change to a call into libsvn_wc that
-             schedules the property in the accumulating log.
-             See issue #806 for more. */
         }
-
 
       return SVN_NO_ERROR;
     }
@@ -199,9 +192,6 @@ set_wc_prop (void *baton,
   assert (cb->base_dir);
   return svn_wc_set_wc_prop (svn_path_join (cb->base_dir, relpath, pool),
                              name, value, pool);
-  /* ### svn_wc_set_wc_prop() is deprecated, and the above call will
-     soon change to a call into libsvn_wc that schedules the property
-     in the accumulating log.  See issue #806 for more. */ 
 }
 
 

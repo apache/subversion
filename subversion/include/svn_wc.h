@@ -917,11 +917,36 @@ svn_error_t *svn_wc_process_committed (const char *path,
 
 
 
-/* DEPRECATED: This function will vanish when issue #806 is resolved.
-   Use svn_wc_prop_set() instead.
+/* This is a function of type svn_ra_get_wc_prop_func_t.  Return
+   *VALUE for wc property NAME on PATH.
 
-   This is a function of type svn_ra_set_wc_prop_func_t. Set property
-   NAME to VALUE on PATH.  If VALUE is null, remove property NAME. */
+   NOTE: This is only for wc properties, that is, properties for
+   which svn_wc_is_wc_prop(NAME) would return true.  
+
+   ### Greg Stein suggests a better long-term solution:
+
+   "My current position is that svn_wc_get_wc_prop() and
+    svn_wc_set_wc_prop() should simply go away.  The *only* caller is
+    in libsvn_client/ra.c.  But those functions should just call
+    svn_wc_prop_get/set() and that latter function should use
+    svn_wc_is_wc_prop() to dispatch properly.
+
+    And note that svn_wc_get/set_wc_prop() are stupid wrappers around
+    svn_wc__wcprop_get/set() (meaning that svn_wc_prop_get/set would
+    just call the internal functions once it has identified the type
+    by name)." ###
+*/
+svn_error_t *svn_wc_get_wc_prop (const char *path,
+                                 const char *name,
+                                 const svn_string_t **value,
+                                 apr_pool_t *pool);
+
+/* This is a function of type svn_ra_set_wc_prop_func_t. Set property
+   NAME to VALUE on PATH.  If VALUE is null, remove property NAME.
+
+   NOTE: This is only for wc properties, that is, properties for
+   which svn_wc_is_wc_prop(NAME) would return true.  See the comments
+   by svn_wc_get_wc_prop() for more about this.  */
 svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t *value,
@@ -1234,22 +1259,18 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                apr_pool_t *pool);
 
 
-/* Set *VALUE to the value of property NAME for PATH, allocating
-   *VALUE in POOL.  If no such prop, set *VALUE to NULL.  NAME may be
-   a regular or wc property; if it is an entry property, return the
-   error SVN_ERR_BAD_PROP_KIND. */
+/* Set *VALUE to the value of regular property NAME for PATH,
+   allocating *VALUE in POOL.  If no such prop, set *VALUE to NULL.
+   ADM_ACCESS must be an access baton for PATH. */
 svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               const char *name,
                               const char *path,
                               apr_pool_t *pool);
 
-/* Set property NAME to VALUE for PATH.  Do any temporary
+/* Set regular property NAME to VALUE for PATH.  Do any temporary
    allocation in POOL.  If NAME is not a valid property for PATH,
    return SVN_ERR_ILLEGAL_TARGET.  If VALUE is null, remove property
-   NAME.  ADM_ACCESS must be an access baton with a write lock for PATH. 
-
-   NAME may be a wc property or a regular property; but if it is an
-   entry property, return the error SVN_ERR_BAD_PROP_KIND. */
+   NAME.  ADM_ACCESS must be an access baton with a write lock for PATH. */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
                               const char *path,

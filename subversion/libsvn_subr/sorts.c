@@ -196,12 +196,9 @@ svn_categorize_props (const apr_array_header_t *proplist,
       else if (kind == svn_prop_entry_kind)
         newprop = apr_array_push (*entry_props);
       else
-        /* Technically this can't happen, but might as well have the
-           code ready in case that ever changes. */
-        return svn_error_createf (SVN_ERR_BAD_PROP_KIND, 0, NULL, pool,
-                                  "bad prop kind for property '%s'",
-                                  prop->name);
-
+        return svn_error_createf (SVN_ERR_UNKNOWN_PROP_KIND, 0, NULL, pool,
+                                  "svn_categorize_props: unknown prop kind "
+                                  "for property '%s'", prop->name);
       newprop->name = prop->name;
       newprop->value = prop->value;
     }
