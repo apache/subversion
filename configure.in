@@ -392,6 +392,11 @@ AC_HELP_STRING([--enable-maintainer-mode],
         dnl SVN_DEBUG enables specific features for developer builds
         dnl AP_DEBUG enables specific (Apache) features for developer builds
         CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
+        case "$host" in
+        *freebsd*|*linux*)
+          CFLAGS="$CFLAGS -std=c89"
+          ;;
+        esac
       fi
     fi
 ])
