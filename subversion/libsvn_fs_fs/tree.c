@@ -1019,8 +1019,10 @@ add_change (svn_fs_t *fs,
             svn_boolean_t prop_mod,
             apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__fs_add_change (fs, txn_id, path, noderev_id, change_kind,
-                                  text_mod, prop_mod, pool));
+  SVN_ERR (svn_fs__fs_add_change (fs, txn_id,
+                                  svn_fs__canonicalize_abspath (path, pool),
+                                  noderev_id, change_kind, text_mod, prop_mod,
+                                  pool));
 
   return SVN_NO_ERROR;
 }
