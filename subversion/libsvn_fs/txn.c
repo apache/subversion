@@ -88,7 +88,7 @@ txn_body_begin_txn (void *baton,
   SVN_ERR (svn_fs__create_txn (&svn_txn_id, args->fs, root_id, trail));
 
   *args->txn_p = make_txn (args->fs, svn_txn_id, trail->pool);
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -107,7 +107,7 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_begin_txn, &args, pool));
   
   *txn_p = txn;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -130,6 +130,48 @@ svn_fs_close_txn (svn_fs_txn_t *txn)
      this handle on it will go away, which is the goal. */
   apr_destroy_pool (txn->pool);
 
+  return SVN_NO_ERROR;
+}
+
+
+struct open_txn_args
+{
+  svn_fs_txn_t **txn_p;
+  svn_fs_t *fs;
+  const char *name;
+};
+
+
+static svn_error_t *
+txn_body_open_txn (void *baton,
+                   trail_t *trail)
+{
+  struct open_txn_args *args = baton;
+  svn_fs_id_t *root_id;
+  svn_fs_id_t *base_root_id;
+
+  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id,
+                            args->fs, args->name, trail));
+
+  *args->txn_p = make_txn (args->fs, args->name, trail->pool); 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_open_txn (svn_fs_txn_t **txn_p,
+                 svn_fs_t *fs,
+                 const char *name,
+                 apr_pool_t *pool)
+{
+  svn_fs_txn_t *txn;
+  struct open_txn_args args;
+  args.txn_p = &txn;
+  args.fs = fs;
+  args.name = name;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_open_txn, &args, pool));
+  
+  *txn_p = txn;
   return SVN_NO_ERROR;
 }
 
