@@ -165,6 +165,15 @@ void svn_svr_register_plugin (svn_svr_policies_t *policy,
                               svn_svr_plugin_t *new_plugin);
 
 
+/* Check global server policy to see if an action is authorized;
+   (this subsumes any authorization hooks coming from plugins.) */
+
+svn_boolean_t svn_server_policy_authorize (svn_svr_policies_t *policy,
+                                           svn_string_t *repos,
+                                           svn_user_t *user,
+                                           svn_svr_action_t *action,
+                                           svn_string_t *path);
+
 /******************************************
 
    The wrappered Filesystem API

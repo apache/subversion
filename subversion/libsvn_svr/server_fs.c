@@ -54,6 +54,10 @@
    the server library the chance to check for authorization and
    execute any policies that may supercede the request.
 
+   NOTE: The "repos" argument in exported routines can be either a
+   nickname (specified in the svn.conf file) or the full pathname of a
+   repository.
+
 ****************************************************************/
 
 
@@ -62,32 +66,98 @@
 #include <svn_string.h>  /* Subversion bytestring routines */
 
 
-/* 
-   This routine is called by each "wrappered" filesystem call in this
-   library; it loops through all plugins and checks to see if an
-   action is authorized.
 
-   Input:  a {repos, user, action, path} group
 
-   Returns: TRUE (action is authorized by *all* authorization hooks) 
-             or FALSE (denied by at least one authorization hook) */
+
+/* NOT EXPORTED.
+
+   Input: a policy and a repository name.  Repository name *might* be
+   an abbreviated nickname (listed in `svn.conf' and in the policy
+   structure)
+
+   Returns:  the full (proper) repository pathname.
+
+ */
+
+svn_string_t *
+svr__expand_repos_name (svn_svr_policy_t *policy,
+                        svn_string_t *repos)
+{
+  /* Loop through policy->repos_aliases hash.
+     If there's a match, return new bytestring containing hash value.
+     If there's no match, return original string pointer.
+  */
+
+  return repos;
+}
+
+
+/* NOT EXPORTED.
+
+   See if general server `policy' allows an action.
+
+   Input:  policy + {repos, user, action, path} group
+
+   Returns:  TRUE (action is authorized by server policy)
+             FALSE (action is not allowed)
+
+       This routine is called first in svr__call_authorization_hooks().
+ */
 
 svn_boolean_t
-svr__call_authorization_hooks (svn_svr_policies_t *policy, 
-                               svn_string_t *repos, 
-                               svn_user_t *user, 
-                               svn_svr_action_t *action,
-                               svn_string_t *path)
+svr__policy_authorize (svn_svr_policies_t *policy,
+                       svn_string_t *repos,
+                       svn_user_t *user,
+                       svn_svr_action_t *action,
+                       svn_string_t *path)
+{
+  /* TODO: loop through policy->global_restrictions array,
+     interpreting each restriction and checking authorization */
+
+  return TRUE;
+}
+
+
+/* 
+   NOT EXPORTED.
+
+   This routine is called by each "wrappered" filesystem call in this
+   library; it first checks global server policy for authorization
+   (see svr__policy_authorize()), and then loops through all
+   authorization plugins.
+
+   Input:  policy + {repos, user, action, path} group
+
+   Returns: TRUE (action is authorized)
+             or FALSE (action is denied)
+*/
+
+svn_boolean_t
+svr__authorize (svn_svr_policies_t *policy, 
+                svn_string_t *repos, 
+                svn_user_t *user, 
+                svn_svr_action_t *action,
+                svn_string_t *path)
 {
   int i;
   svn_svr_plugin_t *current_plugin;
   char (* current_auth_hook) (svn_string_t *r, svn_user_t *u,
                               svn_svr_action_t *a, svr_string_t *p);
 
-  /* start off assuming we're authorized */
+  /* Start off assuming we're authorized! */
   svn_boolean_t authorized = TRUE;  
 
-  /* loop through our policy's array of plugins */
+  /* First: see if our server policy allows the action.  This is a
+     kind of "uber" authorization hook that subsumes all authorization
+     plugins. */
+  authorized = svr__policy_authorize (policy, repos, user, action, path);
+
+  if (! authorized)
+    {
+      return FALSE;
+    }
+
+  /* Next:  loop through our policy's array of plugins... */
   for (i = 0; i < (policy->plugins->nelts); i++)
     {
       /* grab a plugin from the list of plugins */
@@ -127,11 +197,13 @@ svr__call_authorization_hooks (svn_svr_policies_t *policy,
 }
 
 
-/*----------------------------------------------------------------
+/*========================================================================
+
    READING HISTORY.
 
    These routines retrieve info from a repository's history array.
    They return FALSE if authorization fails.
+
 */
 
 
@@ -142,21 +214,18 @@ svn_svr_latest (svn_svr_policies_t *policy,
                 svn_string_t *repos, 
                 svn_user_t *user)
 {
-  svn_ver_t *latest_version;
+  /* Convert "repos" into real pathname */
+  svn_string_t *repository = svr__expand_repos_name (policy, repos);
+
+  /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-
   svn_svr_action_t my_action = foo;  /* TODO:  fix this */
-
-  authorized = svr__call_authorization_hooks (policy, 
-                                              repos, 
-                                              user,
-                                              my_action,
-                                              NULL);
+  authorized = svr__authorize (policy, repository, user, my_action, NULL);
+  /* TODO: should *path be NULL for this?  Or should it be version # ? */
 
   if (! authorized)
     {
-      /* play sad music, and generate CUSTOM Subversion errno: */
-
+      /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
                                           FALSE,
                                           policy->pool));
@@ -164,9 +233,8 @@ svn_svr_latest (svn_svr_policies_t *policy,
     }
   else
     {
-      /* do filesystem call with "canonical" username */
-      latest_version = svn_fs_latest (repos, user->svn_username);
-      return latest_version;
+      /* Do filesystem call with "canonical" username */
+      return (svn_fs_latest (repository, user->svn_username));
     }
 }
 
