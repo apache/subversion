@@ -111,13 +111,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: david, ghudson
 
-  * r11730, r11743 (Issue #2108)
-    Fix UNC paths on Cygwin.
-    Justification:
-      Regression from 1.0.x
-    Votes:
-      +1: brane, lundblad, maxb
-
   * r11740
     Fix encoding bug in svn ls -v.
     Justification:

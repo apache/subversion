@@ -652,14 +652,14 @@ test_canonicalize (const char **msg,
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
-#ifdef WIN32 
+#if defined(WIN32) || defined(__CYGWIN__)
     /* We permit UNC paths on Windows.  By definition UNC
      * paths must have two components so we should remove the
      * double slash if there is only one component. */
     { "//hst/foo",            "//hst/foo" },
     { "//hst",                "/hst" },
     { "//hst/./",             "/hst" },
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
   int i;
