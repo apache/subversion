@@ -39,12 +39,6 @@
 #define SVN_CLIENT__AUTHFILE_FAILURES_KEY              "failures"
 
 
-typedef struct {
-  /* cache:  realmstring which identifies the credentials file */
-  const char *realmstring;
-} ssl_server_trust_file_provider_baton_t;
-
-
 /* retieve ssl server CA failure overrides (if any) from servers
    config */
 static svn_error_t *
@@ -55,7 +49,6 @@ ssl_server_trust_file_first_credentials (void **credentials,
                                          const char *realmstring,
                                          apr_pool_t *pool)
 {
-  ssl_server_trust_file_provider_baton_t *pb = provider_baton;
   apr_uint32_t *failures = apr_hash_get (parameters,
                                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                                          APR_HASH_KEY_STRING);
@@ -70,16 +63,13 @@ ssl_server_trust_file_first_credentials (void **credentials,
   *credentials = NULL;
   *iter_baton = NULL;
 
-  /* Make sure the save_creds function can get the realmstring */
-  pb->realmstring = apr_pstrdup (pool, realmstring);
-
   /* Check if this is a permanently accepted certificate */
   config_dir = apr_hash_get (parameters,
                              SVN_AUTH_PARAM_CONFIG_DIR,
                              APR_HASH_KEY_STRING);
   error =
     svn_config_read_auth_data (&creds_hash, SVN_AUTH_CRED_SSL_SERVER_TRUST,
-                               pb->realmstring, config_dir, pool);
+                               realmstring, config_dir, pool);
   svn_error_clear (error);
   if (! error && creds_hash)
     {
@@ -131,9 +121,9 @@ ssl_server_trust_file_save_credentials (svn_boolean_t *saved,
                                         void *credentials,
                                         void *provider_baton,
                                         apr_hash_t *parameters,
+                                        const char *realmstring,
                                         apr_pool_t *pool)
 {
-  ssl_server_trust_file_provider_baton_t *pb = provider_baton;
   svn_auth_cred_ssl_server_trust_t *creds = credentials;
   const svn_auth_ssl_server_cert_info_t *cert_info;
   apr_hash_t *creds_hash = NULL;
@@ -163,7 +153,7 @@ ssl_server_trust_file_save_credentials (svn_boolean_t *saved,
 
   SVN_ERR (svn_config_write_auth_data (creds_hash,
                                        SVN_AUTH_CRED_SSL_SERVER_TRUST,
-                                       pb->realmstring,
+                                       realmstring,
                                        config_dir,
                                        pool));
   *saved = TRUE;
@@ -186,10 +176,8 @@ svn_client_get_ssl_server_trust_file_provider (
   apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
-  ssl_server_trust_file_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
 
   po->vtable = &ssl_server_trust_file_provider;
-  po->provider_baton = pb;
   *provider = po;
 }
 

@@ -39,13 +39,6 @@
 #define SVN_CLIENT__AUTHFILE_PASSWORD_KEY            "password"
 
 
-typedef struct
-{
-  /* cache:  realmstring which identifies the credentials file */
-  const char *realmstring;
-} provider_baton_t;
-
-
 
 /* Get the username from the OS */
 static const char *
@@ -79,7 +72,6 @@ simple_first_creds (void **credentials,
                     const char *realmstring,
                     apr_pool_t *pool)
 {
-  provider_baton_t *pb = provider_baton;
   const char *config_dir = apr_hash_get (parameters,
                                          SVN_AUTH_PARAM_CONFIG_DIR,
                                          APR_HASH_KEY_STRING);
@@ -91,9 +83,6 @@ simple_first_creds (void **credentials,
                                        APR_HASH_KEY_STRING);
   svn_boolean_t may_save = username || password;
   svn_error_t *err;
-
-  if (realmstring)
-    pb->realmstring = apr_pstrdup (pool, realmstring);
 
   /* If we don't have a usename and a password yet, we try the auth cache */
   if (! (username && password))
@@ -158,10 +147,10 @@ simple_save_creds (svn_boolean_t *saved,
                    void *credentials,
                    void *provider_baton,
                    apr_hash_t *parameters,
+                   const char *realmstring,
                    apr_pool_t *pool)
 {
   svn_auth_cred_simple_t *creds = credentials;
-  provider_baton_t *pb = provider_baton;
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
   svn_error_t *err;
@@ -184,7 +173,7 @@ simple_save_creds (svn_boolean_t *saved,
                 APR_HASH_KEY_STRING,
                 svn_string_create (creds->password, pool));
   err = svn_config_write_auth_data (creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                    pb->realmstring, config_dir, pool);
+                                    realmstring, config_dir, pool);
   svn_error_clear (err);
   *saved = ! err;
 
@@ -206,10 +195,8 @@ svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
                                 apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
-  provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
 
   po->vtable = &simple_provider;
-  po->provider_baton = pb;
   *provider = po;
 }
 
@@ -232,12 +219,6 @@ typedef struct
 /* Iteration baton type for username/password prompting. */
 typedef struct
 {
-  /* The original provider baton */
-  simple_prompt_provider_baton_t *pb;
-
-  /* The original realmstring */
-  const char *realmstring;
-
   /* how many times we've reprompted */
   int retries;
 } simple_prompt_iter_baton_t;
@@ -319,8 +300,6 @@ simple_prompt_first_creds (void **credentials_p,
                                     ! no_auth_cache, pool));
 
   ibaton->retries = 0;
-  ibaton->pb = pb;
-  ibaton->realmstring = apr_pstrdup (pool, realmstring);
   *iter_baton = ibaton;
 
   return SVN_NO_ERROR;
@@ -332,15 +311,18 @@ simple_prompt_first_creds (void **credentials_p,
 static svn_error_t *
 simple_prompt_next_creds (void **credentials_p,
                           void *iter_baton,
+                          void *provider_baton,
                           apr_hash_t *parameters,
+                          const char *realmstring,
                           apr_pool_t *pool)
 {
   simple_prompt_iter_baton_t *ib = iter_baton;
+  simple_prompt_provider_baton_t *pb = provider_baton;
   const char *no_auth_cache = apr_hash_get (parameters,
                                             SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                             APR_HASH_KEY_STRING);
 
-  if (ib->retries >= ib->pb->retry_limit)
+  if (ib->retries >= pb->retry_limit)
     {
       /* give up, go on to next provider. */
       *credentials_p = NULL;
@@ -349,7 +331,7 @@ simple_prompt_next_creds (void **credentials_p,
   ib->retries++;
 
   SVN_ERR (prompt_for_simple_creds ((svn_auth_cred_simple_t **) credentials_p,
-                                    ib->pb, parameters, ib->realmstring, FALSE,
+                                    pb, parameters, realmstring, FALSE,
                                     ! no_auth_cache, pool));
 
   return SVN_NO_ERROR;
