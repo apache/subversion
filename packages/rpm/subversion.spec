@@ -15,6 +15,7 @@ Requires: apr >= 2001.10.24
 Requires: db3 >= 3.3.11
 Requires: expat
 Requires: neon = %{neon_version}
+Requires: /sbin/install-info
 BuildPreReq: apr-devel >= 2001.10.24
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db3-devel >= 3.3.11
@@ -85,11 +86,29 @@ make
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
+mkdir -p $RPM_BUILD_ROOT/usr/share
 make prefix=$RPM_BUILD_ROOT/usr libexecdir=$RPM_BUILD_ROOT/usr/lib/apache install
 
 # Install man page until the previous install can do it correctly.
-cp ./subversion/clients/cmdline/man/svn.1 $RPM_BUILD_ROOT/usr/share/man/man1
+mv $RPM_BUILD_ROOT/usr/man $RPM_BUILD_ROOT/usr/share/man
+
+# Install INFO pages in correct place.
+mv $RPM_BUILD_ROOT/usr/info $RPM_BUILD_ROOT/usr/share/info
+
+%post
+/sbin/install-info /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+
+/sbin/install-info /usr/share/info/svn-manual.info.gz /usr/share/info/dir --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
+
+/sbin/install-info /usr/share/info/svn_for_cvs_users.info.gz /usr/share/info/dir --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
+
+%preun
+/sbin/install-info --delete /usr/share/info/svn-design.info.gz /usr/share/info/dir --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+
+/sbin/install-info --delete /usr/share/info/svn-manual.info.gz /usr/share/info/dir --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
+
+/sbin/install-info --delete /usr/share/info/svn_for_cvs_users.info.gz /usr/share/info/dir --entry='* Subversion-cvs: (svn_for_cvs_users).          Subversion Versioning System Information for CVS Users'
+
 
 %post server
 # Load subversion server into apache configuration.
@@ -131,18 +150,19 @@ if [ "`pidof httpd`"x != "x" ]; then
 fi
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+#rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
 %doc BUGS COMMITTERS COPYING HACKING IDEAS INSTALL NEWS PORTING
 %doc README STACK TASKS
-%doc doc notes tools subversion/LICENSE
+%doc tools subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnlook
 /usr/lib/libsvn*so*
 /usr/share/man/man1/*
+/usr/share/info/*
 
 %files devel
 %defattr(-,root,root)
