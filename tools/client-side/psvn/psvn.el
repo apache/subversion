@@ -1139,9 +1139,9 @@ Then move to that line."
 (when (not svn-prop-edit-mode-map)
   (setq svn-prop-edit-mode-map (make-sparse-keymap))
   (define-key svn-prop-edit-mode-map [(control ?c) (control ?c)] 'svn-prop-edit-done)
-  (define-key svn-prop-edit-mode-map [(control ?c) ?=] 'svn-prop-edit-svn-diff)
-  (define-key svn-prop-edit-mode-map [(control ?c) ?s] 'svn-prop-edit-svn-status)
-  (define-key svn-prop-edit-mode-map [(control ?c) ?q] 'svn-prop-edit-abort))
+  (define-key svn-prop-edit-mode-map [(control ?c) (control ?d)] 'svn-prop-edit-svn-diff)
+  (define-key svn-prop-edit-mode-map [(control ?c) (control ?s)] 'svn-prop-edit-svn-status)
+  (define-key svn-prop-edit-mode-map [(control ?c) (control ?q)] 'svn-prop-edit-abort))
 
 (easy-menu-define svn-prop-edit-mode-menu svn-prop-edit-mode-map
 "'svn-prop-edit-mode' menu"
