@@ -36,7 +36,6 @@ import os
 import sys
 import pre
 import pwd
-import string
 import random
 import md5
 
@@ -53,12 +52,12 @@ class hashDir:
 
 
   def md5(self):
-    return md5.md5(string.join(self.allfiles,''))
+    return md5.md5(''.join(self.allfiles))
 
     
   def walker_callback(self, baselen, dirname, fnames):
-    if ((dirname.find('.svn') != -1)
-        or dirname.find('CVS') != -1):
+    if ((dirname == '.svn')
+        or (dirname == 'CVS')):
       return
 
     self.allfiles.append(dirname[baselen:])
@@ -78,14 +77,14 @@ This is some text that was inserted into this file by the lovely and
 talented scramble-tree.py script.
 ======================================================================
 """
-    self.file_modders = {0: self.append_to_file,
-                         1: self.append_to_file,
-                         2: self.append_to_file,                         
-                         3: self.remove_from_file,
-                         4: self.remove_from_file,
-                         5: self.remove_from_file,
-                         6: self.delete_file,
-                         }
+    self.file_modders = [self.append_to_file,
+                         self.append_to_file,
+                         self.append_to_file,                         
+                         self.remove_from_file,
+                         self.remove_from_file,
+                         self.remove_from_file,
+                         self.delete_file,
+                         ]
     self.rand = random.Random(seed)
 
 
@@ -93,8 +92,8 @@ talented scramble-tree.py script.
     # remove 5 random lines
     if len(list) < 6:
       return list
-    for i in range(5):
-      j = self.rand.randint(0, len(list) - 1)
+    for i in range(5): # TODO remove a random number of lines in a range
+      j = self.rand.randrange(len(list) - 1)
       del list[j]
     return list
 
@@ -108,14 +107,8 @@ talented scramble-tree.py script.
 
   def remove_from_file(self):
     print 'remove_from_file:', self.path
-    fh= open(self.path, "r")
-    lines = self.shrink_list(fh.readlines())
-    fh.close()
-
-    fh= open(self.path, "w")
-    for l in lines:
-      fh.write(l)
-    fh.close()
+    lines = self.shrink_list(open(self.path, "r").readlines())
+    open(self.path, "w").writelines(lines)
 
 
   def delete_file(self):
@@ -126,22 +119,16 @@ talented scramble-tree.py script.
   def munge_file(self, path):
     self.path = path
     # Only do something 33% of the time
-    num = self.rand.randint(0, len(self.file_modders) * 3)
-    if not self.file_modders.has_key(num):
-      return
-    else:
-      method = self.file_modders[num]
-      method()
+    if self.rand.randrange(3):
+      self.rand.choice(self.file_modders)()
 
 
   def maybe_add_file(self, dir):
-    if self.rand.randint(1,3) == 3:
+    if self.rand.randrange(3) == 2:
       path = os.path.join(dir, 'newfile.txt')
       print "maybe_add_file:", path
-      fh = open(path, 'w')
-      fh.write(self.greeking)
-      fh.close()
-                
+      open(path, 'w').write(self.greeking)
+
 
 
 def usage():
