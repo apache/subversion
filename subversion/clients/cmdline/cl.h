@@ -51,6 +51,7 @@ typedef enum {
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
   svn_cl__targets_opt,
+  svn_cl__incremental_opt,
   svn_cl__xml_opt,
   svn_cl__strict_opt,
   svn_cl__no_ignore_opt,
@@ -79,6 +80,7 @@ typedef struct svn_cl__opt_state_t
   const char *xml_file;          /* xml source/target file */ /* UTF-8! */
   const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
+  svn_boolean_t incremental;     /* yield output suitable for concatenation */
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */
   svn_boolean_t version;         /* print version information */
   svn_boolean_t verbose;         /* be verbose */
