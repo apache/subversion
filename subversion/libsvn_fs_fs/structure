@@ -1,11 +1,35 @@
-This file describes the file formats and layouts of a libsvn_fs_fs
-repository.  See the "Design" section of the README file for a design
-overview.
+This file describes the design, layouts, and file formats of a
+libsvn_fs_fs repository.
+
+Design
+------
+
+In FSFS, each committed revision is represented as an immutable file
+containing the new node-revisions, contents, and changed-path
+information for the revision, plus a second, changeable file
+containing the revision properties.
+
+In contrast to the BDB back end, the contents of recent revision of
+files are stored as deltas against earlier revisions, instead of the
+other way around.  This is less efficient for common-case checkouts,
+but brings greater simplicity and robustness, as well as the
+flexibility to make commits work without write access to existing
+revisions.  Skip-deltas and delta combination mitigate the checkout
+cost.
+
+In-progress transactions are represented with a prototype rev flie
+containing only the new text representations of files (appended to as
+changed file contents come in), along with a separate file for each
+node-revision, directory representation, or property representation
+which has been changed or added in the transaction.  During the finale
+stage of the commit, these separate files are marshalled onto the end
+of the prototype rev file to form the immutable revision file.
 
 Layout of the FS directory
 --------------------------
 
-The layout of the FS directory is:
+The layout of the FS directory (the "db" subdirectory of the
+repository) is:
 
   revs          Subdirectory containing revs
    <revnum>      File containing rev <revnum>
@@ -24,15 +48,9 @@ The format of the "current" file is a single line of the form
 youngest revision, the next unique node-ID, and the next unique
 copy-ID for the repository.
 
-The "write-lock" file only exists when a process is holding a
-write-lock for the final phase of a commit.  It contains a line
-"<IP-address> <pid>\n" identifying the IP address and PID of the
-process holding the lock.  [NOTE: This may be too Unix-specific.  It's
-borrowed from Mozilla and allows detection of stale locks on the
-machine which has the process which holds the lock.  The meaning of
-"this machine's IP address" is a little tricky, but the only real
-requirement is that it be uniquely determinable from the machine.  We
-can worry about the details of this file a little later.]
+The "write-lock" file is an empty file which is locked before the
+final stage of a commit and unlocked after the new "current" file has
+been moved into place to indicate that a new revision is present.
 
 Node-revision IDs
 -----------------
@@ -167,20 +185,17 @@ identified by revision and created-path, not by node-rev ID, because a
 copy root may be a node-rev which exists later on within the same
 revision file, meaning its offset is not yet known.
 
-Changed-path data is represented as a series of lines, each containing
+The changed-path data is represented as a series of changed-path
+items, each consisting of two lines.  The first line has the format
 "<id> <action> <text-mod> <prop-mod> <path>\n", where <id> is the
 node-rev ID of the new node-rev, <action> is "add", "delete",
 "replace", or "modify", <text-mod> and <prop-mod> are "true" or
 "false" indicating whether the text and/or properties changed, and
 <path> is the changed pathname.  For deletes, <id> is the node-rev ID
 of the deleted node-rev, and <text-mod> and <prop-mod> are always
-"false".
-
-[NOTE: We could speed up svn_repos_get_logs significantly by storing
-copy history in the changed-path data and caching it upon reading the
-changed-path data in svn_fs_paths_changed.  Before we finalize the
-structure, we should measure the performance impact of this operation
-on "svn log -v" of a large import.]
+"false".  The second line has the format "<rev> <path>\n" containing
+the node-rev's copyfrom information if it has any; if it does not, the
+second line is blank.
 
 At the very end of a rev file is a pair of lines containing
 "\n<root-offset> <cp-offset>\n", where <root-offset> is the offset of
@@ -198,22 +213,28 @@ A transaction directory has the following layout:
   rev                   Protype rev file with new text reps
   props                 Contains transaction props
   next-ids              Contains the next temporary node-ID and copy-ID
+  changes               Contains changed-path information to date
   <nid>.<cid>           New node-rev data for node
   <nid>.<cid>.props     Property list for new node-rev, if changed
   <nid>.<cid>.children  Directory contents for node-rev
 
 The two kinds of props files are both in hash dump format.
 
-The "latest" file contains a single line "<next-temp-node-id>
+The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID
 assignments (without the leading underscores).
 
-The contents file begins with a copy of the hash dump representation
-of the directory entries from the old node-rev (or a dump of the empty
-hash for new directories), and then an entry for each change made to
-the directory.  Additions and replacements are represented in the
-usual hash dump form ("K <len>\n<key>\nV <len>\n<value>\n"); deletions
-are represented in the form "D <len>\n<key>\n".
+The "children" file for a node-revision begins with a copy of the hash
+dump representation of the directory entries from the old node-rev (or
+a dump of the empty hash for new directories), and then an incremental
+hash dump entry for each change made to the directory.
+
+The "changes" file contains changed-path entries in the same form as
+the changed-path entries in a rev file, except that <id> and <action>
+may both be "reset" (in which case <text-mod> and <prop-mod> are both
+always "false") to indicate that all changes to a path should be
+considered undone.  Reset entries are only used during the final merge
+phase of a transaction.
 
 The node-rev files have the same format as node-revs in a revision
 file, except that the "text" and "props" fields are augmented as
