@@ -615,7 +615,6 @@ svn_io_file_checksum (svn_stringbuf_t **checksum_p,
   apr_status_t apr_err;
   unsigned char digest[MD5_DIGESTSIZE];
   char buf[BUFSIZ];  /* What's a good size for a read chunk? */
-  svn_stringbuf_t *md5str;
 
   /* ### The apr_md5 functions return apr_status_t, but they only
      return success, and really, what could go wrong?  So below, we
@@ -646,16 +645,8 @@ svn_io_file_checksum (svn_stringbuf_t **checksum_p,
        "svn_io_file_checksum: error closing '%s'", file);
 
   apr_md5_final (digest, &context);
-  md5str = svn_stringbuf_ncreate (digest, MD5_DIGESTSIZE, pool);
-  *checksum_p = svn_base64_encode_string (md5str, pool);
-  
-  /* ### Our base64-encoding routines append a final newline if any
-     data was created at all, so let's hack that off. */
-  if ((*checksum_p)->len)
-    {
-      (*checksum_p)->len--;
-      (*checksum_p)->data[(*checksum_p)->len] = 0;
-    }
+  *checksum_p = svn_base64_from_md5 (digest, pool);
+
   return SVN_NO_ERROR;
 }
 

@@ -327,3 +327,23 @@ svn_base64_decode_string (svn_stringbuf_t *str, apr_pool_t *pool)
   decode_bytes (decoded, str->data, str->len, ingroup, &ingrouplen, &done);
   return decoded;
 }
+
+
+svn_stringbuf_t *
+svn_base64_from_md5 (unsigned char digest[], apr_pool_t *pool)
+{
+  svn_stringbuf_t *md5str;
+
+  md5str = svn_stringbuf_ncreate (digest, MD5_DIGESTSIZE, pool);
+  md5str = svn_base64_encode_string (md5str, pool);
+  
+  /* Our base64-encoding routines append a final newline if any data
+     was created at all, so let's hack that off. */
+  if ((md5str)->len)
+    {
+      (md5str)->len--;
+      (md5str)->data[(md5str)->len] = 0;
+    }
+
+  return md5str;
+}
