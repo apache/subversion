@@ -76,7 +76,18 @@ Step 3:  Install Specific Language Bindings
 
 *  Perl
 
-   ???
+   The build process of the Perl bindings is not yet tightly
+   integrated with subversion's build system. It is using the standard
+   way for building and installing perl extentions. You will have to
+   install subversion before building and using it.
+
+   1.  Run 'make install-swig-pl-lib' from the top of the
+       Subversion source tree.
+
+   2.  Go to subversion/bindings/swig/perl and run
+       `env APR_CONFIG=/path/to/apr-config perl Makefile.PL'
+
+   3.  run `make all test install'
 
 *  Java
 
@@ -197,4 +208,9 @@ TESTING AND USING SWIG BINDINGS
            subversion/include/svn_wc.h
 
 *  Perl
+
+   The perl bindings are using the standard module testing facilities
+   to do regression tests. Simply run make test as described in the
+   install section.
+
 *  Java

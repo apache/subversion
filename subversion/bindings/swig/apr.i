@@ -44,7 +44,7 @@
     "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
 
 %typemap(perl5,argout) apr_off_t * {
-    /* ### FIXME-perl */
+    /* ### FIXME-perl apr_off_t out*/
 }
 
 /* ----------------------------------------------------------------------- */
@@ -86,7 +86,7 @@ typedef apr_int32_t time_t;
 }
 
 %typemap(perl5,argout) apr_time_t * {
-    /* ### FIXME-perl */
+    /* ### FIXME-perl apr_time_t out */
 }
 /* -----------------------------------------------------------------------
    create some INOUT typemaps for apr_size_t
@@ -104,13 +104,17 @@ typedef apr_int32_t time_t;
 }
 
 %typemap(perl5,in) apr_size_t *INOUT (apr_size_t temp) {
-    /* ### FIXME-perl */
+    temp = (apr_size_t) SvIV($input);
+    $1 = &temp;
 }
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
 */
 
 %typemap(python,in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
+    "$1 = &temp;";
+
+%typemap(perl5,in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
     "$1 = &temp;";
 
 /* -----------------------------------------------------------------------
@@ -171,8 +175,10 @@ typedef apr_int32_t time_t;
     svn_swig_java_add_to_list(jenv, $1, $input);
 }
 
+%typemap(perl5,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **PROPHASH {
-    /* ### FIXME-perl */
+    $result = svn_swig_pl_prophash_to_hash(*$1);
+    argvi++;
 }
 /* -----------------------------------------------------------------------
   handle apr_file_t *
@@ -181,9 +187,9 @@ typedef apr_int32_t time_t;
 %typemap(python, in) apr_file_t * {
   $1 = svn_swig_py_make_file($input, _global_pool);
 }
-%typemap(perl5, in) apr_file_t * {
-    /* ### FIXME-perl */
-}
+
+/* ### FIXME-perl */
+%typemap(perl5, in) apr_file_t *;
 
 /* -----------------------------------------------------------------------
    apr_file_t ** is always an OUT param
@@ -197,7 +203,9 @@ typedef apr_int32_t time_t;
         $result,
         SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
 
-%typemap(perl5,argout) apr_file_t ** {
-    /* ### FIXME-perl */
+%typemap(perl5, argout) apr_file_t ** {
+    ST(argvi) = sv_newmortal();
+    SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
 }
+
 /* ----------------------------------------------------------------------- */

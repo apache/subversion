@@ -39,8 +39,7 @@
     svn_fs_root_t **,
     svn_fs_txn_t **,
     void **,
-    svn_fs_id_t **,
-    svn_stream_t **
+    svn_fs_id_t **
 };
 
 /* and this is always an OUT param */
@@ -63,8 +62,6 @@
 */
 %apply int *OUTPUT { int * };
 
-%apply enum SWIGTYPE *OUTENUM { svn_node_kind_t * };
-
 /* -----------------------------------------------------------------------
    define the data/len pair of svn_fs_parse_id to be a single argument
 */
@@ -85,7 +82,8 @@ apr_array_header_t **names_p {
 }
 
 %typemap(perl5, argout) apr_array_header_t **names_p {
-    /* ### FIXME-perl */
+    $result = svn_swig_pl_array_to_list(*$1);
+    ++argvi;
 }
 /* -----------------------------------------------------------------------
    revisions_changed's "apr_array_header_t **" is returning a list of
@@ -97,7 +95,8 @@ apr_array_header_t **revs {
     $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
 }
 %typemap(perl5, argout) apr_array_header_t **revs {
-    /* ### FIXME-perl */
+    $result = svn_swig_pl_ints_to_list(*$1);
+    ++argvi;
 }
 
 /* -----------------------------------------------------------------------
@@ -116,8 +115,9 @@ apr_array_header_t **revs {
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
 }
+%typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **entries_p {
-    /* ### FIXME-perl */
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t);
 }
 
 /* -----------------------------------------------------------------------
@@ -166,5 +166,9 @@ apr_array_header_t **revs {
 
 #ifdef SWIGJAVA
 #include "swigutil_java.h"
+#endif
+
+#ifdef SWIGPERL
+#include "swigutil_pl.h"
 #endif
 %}
