@@ -234,39 +234,51 @@ unadjusted P to B:15.  P, being based on source text T:19,
 <p>
 
 To adjust P, we first walk over the diff T:8-T:19, adjusting hunks as
-we go:
+we go.  Each line in T:8-T:19 falls into one of the following
+categories:
 
    <ol>
-   <li>For each out-range added line, decrement the line numbers in
+   <li><i>Out-range added line</i>: decrement the line numbers in
        every hunk in P that comes after the addition.  This undoes the
        effect of the add, since the add never happened in B.</li>
    <p>
-   <li>For each out-range deleted line, increment the line numbers in
+   <li><i>Out-range deleted line</i>: increment the line numbers in
        every hunk in P that comes after the deletion.  This undoes the
        effect of the deletion, since the deletion never happened in
        B.</li> 
    <p>
-   <li>For each out-range edited line, do nothing.  Out-range edits
+   <li><i>Out-range edited line</i>: do nothing.  Out-range edits
        are irrelevant to P.</li> 
    <p>
-   <li>For each added line that is in context range in P, change it to
-       an insertion instead.  Optionally, replace the lost context
-       with new context <i>based on the same region in B:15</i> and
-       adjust line numbers and mappings appropriately, so P will
-       remain applicable even in the presence of local edits.</li>
+   <li><i>Added line in context range in P</i>: remove the
+       corresponding line from the context, optionally replacing it
+       with new context <i>based on that region in B:15</i>, and
+       adjust line numbers and mappings appropriately.</li>
    <p>
-   <li>For each added line that is in affected text range in P, change
-       P to simply insert the "after" version of the text instead, and
-       adjust line numbers and mappings accordingly.  (And if all this
-       isn't sounding a lot like a directory merge algorithm, try
-       drinking more of the Kool-Aid.)</li>
+   <li><i>Added line in affected text range in P</i>: this is a
+       dependency problem -- part of the change T:18-T:19 depends on
+       changes introduced to T after B branched.  There are several
+       possible behaviors, depending on what the user wants.  One is
+       to generate an informative error, stating that T:18-T:19
+       depends on some other change (T:N-T:M, where N>=8, M<=18, and
+       M-N&nbsp;==&nbsp;1); the exact revisions can be discovered
+       automatically using the same process as "cvs annotate", though
+       it may take some time to do so.  Another option is to include
+       the change in P, as an insertion of the "after" version of the
+       text, and adjust line numbers and mappings accordingly.  (And
+       if all this isn't sounding a lot like a directory merge
+       algorithm, try drinking more of the Kool-Aid.)  A third option
+       is to include it as an insertion, but with metadata (such as
+       CVS-style conflict markers) indicating that the line attempting
+       to be patched does not exist in B.</li>
    <p>
-   <li>For each deleted line that is in-range in P, request another
-       universe -- such a situation can't happen in ours.</li>
+   <li><i>Deleted line that is in-range in P</i>: request another
+       universe -- this situation can't happen in ours.</li>
    <p>
-   <li>For each in-range edited line, reverse that edit in the
-       "before" version of the corresponding line in the appropriate
-       hunk in P.</li>
+   <li><i>In-range edited line</i>: reverse that edit in the "before"
+       version of the corresponding line in the appropriate hunk in
+       P, to obtain the version of the line that will be found in
+       B when P is applied.</li> 
    <p>
    </ol>
 
@@ -277,33 +289,29 @@ Now walk over the diff B:1-B:15, further adjusting P:
 <p>
 
    <ol>
-   <li>For each out-range added line, increment the line numbers in
+   <li><i>Out-range added line</i>: increment the line numbers in
        every hunk in P that comes after the addition.</li>
    <p>
-   <li>For each out-range deleted line, decrement the line numbers in
+   <li><i>Out-range deleted line</i>: decrement the line numbers in
        every hunk in P that comes after the deletion.</li>
    <p>
-   <li>For each out-range edited line, do nothing.  Out-range edits
+   <li><i>Out-range edited line</i>: do nothing.  Out-range edits
        are irrelevant to P.</li> 
    <p>
-   <li>For each added line that is in context range in P, add that
-       line to both sides of the context in the appropriate hunk,
-       adjust line numbers in that hunk and all following hunks.</li>
+   <li><i>Added line in context range in P</i>: add that line to both
+       sides of the context in the appropriate hunk, adjust line
+       numbers in that hunk and all following hunks.</li>
    <p>
-   <li>For each added line that is in affected text range in P, add
-       that line to the context in P and adjust numbers
-       appropriately.</li>
+   <li><i>Added line in affected text range in P</i>: add that line to
+       the context in P and adjust numbers appropriately.</li>
    <p>
-   <li>For each deleted line that is in-range in P, remove that line
-       from P; if it was context, replace it with up-to-date context
-       from B:15.</li>
+   <li><i>Deleted line in-range in P</i>: dependency problem; see
+       "<i>Added line in affected text range in P</i>" in the first
+       pass above.</li>
    <p>
-   <li>For each in-range edited line, apply that edit to the
-       "before" version of the corresponding line in the appropriate
-       hunk in P.  The mapping between lines in the unchanged hunk and
-       lines in adjusted hunk must still hold -- that is, the mapping
-       should not be dependent on the two lines having the same
-       text.</li>
+   <li><i>In-range edited line</i>: apply that edit to the "before"
+       version of the corresponding line in the appropriate hunk in
+       P.</li> 
    <p>
    </ol>
 
@@ -322,25 +330,22 @@ question.
 
 <p>
 
-Also, the algorithm can be modified to reveal inherent conflicts while
-not losing information.  An "inherent" conflict is one where changes
-in T:8-T:19 overlap with changes in B:1-B:15.  The naive algorithm
-described above builds a patch that papers over such conflicts by
-adjusting context and "before" lines too enthusiastically.  But it
-could just as easily insert CVS-style conflict markers into the patch
-itself, instead of inserting just a new line or doing nothing; then
-when the patch is applied, it would automatically put conflict
-information into the file.  Or if conflict markers are not the desired
-user interface, the patch can hold the conflict as metadata (using the
-patch format comment space) and other tools can report on the conflict
-and help resolve it.
+The algorithm handles inherent conflicts flexibly without losing
+information.  An "inherent" conflict is one where changes in T:8-T:19
+overlap with changes in B:1-B:15.  They can be either papered over by
+adjusting context and "before" lines as enthusiastically as possible;
+reported as errors, with dependency information included; or both
+sides of the overlap can be handed to the user, surrounded by
+CVS-style conflict markers.  Or if conflict markers are not the
+desired interface, the patch can hold the conflict in some other
+metadata markup (using the patch format comment space), and other
+tools can report on and help resolve it.
 
 <p>
 
-Let's take a brief look at what adjustment does to some example
-patches.  Here's a simple case, arising from an attempt to port an
-individual change from trunk to branch.  On trunk T, revision 1 looks
-like this:
+Let's take a brief look at what adjustment does to some patches.
+Here's a simple case, arising from an attempt to port an individual
+change from trunk to branch.  On trunk T, revision 1 looks like this:
 
 <p>
 
@@ -511,8 +516,8 @@ this:
 
 <p>
 
-which is a diff that does not exist between any two committed
-revisions, yet is perfectly applicable to B:2.
+and would now apply perfectly to B:2, even though this diff never
+existed between any two committed revisions.
 
 <p>
 
