@@ -13,7 +13,7 @@ Candidate changes:
     Fix FSFS bug loading cvs2svn-produced dumpfiles
     Justification: Small fix, work-stopping bug
     Votes:
-      +1: ghudson, brane
+      +1: ghudson, brane, breser
 
   * r10251
     Fix FSFS bug loading dump files.
@@ -28,10 +28,10 @@ Candidate changes:
     r10167/issue #1861; and avoid the need to deprecate yet
     another ABI version later on.
     Votes:
-      +1: brane
+      +1: brane, breser
 
   * 10262, 10263:
     Comment and docstring fixes.
     Justification: Good to have accurate API documentation.
     Votes:
-      +1: lundblad
+      +1: lundblad, breser
