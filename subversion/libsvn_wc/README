@@ -278,6 +278,10 @@ analogous to CVS/ sudirs:
 
          When all done, remove the `pending' file.
 
+         (kff todo: seems better to use "SVN/tmp/iota" in the first
+         pending line than "SVN/tmp/SVN/text-base/iota", but...
+         thoughts?)
+
    To recover from a crash:
 
       1. Look for a pending file.  
