@@ -1,12 +1,12 @@
-<delta-pkg ancestor="" ver="1">
+<delta-pkg>
   <tree-delta>
     <add name="iota">
-      <file ver="1">
+      <file>
         <text-delta>This is the file 'iota'.</text-delta>
       </file>
     </add>
     <add name="A">
-      <dir ver="1">
+      <dir>
         <tree-delta>
           <add name="mu">
             <file>

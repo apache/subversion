@@ -20,3 +20,5 @@ svn_LDADD = ../libsvn_client/libsvn_client.la     \
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
 
+## Build *this* directory first, *then* the test subdirectory!
+SUBDIRS = . tests
