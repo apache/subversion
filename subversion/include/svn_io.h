@@ -508,7 +508,9 @@ typedef svn_error_t * (*svn_io_walk_func_t) (void *baton,
  * rooted at @a dirname, a utf8-encoded path. For each file or directory,
  * @a walk_func is invoked, passing in the @a walk_baton, the utf8-encoded
  * full path to the entry, an @c apr_finfo_t structure, and a temporary
- * pool for allocations.
+ * pool for allocations.  For any directory, @a walk_func will be invoked
+ * on the directory itself before being invoked on any subdirectories or
+ * files within the directory.
  *
  * The set of information passed to @a walk_func is specified by @a wanted,
  * and the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
