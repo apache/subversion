@@ -110,10 +110,10 @@ class hashDir:
 
 
 class Scrambler:
-  def __init__(self, seed, vc_actions, dry_run):
+  def __init__(self, seed, vc_actions, dry_run, quiet):
     self.vc_actions = vc_actions
     self.dry_run = dry_run
-    self.file_name = 'newfile.txt' 
+    self.quiet = quiet
     self.greeking = """
 ======================================================================
 This is some text that was inserted into this file by the lovely and
@@ -130,8 +130,19 @@ talented scramble-tree.py script.
                          ]
     self.rand = random.Random(seed)
 
+  def _make_new_file(self, dir):
+    i = 0
+    path = None
+    for i in range(1):
+      path = os.path.join(dir, "newfile.%05d.txt" % i)
+      if not os.path.exists(path):
+        open(path, 'w').write(self.greeking)
+        return path
+    raise Exception("Ran out of unique new filenames in directory '%s'" % dir)
+    
   def _mod_append_to_file(self, path):
-    print 'append_to_file:', path
+    if not self.quiet:
+      print 'append_to_file:', path
     if self.dry_run:
       return
     fh = open(path, "a")
@@ -139,7 +150,8 @@ talented scramble-tree.py script.
     fh.close()
 
   def _mod_remove_from_file(self, path):
-    print 'remove_from_file:', path
+    if not self.quiet:
+      print 'remove_from_file:', path
     if self.dry_run:
       return
     def _shrink_list(list):
@@ -154,7 +166,8 @@ talented scramble-tree.py script.
     open(path, "w").writelines(lines)
 
   def _mod_delete_file(self, path):
-    print 'delete_file:', path
+    if not self.quiet:
+      print 'delete_file:', path
     if self.dry_run:
       return    
     self.vc_actions.remove_file(path)
@@ -166,11 +179,11 @@ talented scramble-tree.py script.
 
   def maybe_add_file(self, dir):
     if self.rand.randrange(3) == 2:
-      path = os.path.join(dir, self.file_name)
-      print "maybe_add_file:", path
+      path = self._make_new_file(dir)
+      if not self.quiet:
+        print "maybe_add_file:", path
       if self.dry_run:
         return
-      open(path, 'w').write(self.greeking)
       self.vc_actions.add_file(path)
 
 
@@ -201,11 +214,12 @@ def main():
   seed = None
   vc_actions = NoVCActions()
   dry_run = 0
-
+  quiet = 0
+  
   # Mm... option parsing.
-  optlist, args = getopt.getopt(sys.argv[1:], "h",
+  optlist, args = getopt.getopt(sys.argv[1:], "hq",
                                 ['seed=', 'use-svn', 'use-cvs',
-                                 'help', 'dry-run'])
+                                 'help', 'quiet', 'dry-run'])
   for opt, arg in optlist:
     if opt == '--help' or opt == '-h':
       usage(0)
@@ -217,6 +231,8 @@ def main():
       vc_actions = CVSActions()
     if opt == '--dry-run':
       dry_run = 1
+    if opt == '--quiet' or opt == '-q':
+      quiet = 1
 
   # We need at least a path to work with, here.
   argc = len(args)
@@ -227,7 +243,7 @@ def main():
   # If a seed wasn't provide, calculate one.
   if seed is None:
     seed = hashDir(rootdir).gen_seed()
-  scrambler = Scrambler(seed, vc_actions, dry_run)  
+  scrambler = Scrambler(seed, vc_actions, dry_run, quiet)
   
   # Fire up the treewalker
   print 'SEED: ' + seed
