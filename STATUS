@@ -30,7 +30,7 @@ Candidate changes:
       +1: mbk, jpieper, dionisos, kfogel
 
   * r11215, r11264
-      SVN has needed a good packaging script for Win32 since forever.
+    SVN has needed a good packaging script for Win32 since forever.
     Justification:
       This and the related build and test script changes will make
       creating 1.1.x Win32 binary packages a lot easier.
@@ -45,3 +45,10 @@ Candidate changes:
       Nasty bug with simple fix.
     Votes:
       +1: lundblad, jaa
+
+  * r11592
+    Improve the speed of many WC operations by removing a redundant stat.
+    Justification:
+      Simple fix that shows 60% speed up of "svn st" on my box
+    Votes:
+      +1: brane
