@@ -1699,6 +1699,56 @@ def commit_with_bad_log_message(sbox):
     return 1
 
 
+def from_wc_top_with_bad_editor(sbox):
+  "commit from top of a wc, with invalid external editor cmd"
+
+  # Shortly after revision 5407, Vladimir Prus posted this bug recipe:
+  #
+  #   #!/bin/bash
+  #   cd /tmp
+  #   rm -rf repo wc
+  #   svnadmin create repo
+  #   svn mkdir file:///tmp/repo/foo -m ""
+  #   svn co file:///tmp/repo/foo wc
+  #   cd wc
+  #   svn ps svn:externals "lib http://something.org/lib" .
+  #   svn ci
+  #
+  # The final 'svn ci' would seg fault because of a problem in
+  # calculating the paths to insert in the initial log message that
+  # gets passed to the editor.
+  #
+  # So this regression test is primarily about making sure the seg
+  # fault is gone, and only secondarily about testing that we get the
+  # expected error from passing a bad editor cmd to Subversion.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  out, err = svntest.main.run_svn(None, 'pset', 'fish', 'food', wc_dir)
+  if err:
+    print "Unexpected failure from propset."
+    raise svntest.Failure
+  
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    out, err = svntest.main.run_svn(1, 'ci', '--editor-cmd', 'no_such-editor')
+
+    if not err:
+      print "Commit succeeded when should have failed."
+      raise svntest.Failure
+
+    err = string.join(map(string.strip, err), ' ')
+    if not (re.match(".*no_such-editor.*", err)
+            and re.match(".*Commit failed.*", err)):
+      print "Commit failed, but not in the way expected."
+      raise svntest.Failure
+
+  finally:
+    os.chdir(was_cwd)
+  
+
 
 ########################################################################
 # Run the tests
@@ -1735,6 +1785,7 @@ test_list = [ None,
               Skip(commit_symlink, (os.name != 'posix')),
               commit_out_of_date_deletions,
               commit_with_bad_log_message,
+              from_wc_top_with_bad_editor,
              ]
 
 if __name__ == '__main__':

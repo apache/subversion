@@ -465,9 +465,11 @@ svn_cl__get_log_message (const char **log_msg,
             path = ".";
 
           if (path && lmb->base_dir)
-            {
-              path = svn_path_is_child(lmb->base_dir, path, pool);
-            }
+            path = svn_path_is_child (lmb->base_dir, path, pool);
+
+          /* If still no path, then just use current directory. */
+          if (! path)
+            path = ".";
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
