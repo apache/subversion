@@ -226,7 +226,7 @@ make_editor_baton (svn_wc_adm_access_t *anchor,
   eb->recurse = recurse;
   eb->pool = pool;
 
-  return eb;;
+  return eb;
 }
 
 
