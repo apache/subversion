@@ -295,11 +295,12 @@ unnecessary delays and friction.
 
 Of course, the merge process needs to be under the users' control.
 Patch is not appropriate for files with rigid formats, like images or
-executables.  Subversion allows users to customize its merging behavior
-on a per-file basis.  You can direct Subversion to refuse to merge
-changes to certain files, and simply present you with the two original
-texts to choose from.  Or, you can direct Subversion to merge using a
-tool which respects the semantics of the file format.
+executables.  Subversion allows users to customize its merging
+behavior on a per-file basis.  You can direct Subversion to refuse to
+merge changes to certain files, and simply present you with the two
+original texts to choose from.  (Or, someday, you can direct
+Subversion to merge using a tool which respects the semantics of the
+file format.)
 
 
 @c -----------------------------------------------------------------------
@@ -307,12 +308,12 @@ tool which respects the semantics of the file format.
 @section Properties
 
 Files generally have interesting attributes beyond their contents:
-owners and groups, access permissions, creation and modification times,
-and so on.  Subversion attempts to preserve these attributes, or at
-least record them, when doing so would be meaningful.  However,
-different operating systems support very different sets of file
-attributes: Windows NT supports access control lists, while Linux
-provides only the simpler traditional Unix permission bits.
+mime-types, executable permissions, EOL styles, and so on.  Subversion
+attempts to preserve these attributes, or at least record them, when
+doing so would be meaningful.  However, different operating systems
+support very different sets of file attributes: Windows NT supports
+access control lists, while Linux provides only the simpler
+traditional Unix permission bits.
 
 In order to interoperate well with clients on many different operating
 systems, Subversion supports @dfn{property lists}, a simple,
@@ -333,17 +334,13 @@ Subversion repository, has its own property list.  Subversion puts these
 property lists to several uses:
 @itemize @bullet
 @item
-Clients use properties to store file attributes, as described above.
-For example, the Unix Subversion client records the files' permission
-bits as the value of a property called
-@samp{svn-posix-access-permission}.  Operating systems which allow files
-to have more than one name, like Windows 95, can use directory entry
-property lists to record files' alternative names.
+Clients can use properties to store file attributes, as described above.
 @item
-The Subversion server uses properties to hold attributes of its own, and
-allow clients to read and modify them.  For example, the @samp{svn-acl}
-property holds an access control list which the Subversion server uses
-to regulate access to repository files.
+The Subversion server uses properties to hold attributes of its own,
+and allow clients to read and modify them.  For example, someday a
+hypothetical @samp{svn-acl} property might hold an access control list
+which the Subversion server uses to regulate access to repository
+files.
 @item
 Users can invent properties of their own, to store arbitrary information
 for use by scripts, build environments, and so on.  Names of user
@@ -360,6 +357,11 @@ update their working directories.
 @c -----------------------------------------------------------------------
 @node Merging and Ancestry
 @section Merging and Ancestry
+
+[WARNING:  this section was written in May 2000, at the very beginning
+of the Subversion project.  This functionality probably will not exist
+in Subversion 1.0, but it's planned for post-1.0.  The problem should
+be reasonably solvable by recording merge data in 'properties'.]
 
 Subversion defines merges the same way CVS does: to merge means to take
 a set of previously committed changes and apply them, as a patch, to a

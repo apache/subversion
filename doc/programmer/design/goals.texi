@@ -50,10 +50,6 @@ It handles binary files gracefully (experience has shown that CVS's
 binary file handling is prone to user error).
 
 @item
-It has a fully-realized internal concept of users and access
-permissions.
-
-@item
 It takes advantage of the Net's experience with CVS by choosing better
 default behaviors for certain situations.
 
@@ -82,6 +78,10 @@ whose name was foo.c in revision 12 (perhaps that file no longer exists,
 or has a different name now)?  In Subversion, both interpretations are
 available to the user.
 
+(Note:  we've not yet implemented this, but it wouldn't be too hard.
+People are advocating switches to 'svn log' that cause history to be
+traced backwards either by entity or by path.)
+
 @c -----------------------------------------------------------------------
 @node Text vs binary issues
 @section Text vs binary issues
@@ -108,29 +108,26 @@ plain text files.  CVS only recognizes two file types anyway: plaintext
 and binary.  And CVS assumes files are plain text unless you tell it
 otherwise.
 
-Subversion recognizes the same two types.  The question is, how does it
-determine a file's type?  Experience with CVS suggests that assuming
-text unless told otherwise is a losing strategy -- people frequently
-forget to mark images and other opaque formats as binary, then later
-they wonder why CVS mangled their data.  So Subversion assumes a file is
-binary, unless it matches a standard text pattern (.c, .h, .pl, .html,
-.txt, README, and so on).  When necessary, the user can explicitly set
-the type for a file or file pattern.
+Subversion recognizes the same two types.  The question is, how does
+it determine a file's type?  Experience with CVS suggests that
+assuming text unless told otherwise is a losing strategy -- people
+frequently forget to mark images and other opaque formats as binary,
+then later they wonder why CVS mangled their data.  So Subversion will
+not mangle data: when moving over the network, or when being stored in
+the repository, it treats all files as binary.  In the working copy, a
+tweakable meta-data property indicates whether to treat the file as
+text or binary for purposes of whether or not to allow contextual
+merging during updates.
 
-Text files undergo line-end conversion by default.  Users can turn
-line-end conversion on or off per file pattern, or per file.  Text files
-do @emph{not} undergo keyword substitution by default, on the theory
-that if someone wants substitution and isn't getting it, they'll look in
-the manual; but if they are getting it and didn't want it, they might
-just be confused and not know what to do.  Users can turn substitution
-on or off per project, or per file pattern, or per file.
+Users can turn line-end conversion on or off per file by tweaking
+meta-data.  Files do @emph{not} undergo keyword substitution by
+default, on the theory that if someone wants substitution and isn't
+getting it, they'll look in the manual; but if they are getting it and
+didn't want it, they might just be confused and not know what to do.
+Users can turn substitution on or off per file.
 
 Both of these changes are done on the client side; the repository does
 not even know about them.
-
-Changes to file type are versioned -- the type is associated with a
-particular revision of the file, and new revisions inherit from previous
-revisions except when told otherwise.
 
 @c -----------------------------------------------------------------------
 @node I18N/Multilingual support
@@ -160,11 +157,6 @@ the original tree.  If you never commit anything on the clone, then it's
 just like a CVS tag.  If you start committing on it, then it's a branch.
 Voila!  This also implies CVS's "vendor branching" feature, since
 Subversion has real rename and directory support.
-
-Note that from the user's point of view, there are still separate branch
-and tag commands, with the latter initializing the clone as read-only
-(i.e., if a static snapshot is going to become an active line of
-development, one at least wants users to be aware of the change).
 
 @c -----------------------------------------------------------------------
 @node Miscellaneous new behaviors
@@ -200,6 +192,8 @@ There is no need for Subversion to have every possible diff mechanism
 built in.  It can invoke a user-specified client-side diff program on
 the two revisions of the file(s) locally.
 
+(Note:  This feature does not exist yet, but is planned for post-1.0.)
+
 @c -----------------------------------------------------------------------
 @node Better merging
 @subsection Better merging
@@ -208,6 +202,8 @@ Subversion remembers what has already been merged in and what hasn't,
 thereby avoiding the problem, familiar to CVS users, of spurious
 conflicts on repeated merges.
 
+(Note:  This feature does not exist yet, but is planned for post-1.0.)
+
 For details, @xref{Merging and Ancestry}.
 
 @c -----------------------------------------------------------------------
@@ -215,23 +211,25 @@ For details, @xref{Merging and Ancestry}.
 @subsection Conflicts resolution
 
 For text files, Subversion resolves conflicts similarly to CVS, by
-folding repository changes into the working files with conflict markers.
-But, for @emph{both} text and binary files, Subversion also always puts
-the pristine repository revision in one temporary file, and the pristine
-working copy revision in another temporary file.
+folding repository changes into the working files with conflict
+markers.  But, for @emph{both} text and binary files, Subversion also
+always puts the old and new pristine repository revisions into
+temporary files, and the pristine working copy revision in another
+temporary file.
 
-Thus, in a text conflict, the user has three files readily at hand,
+Thus, for any conflict, the user has four files readily at hand:
 
 @enumerate
-@item the original working copy file
-@item the repository revision from which the update was taken
-@item the combined file, with conflict markers
+@item the original working copy file with local mods
+@item the older repository file
+@item the newest repository file
+@item the merged file, with conflict markers
 @end enumerate
 
-and in a binary file conflict, the user at least has 1 and 2.
+and in a binary file conflict, the user has all but the last.
 
 When the conflict has been resolved and the working copy is committed,
-Subversion can automatically remove the temporary pristine files.
+Subversion automatically removes the temporary pristine files.
 
 A more general solution would allow plug-in merge resolution tools on
 the client side; but this is not scheduled for the first release

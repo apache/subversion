@@ -101,17 +101,14 @@ adm format this is (so future clients can be backwards compatible
 easily).
 
 @item
-A @file{repository} file, stating where the directory came from (syntax
-TBD).
-
-@item
 A @file{text-base} directory, containing the pristine repository
 revisions of the files in the corresponding working directory
 
 @item
 An @file{entries} file, which holds revision numbers and other
 information for this directory and its files, and records the presence
-of subdirs.
+of subdirs.  It also contains the repository URLs that each file and
+directory came from.
 
 It may help to think of this file as the functional equivalent of the
 CVS/Entries file.
