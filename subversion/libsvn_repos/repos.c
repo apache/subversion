@@ -1016,23 +1016,18 @@ svn_repos_create (svn_repos_t **repos_p,
                          pool);
   if (err)
     {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          /* We could not find the specified template. If the user
-             actually specified one, then bail.  */
-          if (on_disk_template != NULL)
-            return err;
-
-          /* Don't need the error any more. */
-          svn_error_clear (err);
-
-          /* We were trying the default. Oops... install problem?
-             Fall back to the builtin structure.  */
-          SVN_ERR_W (create_repos_structure (repos, path, pool),
-                     "repository creation failed");
-        }
-      else
+      /* We could not use the specified template. If the user
+         actually specified one, then bail.  */
+      if (on_disk_template != NULL)
         return err;
+
+      /* Don't need the error any more. */
+      svn_error_clear (err);
+
+      /* We were trying the default, but for some reason it didn't
+         work... Anyway, fall back to the builtin structure.  */
+      SVN_ERR_W (create_repos_structure (repos, path, pool),
+                 "repository creation failed");
     }
 
   /* The on-disk structure should be built now. */
