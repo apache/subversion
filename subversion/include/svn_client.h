@@ -61,10 +61,11 @@ extern "C" {
 
 
 /**
+ * Get libsvn_client version information.
  * @since New in 1.1.
- * (A prototype is being generated here, and the prototype is new in 1.1.)
  */
-SVN_VER_GEN_PROTO(client);
+const svn_version_t *svn_client_version (void);
+
 
 
 /*** Authentication stuff ***/

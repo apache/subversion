@@ -20,4 +20,8 @@
 
 #include "svn_version.h"
 
-SVN_VER_GEN_IMPL(client)
+const svn_version_t *
+svn_client_version (void)
+{
+  SVN_VERSION_BODY;
+}

@@ -692,17 +692,15 @@ version_mismatch_error (const char *libname, const svn_version_t *versioninfo,
 static svn_error_t *
 check_lib_versions (void)
 {
-  svn_error_t *err = SVN_NO_ERROR;
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr", svn_subr_version },
+      { "svn_client", svn_client_version },
+      { NULL, NULL }
+    };
 
-  /* libsvn_subr */
-  if (!SVN_VER_COMPATIBLE (subr) || !SVN_VER_CALLBACK_COMPATIBLE (subr))
-    err = version_mismatch_error("svn_subr", svn_subr_version(), err);
-
-  /* libsvn_client */
-  if (!SVN_VER_COMPATIBLE (client) || !SVN_VER_CALLBACK_COMPATIBLE (client))
-    err = version_mismatch_error("svn_client", svn_client_version(), err);
-
-  return err;
+  SVN_VERSION_DEFINE (my_version);
+  return svn_ver_check_list (&my_version, checklist, version_mismatch_error);
 }
 
 
