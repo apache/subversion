@@ -407,10 +407,12 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   SVN_ERR(svn_ra_svn_write_word(conn, pool, "success"));
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
-  SVN_ERR(write_proplist(conn, pool, props));
+  SVN_ERR(svn_ra_svn_start_list(conn, pool));
   if (hex_digest)
     SVN_ERR(svn_ra_svn_write_cstring(conn, pool, hex_digest));
+  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
+  SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
 
