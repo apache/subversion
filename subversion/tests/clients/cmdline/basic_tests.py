@@ -199,7 +199,7 @@ def basic_update(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
                       + 'appended mu text')
@@ -299,7 +299,7 @@ def basic_corruption(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=expected_disk.desc['A/mu'].contents
                       + 'appended mu text')
@@ -441,7 +441,7 @@ def basic_merging_update(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
                       contents=backup_mu_text + ' Appended to line 10 of mu')
   expected_disk.tweak('A/D/G/rho',
@@ -512,7 +512,7 @@ def basic_conflict(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents="""<<<<<<< .mine
 This is the file 'mu'.
 Conflicting appended text for mu=======
@@ -748,7 +748,7 @@ def basic_switch(sbox):
     })
 
   # Create expected disk tree (iota will have gamma's contents)
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
 
@@ -786,7 +786,7 @@ def basic_switch(sbox):
 
   # Create expected disk tree (iota will have gamma's contents,
   # A/D/H/* will look like A/D/G/*)
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
@@ -1203,25 +1203,99 @@ def basic_node_kind_change(sbox):
 
 #----------------------------------------------------------------------
 
-def basic_executable_file(sbox):
-  "basic checkout of executable file"
+def basic_import(sbox):
+  "basic import of (possibly executable) files"
 
   if sbox.build():
     return 1
 
-  if os.name == 'posix':
-    wc_dir = sbox.wc_dir
+  wc_dir = sbox.wc_dir
 
-    # What we expect the disk tree to look like:
-    expected_disk = svntest.actions.get_virginal_disk(1)
+  # create a new directory with files of various permissions
+  xt_path = os.path.join(wc_dir, "XT")
+  os.makedirs(xt_path)
+  all_path = os.path.join(wc_dir, "XT/all_exe")
+  none_path = os.path.join(wc_dir, "XT/none_exe")
+  user_path = os.path.join(wc_dir, "XT/user_exe")
+  group_path = os.path.join(wc_dir, "XT/group_exe")
+  other_path = os.path.join(wc_dir, "XT/other_exe")
 
-    # Read the real disk tree.  Notice we are passing the (normally
-    # disabled) "load props" flag to this routine.  This will run 'svn
-    # proplist' on every item in the working copy!  
-    actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  for path in [all_path, none_path, user_path, group_path, other_path]:
+    f = open(path, "w")
+    f.close()
 
-    # Compare actual vs. expected disk trees.
-    return svntest.tree.compare_trees(expected_disk.old_tree(), actual_disk_tree)
+  if (os.name == 'posix'):
+    os.chmod(all_path, 0777)
+    os.chmod(none_path, 0666)
+    os.chmod(user_path, 0766)
+    os.chmod(group_path, 0676)
+    os.chmod(other_path, 0667)
+
+  # import new files into repository
+  url = svntest.main.current_repo_url
+  output, errput = svntest.main.run_svn(None, 'import',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        '-m', 'Log message for new import',
+                                        url, xt_path)
+
+  # check output from import
+  if len(errput):
+    return 1
+  lastline = string.strip(output.pop())
+  cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+  match = cm.search (lastline)
+  if not match:
+    return 1
+
+  # remove (uncontrolled) local files
+  shutil.rmtree(xt_path)
+
+  # Create expected disk tree for the update (disregarding props)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'all_exe' : Item(''),
+    'none_exe' : Item(''),
+    'user_exe' : Item(''),
+    'group_exe' : Item(''),
+    'other_exe' : Item(''),
+    })
+
+  # Create expected status tree for the update (disregarding props).
+  # Newly imported file should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'all_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'none_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'user_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'group_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    'other_exe' : Item(status='_ ', wc_rev=2, repos_rev=2),
+    })
+
+  # Create expected output tree for the update.
+  expected_output = svntest.wc.State(wc_dir, {
+    'all_exe' : Item(status='A '),
+    'none_exe' : Item(status='A '),
+    'user_exe' : Item(status='A '),
+    'group_exe' : Item(status='A '),
+    'other_exe' : Item(status='A '),
+  })
+
+  # account for executable property (posix only)
+  if (os.name == 'posix'):
+    expected_disk.tweak('all_exe', 'user_exe', props={ 
+      'svn:executable' : '' 
+      })
+    expected_status.tweak('all_exe', 'user_exe', status='__')
+
+  # do update and check three ways
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
+                                               None, None, None,
+                                               None, None, 1)
+
 
 
 #----------------------------------------------------------------------
@@ -1286,7 +1360,7 @@ test_list = [ None,
               basic_delete,
               basic_checkout_deleted,
               basic_node_kind_change,
-              basic_executable_file,
+              basic_import,
               nonexistent_repository,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"

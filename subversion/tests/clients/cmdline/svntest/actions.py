@@ -43,13 +43,6 @@ def guarantee_greek_repository(path):
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
 
-    if os.name == 'posix':
-      # set executable bits
-      kappa_path = os.path.join(main.greek_dump_dir, 'kappa')
-      mu_path = os.path.join(main.greek_dump_dir, 'A', 'mu')
-      os.chmod(kappa_path, 0766)  # executable
-      os.chmod(mu_path, 0676)    # not executable by current user
-
     # build a URL for doing an import.
     url = main.test_area_url + '/' + main.pristine_dir
 
@@ -614,22 +607,7 @@ def get_virginal_state(wc_dir, rev):
   state.desc[''] = wc.StateItem()
   state.tweak(contents=None, status='_ ', wc_rev=rev, repos_rev=rev)
 
-  if os.name == 'posix':
-    # svn:executable property => underscore in 2nd column
-    state.tweak('kappa', contents=None, status='__', wc_rev=rev, repos_rev=rev)
-
   return state
-
-
-def get_virginal_disk(incl_props=0):
-  "Return a virginal expected disk state."
-  disk = main.greek_state.copy()
-
-  if incl_props and (os.name == 'posix'):
-    # properties to be expected at first checkout
-    disk.tweak('kappa', props={'svn:executable' : ''})
-
-  return disk
 
 
 # Cheap administrative directory locking

@@ -15,4 +15,4 @@ if sys.hexversion < 0x2000000:
 # don't export this name
 del sys
 
-import main, tree, actions, wc
+import main, testcase, tree, actions, wc

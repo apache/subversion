@@ -143,7 +143,7 @@ def update_binary_file(sbox):
 
   # Create expected disk tree for the update -- 
   #    look!  binary contents, and a binary property!
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/theta' : Item(theta_contents_local,
                      props={'svn:mime-type' : 'application/octet-stream'}),
@@ -276,7 +276,7 @@ def update_binary_file_2(sbox):
 
   # Create expected disk tree for the update -- 
   #    look!  binary contents, and a binary property!
-  expected_disk = svntest.actions.get_virginal_disk(1)
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/theta' : Item(theta_contents,
                      props={'svn:mime-type' : 'application/octet-stream'}),
@@ -343,7 +343,7 @@ def update_missing(sbox):
     })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -392,7 +392,7 @@ def update_ignores_added(sbox):
   expected_output = svntest.wc.State(wc_dir, { })
 
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/B/zeta' : Item("This is the file 'zeta'."),
     })
@@ -430,7 +430,6 @@ def update_to_rev_zero(sbox):
   # Create expected output tree for an update to rev 0
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='D '),
-    'kappa' : Item(status='D '),
     'A' : Item(status='D '),
     })
 
@@ -505,7 +504,7 @@ def receive_overlapping_same_change(sbox):
     })
 
   # Expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
                       contents="This is the file 'iota'.\nA change to iota.\n")
 
@@ -591,7 +590,7 @@ def update_to_revert_text_conflicts(sbox):
     })
   
   # Create expected disk tree for the update.
-  expected_disk = svntest.actions.get_virginal_disk()
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents= """<<<<<<< .mine
 This is the file 'mu'.
 Conflicting appended text for mu=======
