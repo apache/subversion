@@ -837,7 +837,7 @@ typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
 /* Return an EDITOR and EDIT_BATON to commit changes to BASE_REVISION
  * of FS (which is assumed to be a previously opened file system) with
  * LOG_MSG as the commit message.  The directory baton returned by
- * (*EDITOR)->begin_edit is for the root of the tree; all edits must
+ * (*EDITOR)->replace_root is for the root of the tree; all edits must
  * start at the top and descend.
  *
  * Calling (*EDITOR)->close_edit completes the commit.  Before
