@@ -38,7 +38,7 @@ $ svn status -v myfile
       properties in <xref linkend="svn-ch-6-sect-2"/></para>
     
     <sect2 id="svn-ch-8-sect-1.1">
-      <title>Switches</title> 
+      <title><command>svn</command> Switches</title> 
       
       <para>While Subversion has different switches for its
         subcommands, all switches are global&mdash;that is, each
@@ -374,7 +374,7 @@ $ svn log -r 1729:{2/17/02}
       </sect2>
       
       <sect2 id="svn-ch-8-sect-1.2">
-        <title><command>svn Subcommands</command></title>
+      <title><command>svn</command> Subcommands</title>
 
         <refentry>
           <refnamediv>
@@ -1738,7 +1738,7 @@ rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
 
             <screen>
 $ svn log http://svn.red-bean.com/repos/test/foo.c \
-          http://svn.red-bean.com/repos/test/foo.c
+          http://svn.red-bean.com/repos/test/bar.c
 &hellip;
             </screen>
 
@@ -3246,7 +3246,7 @@ Updated to revision 30.
       </warning>
         
       <sect2 id="svn-ch-8-sect-2.1">
-        <title>Switches</title> 
+      <title><command>svnadmin</command> Switches</title> 
         
         <variablelist>
           
@@ -3338,6 +3338,9 @@ Updated to revision 30.
       </sect2>
 
       <!-- ================================================================= -->
+    <sect2 id="svn-ch-8-sect-2.2">
+      <title><command>svnadmin</command> Subcommands</title>
+
       <refentry>
         <refnamediv>
           <refname>svnadmin archive</refname>
@@ -3769,6 +3772,8 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
         </refsect1>
       </refentry>
 
+    </sect2>
+
     </sect1>
     
     <!-- ================================================================= -->
@@ -3794,7 +3799,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
         recent) revision of the repository.</para>
       
       <sect2 id="svn-ch-8-sect-3.1">
-        <title>Switches</title>
+      <title><command>svnlook</command> Switches</title>
         
         <para>Switches in <command>svnlook</command> are global, just
           like in <command>svn</command> and
@@ -3844,7 +3849,12 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
 
         </variablelist>
 
+    </sect2>
+
         <!-- ================================================================= -->
+    <sect2 id="svn-ch-8-sect-3.2">
+      <title><command>svnlook</command> Subcommands</title>
+	
         <refentry>
           <refnamediv>
             <refname>svnlook author</refname>
