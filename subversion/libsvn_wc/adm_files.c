@@ -170,7 +170,7 @@ svn_wc__adm_path_exists (svn_stringbuf_t *path,
   v_extend_with_adm_name (newpath, NULL, tmp, pool, ap);
   va_end (ap);
 
-  svn_io_check_path (newpath, &kind, pool);
+  svn_io_check_path (newpath->data, &kind, pool);
   if (kind == svn_node_none)
     return FALSE;
   else
@@ -265,7 +265,7 @@ maybe_copy_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
   apr_status_t apr_err;
 
   /* First test if SRC exists. */
-  err = svn_io_check_path (src, &kind, pool);
+  err = svn_io_check_path (src->data, &kind, pool);
   if (err)
     return err;
   else if (kind == svn_node_none)
@@ -404,7 +404,7 @@ prop_path_internal (svn_stringbuf_t **prop_path,
   svn_boolean_t is_wc;
   svn_stringbuf_t *entry_name;
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path (path->data, &kind, pool);
   if (err)
     return err;
 
@@ -474,7 +474,7 @@ svn_wc__wcprop_path (svn_stringbuf_t **wcprop_path,
   svn_boolean_t is_wc;
   svn_stringbuf_t *entry_name;
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path (path->data, &kind, pool);
   if (err)
     return err;
 
@@ -825,7 +825,7 @@ svn_wc__open_props (apr_file_t **handle,
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
 
   /* If file, split the path. */
   if (kind == svn_node_file)
@@ -887,7 +887,7 @@ svn_wc__close_props (apr_file_t *fp,
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
 
   /* If file, split the path. */
   if (kind == svn_node_file)
@@ -945,7 +945,7 @@ svn_wc__sync_props (svn_stringbuf_t *path,
   enum svn_node_kind kind;
 
   /* Check if path is a file or a dir. */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
 
   /* If file, split the path. */
   if (kind == svn_node_file)
@@ -1045,7 +1045,7 @@ check_adm_exists (int *exists,
 
   components_added = extend_with_adm_name (path, NULL, 0, pool, NULL);
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path (path->data, &kind, pool);
   if (!err)
     {
       if (kind != svn_node_none && kind != svn_node_dir)

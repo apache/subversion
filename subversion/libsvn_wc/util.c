@@ -38,7 +38,7 @@ svn_wc__ensure_directory (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   enum svn_node_kind kind;
   svn_stringbuf_t *npath = svn_stringbuf_dup (path, pool);
-  svn_error_t *err = svn_io_check_path (npath, &kind, pool);
+  svn_error_t *err = svn_io_check_path (npath->data, &kind, pool);
 
   if (err)
     return err;

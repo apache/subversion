@@ -238,10 +238,7 @@ svn_wc__load_prop_file (const char *propfile_path,
 {
   enum svn_node_kind kind;
 
-  /* ### be nice to remove this... */
-  svn_stringbuf_t *pathbuf = svn_stringbuf_create (propfile_path, pool);
-
-  SVN_ERR (svn_io_check_path (pathbuf, &kind, pool));
+  SVN_ERR (svn_io_check_path (propfile_path, &kind, pool));
 
   if (kind == svn_node_file)
     {
@@ -778,7 +775,7 @@ wcprop_list (apr_hash_t **props,
   *props = apr_hash_make (pool);
 
   /* Check validity of PATH */
-  SVN_ERR( svn_io_check_path (pathbuf, &kind, pool) );
+  SVN_ERR( svn_io_check_path (pathbuf->data, &kind, pool) );
   
 #if 0
   if (kind == svn_node_none)
@@ -796,7 +793,7 @@ wcprop_list (apr_hash_t **props,
   SVN_ERR( svn_wc__wcprop_path (&prop_path, pathbuf, 0, pool) );
 
   /* Does the property file exist? */
-  SVN_ERR( svn_io_check_path (prop_path, &pkind, pool) );
+  SVN_ERR( svn_io_check_path (prop_path->data, &pkind, pool) );
   
   if (pkind == svn_node_none)
     /* No property file exists.  Just go home, with an empty hash. */
@@ -910,7 +907,7 @@ svn_wc_prop_list (apr_hash_t **props,
   SVN_ERR (svn_wc__prop_path (&prop_path, pathbuf, 0, pool));
 
   /* Does the property file exist? */
-  SVN_ERR (svn_io_check_path (prop_path, &pkind, pool));
+  SVN_ERR (svn_io_check_path (prop_path->data, &pkind, pool));
   
   if (pkind == svn_node_none)
     /* No property file exists.  Just go home, with an empty hash. */

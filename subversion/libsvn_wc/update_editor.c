@@ -600,7 +600,7 @@ add_directory (const char *path,
   cfpath = copyfrom_path ? svn_stringbuf_create (copyfrom_path, pool) : NULL;
       
   /* Check that an object by this name doesn't already exist. */
-  SVN_ERR (svn_io_check_path (db->path, &kind, db->pool));
+  SVN_ERR (svn_io_check_path (db->path->data, &kind, db->pool));
   if (kind != svn_node_none)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
                               "failed to add dir`%s': object already exists",
@@ -1319,7 +1319,7 @@ svn_wc_install_file (const char *file_path,
         {
           enum svn_node_kind wfile_kind = svn_node_unknown;
           
-          SVN_ERR (svn_io_check_path (file_path_str, &wfile_kind, pool));
+          SVN_ERR (svn_io_check_path (file_path_str->data, &wfile_kind, pool));
           if (wfile_kind == svn_node_none) /* working file is missing?! */
             {
               /* Just copy the new text-base to the file. */

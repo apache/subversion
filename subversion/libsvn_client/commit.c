@@ -266,7 +266,7 @@ import (svn_stringbuf_t *path,
   SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, &root_baton));
 
   /* Import a file or a directory tree. */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
 
   /* Note that there is no need to check whether PATH's basename is
      "SVN".  It would be strange but not illegal to import the

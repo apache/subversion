@@ -48,7 +48,7 @@ svn_wc_check_wc (const svn_stringbuf_t *path,
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
 
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_io_check_path (path->data, &kind, pool);
   if (err)
     return err;
   
@@ -139,7 +139,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   struct svn_wc_entry_t *entry;
   enum svn_node_kind kind;
 
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (path->data, &kind, pool));
   if (kind == svn_node_dir)
     {
       dirpath = path;
@@ -380,7 +380,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   enum svn_node_kind kind;
 
   /* Sanity check:  if the path doesn't exist, return FALSE. */
-  SVN_ERR (svn_io_check_path (filename, &kind, subpool));
+  SVN_ERR (svn_io_check_path (filename->data, &kind, subpool));
   if (kind != svn_node_file)
     {
       *modified_p = FALSE;
@@ -404,7 +404,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
   textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
-  SVN_ERR (svn_io_check_path (textbase_filename, &kind, subpool));
+  SVN_ERR (svn_io_check_path (textbase_filename->data, &kind, subpool));
   if (kind != svn_node_file)
     {
       *modified_p = TRUE;
@@ -437,7 +437,7 @@ empty_props_p (svn_boolean_t *empty_p,
 {
   enum svn_node_kind kind;
 
-  SVN_ERR (svn_io_check_path (path_to_prop_file, &kind, pool));
+  SVN_ERR (svn_io_check_path (path_to_prop_file->data, &kind, pool));
 
   if (kind == svn_node_none)
     *empty_p = TRUE;
@@ -639,7 +639,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
     {
       path = svn_stringbuf_dup (dir_path, subpool);
       svn_path_add_component (path, entry->conflict_old);
-      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
@@ -648,7 +648,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
     {
       path = svn_stringbuf_dup (dir_path, subpool);
       svn_path_add_component (path, entry->conflict_new);
-      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
@@ -657,7 +657,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
     {
       path = svn_stringbuf_dup (dir_path, subpool);
       svn_path_add_component (path, entry->conflict_wrk);
-      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
       if (kind == svn_node_file)
         *text_conflicted_p = TRUE;
     }
@@ -667,7 +667,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
     {
       path = svn_stringbuf_dup (dir_path, subpool);
       svn_path_add_component (path, entry->prejfile);
-      SVN_ERR (svn_io_check_path (path, &kind, subpool));
+      SVN_ERR (svn_io_check_path (path->data, &kind, subpool));
       if (kind == svn_node_file)
         *prop_conflicted_p = TRUE;
     }

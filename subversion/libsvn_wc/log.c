@@ -167,7 +167,7 @@ replace_text_base (svn_stringbuf_t *path,
   svn_path_add_component_nts (filepath, name);
 
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
-  err = svn_io_check_path (tmp_text_base, &kind, pool);
+  err = svn_io_check_path (tmp_text_base->data, &kind, pool);
   if (err)
     return err;
 
@@ -491,7 +491,7 @@ log_do_modify_entry (struct log_runner *loggy,
       if (strcmp (sname->data, SVN_WC_ENTRY_THIS_DIR))
         svn_path_add_component (tfile, sname);
       
-      err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
+      err = svn_io_check_path (tfile->data, &tfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
@@ -521,7 +521,7 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         signal_error (loggy, err);
       
-      err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
+      err = svn_io_check_path (pfile->data, &pfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
@@ -736,7 +736,7 @@ log_do_committed (struct log_runner *loggy,
 
       /* Make sure our working file copy is present in the temp area. */
       tmpf = svn_wc__text_base_path (wf, 1, pool);
-      if ((err = svn_io_check_path (tmpf, &kind, pool)))
+      if ((err = svn_io_check_path (tmpf->data, &kind, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                   "error checking existence: %s", name);
       if (kind == svn_node_file)
@@ -778,7 +778,7 @@ log_do_committed (struct log_runner *loggy,
 
     SVN_ERR (svn_wc__prop_path (&tmpf, is_this_dir ? loggy->path : full_path,
                                 1, pool));
-    if ((err = svn_io_check_path (tmpf, &kind, pool)))
+    if ((err = svn_io_check_path (tmpf->data, &kind, pool)))
       return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                 "error checking existence: %s", name);
     if (kind == svn_node_file)
@@ -1103,7 +1103,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
     SVN_ERR (svn_wc__lock (path, 0, pool));
 
   /* Is there a log?  If so, run it. */
-  err = svn_io_check_path (log_path, &kind, pool);
+  err = svn_io_check_path (log_path->data, &kind, pool);
   if (err)
     {
       if (! APR_STATUS_IS_ENOENT(err->apr_err))
