@@ -183,6 +183,14 @@ already_exists (svn_fs_root_t *root, const char *path)
 }
 
 
+static svn_error_t *
+not_txn (svn_fs_root_t *root)
+{
+  return svn_error_create
+    (SVN_ERR_FS_NOT_TXN_ROOT, 0, NULL, root->pool,
+     "root object must be a transaction root");
+}
+
 
 
 /* Getting dag nodes for roots.  */
@@ -990,6 +998,9 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 {
   struct change_node_prop_args args;
 
+  if (! svn_fs_is_txn_root (root))
+    return not_txn (root);
+
   args.root  = root;
   args.path  = path;
   args.name  = name;
@@ -1663,9 +1674,7 @@ svn_fs_merge (const char **conflict_p,
   svn_fs_txn_t *txn;
 
   if (! svn_fs_is_txn_root (target_root))
-    return svn_error_create
-      (SVN_ERR_FS_NOT_TXN_ROOT, 0, NULL, pool,
-       "attempt to merge into non-transaction root");
+    return not_txn (to_root);
 
   SVN_ERR (get_dag (&source, source_root, source_path, trail));
   SVN_ERR (get_dag (&ancestor, ancestor_root, ancestor_path, trail));
@@ -1778,6 +1787,9 @@ svn_fs_make_dir (svn_fs_root_t *root,
 {
   struct make_dir_args args;
 
+  if (! svn_fs_is_txn_root (root))
+    return not_txn (root);
+
   args.root = root;
   args.path = path;
   return svn_fs__retry_txn (root->fs, txn_body_make_dir, &args, pool);
@@ -1803,10 +1815,8 @@ txn_body_delete (void *baton,
 
   SVN_ERR (open_path (&parent_path, root, path, 0, trail));
 
-  if (root->kind != transaction_root)
-    return svn_error_create
-      (SVN_ERR_FS_NOT_TXN_ROOT, 0, NULL, trail->pool,
-       "root object must be a transaction root");
+  if (! svn_fs_is_txn_root (root))
+    return not_txn (root);
 
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
@@ -1951,6 +1961,9 @@ svn_fs_copy (svn_fs_root_t *from_root,
              apr_pool_t *pool)
 {
   struct copy_args args;
+
+  if (! svn_fs_is_txn_root (to_root))
+    return not_txn (to_root);
 
   args.from_root = from_root;
   args.from_path = from_path;
