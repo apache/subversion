@@ -116,6 +116,9 @@ static const apr_getopt_option_t options_table[] =
     {"in-repos-template", svnadmin__in_repos_template, 1,
      "specify template for the repository structure"},
 
+    {"quiet",           'q', 0,
+     "no progress (only errors) to stderr"},
+
     {"ignore-uuid", svnadmin__ignore_uuid, 0,
      "ignore any repos UUID found in the stream."},
 
@@ -149,7 +152,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "revision trees.  If only LOWER is given, dump that one revision tree.\n"
      "If --incremental is passed, then the first revision dumped will be\n"
      "a diff against the previous revision, instead of the usual fulltext.\n",
-     {'r', svnadmin__incremental} },
+     {'r', svnadmin__incremental, 'q'} },
 
     {"help", subcommand_help, {"?", "h"},
      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
@@ -212,6 +215,7 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
+  svn_boolean_t quiet;                              /* --quiet */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *on_disk;
@@ -268,7 +272,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_stream_t *stdout_stream, *stderr_stream;
+  svn_stream_t *stdout_stream, *stderr_stream = NULL;
   svn_revnum_t
     lower = SVN_INVALID_REVNUM,
     upper = SVN_INVALID_REVNUM;
@@ -302,11 +306,17 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
        "first revision cannot be higher than second");
 
   /* Run the dump to STDOUT.  Let the user redirect output into
-     a file if they want.  :-)  Progress feedback goes to stderr. */
+     a file if they want.  :-)  */
   SVN_ERR (create_stdio_stream (&stdout_stream,
                                 apr_file_open_stdout, pool));
-  SVN_ERR (create_stdio_stream (&stderr_stream,
-                                apr_file_open_stderr, pool));
+
+  /* Progress feedback goes to stderr, unless they asked to suppress
+     it. */
+  if (!opt_state->quiet)
+    {
+      SVN_ERR (create_stdio_stream (&stderr_stream,
+                                    apr_file_open_stderr, pool));
+    }
 
   SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
                               lower, upper, opt_state->incremental, pool));
@@ -626,6 +636,9 @@ main (int argc, const char * const *argv)
               return EXIT_FAILURE;
             }
         }
+        break;
+      case 'q':
+        opt_state.quiet = TRUE;
         break;
       case 'h':
       case '?':
