@@ -211,15 +211,45 @@ convert_to_stringbuf (apr_xlate_t *convset,
 static svn_error_t *
 check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 {
+  const char *data_start = data;
+
   for (; len > 0; --len, data++)
     {
       if ((! apr_isascii (*((unsigned char *) data)))
           || ((! apr_isspace (*((unsigned char *) data)))
               && apr_iscntrl (*((unsigned char *) data))))
         {
-          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                                   "non-ascii characters detected, "
-                                   "please recompile with --enable-utf8");
+          /* Show the printable part of the data, followed by the
+             decimal code of the questionable character.  Because if a
+             user ever gets this error, she's going to have to spend
+             time tracking down the non-ascii data, so we want to help
+             as much as possible.  And yes, we just call the unsafe
+             data "non-ascii", even though the actual constraint is
+             somewhat more complex than that. */ 
+
+          if (data - data_start)
+            {
+              const char *error_data
+                = apr_pstrndup (pool, data_start, (data - data_start));
+
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                 "Safe data:\n"
+                 "\"%s\"\n"
+                 "... was followed by non-ascii byte %d.\n"
+                 "\n"
+                 "Non-ascii character detected (see above), "
+                 "and unable to convert to UTF-8.\n",
+                 error_data, *((unsigned char *) data));
+            }
+          else
+            {
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                 "Non-ascii character (code %d) detected, "
+                 "and unable to convert to UTF-8.\n",
+                 *((unsigned char *) data));
+            }
         }
     }
 
