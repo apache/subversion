@@ -21,7 +21,7 @@ AppSupportURL=http://subversion.tigris.org/project_faq.html
 AppUpdatesURL=http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
 DefaultDirName={pf}\Subversion
 DefaultGroupName=Subversion
-LicenseFile=in\subversion\SubversionLicense.txt
+LicenseFile={#= path_setup_in}\subversion\SubversionLicense.txt
 OutputDir={#= path_setup_out}
 OutputBaseFilename=svn-setup
 Compression=none
@@ -49,8 +49,8 @@ Name: quicklaunchicon; Description: Create &Quick Launch icon for the Subversion
 
 [Files]
 ; Subversion files --------------------------------------------------------------
-Source: in\subversion\svn-proxy-template.reg; DestDir: {app}; Components: main; Flags: ignoreversion
-Source: in\subversion\README.txt; DestDir: {app}; Components: main
+Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Components: main; Flags: ignoreversion
+Source: {#= path_svnclient}\README.txt; DestDir: {app}; Components: main
 Source: {#= path_svnclient}\svn.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}; Components: main; Flags: ignoreversion
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}; Components: main; Flags: ignoreversion

@@ -37,6 +37,7 @@ sub SvnVersion;
 
 ################################################################################
 # CONSTANTS AND GLOBAL VARIABLES
+my $g_AutoRun='';
 
 ##########################################################################
 # PROGRAM ENTRANCE
@@ -49,11 +50,23 @@ Main;
 # DOES       This is the program's main function
 sub Main
 {
+    my $Arg=$ARGV[0];
+
+    if ($Arg eq "-a")
+      {
+        $g_AutoRun="y";
+      }
+    
     my ($SvnVersion, $SvnRelease) = &SetVersion;
     my $PathSetupOut = &PathSetupOut;
     my ($Path7Zip_exe, $Path7Zip_sfx) = &Path7Zip;
 
-    print "Setting version $SvnVersion and release $SvnRelease on...\n";
+
+
+    if (! $g_AutoRun)
+      {
+        print "Setting version $SvnVersion and release $SvnRelease on...\n";
+      }
     
     #Make mk7zsfx.bat and 7z.conf in $PathSetupOut
     &Mk7zSfxBat($Path7Zip_exe, $Path7Zip_sfx, $SvnVersion,
@@ -80,7 +93,10 @@ sub Mk7zConf
 
     $Mk7zConf_cnt = &cmn_Template("../templates/7z.conf", \%Values);
 
-    print "  7z.conf in the Inno output directory.\n";
+    if (! $g_AutoRun)
+      {
+        print "  7z.conf in the Inno output directory.\n";
+      }
 
     chdir ".."; #In case the path is relative
 
@@ -114,7 +130,11 @@ sub Mk7zSfxBat
 
     chdir ".."; #In case the paths is relative
 
-    print "  mk7zsfx.bat in the Inno output directory.\n";
+    if (! $g_AutoRun)
+      {
+        print "  mk7zsfx.bat in the Inno output directory.\n";
+      }
+
     open (FH_MKSFXBAT, ">" . "$PathSetupOut/mk7zsfx.bat") ||
       die "ERROR: Could not open $PathSetupOut\\mk7zsfx.bat\n";
 		    print FH_MKSFXBAT $Mk7zSfxBat_cnt;
@@ -131,7 +151,7 @@ sub Path7Zip
     my $Path7Zip_sfx='';
     my $Path7Zip= &cmn_RegGetValue('HKLM/SOFTWARE/7-ZIP', 'Path');
 
-    print "Checking for 7-zip..";
+    print "Checking for 7-zip.." if (! $g_AutoRun);
 
     if (-e "$Path7Zip/7z.exe")
       {
@@ -145,7 +165,7 @@ sub Path7Zip
 
     if ($Path7Zip_exe && $Path7Zip_exe)
       {
-         print "ok. Found in $Path7Zip\n";
+         print "ok. Found in $Path7Zip\n" if (! $g_AutoRun);
       }
     else
       {
@@ -178,6 +198,10 @@ sub PathSetupOut
 sub PathSvn
 {
     my $RetVal = &cmn_ValuePathfile('path_svnclient');
+    my $ErrMsg="ERROR: File not found: Could not find svn.exe in:\n  $RetVal\n";
+    $ErrMsg=$ErrMsg . "Please, check that the path_svnclient variable in the ";
+    $ErrMsg=$ErrMsg . "..\\paths_inno_src.iss\n";
+    $ErrMsg=$ErrMsg . "file are correct and try again\n";
     
     if (-e "$RetVal\\svn.exe")
       {
@@ -185,10 +209,7 @@ sub PathSvn
       }
     else
       {
-        print "ERROR: File not found: Could not find svn.exe in:\n  $RetVal\n",
-              "Please, check that the path_svnclient variable in the ",
-              "..\\paths_inno_src.iss\n";
-        die "file are correct and try again\n";
+        die $ErrMsg;
       }
 
     return $RetVal;
@@ -202,7 +223,9 @@ sub SetVersion
     my ($SvnVersion, $SvnRelease) = &SvnVersion;
     my $Input='';
 
-    print "\nsvn.exe that's mentioned in your paths_inno_src.iss file have ",
+    if (! $g_AutoRun)
+      {
+        print "\nsvn.exe that's mentioned in your paths_inno_src.iss file have ",
           "told me that the\n",
           "version you want to make a distro from is $SvnVersion and that the ",
           "revision is\n",
@@ -213,19 +236,21 @@ sub SetVersion
           "Please, make sure that svn.iss is not opened by another ",
           "applications before you continue:\n\n";
           
-    print "  Version [$SvnVersion]: ";
-    chomp ($Input = <STDIN>);
+          print "  Version [$SvnVersion]: ";
+          
+        chomp ($Input = <STDIN>);
 
-    if ($Input)
-      {
-        $SvnVersion = $Input;
-      }
+        if ($Input)
+          {
+            $SvnVersion = $Input;
+          }
 
-    print "  Release [$SvnRelease]: ";
-    chomp ($Input = <STDIN>);
-    if ($Input)
-      {
-        $SvnVersion = $Input;
+        print "  Release [$SvnRelease]: ";
+        chomp ($Input = <STDIN>);
+        if ($Input)
+          {
+            $SvnVersion = $Input;
+          }
       }
 
     return ($SvnVersion, $SvnRelease);
@@ -239,7 +264,7 @@ sub SetVerSvnIss
     my ($SvnVersion, $SvnRelease) = @_;
     my $IssFileCnt='';
 
-    print "  svn.iss in the Inno Setup directory.\n";
+    print "  svn.iss in the Inno Setup directory.\n" if (! $g_AutoRun);
     
     open (FH_ISSFILE, '../svn.iss') || die "ERROR: Could not open ..\\svn.iss";
     while (<FH_ISSFILE>)
