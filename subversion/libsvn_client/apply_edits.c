@@ -90,15 +90,15 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
                          editor, edit_baton, pool);
 
-  svn_delta_wrap_editor (&wrap_editor,
-                         &wrap_edit_baton,
-                         before_editor,
-                         before_edit_baton,
-                         wrap_editor,
-                         wrap_edit_baton,
-                         after_editor,
-                         after_edit_baton,
-                         pool);
+  svn_delta_wrap_old_editor (&wrap_editor,
+                             &wrap_edit_baton,
+                             before_editor,
+                             before_edit_baton,
+                             wrap_editor,
+                             wrap_edit_baton,
+                             after_editor,
+                             after_edit_baton,
+                             pool);
 
   return svn_delta_xml_auto_parse (delta,
                                    wrap_editor,

@@ -491,10 +491,10 @@ send_to_repos (svn_client_commit_info_t **commit_info,
           svn_delta_compat_wrap (&wrap_trk_editor, &wrap_trk_edit_baton, 
                                  track_editor, track_edit_baton, pool);
                                                       
-          svn_delta_compose_editors (&editor, &edit_baton,
-                                     wrap_cmt_editor, wrap_cmt_edit_baton,
-                                     wrap_trk_editor, wrap_trk_edit_baton, 
-                                     pool);
+          svn_delta_compose_old_editors (&editor, &edit_baton,
+                                         wrap_cmt_editor, wrap_cmt_edit_baton,
+                                         wrap_trk_editor, wrap_trk_edit_baton, 
+                                         pool);
         }        
     }
   else   /* Else we're committing to an RA layer. */
@@ -557,17 +557,17 @@ send_to_repos (svn_client_commit_info_t **commit_info,
                                 base_path,
                                 pool));
   
-  svn_delta_compose_editors (&editor, &edit_baton,
-                             editor, edit_baton,
-                             test_editor, test_edit_baton, pool);
+  svn_delta_compose_old_editors (&editor, &edit_baton,
+                                 editor, edit_baton,
+                                 test_editor, test_edit_baton, pool);
 #endif /* 0 */
 
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */
-  svn_delta_wrap_editor (&editor, &edit_baton,
-                         before_editor, before_edit_baton,
-                         editor, edit_baton, 
-                         after_editor, after_edit_baton, pool);
+  svn_delta_wrap_old_editor (&editor, &edit_baton,
+                             before_editor, before_edit_baton,
+                             editor, edit_baton, 
+                             after_editor, after_edit_baton, pool);
   
   /* Do the commit. */
   if (is_import)

@@ -1196,10 +1196,10 @@ svn_error_t * svn_ra_dav__get_commit_editor(
 
 
   /* Compose the two editors, returning the composition by reference. */
-  svn_delta_compose_editors(editor, edit_baton,
-                            wrapped_trk_editor, wrapped_trk_baton,
-                            wrapped_editor, wrapped_baton,
-                            ras->pool);
+  svn_delta_compose_old_editors(editor, edit_baton,
+                                wrapped_trk_editor, wrapped_trk_baton,
+                                wrapped_editor, wrapped_baton,
+                                ras->pool);
 
   return NULL;
 }

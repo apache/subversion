@@ -399,10 +399,10 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Co-mingle the before- and after-editors with the commit
      editor. */
-  svn_delta_wrap_editor (&editor, &edit_baton,
-                         before_editor, before_edit_baton,
-                         editor, edit_baton,
-                         after_editor, after_edit_baton, pool);
+  svn_delta_wrap_old_editor (&editor, &edit_baton,
+                             before_editor, before_edit_baton,
+                             editor, edit_baton,
+                             after_editor, after_edit_baton, pool);
 
   /* Crawl the working copy, committing as if SRC_PATH was scheduled
      for a copy. */
@@ -537,7 +537,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                              editor, edit_baton, pool);
 
       
-      svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
+      svn_delta_wrap_old_editor (&wrap_editor, &wrap_edit_baton,
                              before_editor, before_edit_baton,
                              wrap_editor, wrap_edit_baton,
                              after_editor, after_edit_baton, pool);
