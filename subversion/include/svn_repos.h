@@ -273,12 +273,18 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
  * it drive an update editor (using @c svn_repos_delta_dirs()), then
  * abort the transaction.  If an error occurs during the driving of
  * the editor, we do NOT abort the edit; that responsibility belongs
- * to the caller, if it happens at all.
+ * to the caller, if it happens at all.  The fs transaction will be
+ * aborted even if the editor drive fails, so the caller does not need
+ * to clean up.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton);
 
 
-/** The report-driver is bailing, so abort the fs transaction. */
+/** The report-driver is bailing, so abort the fs transaction.  This
+ * function can be called anytime before @c svn_repos_finish_report() is
+ * called.  No other reporting functions should be called after calling
+ * this function.
+ */
 svn_error_t *svn_repos_abort_report (void *report_baton);
 
 
