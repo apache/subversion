@@ -620,7 +620,7 @@ erase_unversioned_from_wc (const char *path,
  * deletion from the physical filesystem.  For directories it involves the
  * deletion from the filesystem of all unversioned children, and all
  * versioned children that are files. By the time we get here, added but
- * not committed items will have been scheduled for detetion which means
+ * not committed items will have been scheduled for deletion which means
  * they have become unversioned.
  *
  * The result is that all that remains are versioned directories, each with
@@ -763,7 +763,7 @@ svn_wc_delete (const char *path,
       apr_hash_t *entries;
       const svn_wc_entry_t *entry_in_parent;
 
-      /* The deleted state is only avaliable in the entry in parent's
+      /* The deleted state is only available in the entry in parent's
          entries file */
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, parent_access, TRUE, pool));
