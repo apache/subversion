@@ -96,9 +96,11 @@ svn_xml_is_xml_safe (const char *data, apr_size_t len)
   const char *end = data + len;
   const char *p;
 
+  /* ### We could accept valid UTF-8 as being XML-safe, but what's wrong
+     ### with being conservative? */
   for (p = data; p < end; p++)
     {
-      if (! xml_char_validity[(int)*p])
+      if (! xml_char_validity[(unsigned char)*p])
         return FALSE;
     }
   return TRUE;
