@@ -79,13 +79,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r13111
-    Fix improper UTF-8 conversion for wc-to-wc directory moves/copies.
-    Justification:
-      Regression from 1.0, move/copy can fail in some non-UTF-8 locales.
-    Votes:
-      +1: philip, lundblad, maxb
-
   * r12576
     Fix JavaHL run-time link error by properly depending on libsvn_repos.
     Justification: 
