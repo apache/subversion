@@ -38,10 +38,8 @@ libsvn_fs_la_SOURCES =				\
 
 # Set aside for the moment:
 #		       delta.c			\
-#		       dir.c			\
 #		       file.c			\
 #                      file.h                   \
-#		       node.c			\
 #		       rep.c			\
 #		       revision.c               \
 #                      revision.h
