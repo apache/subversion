@@ -56,8 +56,7 @@ svn_client_commit (svn_string_t *path,
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error opening %s", xml_dst->data);
 
-  err = svn_delta_get_xml_editor (svn_io_file_writer,
-                                  dst,
+  err = svn_delta_get_xml_editor (svn_stream_from_aprfile (dst, pool),
                                   &editor,
                                   &edit_baton,
                                   pool);

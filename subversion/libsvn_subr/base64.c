@@ -34,8 +34,7 @@ static const char base64tab[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 /* Binary input --> base64-encoded output */
 
 struct encode_baton {
-  svn_write_fn_t *output;
-  void *output_baton;
+  svn_stream_t *output;
   char buf[3];                  /* Bytes waiting to be encoded */
   int buflen;                   /* Number of bytes waiting */
   int linelen;                  /* Bytes output so far on this line */
@@ -132,33 +131,31 @@ encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   /* Write the output, clean up, go home.  */
   enclen = encoded->len;
   if (enclen != 0)
-    err = eb->output (eb->output_baton, encoded->data, &enclen, pool);
+    err = svn_stream_write (eb->output, encoded->data, &enclen);
   apr_destroy_pool (subpool);
   if (*len == 0)
     {
-      apr_destroy_pool (eb->pool);
       if (err == SVN_NO_ERROR)
-	err = eb->output (eb->output_baton, NULL, len, pool);
+	err = svn_stream_write (eb->output, NULL, len);
+      apr_destroy_pool (eb->pool);
     }
   return err;
 }
 
 
 void
-svn_base64_encode (svn_write_fn_t *output, void *output_baton,
-		   apr_pool_t *pool,
-		   svn_write_fn_t **encode, void **encode_baton)
+svn_base64_encode (svn_stream_t *output, apr_pool_t *pool,
+                   svn_stream_t **encode)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct encode_baton *eb = apr_palloc (subpool, sizeof (*eb));
 
   eb->output = output;
-  eb->output_baton = output_baton;
   eb->buflen = 0;
   eb->linelen = 0;
   eb->pool = subpool;
-  *encode = encode_data;
-  *encode_baton = eb;
+  *encode = svn_stream_create (eb, pool);
+  svn_stream_set_write (*encode, encode_data);
 }
 
 
@@ -179,8 +176,7 @@ svn_base64_encode_string (svn_string_t *str, apr_pool_t *pool)
 /* Base64-encoded input --> binary output */
 
 struct decode_baton {
-  svn_write_fn_t *output;
-  void *output_baton;
+  svn_stream_t *output;
   unsigned char buf[4];         /* Bytes waiting to be decoded */
   int buflen;                   /* Number of bytes waiting */
   svn_boolean_t done;		/* True if we already saw an '=' */
@@ -254,7 +250,7 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   if (*len == 0)
     {
       /* No more data to decode; pass that on to db->output and clean up.  */
-      err = db->output (db->output_baton, NULL, len, pool);
+      err = svn_stream_write (db->output, NULL, len);
       apr_destroy_pool (db->pool);
       return err;
     }
@@ -267,27 +263,25 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   /* Write the output, clean up, go home.  */
   declen = decoded->len;
   if (declen != 0)
-    err = db->output (db->output_baton, decoded->data, &declen, pool);
+    err = svn_stream_write (db->output, decoded->data, &declen);
   apr_destroy_pool (subpool);
   return err;
 }
 
 
 void
-svn_base64_decode (svn_write_fn_t *output, void *output_baton,
-		   apr_pool_t *pool,
-		   svn_write_fn_t **decode, void **decode_baton)
+svn_base64_decode (svn_stream_t *output, apr_pool_t *pool,
+                   svn_stream_t **decode)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct decode_baton *db = apr_palloc (subpool, sizeof (*db));
 
   db->output = output;
-  db->output_baton = output_baton;
   db->buflen = 0;
   db->done = FALSE;
   db->pool = subpool;
-  *decode = decode_data;
-  *decode_baton = db;
+  *decode = svn_stream_create (db, pool);
+  svn_stream_set_write (*decode, decode_data);
 }
 
 

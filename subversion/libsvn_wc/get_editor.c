@@ -278,21 +278,6 @@ free_file_baton (struct file_baton *fb)
 /*** Helpers for the editor callbacks. ***/
 
 static svn_error_t *
-write_to_file (void *baton, const char *data, apr_size_t *len,
-               apr_pool_t *pool)
-{
-  apr_file_t *fp = baton;
-  apr_status_t status;
-
-  status = apr_full_write (fp, data, *len, len);
-  if (status)
-    return svn_error_create (status, 0, NULL, pool,
-                             "Can't write new base file");
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
@@ -854,8 +839,8 @@ apply_textdelta (void *file_baton,
   
   /* Prepare to apply the delta.  */
   svn_txdelta_apply (svn_stream_from_aprfile (hb->source, subpool),
-                     write_to_file, hb->dest, subpool, &hb->apply_handler,
-                     &hb->apply_baton);
+                     svn_stream_from_aprfile (hb->dest, subpool),
+                     subpool, &hb->apply_handler, &hb->apply_baton);
   
   hb->pool = subpool;
   hb->fb = fb;

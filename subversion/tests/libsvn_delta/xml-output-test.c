@@ -26,17 +26,6 @@
  * code and see if it works.  It doesn't verify the output and can't
  * be hooked into the test framework. */
 
-/* NOTE: Does no error-checking.  */
-static svn_error_t *
-write_to_file (void *baton, const char *data, apr_size_t *len,
-               apr_pool_t *pool)
-{
-  FILE *fp = baton;
-
-  *len = fwrite (data, 1, *len, fp);
-  return SVN_NO_ERROR;
-}
-
 int main(int argc, char **argv)
 {
   apr_pool_t *pool;
@@ -71,7 +60,8 @@ int main(int argc, char **argv)
   window.ops[0].length = 10;
   window.new_data = svn_string_create ("test delta", pool);
 
-  svn_delta_get_xml_editor (write_to_file, stdout, &editor, &edit_baton, pool);
+  svn_delta_get_xml_editor (svn_stream_from_stdio (stdout, pool),
+			    &editor, &edit_baton, pool);
   editor->replace_root (edit_baton, &root_baton);
   editor->replace_directory (foo_string, root_baton, aaa_string, 2,
 			     &dir_baton);

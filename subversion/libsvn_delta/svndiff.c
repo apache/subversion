@@ -29,8 +29,7 @@
    window handler.  We only use it to record the write function and
    baton passed to svn_txdelta_to_svndiff ().  */
 struct encoder_baton {
-  svn_write_fn_t *write_fn;
-  void *write_baton;
+  svn_stream_t *output;
   svn_boolean_t header_done;
   apr_pool_t *pool;
 };
@@ -110,7 +109,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (eb->header_done == FALSE)
     {
       len = 4;
-      err = eb->write_fn (eb->write_baton, "SVN\0", &len, pool);
+      err = svn_stream_write (eb->output, "SVN\0", &len);
       if (err != SVN_NO_ERROR)
         return err;
       eb->header_done = TRUE;
@@ -120,7 +119,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       /* We're done; pass the word on to the output function and clean up.  */
       len = 0;
-      err = eb->write_fn (eb->write_baton, NULL, &len, eb->pool);
+      err = svn_stream_write (eb->output, NULL, &len);
       apr_destroy_pool (eb->pool);
       return SVN_NO_ERROR;
     }
@@ -154,16 +153,16 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Write out the window.  */
   len = header->len;
-  err = eb->write_fn (eb->write_baton, header->data, &len, pool);
+  err = svn_stream_write (eb->output, header->data, &len);
   if (err == SVN_NO_ERROR && instructions->len > 0)
     {
       len = instructions->len;
-      err = eb->write_fn (eb->write_baton, instructions->data, &len, pool);
+      err = svn_stream_write (eb->output, instructions->data, &len);
     }
   if (err == SVN_NO_ERROR && window->new_data->len > 0)
     {
       len = window->new_data->len;
-      err = eb->write_fn (eb->write_baton, window->new_data->data, &len, pool);
+      err = svn_stream_write (eb->output, window->new_data->data, &len);
     }
 
   apr_destroy_pool (pool);
@@ -171,8 +170,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 }
 
 void
-svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
-			void *write_baton,
+svn_txdelta_to_svndiff (svn_stream_t *output,
 			apr_pool_t *pool,
 			svn_txdelta_window_handler_t **handler,
 			void **handler_baton)
@@ -181,8 +179,7 @@ svn_txdelta_to_svndiff (svn_write_fn_t *write_fn,
   struct encoder_baton *eb;
 
   eb = apr_palloc (subpool, sizeof (*eb));
-  eb->write_fn = write_fn;
-  eb->write_baton = write_baton;
+  eb->output = output;
   eb->header_done = FALSE;
   eb->pool = subpool;
 
@@ -477,8 +474,7 @@ void
 svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                            void *handler_baton,
                            apr_pool_t *pool,
-                           svn_write_fn_t **write_fn,
-                           void **write_baton)
+                           svn_stream_t **parse)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   struct decode_baton *db = apr_palloc (pool, sizeof (*db));
@@ -491,8 +487,8 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
   db->last_sview_offset = 0;
   db->last_sview_len = 0;
   db->header_bytes = 0;
-  *write_fn = write_handler;
-  *write_baton = db;
+  *parse = svn_stream_create (db, pool);
+  svn_stream_set_write (*parse, write_handler);
 }
 
 

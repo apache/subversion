@@ -33,6 +33,7 @@ myrand (unsigned long *seed)
   return *seed;
 }
 
+
 /* Generate a temporary file containing sort-of random data.  Diffs
    between files of random data tend to be pretty boring, so we try to
    make sure there are a bunch of common substrings between two runs
@@ -67,6 +68,7 @@ generate_random_file (int maxlen, unsigned long subseed_base,
   return fp;
 }
 
+
 static FILE *
 copy_tempfile (FILE *fp)
 {
@@ -81,16 +83,6 @@ copy_tempfile (FILE *fp)
   return newfp;
 }
 
-/* NOTE: Does no error-checking.  */
-static svn_error_t *
-write_to_file (void *baton, const char *data, apr_size_t *len,
-               apr_pool_t *pool)
-{
-  FILE *fp = baton;
-
-  *len = fwrite (data, 1, *len, fp);
-  return SVN_NO_ERROR;
-}
 
 int
 main (int argc, const char * const *argv)
@@ -104,11 +96,11 @@ main (int argc, const char * const *argv)
   unsigned long seed, seed_save, subseed_base;
   int seed_set = 0, maxlen = DEFAULT_MAXLEN, iterations = DEFAULT_ITERATIONS;
   int c1, c2, i;
-  svn_txdelta_stream_t *stream;
+  svn_txdelta_stream_t *txdelta_stream;
   svn_txdelta_window_t *window;
   svn_txdelta_window_handler_t *handler;
-  svn_write_fn_t *write_fn;
-  void *handler_baton, *write_baton;
+  void *handler_baton;
+  svn_stream_t *stream;
   svn_error_t *err = SVN_NO_ERROR;
 
   progname = strrchr (argv[0], '/');
@@ -167,24 +159,22 @@ main (int argc, const char * const *argv)
 
       /* Make stage 4: apply the text delta.  */
       svn_txdelta_apply (svn_stream_from_stdio (source_copy, pool),
-                         write_to_file, target_regen, pool,
-                         &handler, &handler_baton);
+                         svn_stream_from_stdio (target_regen, pool),
+                         pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
-      svn_txdelta_parse_svndiff (handler, handler_baton, pool,
-                                 &write_fn, &write_baton);
+      svn_txdelta_parse_svndiff (handler, handler_baton, pool, &stream);
 
       /* Make stage 2: encode the text delta in svndiff format.  */
-      svn_txdelta_to_svndiff (write_fn, write_baton, pool, &handler,
-                              &handler_baton);
+      svn_txdelta_to_svndiff (stream, pool, &handler, &handler_baton);
 
       /* Make stage 1: create the text delta.  */
-      svn_txdelta (&stream, svn_stream_from_stdio (source, pool),
+      svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source, pool),
                    svn_stream_from_stdio (target, pool), pool);
 
       while (err == SVN_NO_ERROR)
         {
-          err = svn_txdelta_next_window (&window, stream);
+          err = svn_txdelta_next_window (&window, txdelta_stream);
           if (err == SVN_NO_ERROR)
             err = handler (window, handler_baton);
           if (window == NULL)
@@ -197,7 +187,7 @@ main (int argc, const char * const *argv)
                   progname, seed_save);
           exit (1);
         }
-      svn_txdelta_free (stream);
+      svn_txdelta_free (txdelta_stream);
       apr_destroy_pool (pool);
 
       /* Compare the two files.  */

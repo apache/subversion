@@ -55,8 +55,7 @@ enum elemtype {
 
 struct edit_baton
 {
-  svn_write_fn_t *output;
-  void *output_baton;
+  svn_stream_t *output;
   enum elemtype elem;           /* Current element we are inside at
                                    the end of a call.  One of
                                    elem_dir, elem_dir_prop_delta,
@@ -252,7 +251,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
   eb->elem = dirfile;
 
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -283,7 +282,7 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
                            "name", name, NULL);
 
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, eb->pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -306,7 +305,7 @@ replace_root (void *edit_baton,
   eb->elem = elem_dir;
 
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, eb->pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -327,7 +326,7 @@ delete_item (svn_string_t *name, void *parent_baton)
                          "name", name, NULL);
 
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, eb->pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (pool);
   return err;
 }
@@ -399,7 +398,7 @@ close_directory (void *dir_baton)
     eb->elem = elem_delta_pkg;
 
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, db->pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (db->pool);
   return err;
 }
@@ -458,7 +457,7 @@ output_svndiff_data (void *baton, const char *data, apr_size_t *len,
     str = svn_string_ncreate (data, *len, subpool);
 
   slen = str->len;
-  err = eb->output (eb->output_baton, str->data, &slen, subpool);
+  err = svn_stream_write (eb->output, str->data, &slen);
   apr_destroy_pool (subpool);
   return err;
 }
@@ -475,8 +474,7 @@ apply_textdelta (void *file_baton,
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
-  svn_write_fn_t *base64_encoder;
-  void *base64_baton;
+  svn_stream_t *base64_encoder, *output;
 
   if (fb->txdelta_id == 0)
     {
@@ -499,13 +497,15 @@ apply_textdelta (void *file_baton,
   fb->txdelta_id = -1;
 
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (pool);
 
-  svn_base64_encode (output_svndiff_data, fb, eb->pool,
-                     &base64_encoder, &base64_baton);
-  svn_txdelta_to_svndiff (base64_encoder, base64_baton, eb->pool,
-                          handler, handler_baton);
+  /* Set up a handler which will write base64-encoded svndiff data to
+     the editor's output stream via output_svndiff_data().  */
+  output = svn_stream_create (fb, fb->pool);
+  svn_stream_set_write (output, output_svndiff_data);
+  svn_base64_encode (output, eb->pool, &base64_encoder);
+  svn_txdelta_to_svndiff (base64_encoder, eb->pool, handler, handler_baton);
 
   return err;
 }
@@ -541,7 +541,7 @@ close_file (void *file_baton)
       svn_xml_make_close_tag (&str, fb->pool, outertag);
 
       len = str->len;
-      err = eb->output (eb->output_baton, str->data, &len, fb->pool);
+      err = svn_stream_write (eb->output, str->data, &len);
       eb->curfile = NULL;
       eb->elem = elem_tree_delta;
     }
@@ -560,7 +560,7 @@ close_edit (void *edit_baton)
 
   svn_xml_make_close_tag (&str, eb->pool, "delta-pkg");
   len = str->len;
-  err = eb->output (eb->output_baton, str->data, &len, eb->pool);
+  err = svn_stream_write (eb->output, str->data, &len);
   apr_destroy_pool (eb->pool);
   return err;
 }
@@ -584,8 +584,7 @@ static const svn_delta_edit_fns_t tree_editor =
 
 
 svn_error_t *
-svn_delta_get_xml_editor (svn_write_fn_t *output,
-			  void *output_baton,
+svn_delta_get_xml_editor (svn_stream_t *output,
 			  const svn_delta_edit_fns_t **editor,
 			  void **edit_baton,
 			  apr_pool_t *pool)
@@ -597,7 +596,6 @@ svn_delta_get_xml_editor (svn_write_fn_t *output,
   eb = apr_palloc (subpool, sizeof (*eb));
   eb->pool = subpool;
   eb->output = output;
-  eb->output_baton = output_baton;
   eb->curfile = NULL;
   eb->txdelta_id_counter = 1;
 
