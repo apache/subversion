@@ -1,11 +1,13 @@
 <appendix id="svn-ap-b">
   <title>CVS Repository Migration</title>
 
-  <para>Since Subversion aims to be the successor to CVS, it only
-    makes sense to provide tools to help that migration.  Subversion
-    has a script that migrates data from a CVS repository to a
-    Subversion repository.  Yes, you <emphasis>can</emphasis> take
-    your CVS history with you into the brave new world.</para>
+  <simplesect>
+    <para>Since Subversion aims to be the successor to CVS, it only
+      makes sense to provide tools to help that migration.  Subversion
+      has a script that migrates data from a CVS repository to a
+      Subversion repository.  Yes, you <emphasis>can</emphasis> take
+      your CVS history with you into the brave new world.</para>
+  </simplesect>
 
   <sect1 id="svn-ap-b-sect-1">
     <title>Requirements</title>
