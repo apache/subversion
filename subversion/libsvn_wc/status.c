@@ -637,8 +637,7 @@ get_dir_status (apr_hash_t *statushash,
                                            notify_baton, pool));
                 }
             }
-          else if ((fullpath_kind == svn_node_file) 
-                   || (fullpath_kind == svn_node_none))
+          else
             {
               /* File entries are ... just fine! */
               SVN_ERR (add_status_structure 
@@ -674,7 +673,7 @@ svn_wc_statuses (apr_hash_t *statushash,
   /* If path points to just one file, or at least to just one
      non-directory, store just one status structure in the
      STATUSHASH and return. */
-  if ((kind == svn_node_file) || (kind == svn_node_none))
+  if (kind != svn_node_dir)
     {
       const svn_wc_entry_t *parent_entry;
       /* Get the entry for this file. Place it into the specified pool since
