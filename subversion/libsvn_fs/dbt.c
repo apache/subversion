@@ -142,7 +142,7 @@ svn_fs__id_to_dbt (DBT *dbt,
 		   svn_fs_id_t *id,
 		   apr_pool_t *pool)
 {
-  svn_string_t *unparsed_id = svn_fs__unparse_id (id, pool);
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, pool);
   svn_fs__set_dbt (dbt, unparsed_id->data, unparsed_id->len);
   return dbt;
 }

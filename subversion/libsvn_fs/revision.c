@@ -52,7 +52,6 @@
 #include "fs.h"
 #include "revision.h"
 #include "err.h"
-#include "id.h"
 #include "convert-size.h"
 #include "skel.h"
 #include "dbt.h"
@@ -147,7 +146,7 @@ svn_fs__revision_root (svn_fs_id_t **id_p,
   if (! id_skel->is_atom)
     goto corrupt;
 
-  id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
+  id = svn_fs_parse_id (id_skel->data, id_skel->len, pool);
   if (! id)
     goto corrupt;
 

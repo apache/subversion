@@ -59,6 +59,7 @@
 #include "convert-size.h"
 #include "dbt.h"
 #include "err.h"
+#include "id.h"
 
 
 /* The private structure underlying the public svn_fs_txn_t typedef.  */
@@ -464,8 +465,8 @@ replace_root_body (void *baton,
       /* If there is a node ID, try to parse it.  */
       if (root_skel->len > 0)
 	{
-	  svn_txn->root = svn_fs__parse_id (root_skel->data, root_skel->len,
-					    svn_txn->pool);
+	  svn_txn->root = svn_fs_parse_id (root_skel->data, root_skel->len,
+					   svn_txn->pool);
 	  if (! svn_txn->root)
 	    return corrupt_txn (svn_txn);
 	}
@@ -508,7 +509,7 @@ replace_root_body (void *baton,
 	 no root directory when we began.  */
       {
 	svn_string_t *unparsed_txn_root_id
-	  = svn_fs__unparse_id (svn_fs__node_id (txn_root), svn_txn->pool);
+	  = svn_fs_unparse_id (svn_fs__node_id (txn_root), svn_txn->pool);
 	root_skel->data = unparsed_txn_root_id->data;
 	root_skel->len = unparsed_txn_root_id->len;
 

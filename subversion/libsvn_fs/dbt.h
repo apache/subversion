@@ -49,9 +49,10 @@
 #ifndef SVN_LIBSVN_FS_DBT_H
 #define SVN_LIBSVN_FS_DBT_H
 
+#include <apr_pools.h>
+
+#include "svn_fs.h"
 #include "db.h"
-#include "apr_pools.h"
-#include "id.h"
 #include "skel.h"
 
 /* Set all fields of DBT to zero.  Return DBT.  */
