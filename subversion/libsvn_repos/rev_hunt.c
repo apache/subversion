@@ -288,6 +288,13 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
 
   SVN_ERR (svn_fs_node_history (&history, root, fs_path, lastpool));
 
+  /* Since paths that are different according to strcmp may still be
+     equivalent (due to number of consecutive slashes and the fact that
+     "" is the same as "/"), we get the "canonical" path in the first
+     iteration below so that the comparison after the loop will work
+     correctly. */
+  fs_path = NULL;
+
   while (1)
     {
       apr_pool_t *tmppool;
@@ -299,6 +306,9 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
 
       SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
 
+      if (!fs_path)
+        fs_path = path;
+
       if (revision <= peg_revision)
         break;
 
@@ -309,6 +319,11 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
       currpool = tmppool;
     }
 
+  /* We must have had at least one iteration above where we
+     reassigned fs_path. Else, the path wouldn't have existed at
+     future_revision and svn_fs_history would have thrown. */
+  assert (fs_path != NULL);
+     
   *is_ancestor = (history && strcmp (path, fs_path) == 0);
 
   return SVN_NO_ERROR;
