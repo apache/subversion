@@ -98,15 +98,6 @@ Candidate changes:
     Votes:
       +1: breser
 
-  * r9144
-    Fix a problem that return values of apply_textdelta of a Perl editor
-    is different when stacked.
-    Justification: Perl bindings bug.
-    Votes:
-      +1: clkao
-      +0: breser (I'm not terribly fond of this logic and not terribly familiar
-                  with the SVN::Delta code)
-
   * r9358
     Make mod_authz_svn less restrictive per issue #1821.
     Votes:
