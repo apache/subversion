@@ -16,31 +16,35 @@
  */
 
 import junit.framework.*;
+import org.tigris.subversion.lib.Nodekind;
 
 /**
- * JUnits tests for the Java subversion binding helper functions
+ * Testcases for the native functions with prefix "nodekind" 
+ * in the class NativeWrapper
+ *
+ * @see NativeWrapper
+ * @see org.tigris.subversion.lib.Nodekind
  */
-public class AllTests {
-
-    public static void main( String [] args )
+public class NodekindTests extends TestCase
+{
+    public NodekindTests(String name)
 	{
-	    junit.textui.TestRunner.run( suite() );
+	    super(name);
 	}
 
-    public static Test suite( )
+    public void testNodekindCreate()
 	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
+	    Nodekind nodekind = NativeWrapper.nodekindCreate(0);
+	    
+	    assertNotNull( nodekind );
+	}
 
-	    //add tests here
-	    suite.addTestSuite( DateTests.class );
-	    suite.addTestSuite( EntryTests.class );
-	    suite.addTestSuite( VectorTests.class );
-	    suite.addTestSuite( HashtableTests.class );
-	    suite.addTestSuite( MiscTests.class );
-	    suite.addTestSuite( StatusTests.class );
-	    suite.addTestSuite( NodekindTests.class );
+    public void testNodekindCreateIntegrity()
+	{
+	    int kind = 55;
+	    Nodekind nodekind = NativeWrapper.nodekindCreate(kind);
 
-	    return suite;
+	    assertEquals( kind, nodekind.getKind() );
 	}
 }
+
