@@ -28,6 +28,7 @@
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -56,8 +57,6 @@ struct external_item_t
 
 };
 
-
-#if 0 /* ### temporarily commented out, while unused */
 
 /* Set *EXTERNALS_P to a hash table whose keys are target subdir
  * names, and values are `struct external_item_t *' objects,
@@ -118,6 +117,8 @@ parse_externals_description (apr_hash_t **externals_p,
   return SVN_NO_ERROR;
 }
 
+
+#if 0 /* ### temporarily commented out, while unused */
 
 /* Check out the external items described by DESCRIPTION into PATH.
  * Use POOL for any temporary allocation.
@@ -182,6 +183,118 @@ checkout_externals_description (const char *description,
 #endif /* 0, temporarily commented out, while unused */
 
 
+/* Closure for handle_external_item_change. */
+struct handle_external_item_change_baton
+{
+  /* As returned by parse_externals_description(). */
+  apr_hash_t *new_desc;
+  apr_hash_t *old_desc;
+
+  /* The directory that has this externals property. */
+  const char *parent_dir;
+
+  /* Passed through to svn_client_checkout(). */
+  const svn_delta_editor_t *before_editor;
+  void *before_edit_baton;
+  const svn_delta_editor_t *after_editor;
+  void *after_edit_baton;
+  svn_client_auth_baton_t *auth_baton;
+
+  apr_pool_t *pool;
+};
+
+
+/* This implements the `svn_hash_diff_func_t' interface.
+   BATON is of type `struct handle_external_item_change_baton *'.  
+*/
+static svn_error_t *
+handle_external_item_change (const void *key, apr_ssize_t klen,
+                             enum svn_hash_diff_key_status status,
+                             void *baton)
+{
+#if 0 /* temporarily unused */
+  struct handle_external_item_change_baton *ib = baton;
+  const char *target_subdir;
+  void *val;
+#endif /* 0 */
+
+  /* There's one potential ugliness here.  If a target subdir changed,
+     but its URL did not, then we only want to rename the subdir,
+     and not check out the URL again.  Thus, for subdir changes, we
+     "sneak around the back" and look in ib->new_desc, ib->old_desc
+     to check if anything else in this parent_dir has the same URL. */
+
+  switch (status)
+    {
+    case svn_hash_diff_key_both:
+    case svn_hash_diff_key_a:
+    case svn_hash_diff_key_b:
+    default:
+      /* ### in progress */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Closure for handle_externals_change. */
+struct handle_externals_desc_change_baton
+{
+  /* As returned by svn_wc_edited_externals(). */
+  apr_hash_t *externals_new;
+  apr_hash_t *externals_old;
+
+  /* Passed through to handle_external_item_change_baton. */
+  const svn_delta_editor_t *before_editor;
+  void *before_edit_baton;
+  const svn_delta_editor_t *after_editor;
+  void *after_edit_baton;
+  svn_client_auth_baton_t *auth_baton;
+
+  apr_pool_t *pool;
+};
+
+
+/* This implements the `svn_hash_diff_func_t' interface.
+   BATON is of type `struct handle_externals_desc_change_baton *'.  
+*/
+static svn_error_t *
+handle_externals_desc_change (const void *key, apr_ssize_t klen,
+                              enum svn_hash_diff_key_status status,
+                              void *baton)
+{
+  struct handle_externals_desc_change_baton *cb = baton;
+  struct handle_external_item_change_baton ib;
+  const char *old_desc_text, *new_desc_text;
+  apr_hash_t *old_desc, *new_desc;
+
+  if ((old_desc_text = apr_hash_get (cb->externals_old, key, klen)))
+    SVN_ERR (parse_externals_description (&old_desc, old_desc_text, cb->pool));
+  else
+    old_desc = NULL;
+
+  if ((new_desc_text = apr_hash_get (cb->externals_new, key, klen)))
+    SVN_ERR (parse_externals_description (&new_desc, new_desc_text, cb->pool));
+  else
+    new_desc = NULL;
+
+  ib.old_desc          = old_desc;
+  ib.new_desc          = new_desc;
+  ib.parent_dir        = (const char *) key;
+  ib.before_editor     = cb->before_editor;
+  ib.before_edit_baton = cb->before_edit_baton;
+  ib.after_editor      = cb->after_editor;
+  ib.after_edit_baton  = cb->after_edit_baton;
+  ib.auth_baton        = cb->auth_baton;
+  ib.pool              = cb->pool;
+
+  SVN_ERR (svn_hash_diff (old_desc, new_desc,
+                          handle_external_item_change, &ib, cb->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client__handle_externals_changes (void *traversal_info,
                                       const svn_delta_editor_t *before_editor,
@@ -192,10 +305,20 @@ svn_client__handle_externals_changes (void *traversal_info,
                                       apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new;
-  
+  struct handle_externals_desc_change_baton cb;
+
   svn_wc_edited_externals (&externals_old, &externals_new, traversal_info);
 
-  /* ### in progress */
+  cb.externals_new     = externals_new;
+  cb.externals_old     = externals_old;
+  cb.before_editor     = before_editor;
+  cb.before_edit_baton = before_edit_baton;
+  cb.after_editor      = after_editor;
+  cb.after_edit_baton  = after_edit_baton;
+  cb.auth_baton        = auth_baton;
+
+  SVN_ERR (svn_hash_diff (externals_old, externals_new,
+                          handle_externals_desc_change, &cb, pool));
 
   return SVN_NO_ERROR;
 }
