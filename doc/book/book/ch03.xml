@@ -1964,11 +1964,10 @@ $ svn list --verbose http://svn.collab.net/repos/svn
    2785 sally               Jul 29 19:07 trunk/
       </screen>
 
-      <para>The columns tell you if a file has any properties
-        (<quote>P</quote> if it does, <quote>_</quote> if it doesn't),
-        the revision it was last updated at, the user who last updated
-        it, the size if it is a file, the date it was last updated,
-        and the item's name.</para>
+      <para>The columns tell you the revision at which the file or
+        directory was last modified, the user who modified it, the size
+        if it is a file, the date it was last modified, and the item's
+        name.</para>
  
     </sect2>
 
