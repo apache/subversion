@@ -1184,7 +1184,12 @@ close_file (void *file_baton)
              kff todo: maybe this should be abstracted into
              svn_path_whatever, but it's so simple I'm inclined not
              to.  On the other hand, the +1/-1's are for slashes, and
-             technically only svn_path should know such dirty details 
+             technically only svn_path should know such dirty details.
+             On the third hand, whatever the separator char is, it's
+             still likely to be one char, so the code would work even
+             if it weren't slash.
+
+             Sometimes I think I think too much.  I think.
           */ 
           reject_filename = svn_string_ncreate
             (reject_filename->data + fb->dir_baton->path->len + 1,
