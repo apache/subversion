@@ -202,11 +202,11 @@ text-delta-parsing universe.  The pdelta parser can send commands to
 the caller's svn_walk_t callbacks in two different, *non*-mutually
 exclusive ways.
 
-  1.  If the svn_walk_t callbacks "apply_*_propchange" are non-NULL:
+  (1) If the svn_walk_t callbacks "apply_*_propchange" are non-NULL:
   buffer the propname and propvalue completely into RAM, and send it
   to these callbacks.
 
-  2.  If the svn_walk_t callbacks "begin_*delta" are non-NULL: buffer
+  (2) If the svn_walk_t callbacks "begin_*delta" are non-NULL: buffer
   the propname and propvalue gradually, and send off `chunks' to these
   handlers.  This is similar to the text-delta strategy.
       
@@ -306,24 +306,24 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*delete) (svn_string_t *name,
 			  void *walk_baton, void *parent_baton);
 
-  /* If these routines are non-NULL, then entire RAM-buffered
-     PROPCHANGE will be sent all at once to them. */
+  /* Handle property changes a full change at a time.  This is not a
+     completely streamy interface, but it's probably what we'll use
+     for the forseeable future.  If we ever get properties whose names
+     or values are huge, there is a fully streamy interface available
+     too (see (1) above, but note that this would imply a change to
+     how property names are set in XML as well, since names are
+     currently XML attributes and therefore can't really be streamed
+     at parse time anyway). */
   svn_error_t *(apply_dir_propchange) (svn_propchange_t *propchange,
                                        void *walk_baton, void *parent_baton);
 
   svn_error_t *(apply_file_propchange) (svn_propchange_t *propchange,
                                         void *walk_baton, void *parent_baton);
 
-  svn_error_t *(apply_dir_propchange) (svn_propchange_t *propchange,
-                                       void *walk_baton, void *parent_baton);
+  svn_error_t *(apply_dirent_propchange) (svn_propchange_t *propchange,
+                                          void *walk_baton,
+                                          void *parent_baton);
                                    
-                                   
-  /* Apply the property delta ENTRY_PDELTA to the property list of the
-     directory entry named NAME.  */
-  svn_error_t *(*dirent_pdelta) (svn_string_t *name,
-				void *walk_baton, void *parent_baton,
-				svn_pdelta_t *entry_pdelta);
-
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
      PARENT_BATON for further changes in the new subdirectory.  The
