@@ -1056,17 +1056,9 @@ add_node_props (report_baton_t *rb)
   if (rb->is_status)
     return SVN_NO_ERROR;
 
-  /*** ### HACK HACK HACK ***/
-  /* We're going to blow off empty URLs herein, but this is WRONG, and
-     I'm only doing it until I can figure out how to get a URL for the
-     root directory of the repos (which, for some reason, I don't have
-     on hand currently). */
   if (rb->file_baton)
     {
       if (! rb->fetch_props)
-        return SVN_NO_ERROR;
-
-      if (rb->href->data == NULL)
         return SVN_NO_ERROR;
 
       /* Fetch dir props. */
@@ -1084,9 +1076,6 @@ add_node_props (report_baton_t *rb)
   else
     {
       if (! TOP_DIR(rb).fetch_props)
-        return SVN_NO_ERROR;
-
-      if (TOP_DIR(rb).vsn_url == NULL)
         return SVN_NO_ERROR;
 
       /* Fetch dir props. */
