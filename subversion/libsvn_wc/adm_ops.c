@@ -879,7 +879,7 @@ static svn_error_t *
 revert_admin_things (svn_stringbuf_t *parent_dir,
                      svn_stringbuf_t *name,
                      svn_wc_entry_t *entry,
-                     apr_uint64_t *modify_flags,
+                     apr_uint16_t *modify_flags,
                      apr_pool_t *pool)
 {
   svn_stringbuf_t *fullpath, *thing, *pthing;
@@ -1006,7 +1006,7 @@ svn_wc_revert (svn_stringbuf_t *path,
   svn_stringbuf_t *p_dir = NULL, *bname = NULL;
   svn_wc_entry_t *entry;
   svn_boolean_t wc_root, reverted = FALSE;
-  apr_uint64_t modify_flags = 0;
+  apr_uint16_t modify_flags = 0;
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
