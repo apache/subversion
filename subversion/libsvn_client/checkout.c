@@ -145,7 +145,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
                                       checkout_editor,
                                       checkout_edit_baton,
-                                      URL,
+                                      URL->data,
                                       revision,
                                       pool);
 

@@ -181,7 +181,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
                                       update_editor,
                                       update_edit_baton,
-                                      URL,
+                                      URL->data,
                                       revision,
                                       pool);
 

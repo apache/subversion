@@ -96,7 +96,7 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   return svn_delta_xml_auto_parse (delta,
                                    editor,
                                    edit_baton,
-                                   ancestor_path,
+                                   ancestor_path->data,
                                    ancestor_revision,
                                    pool);
 }

@@ -191,7 +191,7 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
 
    All temporary allocation is performed in POOL.
 */
-svn_error_t *svn_txdelta_send_string (svn_stringbuf_t *string,
+svn_error_t *svn_txdelta_send_string (const svn_string_t *string,
                                       svn_txdelta_window_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
@@ -768,7 +768,7 @@ typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
 svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                                          const svn_delta_edit_fns_t *editor,
                                          void *edit_baton,
-                                         svn_stringbuf_t *base_path, 
+                                         const char *base_path, 
                                          svn_revnum_t base_revision,
                                          apr_pool_t *pool);
 
@@ -797,7 +797,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
 svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton,
-                                       svn_stringbuf_t *base_path,
+                                       const char *base_path,
                                        svn_revnum_t base_revision,
                                        apr_pool_t *pool);
 

@@ -484,18 +484,13 @@ svn_txdelta_apply (svn_stream_t *source,
 /* Convenience routines */
 
 svn_error_t * 
-svn_txdelta_send_string (svn_stringbuf_t *string,
+svn_txdelta_send_string (const svn_string_t *string,
                          svn_txdelta_window_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool)
 {
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
-  svn_string_t new_data;
-
-  /* Build a structure for the new data. */
-  new_data.data = string->data;
-  new_data.len = string->len;
 
   /* Build a single `new' op */
   op.action_code = svn_txdelta_new;
@@ -506,7 +501,7 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
   window.tview_len = string->len;
   window.num_ops = 1;
   window.ops = &op;
-  window.new_data = &new_data;
+  window.new_data = string;
 
   /* Push the one window at the handler. */
   SVN_ERR ((*handler) (&window, handler_baton));
