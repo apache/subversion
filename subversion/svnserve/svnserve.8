@@ -58,6 +58,14 @@ the username of the current uid.  This flag is selected by the client
 when running over a tunnel agent.
 .PP
 .TP 5
+\fB\-\-tunnel-user\fP=\fIusername\fP
+When combined with \fB\-\-tunnel\fP, overrides the pre-authenticated
+username with the supplied \fIusername\fP.  This is useful in
+combination with the ssh authorized_key file's "command" directive to
+allow a single system account to be used by multiple committers, each
+having a distinct ssh identity.
+.PP
+.TP 5
 \fB\-T\fP, \fB\-\-threads\fP
 When running in daemon mode, causes \fBsvnserve\fP to spawn a thread
 instead of a process for each connection.  The \fBsvnserve\fP process

@@ -52,7 +52,8 @@ typedef struct {
   const char *repos_url;   /* Decoded URL to base of repository */
   const char *fs_path;     /* Decoded base path inside repository */
   const char *user;
-  svn_boolean_t tunnel;    /* Tunneled through login agent; allow EXTERNAL */
+  svn_boolean_t tunnel;    /* Tunneled through login agent */
+  const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   int protocol_version;
 } server_baton_t;
@@ -118,10 +119,8 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   if (get_access(b, UNAUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
-#if APR_HAS_USER
-  if (b->tunnel && get_access(b, AUTHENTICATED) >= required)
+  if (b->tunnel_user && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
-#endif
   if (b->pwdb && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "CRAM-MD5"));
   return SVN_NO_ERROR;
@@ -139,20 +138,10 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   *success = FALSE;
 
-#if APR_HAS_USER
   if (get_access(b, AUTHENTICATED) >= required
-      && b->tunnel && strcmp(mech, "EXTERNAL") == 0)
+      && b->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
     {
-      apr_uid_t uid;
-      apr_gid_t gid;
-
-      if (!mecharg)  /* Must be present */
-        return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
-                                      "Mechanism argument must be present");
-      if (apr_uid_current(&uid, &gid, pool) != APR_SUCCESS
-          || apr_uid_name_get((char **) &b->user, uid, pool) != APR_SUCCESS)
-        return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
-                                      "Can't determine username");
+      b->user = b->tunnel_user;
       if (*mecharg && strcmp(mecharg, b->user) != 0)
         return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                       "Requested username does not match");
@@ -160,7 +149,6 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       *success = TRUE;
       return SVN_NO_ERROR;
     }
-#endif
 
   if (get_access(b, UNAUTHENTICATED) >= required
       && strcmp(mech, "ANONYMOUS") == 0)
@@ -217,8 +205,9 @@ static svn_error_t *must_have_write_access(svn_ra_svn_conn_t *conn,
   if (current_access(b) == WRITE_ACCESS)
     return trivial_auth_request(conn, pool, b);
 
+  /* If we can get write access by authenticating, try that. */
   if (b->user == NULL && get_access(b, AUTHENTICATED) == WRITE_ACCESS
-      && (b->tunnel || b->pwdb) && b->protocol_version >= 2)
+      && (b->tunnel_user || b->pwdb) && b->protocol_version >= 2)
     SVN_ERR(auth_request(conn, pool, b, WRITE_ACCESS));
 
   if (current_access(b) != WRITE_ACCESS)
@@ -1025,10 +1014,36 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Make sure it's possible for the client to authenticate. */
   if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
       && (get_access(b, AUTHENTICATED) == NO_ACCESS
-          || (!b->tunnel && !b->pwdb)))
+          || (!b->tunnel_user && !b->pwdb)))
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "No access allowed to this repository");
   return SVN_NO_ERROR;
+}
+
+/* Compute the authentication name EXTERNAL should be able to get, if any. */
+static const char *get_tunnel_user(serve_params_t *params, apr_pool_t *pool)
+{
+  apr_uid_t uid;
+  apr_gid_t gid;
+  char *user;
+
+  /* Only offer EXTERNAL for connections tunneled over a login agent. */
+  if (!params->tunnel)
+    return NULL;
+
+  /* If a tunnel user was provided on the command line, use that. */
+  if (params->tunnel_user)
+    return params->tunnel_user;
+
+#if APR_HAS_USER
+  /* Use the current uid's name, if we can. */
+  if (apr_uid_current(&uid, &gid, pool) == APR_SUCCESS
+      && apr_uid_name_get(&user, uid, pool) == APR_SUCCESS)
+    return user;
+#endif
+
+  /* Give up and don't offer EXTERNAL. */
+  return NULL;
 }
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
@@ -1043,6 +1058,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   svn_ra_svn_item_t *item, *first;
 
   b.tunnel = params->tunnel;
+  b.tunnel_user = get_tunnel_user(params, pool);
   b.read_only = params->read_only;
   b.user = NULL;
   b.cfg = NULL;  /* Ugly; can drop when we remove v1 support. */

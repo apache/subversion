@@ -38,6 +38,10 @@ typedef struct serve_params_t {
      current uid's username. */
   svn_boolean_t tunnel;
 
+  /* If tunnel is true, overrides the current uid's username as the
+     identity EXTERNAL authenticates as. */
+  const char *tunnel_user;
+
   /* True if the deprecated read-only flag was specified on the
      command-line, which forces all connections to be read-only. */
   svn_boolean_t read_only;
