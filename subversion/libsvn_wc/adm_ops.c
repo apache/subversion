@@ -783,6 +783,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
                      apr_pool_t *pool)
 {
   svn_stringbuf_t *full_path, *thing, *pristine_thing;
+  enum svn_node_kind kind;
   svn_boolean_t modified_p;
   svn_error_t *err;
   apr_time_t tstamp;
@@ -811,10 +812,12 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
 
   if (entry->kind == svn_node_file)
     {
+      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
       SVN_ERR (svn_wc_text_modified_p (&modified_p, full_path, pool));
-      if (modified_p)
+      if ((modified_p) || (kind == svn_node_none))
         {
-          /* If there are textual mods, copy the text-base out into
+          /* If there are textual mods (or if the working file is
+             missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
           pristine_thing = svn_wc__text_base_path (full_path, 0, pool);
