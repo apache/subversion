@@ -34,9 +34,9 @@
 /*** Code. ***/
 
 static int
-print_prop(const svn_string_t *propname,
-           const char *filename,
-           const svn_string_t *propval)
+print_prop (const svn_string_t *propname,
+            const char *filename,
+            const svn_string_t *propval)
 {
   /* ### This won't handle binary property values properly. */
   printf("%s - %s : %s\n", filename, propname->data, propval->data);

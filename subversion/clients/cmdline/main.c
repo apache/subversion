@@ -131,6 +131,12 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: propdel PROPNAME [TARGETS]\n"},
   { "pdel",       TRUE, NULL, NULL },
 
+  { "propedit",    FALSE, svn_cl__propedit, 
+    "Edit property PROPNAME with $EDITOR on files and directories.\n"
+    "usage: propedit PROPNAME [TARGETS]\n"},
+  { "pedit",       TRUE, NULL, NULL },
+  { "pe",          TRUE, NULL, NULL },
+
   { "propget",    FALSE, svn_cl__propget,
     "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },

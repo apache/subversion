@@ -103,6 +103,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
               "Trying to use an unsupported feature")
 
+  SVN_ERRDEF (SVN_ERR_MISSING_ENV_VARIABLE,
+              "Missing environment variable")
+
   SVN_ERRDEF (SVN_ERR_UNKNOWN_NODE_KIND,
               "Unknown svn_node_kind")
 
