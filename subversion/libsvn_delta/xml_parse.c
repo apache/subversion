@@ -165,23 +165,28 @@ twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 
 /* If we get malformed XML, return an informative error saying so. */
 static svn_error_t *
-XML_type_error (apr_pool_t *pool, const char *name, svn_boolean_t destroy_p)
+XML_type_error (svn_delta_digger_t *digger,
+                const char *name,
+                svn_boolean_t destroy_p)
 {
+  svn_error_t *err;
+
   if (destroy_p)
-    {
-      char *msg = 
-        apr_psprintf (pool, "Typecheck error in starpend_delta: trying to remove frame type '%s', but current bottom of stackframe is different type!", name);
-      return svn_create_error (SVN_ERR_MALFORMED_XML, 0,
-                               msg, NULL, pool);
-    }
+    char *msg = 
+      apr_psprintf (pool, "XML validation error: got unexpected closure-tag of type '%s'", name);
 
   else
-    {
-      char *msg = 
-        apr_psprintf (pool, "Typecheck error in starpend_delta: trying to append frame type '%s', but current bottom of stackframe is wrong type!", name);
-      return svn_create_error (SVN_ERR_MALFORMED_XML, 0,
-                               msg, NULL, pool);
-    }
+    char *msg = 
+      apr_psprintf (pool, "XML validation error: got unexpected open-tag of type '%s'", name);
+
+  err = svn_create_error (SVN_ERR_MALFORMED_XML, 0, msg, NULL, pool);
+
+  /* Since we got a validation error, store it in our digger */
+  digger->validation_error = err;
+
+  /* And also NULL out our callbacks */
+
+  return err;
 }
 
 
@@ -513,16 +518,17 @@ svn_xml_handle_data (void *userData, const char *data, int len)
 }
 
 
-/* The one public interface in this file: return an expat parser
-   object which uses our svn_xml_* routines above as callbacks.  */
 
-XML_Parser
+/* Return an expat parser object which uses our svn_xml_* routines
+   above as callbacks.  */
+
+static XML_Parser
 svn_delta_make_xml_parser (svn_delta_digger_t *diggy)
 {
   /* Create the parser */
   XML_Parser parser = XML_ParserCreate (NULL);
 
-  /* All callbacks should receive the delta_digger structure. */
+  /* All callbacks should receive the digger structure. */
   XML_SetUserData (parser, diggy);
 
   /* Register subversion-specific callbacks with the parser */
@@ -533,6 +539,90 @@ svn_delta_make_xml_parser (svn_delta_digger_t *diggy)
 
   return parser;
 }
+
+
+
+/* The _one_ public interface in this file; see svn_delta.h */
+
+svn_error_t *
+svn_delta_parse (svn_delta_read_fn_t *source_fn,
+                 void *source_baton,
+                 svn_delta_walk_t *walker,
+                 void *walk_baton,
+                 void *dir_baton,
+                 apr_pool_t *pool)
+{
+  char buf[BUFSIZ];
+  int len;
+  int done;
+  svn_error_t *err;
+  XML_Parser parser;
+
+  /* Create a digger structure */
+  svn_digger_t *digger = apr_pcalloc (pool, sizeof (svn_digger_t));
+
+  digger->pool             = pool;
+  digger->stack            = NULL;
+  digger->walker           = walker;
+  digger->walk_baton       = walk_baton;
+  digger->dir_baton        = dir_baton;
+  digger->validation_error = SVN_NO_ERROR;
+
+  /* Create a custom expat parser (one uses our own svn callbacks and
+     hands them the digger on each XML event) */
+  parser = svn_delta_make_xml_parser (digger);
+
+  /* Store the parser in the digger too, so that our expat callbacks
+     can magically set themselves to NULL in the case of an error. */
+
+  digger->parser = parser;
+
+
+  /* Our main parse-loop */
+
+  do {
+    /* Read BUFSIZ bytes into buf using the supplied read function. */
+    len = BUFSIZ;
+    err = (*(source_fn)) (source_baton, buf, &len);
+    if (err)
+      return 
+        svn_quick_wrap_error (err, "svn_delta_parse: can't read data source");
+
+    /* How many bytes were actually read into buf?  According to the
+       definition of an svn_delta_read_fn_t, we should keep reading
+       until the reader function says that 0 bytes were read. */
+    done = (len == 0);
+    
+    /* Parse the chunk of stream. */
+    if (! XML_Parse (parser, buf, len, done))
+    {
+      /* Uh oh, expat itself choked somehow.  Return its message. */
+      svn_error_t *err
+        = svn_create_error
+        (SVN_ERR_MALFORMED_XML, 0,
+         apr_psprintf (pool, "%s at line %d",
+                       XML_ErrorString (XML_GetErrorCode (parsimonious)),
+                       XML_GetCurrentLineNumber (parsimonious)),
+         NULL, pool);
+      XML_ParserFree (parsimonious);
+      return err;
+    }
+
+    /* After parsing our chunk, check to see if any validation errors
+       happened. */
+    if (digger->validation_error)
+      return digger->validation_error;
+
+  } while (! done);
+
+
+  /* Done parsing entire SRC_BATON stream, so clean up and return. */
+  XML_ParserFree (parser);
+  return SVN_NO_ERROR;
+}
+
+
+
 
 
 

@@ -301,20 +301,12 @@ typedef struct svn_delta_stackframe_t
  * there to registered callback functions).
  *
  * As the callbacks see various XML elements, they construct
- * digger->delta.  Most elements merely require a new component of the
- * delta to be built and hooked in, with no further action.  Other
- * elements, such as a directory or actual file contents, require
- * special action from the caller.  For example, if the caller is from
- * the working copy library, it might create the directory or the file
- * on disk; or if the caller is from the repository, it might want to
- * start building nodes for a commit.  The digger holds function
- * pointers for such callbacks, and the delta provides context to
- * those callbacks -- e.g., the name of the directory or file to
- * create.
+ * digger->stack.  This "stack" keeps track of the XML nesting and
+ * aids in the validation of the XML.
  *
  *    Note ("heads we win, tails we lose"):
  *    =====================================
- *    A digger only stores the head of the delta, even though the
+ *    A digger only stores the head of the stack, even though the
  *    place we hook things onto is the tail.  While it would be
  *    technically more efficient to keep a pointer to tail, it would
  *    also be more error-prone, since it's another thing to keep track
@@ -326,27 +318,33 @@ typedef struct svn_delta_stackframe_t
  *    not so bad.  Given that deltas usually result in file IO of some
  *    kind, a little pointer chasing should be lost in the noise.
  */
+
 typedef struct svn_delta_digger_t
 {
+  /* Pool to do allocations from */
   apr_pool_t *pool;
-  
+
+  /* A mirror of the stack we're getting from the XML structure, used
+     for storing XML attributes and for XML validation.  */
   svn_delta_stackframe_t *stack;
 
-  /* Caller uses delta context to determine if prop data or text data. */
-  svn_error_t *(*data_handler) (struct svn_delta_digger_t *digger,
-                                const char *data,
-                                int len);
+  /* Callbacks to use when we discover interesting XML events */
+  svn_delta_walk_t *walker;
 
-  /* Call handles dirs specially, because might want to create them. 
-   * It gets the digger for context, but also the current edit_content
-   * because that's a faster way to get this edit. 
-   */
-  svn_error_t *(*dir_handler) (struct svn_delta_digger_t *digger,
-                               svn_delta_stackframe_t *frame);
+  /* Userdata structures that we need to keep track of while we parse,
+     given to us by either the SVN filesystem or the SVN client */
+  void *walk_baton;  /* (global) */
+  void *dir_baton;   /* (info about current directory we're parsing) */
 
-  /* Caller optionally decides what to do with unrecognized elements. */
-  svn_error_t *(*unknown_elt_handler) (struct svn_delta_digger_t *digger,
-                                       const char *name);
+  /* Has a validation error happened in the middle of an expat
+     callback?  All of our expat callbacks will check this field
+     before doing anything. */
+  svn_error_t *validation_error;
+
+  /* The expat parser itself, so that our expat callbacks have the
+     power to set themselves to NULL in the case of an error */
+
+  XML_Parser parser;   /* note: this is a pointer in disguise! */
 
 } svn_delta_digger_t;
 

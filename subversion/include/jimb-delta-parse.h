@@ -90,9 +90,9 @@ typedef struct svn_delta_walk_t
 
 /* Create a delta parser that consumes data from SOURCE_FN and
    SOURCE_BATON, and invokes the callback functions in WALKER as
-   appropriate.  CALLER_WALK is a data passthrough for the entire
-   traversal.  CALLER_DIR is a data passthrough for the root
-   directory; the callbacks can establish new CALLER_DIR values for
+   appropriate.  WALK_BATON is a data passthrough for the entire
+   traversal.  DIR_BATON is a data passthrough for the root
+   directory; the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
 extern svn_error_t *svn_delta_parse (svn_delta_read_fn_t *source_fn,
 				     void *source_baton,
