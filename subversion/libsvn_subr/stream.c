@@ -429,7 +429,7 @@ read_handler_gz (void *baton, char *buffer, apr_size_t *len)
       SVN_ERR (zerr_to_svn_error (zerr, "inflateInit", btn->in));
     }
   
-  btn->in->next_out = buffer;
+  btn->in->next_out = (Bytef *) buffer;
   btn->in->avail_out = *len;
   
   while (btn->in->avail_out > 0) 
@@ -480,7 +480,7 @@ write_handler_gz (void *baton, const char *buffer, apr_size_t *len)
   subpool = svn_pool_create (btn->pool);
   write_buf = apr_palloc (subpool, buf_size);
   
-  btn->out->next_in = (char *) buffer;
+  btn->out->next_in = (Bytef *) buffer;  /* Casting away const! */
   btn->out->avail_in = *len;
   
   while (btn->out->avail_in > 0)
