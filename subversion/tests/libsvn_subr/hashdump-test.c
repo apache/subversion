@@ -82,9 +82,11 @@ char *review =
 
 
 static int
-test1()
+test1 (const char **msg)
 {
   apr_status_t result;
+
+  *msg = "write a hash to a file";
 
   /* Build a hash in memory, and fill it with test data. */
   proplist = apr_make_hash (pool);
@@ -124,9 +126,11 @@ test1()
 
 
 static int
-test2()
+test2 (const char **msg)
 {
   apr_status_t result;
+
+  *msg = "read a file into a hash";
 
   new_proplist = apr_make_hash (pool);
 
@@ -142,19 +146,22 @@ test2()
 
 
 static int
-test3()
+test3 (const char **msg)
 {
   apr_hash_index_t *this;
   int err;
   int found_discrepancy = 0;
+  const char *ignored;
+
+  *msg = "write hash out, read back in, compare";
 
   /* Build a hash in global variable "proplist", then write to a file. */
-  err = test1();
+  err = test1 (&ignored);
   if (err)
     return err;
 
   /* Read this file back into global variable "new_proplist" */
-  err = test2();
+  err = test2 (&ignored);
   if (err)
     return err;
 
@@ -194,12 +201,12 @@ test3()
 
 /*
    ====================================================================
-   If you add a new test to this file, update these two arrays.
+   If you add a new test to this file, update this array.
 
 */
 
 /* An array of all test functions */
-int (*test_funcs[])() = 
+int (*test_funcs[])(const char **msg) =
 {
   NULL,
   test1,
@@ -207,18 +214,6 @@ int (*test_funcs[])() =
   test3,
   NULL
 };
-
-
-/* Descriptions of each test we can run */
-char *descriptions[] = 
-{
-  NULL,
-  "test 1: write a hash to a file",
-  "test 2: read a file into a hash",
-  "test 3: write hash out, read back in, compare",
-  NULL
-};
-
 
 
 

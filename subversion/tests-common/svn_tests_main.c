@@ -65,11 +65,7 @@ extern apr_pool_t *pool;
    begin and end with NULL: */
 
 /* An array of function pointers (all of our sub-tests) */
-extern int (*test_funcs[])();
-
-/* An array of sub-test descriptions */
-extern char *descriptions[];
-
+extern int (*test_funcs[])(const char **msg);
 
 /* ================================================================= */
 
@@ -95,23 +91,24 @@ static int
 do_test_num (const char *progname, int test_num)
 {
   int retval;
-  int (*func)();
+  int (*func)(const char **msg);
   int array_size = get_array_size();
+  const char *msg;  /* the message this individual test prints out */
 
   /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
     {
-      char *msg = (char *) apr_psprintf (pool, "%s %d: NO SUCH TEST",
-                                         progname, test_num);
+      char *err_msg = (char *) apr_psprintf (pool, "%s %2d: NO SUCH TEST",
+                                             progname, test_num);
       printf ("FAIL: ");
-      printf ("%s\n", msg);
+      printf ("%s\n", err_msg);
 
       return 1;  /* BAIL, this test number doesn't exist. */
     }
 
   /* Do test */
   func = test_funcs[test_num];
-  retval = (*func)();
+  retval = (*func)(&msg);
 
   if (! retval)
     printf ("PASS: ");
@@ -119,7 +116,7 @@ do_test_num (const char *progname, int test_num)
     printf ("FAIL: ");
 
   /* Pretty print results */
-  printf ("%s %s\n", progname, descriptions[test_num]);
+  printf ("%s %2d: %s\n", progname, test_num, msg);
 
   return retval;
 }
