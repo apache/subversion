@@ -27,10 +27,11 @@ def main(fname, oname=None, skip_depends=0):
 
   errors = 0
   targets = { }
-  groups = { }		# group name -> targets
   install = { }		# install area name -> targets
   test_progs = [ ]
   test_deps = [ ]
+  fs_test_progs = [ ] 
+  fs_test_deps = [ ]
   file_deps = [ ]
   target_dirs = { }
 
@@ -49,12 +50,6 @@ def main(fname, oname=None, skip_depends=0):
       continue
 
     targets[target] = target_ob
-
-    group = parser.get(target, 'group')
-    if groups.has_key(group):
-      groups[group].append(target_ob.output)
-    else:
-      groups[group] = [ target_ob.output ]
 
     itype = target_ob.install
     if install.has_key(itype):
@@ -82,6 +77,11 @@ def main(fname, oname=None, skip_depends=0):
       test_deps.append(tpath)
       if parser.get(target, 'testing') != 'skip':
         test_progs.append(tpath)
+
+    if target_ob.install == 'fs-test' and bldtype == 'exe':
+      fs_test_deps.append(tpath)
+      if parser.get(target, 'testing') != 'skip':
+        fs_test_progs.append(tpath)
 
     pats = parser.get(target, 'sources')
     if not pats:
@@ -148,8 +148,12 @@ def main(fname, oname=None, skip_depends=0):
                       % (src[:-2], objext, src))
       ofile.write('\n')
 
-  for g_name, g_targets in groups.items():
-    ofile.write('%s: %s\n\n' % (g_name, string.join(g_targets)))
+  for g_name, g_targets in install.items():
+    target_names = [ ]
+    for i in g_targets:
+      target_names.append(i.output)
+
+    ofile.write('%s: %s\n\n' % (g_name, string.join(target_names)))
 
   ofile.write('BUILD_DIRS = %s\n' % string.join(target_dirs.keys()))
 
@@ -205,15 +209,16 @@ def main(fname, oname=None, skip_depends=0):
                                           os.path.basename(file))))
       ofile.write('\n')
 
-    elif area != 'test':
+    elif area != 'test' and area != 'fs-test':
+      area_var = string.replace(area, '-', '_')
       ofile.write('install-%s: %s\n'
                   '\t$(MKDIR) $(%sdir)\n'
-                  % (area, string.join(files), area))
+                  % (area, string.join(files), area_var))
       for file in files:
         ofile.write('\t$(INSTALL_%s) %s %s\n'
-                    % (string.upper(area), file,
-                       os.path.join('$(%sdir)' % area,
-                                    os.path.basename(file))))
+                    % (string.upper(area_var), file,
+		       os.path.join('$(%sdir)' % area_var,
+		                    os.path.basename(file))))
       ofile.write('\n')
 
   includes, i_errors = _collect_paths(parser.get('includes', 'paths'))
@@ -235,6 +240,12 @@ def main(fname, oname=None, skip_depends=0):
   scripts, s_errors = _collect_paths(parser.get('test-scripts', 'paths'))
   errors = errors or s_errors
 
+  fs_scripts, fs_errors = _collect_paths(parser.get('fs-test-scripts', 'paths'))
+  errors = errors or fs_errors
+
+  ofile.write('FS_TEST_DEPS = %s\n\n' % string.join(fs_test_deps + fs_scripts))
+  ofile.write('FS_TEST_PROGRAMS = %s\n\n' % 
+                              string.join(fs_test_progs + fs_scripts))
   ofile.write('TEST_DEPS = %s\n\n' % string.join(test_deps + scripts))
   ofile.write('TEST_PROGRAMS = %s\n\n' % string.join(test_progs + scripts))
 
@@ -321,6 +332,7 @@ _predef_sections = [
   'includes',
   'static-apache',
   'test-scripts',
+  'fs-test-scripts',
   ]
 
 def _filter_targets(t):

@@ -21,8 +21,9 @@ LIBS = @LIBS@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 libdir = @libdir@
-sbindir = @sbindir@
+fs_libdir= @libdir@
 bindir = @bindir@
+fs_bindir=@bindir@
 includedir = @includedir@
 
 ### should search for these...
@@ -48,7 +49,6 @@ INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_NEON_INCLUDES@ \
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
-INSTALL_APACHE_RULE = @INSTALL_APACHE_RULE@
 
 MKDIR = @MKDIR@
 
@@ -65,8 +65,9 @@ LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rp
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_FS_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
-INSTALL_SBIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_FS_BIN = $(INSTALL_BIN)
 INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -a
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
@@ -81,7 +82,7 @@ install: external-install local-install
 
 @INCLUDE_OUTPUTS@
 
-local-all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
+local-all: @BUILD_RULES@
 
 local-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do \
@@ -100,15 +101,15 @@ local-extraclean: local-distclean
 		ac-helpers/libtool.m4 ac-helpers/ltconfig \
 		ac-helpers/ltmain.sh
 
-local-install: install-lib install-include install-bin $(INSTALL_APACHE_RULE)
+local-install: @INSTALL_RULES@
 
 ### the chmod really sucks, but some repository files don't have it like
 ### they should ...
-check: $(TEST_DEPS)
+check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@logfile=`pwd`/tests.log ; \
 	echo > $$logfile ; \
 	failed=no ; \
-	list='$(TEST_PROGRAMS)'; for prog in $$list; do \
+	list='$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@'; for prog in $$list; do \
 	    chmod a+x $$prog ; \
 	    progbase=`echo $$prog | sed 's?.*/??'` ; \
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
@@ -149,11 +150,16 @@ external-all external-clean external-distclean external-install:
 	    echo "------ completed $$target in $$i"; \
 	done;
 
-### temporary hack. Neon does not have an "extraclean"
+### temporary hack. Neon does not have an "extraclean" and neither does db
+### If we don't have extraclean -- do the next best thing.
 external-extraclean:
 	@list='$(EXTERNAL_PROJECT_DIRS)'; \
 	for i in $$list; do \
-	    if test "$$i" != "neon"; then \
+	    if test "$$i" = "neon" || test "$$i" = "db/dist"; then \
+		echo "------ making distclean(no extraclean) in $$i"; \
+		(cd $$i && $(MAKE) distclean) || exit 1; \
+		echo "------ completed distclean(no extraclean) in $$i"; \
+	    else \
 		echo "------ making extraclean in $$i"; \
 		(cd $$i && $(MAKE) extraclean) || exit 1; \
 		echo "------ completed extraclean in $$i"; \

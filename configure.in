@@ -151,10 +151,19 @@ SVN_FS_WANT_DB_PATCH=11
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH)
 
+# Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
+INSTALL_RULES="install-lib install-bin"
+BUILD_RULES="lib bin test"
 if test "$svn_lib_berkeley_db" = "yes"; then
-  FS_RULES="fs-libs fs-programs"
+  BUILD_RULES="lib fs-lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
+  INSTALL_RULES="install-lib install-fs-lib install-bin install-fs-bin $INSTALL_APACHE_RULE"
+  FS_TEST_DEPS="\$(FS_TEST_DEPS)"
+  FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
 fi
-AC_SUBST(FS_RULES)
+AC_SUBST(BUILD_RULES)
+AC_SUBST(INSTALL_RULES)
+AC_SUBST(FS_TEST_DEPS)
+AC_SUBST(FS_TEST_PROGRAMS)
 AC_SUBST(SVN_DB_INCLUDES)
 AC_SUBST(SVN_DB_LIBS)
 
