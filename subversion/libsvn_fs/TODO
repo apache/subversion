@@ -78,3 +78,13 @@ the latest version of Subversion is nil.  The solution:
 
 - Write a test suite that verifies that the repository dump program
   can handle all of the archived formats.
+
+
+Documentation:
+
+Document the svn_delta_edit_fns_t structure.  That's probably even
+more fundamental than the XML tree delta format.  Make sure to cover:
+- how you express deleting a file, and then adding a new file under the same
+  name
+- how you express "copy existing file A to new file B; update,
+  receiving new version of A; rename B on top of A; now commit"
