@@ -40,7 +40,6 @@ svn_cl__checkout (apr_getopt_t *os,
 {
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
-  svn_error_t *err;
   int i;
   svn_client_auth_baton_t *auth_baton;
   
