@@ -40,60 +40,8 @@ Ben & Karl todo:
 
 Ben todo:
 
-   Ben's magic list of bugs:
+   - finish svn_fs_is_different, make status command use it.
 
-       - svn add a file, then run svn status.  you can see it.
-         svn add a dir, then run svn status.  you can't see it.
-
-            -why?  because we should format the new dir as soon as we add
-             it (make it into a wc subir.)
-
-            -whoops, svn_client_add() assumes files only!!!
-
-       - svn ci --xml-file foo.xml
-         this command segfaults, but not if we add a --revision arg.
-
-       - svn rm some/dir/
-         when you run svn status, the dir doesn't show up as being
-         marked for deletion, *unless* you remove it... ???  I know
-         that a dir can't be deleted unless it's empty, but this is
-         going too far.
-
-       - successive commit bug
-         
-         If I checkout a working copy, then mod a file, I can commit
-         it OK, but if I mod it again, I get an error (I modded iota
-         twice in the Greek tree) on the next commit:
-
-              pantheon: ...foo$../svn ci
-              
-              svn_error: #21038   file not found: filesystem `/home/bwf/svn-repo',
-              transaction `0', path `/A/D/iota'
-              pantheon: ...foo$
-         -Fitz
-
-       - proplist bug:
-
-           From within a wc, `svn pl ./iota' works, and `svn pl A'
-           works, but `svn pl iota' errors.
-
-
-   Ben's todo list:
-
-       - finish svn_fs_is_different, make status command use it.
-
-
-
-Mike Pilato wc todo:
-
-   - Big Ol' Change #2 below.
-   - From Bill Tutt:
-     This is just more an FYI, as it isn't preventing me from doing
-     any work atm, but the paths returned from svn_wc_statuses are
-     looking like: "C:\SVN\subversion\subversion\client\tests\t1\/iota"
-     Seemingly fixed by Mike's changes to apr_subr/path.c, but Bill
-     sez he too will verify this at some point in the near future.
-         
 
 Karl wc todo:
 
