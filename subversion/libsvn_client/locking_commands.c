@@ -197,7 +197,8 @@ organize_lock_targets (const char **common_parent,
           const char *target = ((const char **) (rel_targets->elts))[i];
           apr_hash_set (rel_targets_ret, apr_pstrdup (pool, target),
                         APR_HASH_KEY_STRING,
-                        do_lock ? (void *) invalid_revnum : (void *) "");
+                        do_lock ? (const void *) invalid_revnum
+                                : (const void *) "");
         }
     }
   else  /* common parent is a local path */
