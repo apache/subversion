@@ -98,7 +98,7 @@ section for approved changes.)
       only gets triggered by cvs2svn during directory pruning, but
       cvs2svn is only gonna get more popular as time goes on...
       Votes:
-       +1: cmpilato
+       +1: cmpilato, kfogel
 
 
     * Issue #1647
