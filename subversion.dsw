@@ -57,6 +57,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "libsvn_fs"=.\subversion\libsvn_fs\libsvn_fs.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "libsvn_subr"=.\SUBVERSION\LIBSVN_SUBR\libsvn_subr.dsp - Package Owner=<4>
 
 Package=<5>
