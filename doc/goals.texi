@@ -234,7 +234,7 @@ Subversion remembers what has already been merged in and what hasn't,
 thereby avoiding the problem (familiar to CVS users) of spurious
 conflicts on repeated merges.
 
-See @xref{Merging and Ancestry} for details.
+For details, @xref{Merging and Ancestry}.
 
 @c -----------------------------------------------------------------------
 @node Conflicts resolution
