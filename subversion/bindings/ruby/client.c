@@ -467,7 +467,7 @@ cl_cleanup (VALUE class, VALUE aPath)
 }
 
 static VALUE
-cl_undo (VALUE class, VALUE aPath, VALUE recursive)
+cl_revert (VALUE class, VALUE aPath, VALUE recursive)
 {
   apr_pool_t *pool;
 
@@ -475,9 +475,9 @@ cl_undo (VALUE class, VALUE aPath, VALUE recursive)
 
   pool = svn_pool_create (NULL);
 
-  SVN_RB_ERR (svn_client_undo (svn_path_canonicalize (StringValuePtr (aPath),
-                                                      pool),
-                               RTEST (recursive), NULL, NULL, pool),
+  SVN_RB_ERR (svn_client_revert (svn_path_canonicalize (StringValuePtr (aPath),
+                                                        pool),
+                                 RTEST (recursive), NULL, NULL, pool),
               pool);
 
   svn_pool_destroy (pool);
@@ -636,7 +636,7 @@ void svn_ruby_init_client (void)
   rb_define_method (cSvnClient, "status", cl_status, 5);
   rb_define_method (cSvnClient, "log", cl_log, -1);
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
-  rb_define_singleton_method (cSvnClient, "undo", cl_undo, 2);
+  rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
   rb_define_method (cSvnClient, "copy", cl_copy, -1);
   rb_define_singleton_method (cSvnClient, "propset", cl_propset, 4);
   rb_define_singleton_method (cSvnClient, "propget", cl_propget, 3);

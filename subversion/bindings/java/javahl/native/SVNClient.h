@@ -59,7 +59,7 @@ public:
 	jlong commit(Targets &targets, const char *message, bool recurse);
 	void update(const char *path, Revision &revision, bool recurse);
 	void add(const char *path, bool recurse);
-	void undo(const char *path, bool recurse);
+	void revert(const char *path, bool recurse);
 	void remove(const char *path, const char *message, bool force);
 	void notification(Notify *notify);
 	void checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse);

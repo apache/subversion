@@ -6,8 +6,8 @@
 ;;
 ;; All this stuff should get folded into Emacs VC mode, really.
 
-(defun svn-undo ()
-  "Undo the current buffer and its file to its svn base revision."
+(defun svn-revert ()
+  "Revert the current buffer and its file to its svn base revision."
   (interactive)
   (let ((obuf (current-buffer))
         (fname (buffer-file-name))
@@ -20,13 +20,13 @@
     (beginning-of-line)
     (if (looking-at "^?")
         (error "\"%s\" is not a Subversion-controlled file" fname))
-    (call-process "svn" nil outbuf nil "undo" fname)
+    (call-process "svn" nil outbuf nil "revert" fname)
     (set-buffer obuf)
     ;; todo: make a backup~ file?
     (save-excursion
       (revert-buffer nil t)
       (save-buffer))
-    (message "Undid \"%s\"." fname)))
+    (message "Reverted \"%s\"." fname)))
 
 (defconst svn-adm-area ".svn"
   "The name of the Subversion administrative subdirectory.")

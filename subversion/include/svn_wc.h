@@ -230,8 +230,8 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_copy,
   svn_wc_notify_delete,
   svn_wc_notify_restore,
-  svn_wc_notify_undo,
-  svn_wc_notify_failed_undo,
+  svn_wc_notify_revert,
+  svn_wc_notify_failed_revert,
   svn_wc_notify_resolve,
   svn_wc_notify_status,
   svn_wc_notify_skip,
@@ -1039,7 +1039,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
  *
  * Important: this is a variant of @c svn_wc_add.  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
- * removed with @c svn_client_undo.
+ * removed with @c svn_client_revert.
  */
 svn_error_t *svn_wc_copy (const char *src,
                           svn_wc_adm_access_t *dst_parent,
@@ -1904,30 +1904,31 @@ svn_wc_relocate (const char *path,
                  svn_wc_relocation_validator *validator,
                  apr_pool_t *pool);
 
-/** Undo changes to @a path, recursively if @a recursive is true.  Use
- * @a pool for temporary allocation.
+/** Revert changes to @a path (perhaps in a @a recursive fashion).  Perform
+ * necessary allocations in @a pool.
  *
  * @a parent_access is an access baton for the directory containing @a path,
  * unless @a path is a wc root, in which case @a parent_access refers to 
  * @a path itself.
  *
  * If @cancel_func is non-null, call it with @a cancel_baton at
- * various points during the process.  If it returns an error
- * (typically @c SVN_ERR_CANCELLED), return that error immediately.
+ * various points during the reversion process.  If it returns an
+ * error (typically @c SVN_ERR_CANCELLED), return that error
+ * immediately.
  *
- * For each item affected, @a notify_func will be called with @a notify_baton
- * and the path of the item. @a notify_func may be @c NULL if this
+ * For each item reverted, @a notify_func will be called with @a notify_baton
+ * and the path of the reverted item. @a notify_func may be @c NULL if this
  * notification is not needed.
  */
 svn_error_t *
-svn_wc_undo (const char *path, 
-             svn_wc_adm_access_t *parent_access,
-             svn_boolean_t recursive, 
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
-             svn_wc_notify_func_t notify_func,
-             void *notify_baton,
-             apr_pool_t *pool);
+svn_wc_revert (const char *path, 
+               svn_wc_adm_access_t *parent_access,
+               svn_boolean_t recursive, 
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool);
 
 
 

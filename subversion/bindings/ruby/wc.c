@@ -280,7 +280,7 @@ wc_cleanup (VALUE class, VALUE aPath)
 
 #if 0
 static VALUE
-wc_undo (VALUE class, VALUE aPath, VALUE recursive)
+wc_revert (VALUE class, VALUE aPath, VALUE recursive)
 {
   svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
@@ -289,9 +289,9 @@ wc_undo (VALUE class, VALUE aPath, VALUE recursive)
 
   pool = svn_pool_create (NULL);
 
-  /* XXX this is wrong.  see the code in svn_client_undo to see what we need 
+  /* XXX this is wrong.  see the code in svn_client_revert to see what we need 
    * to be doing to get the correct adm_access baton.  i'm not going to bother 
-   * at this point since you can just as well use Svn::Client::Undo instead 
+   * at this point since you can just as well use Svn::Client::Revert instead 
    * for the time being.  at some point, we might want to do something funky to 
    * give one access to the notification callbacks or something, but for now 
    * it's just not worth the trouble. */
@@ -300,8 +300,8 @@ wc_undo (VALUE class, VALUE aPath, VALUE recursive)
                                      FALSE, FALSE, pool),
               pool);
 
-  SVN_RB_ERR (svn_wc_undo (StringValuePtr (aPath), adm_access,
-                           RTEST (recursive), NULL, NULL, pool),
+  SVN_RB_ERR (svn_wc_revert (StringValuePtr (aPath), adm_access,
+                             RTEST (recursive), NULL, NULL, pool),
               pool);
 
   svn_pool_destroy (pool);
@@ -829,7 +829,7 @@ void svn_ruby_init_wc (void)
   rb_define_singleton_method (cSvnWc, "getPristineCopyPath",
                               wc_get_pristine_copy_path, 1);
   rb_define_singleton_method (cSvnWc, "cleanup", wc_cleanup, 1);
-  /* rb_define_singleton_method (cSvnWc, "undo", wc_undo, 2); */
+  /* rb_define_singleton_method (cSvnWc, "revert", wc_revert, 2); */
 
   cSvnWcEntry = rb_define_class_under (svn_ruby_mSvn, "WcEntry", rb_cObject);
   rb_define_singleton_method (cSvnWcEntry, "new", wc_entry_create, 2);

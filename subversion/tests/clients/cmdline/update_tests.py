@@ -522,7 +522,7 @@ def receive_overlapping_same_change(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for update_to_resolve_text_conflicts() test -- a singleton handler.
+# Helper for update_to_revert_text_conflicts() test -- a singleton handler.
 def detect_conflict_files(node, extra_files):
   """NODE has been discovered an extra file on disk.  Verify that it
   matches one of the regular expressions in the EXTRA_FILES list.  If
@@ -538,7 +538,7 @@ def detect_conflict_files(node, extra_files):
   print "Found unexpected disk object:", node.name
   raise svntest.main.SVNTreeUnequal
 
-def update_to_resolve_text_conflicts(sbox):
+def update_to_revert_text_conflicts(sbox):
   "delete files and update to resolve text conflicts"
   
   if sbox.build():
@@ -1157,7 +1157,7 @@ test_list = [ None,
               update_ignores_added,
               update_to_rev_zero,
               receive_overlapping_same_change,
-              update_to_resolve_text_conflicts,
+              update_to_revert_text_conflicts,
               update_delete_modified_files,
               update_after_add_rm_deleted,
               update_missing,

@@ -515,7 +515,7 @@ collabnet = svn.collab.net
       them to be, with the constraint that the names must be
       human-readable text.  And the best part about these properties
       is that they, too, are versioned, just like the textual contents
-      of your files.  You can modify, commit, and undo property
+      of your files.  You can modify, commit, and revert property
       changes as easily as committing textual changes.  And you
       receive other people's property changes as you update your
       working copy.</para>
@@ -785,7 +785,7 @@ $
         modifications, only made permanent when you commit them to the
         repository with <command>svn commit</command>.  Your property
         changes can be easily unmade, too&mdash;the <command>svn
-        undo</command> command will restore your files and
+        revert</command> command will restore your files and
         directories to their un-edited states, contents, properties,
         and all.  Also, you can receive interesting information about
         the state of your file and directory properties by using the

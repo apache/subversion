@@ -359,7 +359,7 @@ $ svn log -r 1729:{2/17/02}
               will be uploaded and added to the repository on your
               next commit.  If you add something and change your mind
               before committing, you can unschedule the addition using
-              <command>svn undo</command>.</para>
+              <command>svn revert</command>.</para>
           </refsect1>
           
           <refsect1>
@@ -2474,19 +2474,19 @@ Properties on 'foo.c':
         <!-- ================================================================= -->
         <refentry>
           <refnamediv>
-            <refname>svn undo</refname>
+            <refname>svn revert</refname>
             <refpurpose>Undo all local edits.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting>svn undo PATH [PATH [PATH ... ]]</programlisting>
+            <programlisting>svn revert PATH [PATH [PATH ... ]]</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
-            <para>Undoes any local changes to a file or directory and
+            <para>Reverts any local changes to a file or directory and
               resolves any conflicted states.  <command>svn
-              undo</command> will not only undo the contents of an
+              revert</command> will not only revert the contents of an
               item in your working copy, but also any property
               changes.  Finally, you can use it to undo any scheduling
               operations that you may have done (e.g. files scheduled
@@ -2525,18 +2525,18 @@ Properties on 'foo.c':
             <para>Discard changes to a file:</para>
 
             <screen>
-$ svn undo foo.c
-Undid foo.c
+$ svn revert foo.c
+Reverted foo.c
             </screen>
 
-            <para>If you want to undo changes a whole directory of files,
+            <para>If you want to revert a whole directory of files,
               use the <option>--recursive</option> flag:</para>
 
             <screen>
-$svn undo --recursive .
-Undid newdir/afile
-Undid foo.c
-Undid bar.txt
+$svn revert --recursive .
+Reverted newdir/afile
+Reverted foo.c
+Reverted bar.txt
             </screen>
 
             <para>Lastly, you can undo any scheduling
@@ -2548,9 +2548,9 @@ A         mistake.txt
 A         whoops
 A         whoops/oopsie.c
 
-$ svn undo mistake.txt whoops
-Undid mistake.txt
-Undid whoops
+$ svn revert mistake.txt whoops
+Reverted mistake.txt
+Reverted whoops
 
 $ svn status
 ?      mistake.txt
@@ -2559,9 +2559,9 @@ $ svn status
 
             <warning>
               <para>If you provide no targets to <command>svn
-                undo</command>, it will do nothing&mdash;to protect
+                revert</command>, it will do nothing&mdash;to protect
                 you from accidentally losing changes in your working
-                copy, <command>svn undo</command> requires you to
+                copy, <command>svn revert</command> requires you to
                 provide at least one target.</para>
             </warning>
 

@@ -1,5 +1,5 @@
 /*
- * undo-cmd.c -- Subversion undo command
+ * revert-cmd.c -- Subversion revert command
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -35,9 +35,9 @@
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__undo (apr_getopt_t *os,
-              void *baton,
-              apr_pool_t *pool)
+svn_cl__revert (apr_getopt_t *os,
+                void *baton,
+                apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -52,7 +52,7 @@ svn_cl__undo (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Undo has no implicit dot-target `.', so don't you put that code here! */
+  /* Revert has no implicit dot-target `.', so don't you put that code here! */
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
 
@@ -66,7 +66,7 @@ svn_cl__undo (apr_getopt_t *os,
       const char *target = ((const char **) (targets->elts))[i];
       svn_error_t *err;
 
-      err = svn_client_undo (target, recursive, ctx, subpool);
+      err = svn_client_revert (target, recursive, ctx, subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
