@@ -908,9 +908,12 @@ svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
                    apr_hash_t *hash)
 {
-  apr_hash_set (hash, "file", APR_HASH_KEY_STRING, &ra_local_plugin);
+  if (abi_version != 1)
+    return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
+                              "Unsupported RA plugin ABI version (%d) "
+                              "for ra_local.", abi_version);
 
-  /* ben sez:  todo:  check that abi_version >=1. */
+  apr_hash_set (hash, "file", APR_HASH_KEY_STRING, &ra_local_plugin);
 
   return SVN_NO_ERROR;
 }

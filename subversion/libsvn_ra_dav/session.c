@@ -852,9 +852,10 @@ svn_error_t *svn_ra_dav_init(int abi_version,
                              apr_pool_t *pconf,
                              apr_hash_t *hash)
 {
-  /* ### need a version number to check here... */
-  if (abi_version != 0)
-    ;
+  if (abi_version != 1)
+    return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
+                              "Unsupported RA plugin ABI version (%d) "
+                              "for ra_dav.", abi_version);
 
   apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
 
@@ -864,5 +865,5 @@ svn_error_t *svn_ra_dav_init(int abi_version,
       apr_hash_set (hash, "https", APR_HASH_KEY_STRING, &dav_plugin);
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
