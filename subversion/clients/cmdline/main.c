@@ -581,8 +581,8 @@ main (int argc, const char * const *argv)
       case 'F':
         err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
         if (!err)
-          err = svn_string_from_file (&(opt_state.filedata),
-                                      utf8_opt_arg, pool);
+          err = svn_stringbuf_from_file (&(opt_state.filedata),
+                                         utf8_opt_arg, pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
@@ -615,7 +615,7 @@ main (int argc, const char * const *argv)
           err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
 
           if (! err)
-            err = svn_string_from_file (&buffer, utf8_opt_arg, pool);
+            err = svn_stringbuf_from_file (&buffer, utf8_opt_arg, pool);
           if (! err)
             err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
   	  if (err)

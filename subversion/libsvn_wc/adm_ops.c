@@ -1849,7 +1849,7 @@ svn_wc_get_auth_file (const char *path,
   SVN_ERR (svn_wc__open_auth_file (&file, path, filename, APR_READ, pool));
 
   /* Read the file's contents into a stringbuf, allocated in POOL. */
-  SVN_ERR (svn_string_from_aprfile (contents, file, pool));
+  SVN_ERR (svn_stringbuf_from_aprfile (contents, file, pool));
 
   SVN_ERR (svn_wc__close_auth_file (file, path, filename,
                                     0 /* Don't sync */, pool));

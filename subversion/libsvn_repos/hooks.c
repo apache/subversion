@@ -90,7 +90,7 @@ run_hook_cmd (const char *name,
           svn_stringbuf_t *error;
 
           /* Read the file's contents into a stringbuf, allocated in POOL. */
-          SVN_ERR (svn_string_from_aprfile (&error, read_errhandle, pool));
+          SVN_ERR (svn_stringbuf_from_aprfile (&error, read_errhandle, pool));
 
           err = svn_error_createf
               (SVN_ERR_REPOS_HOOK_FAILURE, 0, err, pool,

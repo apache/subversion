@@ -768,7 +768,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     NULL, pool));
-  SVN_ERR (svn_string_from_file (&file_contents, filename_utf8, pool)); 
+  SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
   SVN_ERR (svn_utf_stringbuf_to_utf8 (&file_contents_utf8, file_contents,
                                       pool));
   log_contents.data = file_contents_utf8->data;

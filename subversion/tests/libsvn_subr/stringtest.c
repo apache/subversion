@@ -425,7 +425,7 @@ test12 (const char **msg,
   if (status)
     return fail (pool, "closing file");
 
-  SVN_ERR (svn_string_from_file (&s, fname, pool));
+  SVN_ERR (svn_stringbuf_from_file (&s, fname, pool));
   SVN_ERR (check_string_contents (s, ftext, sizeof(ftext) - 1, repeat, pool));
 
   /* Reset to avoid false positives */
@@ -435,7 +435,7 @@ test12 (const char **msg,
   if (status)
     return fail (pool, "opening file");
 
-  SVN_ERR (svn_string_from_aprfile(&s, file, pool));
+  SVN_ERR (svn_stringbuf_from_aprfile(&s, file, pool));
   SVN_ERR (check_string_contents (s, ftext, sizeof(ftext) - 1, repeat, pool));
 
   status = apr_file_close (file);

@@ -596,7 +596,7 @@ substitute_and_verify (const char *test_name,
 
   /** Ready to verify. **/
 
-  SVN_ERR (svn_string_from_file (&contents, dst_fname, pool));
+  SVN_ERR (svn_stringbuf_from_file (&contents, dst_fname, pool));
 
   for (i = 0; i < (sizeof (expect) / sizeof (*expect)); i++)
     {
