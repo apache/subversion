@@ -309,14 +309,20 @@ class WinGeneratorBase(gen_base.GeneratorBase):
               csrc = rootpath + '\\' + string.replace(cobj.filename, '/', '\\')
 
               if isinstance(target, gen_base.TargetSWIGRuntime):
-                bsrc = os.path.join(self.swig_libdir, "swigrun.i")
-                cbuild = "swig -%s -runtime -o %s $(InputPath)" \
-                         % (target.lang, csrc)
+                bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
+                cbuild = "python $(InputPath) %s %s %s" \
+                         % (target.lang, csrc, self.quote(self.swig_libdir))
                 sources.append(ProjectItem(path=bsrc, reldir=None,
                                            custom_build=cbuild,
                                            custom_target=csrc,
                                            user_deps=[]))
                 continue
+
+              # output path passed to swig has to use forward slashes,
+              # otherwise the generated python files (for shadow
+              # classes) will be saved to the wrong directory
+              cout = string.replace(os.path.join(rootpath, cobj.filename),
+                                    os.sep, '/')
 
               # included header files that the generated c file depends on
               user_deps = []
@@ -368,17 +374,17 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
                     user_deps.append(ofile)
 
-                  cbuild = "swig -noruntime -%s -nopm -module SVN::%s %s -o %s $(InputPath)" % \
-                           (target.lang, modules[target.name],
+                  cbuild = "swig %s -%s -nopm -module SVN::%s %s -o %s $(InputPath)" % \
+                           (self.swig_options, target.lang, modules[target.name],
                             string.join(map(lambda x: "-I%s" % self.quote(x),
                                             includes)),
                             self.quote(csrc))
-                else:
-                  cbuild = "swig -noruntime -%s %s -o %s $(InputPath)" % \
-                           (target.lang,
+                else:      
+                  cbuild = "swig %s -%s %s -o %s $(InputPath)" % \
+                           (self.swig_options, target.lang,
                             string.join(map(lambda x: "-I%s" % self.quote(x),
                                             includes)),
-                            self.quote(csrc))
+                            self.quote(cout))
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
@@ -730,9 +736,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       fp.close()
 
   def _find_swig(self):
-    # Require (and assume) version 1.3.20
-    base_version = '1.3.20'
-    vernum = base_vernum = 103020
+    # Require (and assume) version 1.3.19
+    base_version = '1.3.19'
+    vernum = base_vernum = 103019
+    options = '-c'
     libdir = ''
 
     infp, outfp = os.popen4('swig -version')
@@ -755,6 +762,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if vernum < base_vernum:
           sys.stderr.write('WARNING: Subversion requires version %s\n'
                            % base_version)
+        if vernum >= 103020:
+          options = '-noruntime'
 
         libdir = self._find_swig_libdir()
       else:
@@ -765,6 +774,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       outfp.close()
 
     self.swig_defines = 'SVN_SWIG_VERSION=%d' % vernum
+    self.swig_options = '%s -D%s' % (options, self.swig_defines)
     self.swig_libdir = libdir
 
   def _find_swig_libdir(self):
