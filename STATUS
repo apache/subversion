@@ -56,7 +56,7 @@ Candidate changes:
       how I (Greg) always intended FSFS to work, and fulfills what has
       been a secondary goal of FSFS from the beginning.
     Votes:
-      +1: ghudson
+      +1: ghudson, epg
 
   * Issue #2111
     Fix RPM build breakage.
