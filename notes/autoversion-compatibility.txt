@@ -113,18 +113,36 @@ This works pretty well:  the details needs to be filled in below.
 OS X   (fitz/thom/sabi/sussman/jerenkrantz)
 ====
 
-OS X's DAV client requires LOCK (DAV class 2 client).
+OS X's DAV client requires LOCK to do write operations.
 
-Hacking it around so that "DAV: 2" is passed and it writes, but will
-fail when it tries to acquire a lock.  (How about implementing
-a no-op LOCK routine for now?)
+httpd-2.1 HEAD now has mod_dav_lock.  When used with DavGenericLockDB
+(part of mod_dav_lock), all operations work as follows:
 
-DELETE works without LOCK.  Fun.
+1. Add new file     (PUT)     - Works.
+2. Add new folder   (MKCOL)   - Works.
+3. Rename a file    (MOVE)    - Works.
+4. Rename a folder  (MOVE)    - Works.
+5. Copy a file      (COPY)    - Works.
+6. Copy a folder    (COPY)    - Works.
+7. Delete a file    (DELETE)  - Works.
+8. Delete a folder  (DELETE)  - Works.
+9. Open remote file directly  (LOCK) - Works.
+10. Copy/drag remote file to local disk (GET) - Works.
+11. Copy/drag local file back on top of remote file.  - Works.
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+Note: The OS X DAV client isn't a speed demon.
+
+Note: When using it as a file system and editing it directly (i.e. using
+vi in the share), the client will PUT the new file as a temporary location,
+DELETE the old file, MOVE the temp resource to the original file name.  This
+probably isn't optimal on Apple's part.  It does wonders for the file
+history.
 
 Note: It seems to try to create ._<file> as well.  Implications of this
-are not yet understood.
+are not yet understood (fitz hinted at AppleDouble as the reason). 
 
-If you see a problem mounting the repository, you may need to enable
+Note: If you see a problem mounting the repository, you may need to enable
 the default BrowserMatch directive in httpd-std.conf for WebDAVFS.
 (It's included in the default httpd.conf now.)
 
