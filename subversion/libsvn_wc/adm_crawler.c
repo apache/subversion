@@ -501,6 +501,8 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
   const void *key;
   void *val;
   apr_ssize_t keylen;
+  enum svn_wc__eol_style eol_style;
+  const char *eol_str;
 
   for (hi = apr_hash_first (pool, affected_targets); 
        hi; 
@@ -516,7 +518,22 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       */
       entrypath = svn_stringbuf_create ((char *) key, pool);
       local_tmp_path = svn_wc__text_base_path (entrypath, TRUE, pool);
-      SVN_ERR (svn_io_copy_file (entrypath, local_tmp_path, pool));
+
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
+                                      entrypath->data, pool));
+
+      if ((eol_style == svn_wc__eol_style_native)
+          || (eol_style == svn_wc__eol_style_fixed))
+        /* Copy the file with either the native or fixed eol, since
+           that's what text-base has. */
+        SVN_ERR (svn_io_copy_and_translate (entrypath->data,
+                                            local_tmp_path->data,
+                                            eol_str, TRUE /* repair! */,
+                                            NULL, NULL, NULL, NULL, FALSE,
+                                            pool));
+      else
+        /* eol-style 'none', or unknown.  Just copy the file unchanged. */
+        SVN_ERR (svn_io_copy_file (entrypath, local_tmp_path, pool));
 
       /* If there's a local mod, send a text-delta. */
       if (tb->text_modified_p)
