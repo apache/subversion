@@ -138,7 +138,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified, bool oneIfUnspecified)
 					{
 						return;
 					}
-					fid = env->GetFieldID(clazz, "getTime", "()J");
+					mid = env->GetMethodID(clazz, "getTime", "()J");
 					if(JNIUtil::isJavaExceptionThrown())
 					{
 						return;
