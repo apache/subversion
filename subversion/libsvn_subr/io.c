@@ -1442,10 +1442,19 @@ svn_io_run_diff (const char *dir,
   SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
                            NULL, outfile, errfile, subpool));
 
-  if (*pexitcode < 0 || *pexitcode > 2)
+  /* The man page for (GNU) diff describes the return value as:
+
+       "An exit status of 0 means no differences were found, 1 means
+        some differences were found, and 2 means trouble."
+
+     A return value of 2 typically occurs when diff cannot read its input
+     or write to its output, but in any case we probably ought to return an
+     error for anything other than 0 or 1 as the output is likely to be
+     corrupt.
+   */
+  if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, subpool, 
-                              "svn_io_run_diff: Error calling %s.",
-                              SVN_CLIENT_DIFF);
+                              "%s returned %d", SVN_CLIENT_DIFF, *pexitcode);
 
   svn_pool_destroy (subpool);
 
