@@ -3,6 +3,11 @@
 # svn-graph.pl - produce a GraphViz .dot graph for the branch history
 #                of a node
 #
+# WARNING:  Right now, this will produce a very large graph for
+#           repositories with lots of revisions that participate
+#           in the history of the paths you're graphing.  See the TODO
+#           below for a description of what remains to be done to
+#           filter out some of the noise.
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -18,21 +23,16 @@
 # ====================================================================
 #
 # TODO:
-#   - pay attention to when branches are deleted
-#   - be a bit more careful about following the branch history,
-#     it's currently a bit of a quick hack
 #   - take some command line parameters (url, start & end revs, 
 #     node we're tracking, etc)
 #   - calculate the repository root at runtime so the user can pass
 #     the node of interest as a single URL
 #   - produce the graphical output ourselves (SVG?) instead
 #     of using .dot?
-#
-# NOTES:
-#   Everything goes to stdout
-#   Algorithm is a bit stuffed.  We're not really reconstructing
-#     the DAG here, it just looks like it.  We're close, but I'll
-#     have to think harder.
+#   - trim out changes along a codeline that aren't a source of copies
+#     to massively reduce the size of the graph.  Right now, every
+#     change to a path makes a new node (i.e. there are 10000 nodes
+#     for trunk for the Subversion repository).
 #
 
 use strict;
@@ -42,7 +42,8 @@ require SVN::Ra;
 
 # CONFIGURE ME:  The URL of the Subversion repository we wish to graph.
 # See TODO.
-my $REPOS_URL = 'http://svn.collab.net/repos/svn';
+my $REPOS_URL = 'file:///some/repository';
+#my $REPOS_URL = 'http://svn.collab.net/repos/svn';
 
 # Point at the root of a repository so we get can look at
 # every revision.  
@@ -50,96 +51,80 @@ my $ra = SVN::Ra->new($REPOS_URL);
 
 # We're going to look at all revisions
 my $youngest = $ra->get_latest_revnum();
-my $startrev = 0;
+my $startrev = 1;
 
 # This is the node we're interested in
 my $startpath = "/trunk";
 
-# This array holds all the copies we've followed so far
-# TODO: this will have to change if we pay attention to deletes
-my @frompaths = ($startpath);
-
-# This holds all the nodes we've visited so that we can ensure
-# everything is joined later on
-my %copypaths = ();
+# The "interesting" nodes are potential sources for copies.  This list
+#   grows as we move through time.
+# The "tracking" nodes are the most recent revisions of paths we're
+#   following as we move through time.  If we hit a delete of a path
+#   we remove it from the tracking array (i.e. we're no longer interested
+#   in it).
+my %interesting = ();
+my %tracking = ("$startpath", $startrev);
 
 # This function is a callback which is called for every revision
 # as we traverse
-sub show_log {
+sub process_revision {
   my $changed_paths = shift;
-  my $revision = shift;
-  my $author = shift;
-  my $date = shift;
-  my $message = shift;
+  my $revision = shift || "";
+  my $author = shift || "";
+  my $date = shift || "";
+  my $message = shift || "";
   my $pool = shift;
 
-  # Uncomment this if you want some kind of progress indicator
-  # print STDERR "$revision ";
+  print STDERR "$revision ";
 
-  # For each path changed in this revision:
-  #   If it's copied from somewhere else
-  #   and that somewhere else is a path we're
-  #   tracing (exists in @frompaths),
-  #     Print out a new node linking
-  #     the somewhere else (copyfrom:copyrev)
-  #     to this changed path
-  #     Also, make note of the two nodes we touched (in %copypaths)
-  #     so we can later ensure that they're all linked
+  #  print "Revision: $revision\n";
+  #  print "Author: $author\n";
+  #  print "Date: $date\n";
+  #  print "Changes:\n";
+  foreach my $path (keys %$changed_paths) {
+    my $copyfrom_path = $$changed_paths{$path}->copyfrom_path;
+    my $copyfrom_rev = $$changed_paths{$path}->copyfrom_rev;
+    my $action = $$changed_paths{$path}->action;
 
-  foreach my $key (keys %$changed_paths) {
-    my $copyfrom = $$changed_paths{$key}->copyfrom_path;
-    my $copyrev = $$changed_paths{$key}->copyfrom_rev;
-    if (defined($copyfrom)) {
-      if (grep(/^$copyfrom$/, @frompaths)) {
-        print "\t\"$copyfrom:$copyrev\" -> \"$key:$revision\";\n";
-        push(@frompaths, $key);
-        $copypaths{"$copyfrom:$copyrev"} = 1;
-        $copypaths{"$key:$revision"} = 1;
+    # See if we're deleting one of our tracking nodes
+    if ($action eq "D" and exists($tracking{$path})) 
+    {
+      print "\"$path:$tracking{$path}\" ";
+      print "[label=\"$path:$tracking{$path}\\nDeleted in r$revision\"]\n";
+      delete($tracking{$path});
+      next;
+    }
+
+    # If this is a copy, work out if it was from somewhere interesting
+    if (defined($copyfrom_path) && 
+        exists($interesting{$copyfrom_path.":".$copyfrom_rev})) 
+    {
+      $interesting{$path.":".$revision} = 1;
+      $tracking{$path} = $revision;
+      print "\t\"$copyfrom_path:$copyfrom_rev\" -> ";
+      print " \"$path:$revision\" [label=\"copy\",weight=1,color=red];\n";
+    }
+
+    # For each change, we'll move up the path, updating any parents
+    # that we're tracking (i.e. a change to /trunk/asdf/foo updates
+    # /trunk).  We mark that parent as interesting (a potential source
+    # for copies), draw a link, and update it's tracking revision.
+    while ($path =~ m:/:) {
+      if (exists($tracking{$path}) && $tracking{$path} != $revision) {
+        print "\t\"$path:$tracking{$path}\" -> \"$path:$revision\" ";
+        print "[label=\"change\",weight=10];\n";
+        $interesting{$path.":".$revision} = 1;
+        $tracking{$path} = $revision;
       }
+      $path =~ s:/[^/]+$::;
     }
   }
-}
 
-# Actually do some work
-print "digraph branches {\n";
+}
 
 # And we can do it all with just one call to SVN :)
-$ra->get_log(['/'], $startrev, $youngest, 1, 0, \&show_log); 
+print "digraph tree {\n";
 
-my %paths = ();
-
-# For all nodes that we found that match our
-# original starting node, indicate that it should
-# be coloured (this makes it easier to see in a big graph)
-# Also, store all the revisions we touched a particular
-# path for in %paths
-
-foreach my $frompath (keys %copypaths) {
-  $frompath =~ m/(.*?):([0-9]+)$/;
-  my $p = $1;
-  if ($p eq $startpath) {
-    print "\t\"$frompath\" [style=\"filled\",fillcolor=\"#cccccc\",color=\"red\"];\n";
-  }
-  my $r = $2;
-  ${$paths{$p}}{$r} = 1;
-}
-
-# Now, go through all of the revisions of each path,
-# sort them (because revisions are ordered in time),
-# and make sure they're linked.
-# This gives us a set of links along a path
-# TODO: this is broken for situations where path
-#   is deleted and then recreated (this loop doesn't notice
-#   and joins things that shouldn't be)
-
-foreach my $path (keys %paths) {
-  my @values = sort {$a <=> $b} keys %{$paths{$path}};
-  for (my $i=0; $i < $#values; $i++) {
-    print "\t\"$path:".$values[$i]."\" -> \"$path:".$values[$i+1]."\";\n";
-  }
-}
+$ra->get_log(['/'], $startrev, $youngest, 1, 0, \&process_revision); 
 
 print "}\n";
-
-# Uncomment if printing progress indicators
-# print STDERR "\n";
