@@ -211,6 +211,19 @@ log_end_element(void *userdata,
       break;
     case ELEM_log_item:
       {
+        /* Compatability cruft so that we can provide limit functionality 
+           even if the server doesn't support it.
+
+           If we've seen as many log entries as we're going to show just
+           error out of the XML parser so we can avoid having to parse the
+           remaining XML, but set lb->err to SVN_NO_ERROR so no error will
+           end up being shown to the user. */
+        if (lb->limit && (++lb->count > lb->limit))
+          {
+            lb->err = SVN_NO_ERROR;
+            return SVN_RA_DAV__XML_INVALID;
+          }
+ 
         svn_error_t *err = (*(lb->receiver))(lb->receiver_baton,
                                              lb->changed_paths,
                                              lb->revision,
@@ -219,14 +232,6 @@ log_end_element(void *userdata,
                                              lb->msg,
                                              lb->subpool);
 
-        /* Compatability cruft so that we can provide limit functionality 
-           even if the server doesn't support it. */
-        if (lb->limit && (++lb->count == lb->limit))
-          {
-            lb->err = NULL;
-            return SVN_RA_DAV__XML_INVALID;
-          }
-        
         reset_log_item (lb);
         
         if (err)
