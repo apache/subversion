@@ -761,24 +761,24 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
     {
       if (value)
         {
-          const svn_string_t *qval;
+          const char *qval;
           
           if (svn_xml_is_xml_safe(value->data, value->len))
             {
               svn_stringbuf_t *tmp = NULL;
               svn_xml_escape_cdata_string(&tmp, value, pool);
-              qval = svn_string_create (tmp->data, pool);
+              qval = tmp->data;
               SVN_ERR( send_xml(b->uc, "<S:set-prop name=\"%s\">", qname) );
             }
           else
             {
-              qval = svn_base64_encode_string(value, pool);
+              qval = svn_base64_encode_string(value, pool)->data;
               SVN_ERR( send_xml(b->uc, 
                                 "<S:set-prop name=\"%s\" encoding=\"base64\">" 
                                 DEBUG_CR, qname) );
             }
           
-          SVN_ERR( send_xml(b->uc, "%s", qval->data) );
+          SVN_ERR( send_xml(b->uc, "%s", qval) );
           SVN_ERR( send_xml(b->uc, "</S:set-prop>" DEBUG_CR) );
         }
       else  /* value is null, so this is a prop removal */
