@@ -474,7 +474,7 @@ noop (const char **msg,
 
 
 
-/** EOL Tests **/
+/** EOL conversion alone. **/
 
 static svn_error_t *
 crlf_to_crlf (const char **msg,
@@ -769,7 +769,7 @@ mixed_no_repair (const char **msg,
 
 
 
-/** Keyword substitution. **/
+/** Keyword substitution alone. **/
 
 static svn_error_t *
 author (const char **msg,
@@ -910,6 +910,122 @@ author_date_rev_url (const char **msg,
 
 
 
+/** Keyword substitution and EOL conversion together. **/
+
+static svn_error_t *
+lf_to_crlf_author (const char **msg,
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
+{
+  *msg = "lf_to_crlf, plus expand author keyword";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("lf_to_crlf_author", "\n", "\r\n", 0,
+            NULL, NULL, "jrandom", NULL, pool));
+
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+mixed_to_lf_author_date (const char **msg,
+                         svn_boolean_t msg_only,
+                         apr_pool_t *pool)
+{
+  *msg = "mixed_to_lf, plus expand author and date keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("mixed_to_lf_author_date", NULL, "\n", 1,
+            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+crlf_to_cr_author_rev (const char **msg,
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
+{
+  *msg = "crlf_to_cr, plus expand author and rev keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("crlf_to_cr_author_rev", "\r\n", "\r", 0,
+            "1729", NULL, "jrandom", NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+cr_to_crlf_rev (const char **msg,
+                svn_boolean_t msg_only,
+                apr_pool_t *pool)
+{
+  *msg = "cr_to_crlf, plus expand rev keyword";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("cr_to_crlf_rev", "\r", "\r\n", 0,
+            "1729", NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+cr_to_lfcr_rev_url (const char **msg,
+                    svn_boolean_t msg_only,
+                    apr_pool_t *pool)
+{
+  *msg = "cr_to_lfcr, plus expand rev and url keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("cr_to_lfcr_rev_url", "\r", "\n\r", 0,
+            "1729", NULL, NULL, "http://subversion.tigris.org", pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+mixed_to_crlf_author_date_rev_url (const char **msg,
+                                   svn_boolean_t msg_only,
+                                   apr_pool_t *pool)
+{
+  *msg = "mixed_to_crlf, plus expand author, date, rev, and url keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("mixed_to_crlf_author_date_rev_url", NULL, "\r\n", 1,
+            "1729",
+            "Wed Jan  9 07:49:05 2002",
+            "jrandom",
+            "http://subversion.tigris.org",
+            pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The test table.  */
 
 svn_error_t * (*test_funcs[]) (const char **msg,
@@ -948,6 +1064,12 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   rev_url,
   author_date_rev_url,
   /* Keywords and eol conversion together. */
+  lf_to_crlf_author,
+  mixed_to_lf_author_date,
+  crlf_to_cr_author_rev,
+  cr_to_crlf_rev,
+  cr_to_lfcr_rev_url,
+  mixed_to_crlf_author_date_rev_url,
   0
 };
 
