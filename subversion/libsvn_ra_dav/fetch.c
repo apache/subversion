@@ -365,6 +365,8 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
   svn_error_t *err;
   svn_error_t *err2;
   int rv;
+  svn_string_t my_url = { url, strlen(url) };
+  svn_stringbuf_t *url_str = svn_path_uri_encode (&my_url, pool);
 
   err = (*editor->apply_textdelta)(file_baton,
                                    &frc.handler,
@@ -383,7 +385,7 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
 
   frc.pool = pool;
 
-  rv = ne_read_file(ras->sess2, url, fetch_file_reader, &frc);
+  rv = ne_read_file(ras->sess2, url_str->data, fetch_file_reader, &frc);
   if (rv != NE_OK)
     {
       /* ### other GET responses? */
@@ -500,7 +502,8 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
       SVN_ERR( svn_ra_dav__get_one_prop(&baseline, ras->sess, vcc, NULL,
                                         &svn_ra_dav__checked_in_prop, pool) );
 
-      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, baseline->data, NULL,
+      SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, 
+                                              baseline->data, NULL,
                                               baseline_props, pool) );
     }
   else

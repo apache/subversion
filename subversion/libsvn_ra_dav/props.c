@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_path.h"
 
 #include "ra_dav.h"
 
@@ -116,6 +117,8 @@ static void *create_private(void *userdata, const char *url)
   char *url_path;
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
+  svn_string_t my_url = { url, strlen(url) };
+  svn_stringbuf_t *url_str = svn_path_uri_decode(&my_url, pc->pool);
 
   r->pool = pc->pool;
 
@@ -124,7 +127,7 @@ static void *create_private(void *userdata, const char *url)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) uri_parse(url, &parsed_url, NULL);
+  (void) uri_parse(url_str->data, &parsed_url, NULL);
   url_path = apr_pstrdup(pc->pool, parsed_url.path);
   uri_free(&parsed_url);
 
@@ -283,11 +286,13 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   ne_xml_parser *hip;
   int rv;
   prop_ctx_t pc = { 0 };
+  svn_string_t my_url = { url, strlen(url) };
+  svn_stringbuf_t *url_str = svn_path_uri_encode(&my_url, pool);
 
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
 
-  pc.dph = ne_propfind_create(sess, url, depth);
+  pc.dph = ne_propfind_create(sess, url_str->data, depth);
   ne_propfind_set_private(pc.dph, create_private, &pc);
   hip = ne_propfind_get_parser(pc.dph);
   ne_xml_push_handler(hip, neon_descriptions,
@@ -319,7 +324,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
           /* ### need an SVN_ERR here */
           return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
                                    "Could not connect to server for '%s'",
-                                   url);
+                                   url_str->data);
         case NE_AUTH:
           return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL, 
                                   pool,
