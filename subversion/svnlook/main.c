@@ -981,6 +981,7 @@ main (int argc, const char * const *argv)
   int cmd_offset = 4;
   svnlook_cmd_t command;
   svnlook_ctxt_t c;
+  svn_boolean_t was_success = FALSE;
 
   /* Initialize context variable. */
   c.fs = NULL;
@@ -1129,6 +1130,9 @@ main (int argc, const char * const *argv)
       break;
     }
 
+  /* We were successful in our subcommand. */
+  was_success = TRUE;
+
  cleanup:  /* Cleanup after ourselves. */
   if (c.txn && (! c.is_revision))
     svn_fs_close_txn (c.txn);
@@ -1139,7 +1143,7 @@ main (int argc, const char * const *argv)
   svn_pool_destroy (pool);
   apr_terminate ();
 
-  return EXIT_SUCCESS;
+  return was_success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 
