@@ -21,6 +21,7 @@
 #include <ne_socket.h>
 #include <ne_request.h>
 #include <ne_uri.h>
+#include <ne_auth.h>
 
 #include "svn_error.h"
 #include "svn_ra.h"
