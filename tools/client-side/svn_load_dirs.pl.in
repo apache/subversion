@@ -143,7 +143,7 @@ if (defined $opt_existing_wc_dir)
         die "$0: working copy `$opt_existing_wc_dir' does not exist.\n";
       }
 
-    unless (-d $opt_existing_wc_dir)
+    unless (-d _)
       {
         die "$0: working copy `$opt_existing_wc_dir' is not a directory.\n";
       }
@@ -174,7 +174,7 @@ if (@ARGV)
             die "$0: directory `$dir' does not exist.\n";
           }
 
-        unless (-d $dir)
+        unless (-d _)
           {
             die "$0: directory `$dir' is not a directory.\n";
           }
