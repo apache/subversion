@@ -127,7 +127,7 @@ svn_cl__propedit (apr_getopt_t *os,
             if (opt_state->encoding)
               return svn_error_create 
                 (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 _("Bad encoding option: prop's value isn't stored as UTF8"));
+                 _("Bad encoding option: prop value not stored as UTF8"));
           
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
