@@ -70,7 +70,7 @@ svn_mime_type_is_binary (const char *mime_type)
   /* See comment in svn_mime_type_validate() above. */
   const apr_size_t len = strcspn (mime_type, "; ");
   return ((strncmp (mime_type, "text/", 5) != 0)
-          && (strncmp (mime_type, "image/x-xbitmap", len) != 0)
-          && (strncmp (mime_type, "image/x-xpixmap", len) != 0)
+          && (len != 15 || strncmp (mime_type, "image/x-xbitmap", len) != 0)
+          && (len != 15 || strncmp (mime_type, "image/x-xpixmap", len) != 0)
           );
 }
