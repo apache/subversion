@@ -2016,7 +2016,7 @@ static int cdata_handler(void *userdata, int state,
             CHKERR( svn_error_createf
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                      _("Error writing to '%s': unexpected EOF"),
-                     rb->namestr->data) );
+                     svn_path_local_style(rb->namestr->data, rb->ras->pool)) );
           }
       }
       break;

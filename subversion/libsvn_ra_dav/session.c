@@ -722,7 +722,7 @@ svn_ra_dav__open (void **session_baton,
                   return svn_error_createf
                     (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                      _("Invalid config: unable to load certificate file '%s'"),
-                     file);
+                     svn_path_local_style(file, pool));
                 }
               ne_ssl_trust_cert(sess, ca_cert);
               ne_ssl_trust_cert(sess2, ca_cert);

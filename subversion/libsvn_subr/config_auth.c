@@ -95,7 +95,8 @@ svn_config_read_auth_data (apr_hash_t **hash,
       *hash = apr_hash_make (pool);
 
       SVN_ERR_W (svn_hash_read (*hash, authfile, pool),
-                 apr_psprintf (pool, "Error parsing '%s'", auth_path));
+                 apr_psprintf (pool, "Error parsing '%s'",
+                               svn_path_local_style (auth_path, pool)));
       
       SVN_ERR (svn_io_file_close (authfile, pool));
     }
@@ -132,7 +133,8 @@ svn_config_write_auth_data (apr_hash_t *hash,
              "Unable to open auth file for writing");
   
   SVN_ERR_W (svn_hash_write (hash, authfile, pool),
-             apr_psprintf (pool, "Error writing hash to '%s'", auth_path));
+             apr_psprintf (pool, "Error writing hash to '%s'",
+                           svn_path_local_style (auth_path, pool)));
 
   SVN_ERR (svn_io_file_close (authfile, pool));
 
