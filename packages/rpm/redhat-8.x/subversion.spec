@@ -1,4 +1,4 @@
-%define apache_version 2.0.42-0.1
+%define apache_version 2.0.44-0.1
 %define neon_version 0.23.2
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -33,7 +33,7 @@ BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2
-BuildPreReq: neon-devel = %{neon_version}
+BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python
 BuildPreReq: python-devel
