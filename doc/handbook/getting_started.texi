@@ -15,14 +15,6 @@ How to get started with Subversion.
 @node Introduction
 @section Introduction
 
-
-@menu
-* A Revision Control System::   
-* History::                     
-* Features::                    
-@end menu
-
-@node A Revision Control System
 @subsection A Revision Control System
 
 Subversion is a free/open-source @dfn{revision control system}.  
@@ -43,7 +35,6 @@ general system that can be used to manage @emph{any} sort of collection
 of files.  (And is still darn good at managing source code.)
 
 
-@node History
 @subsection History
 
 Subversion aims to be the successor to CVS (@url{http://www.cvshome.org}).
@@ -67,7 +58,6 @@ into a large, open-source project backed by a community of Free
 software developers.
 
 
-@node Features
 @subsection Features
 
 What sort of things does Subversion do better than CVS?  Here's a short
@@ -170,13 +160,6 @@ the top of the diagram (initiated by the user) and flows "downward".
 @end example
 
 
-@menu
-* Filesystem::                  
-* Network Layer::               
-* Client Libraries::            
-@end menu
-
-@node Filesystem
 @subsection Filesystem
 
 The Subversion Filesystem is not a kernel-level filesystem that one
@@ -199,7 +182,6 @@ Subversion needs: data integrity, atomic writes, recoverability, and hot
 backups.
 
 
-@node Network Layer
 @subsection Network Layer
 
 Subversion has the mark of Apache all over it.  At its very core, the
@@ -234,7 +216,6 @@ network protocol for Subversion?  Just write a new library that
 implements the RA API.
 
 
-@node Client Libraries
 @subsection Client Libraries
 
 On the client side, the Subversion "working copy" library maintains
