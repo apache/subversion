@@ -968,6 +968,26 @@ change.  Please adhere to this format, even when only one file is
 changed -- not only does consistency aid readability, it also allows
 software to colorize log entries automatically.
 
+As an exception to the above, if you make exactly the same change in
+several files, list all the changed files in one entry. For example:
+
+   * subversion/libsvn_ra_pegions/twirl.c,
+     subversion/libsvn_ra_pegions/roost.c:
+     Include svn_private_config.h.
+
+If all the changed files are deep inside the source tree, you can
+shorten the file name entries by noting the common prefix before the
+change entries:
+
+   [in subversion/bindings/swig/birdsong]
+
+   * dialects/nightingale.c (get_base_pitch): Allow 3/4-tone
+     pitch variation to account for trait variability amongst
+     isolated populations Erithacus megarhynchos.
+
+   * dialects/gallus_domesticus.c: Remove. Unreliable due to
+     extremely low brain-to-body mass ratio.
+
 If your change is related to a specific issue in the issue tracker,
 then include a string like "issue #N" in the log message.  For
 example, if a patch resolves issue 1729, then the log message might
