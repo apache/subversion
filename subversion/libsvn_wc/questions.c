@@ -444,54 +444,48 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
                          svn_stringbuf_t *path,
                          apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  enum svn_node_kind wkind, bkind;
   svn_error_t *err;
   svn_stringbuf_t *prop_path;
   svn_stringbuf_t *prop_base_path;
   svn_boolean_t different_filesizes, equal_timestamps;
 
-  /* First, get the prop_path from the original path */
-  err = svn_wc__prop_path (&prop_path, path, 0, pool);
-  if (err) return err;
-  
-  /* Sanity check:  if the prop_path doesn't exist, return FALSE. */
-  err = svn_io_check_path (prop_path, &kind, pool);
-  if (err) return err;
-  if (kind != svn_node_file)
+  /* First, get the paths of the working and 'base' prop files. */
+  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, pool));
+
+  /* See if either of the paths exist. */
+  SVN_ERR (svn_io_check_path (prop_path, &wkind, pool));
+  SVN_ERR (svn_io_check_path (prop_base_path, &bkind, pool));
+
+  /* Easy out:  if the base file is missing, we know the answer
+     immediately. */
+  if (bkind != svn_node_file)
     {
-      *modified_p = FALSE;
-      return SVN_NO_ERROR;
-    }              
-
-  /* Get the full path of the prop-base `pristine' file */
-  err = svn_wc__prop_base_path (&prop_base_path, path, 0, pool);
-  if (err) return err;
-
-  /* Sanity check:  if the prop_base_path doesn't exist, return FALSE. */
-  err = svn_io_check_path (prop_base_path, &kind, pool);
-  if (err) return err;
-  if (kind != svn_node_file)
-    {
-      /* If we get here, we know that the property file exists, but
-         the base property file doesn't. 
-         
-         This means somebody has recently created properties for the
-         first time, and hasn't yet committed.
-
-         BUT:  they may have removed them again, leaving an empty
-         property file.  Check for this. */
-      int hash_size;
-      apr_hash_t *props = apr_hash_make (pool);
-
-      SVN_ERR (svn_wc__load_prop_file (prop_path, props, pool));
-      hash_size = apr_hash_count (props);
-      if (hash_size)
-        *modified_p = TRUE;
+      if (wkind == svn_node_file)
+        {
+          /* base is missing, but working exists */
+          *modified_p = TRUE;
+          return SVN_NO_ERROR;
+        }
       else
-        *modified_p = FALSE;
+        {
+          /* base and working are both missing */
+          *modified_p = FALSE;
+          return SVN_NO_ERROR;
+        }
+    }
 
+  /* OK, so the base file exists.  One more easy out: */
+  if (wkind != svn_node_file)
+    {
+      /* base exists, working is missing */
+      *modified_p = TRUE;
       return SVN_NO_ERROR;
-    }              
+    }
+
+  /* At this point, we know both files exists.  Therefore we have no
+     choice but to start checking their contents. */
   
   /* There are at least three tests we can try in succession. */
   
@@ -512,8 +506,8 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   
   /* Easy-answer attempt #2:  */
       
-  /* See if the local file's timestamp is the same as the one recorded
-     in the administrative directory.  */
+  /* See if the local file's prop timestamp is the same as the one
+     recorded in the administrative directory.  */
   err = timestamps_equal_p (&equal_timestamps, path,
                             svn_wc__prop_time, pool);
   if (err) return err;

@@ -52,11 +52,9 @@ assemble_status (svn_wc_status_t **status,
                  apr_pool_t *pool)
 {
   svn_wc_status_t *stat;
-  svn_stringbuf_t *prop_path;
-  enum svn_node_kind prop_kind, path_kind;
+  enum svn_node_kind path_kind;
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
-  svn_boolean_t prop_exists = FALSE;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_none;
@@ -75,15 +73,8 @@ assemble_status (svn_wc_status_t **status,
         Together, these two stati are of lowest precedence, and C has
         precedence over M. */
 
-  /* Determine if a property component exists. ### CHANGEME */
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
-  SVN_ERR (svn_io_check_path (prop_path, &prop_kind, pool));
-  if (prop_kind == svn_node_file)
-    prop_exists = TRUE;
-  
   /* If the entry has a property file, see if it has local changes. */
-  if (prop_exists)
-    SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, pool));
+  SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, pool));
   
   /* If the entry is a file, check for textual modifications */
   if (entry->kind == svn_node_file)

@@ -276,7 +276,8 @@ svn_wc__load_prop_file (svn_stringbuf_t *propfile_path,
 
 
 /* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH */
+   located at PROPFILE_PATH.  If HASH is empty, then any file at this
+   location will be removed.  */
 svn_error_t *
 svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
                         apr_hash_t *hash,
@@ -284,6 +285,26 @@ svn_wc__save_prop_file (svn_stringbuf_t *propfile_path,
 {
   apr_status_t apr_err;
   apr_file_t *prop_tmp;
+  enum svn_node_kind kind;
+
+  /* Sanity check;  if the hash is empty, make sure that *no* propfile
+     exists!   We do this so that svn_wc_props_modified_p() can just
+     stat the file's existence for quick results (better than opening
+     and closing an empty file.) */
+  if (apr_hash_count (hash) == 0)
+    {
+      SVN_ERR (svn_io_check_path (propfile_path, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          apr_status_t status = apr_file_remove (propfile_path->data, pool);
+          if (status)
+            return svn_error_createf (status, 0, NULL, pool,
+                                      "can't delete propfile '%s'",
+                                      propfile_path->data);
+        }
+
+      return SVN_NO_ERROR;
+    }
 
   apr_err = apr_file_open (&prop_tmp, propfile_path->data,
                       (APR_WRITE | APR_CREATE),
@@ -647,27 +668,64 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
     }
   
   
-  /* Write log entry to move pristine tmp copy to real pristine area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_prop_base,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_prop_base,
-                         NULL);
+  /* We don't know for sure whether the previous two calls to
+     svn_wc__save_prop_file() actually created files or not; if either
+     of the merged hashes was empty, then base_prop_tmp_path and/or
+     local_prop_tmp_path might be *deleted*, due to the way
+     _save_prop_file() works.  Look at the hash sizes to determine.
+     If a file doesn't exist, then write a 'rm' log command instead of
+     a 'mv' log command. */
+
+  if (apr_hash_count (basehash) == 0)
+    {
+      /* Write log entry to remove the pristine propfile. */
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_RM,
+                             SVN_WC__LOG_ATTR_NAME,
+                             real_prop_base,
+                             NULL);
+    }
+  else
+    {
+      /* Write log entry to move pristine tmp copy to real pristine area. */
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_prop_base,
+                             SVN_WC__LOG_ATTR_DEST,
+                             real_prop_base,
+                             NULL);
+    }
   
-  /* Write log entry to move working tmp copy to real working area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_props,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_props,
-                         NULL);
+
+  if (apr_hash_count (localhash) == 0)
+    {
+      /* Write log entry to remove the working propfile. */
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_RM,
+                             SVN_WC__LOG_ATTR_NAME,
+                             real_props,
+                             NULL);
+    }
+  else
+    {
+      /* Write log entry to move working tmp copy to real working area. */
+      svn_xml_make_open_tag (entry_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_props,
+                             SVN_WC__LOG_ATTR_DEST,
+                             real_props,
+                             NULL);
+    }
 
 
   if (reject_tmp_fp)
@@ -987,6 +1045,28 @@ svn_wc_prop_set (svn_stringbuf_t *name,
      property into it. */
   apr_hash_set (prophash, name->data, name->len, value);
   
+  /* If hash is empty, don't write out a propfile.  
+     In fact, make sure that the propfile is -deleted-. */
+  if (apr_hash_count (prophash) == 0)
+    {
+      svn_stringbuf_t *propfile_path;
+      enum svn_node_kind kind;
+
+      SVN_ERR (svn_wc__prop_path (&propfile_path, path, 0, pool));
+      SVN_ERR (svn_io_check_path (propfile_path, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          apr_status_t status = apr_file_remove (propfile_path->data, pool);
+          if (status)
+            return svn_error_createf (status, 0, NULL, pool,
+                                      "can't delete propfile '%s'",
+                                      propfile_path->data);
+        }
+
+      return SVN_NO_ERROR;
+    }
+  
+
   /* Open the propfile for writing. */
   SVN_ERR (svn_wc__open_props (&fp, 
                                path, /* open in PATH */
