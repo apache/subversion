@@ -9,6 +9,13 @@ Status of 1.1.0:
 
 Candidate changes:
 
+  * r10242
+    Fix a gcc compiler warning.
+    Justification:
+      Duh.  It's a compiler warning.
+    Votes:
+      +1: cmpilato
+
   * r10604
     Cleanup some qsort-related stuff.
     Justification:
