@@ -98,10 +98,14 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r12499, r12542
+  * r12499, r12542, plus branch-only modification in r12670
     Make mailer.py work on Windows.
     Justification:
       Our flagship mailing hook-script should work on all platforms.
+    Notes:
+      The branch-only modification was inlining a piece of code available
+      in the 1.2 and later Python bindings into mailer.py so that it can
+      function with 1.1 bindings.
     Branch:
       1.1.x-mailer.py r12543:HEAD
     Votes:
