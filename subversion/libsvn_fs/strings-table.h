@@ -46,14 +46,16 @@ int svn_fs__open_strings_table (DB **strings_p,
 /* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
  * of TRAIL.
  * 
- * On return, *LEN is set to the number of bytes read.  If the
- * outgoing *LEN is less than the incoming, this indicates that the
- * end of the string was reached (no error is returned on end of
- * string).
+ * On return, *LEN is set to the number of bytes read. This value may
+ * be less than the number requested.
+ *
+ * If OFFSET is past the end of the string, then *LEN will be set to
+ * zero. Callers which are advancing OFFSET as they read portions of
+ * the string can terminate their loop when *LEN is returned as zero
+ * (which will occur when OFFSET == length(the string)).
  * 
- * If OFFSET is past the end of the string, the error
- * SVN_ERR_FS_SHORT_STRING is returned.  If string KEY does not exist,
- * the error SVN_ERR_FS_NO_SUCH_STRING is returned.
+ * If string KEY does not exist, the error SVN_ERR_FS_NO_SUCH_STRING
+ * is returned.
  */
 svn_error_t *svn_fs__string_read (svn_fs_t *fs,
                                   const char *key,

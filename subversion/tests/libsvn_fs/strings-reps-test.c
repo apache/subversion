@@ -326,25 +326,31 @@ verify_expected_record (svn_fs_t *fs,
   /* Check the string size. */
   SVN_ERR (svn_fs__string_size (&size, fs, key, trail));
   if (size != expected_len)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
-                             "record has unexpected size");
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+                              "record has unexpected size "
+                              "(got %" APR_SIZE_T_FMT ", "
+                              "expected %" APR_SIZE_T_FMT ")",
+                              size, expected_len);
 
   /* Read the string back in 100-byte chunks. */
   text = svn_stringbuf_create ("", trail->pool);
   while (1)
     {
-      size = 100;
+      size = sizeof (buf);
       SVN_ERR (svn_fs__string_read (fs, key, buf, offset, &size, trail));
-      svn_stringbuf_appendbytes (text, buf, size);
-      if (size < 100)
+      if (size == 0)
         break;
+      svn_stringbuf_appendbytes (text, buf, size);
       offset += size;
     }
 
   /* Check the size and contents of the read data. */
   if (text->len != expected_len)
-    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
-                             "record read returned unexpected size");
+    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
+                              "record read returned unexpected size "
+                              "(got %" APR_SIZE_T_FMT ", "
+                              "expected %" APR_SIZE_T_FMT ")",
+                              size, expected_len);
   if (memcmp (expected_text, text->data, expected_len))
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
                              "record read returned unexpected data");
