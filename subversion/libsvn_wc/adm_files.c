@@ -727,7 +727,7 @@ svn_wc__open_props (apr_file_t **handle,
      of parent_dir.  Examine the flags to know -which- kind of prop
      file to get -- there are three types! */
 
-  if (base || wcprops)
+  if (base && wcprops)
     return svn_error_create (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
                              "open_props: no such thing as 'base' wcprops!");
 
