@@ -187,6 +187,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   /* if we need to realloc our first buffer to hold the concatenation,
      then make it twice the total size we need. */
 
+  /* +1 for null terminator. */
   lengthen_block (str, (total_len + 1), pool);
 
   /* get address 1 byte beyond end of original bytestring */
