@@ -46,6 +46,11 @@ my $filelen = SVN::Fs::file_length($root, $path);
 my $stream = SVN::Fs::file_contents($root, $path);
 is($stream->read($filelen), $text, 'content verified');
 
+ok (eq_array(SVN::Repos::revisions_changed ($fs, 'trunk/filea', 0, 1, 0), [1]),
+    'revisions_changed');
+
+is ($fs->revision_prop(1, 'not:exists'), undef, 'nonexisting property');
+
 END {
 diag "cleanup";
 `rm -rf $repospath`;
