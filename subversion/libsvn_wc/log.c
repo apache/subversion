@@ -569,11 +569,14 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
               svn_error_clear (err);
               err = SVN_NO_ERROR;
 
-              SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, TRUE,
-                                            loggy->pool));
-              svn_wc__entry_remove (entries, name);
-              SVN_ERR (svn_wc__entries_write (entries, loggy->adm_access, 
-                                              loggy->pool));
+              if (entry->schedule != svn_wc_schedule_add)
+                {
+                  SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access,
+                                                TRUE, loggy->pool));
+                  svn_wc__entry_remove (entries, name);
+                  SVN_ERR (svn_wc__entries_write (entries, loggy->adm_access, 
+                                                  loggy->pool));
+                }
             }
           else
             {

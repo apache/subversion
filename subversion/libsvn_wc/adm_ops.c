@@ -118,14 +118,18 @@ recursively_tweak_entries (svn_wc_adm_access_t *dirpath,
           if (remove_missing_dirs 
               && svn_wc__adm_missing (dirpath, child_path))
             {
-              svn_wc__entry_remove (entries, name);
-              if (notify_func)
-                (* notify_func) (notify_baton, child_path, 
-                                 svn_wc_notify_delete,
-                                 current_entry->kind, NULL, 
-                                 svn_wc_notify_state_unknown,
-                                 svn_wc_notify_state_unknown,
-                                 SVN_INVALID_REVNUM);
+              if (current_entry->schedule != svn_wc_schedule_add) 
+                {
+                  svn_wc__entry_remove (entries, name);
+                  if (notify_func)
+                    (* notify_func) (notify_baton, child_path, 
+                                     svn_wc_notify_delete,
+                                     current_entry->kind, NULL, 
+                                     svn_wc_notify_state_unknown,
+                                     svn_wc_notify_state_unknown,
+                                     SVN_INVALID_REVNUM);
+                }
+              /* Else if missing item is schedule-add, do nothing. */
             }
 
           /* Not missing or deleted, so recurse. */
