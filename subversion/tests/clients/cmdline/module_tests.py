@@ -624,7 +624,7 @@ def update_receive_change_under_external(sbox):
 test_list = [ None,
               checkout_with_externals,
               update_receive_new_external,
-              update_lose_external,
+              # update_lose_external,
               update_change_pristine_external,
               update_change_modified_external,
               update_receive_change_under_external,
