@@ -133,3 +133,9 @@ Candidate changes:
     Use warnings pragma on perl hook-scripts.
     Justification: Perl correctness issue.
     Votes:
+
+  * r8802
+    Fix issue #1752 - 'svn propget url' doesn't work over ra_svn.
+    Justification: Simple one-line fix to a shallow bug.
+    Votes:
+      +1: bliss
