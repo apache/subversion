@@ -31,7 +31,7 @@ Item = svntest.wc.StateItem
 #----------------------------------------------------------------------
 
 def svnversion_test(sbox):
-  "test 'svnversion' on a working copy and other directories"
+  "test 'svnversion' on wc and other dirs"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url

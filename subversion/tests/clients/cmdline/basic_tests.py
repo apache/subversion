@@ -1455,7 +1455,7 @@ def basic_auth_cache(sbox):
 
 #----------------------------------------------------------------------
 def basic_add_ignores(sbox):
-  'ignored files in the added directory should not be added'
+  'ignored files in added dirs should not be added'
 
   # The bug was that
   #
@@ -1494,7 +1494,7 @@ def basic_add_ignores(sbox):
 
 #----------------------------------------------------------------------
 def basic_import_ignores(sbox):
-  'ignored files in the imported directory should not be imported'
+  'do not import ignored files in imported dirs'
 
   # The bug was that
   #

@@ -205,7 +205,7 @@ def change_external(path, new_val):
 #----------------------------------------------------------------------
 
 def checkout_with_externals(sbox):
-  "check out a directory with some external modules attached"
+  "test checkouts with externals"
 
   if externals_test_setup(sbox):
     return 1
@@ -277,7 +277,7 @@ def checkout_with_externals(sbox):
 #----------------------------------------------------------------------
 
 def update_receive_new_external(sbox):
-  "update to receive a new external module."
+  "update to receive a new external module"
 
   if externals_test_setup(sbox):
     return 1
@@ -335,7 +335,7 @@ def update_receive_new_external(sbox):
 #----------------------------------------------------------------------
 
 def update_lose_external(sbox):
-  "update to lose an external module."
+  "update to lose an external module"
 
   if externals_test_setup(sbox):
     return 1
@@ -434,7 +434,7 @@ def update_lose_external(sbox):
 #----------------------------------------------------------------------
 
 def update_change_pristine_external(sbox):
-  "update to receive a change to an unmodified external module."
+  "update change to an unmodified external module"
 
   if externals_test_setup(sbox):
     return 1
@@ -496,7 +496,7 @@ def update_change_pristine_external(sbox):
 
 
 def update_change_modified_external(sbox):
-  "update to receive a change to a modified external module."
+  "update changes to a modified external module"
 
   if externals_test_setup(sbox):
     return 1
@@ -566,7 +566,7 @@ def update_change_modified_external(sbox):
 
 
 def update_receive_change_under_external(sbox):
-  "update to receive a change under an external module."
+  "update changes under an external module"
 
   if externals_test_setup(sbox):
     return 1
@@ -669,7 +669,7 @@ def update_receive_change_under_external(sbox):
 #----------------------------------------------------------------------
 
 def modify_and_update_receive_new_external(sbox):
-  "modify to specify, and update to receive, a new external module"
+  "commit and update additional externals"
 
   if externals_test_setup(sbox):
     return 1

@@ -551,7 +551,7 @@ def no_wc_copy_overwrites(sbox):
 # Takes out working-copy locks for A/B2 and child A/B2/E. At one stage
 # during issue 749 the second lock cause an already-locked error.
 def copy_modify_commit(sbox):
-  "copy a directory hierarchy and modify before commit"
+  "copy and tree and modify before commit"
 
   sbox.build()
 
