@@ -79,6 +79,44 @@ svn_repos_fs_commit_txn (const char **conflict_p,
 }
 
 
+svn_error_t *
+svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
+                                   svn_fs_t *fs,
+                                   svn_revnum_t rev,
+                                   const char *author,
+                                   svn_string_t *log_msg,
+                                   apr_pool_t *pool)
+
+{
+  svn_string_t log_prop_name = { SVN_PROP_REVISION_LOG,
+                                 sizeof(SVN_PROP_REVISION_LOG) - 1};
+  svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
+                                    sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
+
+  /* Begin the transaction. */
+  SVN_ERR (svn_fs_begin_txn (txn_p, fs, rev, pool));
+
+  /* We pass the author and log message to the filesystem by adding
+     them as properties on the txn.  Later, when we commit the txn,
+     these properties will be copied into the newly created revision. */
+
+  /* User (author). */
+  {
+    svn_string_t val;
+    val.data = author;
+    val.len = strlen (author);
+
+    SVN_ERR (svn_fs_change_txn_prop (*txn_p, &author_prop_name,
+                                     &val, pool));
+  }
+
+  /* Log message. */
+  SVN_ERR (svn_fs_change_txn_prop (*txn_p, &log_prop_name,
+                                   log_msg, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* 
