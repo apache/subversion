@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux
-;; with svn 0.29
+;; with svn 0.33
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -42,6 +42,7 @@
 ;; a     - svn-status-add-file              run 'svn add'
 ;; +     - svn-status-make-directory        run 'svn mkdir'
 ;; M-c   - svn-status-cleanup               run 'svn cleanup'
+;; b     - svn-status-blame                 run 'svn blame'
 ;; RET   - svn-status-find-file-or-examine-directory
 ;; ^     - svn-status-examine-parent
 ;; ~     - svn-status-get-specific-revision
@@ -92,6 +93,7 @@
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
+;; * blame                     implemented
 ;; * cat
 ;; * checkout (co)
 ;; * cleanup                   implemented
@@ -113,8 +115,8 @@
 ;; * propget (pget, pg)        used
 ;; * proplist (plist, pl)      implemented
 ;; * propset (pset, ps)        used
-;; * revert                    implemented
 ;; * resolved
+;; * revert                    implemented
 ;; * status (stat, st)         implemented
 ;; * switch (sw)
 ;; * update (up)               implemented
@@ -183,6 +185,7 @@
 (defvar svn-status-mode-line-process-status "")
 (defvar svn-status-mode-line-process-edit-flag "")
 (defvar svn-status-edit-svn-command nil)
+(defvar svn-status-update-previous-process-output nil)
 (defvar svn-status-temp-dir
   (or
    (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
@@ -364,7 +367,14 @@ for  example: '(\"revert\" \"file1\"\)"
                           (replace-match "/"))))
                   (svn-parse-status-result)
                   (set-buffer act-buf)
-                  (svn-status-update-buffer))
+                  (svn-status-update-buffer)
+                  (when svn-status-update-previous-process-output
+                    (set-buffer (process-buffer process))
+                    (delete-region (point-min) (point-max))
+                    (insert "Output from svn command:\n")
+                    (insert svn-status-update-previous-process-output)
+                    (goto-char (point-min))
+                    (setq svn-status-update-previous-process-output nil)))
                  ((eq svn-process-cmd 'log)
                   (svn-status-show-process-buffer-internal t)
                   (message "svn log finished"))
@@ -380,6 +390,9 @@ for  example: '(\"revert\" \"file1\"\)"
                  ;;                   (diff-mode)
                  ;;                   (font-lock-fontify-buffer))
                  ;;                 (message "svn diff finished"))
+                 ((eq svn-process-cmd 'blame)
+                  (svn-status-show-process-buffer-internal t)
+                  (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-status-show-process-buffer-internal t)
                   (svn-status-update)
@@ -560,6 +573,7 @@ A and B must be line-info's"
   (define-key svn-status-mode-map [?r] 'svn-status-revert-file)
   (define-key svn-status-mode-map [?l] 'svn-status-show-svn-log)
   (define-key svn-status-mode-map [?i] 'svn-status-info)
+  (define-key svn-status-mode-map [?b] 'svn-status-blame)
   (define-key svn-status-mode-map [?=] 'svn-status-show-svn-diff)
   (define-key svn-status-mode-map [(control ?=)] 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map [?~] 'svn-status-get-specific-revision)
@@ -595,6 +609,7 @@ A and B must be line-info's"
     ["svn commit" svn-status-commit-file t]
     ["svn log" svn-status-show-svn-log t]
     ["svn info" svn-status-info t]
+    ["svn blame" svn-status-blame t]
     ("Diff"
      ["svn diff actual file" svn-status-show-svn-diff t]
      ["svn diff marked files" svn-status-show-svn-diff-for-marked-files t]
@@ -655,6 +670,7 @@ A and B must be line-info's"
   +     - svn-status-make-directory        run 'svn mkdir'
   R     - svn-status-mv                    run 'svn mv'
   M-c   - svn-status-cleanup               run 'svn cleanup'
+  b     - svn-status-blame                 run 'svn blame'
   RET   - svn-status-find-file-or-examine-directory
   ^     - svn-status-examine-parent
   ~     - svn-status-get-specific-revision
@@ -995,7 +1011,12 @@ This hides the repository information again."
     (goto-char (+ (point-at-bol) svn-status-default-column))))
 
 (defun svn-status-update (&optional arg)
+  "Run 'svn status -v'.
+When called with a prefix argument run 'svn status -vu'"
   (interactive "P")
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (setq svn-status-update-previous-process-output (buffer-substring (point-min) (point-max))))
   (svn-status default-directory arg))
 
 (defun svn-status-get-line-information ()
@@ -1203,23 +1224,38 @@ See `svn-status-marked-files' for what counts as selected."
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
   (svn-run-svn t t 'info "info" "--targets" svn-status-temp-arg-file))
 
+;; Todo: add possiblity to specify the revision
+(defun svn-status-blame ()
+  "Run `svn blame' on the actual file."
+  (interactive)
+  ;;(svn-run-svn t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
+  (svn-run-svn t t 'blame "blame" (svn-status-line-info->filename (svn-status-get-line-information))))
+
 (defun svn-status-show-svn-diff (arg)
-  "Run `svn diff' on all selected files.
-See `svn-status-marked-files' for what counts as selected.
-If ARG then prompt for revision to diff against, else compare working copy with BASE."
+  "Run `svn diff' on the actual file.
+If there is a newer revision in the repository, the diff is done against HEAD, otherwise
+compare the working copy with BASE.
+If ARG then prompt for revision to diff against."
   (interactive "P")
   (svn-status-show-svn-diff-internal arg nil))
 
 (defun svn-status-show-svn-diff-for-marked-files (arg)
+  "Run `svn diff' on all selected files.
+See `svn-status-marked-files' for what counts as selected.
+If ARG then prompt for revision to diff against, else compare working copy with BASE."
   (interactive "P")
   (svn-status-show-svn-diff-internal arg t))
 
 (defun svn-status-show-svn-diff-internal (arg &optional use-all-marked-files)
-  (let ((fl (if use-all-marked-files
-                (svn-status-marked-files)
-              (list (svn-status-get-line-information))))
-        (clear-buf t)
-        (revision (if arg (svn-status-read-revision-string "Diff with files for version: " "PREV") "BASE")))
+  (let* ((fl (if use-all-marked-files
+                 (svn-status-marked-files)
+               (list (svn-status-get-line-information))))
+         (clear-buf t)
+         (revision (if arg
+                       (svn-status-read-revision-string "Diff with files for version: " "PREV")
+                     (if use-all-marked-files
+                         "BASE"
+                       (if (svn-status-line-info->modified-external (car fl)) "HEAD" "BASE")))))
     (while fl
       (svn-run-svn nil clear-buf 'diff "diff" "-r" revision (svn-status-line-info->filename (car fl)))
       (setq clear-buf nil)
