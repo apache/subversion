@@ -1108,7 +1108,9 @@ main (int argc, const char * const *argv)
   err = (*subcommand->cmd_func) (os, &opt_state, pool);
   if (err)
     {
-      if (err->apr_err != SVN_ERR_CL_ARG_PARSING_ERROR)
+      if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        svn_cl__subcommand_help (subcommand->name, pool);
+      else
         svn_handle_error (err, stderr, 0);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
