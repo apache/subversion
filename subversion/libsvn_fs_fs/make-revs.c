@@ -8,20 +8,22 @@
 #include <svn_md5.h>
 #include <svn_repos.h>
 
+struct rep_pointer
+{
+  svn_revnum_t rev;
+  apr_off_t off;
+  apr_off_t len;       /* Serves for both the expanded and rep size */
+  const char *digest;
+};
+
 struct entry
 {
   apr_hash_t *children;  /* NULL for files */
   apr_hash_t *props;
   apr_pool_t *props_pool;
-  svn_revnum_t text_rev;
-  apr_off_t text_off;
-  apr_off_t text_len;    /* Serves for both the expanded and rep size */
-  const char *text_digest;
-  svn_revnum_t props_rev;
-  apr_off_t props_off;
-  apr_off_t props_len;   /* Serves for both the expanded and rep size */
+  struct rep_pointer text_rep;
+  struct rep_pointer props_rep;
   svn_revnum_t node_rev;
-  const char *props_digest;
   apr_off_t node_off;
   int pred_count;
   struct entry *pred;
@@ -92,6 +94,15 @@ hash_write(apr_hash_t *hash, svn_stream_t *out, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static void
+init_rep(struct rep_pointer *rep)
+{
+  rep->rev = SVN_INVALID_REVNUM;
+  rep->off = -1;
+  rep->len = -1;
+  rep->digest = NULL;
+}
+
 static struct entry *
 new_entry(apr_pool_t *pool)
 {
@@ -100,14 +111,8 @@ new_entry(apr_pool_t *pool)
   entry = apr_palloc(pool, sizeof(*entry));
   entry->children = NULL;
   entry->props = NULL;
-  entry->text_rev = SVN_INVALID_REVNUM;
-  entry->text_off = -1;
-  entry->text_len = -1;
-  entry->text_digest = NULL;
-  entry->props_rev = SVN_INVALID_REVNUM;
-  entry->props_off = -1;
-  entry->props_len = -1;
-  entry->props_digest = NULL;
+  init_rep(&entry->text_rep);
+  init_rep(&entry->props_rep);
   entry->node_rev = SVN_INVALID_REVNUM;
   entry->node_off = -1;
   entry->pred_count = 0;
@@ -230,6 +235,15 @@ node_rev_id(struct entry *entry, apr_pool_t *pool)
                       entry->node_off);
 }
 
+/* Return the string form of a rep pointer as used in a node-rev field. */
+static const char *
+repstr(struct rep_pointer *rep, apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%" SVN_REVNUM_T_FMT " %" APR_OFF_T_FMT
+                      " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT " %s",
+                      rep->rev, rep->off, rep->len, rep->len, rep->digest);
+}
+
 static void
 get_node_info(apr_hash_t *headers, const char **path, svn_node_kind_t *kind,
               enum svn_node_action *action, svn_revnum_t *copyfrom_rev,
@@ -268,18 +282,17 @@ get_node_info(apr_hash_t *headers, const char **path, svn_node_kind_t *kind,
 }
 
 static svn_error_t *
-write_hash_rep(struct parse_baton *pb, apr_hash_t *hash, apr_pool_t *pool,
-               svn_revnum_t *rev, apr_off_t *off, apr_off_t *len,
-               const char **digest)
+write_hash_rep(struct parse_baton *pb, apr_hash_t *hash,
+               struct rep_pointer *rep, apr_pool_t *pool)
 {
   svn_stringbuf_t *buf;
   svn_stream_t *stream;
   unsigned char md5buf[APR_MD5_DIGESTSIZE];
 
   /* Record the rev file offset of the rep. */
-  *rev = pb->current_rev;
-  *off = 0;
-  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, off, pool));
+  rep->rev = pb->current_rev;
+  rep->off = 0;
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &rep->off, pool));
 
   /* Write out a rep header. */
   svn_stream_printf(pb->rev_stream, pool, "PLAIN\n");
@@ -291,14 +304,14 @@ write_hash_rep(struct parse_baton *pb, apr_hash_t *hash, apr_pool_t *pool,
 
   /* Record the MD5 digest of the marshalled hash. */
   apr_md5(md5buf, buf->data, buf->len);
-  *digest = svn_md5_digest_to_cstring(md5buf, pb->pool);
+  rep->digest = svn_md5_digest_to_cstring(md5buf, pb->pool);
 
   /* Write the marshalled hash out to the rev file. */
   SVN_ERR(svn_io_file_write_full(pb->rev_file, buf->data, buf->len,
                                  NULL, pool));
 
   /* Record the length of the props data. */
-  *len = buf->len;
+  rep->len = buf->len;
 
   SVN_ERR(svn_stream_printf(pb->rev_stream, pool, "ENDREP\n"));
   return SVN_NO_ERROR;
@@ -328,22 +341,40 @@ write_directory_rep(struct parse_baton *pb, struct entry *entry,
                    svn_string_create(rep, pool));
     }
 
-  return write_hash_rep(pb, tmpmap, pool, &entry->text_rev, &entry->text_off,
-                        &entry->text_len, &entry->text_digest);
+  return write_hash_rep(pb, tmpmap, &entry->text_rep, pool);
 }
 
 static svn_error_t *
 write_props(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
 {
-  SVN_ERR(write_hash_rep(pb, entry->props, pool, &entry->props_rev,
-                         &entry->props_off, &entry->props_len,
-                         &entry->props_digest));
+  SVN_ERR(write_hash_rep(pb, entry->props, &entry->props_rep, pool));
 
   /* We don't need the props hash any more. */
   entry->props = NULL;
   svn_pool_destroy(entry->props_pool);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_field(struct parse_baton *pb, apr_pool_t *pool, const char *name,
+            const char *fmt, ...)
+{
+  const char *val;
+  va_list ap;
+
+  /* Format the value. */
+  va_start(ap, fmt);
+  val = apr_pvsprintf(pool, fmt, ap);
+  va_end(ap);
+
+  /* Write it out using the normal or length-counted field format as needed. */
+  if (strchr(val, '\n') == NULL)
+    return svn_stream_printf(pb->rev_stream, pool, "%s: %s\n", name, val);
+  else
+    return svn_stream_printf(pb->rev_stream, pool,
+                             "%s:%" APR_SIZE_T_FMT "%s\n",
+                             name, strlen(val), val);
 }
 
 static svn_error_t *
@@ -355,35 +386,25 @@ write_node_rev(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
   entry->node_off = 0;
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &entry->node_off, pool));
 
-  SVN_ERR(svn_stream_printf(out, pool, "id: %s\n", node_rev_id(entry, pool)));
-  SVN_ERR(svn_stream_printf(out, pool, "type: %s\n",
-                            entry->children ? "dir" : "file"));
+  SVN_ERR(write_field(pb, pool, "id", "%s", node_rev_id(entry, pool)));
+  SVN_ERR(write_field(pb, pool, "type", entry->children ? "dir" : "file"));
   if (entry->pred)
-    SVN_ERR(svn_stream_printf(out, pool, "pred: %s\n",
-                              node_rev_id(entry->pred, pool)));
-  SVN_ERR(svn_stream_printf(out, pool, "count: %d\n", entry->pred_count));
-  SVN_ERR(svn_stream_printf(out, pool, "text: %" SVN_REVNUM_T_FMT
-                            " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
-                            " %" APR_OFF_T_FMT " %s\n",
-                            entry->text_rev, entry->text_off, entry->text_len,
-                            entry->text_len, entry->text_digest));
-  if (SVN_IS_VALID_REVNUM(entry->props_rev))
-    SVN_ERR(svn_stream_printf(out, pool, "props: %" SVN_REVNUM_T_FMT
-                              " %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
-                              " %" APR_OFF_T_FMT " %s\n",
-                              entry->props_rev, entry->props_off,
-                              entry->props_len, entry->props_len,
-                              entry->props_digest));
-  /* XXX use length-counted field format */
-  SVN_ERR(svn_stream_printf(out, pool, "cpath: %s\n", entry->created_path));
+    SVN_ERR(write_field(pb, pool, "pred", "%s",
+                        node_rev_id(entry->pred, pool)));
+  SVN_ERR(write_field(pb, pool, "count", "%d", entry->pred_count));
+  SVN_ERR(write_field(pb, pool, "text", "%s", repstr(&entry->text_rep, pool)));
+  if (SVN_IS_VALID_REVNUM(entry->props_rep.rev))
+    SVN_ERR(write_field(pb, pool, "props", "%s",
+                        repstr(&entry->props_rep, pool)));
+  SVN_ERR(write_field(pb, pool, "cpath", "%s", entry->created_path));
   if (SVN_IS_VALID_REVNUM(entry->copyfrom_rev))
-    /* XXX use length-counted field format. */
-    SVN_ERR(svn_stream_printf(out, pool, "copyfrom: %s %" SVN_REVNUM_T_FMT
-                              "%s\n", (entry->soft_copy) ? "soft" : "hard",
-                              entry->copyfrom_rev, entry->copyfrom_path));
+    SVN_ERR(write_field(pb, pool, "copyfrom",
+                        "%s %" SVN_REVNUM_T_FMT "%s\n",
+                        (entry->soft_copy) ? "soft" : "hard",
+                        entry->copyfrom_rev, entry->copyfrom_path));
   else
-    SVN_ERR(svn_stream_printf(out, pool, "copyroot: %s\n",
-                              node_rev_id(entry->copyroot, pool)));
+    SVN_ERR(write_field(pb, pool, "copyroot", "%s",
+                        node_rev_id(entry->copyroot, pool)));
   SVN_ERR(svn_stream_printf(out, pool, "\n"));
 
   return SVN_NO_ERROR;
@@ -584,16 +605,17 @@ text_close(void *baton)
 {
   struct parse_baton *pb = baton;
   struct entry *entry = pb->current_node;
+  struct rep_pointer *rep = &entry->text_rep;
   unsigned char digest[APR_MD5_DIGESTSIZE];
   apr_off_t offset;
 
   apr_md5_final(digest, &pb->md5_ctx);
-  entry->text_digest = svn_md5_digest_to_cstring(digest, pb->pool);
+  rep->digest = svn_md5_digest_to_cstring(digest, pb->pool);
 
   /* Record the length of the data written (subtract for the header line). */
   offset = 0;
   SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &offset, pb->pool));
-  entry->text_len = offset - entry->text_off - 6;
+  rep->len = offset - rep->off - 6;
 
   /* Write a representation trailer to the rev file. */
   SVN_ERR(svn_stream_printf(pb->rev_stream, pb->pool, "ENDREP\n"));
@@ -606,11 +628,12 @@ set_fulltext(svn_stream_t **stream, void *baton)
 {
   struct parse_baton *pb = baton;
   struct entry *entry = pb->current_node;
+  struct rep_pointer *rep = &entry->text_rep;
 
   /* Record the current offset of the rev file as the text rep location. */
-  entry->text_rev = pb->current_rev;
-  entry->text_off = 0;
-  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &entry->text_off, pb->pool));
+  rep->rev = pb->current_rev;
+  rep->off = 0;
+  SVN_ERR(svn_io_file_seek(pb->rev_file, APR_CUR, &rep->off, pb->pool));
 
   /* Write a representation header to the rev file. */
   SVN_ERR(svn_io_file_write_full(pb->rev_file, "PLAIN\n", 6, NULL, pb->pool));
