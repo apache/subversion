@@ -29,10 +29,6 @@ except SyntaxError:
   raise SystemExit
 
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "basic_tests-" + `test_list.index(x)`
-
 
 ######################################################################
 # Tests
@@ -41,12 +37,13 @@ def sandbox(x):
 
 #----------------------------------------------------------------------
 
-def stat_unversioned_file_in_current_dir():
+def stat_unversioned_file_in_current_dir(sbox):
   "stat an unversioned file in the current directory"
 
-  sbox = sandbox(stat_unversioned_file_in_current_dir)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-  if svntest.actions.make_repo_and_wc(sbox): return 1
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
 
   was_cwd = os.getcwd()
   try:
@@ -79,17 +76,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

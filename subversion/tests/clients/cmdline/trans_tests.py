@@ -29,10 +29,6 @@ except SyntaxError:
   raise SystemExit
 
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "trans_tests-" + `test_list.index(x)`
-
 # (abbreviation)
 path_index = svntest.actions.path_index
 
@@ -101,7 +97,7 @@ embd_author_rev_unexp_path = ''
 embd_author_rev_exp_path = ''
 embd_bogus_keywords_path = ''
 
-def setup_working_copy(sbox):
+def setup_working_copy(wc_dir):
   """Setup a standard test working copy, then create (but do not add)
   various files for testing translation."""
   
@@ -114,19 +110,15 @@ def setup_working_copy(sbox):
 
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
-  
-  # Get a default working copy all setup.
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
 
   # Unexpanded, expanded, and bogus keywords; first as the only
   # contents of the files, then embedded in non-keyword content.
-  author_rev_unexp_path = os.path.join(sbox, 'author_rev_unexp')
-  author_rev_exp_path = os.path.join(sbox, 'author_rev_exp')
-  bogus_keywords_path = os.path.join(sbox, 'bogus_keywords')
-  embd_author_rev_unexp_path = os.path.join(sbox, 'embd_author_rev_unexp')
-  embd_author_rev_exp_path = os.path.join(sbox, 'embd_author_rev_exp')
-  embd_bogus_keywords_path = os.path.join(sbox, 'embd_bogus_keywords')
+  author_rev_unexp_path = os.path.join(wc_dir, 'author_rev_unexp')
+  author_rev_exp_path = os.path.join(wc_dir, 'author_rev_exp')
+  bogus_keywords_path = os.path.join(wc_dir, 'bogus_keywords')
+  embd_author_rev_unexp_path = os.path.join(wc_dir, 'embd_author_rev_unexp')
+  embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
+  embd_bogus_keywords_path = os.path.join(wc_dir, 'embd_bogus_keywords')
 
   svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
   svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
@@ -162,15 +154,19 @@ def keywords_off(path):
 
 #----------------------------------------------------------------------
 
-def keywords_from_birth():
+def keywords_from_birth(sbox):
   """Create some files that have the `svn:keywords' property set from
   the moment they're first committed.  Some of the files actually
   contain keywords, others don't.  Make sure everything behaves
   correctly."""
-  
-  sbox = sandbox (keywords_from_birth)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
   if setup_working_copy (wc_dir): return 1
+
   keywords_on (author_rev_unexp_path)
   keywords_on (embd_author_rev_exp_path)
 
@@ -229,11 +225,10 @@ def keywords_from_birth():
   return 0
 
 
-def enable_translation():
+def enable_translation(sbox):
   "enable translation, check status, commit"
 
-  sbox = sandbox(enable_translation)
-  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+  wc_dir = sbox.wc_dir
   
   # TODO: Turn on newline conversion and/or keyword substition for all
   # sorts of files, with and without local mods, and verify that
@@ -275,17 +270,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

@@ -29,9 +29,6 @@ except SyntaxError:
   traceback.print_exc(None,sys.stdout)
   raise SystemExit
 
-# Quick macro for auto-generating sandbox names
-def sandbox(x):
-  return "schedule_tests-" + `test_list.index(x)`
 
 ######################################################################
 # Tests
@@ -278,72 +275,50 @@ def delete_dirs_core(sbox, wc_dir):
 #  Stage I - Schedules and modifications, verified with `svn status'
 #
 
-def add_files():
+def add_files(sbox):
   "schedule: add some files"
 
-  # Bootstrap
-  sbox = sandbox(add_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  return add_files_core(sbox, wc_dir)
+  return add_files_core(sbox.name, sbox.wc_dir)
 
 #----------------------------------------------------------------------
 
-def add_directories():
+def add_directories(sbox):
   "schedule: add some directories"
 
-  # Bootstrap
-  sbox = sandbox(add_directories)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  return add_directories_core(sbox, wc_dir)
+  return add_directories_core(sbox.name, sbox.wc_dir)
 
 #----------------------------------------------------------------------
 
-def nested_adds():
+def nested_adds(sbox):
   "schedule: add some nested files and directories"
 
-  # Bootstrap
-  sbox = sandbox(nested_adds)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  return nested_adds_core(sbox, wc_dir)
+  return nested_adds_core(sbox.name, sbox.wc_dir)
 
 #----------------------------------------------------------------------
 
-def delete_files():
+def delete_files(sbox):
   "schedule: delete some files"
 
-  # Bootstrap
-  sbox = sandbox(delete_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  return delete_files_core(sbox, wc_dir)
+  return delete_files_core(sbox.name, sbox.wc_dir)
 
 #----------------------------------------------------------------------
 
-def delete_dirs():
+def delete_dirs(sbox):
   "schedule: delete some directories"
 
-  # Bootstrap
-  sbox = sandbox(delete_dirs)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  return delete_dirs_core(sbox, wc_dir)
+  return delete_dirs_core(sbox.name, sbox.wc_dir)
 
 
 #######################################################################
 #  Stage II - Reversion of changes made in Stage I
 #
 
-def revert_add_files():
+def revert_add_files(sbox):
   "revert: add some files"
 
-  # Bootstrap
-  sbox = sandbox(revert_add_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  wc_dir = sbox.wc_dir
 
-  if add_files_core(sbox, wc_dir):
+  if add_files_core(sbox.name, wc_dir):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -369,14 +344,12 @@ def revert_add_files():
 
 #----------------------------------------------------------------------
 
-def revert_add_directories():
+def revert_add_directories(sbox):
   "revert: add some directories"
 
-  # Bootstrap
-  sbox = sandbox(revert_add_directories)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  wc_dir = sbox.wc_dir
 
-  if add_directories_core(sbox, wc_dir):
+  if add_directories_core(sbox.name, wc_dir):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -402,14 +375,12 @@ def revert_add_directories():
 
 #----------------------------------------------------------------------
 
-def revert_nested_adds():
+def revert_nested_adds(sbox):
   "revert: add some nested files and directories"
 
-  # Bootstrap
-  sbox = sandbox(revert_nested_adds)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  wc_dir = sbox.wc_dir
 
-  if nested_adds_core(sbox, wc_dir):
+  if nested_adds_core(sbox.name, wc_dir):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -435,14 +406,12 @@ def revert_nested_adds():
 
 #----------------------------------------------------------------------
 
-def revert_delete_files():
+def revert_delete_files(sbox):
   "revert: delete some files"
 
-  # Bootstrap
-  sbox = sandbox(revert_delete_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  wc_dir = sbox.wc_dir
 
-  if delete_files_core(sbox, wc_dir):
+  if delete_files_core(sbox.name, wc_dir):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -470,14 +439,12 @@ def revert_delete_files():
 
 #----------------------------------------------------------------------
 
-def revert_delete_dirs():
+def revert_delete_dirs(sbox):
   "revert: delete some directories"
 
-  # Bootstrap
-  sbox = sandbox(revert_delete_dirs)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+  wc_dir = sbox.wc_dir
 
-  if delete_dirs_core(sbox, wc_dir):
+  if delete_dirs_core(sbox.name, wc_dir):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -516,70 +483,50 @@ def revert_delete_dirs():
 #  Stage III - Commit of modifications made in Stage 1
 #
 
-def commit_add_files():
+def commit_add_files(sbox):
   "commit: add some files"
 
-  # Bootstrap
-  sbox = sandbox(commit_add_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  if add_files_core(sbox, wc_dir):
+  if add_files_core(sbox.name, sbox.wc_dir):
     return 1
 
   return 0
 
 #----------------------------------------------------------------------
 
-def commit_add_directories():
+def commit_add_directories(sbox):
   "commit: add some directories"
 
-  # Bootstrap
-  sbox = sandbox(commit_add_directories)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  if add_directories_core(sbox, wc_dir):
+  if add_directories_core(sbox.name, sbox.wc_dir):
     return 1
 
   return 0
 
 #----------------------------------------------------------------------
 
-def commit_nested_adds():
+def commit_nested_adds(sbox):
   "commit: add some nested files and directories"
 
-  # Bootstrap
-  sbox = sandbox(commit_nested_adds)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  if nested_adds_core(sbox, wc_dir):
+  if nested_adds_core(sbox.name, sbox.wc_dir):
     return 1
 
   return 0
 
 #----------------------------------------------------------------------
 
-def commit_delete_files():
+def commit_delete_files(sbox):
   "commit: delete some files"
 
-  # Bootstrap
-  sbox = sandbox(commit_delete_files)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  if delete_files_core(sbox, wc_dir):
+  if delete_files_core(sbox.name, sbox.wc_dir):
     return 1
 
   return 0
 
 #----------------------------------------------------------------------
 
-def commit_delete_dirs():
+def commit_delete_dirs(sbox):
   "commit: delete some directories"
 
-  # Bootstrap
-  sbox = sandbox(commit_delete_dirs)
-  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
-
-  if delete_dirs_core(sbox, wc_dir):
+  if delete_dirs_core(sbox.name, sbox.wc_dir):
     return 1
 
   return 0
@@ -609,17 +556,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.

@@ -57,8 +57,6 @@ path_index = svntest.actions.path_index
 
 # These variables are set by guarantee_repos_and_wc().
 max_revision = 0    # Highest revision in the repos
-repos_path = None   # Where is the repos
-wc_path = None      # Where is the working copy
 
 # What separates log msgs from one another in raw log output.
 msg_separator = '------------------------------------' \
@@ -73,20 +71,17 @@ path_index = svntest.actions.path_index
 # Utilities
 #
 
-def guarantee_repos_and_wc():
+def guarantee_repos_and_wc(sbox):
   "Make a repos and wc, commit max_revision revs.  Return 0 on success."
-  global wc_path, max_revision
+  global max_revision
 
-  if (wc_path != None): return
+  if sbox.build():
+    return 1
 
-  sbox = "log_tests"
-
-  if svntest.actions.make_repo_and_wc (sbox): return 1
+  wc_path = sbox.wc_dir
 
   # Now we have a repos and wc at revision 1.
 
-  repos_path = os.path.join (svntest.main.general_repo_dir, sbox)
-  wc_path    = os.path.join (svntest.main.general_wc_dir, sbox)
   was_cwd = os.getcwd ()
   os.chdir (wc_path)
 
@@ -336,15 +331,16 @@ def check_log_chain (chain, start, end):
 
 
 #----------------------------------------------------------------------
-def plain_log():
+def plain_log(sbox):
   "'svn log', no args, top of wc."
-  if guarantee_repos_and_wc():
+
+  if guarantee_repos_and_wc(sbox):
     return 1
 
   result = 0
 
   was_cwd = os.getcwd()
-  os.chdir(wc_path)
+  os.chdir(sbox.wc_dir)
 
   output, errput = svntest.main.run_svn (None, 'log')
 
@@ -361,18 +357,14 @@ def plain_log():
   return 0
 
 
-def versioned_log_message():
+def versioned_log_message(sbox):
   "'svn commit -F foo' when foo is a versioned file"
 
-  global wc_path
+  if sbox.build():
+    return 1
 
-  sbox = "versioned_log_message"
- 
-  if svntest.actions.make_repo_and_wc (sbox): return 1
-
-  wc_path    = os.path.join (svntest.main.general_wc_dir, sbox)
   was_cwd = os.getcwd ()
-  os.chdir (wc_path)
+  os.chdir (sbox.wc_dir)
 
   iota_path = os.path.join ('iota')
   mu_path = os.path.join ('A', 'mu')
@@ -430,17 +422,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  
-  ## run the main test routine on them:
-  err = svntest.main.run_tests(test_list)
-
-  ## remove all scratchwork: the 'pristine' repository, greek tree, etc.
-  ## This ensures that an 'import' will happen the next time we run.
-  if os.path.exists(svntest.main.temp_dir):
-    shutil.rmtree(svntest.main.temp_dir)
-
-  ## return whatever main() returned to the OS.
-  sys.exit(err)
+  svntest.main.run_tests(test_list)
+  # NOTREACHED
 
 
 ### End of file.
