@@ -270,8 +270,12 @@ svn_wc_statuses (apr_hash_t *statushash,
           /* Get the next dirent */
           apr_hash_this (hi, &key, &keylen, &val);
           basename = (const char *) key;
-          svn_path_add_component_nts (fullpath, basename,
-                                      svn_path_local_style);
+          if (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0)
+            {
+              svn_path_add_component_nts (fullpath, basename,
+                                          svn_path_local_style);
+            }
+
           entry = (svn_wc_entry_t *) val;
 
           err = svn_io_check_path (fullpath, &kind, pool);

@@ -667,7 +667,7 @@ change_dir_prop (void *dir_baton,
   propchange->name = local_name;
   propchange->value = local_value;
 
-  /* Push the object to the file baton's array of propchanges */
+  /* Push the object to the directory baton's array of propchanges */
   receiver = (svn_prop_t **) apr_array_push (db->propchanges);
   *receiver = propchange;
 
