@@ -45,9 +45,8 @@ add_dir_recursive (const char *dirname,
   apr_pool_t *subpool;
 
   /* Add this directory to revision control. */
-  SVN_ERR (svn_wc_add_directory (svn_stringbuf_create (dirname, pool),
-                                 NULL,
-                                 pool));
+  SVN_ERR (svn_wc_add (svn_stringbuf_create (dirname, pool),
+                       NULL, SVN_INVALID_REVNUM, pool));
 
   /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create (pool);
@@ -82,7 +81,7 @@ add_dir_recursive (const char *dirname,
         SVN_ERR (add_dir_recursive (fullpath->data, subpool));
 
       else if (this_entry.filetype == APR_REG)
-        SVN_ERR (svn_wc_add_file (fullpath, NULL, subpool));
+        SVN_ERR (svn_wc_add (fullpath, NULL, SVN_INVALID_REVNUM, subpool));
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -119,21 +118,10 @@ svn_client_add (svn_stringbuf_t *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   
-  if (kind == svn_node_file)
-    {
-      err = svn_wc_add_file (path, NULL, pool);
-    }
-  else if (kind == svn_node_dir)
-    {
-      if (recursive)
-        SVN_ERR (add_dir_recursive (path->data, pool));
-      else
-        err = svn_wc_add_directory (path, NULL, pool);
-    }
+  if (recursive)
+    SVN_ERR (add_dir_recursive (path->data, pool));
   else
-    return
-      svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-                         "No such object: %s", path->data);
+    err = svn_wc_add (path, NULL, SVN_INVALID_REVNUM, pool);
 
   if (err)
     {
@@ -203,7 +191,7 @@ svn_client_mkdir (svn_stringbuf_t *path,
   if (apr_err)
     return svn_error_create (apr_err, 0, NULL, pool, path->data);
   
-  return svn_wc_add_directory (path, NULL, pool);
+  return svn_wc_add (path, NULL, SVN_INVALID_REVNUM, pool);
 }
 
 

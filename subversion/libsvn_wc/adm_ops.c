@@ -414,18 +414,6 @@ remove_file_if_present (svn_stringbuf_t *file, apr_pool_t *pool)
 
 
 
-/* kff todo: not all of these really belong in wc_adm.  Some may get
-   broken out into other files later.  They're just here to satisfy
-   the public header file that they exist. */
-
-svn_error_t *
-svn_wc_rename (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
-{
-  /* kff todo */
-  return SVN_NO_ERROR;
-}
-
-
 /* Recursively mark a tree DIR for with a SCHEDULE and/or EXISTENCE
    flag and/or COPIED flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
@@ -596,34 +584,41 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 }
 
 
-/*  Given a PATH within a working copy of type KIND, follow this algorithm:
+svn_error_t *
+svn_wc_get_ancestry (svn_stringbuf_t **url,
+                     svn_revnum_t *rev,
+                     svn_stringbuf_t *path,
+                     apr_pool_t *pool)
+{
+  svn_wc_entry_t *ent;
 
-      - if PATH is not under version control:
-         - Place it under version control and schedule for addition,
-           possibly adding 'copyfrom' history if ANCESTOR_PATH is non-null.
+  SVN_ERR (svn_wc_entry (&ent, path, pool));
+  *url = svn_stringbuf_dup (ent->url, pool);
+  *rev = ent->revision;
 
-      - if PATH is already under version control:
-            (This can only happen when a directory is copied, in which
-             case ANCESTOR_PATH must have been supplied as well.)
+  return SVN_NO_ERROR;
+}
 
-         -  Schedule the directory itself for addition with copyfrom history.
-         -  Mark all its children with a 'copied' flag
-         -  Rewrite all the URLs to what they will be after a commit.
-         -  ### TODO:  remove old wcprops too, see the '###'below
-*/
-static svn_error_t *
-add_to_revision_control (svn_stringbuf_t *path,
-                         enum svn_node_kind kind,
-                         svn_stringbuf_t *ancestor_path,
-                         apr_pool_t *pool)
+
+svn_error_t *
+svn_wc_add (svn_stringbuf_t *path,
+            svn_stringbuf_t *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            apr_pool_t *pool)
 {
   svn_stringbuf_t *parent_dir, *basename;
-  svn_stringbuf_t *copyfrom_url, *copyfrom_rev;
-  svn_wc_entry_t *orig_entry, *anc_entry, *parent_entry;
+  svn_wc_entry_t *orig_entry, *parent_entry;
   svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
   svn_boolean_t is_replace = FALSE;
   apr_status_t apr_err;
   apr_hash_t *atts = apr_hash_make (pool);
+  enum svn_node_kind kind;
+
+  /* Make sure something's there. */
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                              "'%s' not found", path->data);
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
@@ -637,7 +632,7 @@ add_to_revision_control (svn_stringbuf_t *path,
      object to be under version control already;  it's not really new.  */
   if (orig_entry)
     {
-      if ((! ancestor_path)
+      if ((! copyfrom_url)
           && (orig_entry->schedule != svn_wc_schedule_delete)
           && (orig_entry->existence != svn_wc_existence_deleted))
         {
@@ -668,28 +663,23 @@ add_to_revision_control (svn_stringbuf_t *path,
     parent_dir = svn_stringbuf_create (".", pool);
 
   /* If a copy ancestor was given, put the proper ancestry info in a hash. */
-  if (ancestor_path)
+  if (copyfrom_url)
     {
-      /* Here's where we create and set the copyfrom_* args */
-      SVN_ERR (svn_wc_entry (&anc_entry, ancestor_path, pool));
-      copyfrom_url = svn_stringbuf_dup (anc_entry->url, pool);
-      copyfrom_rev = svn_stringbuf_createf (pool, "%ld", anc_entry->revision);
       apr_hash_set (atts, 
                     SVN_WC_ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
                     copyfrom_url);
       apr_hash_set (atts, 
                     SVN_WC_ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
-                    copyfrom_rev);
+                    svn_stringbuf_createf (pool, "%ld", copyfrom_rev));
     }
-
 
   /* Now, add the entry for this item to the parent_dir's
      entries file, marking it for addition. */
   SVN_ERR (svn_wc__entry_modify
            (parent_dir, basename,
             (SVN_WC__ENTRY_MODIFY_SCHEDULE
-             | (ancestor_path ? SVN_WC__ENTRY_MODIFY_COPIED : 0)
-             | ((is_replace || ancestor_path) ?
+             | (copyfrom_url ? SVN_WC__ENTRY_MODIFY_COPIED : 0)
+             | ((is_replace || copyfrom_url) ?
                   0 : SVN_WC__ENTRY_MODIFY_REVISION)
              | SVN_WC__ENTRY_MODIFY_KIND
              | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
@@ -697,7 +687,7 @@ add_to_revision_control (svn_stringbuf_t *path,
             svn_wc_schedule_add,
             svn_wc_existence_normal,
             FALSE,
-            ancestor_path ? TRUE : FALSE, 
+            copyfrom_url ? TRUE : FALSE, 
             0, 0, NULL,
             atts,  /* may or may not contain copyfrom args */
             pool, NULL));
@@ -744,8 +734,8 @@ add_to_revision_control (svn_stringbuf_t *path,
       
       /* Things we plan to change in this_dir. */
       flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
-               | (ancestor_path ? SVN_WC__ENTRY_MODIFY_COPIED : 0)
-               | ((is_replace || ancestor_path)
+               | (copyfrom_url ? SVN_WC__ENTRY_MODIFY_COPIED : 0)
+               | ((is_replace || copyfrom_url)
                      ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
                | SVN_WC__ENTRY_MODIFY_KIND
                | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
@@ -760,14 +750,14 @@ add_to_revision_control (svn_stringbuf_t *path,
                 is_replace ? svn_wc_schedule_replace : svn_wc_schedule_add,
                 svn_wc_existence_normal,
                 FALSE,
-                ancestor_path ? TRUE : FALSE,
+                copyfrom_url ? TRUE : FALSE,
                 0, 0,
                 NULL,
                 atts,  /* may or may not contain copyfrom args */
                 pool, NULL));
 
 
-      if (ancestor_path)
+      if (copyfrom_url)
         {
           /* If this new directory has ancestry, it's not enough to
              schedule it for addition with copyfrom args.  We also
@@ -780,7 +770,7 @@ add_to_revision_control (svn_stringbuf_t *path,
           url = svn_stringbuf_dup (parent_entry->url, pool);
           svn_path_add_component (url, basename, svn_path_url_style);
 
-          /* Change the entry-urls recursively. */
+          /* Change the entry urls recursively. */
           SVN_ERR (svn_wc__recursively_rewrite_urls (path, url, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
@@ -788,7 +778,8 @@ add_to_revision_control (svn_stringbuf_t *path,
                               svn_wc_schedule_normal, svn_wc_existence_normal,
                               TRUE, pool));
 
-          /* ### karl:  call recursively_remove_all_wcprops() here. */
+          /* Clean out the now-obsolete wcprops. */
+          SVN_ERR (svn_wc__remove_wcprops (path, pool));
         }
     }
   
@@ -804,25 +795,6 @@ add_to_revision_control (svn_stringbuf_t *path,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_wc_add_directory (svn_stringbuf_t *dir,
-                      svn_stringbuf_t *ancestor_path,
-                      apr_pool_t *pool)
-{
-  return add_to_revision_control (dir, svn_node_dir, ancestor_path, pool);
-}
-
-
-svn_error_t *
-svn_wc_add_file (svn_stringbuf_t *file,
-                 svn_stringbuf_t *ancestor_path,
-                 apr_pool_t *pool)
-{
-  return add_to_revision_control (file, svn_node_file, ancestor_path, pool);
-}
-
 
 
 /* Thoughts on Reversion. 

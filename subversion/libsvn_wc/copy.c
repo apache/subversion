@@ -35,20 +35,26 @@
 
 /*** Code. ***/
 
-static svn_error_t *
-recursively_remove_all_wcprops (svn_stringbuf_t *dirpath,
-                                apr_pool_t *pool)
+svn_error_t *
+svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_stringbuf_t *wcprop_path;
   apr_pool_t *subpool = svn_pool_create (pool);
+  enum svn_node_kind kind;
   
-  /* Read DIRPATH's entries. */
-  SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
+  SVN_ERR (svn_io_check_path (path, &kind, subpool));
+  if (kind != svn_node_dir)
+    return svn_error_createf
+      (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
+       "svn_wc__remove_wcprops: '%s' is not a directory.", path->data);
+
+  /* Read PATH's entries. */
+  SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
 
   /* Remove this_dir's wcprops */
-  SVN_ERR (svn_wc__wcprop_path (&wcprop_path, dirpath, 0, subpool));
+  SVN_ERR (svn_wc__wcprop_path (&wcprop_path, path, 0, subpool));
   (void) apr_file_remove (wcprop_path->data, subpool);
 
   /* Recursively loop over all children. */
@@ -69,7 +75,7 @@ recursively_remove_all_wcprops (svn_stringbuf_t *dirpath,
       if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
         continue;
 
-      child_path = svn_stringbuf_dup (dirpath, subpool);
+      child_path = svn_stringbuf_dup (path, subpool);
       svn_path_add_component_nts (child_path, name, svn_path_local_style);
 
       /* If a file, remove it from wcprops. */
@@ -86,7 +92,7 @@ recursively_remove_all_wcprops (svn_stringbuf_t *dirpath,
 
       /* If a dir, recurse. */
       else if (current_entry->kind == svn_node_dir)
-          SVN_ERR (recursively_remove_all_wcprops (child_path, subpool));
+          SVN_ERR (svn_wc__remove_wcprops (child_path, subpool));
     }
 
   /* Cleanup */
@@ -94,7 +100,6 @@ recursively_remove_all_wcprops (svn_stringbuf_t *dirpath,
 
   return SVN_NO_ERROR;
 }
-
 
 
 
@@ -186,10 +191,16 @@ copy_file_administratively (svn_stringbuf_t *src_path,
       SVN_ERR (svn_io_copy_file (src_bprop, dst_bprop, pool));
   }
 
-
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
-  SVN_ERR (svn_wc_add_file (dst_path, src_path, pool));
+  {
+    svn_stringbuf_t *copyfrom_url;
+    svn_revnum_t copyfrom_rev;
 
+    SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
+                                  src_path, pool));
+    
+    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev, pool));
+  }
 
   return SVN_NO_ERROR;
 }
@@ -228,18 +239,23 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
   /* Remove all wcprops in the directory, because they're all bogus
      now.  After the commit, ra_dav should regenerate them and
      re-store them as an optimization. */
-  SVN_ERR (recursively_remove_all_wcprops (dst_path, pool));
+  SVN_ERR (svn_wc__remove_wcprops (dst_path, pool));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the
      existing administrative dir untouched.  */
-  SVN_ERR (svn_wc_add_directory (dst_path, src_path, pool));
+  {
+    svn_stringbuf_t *copyfrom_url;
+    svn_revnum_t copyfrom_rev;
+    
+    SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
+                                  src_path, pool));
+    
+    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev, pool));
+  }
  
   return SVN_NO_ERROR;
 }
-
-
-
 
 
 

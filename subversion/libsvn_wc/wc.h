@@ -708,6 +708,11 @@ svn_error_t * svn_wc__wcprop_set (svn_stringbuf_t *name,
                                   svn_stringbuf_t *path,
                                   apr_pool_t *pool);
 
+/* Remove all wc properties under PATH, recursively.  Do any temporary
+   allocation in POOL.  If PATH is not a directory, return the error
+   SVN_ERR_WC_NOT_DIRECTORY. */
+svn_error_t *svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool);
+
 
 /* 
  * local variables:

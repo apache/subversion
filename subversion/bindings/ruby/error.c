@@ -116,8 +116,8 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_WC_UNWIND_EMPTY, "WcUnwindEmpty");
   define_error (SVN_ERR_WC_UNWIND_NOT_EMPTY, "WcUnwindNotEmpty");
   define_error (SVN_ERR_WC_LOCKED, "WcLocked");
-  define_error (SVN_ERR_WC_IS_NOT_DIRECTORY, "WcIsNotDirectory");
-  define_error (SVN_ERR_WC_IS_NOT_FILE, "WcIsNotFile");
+  define_error (SVN_ERR_WC_NOT_DIRECTORY, "WcNotDirectory");
+  define_error (SVN_ERR_WC_NOT_FILE, "WcNotFile");
   define_error (SVN_ERR_WC_BAD_ADM_LOG, "WcBadAdmLog");
   define_error (SVN_ERR_WC_PATH_NOT_FOUND, "WcPathNotFound");
   define_error (SVN_ERR_WC_UNEXPECTED_KIND, "WcUnexpectedKind");

@@ -211,6 +211,12 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   svn_wc_entry_t *entry,
                                   apr_pool_t *pool);
 
+/* Set *URL and *REV to the ancestor url and revision for PATH,
+   allocating in POOL. */
+svn_error_t *svn_wc_get_ancestry (svn_stringbuf_t **url,
+                                  svn_revnum_t *rev,
+                                  svn_stringbuf_t *path,
+                                  apr_pool_t *pool);
 
 
 /*** Status. ***/
@@ -361,41 +367,52 @@ svn_error_t *svn_wc_copy (svn_stringbuf_t *src,
                           apr_pool_t *pool);
 
 
-/* kff todo: these do nothing and return SVN_NO_ERROR right now. */
-svn_error_t *svn_wc_rename (svn_stringbuf_t *src,
-                            svn_stringbuf_t *dst,
-                            apr_pool_t *pool);
+/* Schedule PATH for deletion.  This does not actually delete PATH
+   from disk nor from the repository.  It is deleted from the
+   repository on commit. */
+svn_error_t *svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool);
 
-svn_error_t *svn_wc_delete (svn_stringbuf_t *path,
-                            apr_pool_t *pool);
 
-/* Put DIR under version control.  Specifically, this means adding an
-   an administrative directory to DIR, adding an entry to its parent,
-   and then scheduling it for addition to the repository. This
-   function does not check that FILE exists on disk; caller should
-   take care of that, if it cares.
+/* Put PATH under version control by adding an entry in its parent,
+   and, if PATH is a directory, adding an administrative area.  The
+   new entry and anything under it is scheduled for addition to the
+   repository.
 
-   If ANCESTOR_PATH is non-null, it must refer to an existing
-   version-controlled file which will be considered the "ancestor" of
-   the new file.  This is used in copy operations, where one wants to
-   schedule DIR for addition, but having a particular history. */
-svn_error_t *svn_wc_add_directory (svn_stringbuf_t *dir,
-                                   svn_stringbuf_t *ancestor_path,
-                                   apr_pool_t *pool);
+   If PATH does not exist, return SVN_ERR_WC_PATH_NOT_FOUND.
 
-/* Put FILE under version control.  Specifically, this means adding an
-   entry for FILE in the parent directory, and then scheduling the
-   entry for addition to the repository. This function does not check
-   that FILE exists on disk; caller should take care of that, if it
-   cares.
+   If COPYFROM_URL is non-null, it and COPYFROM_REV are used as
+   `copyfrom' args.  This is for copy operations, where one wants
+   to schedule PATH for addition with a particular history. 
 
-   If ANCESTOR_PATH is non-null, it must refer to an existing
-   version-controlled file which will be considered the "ancestor" of
-   the new file.  This is used in copy operations, where one wants to
-   schedule FILE for addition, but having a particular history. */
-svn_error_t *svn_wc_add_file (svn_stringbuf_t *file,
-                              svn_stringbuf_t *ancestor_path,
-                              apr_pool_t *pool);
+   ### This function currently does double duty -- it is also
+   ### responsible for "switching" a working copy directory over to a
+   ### new copyfrom ancestry and scheduling it for addition.  Here is
+   ### the old doc string from Ben, lightly edited to bring it
+   ### up-to-date, explaining the true, secret life of this function:
+
+   Given a PATH within a working copy of type KIND, follow this algorithm:
+
+      - if PATH is not under version control:
+         - Place it under version control and schedule for addition; 
+           if COPYFROM_URL is non-null, use it and COPYFROM_REV as
+           'copyfrom' history
+
+      - if PATH is already under version control:
+            (This can only happen when a directory is copied, in which
+             case ancestry must have been supplied as well.)
+
+         -  Schedule the directory itself for addition with copyfrom history.
+         -  Mark all its children with a 'copied' flag
+         -  Rewrite all the URLs to what they will be after a commit.
+         -  ### TODO:  remove old wcprops too, see the '###'below
+
+   ### I think possibly the "switchover" functionality should be
+   ### broken out into a separate function, but its all intertwined in
+   ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve? */
+svn_error_t *svn_wc_add (svn_stringbuf_t *path,
+                         svn_stringbuf_t *copyfrom_url,
+                         svn_revnum_t copyfrom_rev,
+                         apr_pool_t *pool);
 
 
 /* Remove entry NAME in PATH from revision control.  NAME must be
@@ -624,8 +641,8 @@ svn_error_t *svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
  */
 
 /* Set *PROPS to a hash table mapping char * names onto
-   svn_stringbuf_t * values for all the properties of PATH.  Allocate
-   the table, names, and values in POOL.  If the node has no
+   svn_stringbuf_t * values for all the wc properties of PATH.
+   Allocate the table, names, and values in POOL.  If the node has no
    properties, an empty hash is returned.
 
    ### todo (issue #406): values could be svn_string_t instead of
@@ -635,8 +652,8 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                apr_pool_t *pool);
 
 
-/* Return local VALUE of property NAME for the file or directory PATH.
-   If property name doesn't exist, VALUE is returned as NULL.
+/* Set *VALUE to the value of wc property NAME for PATH, allocating
+   *VALUE in POOL.  If no such prop, set *VALUE to NULL.
 
    ### todo (issue #406): name could be const char *, value
    svn_string_t instead of svn_stringbuf_t.  */
@@ -645,8 +662,8 @@ svn_error_t *svn_wc_prop_get (svn_stringbuf_t **value,
                               svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
-/* Set a local value of property NAME to VALUE for the file or
-   directory PATH.
+/* Set wc property NAME to VALUE for PATH.  Do any temporary
+   allocation in POOL.
 
    ### todo (issue #406): name could be const char *, value
    svn_string_t instead of svn_stringbuf_t.  */
@@ -655,7 +672,7 @@ svn_error_t *svn_wc_prop_set (svn_stringbuf_t *name,
                               svn_stringbuf_t *path,
                               apr_pool_t *pool);
 
-/* Return TRUE iff NAME is a 'wc' property name. */
+/* Return true iff NAME is a 'wc' property name. */
 svn_boolean_t svn_wc_is_wc_prop (svn_stringbuf_t *name);
 
 
