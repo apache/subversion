@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-07 20:16+0200\n"
+"POT-Creation-Date: 2004-09-10 18:01+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1648,8 +1648,8 @@ msgstr "Sett ny verdi for egenskap '%s' på revisjon %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:145
 #, c-format
-msgid "No changes to property '%s' on revision %ld"
-msgstr "Ingen endringer til egenskap '%s' på revisjon %ld"
+msgid "No changes to property '%s' on revision %ld\n"
+msgstr "Ingen endringer til egenskap '%s' på revisjon %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:153
 #, c-format
@@ -1857,8 +1857,8 @@ msgstr "Rammefeil i rørprotokollen"
 msgid "Read error in pipe"
 msgstr "Lesefeil i rør"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:311
-#: libsvn_subr/cmdline.c:328
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:313
+#: libsvn_subr/cmdline.c:330
 msgid "Write error"
 msgstr "Feil ved skriving"
 
@@ -2612,27 +2612,27 @@ msgstr "Kan ikke sende inn ikke-rekursiv sletting av en katalog"
 msgid "Unknown entry kind for '%s'"
 msgstr "Ukjent posttype for '%s'"
 
-#: libsvn_client/commit_util.c:236
+#: libsvn_client/commit_util.c:237
 #, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
 msgstr "Posten '%s' har uventet forandret spesialstatus"
 
-#: libsvn_client/commit_util.c:286
+#: libsvn_client/commit_util.c:287
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "Avbryter innsending: '%s' er fortsatt i konflikt"
 
-#: libsvn_client/commit_util.c:342
+#: libsvn_client/commit_util.c:343
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
 msgstr "Forventet ikke at '%s' skulle være roten på en arbeidskopi"
 
-#: libsvn_client/commit_util.c:359
+#: libsvn_client/commit_util.c:360
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
 msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 
-#: libsvn_client/commit_util.c:606 libsvn_client/commit_util.c:731
+#: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
 #: libsvn_client/diff.c:1206 libsvn_client/diff.c:1856
 #: libsvn_client/diff.c:2291 libsvn_client/diff.c:2396
@@ -2647,17 +2647,17 @@ msgstr "Objekt '%s' for innsending har kopimerke, men ingen copyfrom-URL\n"
 msgid "'%s' is not under version control"
 msgstr "'%s' er ikke under versjonskontroll"
 
-#: libsvn_client/commit_util.c:609
+#: libsvn_client/commit_util.c:610
 #, c-format
 msgid "Entry for '%s' has no URL"
 msgstr "Innslaget for '%s' mangler URL"
 
-#: libsvn_client/commit_util.c:640
+#: libsvn_client/commit_util.c:641
 #, c-format
 msgid "'%s' is scheduled for addition within unversioned parent"
 msgstr "'%s' er klarert for å legges til i en ikke-versjonert forelder"
 
-#: libsvn_client/commit_util.c:660
+#: libsvn_client/commit_util.c:661
 #, c-format
 msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
@@ -2668,7 +2668,7 @@ msgstr ""
 "skulle legges til. Kanskje du prøver å sende inn et mål som ligger i\n"
 "en ikke-versjonert (eller ikke enda versjonert) katalog?"
 
-#: libsvn_client/commit_util.c:700
+#: libsvn_client/commit_util.c:701
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
@@ -2677,17 +2677,17 @@ msgstr ""
 "'%s' er ikke under versjonskontroll og er ikke en del av innsendingen,\n"
 "men dens barn '%s' er del av innsendingen"
 
-#: libsvn_client/commit_util.c:780
+#: libsvn_client/commit_util.c:781
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr "Kan ikke sende inn både '%s' og '%s' siden de refererer til samme URL"
 
-#: libsvn_client/commit_util.c:924
+#: libsvn_client/commit_util.c:925
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "Objekt '%s' for innsending har kopimerke satt, men ingen copyfrom-URL"
 
-#: libsvn_client/commit_util.c:928
+#: libsvn_client/commit_util.c:929
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr ""
@@ -4799,7 +4799,7 @@ msgstr "fjern overflødige loggfiler fra depotet"
 
 #: svnadmin/main.c:269
 msgid ""
-"wait instead of exit if the the repository is in\n"
+"wait instead of exit if the repository is in\n"
 "                             use by another process"
 msgstr ""
 "vent istedenfor å avslutte hvis depotet\n"
