@@ -1,5 +1,5 @@
 /*
- * propset-cmd.c -- Display status information in current directory
+ * propset-cmd.c -- Set property values on files/dirs
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.

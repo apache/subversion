@@ -1,5 +1,5 @@
 /*
- * propget-cmd.c -- Display status information in current directory
+ * propget-cmd.c -- Print properties and values of files/dirs
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
