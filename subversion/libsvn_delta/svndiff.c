@@ -449,7 +449,7 @@ write_handler (void *baton,
 
       /* Wait for more data if we don't have enough bytes for the
          whole window.  */
-      if (apr_size_t (end - p) < inslen + newlen)
+      if ((apr_size_t) (end - p) < inslen + newlen)
 	return SVN_NO_ERROR;
 
       /* Count the instructions and make sure they are all valid.  */
