@@ -25,7 +25,7 @@ ps: dvi
 	dvips svn-design.dvi -o svn-design.ps
 
 pdf: dvi
-	dvipdf svn-design.dvi svn-design.pdf
+	/usr/local/bin/dvipdf svn-design.dvi svn-design.pdf
 
 log:
 	cvs2cl.pl -r -t
