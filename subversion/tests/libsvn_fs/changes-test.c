@@ -581,7 +581,8 @@ changes_fetch_ordering (const char **msg,
 
   /*** REVISION 2: Delete and add some stuff, non-depth-first. ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
-  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
+  /* Don't use subpool, txn_name is used after subpool is cleared */
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   {
     static svn_test__txn_script_command_t script_entries[] = {
@@ -650,7 +651,8 @@ changes_fetch_ordering (const char **msg,
        that the 'replace' change type works, too.  (And add 'dir4'
        instead of 'dir3', since 'dir3' still exists).  ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
-  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
+  /* Don't use subpool, txn_name is used after subpool is cleared */
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, subpool));
   {
