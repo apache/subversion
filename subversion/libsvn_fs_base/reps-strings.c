@@ -200,7 +200,7 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
           apr_size_t source_len = window->tview_len;
           assert (cb->window->sview_len == source_len);
           cb->source_buf = apr_palloc (cb->window_pool, source_len);
-          svn_txdelta__apply_instructions (window, "",
+          svn_txdelta__apply_instructions (window, NULL,
                                            cb->source_buf, &source_len);
           cb->done = TRUE;
         }
@@ -364,7 +364,7 @@ rep_undeltify_range (svn_fs_t *fs,
         }
       else
         {
-          source_buf = (char *) "";   /* Won't read anything from here. */
+          source_buf = NULL;    /* Won't read anything from here. */
         }
 
       if (offset > 0)
