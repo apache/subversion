@@ -551,6 +551,11 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 6,
               "Invalid configuration value")
 
+  SVN_ERRDEF (SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+              SVN_ERR_RA_DAV_CATEGORY_START + 7,
+              "HTTP Path Not Found")
+
+
   /* ra_local errors */
   
   SVN_ERRDEF (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
