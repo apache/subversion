@@ -1404,79 +1404,78 @@ Updated to revision 46.
         con los suyos propios, y ahora tiene que elegir manualmente
         entre ellos.</para>
            
-      <para>Whenever a conflict occurs, three things occur to assist
-        you in noticing and resolving that conflict:</para>
+      <para>Siempre que ocurra un conflicto, ocurren tres cosas para
+        ayudarle a notar<!--TODO:to assist you in noticing--> y
+        resolver ese conflicto:</para>
            
       <itemizedlist>
 
         <listitem>
-          <para>Subversion prints a <computeroutput>C</computeroutput>
-            during the update, and remembers that the file is in a
-            state of conflict.</para>
+          <para>Subversion imprime una <computeroutput>C</computeroutput>
+            durante la actualización, y recuerda que el fichero está en
+            un estado de conflicto.</para>
         </listitem>
 
         <listitem>
-          <para>Subversion places <firstterm>conflict
-            markers</firstterm>&mdash;special strings of text which
-            delimit the <quote>sides</quote> of the
-            conflict&mdash;into the file to visibly demonstrate the
-            overlapping areas.</para>
+          <para>Subversion coloca <firstterm>marcas de
+            conflicto</firstterm>&mdash;secuencias especiales de texto
+            que delimitan los <quote>lados</quote> del conflicto&mdash;en
+            el fichero para demostrar visualmente las áreas solapadas.
+          </para>
         </listitem>
 
         <listitem>
-          <para>For every conflicted file, Subversion places three
-            extra files in your working copy:</para>
+          <para>Para cada fichero en conflicto, Subversion coloca tres
+            ficheros extra en su copia de trabajo local:</para>
 
           <variablelist>
             
             <varlistentry>
               <term><filename>filename.mine</filename></term>
               <listitem>
-                <para> This is your file as it existed in your working
-                  copy before you updated your working copy&mdash;that
-                  is, without conflict markers.  This file has your
-                  latest changes in it and nothing else.</para>
+                <para>Este es su fichero como existió en su copia de
+                  trabajo antes de que usted actualizara su copia de
+                  trabajo&mdash;esto es, sin marcas de conflicto.
+                  Este fichero tiene su últimos cambios y nada más.</para>
               </listitem>
             </varlistentry>
             
             <varlistentry>
               <term><filename>filename.rOLDREV</filename></term>
               <listitem>
-                <para>This is the file that was the
-                  <literal>BASE</literal> revision before you updated
-                  your working copy.  That is, the file that you
-                  checked out before you made your latest
-                  edits.</para>
+                <para>Este es el fichero que era la revisión
+                  <literal>BASE</literal> antes de que usted actalizara
+                  su copia de trabajo. Esto es, el fichero que usted
+                  descargó antes de que hiciera su última edición.</para>
               </listitem>
             </varlistentry>
 
             <varlistentry>
               <term><filename>filename.rNEWREV</filename></term>
               <listitem>
-                <para>This is the file that your Subversion client
-                  just received from the server when you updated your
-                  working copy.  This file corresponds to the
-                  <literal>HEAD</literal> revision of the
-                  repository.</para>
+                <para>Este es el fichero que su cliente de Subversion
+                  recibió del servidor justo cuando usted actualizó su
+                  copia de trabajo. Este fichero corresponde con la
+                  revisión <literal>HEAD</literal> del repositorio.</para>
               </listitem>
             </varlistentry>
 
           </variablelist>
           
-          <para>Here <literal>OLDREV</literal> is the revision number
-            of the file in your <filename>.svn</filename> directory
-            and <literal>NEWREV</literal> is the revision number of
-            the repository <literal>HEAD</literal>.
-          </para>
+          <para>Aquí <literal>OLDREV</literal> es el número de revisión
+            del fichero en su directorio <filename>.svn</filename> y
+            <literal>NEWREV</literal> es el número de revisión del
+            <literal>HEAD</literal> del repositorio.</para>
         </listitem>
         
       </itemizedlist>
       
-      <para>For example, Sally makes changes to the file
-        <filename>sandwich.txt</filename> in the repository.  Harry has
-        just changed the file in his working copy and checked it in.
-        Sally updates her working copy before checking in and she gets
-        a conflict:</para>
+      <para>Por ejemplo, Sally hace cambios al fichero
+        <filename>sandwich.txt</filename> en el repositorio. Harry acaba
+        de cambiar el fichero en su copia de trabajo y lo ha enviado. Sally
+        actualiza su copia de trabajo antes de enviarlo y recibe<!--TODO:
+        gets...recibir parece que es un premio, quizá haya algo mejo--> un
+        conflicto:</para>
       
       <screen>
 $ svn update
