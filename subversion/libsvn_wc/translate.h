@@ -101,22 +101,10 @@ svn_error_t *svn_wc__get_keywords (svn_wc_keywords_t **keywords,
                                    const char *force_list,
                                    apr_pool_t *pool);
 
-/*  Query the SVN_PROP_EXECUTABLE property on the file at PATH.
 
-    If the property is "true"/"on" or "false"/"off", then allocate
-    *WANTS_EXEC in POOL, and set **WANTS_EXEC to TRUE or FALSE.
-
-    If the property is non-existent (or some bogus value), then set
-    *WANTS_EXEC to NULL -- meaning, "do nothing."
-*/
-svn_error_t *svn_wc__get_executable_prop (svn_boolean_t **wants_exec,
-                                          const char *path,
-                                          apr_pool_t *pool);
-
-
-/* If the SVN_PROP_EXECUTABLE property is present, then toggle PATH's
-   executable bit one way or another.  Set *TOGGLED to TRUE if a
-   toggle happened, or FALSE if not. */
+/* If the SVN_PROP_EXECUTABLE property is present at all, then set
+   PATH executable.  Set *TOGGLED to TRUE if this happened, or FALSE
+   if not. */
 svn_error_t *
 svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
                                              const char *path,

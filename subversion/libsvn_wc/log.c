@@ -662,7 +662,7 @@ log_do_committed (struct log_runner *loggy,
   int is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
   svn_stringbuf_t *sname = svn_stringbuf_create (name, pool);
-  svn_boolean_t wc_root, overwrote_working = FALSE;
+  svn_boolean_t wc_root, overwrote_working = FALSE, remove_executable = FALSE;
   svn_stringbuf_t *full_path;
   svn_stringbuf_t *pdir, *basename;
   apr_hash_t *entries;
@@ -863,7 +863,31 @@ log_do_committed (struct log_runner *loggy,
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                     "error getting affected time: %s",
                                     chosen->data);
-        
+
+        /* Examine propchanges here before installing the new
+           propbase.  If the executable prop was -deleted-, then set a
+           flag that will remind us to run -x after our call to
+           install_committed_file(). */
+        if (! is_this_dir)
+          {
+            int i;
+            apr_array_header_t *propchanges;
+            SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL,
+                                            full_path->data, pool));
+            for (i = 0; i < propchanges->nelts; i++)
+              {
+                svn_prop_t *propchange
+                  = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+                
+                if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+                    && (propchange->value == NULL))
+                  {
+                    remove_executable = TRUE;
+                    break;
+                  }
+              }                
+          }
+
         /* Make the tmp prop file the new pristine one.  Note that we
            have to temporarily set the file permissions for writability. */
         SVN_ERR (svn_io_set_file_read_write (basef->data, TRUE, pool));
@@ -884,9 +908,22 @@ log_do_committed (struct log_runner *loggy,
                                          loggy->path, name, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
                                   "error replacing text-base: %s", name);
+
+      /* The previous call will have run +x if the executable property
+         was added or already present.  But if this property was
+         -removed-, (detected earlier), then run -x here on the new
+         working file.  */
+      if (remove_executable)
+        {
+          SVN_ERR (svn_io_set_file_executable (full_path->data,
+                                               FALSE, /* chmod -x */
+                                               FALSE, pool));
+          overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
+        }
       
-      /* If the working file was overwritten (due to re-translation), use
-       *that* textual timestamp instead! */
+      /* If the working file was overwritten (due to re-translation)
+         or touched (due to +x / -x), then use *that* textual
+         timestamp instead. */
       if (overwrote_working)
         if ((err = svn_io_file_affected_time (&text_time, full_path, pool)))
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
