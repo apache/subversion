@@ -1674,7 +1674,7 @@ $
           administrators seeking to version large amounts of data.
           Every additional byte consumed by the live repository is a
           byte that needs to be backed up offsite, perhaps multiple
-          time as part of rotating backup schedules.  Since the
+          times as part of rotating backup schedules.  Since the
           primary storage mechanism of a Subversion repository is a
           complex database system, it is useful to know what pieces of
           data need to remain on the live site, which need to be
