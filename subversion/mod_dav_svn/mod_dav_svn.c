@@ -45,7 +45,7 @@ typedef struct {
 /* per-dir configuration */
 typedef struct {
   const char *fs_path;          /* path to the SVN FS */
-
+  const char *repo_name;        /* repository name */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -115,8 +115,19 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
     newconf = apr_pcalloc(p, sizeof(*newconf));
 
     newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
+    newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
 
     return newconf;
+}
+
+static const char *dav_svn_repo_name(cmd_parms *cmd, void *config,
+                                     const char *arg1)
+{
+  dav_svn_dir_conf *conf = config;
+
+  conf->repo_name = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
 }
 
 static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
@@ -171,6 +182,14 @@ const char *dav_svn_get_fs_path(request_rec *r)
     return conf->fs_path;
 }
 
+const char *dav_svn_get_repo_name(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->repo_name;
+}
+
 const char *dav_svn_get_special_uri(request_rec *r)
 {
     dav_svn_server_conf *conf;
@@ -194,6 +213,10 @@ static const command_rec dav_svn_cmds[] =
   AP_INIT_TAKE1("SVNSpecialURI", dav_svn_special_uri_cmd, NULL, RSRC_CONF,
                 "specify the URI component for special Subversion "
                 "resources"),
+
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNRepoName", dav_svn_repo_name, NULL, ACCESS_CONF,
+                "specify the name of a Subversion repository"),
 
   { NULL }
 };

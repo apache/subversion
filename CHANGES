@@ -1,3 +1,8 @@
+Version x.xx.x (unreleased)
+
+ User-visible changes:
+ * Added SVNRepoName directive to mod_dav_svn
+
 Version 0.10.2 (released 25 Mar 2002, revision 1587)
 
  User-visible changes:
