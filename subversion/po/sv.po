@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-07-10 01:28+0200\n"
-"PO-Revision-Date: 2004-07-12 01:07+0200\n"
+"POT-Creation-Date: 2004-07-25 21:50+0200\n"
+"PO-Revision-Date: 2004-07-25 21:57+0200\n"
 "Last-Translator: Subversion Developers <devel@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -603,7 +603,8 @@ msgid ""
 msgstr ""
 "Visa skillnaderna mellan två sökvägar.\n"
 "användning: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
-"            2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]]\n"
+"            2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT"
+"[@NEWREV]]\n"
 "               [PATH...]\n"
 "            3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
@@ -620,7 +621,8 @@ msgstr ""
 "     dessa vara relativa OLD-TGT och NEW-TGT och de begränsar i så fall\n"
 "     utskriften till skillnaderna i dessa sökvägar. OLD-TGT och NEW-TGT kan\n"
 "     vara sökvägar till en arbetskopia eller URL[@REV]. Standardvärdet för\n"
-"     NEW-TGT är OLD-TGT. -r N sätter standardvärdet för OLDREV till N. -r N:M\n"
+"     NEW-TGT är OLD-TGT. -r N sätter standardvärdet för OLDREV till N. -r N:"
+"M\n"
 "     sätter standardvädet för OLDREV till N och för NEWREV till M.\n"
 "\n"
 "  3. Kortare sätt att skriva \"svn diff --old=OLD-URL[@OLDREV]\n"
@@ -718,7 +720,8 @@ msgstr ""
 "Lista kataloginnehåll i databasen.\n"
 "användning: list [TARGET...]\n"
 "\n"
-"  Lista varje fil TARGET och innehållet i varje katalog TARGET som de ser ut\n"
+"  Lista varje fil TARGET och innehållet i varje katalog TARGET som de ser "
+"ut\n"
 "  i databasen. Om TARGET är en sökväg i en arbetskopia, används motsvarande\n"
 "  URL till databasen.\n"
 "\n"
@@ -766,11 +769,14 @@ msgstr ""
 "  1. Visa loggmeddelanden för en lokal sökväg (\".\" är standardvärdet).\n"
 "     Standardvärdet för revisionsområdet är BASE:1.\n"
 "\n"
-"  2. Visa loggmeddelanden för varje sökväg PATH (standardvärdet är \".\") under\n"
+"  2. Visa loggmeddelanden för varje sökväg PATH (standardvärdet är \".\") "
+"under\n"
 "     URL. Standardvärdet för revisionsområdet är HEAD:1.\n"
 "\n"
-"  Om -v används skrivs även alla berörda sökvägar ut med varje loggmeddelande.\n"
-"  Om -q används, skrivs inte loggmeddelanden ut (kan användas tillsammans med\n"
+"  Om -v används skrivs även alla berörda sökvägar ut med varje "
+"loggmeddelande.\n"
+"  Om -q används, skrivs inte loggmeddelanden ut (kan användas tillsammans "
+"med\n"
 "  -v).\n"
 "\n"
 "  Varje loggmeddelande skrivs endast ut en gång, även om flera av de\n"
@@ -824,7 +830,8 @@ msgstr ""
 "\n"
 "  3. I den tredje formen kan SOURCE vara en URL eller en sökväg till en\n"
 "     arbetskopia. I det senare fallet används motsvarande URL. Denna URL,\n"
-"     vid revision REV, som den såg ut i revisionerna N respektive M bestämmer\n"
+"     vid revision REV, som den såg ut i revisionerna N respektive M "
+"bestämmer\n"
 "     vad som ska jämföras. Om REV inte anges, används HEAD.\n"
 "\n"
 "  WCPATH är sökvägen till den arbetskopia där ändringarna kommer att\n"
@@ -877,7 +884,8 @@ msgstr ""
 "eller databas.\n"
 "användning: move SRC DST\n"
 "\n"
-"  Anmärkning: Detta underkommando är samma sak som \"copy\" följt av \"delete\".\n"
+"  Anmärkning: Detta underkommando är samma sak som \"copy\" följt av \"delete"
+"\".\n"
 "\n"
 "  SRC och DST kan vara antingen sökvägar i en arbetskopia (WC)\n"
 "  eller URL:er:\n"
@@ -946,8 +954,10 @@ msgstr ""
 "\n"
 "  Normalt skrivs ett radslut ut efter värdena, så att utskrifterna ser\n"
 "  snyggare ut. Om egenskaper för fler än en sökväg skrivs ut, läggs också\n"
-"  sökvägen till före det värde som är kopplat till den. Använd flaggan --strict\n"
-"  för att slå av dessa \"tillsnyggningar\" (bland annat användbart när binära\n"
+"  sökvägen till före det värde som är kopplat till den. Använd flaggan --"
+"strict\n"
+"  för att slå av dessa \"tillsnyggningar\" (bland annat användbart när "
+"binära\n"
 "  egenskaper skickas till en fil).\n"
 
 #: clients/cmdline/main.c:490
@@ -1007,33 +1017,42 @@ msgstr ""
 "Sätt egenskapen PROPNAME till PROPVAL på filer, kataloger\n"
 "eller revisioner.\n"
 "användning: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
-"            2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]\n"
+"            2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] "
+"[URL]\n"
 "\n"
 "  1. Gör en lokal ändring av en versionshanterad egenskap i en arbetskopia.\n"
 "  2. Gör en ändring av en icke versionshanterad revisionsegenskap på en\n"
 "     revision i databasen.\n"
 "\n"
-"  Anmärkning: svn känner igen följande särskilda versionshanterade egenskaper,\n"
+"  Anmärkning: svn känner igen följande särskilda versionshanterade "
+"egenskaper,\n"
 "  men lagrar godtyckliga egenskaper:\n"
 "    svn:ignore     - En lista med filmönster att ignorera, avskilda med\n"
 "                     radslut.\n"
 "    svn:keywords   - Nyckelord som ska expanderas. Giltiga nyckelord är:\n"
 "      URL, HeadURL             - URL:en till objektets senaste revision.\n"
-"      Author, LastChangedBy    - Den person som gjorde den senaste ändringen.\n"
+"      Author, LastChangedBy    - Den person som gjorde den senaste "
+"ändringen.\n"
 "      Date, LastChangedDate    - Datum/tid för den senaste ändringen.\n"
-"      Rev, LastChangedRevision - Den senaste revisionen där objektet ändrades.\n"
-"      Id                       - Ett sammandrag av de 4 föregående nyckelorden.\n"
-"    svn:executable - Om den finns, görs filen exekverbar. Den här egenskapen\n"
+"      Rev, LastChangedRevision - Den senaste revisionen där objektet "
+"ändrades.\n"
+"      Id                       - Ett sammandrag av de 4 föregående "
+"nyckelorden.\n"
+"    svn:executable - Om den finns, görs filen exekverbar. Den här "
+"egenskapen\n"
 "      kan inte sättas på en katalog. Ett icke-rekursivt försök kommer att\n"
-"      misslyckas, men om den sätts rekursivt sätts egenskapen för katalogens\n"
+"      misslyckas, men om den sätts rekursivt sätts egenskapen för "
+"katalogens\n"
 "      barn.\n"
 "    svn:eol-style  - Något av \"native\", \"CR\", \"LF\" eller \"CRLF\".\n"
 "    svn:mime-type  - Filens mime-typ. Används för att avgöra om merge\n"
 "      ska göras på filen och hur den skickas via Apache. En mime-typ som\n"
 "      inleds med \"text/\" eller som saknas behandlas som text. Allt annat\n"
 "      behandlas som binärdata.\n"
-"    svn:externals  - En lista, avskild med radslut, med modulspecifikationer,\n"
-"      vilka består av en relativ sökväg, valbara revisionsflaggor samt en URL.\n"
+"    svn:externals  - En lista, avskild med radslut, med "
+"modulspecifikationer,\n"
+"      vilka består av en relativ sökväg, valbara revisionsflaggor samt en "
+"URL.\n"
 "      Exempel:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
@@ -1137,7 +1156,8 @@ msgstr ""
 "Visa status för filer och kataloger i en arbetskopia.\n"
 "användning: status [PATH...]\n"
 "\n"
-"  Utan argument visas endast lokala ändringar (kräver inte nätverksåtkomst).\n"
+"  Utan argument visas endast lokala ändringar (kräver inte "
+"nätverksåtkomst).\n"
 "  Om flaggan -u anges, visas dessutom revisioner i arbetskopian och\n"
 "  information om ändringar på servern.\n"
 "  Om -v anges, visas fullständig revisionsinformation för varje objekt.\n"
@@ -1164,7 +1184,8 @@ msgstr ""
 "    Tredje kolumen: Visar om arbetskopian är låst\n"
 "      \" \" olåst\n"
 "      \"L\" låst\n"
-"    Fjärde kolumnen: Kommande incheckningar kommer att innehålla tillägg med\n"
+"    Fjärde kolumnen: Kommande incheckningar kommer att innehålla tillägg "
+"med\n"
 "    historik\n"
 "      \" \" ingen historik schemalagd\n"
 "      \"+\" historik schemalagd\n"
@@ -1181,7 +1202,8 @@ msgstr ""
 "  De återstående fälten har varierande längd och avgränsas med mellanslag:\n"
 "    Arbetskopians revision (med -u eller -v)\n"
 "    Revision och författare för senaste incheckning (med -v)\n"
-"    Arbetskopians sökväg står alltid sist, så att den kan innehålla mellanslag\n"
+"    Arbetskopians sökväg står alltid sist, så att den kan innehålla "
+"mellanslag\n"
 "\n"
 "  Exempel på vad som kan visas:\n"
 "    svn status wc\n"
@@ -1221,11 +1243,13 @@ msgstr ""
 "            2. switch --relocate FROM TO [PATH...]\n"
 "\n"
 "  1. Uppdatera arbetskopian så att den återspeglar en ny URL inom\n"
-"     databasen. Detta liknar hur \"svn update\" beter sig och är det sätt på\n"
+"     databasen. Detta liknar hur \"svn update\" beter sig och är det sätt "
+"på\n"
 "     vilket man flyttar en arbetskopia till en förgrening eller märke inom\n"
 "     en och samma databas. \n"
 "\n"
-"  2. Skriv endast om arbetskopians URL-metadata för en syntaxmässig ändring.\n"
+"  2. Skriv endast om arbetskopians URL-metadata för en syntaxmässig "
+"ändring.\n"
 "     Detta används när rot-URL:en för en databas ändras (till exempel en\n"
 "     schema- eller värdnamnsändring), men din arbetskopia återspeglar\n"
 "     fortfarande samma katalog i samma databas.\n"
@@ -1727,7 +1751,7 @@ msgid "Can't write to '%s'"
 msgstr "Kan inte skriva till \"%s\""
 
 #: clients/cmdline/util.c:187 clients/cmdline/util.c:211
-#: libsvn_fs_fs/fs_fs.c:3271
+#: libsvn_fs_fs/fs_fs.c:3272
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Kan inte ta status på \"%s\""
@@ -2474,21 +2498,21 @@ msgstr "Fel vid rekursivt tillägg av \"%s\""
 msgid "Can't close directory '%s'"
 msgstr "Kan inte stänga katalogen \"%s\""
 
-#: libsvn_client/blame.c:379 libsvn_client/blame.c:757
+#: libsvn_client/blame.c:389 libsvn_client/blame.c:766
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "Kan inte beräkna blame-information för binär fil \"%s\""
 
-#: libsvn_client/blame.c:540
+#: libsvn_client/blame.c:549
 msgid "Start revision must precede end revision"
 msgstr "Startrevisionen måste komma före slutrevisionen"
 
-#: libsvn_client/blame.c:643 libsvn_client/cat.c:65
+#: libsvn_client/blame.c:652 libsvn_client/cat.c:65
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL:en \"%s\" pekar på en katalog"
 
-#: libsvn_client/blame.c:715
+#: libsvn_client/blame.c:724
 #, c-format
 msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr "Saknar tidigare revision för åtgärden \"%c\" i revision %ld av \"%s\""
@@ -2866,8 +2890,8 @@ msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Åtminstone en revision måste vara icke-lokal för fixerad diff"
 
 #: libsvn_client/diff.c:2260 libsvn_client/diff.c:2265
-#: libsvn_client/diff.c:2376 libsvn_client/export.c:729 libsvn_client/ra.c:690
-#: libsvn_client/ra.c:810
+#: libsvn_client/diff.c:2376 libsvn_client/export.c:729 libsvn_client/ra.c:694
+#: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
 msgstr "\"%s\" saknar URL"
@@ -2967,22 +2991,22 @@ msgstr "Kan inte hitta post för \"%s\""
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "Saknar information om änrade sökvägar för \"%s\" i revision %ld"
 
-#: libsvn_client/ra.c:556
+#: libsvn_client/ra.c:560
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "Sökvägen \"%s\" finns inte i revision %ld"
 
-#: libsvn_client/ra.c:617 libsvn_client/ra.c:752
+#: libsvn_client/ra.c:621 libsvn_client/ra.c:756
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "Kan inte hitta platsen i databasen för \"%s\" i revision %ld"
 
-#: libsvn_client/ra.c:628
+#: libsvn_client/ra.c:632
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "\"%s\" i revision %ld är ett orelaterat objekt"
 
-#: libsvn_client/ra.c:757
+#: libsvn_client/ra.c:761
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -3001,15 +3025,21 @@ msgstr "Databasen på \"%s\" har uuid \"%s\", men arbetskopian har \"%s\""
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "Okänd revisionstyp begärd för \"%s\""
 
-#: libsvn_fs/fs-loader.c:95 libsvn_ra/ra_loader.c:123
+#: libsvn_fs/fs-loader.c:100 libsvn_ra/ra_loader.c:123
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "\"%s\" definierar inte \"%s()\""
 
-#: libsvn_fs/fs-loader.c:130
+#: libsvn_fs/fs-loader.c:137
 #, c-format
 msgid "Unknown FS type '%s'"
 msgstr "Okänd filsystemstyp \"%s\""
+
+#: libsvn_fs/fs-loader.c:143
+#, c-format
+msgid ""
+"Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
+msgstr "Versioner stämmer ej i FS-modulen '%s': hittade %d.%d.%d%s, väntade %d.%d.%d%s"
 
 #: libsvn_fs_base/err.c:69 libsvn_fs_fs/err.c:71
 #, c-format
@@ -3026,7 +3056,7 @@ msgstr "Referens till revision %ld som inte finns i filsystemet \"%s\""
 msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
 msgstr "Filen får ej ändras: filsystem \"%s\", revision %ld, sökväg \"%s\""
 
-#: libsvn_fs_base/fs.c:1077
+#: libsvn_fs_base/fs.c:1074
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -3038,7 +3068,7 @@ msgstr ""
 "med hotcopy-algoritmen. OM problemet kvarstår, försök med att slå av\n"
 "funktionen i DB_CONFIG."
 
-#: libsvn_fs_base/fs.c:1096
+#: libsvn_fs_base/fs.c:1093
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -3049,6 +3079,11 @@ msgstr ""
 "funktionen\n"
 "kan vålla problem för \"hotcopy\"-algoritmen. Prova med att avaktivera\n"
 "denna funktion i DB_CONFIG om problemet kvarstår."
+
+#: libsvn_fs_base/fs.c:1229
+#, c-format
+msgid "Unsupported FS loader version (%d) for bdb"
+msgstr "Versionen för FS-laddaren (%d) stöds ej för bdb"
 
 #: libsvn_fs_base/tree.c:381 libsvn_fs_fs/tree.c:301
 #, c-format
@@ -3132,6 +3167,11 @@ msgstr "Ingen kopia med id \"%s\" i filsystemet \"%s\""
 msgid "'%s' is not a directory in filesystem '%s'"
 msgstr "\"%s\" är ingen katalog i filsystemet \"%s\""
 
+#: libsvn_fs_fs/fs.c:290
+#, c-format
+msgid "Unsupported FS loader version (%d) for fsfs"
+msgstr "Versionen för FS-laddaren (%d) stöds ej för fsfs"
+
 #: libsvn_fs_fs/fs_fs.c:364 libsvn_fs_fs/fs_fs.c:378
 msgid "Found malformed header in revision file"
 msgstr "Hittade felaktigt huvud i revisionsfil"
@@ -3157,7 +3197,7 @@ msgstr "Felaktig copyroot-rad i node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Felaktig copyfrom-rad i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2865
+#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2866
 msgid "Attempted to write to non-transaction"
 msgstr "Försök att skriva i något som inte är en transaktion"
 
@@ -3231,7 +3271,7 @@ msgstr "Ogiltig ändringsordning: ändring som inte är tillägg på raderad sö
 
 #: libsvn_fs_fs/fs_fs.c:1850 libsvn_fs_fs/fs_fs.c:1858
 #: libsvn_fs_fs/fs_fs.c:1890 libsvn_fs_fs/fs_fs.c:1910
-#: libsvn_fs_fs/fs_fs.c:1943 libsvn_fs_fs/fs_fs.c:1948
+#: libsvn_fs_fs/fs_fs.c:1944 libsvn_fs_fs/fs_fs.c:1949
 msgid "Invalid changes line in rev-file"
 msgstr "Ogiltig changes-rad i rev-fil"
 
@@ -3247,46 +3287,52 @@ msgstr "Ogiltig text-mod-flagga i rev-fil"
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ogiltig prop-mod-flagga i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2098
+#: libsvn_fs_fs/fs_fs.c:2099
 msgid "Copying from transactions not allowed"
 msgstr "Det är inte tillåtet att kopiera från transaktioner"
 
-#: libsvn_fs_fs/fs_fs.c:2340 libsvn_fs_fs/fs_fs.c:2347
+#: libsvn_fs_fs/fs_fs.c:2341 libsvn_fs_fs/fs_fs.c:2348
 msgid "next-id file corrupt"
 msgstr "next-id-filen är förstörd"
 
-#: libsvn_fs_fs/fs_fs.c:2573
+#: libsvn_fs_fs/fs_fs.c:2574
 msgid "Invalid change type"
 msgstr "Ogiltig ändringstyp"
 
-#: libsvn_fs_fs/fs_fs.c:2884
+#: libsvn_fs_fs/fs_fs.c:2885
 msgid "Can't set text contents of a directory"
 msgstr "Kan inte sätta textinnehåll i en katalog"
 
-#: libsvn_fs_fs/fs_fs.c:2974 libsvn_fs_fs/fs_fs.c:2979
-#: libsvn_fs_fs/fs_fs.c:2986
+#: libsvn_fs_fs/fs_fs.c:2975 libsvn_fs_fs/fs_fs.c:2980
+#: libsvn_fs_fs/fs_fs.c:2987
 msgid "Corrupt current file"
 msgstr "current-filen är förstörd"
 
-#: libsvn_fs_fs/fs_fs.c:3274
+#: libsvn_fs_fs/fs_fs.c:3275
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Kan inte göra chmod på \"%s\""
 
-#: libsvn_fs_fs/fs_fs.c:3407
+#: libsvn_fs_fs/fs_fs.c:3408
 msgid "Transaction out of date"
 msgstr "Transaktionen är inaktuell"
 
-#: libsvn_fs_fs/fs_fs.c:3646
+#: libsvn_fs_fs/fs_fs.c:3647
 msgid "No such transaction"
 msgstr "Transaktionen finns inte"
 
-#: libsvn_ra/ra_loader.c:210
+#: libsvn_ra/ra_loader.c:209
+#, c-format
+msgid ""
+"Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
+msgstr "Versioner stämmer ej i insticksmodulen '%s' för RA: hittade %d.%d.%d%s, väntade %d.%d.%d%s"
+
+#: libsvn_ra/ra_loader.c:225
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Okänt URL-schema \"%s\""
 
-#: libsvn_ra/ra_loader.c:275
+#: libsvn_ra/ra_loader.c:290
 #, c-format
 msgid "  - handles '%s' schema\n"
 msgstr "  - hanterar schemat \"%s\"\n"
@@ -3470,67 +3516,67 @@ msgstr "\"DAV:version-name\" finns inte på baseline-resursen"
 msgid "At least one property change failed; repository is unchanged"
 msgstr "Åtminstone en egenskapsändring misslyckades; databasen är oförändrad"
 
-#: libsvn_ra_dav/session.c:428
+#: libsvn_ra_dav/session.c:429
 msgid "Invalid URL: illegal character in proxy port number"
 msgstr "Felaktig URL: ogiltigt tecken i proxy-portnummer"
 
-#: libsvn_ra_dav/session.c:432
+#: libsvn_ra_dav/session.c:433
 msgid "Invalid URL: negative proxy port number"
 msgstr "Felaktig URL: negativt proxy-portnummer"
 
-#: libsvn_ra_dav/session.c:435
+#: libsvn_ra_dav/session.c:436
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
 "Felaktig URL: portnummer för proxy större än det högsta TCP-portnummret 65535"
 
-#: libsvn_ra_dav/session.c:449
+#: libsvn_ra_dav/session.c:450
 msgid "Invalid config: illegal character in timeout value"
 msgstr "Felaktig konfiguration: felaktigt tecken i timeout-värde"
 
-#: libsvn_ra_dav/session.c:453
+#: libsvn_ra_dav/session.c:454
 msgid "Invalid config: negative timeout value"
 msgstr "Felaktig konfiguration: negativt timeout-värde"
 
-#: libsvn_ra_dav/session.c:466
+#: libsvn_ra_dav/session.c:467
 msgid "Invalid config: illegal character in debug mask value"
 msgstr "Felaktig konfiguration: ogiltigt tecken i debug mask-värde"
 
-#: libsvn_ra_dav/session.c:556
+#: libsvn_ra_dav/session.c:557
 msgid "Malformed URL for repository"
 msgstr "Felaktig URL för databas"
 
-#: libsvn_ra_dav/session.c:564
+#: libsvn_ra_dav/session.c:565
 msgid "Network socket initialization failed"
 msgstr "Fel vid initiering av nätverksuttag (socket)"
 
-#: libsvn_ra_dav/session.c:577
+#: libsvn_ra_dav/session.c:578
 msgid "SSL is not supported"
 msgstr "SSL stöds ej"
 
-#: libsvn_ra_dav/session.c:723
+#: libsvn_ra_dav/session.c:724
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "Felaktig konfiguration: kan inte ladda certifikatfilen \"%s\""
 
-#: libsvn_ra_dav/session.c:784
+#: libsvn_ra_dav/session.c:785
 msgid "Impossibly long relative URL"
 msgstr "Orimligt lång relativ URL"
 
-#: libsvn_ra_dav/session.c:819
+#: libsvn_ra_dav/session.c:820
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "UUID-egenskapen hittades inte på resursen eller någon av dess föräldrar"
 
-#: libsvn_ra_dav/session.c:827
+#: libsvn_ra_dav/session.c:828
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Var vänlig uppgradera servern till version 0.19 eller senare"
 
-#: libsvn_ra_dav/session.c:838
+#: libsvn_ra_dav/session.c:844
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "Modul för åtkomst av databas via protokollet WebDAV (DeltaV)."
 
-#: libsvn_ra_dav/session.c:868
+#: libsvn_ra_dav/session.c:882
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
 msgstr ""
@@ -3589,11 +3635,11 @@ msgstr ""
 msgid "Unable to open an ra_local session to URL"
 msgstr "Kunde inte öppna en ra_local-session till URL:en"
 
-#: libsvn_ra_local/ra_plugin.c:918
+#: libsvn_ra_local/ra_plugin.c:924
 msgid "Module for accessing a repository on local disk."
 msgstr "Modul för åtkomst av databas på disk lokalt."
 
-#: libsvn_ra_local/ra_plugin.c:953
+#: libsvn_ra_local/ra_plugin.c:969
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
 msgstr ""
@@ -3621,27 +3667,27 @@ msgstr "Den lokala URL:en \"%s\" innehåller värdnamn som inte stöds"
 msgid "Unable to open repository '%s'"
 msgstr "Kunde inte öppna databasen \"%s\""
 
-#: libsvn_ra_svn/client.c:194
+#: libsvn_ra_svn/client.c:195
 msgid "Prop diffs element not a list"
 msgstr "Element med egenskapsskillnader är ingen lista"
 
-#: libsvn_ra_svn/client.c:1119
+#: libsvn_ra_svn/client.c:1120
 msgid "get-locations not implemented"
 msgstr "get-locations ej implementerad"
 
-#: libsvn_ra_svn/client.c:1184
+#: libsvn_ra_svn/client.c:1185
 msgid "get-file-revs not implemented"
 msgstr "get-file-revs ej implementerad"
 
-#: libsvn_ra_svn/client.c:1198
+#: libsvn_ra_svn/client.c:1199
 msgid "Revision entry not a list"
 msgstr "Revisionsposten är ej en lista"
 
-#: libsvn_ra_svn/client.c:1210 libsvn_ra_svn/client.c:1235
+#: libsvn_ra_svn/client.c:1211 libsvn_ra_svn/client.c:1236
 msgid "Text delta chunk not a string"
 msgstr "Textdeltabit är inte en sträng"
 
-#: libsvn_ra_svn/client.c:1247
+#: libsvn_ra_svn/client.c:1248
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs-kommandot returnerade inga revisioner"
 
@@ -3671,18 +3717,18 @@ msgstr "Slutrevisionen %ld är ogiltig (den yngsta revisionen är %ld)"
 msgid "* %s revision %ld.\n"
 msgstr "* %s revision %ld.\n"
 
-#: libsvn_repos/load.c:791
+#: libsvn_repos/load.c:801
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Startade ny transaktion, baserad på originalrevisionen %ld\n"
 
-#: libsvn_repos/load.c:831
+#: libsvn_repos/load.c:845
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr ""
 "Den relativa källrevisionen %ld är inte tillgänglig i nuvarande databas"
 
-#: libsvn_repos/load.c:1108
+#: libsvn_repos/load.c:1122
 #, c-format
 msgid ""
 "\n"
@@ -3693,7 +3739,7 @@ msgstr ""
 "------- Checkade in revision %ld >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1114
+#: libsvn_repos/load.c:1128
 #, c-format
 msgid ""
 "\n"
