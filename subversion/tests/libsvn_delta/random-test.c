@@ -120,7 +120,10 @@ open_tempfile (const char *name_template, apr_pool_t *pool)
 static void rewind_file (apr_file_t *fp)
 {
   apr_off_t offset = 0;
-  apr_status_t apr_err = apr_file_seek (fp, APR_SET, &offset);
+#ifndef NDEBUG
+  apr_status_t apr_err =
+#endif
+    apr_file_seek (fp, APR_SET, &offset);
   assert (apr_err == 0);
   assert (offset == 0);
 }
