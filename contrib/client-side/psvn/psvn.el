@@ -727,7 +727,7 @@ At the moment the following commands are implemented:
   M-x svn-status: run 'svn -status -v'
   and show the result in the *svn-status* buffer, this buffer uses the
   svn-status mode. In this mode the following keys are defined:
-\{svn-status-mode-map}"
+\\{svn-status-mode-map}"
   (interactive)
   (kill-all-local-variables)
 
