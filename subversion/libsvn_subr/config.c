@@ -1,5 +1,5 @@
 /*
- * config.c :  reading configuration files
+ * config.c :  reading configuration information
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -23,6 +23,7 @@
 #include <apr_want.h>
 
 #include <apr_lib.h>
+#include <apr_user.h>
 #include "svn_error.h"
 #include "config_impl.h"
 
@@ -72,16 +73,20 @@ svn_error_t *
 svn_config_read (svn_config_t **cfgp, const char *file,
                  svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  apr_pool_t *cfg_pool = svn_pool_create (pool);
-  svn_config_t *cfg = apr_palloc (cfg_pool, sizeof (*cfg));
+  svn_config_t *cfg = apr_palloc (pool, sizeof (*cfg));
   svn_error_t *err;
 
-  cfg->sections = apr_hash_make(cfg_pool);
-  cfg->pool = cfg_pool;
-  cfg->x_pool = svn_pool_create(cfg_pool);
+  cfg->sections = apr_hash_make (pool);
+  cfg->pool = pool;
+  cfg->x_pool = svn_pool_create (pool);
   cfg->x_values = FALSE;
-  cfg->tmp_key = svn_stringbuf_create ("", cfg_pool);
+  cfg->tmp_key = svn_stringbuf_create ("", pool);
 
+  /* Yes, this is platform-specific code in Subversion, but there's no
+     practical way to migrate it into APR, as it's simultaneously
+     Subversion-specific and Windows-specific.  Even if we eventually
+     want to have APR offer a generic config-reading interface, it
+     makes sense to test it here first and migrate it later. */
 #ifdef SVN_WIN32
   if (0 == strncmp (file, SVN_REGISTRY_PREFIX, SVN_REGISTRY_PREFIX_LEN))
     err = svn_config__parse_registry (cfg, file + SVN_REGISTRY_PREFIX_LEN,
@@ -91,18 +96,77 @@ svn_config_read (svn_config_t **cfgp, const char *file,
     err = svn_config__parse_file (cfg, file, must_exist);
 
   if (err != SVN_NO_ERROR)
-    svn_config_destroy (cfg);
+    return err;
   else
     *cfgp = cfg;
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
-void
-svn_config_destroy (svn_config_t *cfg)
+svn_error_t *
+svn_config_read_all (svn_config_t **cfgp, apr_pool_t *pool)
 {
-  apr_pool_destroy (cfg->pool);
+  /* Read things in this order, with later reads overriding the
+   * results of earlier ones:
+   *
+   *    1. Windows registry system config or global config file,
+   *       whichever applies (can't have both).
+   *
+   *    2. Windows registry user config, if any.
+   *
+   *    3. User's config file, if any.
+   */
+
+#ifdef SVN_WIN32
+  svn_config_read (cfgp, SVN_REGISTRY_SYS_CONFIG_PATH, FALSE, pool);
+  svn_config_merge (cfgp, SVN_REGISTRY_USR_CONFIG_PATH, FALSE, pool);
+#else  /* ! SVN_WIN32 */
+  svn_config_read (cfgp, SVN_CONFIG__SYS_FILE, FALSE, pool);
+#endif  /* SVN_WIN32 */
+
+  /* Check for user config file in both Windows and non-Windows. */
+  {
+    apr_status_t apr_err;
+    
+    /* ### Are there any platforms where APR_HAS_USER is not defined?
+       This code won't compile without it.  */
+    
+    char *usr_cfg_path;
+    apr_uid_t uid;
+    apr_gid_t gid;
+    char *username;
+    char *homedir;
+   
+    /* ### Will these calls fail under Windows sometimes?  If so,
+       we shouldn't error, we should just fall fack to registry. */
+   
+    apr_err = apr_current_userid (&uid, &gid, pool);
+    if (apr_err)
+      return svn_error_create
+        (apr_err, 0, NULL, pool,
+         "svn_config_read_all: unable to get current userid.");
+   
+    apr_err = apr_get_username (&username, uid, pool);
+    if (apr_err)
+      return svn_error_create
+        (apr_err, 0, NULL, pool,
+         "svn_config_read_all: unable to get username.");
+   
+    apr_err = apr_get_home_directory (&homedir, username, pool);
+    if (apr_err)
+      return svn_error_createf
+        (apr_err, 0, NULL, pool,
+         "svn_config_read_all: unable to get home dir for user %s.", username);
+   
+    /* ### No compelling reason to use svn's path lib here. */
+    usr_cfg_path = apr_psprintf
+      (pool, "%s/%s/%s", homedir, SVN_CONFIG__DIRECTORY, SVN_CONFIG__FILE);
+   
+   svn_config_merge (*cfgp, usr_cfg_path, FALSE);
+ }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -157,13 +221,14 @@ svn_config_merge (svn_config_t *cfg, const char *file,
                   svn_boolean_t must_exist)
 {
   /* The original config hash shouldn't change if there's an error
-     while reading the confguration, so read into a temporary table. */
+     while reading the confguration, so read into a temporary table.
+     ### We could use a tmp subpool for this, since merge_cfg is going
+     to be tossed afterwards.  Premature optimization, though? */
   svn_config_t *merge_cfg;
   SVN_ERR (svn_config_read (&merge_cfg, file, must_exist, cfg->pool));
 
   /* Now copy the new options into the original table. */
   for_each_option (merge_cfg, cfg, merge_cfg->pool, merge_callback);
-  svn_config_destroy (merge_cfg);
   return SVN_NO_ERROR;
 }
 
@@ -225,7 +290,7 @@ find_option (svn_config_t *cfg, const char *section, const char *option,
   make_hash_key (cfg->tmp_key->data);
 
   sec_ptr = apr_hash_get (cfg->sections, cfg->tmp_key->data,
-                          APR_HASH_KEY_STRING);
+                          cfg->tmp_key->len);
   if (sectionp != NULL)
     *sectionp = sec_ptr;
 
@@ -238,7 +303,7 @@ find_option (svn_config_t *cfg, const char *section, const char *option,
       make_hash_key (cfg->tmp_key->data);
 
       return apr_hash_get (sec->options, cfg->tmp_key->data,
-                           APR_HASH_KEY_STRING);
+                           cfg->tmp_key->len);
     }
 
   return NULL;

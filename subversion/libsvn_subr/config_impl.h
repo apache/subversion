@@ -51,25 +51,51 @@ struct svn_config_t
 };
 
 
-/* Read sectinos and options from a file. */
+/* Read sections and options from a file. */
 svn_error_t *svn_config__parse_file (svn_config_t *cfg,
                                      const char *file,
                                      svn_boolean_t must_exist);
 
 
 #ifdef SVN_WIN32
-/* Read sectinos and options from the Windows Registry. */
+/* Read sections and options from the Windows Registry. */
 svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
                                          const char *file,
                                          svn_boolean_t must_exist);
 
 #  define SVN_REGISTRY_PREFIX "REGISTRY:"
-#  define SVN_REGISTRY_PREFIX_LEN (9)
+#  define SVN_REGISTRY_PREFIX_LEN ((sizeof (SVN_REGISTRY_PREFIX)) - 1)
 #  define SVN_REGISTRY_HKLM "HKLM\\"
-#  define SVN_REGISTRY_HKLM_LEN (5)
+#  define SVN_REGISTRY_HKLM_LEN ((sizeof (SVN_REGISTRY_HKLM)) - 1)
 #  define SVN_REGISTRY_HKCU "HKCU\\"
-#  define SVN_REGISTRY_HKCU_LEN (5)
+#  define SVN_REGISTRY_HKCU_LEN ((sizeof (SVN_REGISTRY_HKCU)) - 1)
+#  define SVN_REGISTRY_PATH "Software\\Tigris.org\\Subversion\\"
+#  define SVN_REGISTRY_PATH_LEN ((sizeof (SVN_REGISTRY_PATH)) - 1)
+#  define SVN_REGISTRY_CONFIG_KEY "Config"
+#  define SVN_REGISTRY_SYS_CONFIG_PATH \
+                               SVN_REGISTRY_PREFIX     \
+                               SVN_REGISTRY_HKLM       \
+                               SVN_REGISTRY_PATH       \
+                               SVN_REGISTRY_CONFIG_KEY
+#  define SVN_REGISTRY_USR_CONFIG_PATH \
+                               SVN_REGISTRY_PREFIX     \
+                               SVN_REGISTRY_HKCU       \
+                               SVN_REGISTRY_PATH       \
+                               SVN_REGISTRY_CONFIG_KEY
+
+#else  /* ! SVN_WIN32 */
+
+/* System-wide configuration file.  ### should be build-time configured. */
+#  define SVN_CONFIG__SYS_FILE "/etc/subversion.conf"
+
 #endif /* SVN_WIN32 */
+
+/* Subversion's config subdir in the user's home directory. */
+#define SVN_CONFIG__DIRECTORY ".subversion"
+
+/* The config file in SVN_CONFIG__DIRECTORY. */
+#define SVN_CONFIG__FILE      "config"
+
 
 #endif /* SVN_CONFIG_IMPL_H */
 

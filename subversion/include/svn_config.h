@@ -47,8 +47,8 @@ extern "C" {
           [section-name]
 
       - An option, which must always appear within a section, is a pair
-        (name, value). There are two valid forms for defining an option,
-        both of which must start in the first column:
+        (name, value).  There are two valid forms for defining an
+        option, both of which must start in the first column:
 
           name: value
           name = value
@@ -58,15 +58,16 @@ extern "C" {
       - Section and option names are case-insensitive, but case is
         preserved.
 
-      - An option's value may be broken into several lines. The value
+      - An option's value may be broken into several lines.  The value
         continuation lines must start with at least one whitespace.
-        trailing whitespace in the previous line, the newline character
+        Trailing whitespace in the previous line, the newline character
         and the leading whitespace in the continuation line is compressed
         into a single space character.
 
-      - All leading and trailing whitespace in a value is trimmed, but
-        the whitespace within a value is preserved, with the exception
-        of whitespace around line continuations, as described above.
+      - All leading and trailing whitespace around a value is trimmed,
+        but the whitespace within a value is preserved, with the
+        exception of whitespace around line continuations, as
+        described above.
 
       - Option values may be expanded within a value by enclosing the
         option name in parentheses, preceded by a percent sign:
@@ -74,9 +75,10 @@ extern "C" {
           %(name)
 
         The expansion is performed recursively and on demand, during
-        svn_option_get. The name is first searched for in the same section,
-        then in the special [DEFAULTS] section. If the name is not found,
-        the whole %(name) placeholder is left unchanged.
+        svn_option_get.  The name is first searched for in the same
+        section, then in the special [DEFAULTS] section. If the name
+        is not found, the whole %(name) placeholder is left
+        unchanged.
 
         Any modifications to the configuration data invalidate all
         previously expanded values, so that the next svn_option_get
@@ -110,22 +112,61 @@ extern "C" {
    Typically, Subversion will use two config files: One for site-wide
    configuration,
 
-     /etc/svn.conf    or
+     /etc/subversion.conf    or
      REGISTRY:HKLM\Software\Tigris.org\Subversion\Config
 
    and one for per-user configuration:
 
-     ~/.svnrc         or
-     REGISTRY:HKCU\Software\Tigris.org\Subversion\Config */
+     ~/.subversion/config    or
+     REGISTRY:HKCU\Software\Tigris.org\Subversion\Config
+
+*/
 
 
 /* Opaque structure describing a set of configuration options. */
 typedef struct svn_config_t svn_config_t;
 
 
+/* Merge config information from all available sources and store it in
+   *CFGP, which is allocated in POOL.  That is, first read any
+   *system-wide configurations (from a file or from the registry),
+   *then merge in personal configurations (again from file or
+   *registry).
 
-/* Read configuration data from FILE into CFGP. Allocate from a
-   sub-pool of POOL.
+   Under Unix, or a Unix emulator such as Cygwin, personal config is
+   always located in .subversion/config in the user's home directory.
+   Under Windows it may be there, or in the registry; if both are
+   present, the registry is read first and then the file info is
+   merged in.  System config information under Windows is found only
+   in the registry.
+
+   If no config information is available, return an empty *CFGP.  
+
+   ### Notes: This function obviates the need for svn_config_read()
+   and svn_config_merge() as public interfaces.  However, I'm leaving
+   them for now, to leave the door open for a multi-file system,
+   e.g.,
+
+      ~/.subversion/options
+      ~/.subversion/proxies
+      ~/.subversion/hairstyles
+
+  and so forth.  In that system, most calls to svn_config_read_all()
+  would instead invoke
+
+     svn_config_read_options()
+     svn_config_read_proxies()
+     svn_config_read_hairstyles()
+     etc...
+
+  each of which invokes svn_config_{read,merge}() on particular config
+  files.
+*/
+svn_error_t *svn_config_read_all (svn_config_t **cfgp, apr_pool_t *pool);
+
+
+/* Read configuration data from FILE (a file or registry path) into
+   *CFGP, allocated in POOL.
 
    If FILE does not exist, then if MUST_EXIST, return an error,
    otherwise return an empty svn_config_t. */
@@ -134,22 +175,23 @@ svn_error_t *svn_config_read (svn_config_t **cfgp,
                               svn_boolean_t must_exist,
                               apr_pool_t *pool);
 
-/* Like svn_config_read, but merge the configuration data from FILE
-   into CFG, which was previously returned from svn_config_read.
-   This function invalidates all value expansions in CFG. */
+/* Like svn_config_read, but merge the configuration data from FILE (a
+   file or registry path) into *CFG, which was previously returned
+   from svn_config_read.  This function invalidates all value
+   expansions in CFG, so that the next svn_option_get() takes the
+   modifications into account. */
 svn_error_t *svn_config_merge (svn_config_t *cfg,
                                const char *file,
                                svn_boolean_t must_exist);
 
 
-/* Destroy CFG. */
-void svn_config_destroy (svn_config_t *cfg);
+/* Find the value of a (SECTION, OPTION) pair in CFG, and set
+   VALUEP->data to the value and VALUEP->len to the value's length.
 
+   If the value does not exist, return DEFAULT_VALUE.  Otherwise, the
+   value returned in VALUEP remains valid at least until the next
+   operation that invalidates variable expansions.
 
-/* Find the value of a (SECTION, OPTION) pair in CFG, returning a copy in
-   VALUEP. If the value does not exist, return DEFAULT_VALUE.  The string
-   returned in VALUEP will remain valid at least until the next operation
-   that invalidates variable expansions.
    This function may change CFG by expanding option values. */
 void svn_config_get (svn_config_t *cfg, svn_string_t *valuep,
                      const char *section, const char *option,
@@ -164,8 +206,16 @@ void svn_config_set (svn_config_t *cfg,
 
 /* Enumerate the options in SECTION, passing BATON and the current
    option's name and value to CALLBACK.  Continue the enumeration if
-   CALLBACK returns TRUE. Return the number of times CALLBACK was
+   CALLBACK returns TRUE.  Return the number of times CALLBACK was
    called.
+
+   ### kff asks: A more usual interface is to continue enumerating
+       while CALLBACK does not return error, and if CALLBACK does
+       return error, to return the same error (or a wrapping of it)
+       from svn_config_enumerate().  What's the use case for
+       svn_config_enumerate()?  Is it more likely to need to break out
+       of an enumeration early, with no error, than an invocation of
+       CALLBACK is likely to need to return an error? ###
 
    CALLBACK's NAME and VALUE parameters are only valid for the
    duration of the call. */

@@ -65,7 +65,8 @@ skip_whitespace (FILE* fd, int *pcount)
 }
 
 
-/* Skip to the end of the line (or file) */
+/* Skip to the end of the line (or file).  Returns the char that ended
+   the line; the char is either EOF or newline. */
 static APR_INLINE int
 skip_to_eoln (FILE *fd)
 {
@@ -86,7 +87,7 @@ parse_value (int *pch, parse_context_t *ctx)
 
   /* Read the first line of the value */
   svn_stringbuf_setempty (ctx->value);
-  for (ch = getc (ctx->fd);
+  for (ch = getc (ctx->fd);   /* ### kff: huh, not gotten first char yet? */
        ch != EOF && ch != '\n';
        ch = getc (ctx->fd))
     {
@@ -232,16 +233,16 @@ parse_section (int *pch, parse_context_t *ctx)
       /* Everything from the ']' to the end of the line is ignored. */
       ch = skip_to_eoln (ctx->fd);
       if (ch != EOF)
-        {
-          ++ctx->line;
-          ch = fgetc(ctx->fd);  /* Eat the eoln */
-        }
+        ++ctx->line;
     }
 
   *pch = ch;
   return err;
 }
 
+
+
+/*** Exported interface. ***/
 
 svn_error_t *
 svn_config__parse_file (svn_config_t *cfg, const char *file,

@@ -71,6 +71,9 @@ parse_section (svn_config_t *cfg, HKEY hkey, const char *section)
 }
 
 
+^L
+/*** Exported interface. ***/
+
 svn_error_t *
 svn_config__parse_registry (svn_config_t *cfg, const char *file,
                             svn_boolean_t must_exist)
