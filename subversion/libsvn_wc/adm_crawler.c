@@ -818,10 +818,22 @@ process_subdirectory (svn_string_t *path,
                                         subpool);
           if (err) return err;
           
-          err = svn_wc_props_modified_p (&prop_modified_p,
-                                         full_path_to_entry,
-                                         subpool);
-          if (err) return err;
+          /* Only check for local propchanges if we're looking at a
+             file, or if we're looking at SVN_WC_ENTRY_THIS_DIR.
+             Otherwise, each directory will end up being checked
+             twice! */
+          if ((current_entry->kind == svn_node_dir)
+              && (current_entry_name != NULL))
+            /* always assume there's no propchange on `PATH/DIR_NAME' */
+            prop_modified_p = FALSE;
+          else
+            {
+              /* but do a real check on `PATH/.' */
+              err = svn_wc_props_modified_p (&prop_modified_p,
+                                             full_path_to_entry,
+                                             subpool);
+              if (err) return err;
+            }
           
           if (text_modified_p || prop_modified_p)
             {
