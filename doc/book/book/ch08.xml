@@ -1626,19 +1626,30 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
       <refentry>
         <refnamediv>
           <refname>svn list</refname>
-          <refpurpose>List directory entries of a URL.</refpurpose>
+          <refpurpose>List directory entries in the repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn list URL...</programlisting>
+          <programlisting>svn list [TARGET...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>List directory entries of a URL.  If URL is a file,
-            just the file entry will be displayed.  <command>svn
-            list</command> does not work on paths in your working
-            copy.</para>
+          <para>List each TARGET file and the contents of each TARGET
+            directory as they exist in the repository.  If TARGET is a
+            working copy path, the corresponding repository URL will be
+            used.</para>
+          <para>The default TARGET is '.', meaning the repository URL
+            of the current working copy directory.</para>
+          <para>With <option>--verbose</option>, the following fields show
+            the status of the item:</para>
+          <itemizedlist>
+            <listitem><para>'P' if the item has any Properties</para></listitem>
+            <listitem><para>Revision number of the last commit</para></listitem>
+            <listitem><para>Author of the last commit</para></listitem>
+            <listitem><para>Size (in bytes)</para></listitem>
+            <listitem><para>Date and time of the last commit</para></listitem>
+          </itemizedlist>
         </refsect1>
 
         <refsect1>

@@ -276,9 +276,19 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {svn_cl__targets_opt, 'R', svn_cl__config_dir_opt} },
  
   { "list", svn_cl__ls, {"ls"},
-    "List directory entries of a URL.\n"
-    "usage: list URL...\n\n"
-    "  If URL is a file, just file entry will be displayed.\n",
+    "List directory entries in the repository.\n"
+    "usage: list [TARGET...]\n\n"
+    "List each TARGET file and the contents of each TARGET directory as they\n"
+    "exist in the repository.  If TARGET is a working copy path, the\n"
+    "corresponding repository URL will be used.\n\n"
+    "The default TARGET is '.', meaning the repository URL of the current\n"
+    "working directory.\n\n"
+    "With --verbose, the following fields show the status of the item:\n\n"
+    "  'P' if the item has any Properties\n"
+    "  Revision number of the last commit\n"
+    "  Author of the last commit\n"
+    "  Size (in bytes)\n"
+    "  Date and time of the last commit\n",
     {'r', 'v', 'R', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "log", svn_cl__log, {0},
