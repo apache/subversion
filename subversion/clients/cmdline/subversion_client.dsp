@@ -142,6 +142,10 @@ SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\move-cmd.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\prompt.c
 # End Source File
 # Begin Source File

@@ -95,6 +95,10 @@ SOURCE=.\fetch.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\log.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\merge.c
 # End Source File
 # Begin Source File
