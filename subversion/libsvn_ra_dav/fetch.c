@@ -196,9 +196,24 @@ static const char *get_vsn_url(const svn_ra_dav_resource_t *rsrc)
 static svn_error_t *simple_store_vsn_url(const char *vsn_url,
                                          void *baton,
                                          prop_setter_t setter,
-                                         vsn_url_helper *vuh)
+                                         vsn_url_helper *vuh,
+                                         apr_pool_t *pool)
 {
   svn_error_t *err;
+
+  if (strcmp (vuh->name->data, SVN_RA_DAV__LP_VSN_URL) == 0)
+    {
+      /* ### Sigh.  This stringbuf creation is the only reason this
+         function needs to take a pool outside the baton. */
+      svn_stringbuf_t *vsn_url_rev_strbuf
+        = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL_REV, pool);
+
+      err = (*setter)(baton, vsn_url_rev_strbuf, NULL);
+      if (err)
+        return svn_error_quick_wrap(err,
+                                    "could not remove the vsn url rev of the "
+                                    "version resource");
+    }
 
   /* store the version URL as a property */
   svn_stringbuf_set(vuh->value, vsn_url);
@@ -214,7 +229,8 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
 static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
                                   void *baton,
                                   prop_setter_t setter,
-                                  vsn_url_helper *vuh)
+                                  vsn_url_helper *vuh,
+                                  apr_pool_t *pool)
 {
   const char *vsn_url;
 
@@ -222,11 +238,12 @@ static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
   if (vsn_url == NULL)
     return NULL;
 
-  return simple_store_vsn_url(vsn_url, baton, setter, vuh);
+  return simple_store_vsn_url(vsn_url, baton, setter, vuh, pool);
 }
 
 static svn_error_t *get_delta_base(const char **delta_base,
                                    const char *relpath,
+                                   svn_ra_get_committed_rev_func_t get_rev,
                                    svn_ra_get_wc_prop_func_t get_wc_prop,
                                    void *cb_baton,
                                    apr_pool_t *pool)
@@ -237,6 +254,54 @@ static svn_error_t *get_delta_base(const char **delta_base,
     {
       *delta_base = NULL;
       return SVN_NO_ERROR;
+    }
+
+  /* If we can get a validating revision, but it does not match
+     the entry's committed revision, then there's a problem... */
+  if (get_rev != NULL)
+    {
+      const svn_string_t *vsn_url_rev_value;
+      svn_revnum_t entry_committed_rev, vsn_url_rev;
+      
+      SVN_ERR( (*get_rev)(cb_baton, relpath, &entry_committed_rev, pool) );
+      
+      SVN_ERR( (*get_wc_prop)(cb_baton, relpath,
+                              SVN_RA_DAV__LP_VSN_URL_REV,
+                              &vsn_url_rev_value,
+                              pool) );
+      
+      if (vsn_url_rev_value)
+        vsn_url_rev = SVN_STR_TO_REV(vsn_url_rev_value->data);
+      else
+        vsn_url_rev = SVN_INVALID_REVNUM;
+      
+      if (SVN_IS_VALID_REVNUM(vsn_url_rev)
+          && (vsn_url_rev != entry_committed_rev))
+        {
+          /* They don't match.  We could just remove the current
+             version-url and set *delta_base to NULL.  But the
+             mismatch is a sign of some larger problem.  There's
+             something wrong with this working copy, and we don't
+             really know what happened.  So bolt right now.  But note
+             that we don't return SVN_ERR_WC_CORRUPT; that's really
+             for libsvn_wc to say.  We just point out the revision
+             mismatch. */
+          
+          *delta_base = NULL;  /* do this anyway */
+          
+          return svn_error_createf
+            (SVN_ERR_BAD_REVISION, 0, NULL, pool,
+             "get_delta_base: Bad version resource url rev for %s.\n"
+             "  (Expected revision %" SVN_REVNUM_T_FMT ", "
+             "got revision %" SVN_REVNUM_T_FMT ".)\n"
+             "\n"
+  "This usually indicates a corrupt working copy, perhaps one in which a\n"
+  "Subversion operation was interrupted at an inauspicious time.  You should\n"
+  "probably check out a new working copy.",
+             relpath,
+             entry_committed_rev,
+             vsn_url_rev);
+        }
     }
 
   SVN_ERR( (*get_wc_prop)(cb_baton, relpath, SVN_RA_DAV__LP_VSN_URL,
@@ -405,7 +470,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
               /* don't insert "this dir" into the set of subdirs */
 
               /* store the version URL for this resource */
-              SVN_ERR( store_vsn_url(r, dir_baton, setter, vuh) );
+              SVN_ERR( store_vsn_url(r, dir_baton, setter, vuh, pool) );
             }
           else
             {
@@ -437,6 +502,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                        const char *relpath,
                                        ne_block_reader reader,
                                        void *subctx,
+                                       svn_ra_get_committed_rev_func_t get_rev,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
                                        apr_pool_t *pool)
@@ -452,7 +518,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
   /* See if we can get a version URL for this resource. This will refer to
      what we already have in the working copy, thus we can get a diff against
      this particular resource. */
-  SVN_ERR( get_delta_base(&delta_base, relpath, get_wc_prop, cb_baton, pool) );
+  SVN_ERR( get_delta_base(&delta_base, relpath,
+                          get_rev, get_wc_prop, cb_baton, pool) );
 
   req = ne_request_create(sess, "GET", url);
   if (req == NULL)
@@ -615,6 +682,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       svn_boolean_t text_deltas,
                                       void *file_baton,
                                       const svn_delta_edit_fns_t *editor,
+                                      svn_ra_get_committed_rev_func_t get_rev,
                                       svn_ra_get_wc_prop_func_t get_wc_prop,
                                       void *cb_baton,
                                       apr_pool_t *pool)
@@ -638,7 +706,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   SVN_ERR( custom_get_request(sess, encoded_url, relpath,
                               fetch_file_reader, &frc,
-                              get_wc_prop, cb_baton, pool) );
+                              get_rev, get_wc_prop, cb_baton, pool) );
 
   /* close the handler, since the file reading completed successfully. */
   SVN_ERR( (*frc.handler)(NULL, frc.handler_baton) );
@@ -669,7 +737,7 @@ static svn_error_t *fetch_file(ne_session *sess,
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
   err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, editor,
-                          NULL, NULL, pool);
+                          NULL, NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -680,7 +748,7 @@ static svn_error_t *fetch_file(ne_session *sess,
   add_props(rsrc, editor->change_file_prop, file_baton, pool);
 
   /* store the version URL as a property */
-  err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, vuh);
+  err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, vuh, pool);
 
  error:
   err2 = (*editor->close_file)(file_baton);
@@ -817,6 +885,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
   /* Fetch the file, shoving it at the provided stream. */
   SVN_ERR( custom_get_request(ras->sess, final_url, path,
                               get_file_reader, stream,
+                              ras->callbacks->get_committed_rev,
                               ras->callbacks->get_wc_prop,
                               ras->callback_baton, ras->pool) );
 
@@ -848,10 +917,35 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 #undef NSLEN
           
           else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
-            /* For files, we currently only have one 'wc' prop. */
-            apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL, APR_HASH_KEY_STRING, 
-                         svn_string_create(val, ras->pool));
-          
+            {
+              /* ### I *think* we have to remove any old
+                 version-url-rev if we're going to set a new
+                 version-url.  Not sure it's absolutely necessary
+                 here, though (and note that this doesn't take effect
+                 until the props hash is interpreted, meaning there
+                 may still be a small window during which the old rev
+                 is still around while the new url is on disk.
+                 Sigh.)  
+
+                 And of course, we can't just store NULL in the hash,
+                 because apr hash tables don't work that way.  So we
+                 have to store SVN_INVALID_REVNUM as the actual
+                 revision.  */
+
+              {
+                const char *invalid_rev = apr_psprintf (ras->pool,
+                                                        "%" SVN_REVNUM_T_FMT,
+                                                        SVN_INVALID_REVNUM);
+                
+                apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL_REV,
+                             APR_HASH_KEY_STRING,
+                             svn_string_create(invalid_rev, ras->pool));
+              }
+
+              apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL,
+                           APR_HASH_KEY_STRING, 
+                           svn_string_create(val, ras->pool));
+            }
           else
             /* If it's one of the 'entry' props, this func will
                recognize the DAV name & add it to the hash mapped to a
@@ -1413,6 +1507,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
                                 rb->file_baton, rb->editor,
+                                rb->ras->callbacks->get_committed_rev,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->ras->pool) );
@@ -1518,6 +1613,7 @@ static int end_element(void *userdata,
                                 TOP_DIR(rb).pathbuf->data,
                                 rb->fetch_content,
                                 rb->file_baton, rb->editor,
+                                rb->ras->callbacks->get_committed_rev,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->ras->pool) );
@@ -1555,11 +1651,24 @@ static int end_element(void *userdata,
           href_val.len = rb->href->len;
 
           if (rb->ras->callbacks->set_wc_prop != NULL)
-            CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
-                                                    rb->current_wcprop_path,
-                                                    SVN_RA_DAV__LP_VSN_URL,
-                                                    &href_val,
-                                                    rb->ras->pool) );
+            {
+              /* ### I *think* we have to remove any old
+                 version-url-rev when we set a new version-url here.
+                 Not totally sure, though, hoping dav-savvier eyeballs
+                 than mine will see this and know the answer... */
+              CHKERR( rb->ras->callbacks->set_wc_prop
+                      (rb->ras->callback_baton,
+                       rb->current_wcprop_path,
+                       SVN_RA_DAV__LP_VSN_URL_REV,
+                       NULL,
+                       rb->ras->pool) );
+
+              CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
+                                                      rb->current_wcprop_path,
+                                                      SVN_RA_DAV__LP_VSN_URL,
+                                                      &href_val,
+                                                      rb->ras->pool) );
+            }
         }
       
       /* else we're setting a wcprop in the context of an editor drive. */
@@ -1567,7 +1676,7 @@ static int end_element(void *userdata,
         {
           CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                        rb->editor->change_dir_prop,
-                                       &rb->vuh) );
+                                       &rb->vuh, rb->ras->pool) );
 
           /* save away the URL in case a fetch-props arrives after all of
              the subdir processing. we will need this copy of the URL to
@@ -1579,7 +1688,7 @@ static int end_element(void *userdata,
         {
           CHKERR( simple_store_vsn_url(rb->href->data, rb->file_baton,
                                        rb->editor->change_file_prop,
-                                       &rb->vuh) );
+                                       &rb->vuh, rb->ras->pool) );
         }
       break;
 
