@@ -30,7 +30,7 @@ Candidate changes:
       r11321 is just a docstring addition -- we can drop that from
       this merge if folks really care.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, sussman
 
   * r11458
     Fix mod_dav_svn error leaks.
