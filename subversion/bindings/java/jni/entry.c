@@ -35,7 +35,10 @@
 #define SVN_JNI_ENTRY__SET_REVISION "setRevision"
 #define SVN_JNI_ENTRY__SET_NODEKIND "setNodekind"
 #define SVN_JNI_ENTRY__SET_SCHEDULE "setSchedule"
-#define SVN_JNI_ENTRY__SET_EXISTENCE "setExistence"
+#define SVN_JNI_ENTRY__SET_CONFLICTED "setConflicted"
+#define SVN_JNI_ENTRY__SET_CONFLICTED_SIG "(Z)V"
+#define SVN_JNI_ENTRY__SET_COPIED "setCopied"
+#define SVN_JNI_ENTRY__SET_COPIED_SIG "(Z)V"
 #define SVN_JNI_ENTRY__SET_TEXTTIME "setTexttime"
 #define SVN_JNI_ENTRY__SET_TEXTTIME_SIG "(Ljava/util/Date;)V"
 #define SVN_JNI_ENTRY__SET_PROPTIME "setProptime"
@@ -47,7 +50,7 @@
  * Do you want to debug code in this file?
  * Just uncomment the following define.
  */
-//#define SVN_JNI__DEBUG_STATUS
+#define SVN_JNI__DEBUG_STATUS
 
 /*** Code ***/
 jobject
@@ -172,8 +175,14 @@ entry__create(JNIEnv *env, jboolean *hasException,
 
       if( !_hasException )
         {
-          entry__set_existence(env, &_hasException,
-                               result, entry->existence);
+          entry__set_conflicted(env, &_hasException,
+                                result, entry->conflicted);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_copied(env, &_hasException,
+                            result, entry->copied);
         }
 
       if( !_hasException )
@@ -279,20 +288,38 @@ entry__set_schedule(JNIEnv *env, jboolean *hasException,
 }
 
 void 
-entry__set_existence(JNIEnv *env, jboolean *hasException,
-                     jobject jentry, jint jexistence)
+entry__set_conflicted(JNIEnv *env, jboolean *hasException,
+                      jobject jentry, jboolean jconflicted)
 {
 #ifdef SVN_JNI__DEBUG_ENTRY
-  fprintf(stderr, ">>>entry__set_existence(");
+  fprintf(stderr, ">>>entry__set_conflicted(");
   SVN_JNI__DEBUG_PTR(jentry);
-  SVN_JNI__DEBUG_DEC(jexistence);
+  SVN_JNI__DEBUG_BOOL(jconflicted);
   fprintf(stderr, ");");
 #endif
   j__set_int(env, hasException,
-             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_EXISTENCE,
-             jentry, jexistence);
+             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_CONFLICTED,
+             jentry, jconflicted);
 #ifdef SVN_JNI__DEBUG_ENTRY
-  fprintf(stderr, "\n<<<entry__set_existence\n");
+  fprintf(stderr, "\n<<<entry__set_conflicted\n");
+#endif
+}
+
+void 
+entry__set_copied(JNIEnv *env, jboolean *hasException,
+                  jobject jentry, jboolean jcopied)
+{
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, ">>>entry__set_copied(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_BOOL(jcopied);
+  fprintf(stderr, ");");
+#endif
+  j__set_int(env, hasException,
+             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_COPIED,
+             jentry, jcopied);
+#ifdef SVN_JNI__DEBUG_ENTRY
+  fprintf(stderr, "\n<<<entry__set_copied\n");
 #endif
 }
 

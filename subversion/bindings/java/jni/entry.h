@@ -46,8 +46,12 @@ entry__set_schedule(JNIEnv *env, jboolean *hasException,
                     jobject jentry, jint jschedule);
 
 void 
-entry__set_existence(JNIEnv *env, jboolean *hasException,
-                     jobject jentry, jint jexistence);
+entry__set_conflicted(JNIEnv *env, jboolean *hasException,
+                      jobject jentry, jboolean jconflicted);
+
+void
+entry__set_copied(JNIEnv *env, jboolean *hasException,
+                  jobject jentry, jboolean jcopied);
 
 void 
 entry__set_texttime(JNIEnv *env, jboolean *hasException,

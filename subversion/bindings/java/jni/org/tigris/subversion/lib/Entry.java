@@ -27,10 +27,6 @@ public class Entry {
     public final static int SCHEDULE_UNADD=4;
     public final static int SCHEDULE_UNDELETE=5;
 
-    public final static int EXISTENCE_NORMAL=0;
-    public final static int EXISTENCE_ADDED=1;
-    public final static int EXISTENCE_DELETED=2;
-
     public final static int NODEKIND_NONE = 0;
     public final static int NODEKIND_FILE = 1;
     public final static int NODEKIND_DIR = 2;
@@ -40,7 +36,8 @@ public class Entry {
     private String url = null;
     private int nodekind = NODEKIND_NONE;
     private int schedule = SCHEDULE_NORMAL;
-    private int existence = EXISTENCE_NORMAL;
+    private boolean conflicted = false;
+    private boolean copied = false;
     private Date texttime = null;
     private Date proptime = null;
     private Hashtable attributes = new Hashtable();
@@ -81,13 +78,21 @@ public class Entry {
         {
             return schedule;
         }
-    public void setExistence(int _existence)
+    public void setConflicted(boolean _conflicted)
         {
-            existence = _existence;
+            conflicted = _conflicted;
         }
-    public int getExistence()
+    public boolean getConflicted()
         {
-            return existence;
+            return conflicted;
+        }
+    public void setCopied(boolean _copied)
+        {
+            copied = _copied;
+        }
+    public boolean getCopied()
+        {
+            return copied;
         }
     public void setTexttime(Date _texttime)
         {
