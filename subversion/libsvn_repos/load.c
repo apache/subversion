@@ -691,7 +691,41 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
                                        buflen,
                                        found_node ? nodepool : revpool));
         }
-      
+
+      /* if we have a content-length header, did we read all of it?
+         in case of an old v1, we *always* read all of it, because
+         text-content-length == content-length - prop-content-length
+      */
+      if (content_length && ! old_v1_with_cl)
+        {
+          apr_size_t rlen, num_to_read;
+          svn_filesize_t remaining =
+            svn__atoui64 (content_length) -
+            (prop_cl ? svn__atoui64 (prop_cl) : 0) -
+            (text_cl ? svn__atoui64 (text_cl) : 0);
+
+
+          if (remaining < 0)
+            return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                     _("Sum of subblock sizes larger than "
+                                       "total block content length"));
+
+          /* Consume remaining bytes in this content block */
+          while (remaining > 0)
+            {
+              if (remaining >= buflen)
+                rlen = buflen;
+              else
+                rlen = (apr_size_t) remaining;
+
+              num_to_read = rlen;
+              SVN_ERR (svn_stream_read (stream, buffer, &rlen));
+              remaining -= rlen;
+              if (rlen != num_to_read)
+                return stream_ran_dry ();
+            }
+        }
+
       /* If we just finished processing a node record, we need to
          close the node record and clear the per-node subpool. */
       if (found_node)
