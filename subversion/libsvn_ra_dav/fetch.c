@@ -481,6 +481,9 @@ static svn_error_t *custom_get_request(ne_session *sess,
   ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
                                  &cgc.ctype);
 
+  /* ### todo#689: Add `cgc' fields for the base and result checksum
+         headers, and add handlers for them here. */
+
   if (delta_base)
     {
       /* The HTTP delta draft uses an If-None-Match header holding an
@@ -783,6 +786,9 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
   wlen = len;
   svn_stream_write(stream, buf, &wlen);
  
+  /* ### todo#689: this doesn't handle checksums yet.  It's ultimately
+         used by the ra_plugin->get_file() interface. */
+
 #if 0
   /* Neon's callback won't let us return error.  Joe knows this is a
      bug in his API, so this section can be reactivated someday. */

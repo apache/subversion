@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_md5.h"
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
@@ -3056,6 +3057,12 @@ typedef struct txdelta_baton_t
   svn_stream_t *string_stream;
   svn_stringbuf_t *target_string;
 
+  /* Hex MD5 digest for the base text against which a delta is to be
+     applied, and for the resultant fulltext, respectively.  Either or
+     both may be null, in which case ignored. */
+  const char *base_checksum;
+  const char *result_checksum;
+
   /* Pool used by db txns */
   apr_pool_t *pool;
 
@@ -3068,6 +3075,7 @@ txn_body_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
   return svn_fs__dag_finalize_edits (tb->node, 
+                                     tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root,
                                                            trail->pool),
                                      trail);
@@ -3161,6 +3169,23 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
   tb->node = parent_path->node;
 
+  if (tb->base_checksum)
+    {
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex;
+
+      SVN_ERR (svn_fs__dag_file_checksum (digest, tb->node, trail));
+      hex = svn_md5_digest_to_cstring (digest, trail->pool);
+      if (strcmp (tb->base_checksum, hex) != 0)
+        return svn_error_createf
+          (SVN_ERR_CHECKSUM_MISMATCH, 
+           NULL,
+           "txn_body_apply_textdelta: base checksum mismatch on \"%s\":\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n",
+           tb->path, tb->base_checksum, hex);
+    }
+
   /* Make a readable "source" stream out of the current contents of
      ROOT/PATH; obviously, this must done in the context of a db_txn.
      The stream is returned in tb->source_stream. */
@@ -3199,6 +3224,8 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                         void **contents_baton_p,
                         svn_fs_root_t *root,
                         const char *path,
+                        const char *base_checksum,
+                        const char *result_checksum,
                         apr_pool_t *pool)
 {
   txdelta_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
@@ -3207,7 +3234,16 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
   tb->path = path;
   tb->pool = pool;
 
-  /* See IZ Issue #438 */
+  if (base_checksum)
+    tb->base_checksum = apr_pstrdup (pool, base_checksum);
+  else
+    tb->base_checksum = NULL;
+
+  if (result_checksum)
+    tb->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    tb->result_checksum = NULL;
+
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
                               txn_body_apply_textdelta, tb, pool));
   
@@ -3246,7 +3282,13 @@ static svn_error_t *
 another_txn_body_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
+
+  /* ### todo#689: When svn_fs_apply_text() takes a checksum argument
+         (like svn_fs_apply_textdelta does now), it will need to be
+         propagated through to here. */
+
   return svn_fs__dag_finalize_edits (tb->node, 
+                                     NULL,
                                      svn_fs_txn_root_name (tb->root, 
                                                            trail->pool),
                                      trail);

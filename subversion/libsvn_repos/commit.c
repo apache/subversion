@@ -319,7 +319,10 @@ apply_textdelta (void *file_baton,
   struct file_baton *fb = file_baton;
   return svn_fs_apply_textdelta (handler, handler_baton, 
                                  fb->edit_baton->txn_root, 
-                                 fb->path, fb->pool);
+                                 fb->path,
+                                 base_checksum,
+                                 result_checksum,
+                                 fb->pool);
 }
 
 

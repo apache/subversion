@@ -1277,12 +1277,30 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
  * this routine to create new files;  use @c svn_fs_make_file to create
  * an empty file first.)
  *
- * Do any necessary temporary allocation in @a pool.
+ * @a base_checksum is the hex MD5 digest for the base text against
+ * which the delta is to be applied; it is ignored if null, and may be
+ * ignored even if not null.  If it is not ignored, it must match the
+ * checksum of the base text against which svndiff data is being
+ * applied; if not, svn_fs_apply_textdelta or the @a *contents_p call
+ * which detects the mismatch will return the error
+ * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
+ * still be an error if @a base_checksum is neither null nor the
+ * checksum of the empty string).
+ *
+ * @a result_checksum is the hex MD5 digest for the fulltext that
+ * results from this delta application.  It is ignored if null, but if
+ * not null, it must match the checksum of the result; if it does not,
+ * then the @a *contents_p call which detects the mismatch will return
+ * the error SVN_ERR_CHECKSUM_MISMATCH.
+ *
+ * Do temporary allocation in @a pool.
  */
 svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
                                      void **contents_baton_p,
                                      svn_fs_root_t *root,
                                      const char *path,
+                                     const char *base_checksum,
+                                     const char *result_checksum,
                                      apr_pool_t *pool);
 
 
@@ -1300,6 +1318,11 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  * an empty file first.)
  *
  * Do any necessary temporary allocation in @a pool.
+ *
+ * ### todo#689: this is like svn_fs_apply_textdelta, but takes the
+ * text straight.  It is currently used only by the loader, see
+ * libsvn_repos/load.c.  It should accept a checksum, of course,
+ * which would come from a header in the dump file.
  */
 svn_error_t *svn_fs_apply_text (svn_stream_t **contents_p,
                                 svn_fs_root_t *root,

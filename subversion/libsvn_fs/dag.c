@@ -22,6 +22,7 @@
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_error.h"
+#include "svn_md5.h"
 #include "svn_fs.h"
 
 #include "dag.h"
@@ -1348,6 +1349,7 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
 
 svn_error_t *
 svn_fs__dag_finalize_edits (dag_node_t *file,
+                            const char *checksum,
                             const char *txn_id, 
                             trail_t *trail)
 {
@@ -1373,6 +1375,31 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   /* If this node has no EDIT-DATA-KEY, this is a no-op. */
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
+
+  /* ### todo#689: to be continued.
+     Why, when running 'basic_tests.py 4' over ra_local, does this
+     fail with the `expected' checksum correct and the `actual'
+     checksum as if for the empty string?  The representation behind
+     noderev->edit_key ought to be finalized by now, and have the
+     checksum of the new 'A/mu'... Debug with Mike in the morning. */
+  if (0 && checksum)
+    {
+      unsigned char digest[MD5_DIGESTSIZE];
+      const char *hex;
+
+      SVN_ERR (svn_fs__rep_contents_checksum
+               (digest, fs, noderev->edit_key, trail));
+
+      hex = svn_md5_digest_to_cstring (digest, trail->pool);
+      if (strcmp (checksum, hex) != 0)
+        return svn_error_createf
+          (SVN_ERR_CHECKSUM_MISMATCH, 
+           NULL,
+           "svn_fs__dag_finalize_edits: checksum mismatch, rep \"%s\":\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n",
+           noderev->edit_key, checksum, hex);
+    }
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until

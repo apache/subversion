@@ -172,7 +172,7 @@ svn_test__set_file_contents (svn_fs_root_t *root,
   svn_string_t string;
 
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
-                                   root, path, pool));
+                                   root, path, NULL, NULL, pool));
 
   string.data = contents;
   string.len = strlen(contents);

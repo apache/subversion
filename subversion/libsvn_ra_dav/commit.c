@@ -119,6 +119,8 @@ typedef struct
 {
   apr_file_t *tmpfile;
   svn_stringbuf_t *fname;
+  const char *base_checksum;    /* hex md5 of base text; may be null */
+  const char *result_checksum;  /* hex md5 of resulting text; may be null */
   resource_baton_t *file;
 } put_baton_t;
 
@@ -1076,8 +1078,15 @@ static svn_error_t * commit_stream_close(void *baton)
                                url);
     }
 
-  /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
+
+  if (pb->base_checksum)
+    ne_add_request_header
+      (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
+
+  if (pb->result_checksum)
+    ne_add_request_header
+      (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, pb->result_checksum);
 
   /* Rewind the tmpfile. */
   status = apr_file_seek(pb->tmpfile, APR_SET, &offset);
@@ -1128,6 +1137,16 @@ commit_apply_txdelta(void *file_baton,
 
   baton = apr_pcalloc(pool, sizeof(*baton));
   baton->file = file;
+
+  if (base_checksum)
+    baton->base_checksum = apr_pstrdup (pool, base_checksum);
+  else
+    baton->base_checksum = NULL;
+
+  if (result_checksum)
+    baton->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    baton->result_checksum = NULL;
 
   /* ### oh, hell. Neon's request body support is either text (a C string),
      ### or a FILE*. since we are getting binary data, we must use a FILE*

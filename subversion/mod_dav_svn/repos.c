@@ -1122,6 +1122,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   comb->priv.version_name 
     = version_name ? SVN_STR_TO_REV(version_name): SVN_INVALID_REVNUM;
 
+  /* Remember checksums, if any. */
+  comb->priv.base_checksum =
+    apr_table_get (r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
+  comb->priv.result_checksum =
+    apr_table_get (r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
+
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
   /* ### that comment no longer applies. we're creating a string with its
@@ -1491,6 +1497,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                 &(*stream)->delta_baton,
                                 resource->info->root.root,
                                 resource->info->repos_path,
+                                resource->info->base_checksum,
+                                resource->info->result_checksum,
                                 resource->pool);
   if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
@@ -1508,6 +1516,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                     &(*stream)->delta_baton,
                                     resource->info->root.root,
                                     resource->info->repos_path,
+                                    resource->info->base_checksum,
+                                    resource->info->result_checksum,
                                     resource->pool);
     }
   if (serr != NULL)
