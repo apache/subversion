@@ -386,6 +386,8 @@ cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
+# Don't need to include 29+ Meg cvs2svn test stuff.
+rm -rf $RPM_BUILD_ROOT/usr/lib/subversion/tools/cvs2svn
 
 # Set up book generation and installation
 (cd doc/book;
