@@ -167,10 +167,7 @@ delete_entry (const char *path,
   struct edit_baton *eb = parent->edit_baton;
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
-  const char *full_path = apr_pstrdup (pool, eb->base_path->data);
-  
-  /* Get the full path of the thing to be deleted. */
-  full_path = svn_path_join (full_path, path, pool);
+  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
 
   /* Check PATH in our transaction.  */
   kind = svn_fs_check_path (eb->txn_root, full_path, pool);
@@ -206,10 +203,7 @@ add_directory (const char *path,
   struct dir_baton *new_dirb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = apr_pstrdup (pool, eb->base_path->data);
-  
-  /* Get the full path of the thing to be deleted. */
-  full_path = svn_path_join (full_path, path, pool);
+  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
 
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
@@ -285,10 +279,7 @@ open_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  const char *full_path = apr_pstrdup (pool, eb->base_path->data);
-  
-  /* Get the full path of the thing to be deleted. */
-  full_path = svn_path_join (full_path, path, pool);
+  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
 
   /* Check PATH in our transaction.  Make sure it does not exist,
      else return an out-of-dateness error. */
@@ -333,10 +324,7 @@ add_file (const char *path,
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = apr_pstrdup (pool, eb->base_path->data);
-  
-  /* Get the full path of the thing to be deleted. */
-  full_path = svn_path_join (full_path, path, pool);
+  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
 
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
@@ -414,10 +402,7 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
-  const char *full_path = apr_pstrdup (pool, eb->base_path->data);
-  
-  /* Get the full path of the thing to be deleted. */
-  full_path = svn_path_join (full_path, path, pool);
+  const char *full_path = svn_path_join (eb->base_path->data, path, pool);
 
   /* Get this node's creation revision (doubles as an existence check). */
   SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, pool));
