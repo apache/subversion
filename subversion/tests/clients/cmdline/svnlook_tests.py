@@ -128,7 +128,14 @@ def delete_file_in_moved_dir(sbox):
   output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
   if errput:
     raise svntest.Failure
-  ### FIXME: Once 1089 is fixed need to verify the output is correct
+
+  # Okay.  No failure, but did we get the right output?
+  if len(output) != 2:
+    raise svntest.Failure
+  if not ((string.strip(output[0]) == 'A/B/')
+          and (string.strip(output[1]) == 'A/B/E2/')):
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
