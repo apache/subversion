@@ -36,3 +36,10 @@ Candidate changes:
     Justifcation: javahl binding only fix to prevent a crash
     Votes:
       +1: pmayweg
+
+  * r9883
+    Fix for crash in javahl binding. If the first parameter of SVNClient.list
+    is null, the jvm will crash.
+    Justifcation: javahl binding only fix to prevent a crash
+    Votes:
+      +1: pmayweg
