@@ -579,7 +579,6 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
       window.ops_size = 1;          /* ### why is this here? */
       window.ops = &op;
       window.new_data = &data;
-      window.pool = frc->pool;
 
       /* We can't really do anything useful if we get an error here.  Pass
          it off to someone who can. */

@@ -213,7 +213,7 @@ vdelta (svn_txdelta_window_t *window,
 
           if (outputflag && from < end)
             svn_txdelta__insert_op (window, svn_txdelta_new, 0, end - from,
-                                    from);
+                                    from, pool);
           return;
         }
 
@@ -275,19 +275,19 @@ vdelta (svn_txdelta_window_t *window,
               /* Commit the pending insert. */
               svn_txdelta__insert_op (window, svn_txdelta_new,
                                       0, here - insert_from,
-                                      insert_from);
+                                      insert_from, pool);
               insert_from = NULL;
             }
           if (current_match < start) /* Copy from source. */
             svn_txdelta__insert_op (window, svn_txdelta_source,
                                     current_match - data,
                                     current_match_len,
-                                    NULL);
+                                    NULL, pool);
           else                       /* Copy from target */
             svn_txdelta__insert_op (window, svn_txdelta_target,
                                     current_match - start,
                                     current_match_len,
-                                    NULL);
+                                    NULL, pool);
         }
 
       /* Adjust the current position and insert mappings for the

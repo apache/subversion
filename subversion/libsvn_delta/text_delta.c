@@ -79,18 +79,17 @@ struct apply_baton {
 svn_txdelta_window_t *
 svn_txdelta__make_window (apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
   svn_txdelta_window_t *window;
 
-  window = apr_palloc (subpool, sizeof (*window));
+  window = apr_palloc (pool, sizeof (*window));
   window->sview_offset = 0;
   window->sview_len = 0;
   window->tview_len = 0;
   window->num_ops = 0;
   window->ops_size = 0;
   window->ops = NULL;
-  window->new_data = svn_stringbuf_create ("", subpool);
-  window->pool = subpool;
+  window->new_data = svn_stringbuf_create ("", pool);
+
   return window;
 }
 
@@ -103,7 +102,8 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
                         int opcode,
                         apr_off_t offset,
                         apr_off_t length,
-                        const char *new_data)
+                        const char *new_data,
+                        apr_pool_t *pool)
 {
   svn_txdelta_op_t *op;
 
@@ -113,8 +113,7 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
       svn_txdelta_op_t *const old_ops = window->ops;
       int const new_ops_size = (window->ops_size == 0
                                 ? 16 : 2 * window->ops_size);
-      window->ops =
-        apr_palloc (window->pool, new_ops_size * sizeof (*window->ops));
+      window->ops = apr_palloc (pool, new_ops_size * sizeof (*window->ops));
 
       /* Copy any existing ops into the new array */
       if (old_ops)
@@ -207,7 +206,8 @@ svn_txdelta_free (svn_txdelta_stream_t *stream)
    scheme at work there; that's just how the code worked out. */
 svn_error_t *
 svn_txdelta_next_window (svn_txdelta_window_t **window,
-                         svn_txdelta_stream_t *stream)
+                         svn_txdelta_stream_t *stream,
+                         apr_pool_t *pool)
 {
   if (!stream->more)
     {
@@ -216,7 +216,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       apr_err = apr_md5_final (stream->digest, &(stream->context));
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_create 
-          (apr_err, 0, NULL, stream->pool,
+          (apr_err, 0, NULL, pool,
            "svn_txdelta_next_window: MD5 finalization failed");
 
       *window = NULL;
@@ -268,13 +268,13 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
         }
 
       /* Create the delta window. */
-      *window = svn_txdelta__make_window (stream->pool);
+      *window = svn_txdelta__make_window (pool);
       (*window)->sview_offset = stream->pos - total_source_len;
       (*window)->sview_len = total_source_len;
       (*window)->tview_len = target_len;
       svn_txdelta__vdelta (*window, stream->buf,
                            total_source_len, target_len,
-                           stream->pool);
+                           pool);
 
       /* Save the last window's worth of data from the source view. */
       stream->saved_source_len = (total_source_len < SVN_STREAM_CHUNK_SIZE)
@@ -286,14 +286,6 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       /* That's it. */
       return SVN_NO_ERROR;
     }
-}
-
-
-void
-svn_txdelta_free_window (svn_txdelta_window_t *window)
-{
-  if (window)
-    svn_pool_destroy (window->pool);
 }
 
 
@@ -502,7 +494,6 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
   window.ops_size = 1;          
   window.ops = &op;
   window.new_data = string;
-  window.pool = pool;
 
   /* Push the one window at the handler. */
   SVN_ERR ((*handler) (&window, handler_baton));
@@ -539,18 +530,23 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
 {
   svn_txdelta_window_t *window;
 
+  /* create a pool just for the windows */
+  apr_pool_t *wpool = svn_pool_create (pool);
+
   do
     {
       /* read in a single delta window */
-      SVN_ERR( svn_txdelta_next_window (&window, txstream));
+      SVN_ERR( svn_txdelta_next_window (&window, txstream, wpool));
 
       /* shove it at the handler */
       SVN_ERR( (*handler)(window, handler_baton));
 
       /* free the window (if any) */
-      svn_txdelta_free_window (window);
+      svn_pool_clear (wpool);
     }
   while (window != NULL);
+
+  svn_pool_destroy (wpool);
 
   return SVN_NO_ERROR;
 }

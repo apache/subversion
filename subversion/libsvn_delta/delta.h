@@ -35,12 +35,14 @@ svn_txdelta_window_t *svn_txdelta__make_window (apr_pool_t *pool);
 
 /* Insert a delta op into the delta window. If OPCODE is
    svn_delta_new, bytes from NEW_DATA are copied into the window data
-   and OFFSET is ignored.  Otherwise NEW_DATA is ignored. */
+   and OFFSET is ignored.  Otherwise NEW_DATA is ignored. All allocations
+   are performed in POOL. */
 void svn_txdelta__insert_op (svn_txdelta_window_t *window,
                              int opcode,
                              apr_off_t offset,
                              apr_off_t length,
-                             const char *new_data);
+                             const char *new_data,
+                             apr_pool_t *pool);
 
 /* Create a vdelta window. Allocate temporary data from `pool'. */
 void svn_txdelta__vdelta (svn_txdelta_window_t *window,

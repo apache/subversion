@@ -23,6 +23,7 @@
 
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 
 static apr_off_t
 print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
@@ -96,6 +97,7 @@ main (int argc, char **argv)
   FILE *target_file = NULL;
   svn_txdelta_stream_t *stream;
   svn_txdelta_window_t *window;
+  apr_pool_t *wpool;
 
   int count = 0;
   int quiet = 0;
@@ -130,15 +132,18 @@ main (int argc, char **argv)
                svn_stream_from_stdio (target_file, NULL),
                NULL);
 
+  /* ### urm. we should have a pool here! */
+  wpool = svn_pool_create (NULL);
   do {
-    svn_txdelta_next_window (&window, stream);
+    svn_txdelta_next_window (&window, stream, wpool);
     if (window != NULL)
       {
         len += print_delta_window (quiet, window, stdout);
-        svn_txdelta_free_window (window);
+        svn_pool_clear (wpool);
         ++count;
       }
   } while (window != NULL);
+  svn_pool_destroy (wpool);
   fprintf (stdout, "(LENGTH %ld +%d)\n", (long) len, count);
 
   svn_txdelta_free (stream);
