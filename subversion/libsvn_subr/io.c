@@ -432,6 +432,7 @@ svn_stream_create (void *baton, apr_pool_t *pool)
   stream->baton = baton;
   stream->read_fn = NULL;
   stream->write_fn = NULL;
+  stream->close_fn = NULL;
   stream->pool = pool;
   return stream;
 }
