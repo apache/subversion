@@ -19,7 +19,10 @@ A rough guide to the source tree:
    www/
       Subversion web pages (live content at http://subversion.tigris.org/).
    apr/
-      Apache Portable Runtime library (vendor branched, see apr/README.svn).
+      Apache Portable Runtime library.
+      *Note*: This is not in the same repository as Subversion.  Read
+      autogen.sh for instructions on how to get it if you don't
+      already have it.
    glib/
       GNU Library (vendor branched, see glib/README.svn).
    subversion/  
