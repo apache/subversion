@@ -3,7 +3,7 @@ use SVN::Base qw(Fs svn_fs_);
 
 package _p_svn_fs_t;
 
-my @methods = qw/youngest_rev revision_root revision_prop revision_proplist
+our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
 		 change_rev_prop list_transactions open_txn begin_txn/;
 
 for (@methods) {
@@ -12,7 +12,7 @@ for (@methods) {
 
 package _p_svn_fs_root_t;
 
-my @methods = qw/apply_textdelta apply_text change_node_prop
+our @methods = qw/apply_textdelta apply_text change_node_prop
 		 check_path close_root copied_from copy
 		 dir_entries delete delete_tree file_contents
 		 file_length file_md5_checksum is_dir is_file
