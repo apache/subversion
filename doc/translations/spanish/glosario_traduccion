@@ -123,3 +123,7 @@ changeset -> ???
     parche con nombre único. Por ahora dejar en "changeset", ya se
     buscará algo en el futuro. Para ver la descripción del libro,
     buscar en ch04.xml la frase "Subversion y los changesets".
+
+ancestry -> ascendencia
+    La traducción literal concuerda con el significado que se le
+    da al mismo término en la jerga de Subversion.
