@@ -67,23 +67,8 @@ temp_dir = 'local_tmp'
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
-
-# Global variable:  are we running in "ra_dav" mode?
-#
-#    If this variable is set, these things are assumed:   
-#
-#       - an svn-aware httpd is running locally on port 80.
-#
-#       - httpd.conf maps /svn/repositories to the abs. path value of
-#         general_repo_dir above, which right below these tests.
-#           (e.g. /path/to/tests/repositories)
-#
-#       - httpd.conf maps /svn/tmp/repo to the abs. path value of 
-#         pristine_dir above.
-#           (e.g. /path/to/tests/local_tmp/repos)
-#
-DAV_mode = 0
-
+# Global URL to testing area.  Default to ra_local, current working dir.
+test_area_url = "file://" + os.path.abspath(os.getcwd()) + "/"
 
 # Name of the .htaccess file used by DAV_mode:
 htaccess_file = os.path.join(general_repo_dir, '.htaccess')
@@ -273,11 +258,12 @@ def run_one_test(n, test_list):
 def run_tests(test_list):
   "Main routine to run all tests in TEST_LIST."
 
-  global DAV_mode
+  global test_area_url
   testnum = 0
-  # Parse commandline arg, list tests or run one test
-  if (len(sys.argv) > 1):
-    if (sys.argv[1] == 'list'):
+
+  for arg in sys.argv:
+
+    if arg == "list":
       print "Test #     Test Description"
       print "------     ----------------"
       n = 1
@@ -285,22 +271,21 @@ def run_tests(test_list):
         print " ", n, "      ", x.__doc__
         n = n+1
       return 0
-    elif (sys.argv[1] == 'dav'):
-      DAV_mode = 1
+
+    elif arg == "--url":
+      index = sys.argv.index(arg)
+      test_area_url = sys.argv[index + 1]
+
     else:
-      if (len(sys.argv) > 2) and (sys.argv[2] == 'dav'):
-        DAV_mode = 1
       try:
-        testnum = int(sys.argv[1])
+        testnum = int(arg)
       except ValueError:
-        print "error: bogus argument given."        
-        print "Usage:  ./test-script.py"
-        print "        ./test-script.py list"
-        print "        ./test-script.py [test-number]"
-        sys.exit(1)
-      return run_one_test(testnum, test_list)
+        pass
       
-  # otherwise if no args given, run all the tests.
+  if testnum:
+    return run_one_test(testnum, test_list)
+  
+  # otherwise, run all tests.
   got_error = 0
   for n in range(len(test_list)):
     if n:
