@@ -600,6 +600,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   do
     {
       const char *url;
+      svn_ra_dav_resource_t *rsrc;
       void *parent_baton;
       void *this_baton;
       int i;
@@ -636,7 +637,6 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       if (strlen(url) > strlen(bc_root))
         {
           svn_stringbuf_t *name;
-          svn_ra_dav_resource_t *rsrc;
 
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
@@ -646,20 +646,20 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                           &this_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not add directory");
-
-          SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
-                                                  ras->sess,
-                                                  url,
-                                                  NULL,
-                                                  NULL,
-                                                  ras->pool));
-          add_props(rsrc, editor->change_dir_prop, this_baton, ras->pool);
         }
       else 
         {
           /* We are operating in the root of the repository */
           this_baton = root_baton;
         }
+
+      SVN_ERR (svn_ra_dav__get_props_resource(&rsrc,
+                                              ras->sess,
+                                              url,
+                                              NULL,
+                                              NULL,
+                                              ras->pool));
+      add_props(rsrc, editor->change_dir_prop, this_baton, ras->pool);
 
       /* add a sentinel. this will be used to signal a close_directory
          for this directory's baton. */
@@ -685,8 +685,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       /* process each of the files that were found */
       for (i = files->nelts; i--; )
         {
-          svn_ra_dav_resource_t *rsrc = 
-            ((svn_ra_dav_resource_t **)files->elts)[i];
+          rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
 
           err = fetch_file(ras, rsrc, this_baton, &vuh, editor, ras->pool);
           if (err)

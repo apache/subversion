@@ -344,8 +344,13 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              apr_pool_t *pool)
 {
   apr_hash_t *props;
+  char * url_path = apr_pstrdup(pool, url);
+  int len = strlen(url);
+  /* Clean up any trailing slashes. */
+  if (len > 1 && url[len - 1] == '/')
+      url_path[len - 1] = '\0';
 
-  SVN_ERR( svn_ra_dav__get_props(&props, sess, url, NE_DEPTH_ZERO,
+  SVN_ERR( svn_ra_dav__get_props(&props, sess, url_path, NE_DEPTH_ZERO,
                                  label, which_props, pool) );
 
   if (label != NULL)
@@ -363,7 +368,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
     }
   else
     {
-      *rsrc = apr_hash_get(props, url, APR_HASH_KEY_STRING);
+      *rsrc = apr_hash_get(props, url_path, APR_HASH_KEY_STRING);
     }
 
   if (*rsrc == NULL)
@@ -371,7 +376,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
       /* ### hmmm, should have been in there... */
       return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
                                "failed to find label \"%s\" for url \"%s\"",
-                               label, url);
+                               label, url_path);
     }
 
   return SVN_NO_ERROR;
