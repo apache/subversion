@@ -86,8 +86,8 @@ flowing downwards.  The file begins life with three lines of text,
              |      \     |   
              |       \    |            
              |        \   |            
-             |         \ one           
-             |           two-point-five
+             |         \ one                ## This node is a human's
+             |           two-point-five     ## merge of two sides.
              |           three        
              |            |
              |            |
@@ -104,10 +104,10 @@ flowing downwards.  The file begins life with three lines of text,
                      \    |
                       \   |
                        \  |
-                         one
-                         Two-point-five
-                         newline       
-                         three  
+                         one                ## This node is a human's
+                         Two-point-five     ## merge of the changes
+                         newline            ## since the last merge.
+                         three
                               
 
 It's the second merge that's important here.  
@@ -115,13 +115,12 @@ It's the second merge that's important here.
 In a system like Subversion, the second merge of the left branch to
 the right will fail miserably: the whole file's contents will be
 placed within conflict markers.  That's because it's trying to dumbly
-apply a patch that changes "1\2\3" to "one\Two\Three", and the target
-file has no matching lines at all.
+apply a patch that changes "1\n2\n3" to "one\nTwo\nthree", and the
+target file has no matching lines at all.
 
 A smarter system (like Clearcase) would remember that the previous
 merge had happened, and specifically remember that the lines "one" and
-"three" are the results of that previous merge.  It would only mark
-the single "two-point-five" line as something which needs human
-attention.
-
-
+"three" are the results of that previous merge.  Therefore, it would
+ask the human only to deal with the "Two" versus "two-point-five"
+conflict; the earliest changes ("1\n2\n3" to "one\ntwo\nthree") would
+already be accounted for.
