@@ -49,6 +49,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -76,7 +77,7 @@
    overlap, so it doesn't quite make sense to have a separate
    enueration for each use.  */
 enum elemtype {
-  elem_prop_delta,
+  elem_delta_pkg,
   elem_add,
   elem_replace,
   elem_dir,
@@ -105,7 +106,7 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   enum elemtype addreplace;     /* elem_add or elem_replace, or
-                                   elem_prop_delta for the root
+                                   elem_delta_pkg for the root
                                    directory.  */
   apr_pool_t *pool;
 };
@@ -197,7 +198,7 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
       if (fb->txdelta_id == 0)
         {
           fb->txdelta_id = eb->txdelta_id_counter++;
-          sprintf (buf, "<text-delta-ref id='%d'>\n", fb->txdelta_id);
+          sprintf (buf, "<text-delta-ref id='%d'/>\n", fb->txdelta_id);
           svn_string_appendcstr (str, buf, pool);
         }
       svn_string_appendcstr (str, "</file>", pool);
@@ -207,7 +208,8 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
       eb->curfile = NULL;
       eb->elem = elem_tree_delta;
     }
-  if (eb->elem == elem_tree_delta && elem == elem_dir)
+  if (eb->elem == elem_tree_delta
+      && (elem == elem_dir || elem == elem_dir_prop_delta))
     {
       svn_string_appendcstr (str, "</tree-delta>\n", pool);
       eb->elem = elem_dir;
@@ -234,6 +236,11 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
       svn_string_appendcstr (str, "<prop-delta>\n", pool);
       eb->elem = elem_file_prop_delta;
     }
+
+  /* If we didn't make it to the type of element the caller asked for,
+     either the caller wants us to do something we don't do or we have
+     a bug. */
+  assert (eb->elem == elem);
 
   return str;
 }
@@ -322,7 +329,7 @@ replace_root (void *edit_baton,
   const char *hdr = "<?xml version='1.0' encoding='utf-8'?>\n<delta-pkg>\n";
   apr_size_t len = strlen(hdr);
 
-  *dir_baton = make_dir_baton (eb, elem_prop_delta);
+  *dir_baton = make_dir_baton (eb, elem_delta_pkg);
 
   eb->elem = elem_dir;
   return eb->output (eb->output_baton, hdr, &len, eb->pool);
@@ -405,12 +412,17 @@ close_directory (void *dir_baton)
   apr_size_t len;
 
   str = get_to_elem (eb, elem_dir, db->pool);
-  svn_string_appendcstr (str, "</dir>", db->pool);
-  if (db->addreplace == elem_add)
-    svn_string_appendcstr (str, "</add>", db->pool);
-  else if (db->addreplace == elem_replace)
-    svn_string_appendcstr (str, "</replace>", db->pool);
-  svn_string_appendcstr (str, "\n", db->pool);
+  if (db->addreplace != elem_delta_pkg)
+    {
+      /* Not the root directory.  */
+      svn_string_appendcstr (str, "</dir>", db->pool);
+      svn_string_appendcstr (str, ((db->addreplace == elem_add) ? "</add>"
+                                   : "</replace>"), db->pool);
+      svn_string_appendcstr (str, "\n", db->pool);
+      eb->elem = elem_tree_delta;
+    }
+  else
+    eb->elem = elem_delta_pkg;
 
   len = str->len;
   err = eb->output (eb->output_baton, str->data, &len, db->pool);
