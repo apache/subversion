@@ -105,6 +105,7 @@ typedef struct
   resource_t *rsrc;
   apr_table_t *prop_changes; /* name/values pairs of changed (or new) properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
+  svn_boolean_t created; /* set if this is an add rather than an update */
 } resource_baton_t;
 
 typedef struct
@@ -583,6 +584,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   root = apr_pcalloc(dir_pool, sizeof(*root));
   root->cc = cc;
   root->rsrc = rsrc;
+  root->created = FALSE;
 
   *root_baton = root;
 
@@ -649,6 +651,7 @@ static svn_error_t * commit_add_dir(const char *path,
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(dir_pool, sizeof(*child));
   child->cc = parent->cc;
+  child->created = TRUE;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
                      name, 1, SVN_INVALID_REVNUM, dir_pool) );
 
@@ -726,6 +729,7 @@ static svn_error_t * commit_open_dir(const char *path,
   const char *name = svn_path_basename(path, dir_pool);
 
   child->cc = parent->cc;
+  child->created = FALSE;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
                      name, 0, base_revision, dir_pool) );
 
@@ -800,8 +804,39 @@ static svn_error_t * commit_add_file(const char *path,
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(file_pool, sizeof(*file));
   file->cc = parent->cc;
+  file->created = TRUE;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
                      name, 1, SVN_INVALID_REVNUM, file_pool) );
+
+  /* If the parent directory existed before this commit then there may be a
+     file with this URL already. We need to ensure such a file does not
+     exist, which we do by attempting a PROPFIND */
+  if (!parent->created)
+    {
+      svn_ra_dav_resource_t *res;
+      svn_error_t *err = svn_ra_dav__get_starting_props(&res,
+                                                        file->cc->ras->sess,
+                                                        file->rsrc->url, NULL,
+                                                        file_pool);
+      if (!err)
+        {
+          /* If the PROPFIND succeeds the file already exists */
+          return svn_error_createf(SVN_ERR_RA_ALREADY_EXISTS, 0, NULL,
+                                   file_pool,
+                                   "file '%s' already exists", file->rsrc->url);
+        }
+      else if (err->apr_err == SVN_ERR_RA_REQUEST_FAILED)
+        {
+          /* ### TODO: This is what we get if the file doesn't exist
+             but an explicit not-found error might be better */
+          svn_error_clear_all(err);
+        }
+      else
+        {
+          /* A real error */
+          return err;
+        }
+    }
 
   if (! copyfrom_path)
     {
@@ -873,6 +908,7 @@ static svn_error_t * commit_open_file(const char *path,
 
   file = apr_pcalloc(file_pool, sizeof(*file));
   file->cc = parent->cc;
+  file->created = FALSE;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
                      name, 0, base_revision, file_pool) );
 
