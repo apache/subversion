@@ -131,8 +131,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: status [TARGETS]\n" },
   { "stat",       TRUE, NULL, NULL },
   { "st",         TRUE, NULL, NULL },
-
-  { "diff",     FALSE, svn_cl__diff,
+ 
+  { "diff",       FALSE, svn_cl__diff,
     "Display local file changes as contextual diffs.\n"
     "usage: diff [TARGETS]\n" },
   { "di",         TRUE, NULL, NULL },
@@ -141,6 +141,12 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },
   { "up",         TRUE, NULL, NULL },
+
+  { "cleanup",    FALSE, svn_cl__cleanup,
+    "Recursively clean up the working copy, removing locks, resuming\n"
+    "unfinished operations, etc.\n"
+    "usage: cleanup [TARGETS]\n" },
+
   { NULL,         FALSE, NULL, NULL }
 };
 
