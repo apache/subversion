@@ -20,7 +20,10 @@ fi
 echo "buildcheck: autoconf version $ac_version (ok)"
 
 # libtool 1.4 or newer
-libtool=$(which glibtool libtool 2>/dev/null | head -1)
+libtool=`which glibtool 2>/dev/null`
+if test ! -x "$libtool"; then
+  libtool=`which libtool`
+fi
 lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//'`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."
