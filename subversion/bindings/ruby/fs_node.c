@@ -17,6 +17,7 @@
 
 #include <svn_pools.h>
 #include <svn_fs.h>
+#include <svn_repos.h>
 
 #include "svn_ruby.h"
 #include "fs_root.h"
@@ -24,6 +25,7 @@
 #include "stream.h"
 #include "error.h"
 #include "util.h"
+#include "delta_editor.h"
 
 static VALUE cSvnFsDir, cSvnFsFile;
 
@@ -192,6 +194,82 @@ dir_entries (VALUE self)
 }
 
 static VALUE
+dir_delta (VALUE self,
+           VALUE srcEntry,
+           VALUE srcRevs,
+           VALUE tgtRoot,
+           VALUE tgtPath,
+           VALUE aEditor,
+           VALUE text_deltas,
+           VALUE recurse)
+{
+  svn_ruby_fs_node *node;
+  svn_fs_root_t *src_root, *tgt_root;
+  svn_stringbuf_t *src_parent_dir, *src_entry, *tgt_path;
+  apr_hash_t *src_revs;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
+  apr_pool_t *pool;
+  svn_error_t *err;
+
+  VALUE srcRevsArray;
+  int i;
+
+  Data_Get_Struct (self, svn_ruby_fs_node, node);
+  if (! svn_ruby_is_fs_root (tgtRoot))
+    rb_raise (rb_eArgError, "tgtRoot must be Svn::FsRoot object");
+  if (srcEntry != Qnil)
+    Check_Type (srcEntry, T_STRING);
+  Check_Type (srcRevs, T_HASH);
+  Check_Type (tgtPath, T_STRING);
+  srcRevsArray = rb_funcall (srcRevs, rb_intern ("to_a"), 0);
+  for (i = 0; i < RARRAY (srcRevsArray)->len; i++)
+    {
+      VALUE elt = RARRAY (srcRevsArray)->ptr[i];
+      Check_Type (RARRAY (elt)->ptr[0], T_STRING);
+      (void) NUM2LONG (RARRAY (elt)->ptr[1]);
+    }
+  svn_ruby_delta_editor (&editor, &edit_baton, aEditor);
+  src_root = svn_ruby_fs_root (node->fs_root);
+  pool = svn_pool_create (node->pool);
+  src_parent_dir = svn_stringbuf_create (StringValuePtr (node->path), pool);
+  if (srcEntry == Qnil)
+    src_entry = NULL;
+  else
+    src_entry = svn_stringbuf_create (StringValuePtr (srcEntry), pool);
+
+  {
+    svn_revnum_t *rev_ptr = apr_palloc (pool, sizeof (*rev_ptr));
+    src_revs = apr_hash_make (pool);
+
+    for (i = 0; i < RARRAY (srcRevsArray)->len; i++)
+      {
+        VALUE elt = RARRAY (srcRevsArray)->ptr[i];
+      
+        *rev_ptr = NUM2LONG (RARRAY (elt)->ptr[1]);
+        apr_hash_set (src_revs, StringValuePtr (RARRAY (elt)->ptr[0]),
+                      APR_HASH_KEY_STRING, rev_ptr);
+
+      }
+  }
+  tgt_root = svn_ruby_fs_root (tgtRoot);
+  tgt_path = svn_stringbuf_create (StringValuePtr (tgtPath), pool);
+
+  err = svn_repos_dir_delta (src_root, src_parent_dir, src_entry, src_revs,
+                             tgt_root, tgt_path,
+                             editor, edit_baton,
+                             RTEST (text_deltas), RTEST (recurse),
+                             pool);
+  apr_pool_destroy (pool);
+
+  if (err)
+    svn_ruby_raise (err);
+
+  return Qnil;
+}
+
+
+static VALUE
 file_length (VALUE self)
 {
   apr_off_t length;
@@ -258,6 +336,7 @@ svn_ruby_init_fs_node (void)
   rb_define_method (cSvnFsNode, "proplist", proplist, 0);
   cSvnFsDir = rb_define_class_under (svn_ruby_mSvn, "FsDir", cSvnFsNode);
   rb_define_method (cSvnFsDir, "entries", dir_entries, 0);
+  rb_define_method (cSvnFsDir, "delta", dir_delta, 7);
   cSvnFsFile = rb_define_class_under (svn_ruby_mSvn, "FsFile", cSvnFsNode);
   rb_define_method (cSvnFsFile, "length", file_length, 0);
   rb_define_method (cSvnFsFile, "contents", file_contents, 0);

@@ -17,4 +17,5 @@
 VALUE svn_ruby_fs_rev_root_new (svn_fs_root_t *root, apr_pool_t *pool);
 VALUE svn_ruby_fs_txn_root_new (svn_fs_root_t *root, apr_pool_t *pool);
 svn_fs_root_t *svn_ruby_fs_root (VALUE aRoot);
+svn_boolean_t svn_ruby_is_fs_root (VALUE obj);
 #endif /* FS_ROOT_H */
