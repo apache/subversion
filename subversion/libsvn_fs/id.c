@@ -143,8 +143,8 @@ svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
 
 
 int
-svn_fs__is_parent (const svn_fs_id_t *parent,
-                   const svn_fs_id_t *child)
+svn_fs_is_parent (const svn_fs_id_t *parent,
+                  const svn_fs_id_t *child)
 {
   int i;
 
@@ -167,7 +167,8 @@ svn_fs__is_parent (const svn_fs_id_t *parent,
   if ((i & 1) == 0
       && parent[i] == -1
       && child[i + 1] != -1
-      && child[i + 2] == 1)
+      && child[i + 2] == 1
+      && child[i + 3] == -1)
     return 1;
 
   /* Anything else is no good.  */

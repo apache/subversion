@@ -268,6 +268,11 @@ int svn_fs_id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b);
 int svn_fs_id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 
+/* Return true iff PARENT is a direct parent of CHILD.  */
+int svn_fs_is_parent (const svn_fs_id_t *parent,
+                      const svn_fs_id_t *child);
+
+
 /* Return the distance between node revisions A and B.  Return -1 if
    they are completely unrelated.  */
 int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
