@@ -31,3 +31,9 @@ Candidate changes:
     Votes:
       +1: ghudson, sussman
 
+  * r10394:
+    Make svnserve use repos UUID as default realm.
+    Justification:
+      fixes 'changing realm' bug in path computation.
+    Votes:
+      +1: ghudson, sussman
