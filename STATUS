@@ -68,6 +68,7 @@ Candidate changes:
     Justification: Tarballs built with GNU tar will not extract on platforms
     without GNU tar due to filename length.
     Votes:
+      +1: jerenkrantz
 
   * r8969
     Do not copy doc/book/book/images into sandbox.
