@@ -1707,15 +1707,15 @@ sandwich.txt
         los cambios del servidor, y está listo para enviar sus cambios
         al repositorio.</para>
       
-      <para>The <command>svn commit</command> command sends all of
-           your changes to the repository.  When you commit a change,
-           you need to supply a <firstterm>log message</firstterm>,
-           describing your change.  Your log message will be attached
-           to the new revision you create.  If your log message is
-           brief, you may wish to supply it on the command line using
-           the <option>--message</option> (or
-           <option>-m</option>) option:</para>
-           
+      <para>El comando <command>svn commit</command> envía todos sus
+           cambios al repositorio. Cuando usted envía un cambio, necesita
+           proveer un <firstterm>mensaje de registro</firstterm>,
+           describiendo su cambio. Su mensaje de registro será adjuntado
+           a la nueva revisión que ha creado. Si su mensjae de registro
+           es breve, puede querer proveerlo en la línea de comando usando
+           la opción <option>--message</option> (o
+           <option>-m</option>):</para>
+
       <screen>
 $ svn commit --message "Corrected number of cheese slices."
 Sending        sandwich.txt
@@ -1723,10 +1723,10 @@ Transmitting file data .
 Committed revision 3.
 </screen>
            
-      <para>However, if you've been composing your log message as you
-        work, you may want to tell Subversion to get the message from
-        a file by passing the filename with the
-        <option>--file</option> switch:</para>
+      <para>Sin embargo, si ha estado componiendo su mensaje de registro
+        mientras trabaja, puede querer decirle a Subversion que coja el
+        mensaje de un fichero pasando el nombre de fichero con la
+        opción <option>--file</option> :</para>
 
       <screen>
 $ svn commit --file logmsg 
@@ -1735,20 +1735,19 @@ Transmitting file data .
 Committed revision 4.
 </screen>
 
-      <para>If you fail to specify either the
-        <option>--message</option> or <option>--file</option> switch,
-        then Subversion will automatically launch your favorite editor
-        (as defined in the environment variable
-        <literal>$EDITOR</literal>) for composing a log
-        message.</para>
+      <para>Si usted falla en especificar cualquiera de las opciones
+        <option>--message</option> o <option>--file</option>,
+        entonces Subversion lanzará automaticamente su editor favorito
+        (según lo definido en la variable de entorno
+        <literal>$EDITOR</literal>) para redactar un mensaje de
+        registro.</para>
         
         
       <tip>
-        <para>If you're in your editor writing a commit message and
-          decide that you want to cancel your commit, you can just
-          quit your editor without saving changes.  If you've already
-          saved your commit message, simply delete the text and save
-          again.</para>
+        <para>Si está en su editor escribiendo un mensaje de registro y
+          decide que quiere cancelar su envio, usted puede quitar su
+          editor sin guardar los cambios. Si ya ha guardado su mensaje
+          de registro, simplemente borre el texto y salve otra vez.</para>
 
         <screen>
 $ svn commit
