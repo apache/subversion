@@ -25,12 +25,8 @@ class GeneratorBase:
   #
 
   def __init__(self, fname, verfname, options=None):
-    parser = ConfigParser.ConfigParser()
-    parser.read(fname)
-
-    self.swig_lang = string.split(parser.get('options', 'swig-languages'))
-
-    # Version comes from a header file since it is used in the code.
+    # Retrieve major version from the C header, to avoid duplicating it in
+    # build.conf - it is required because some file names include it.
     try:
       vsn_parser = getversion.Parser()
       vsn_parser.search('SVN_VER_MAJOR', 'libver')
@@ -38,14 +34,38 @@ class GeneratorBase:
     except:
       raise GenError('Unable to extract version.')
 
+    # Now read and parse build.conf
+    parser = ConfigParser.ConfigParser()
+    parser.read(fname)
+
     self.sections = { }
     self.graph = DependencyGraph()
 
+    # Allow derived classes to suppress certain configuration sections
     if not hasattr(self, 'skip_sections'):
       self.skip_sections = { }
 
-    # PASS 1: collect the targets and some basic info
-    for section_name in _filter_sections(parser.sections()):
+    # The 'options' section does not represent a build target,
+    # it simply contains global options
+    self.skip_sections['options'] = None
+
+    # Read in the global options
+    self.includes = \
+        _collect_paths(parser.get('options', 'includes'))
+    self.apache_files = \
+        _collect_paths(parser.get('options', 'static-apache-files'))
+    self.scripts = \
+        _collect_paths(parser.get('options', 'test-scripts'))
+    self.bdb_scripts = \
+        _collect_paths(parser.get('options', 'bdb-test-scripts'))
+
+    self.swig_lang = string.split(parser.get('options', 'swig-languages'))
+    self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
+
+    # Collect the build targets
+    parser_sections = parser.sections()
+    parser_sections.sort() # Have a reproducible ordering
+    for section_name in parser_sections:
       if self.skip_sections.has_key(section_name):
         continue
 
@@ -65,90 +85,61 @@ class GeneratorBase:
 
       section.create_targets()
 
-    # compute intra-library dependencies
+    # Compute intra-library dependencies
     for section in self.sections.values():
-      dep_types = ((DT_LINK, section.options.get('libs')),
-                   (DT_NONLIB, section.options.get('nonlibs')))
+      dependencies = (( DT_LINK,   section.options.get('libs',    "") ),
+                      ( DT_NONLIB, section.options.get('nonlibs', "") ))
 
-      for dt_type, deps_list in dep_types:
-        if deps_list:
-          for dep_section in self.find_sections(deps_list):            
-            for target in section.get_targets():
-              self.graph.bulk_add(dt_type, target.name,
-                                  dep_section.get_dep_targets(target))
+      for dep_type, dep_names in dependencies:
+        # Translate string names to Section objects
+        dep_section_objects = []
+        for section_name in string.split(dep_names):
+          if self.sections.has_key(section_name):
+            dep_section_objects.append(self.sections[section_name])
 
-    # collect various files
-    self.includes = _collect_paths(parser.get('options', 'includes'))
-    self.apache_files = _collect_paths(parser.get('static-apache', 'paths'))
-
-    # collect all the test scripts
-    self.scripts = _collect_paths(parser.get('test-scripts', 'paths'))
-    self.bdb_scripts = _collect_paths(parser.get('bdb-test-scripts', 'paths'))
-
-    self.swig_dirs = string.split(parser.get('swig-dirs', 'paths'))
-
-  def find_sections(self, section_list):
-    """Return a list of section objects from a string of section names."""
-    sections = [ ]
-    for section_name in string.split(section_list):
-      if not self.skip_sections.has_key(section_name):
-        sections.append(self.sections[section_name])
-    return sections
+        # For each dep_section that this section declares a dependency on,
+        # take the targets of this section, and register a dependency on
+        # any 'matching' targets of the dep_section.
+        #
+        # At the moment, the concept of multiple targets per section is
+        # employed only for the SWIG modules, which have 1 target
+        # per language. Then, 'matching' means being of the same language.
+        for dep_section in dep_section_objects:
+          for target in section.get_targets():
+            self.graph.bulk_add(dep_type, target.name,
+                                dep_section.get_dep_targets(target))
 
   def compute_hdr_deps(self):
-    #
-    # Find all the available headers and what they depend upon. the
-    # include_deps is a dictionary mapping a short header name to a tuple
-    # of the full path to the header and a dictionary of dependent header
-    # names (short) mapping to None.
-    #
-    # Example:
-    #   { 'short.h' : ('/path/to/short.h',
-    #                  { 'other.h' : None, 'foo.h' : None }) }
-    #
-    # Note that this structure does not allow for similarly named headers
-    # in per-project directories. SVN doesn't have this at this time, so
-    # this structure works quite fine. (the alternative would be to use
-    # the full pathname for the key, but that is actually a bit harder to
-    # work with since we only see short names when scanning, and keeping
-    # a second variable around for mapping the short to long names is more
-    # than I cared to do right now)
-    #
-    include_deps = _create_include_deps(map(native_path, self.includes))
+    all_includes = map(native_path, self.includes)
     for d in unique(self.graph.get_sources(DT_LIST, LT_TARGET_DIRS)):
       hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
-      if hdrs:
-        include_deps = _create_include_deps(hdrs, include_deps)
+      all_includes.extend(hdrs)
 
-    for objname, sources in self.graph.get_deps(DT_OBJECT):
+    include_deps = IncludeDependencyInfo(all_includes)
+
+    for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
+      source = sources[0]
 
-      # generated .c files must depend on all headers their parent .i file
+      # Generated .c files must depend on all headers their parent .i file
       # includes
-      if isinstance(objname, SWIGObject):
-        for ifile in self.graph.get_sources(DT_SWIG_C, sources[0]):
-          if isinstance(ifile, SWIGSource):
-            for short in _find_includes(native_path(ifile.filename),
-                                        include_deps):
-              self.graph.add(DT_SWIG_C, sources[0], 
-                             build_path(include_deps[short][0]))
+      if isinstance(objectfile, SWIGObject):
+        swigsources = self.graph.get_sources(DT_SWIG_C, source)
+        assert len(swigsources) == 1
+        ifile = swigsources[0]
+        assert isinstance(ifile, SWIGSource)
 
-      # any non-swig C/C++ object must depend on the headers it's parent
+        for include_file in include_deps.query(native_path(ifile.filename)):
+          self.graph.add(DT_SWIG_C, source, build_path(include_file))
+
+      # Any non-swig C/C++ object must depend on the headers it's parent
       # .c or .cpp includes. Note that 'object' includes gettext .mo files,
       # Java .class files, and .h files generated from Java classes, so
       # we must filter here.
-      elif isinstance(sources[0], SourceFile) and \
-          os.path.splitext(sources[0].filename)[1] in ('.c', '.cpp'):
-
-        filename = native_path(sources[0].filename)
-
-        if not os.path.isfile(filename):
-          continue
-
-        hdrs = [ ]
-        for short in _find_includes(filename, include_deps):
-          self.graph.add(DT_OBJECT, objname,
-                         build_path(include_deps[short][0]))
+      elif isinstance(source, SourceFile) and \
+          os.path.splitext(source.filename)[1] in ('.c', '.cpp'):
+        for include_file in include_deps.query(native_path(source.filename)):
+          self.graph.add(DT_OBJECT, objectfile, build_path(include_file))
 
 
 class DependencyGraph:
@@ -201,7 +192,6 @@ dep_types = [
   'DT_OBJECT',   # an object filename, depending upon .c filenames
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
-  'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
   'DT_LIST',     # arbitrary listS of values, see list_types below
   ]
@@ -744,23 +734,6 @@ class GenError(Exception):
   pass
 
 
-_predef_sections = [
-  'options',
-  'static-apache',
-  'test-scripts',
-  'bdb-test-scripts',
-  'swig-dirs',
-  ]
-
-def _filter_sections(t):
-  """Sort list of section names and remove predefined sections"""
-  t = t[:]
-  for s in _predef_sections:
-    if s in t:
-      t.remove(s)
-  t.sort()
-  return t
-
 # Path Handling Functions
 #
 # Build paths specified in build.conf are assumed to be always separated
@@ -854,96 +827,78 @@ def _collect_paths(pats, path=None):
 
   return result
 
-def _find_includes(fname, include_deps):
-  """Return list of files in include_deps included by fname"""
-  hdrs = _scan_for_includes(fname, include_deps.keys())
-  return _include_closure(hdrs, include_deps).keys()
 
-def _create_include_deps(includes, prev_deps={}):
-  """Find files included by a list of files
+class IncludeDependencyInfo:
+  """Finds all dependencies between a named set of headers, and computes
+  closure, so that individual C files can then be scanned, and the stored
+  dependency data used to return all directly and indirectly referenced
+  headers.
+
+  This class works exclusively in native-style paths.
   
-  includes (sequence of strings) is a list of files which should
-    be scanned for includes
+  Note: Has the requirement that the basenames of all headers under
+  consideration are unique. This is currently the case for Subversion, and
+  it allows the code to be quite a bit simpler."""
+
+  def __init__(self, filenames):
+    """Scan all files in FILENAMES, which should be a sequence of paths to
+    all header files that this IncludeDependencyInfo instance should
+    consider as interesting when following and reporting dependencies - i.e.
+    all the Subversion header files, no system header files."""
     
-  prev_deps (dictionary) is an optional parameter which may contain
-    the return value of a previous call to _create_include_deps. All
-    data inside will be included in the return value of the current
-    call.
-    
-  Return value is a dictionary with one entry for each file that
-    was scanned (in addition the entries from prev_deps). The key
-    for an entry is the short file name of the file that was scanned
-    and the value is a 2-tuple containing the long file name and a
-    dictionary of files included by that file.
-  """
-  
-  shorts = map(os.path.basename, includes)
+    basenames = map(os.path.basename, filenames)
 
-  # limit intra-header dependencies to just these headers, and what we
-  # may have found before
-  limit = shorts + prev_deps.keys()
+    # This data structure is:
+    # { 'basename.h': ('full/path/to/basename.h', { 'depbase1.h': None, } ) }
+    self._deps = {}
+    for fname in filenames:
+      bname = os.path.basename(fname)
+      self._deps[bname] = (fname, self._scan_for_includes(fname, basenames))
 
-  deps = prev_deps.copy()
-  for inc in includes:
-    short = os.path.basename(inc)
-    deps[short] = (inc, _scan_for_includes(inc, limit))
-
-  # keep recomputing closures until we see no more changes
-  while 1:
-    changes = 0
-    for short in shorts:
-      old = deps[short]
-      deps[short] = (old[0], _include_closure(old[1], deps))
+    # Keep recomputing closures until we see no more changes
+    while 1:
+      changes = 0
+      for bname in basenames:
+        changes = self._include_closure(self._deps[bname][1]) or changes
       if not changes:
-        ok = old[1].keys()
-        ok.sort()
-        nk = deps[short][1].keys()
-        nk.sort()
-        changes = ok != nk
-    if not changes:
-      return deps
+        return
 
-def _include_closure(hdrs, deps):
-  """Update a set of dependencies with dependencies of dependencies
-  
-  hdrs (dictionary) is a set of dependencies. It is a dictionary with
-    filenames as keys and None as values
+  def query(self, fname):
+    """Scan the C file FNAME, and return the full paths of each include file
+    that is a direct or indirect dependency."""
+    hdrs = self._scan_for_includes(fname, self._deps.keys())
+    self._include_closure(hdrs)
+    filenames = map(lambda x, self=self: self._deps[x][0], hdrs.keys())
+    filenames.sort() # Be independent of hash ordering
+    return filenames
+
+  def _include_closure(self, hdrs):
+    """Mutate the passed dictionary HDRS, by performing a single pass
+    through the listed headers, adding the headers on which the first group
+    of headers depend, if not already present.
     
-  deps (dictionary) is a big catalog of dependencies in the format
-    returned by _create_include_deps.
-    
-  Return value is a copy of the hdrs dictionary updated with new
-    entries for files that the existing entries include, according
-    to the information in deps.
-  """
+    Return a boolean indicating whether any changes were made."""
+    keys = hdrs.keys()
+    for h in keys:
+      hdrs.update(self._deps[h][1])
+    return (len(keys) != len(hdrs))
 
-  new = hdrs.copy()
-  for h in hdrs.keys():
-    new.update(deps[h][1])
-  return new
+  _re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
+  def _scan_for_includes(self, fname, limit):
+    """Scan C source file FNAME and return the basenames of any headers
+    which are directly included, and listed in LIMIT.
 
-_re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
-def _scan_for_includes(fname, limit):
-  """Find headers directly included by a C source file.
-  
-  fname (string) is the name of the file to scan
-  
-  limit (sequence or dictionary) is a collection of file names
-    which may be included. Included files which aren't found
-    in this collection will be ignored.
-  
-  Return value is a dictionary with included file names as keys and
-  None as values.
-  """
-  # note: we don't worry about duplicates in the return list
-  hdrs = { }
-  for line in fileinput.input(fname):
-    match = _re_include.match(line)
-    if match:
-      h = native_path(match.group(1))
-      if h in limit:
-        hdrs[h] = None
-  return hdrs
+    Return a dictionary with included file basenames as keys and None as
+    values."""
+    hdrs = { }
+    for line in fileinput.input(fname):
+      match = self._re_include.match(line)
+      if match:
+        h = os.path.basename(native_path(match.group(1)))
+        if h in limit:
+          hdrs[h] = None
+    return hdrs
+
 
 def _sorted_files(graph, area):
   "Given a list of targets, sort them based on their dependencies."
