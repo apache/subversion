@@ -2051,7 +2051,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (href)
           ap_fprintf(output, bb, " path=\"%s\"",
                      apr_xml_quote_string(resource->pool,
-                                          ap_escape_uri(resource->pool, href),
+                                          href,
                                           1));
         ap_fputs(output, bb, ">\n");
       }
