@@ -174,6 +174,17 @@ do_test_num (const char *progname,
               msg ? msg : "(test did not provide name)");
     }
 
+  if (msg)
+    {
+      int len = strlen (msg);
+      if (len > 50)
+        printf ("WARNING: Test docstring exceeds 50 characters\n");
+      if (msg[len - 1] == '.')
+        printf ("WARNING: Test docstring ends in a period (.)\n");
+      if (apr_isupper(msg[0]))
+        printf ("WARNING: Test docstring is capitalized\n");
+    }
+    
   /* Fail on unexpected result -- FAIL or XPASS. */
   skip_cleanup = ((err != SVN_NO_ERROR) != (xfail != 0));
   return skip_cleanup;

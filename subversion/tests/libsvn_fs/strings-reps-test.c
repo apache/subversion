@@ -92,7 +92,7 @@ write_new_rep (const char **msg,
   const char *rep = "((fulltext 0 ) a83t2Z0q)";
   svn_fs_t *fs;
 
-  *msg = "Write a new rep, get a new key back.";
+  *msg = "write a new rep, get a new key back";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -128,7 +128,7 @@ write_rep (const char **msg,
   const char *rep = "((fulltext 0 ) kfogel31337)";
   svn_fs_t *fs;
 
-  *msg = "Write a new rep, then overwrite it.";
+  *msg = "write a new rep, then overwrite it";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -204,7 +204,7 @@ read_rep (const char **msg,
         *p = '\0';
   }
 
-  *msg = "Write and overwrite a new rep; confirm with reads.";
+  *msg = "write and overwrite a new rep; confirm with reads";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -287,7 +287,7 @@ delete_rep (const char **msg,
   svn_fs_t *fs;
   svn_error_t *err;
 
-  *msg = "Write, then delete, a new rep; confirm deletion.";
+  *msg = "write, then delete, a new rep; confirm deletion";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -515,7 +515,7 @@ test_strings (const char **msg,
   svn_fs_t *fs;
   svn_stringbuf_t *string;
 
-  *msg = "Test many strings table functions together.";
+  *msg = "test many strings table functions together";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -617,7 +617,7 @@ write_null_string (const char **msg,
   struct string_args args;
   svn_fs_t *fs;
 
-  *msg = "Write a null string.";
+  *msg = "write a null string";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -644,7 +644,7 @@ abort_string (const char **msg,
   struct string_args args, args2;
   svn_fs_t *fs;
 
-  *msg = "Write a string, then abort during an overwrite.";
+  *msg = "write a string, then abort during an overwrite";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -690,7 +690,7 @@ abort_string (const char **msg,
                              &args2, pool);
     if ((! err) || (err->apr_err != SVN_ERR_TEST_FAILED))
       return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                               "failed to intentionally abort a trail.");
+                               "failed to intentionally abort a trail");
   }
   
   /* Verify that record's size and contents are still that of string1 */
@@ -709,7 +709,7 @@ copy_string (const char **msg,
   svn_fs_t *fs;
   const char *old_key;
 
-  *msg = "Create and copy a string";
+  *msg = "create and copy a string";
 
   if (msg_only)
     return SVN_NO_ERROR;

@@ -120,7 +120,7 @@ test_time_invariant (const char **msg,
   const char *timestring;
   apr_time_t timestamp;
 
-  *msg = "test svn_time_to_cstring and svn_time_from_cstring invariant";
+  *msg = "test svn_time_[to/from]_cstring() invariant";
 
   if (msg_only)
     return SVN_NO_ERROR;

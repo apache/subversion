@@ -365,7 +365,7 @@ node_tree_delete_under_copy (const char **msg,
   svn_repos_node_t *tree;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  *msg = "test that deletions under copies don't irk the node_tree code";
+  *msg = "test deletions under copies in node_tree code";
 
   if (msg_only)
     return SVN_NO_ERROR;
