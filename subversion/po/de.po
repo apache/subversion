@@ -18,6 +18,7 @@
 # conflicted   konfliktbehaftet
 # default      Vorgabe / Standard
 # drop         verwerfen
+# external     externer Verweis
 # hook         Aktion
 # item         Objekt
 # label        Marke / Markierung
@@ -70,8 +71,8 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2004-12-20 11:17+0100\n"
-"Last-Translator: Lübbe Onken <l.onken@rac.de>\n"
+"PO-Revision-Date: 2004-12-22 10:32+0100\n"
+"Last-Translator: subversion developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1245,8 +1246,8 @@ msgstr ""
 "      'I' Ignored    - ignoriert\n"
 "      'M' Modified   - verändert\n"
 "      'R' Replaced   - ersetzt\n"
-"      'X' Objekt ist nicht versioniert, wird aber von einer 'svn:externals'\n"
-"          Definition verwendet\n"
+"      'X' Objekt ist nicht versioniert, wird aber von einem 'svn:externals'\n"
+"          Verweis verwendet\n"
 "      '?' Objekt ist nicht unter Versionskontrolle\n"
 "      '!' Objekt fehlt (durch nicht-svn Befehl entfernt) oder unvollständig\n"
 "      '~' versioniertes Objekt von einem Objekt anderer Art behindert\n"
@@ -1487,12 +1488,12 @@ msgid ""
 "Fetching external item into '%s'\n"
 msgstr ""
 "\n"
-"Hole externes Objekt nach '%s'\n"
+"Hole externen Verweis nach '%s'\n"
 
 #: clients/cmdline/notify.c:217
 #, c-format
 msgid "Exported external at revision %ld.\n"
-msgstr "Externes Objekt exportiert, Revision %ld.\n"
+msgstr "Externer Verweis exportiert, Revision %ld.\n"
 
 #: clients/cmdline/notify.c:218
 #, c-format
@@ -1502,7 +1503,7 @@ msgstr "Exportiert, Revision %ld.\n"
 #: clients/cmdline/notify.c:226
 #, c-format
 msgid "Checked out external at revision %ld.\n"
-msgstr "Externes Objekt ausgecheckt, Revision %ld.\n"
+msgstr "Externer Verweis ausgecheckt, Revision %ld.\n"
 
 #: clients/cmdline/notify.c:227
 #, c-format
@@ -1512,7 +1513,7 @@ msgstr "Ausgecheckt, Revision %ld.\n"
 #: clients/cmdline/notify.c:237
 #, c-format
 msgid "Updated external to revision %ld.\n"
-msgstr "Externes Objekt aktualisiert zu Revision %ld.\n"
+msgstr "Externer Verweis aktualisiert zu Revision %ld.\n"
 
 #: clients/cmdline/notify.c:238
 #, c-format
@@ -1522,7 +1523,7 @@ msgstr "Aktualisiert zu Revision %ld.\n"
 #: clients/cmdline/notify.c:246
 #, c-format
 msgid "External at revision %ld.\n"
-msgstr "Externes Objekt, Revision %ld.\n"
+msgstr "Externer Verweis, Revision %ld.\n"
 
 #: clients/cmdline/notify.c:247
 #, c-format
@@ -1531,15 +1532,15 @@ msgstr "Revision %ld.\n"
 
 #: clients/cmdline/notify.c:259
 msgid "External export complete.\n"
-msgstr "Externes Objekt vollständig exportiert.\n"
+msgstr "Export des externen Verweises abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:260
 msgid "Export complete.\n"
-msgstr "Export vollständig.\n"
+msgstr "Export abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:267
 msgid "External checkout complete.\n"
-msgstr "Externes Objekt vollständig ausgecheckt.\n"
+msgstr "Auschecken des externen Verweises abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:268
 msgid "Checkout complete.\n"
@@ -1547,7 +1548,7 @@ msgstr "Auschecken abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:275
 msgid "External update complete.\n"
-msgstr "Externes Objekt vollständig aktualisiert.\n"
+msgstr "Aktualisierung des externen Verweises abgeschlossen.\n"
 
 #: clients/cmdline/notify.c:276
 msgid "Update complete.\n"
@@ -1560,7 +1561,7 @@ msgid ""
 "Performing status on external item at '%s'\n"
 msgstr ""
 "\n"
-"Hole Status des externen Objekts in '%s'\n"
+"Hole Status des externen Verweises in '%s'\n"
 
 #: clients/cmdline/notify.c:300
 #, c-format
@@ -3138,40 +3139,40 @@ msgstr "Unbekannter Revisionstyp für '%s' angefragt"
 #: libsvn_delta/svndiff.c:350
 #, c-format
 msgid "Invalid diff stream: insn %d cannot be decoded"
-msgstr ""
+msgstr "Ungültiger Diff-Strom: insn %d kann nicht dekodiert werden"
 
 #: libsvn_delta/svndiff.c:354
 #, c-format
 msgid "Invalid diff stream: insn %d has non-positive length"
-msgstr ""
+msgstr "Ungültiger Diff-Strom: insn %d hat negative Länge"
 
 #: libsvn_delta/svndiff.c:358
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
-msgstr ""
+msgstr "Ungültiger Diff-Strom: insn %d läuft in die Zielansicht über"
 
 #: libsvn_delta/svndiff.c:367
 #, c-format
 msgid "Invalid diff stream: [src] insn %d overflows the source view"
-msgstr ""
+msgstr "Ungültiger Diff-Strom: [Quelle] insn %d läuft in die Quellansicht über"
 
 #: libsvn_delta/svndiff.c:374
 #, c-format
 msgid "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
-msgstr ""
+msgstr "Ungültiger Diff-Strom: [Ziel] insn %d startet hinter der Zielposition"
 
 #: libsvn_delta/svndiff.c:381
 #, c-format
 msgid "Invalid diff stream: [new] insn %d overflows the new data section"
-msgstr ""
+msgstr "Ungültiger Diff-Strom: [Neu] insn %d läuft in die neue Datensektion über"
 
 #: libsvn_delta/svndiff.c:391
 msgid "Delta does not fill the target window"
-msgstr ""
+msgstr "Delta füllt das Zielfenster nicht"
 
 #: libsvn_delta/svndiff.c:394
 msgid "Delta does not contain enough new data"
-msgstr ""
+msgstr "Delta enthält nicht genügend neue Daten"
 
 #: libsvn_delta/svndiff.c:471
 msgid "Svndiff has invalid header"
@@ -4032,7 +4033,7 @@ msgstr "Unbekannter Status '%s' in Antwort auf Befehl"
 #: libsvn_repos/commit.c:117
 #, c-format
 msgid "Out of date: '%s' in transaction '%s'"
-msgstr ""
+msgstr "Veraltet: '%s' in Transaktion '%s'"
 
 #: libsvn_repos/commit.c:224
 #: libsvn_repos/commit.c:356
@@ -4123,7 +4124,7 @@ msgstr "Kann leere Standardausgabe für Aktion '%s' nicht anlegen"
 
 #: libsvn_repos/hooks.c:84
 msgid "Error closing write end of stderr pipe"
-msgstr ""
+msgstr "Fehler beim Schließen des Schreib-Endes der Standardfehlerausgabe"
 
 #: libsvn_repos/hooks.c:90
 #, c-format
@@ -4145,7 +4146,7 @@ msgstr ""
 
 #: libsvn_repos/hooks.c:120
 msgid "Error closing null file"
-msgstr ""
+msgstr "Fehler beim Schließen der leeren Standardausgabe"
 
 #: libsvn_repos/hooks.c:202
 #, c-format
@@ -4164,19 +4165,19 @@ msgstr ""
 #: libsvn_repos/load.c:155
 #: libsvn_repos/load.c:167
 msgid "Found malformed header block in dumpfile stream"
-msgstr "Fehlerhaften Kopf im Datenstrom des Dateiabzugs gefunden"
+msgstr "Fehlerhaften Datenkopf im Dateiabzug gefunden"
 
 #: libsvn_repos/load.c:185
 msgid "Premature end of content data in dumpstream"
-msgstr ""
+msgstr "Vorzeitiges Ende der Daten im Dateiabzug"
 
 #: libsvn_repos/load.c:192
 msgid "Dumpstream data appears to be malformed"
-msgstr ""
+msgstr "Daten des Dateiabzugs scheinen fehlerhaft zu sein"
 
 #: libsvn_repos/load.c:227
 msgid "Incomplete or unterminated property block"
-msgstr ""
+msgstr "Eigenschaftsblock ist unvollständig oder nicht terminiert"
 
 #: libsvn_repos/load.c:420
 msgid "Unexpected EOF writing contents"
@@ -4194,7 +4195,7 @@ msgstr "Dateiabzug Version %d wird nicht unterstützt"
 
 #: libsvn_repos/load.c:595
 msgid "Unrecognized record type in stream"
-msgstr ""
+msgstr "Unerkannter Eintrag im Datenstrom"
 
 #: libsvn_repos/load.c:821
 #, c-format
@@ -4208,12 +4209,12 @@ msgstr "Relative Quellrevision %ld ist im aktuellen Projektarchiv nicht verfügb
 
 #: libsvn_repos/load.c:915
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
-msgstr ""
+msgstr "Fehlerhafter Dateiabzug: Revision 0 darf keine Knoteneinträge enthalten"
 
 #: libsvn_repos/load.c:959
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
-msgstr ""
+msgstr "Unerkannte Knotenaktion auf Knoten '%s'"
 
 #: libsvn_repos/load.c:1148
 #, c-format
@@ -4275,7 +4276,7 @@ msgstr "'%s' existiert und ist nicht leer"
 
 #: libsvn_repos/repos.c:172
 msgid "Creating db logs lock file"
-msgstr ""
+msgstr "Erzeuge Sperrdatei für Datenbanklogs"
 
 #: libsvn_repos/repos.c:197
 msgid "Creating db lock file"
@@ -4283,11 +4284,11 @@ msgstr "Erzeuge Datenbank-Sperrdatei"
 
 #: libsvn_repos/repos.c:207
 msgid "Creating lock dir"
-msgstr ""
+msgstr "Erzeuge Verzeichnis für Datenbanksperren"
 
 #: libsvn_repos/repos.c:223
 msgid "Creating hook directory"
-msgstr "Lege Verzeichnis für Aktion an"
+msgstr "Lege Verzeichnis für Aktionen an"
 
 #: libsvn_repos/repos.c:324
 msgid "Creating start-commit hook"
@@ -4315,11 +4316,11 @@ msgstr "Erzeuge Konfigurationsverzeichnis"
 
 #: libsvn_repos/repos.c:848
 msgid "Creating svnserve.conf file"
-msgstr ""
+msgstr "Erzeuge 'svnserve.conf' Datei"
 
 #: libsvn_repos/repos.c:873
 msgid "Creating passwd file"
-msgstr ""
+msgstr "Erzeuge 'passwd' Datei"
 
 #: libsvn_repos/repos.c:899
 msgid "Could not create top-level directory"
@@ -4327,7 +4328,7 @@ msgstr "Konnte oberstes Verzeichnis nicht erzeugen"
 
 #: libsvn_repos/repos.c:903
 msgid "Creating DAV sandbox dir"
-msgstr ""
+msgstr "Erzeuge Verzeichnis für DAV Sandkasten"
 
 #: libsvn_repos/repos.c:946
 msgid "Creating readme file"
@@ -4340,7 +4341,7 @@ msgstr "Anlegen des Projektarchivs fehlgeschlagen"
 #: libsvn_repos/repos.c:1039
 #, c-format
 msgid "Expected version '%d' of repository; found version '%d'"
-msgstr "Erwartete Version '%d' des Projekarchivs; Gefunden Version '%d'"
+msgstr "Erwartete Version '%d' des Projekarchivs; Version '%d' gefunden"
 
 #: libsvn_repos/repos.c:1084
 msgid "Error opening db lockfile"
@@ -4376,8 +4377,9 @@ msgid "Config error: invalid integer value '%s'"
 msgstr "Konfigurationsfehler: Ungülige Ganzzahl '%s'"
 
 #: libsvn_subr/config_auth.c:94
+#, fuzzy
 msgid "Unable to open auth file for reading"
-msgstr ""
+msgstr "Kann 'Auth' Datei nicht zum Lesen öffnen"
 
 #: libsvn_subr/config_auth.c:99
 #, c-format
@@ -4391,8 +4393,9 @@ msgid "Unable to locate auth file"
 msgstr "Kann 'Auth' Datei nicht finden"
 
 #: libsvn_subr/config_auth.c:134
+#, fuzzy
 msgid "Unable to open auth file for writing"
-msgstr ""
+msgstr "Kann 'Auth' Datei nicht zum Schreiben öffnen"
 
 #: libsvn_subr/config_auth.c:137
 #, c-format
@@ -4411,7 +4414,7 @@ msgstr "Kann Konfigurationsdatei '%s' nicht öffnen"
 
 #: libsvn_subr/date.c:204
 msgid "Can't manipulate current date"
-msgstr ""
+msgstr "Kann das aktuelle Datum nicht manipulieren"
 
 #: libsvn_subr/date.c:274
 #: libsvn_subr/date.c:282
@@ -4420,11 +4423,11 @@ msgstr "Kann die das angeforderte Datum nicht berechnen"
 
 #: libsvn_subr/date.c:277
 msgid "Can't expand time"
-msgstr ""
+msgstr "Kann Zeitangabe nicht expandieren"
 
 #: libsvn_subr/error.c:292
 msgid "Can't recode error string from APR"
-msgstr "Kann Fehlemeldung von APR nicht umkodieren"
+msgstr "Kann Fehlermeldung von APR nicht umkodieren"
 
 #: libsvn_subr/io.c:127
 #, c-format
@@ -4852,7 +4855,7 @@ msgstr "Geben Sie '%s help' für weitere Hilfe ein.\n"
 #: libsvn_subr/path.c:1064
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
-msgstr ""
+msgstr "Konnte den absoluten Pfad von '%s' nicht ermitteln"
 
 #: libsvn_subr/path.c:1103
 #, c-format
@@ -4861,7 +4864,7 @@ msgstr "'%s' ist weder ein Datei- noch ein Verzeichnisname"
 
 #: libsvn_subr/path.c:1209
 msgid "Can't determine the native path encoding"
-msgstr ""
+msgstr "Kann die natürliche Pfadkodiernung nicht ermitteln"
 
 #: libsvn_subr/subst.c:985
 #: libsvn_wc/props.c:980
@@ -4871,12 +4874,12 @@ msgstr "Datei '%s' hat inkonsistente Zeilenenden"
 
 #: libsvn_subr/utf.c:147
 msgid "Can't lock charset translation mutex"
-msgstr ""
+msgstr "Kann das Semaphor zur Zeichensatzkonvertierung nicht sperren"
 
 #: libsvn_subr/utf.c:165
 #: libsvn_subr/utf.c:215
 msgid "Can't unlock charset translation mutex"
-msgstr ""
+msgstr "Kann das Semaphor zur Zeichensatzkonvertierung nicht freigeben"
 
 #: libsvn_subr/utf.c:228
 #, c-format
@@ -4886,7 +4889,7 @@ msgstr "Kann keinen Konverter von '%s' nach '%s' erzeugen"
 #: libsvn_subr/utf.c:229
 #: libsvn_subr/utf.c:230
 msgid "native"
-msgstr ""
+msgstr "natürlich"
 
 #. Can't use svn_error_wrap_apr here because it calls functions in
 #: libsvn_subr/utf.c:361
@@ -5567,8 +5570,8 @@ msgid ""
 "     actual:  %s\n"
 msgstr ""
 "Prüfsummenfehler ist Anzeichen für beschädigte Textbasis: '%s'\n"
-"     erwartet:  %s\n"
-"  tatsächlich:  %s\n"
+"      erwartet:  %s\n"
+"   tatsächlich:  %s\n"
 
 #: libsvn_wc/translate.c:124
 #, c-format
@@ -5737,7 +5740,7 @@ msgid ""
 "                             use by another process"
 msgstr ""
 "warte anstatt abzubrechen, wenn das Projektarchiv\n"
-"durch einen anderen Prozess belegt ist"
+"                             durch einen anderen Prozess belegt ist"
 
 #: svnadmin/main.c:283
 msgid ""
@@ -5911,7 +5914,7 @@ msgstr ""
 "hängenden Aktionen (pre-revprop-change, post-revprop-change) nicht auszulösen\n"
 "(z.B. falls Sie keine E-Mail Benachrichtigung durch Ihre 'post-revprop-change'\n"
 "Aktion auslösen wollen oder die Änderung von Revisionseigenschaften in der\n"
-"'pre-revprop-change' Aktion nicht gestattet wird)\n"
+"'pre-revprop-change' Aktion nicht gestattet wird).\n"
 "ACHTUNG: Revisionseigenschaften werden nicht versioniert. Dieser Befehl\n"
 "überschreibt also die vorherige Log-Meldung endgültig.\n"
 
@@ -6566,7 +6569,6 @@ msgid "Can't bind server socket: %s\n"
 msgstr "Kann Server-Sockel nicht binden: %s\n"
 
 #: svnversion/main.c:125
-#, fuzzy
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
@@ -6596,7 +6598,8 @@ msgid ""
 msgstr ""
 "Aufruf: svnversion [OPTIONEN] AK_PFAD [ANGEH_URL]\n"
 "\n"
-"  Erzeuge eine kompakte 'Versionsnummer' für den Pfad AK_PFAD der\n"
+"  Erzeuge eine kompakte 'Versionsnummer' für den AK_PFAD der Arbeitskopie.\n"
+"  ANGEH_URL \n"
 
 #: svnversion/main.c:198
 msgid "do not output the trailing newline"
