@@ -335,7 +335,7 @@ A  tools/svnbook.el
 A  tools/dtd
 A  tools/dtd/dblite.dtd
 &hellip;
-Checked out revision 3678.
+Checked out revision 2499.
 </screen>
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
@@ -550,8 +550,9 @@ Updated to revision 2.
           <listitem>
             <para>File <filename>foo</filename> received new changes
               from the repository, but your local copy of the file had
-              your modifications.  The changes did not intersect,
-              however, so Subversion has
+              your modifications.  Either the changes did not intersect,
+              or the changes were exactly the same as your local
+              modifications, so Subversion has successfully
               mer<computeroutput>G</computeroutput>ed the repository's
               changes into the file without a problem.</para>
           </listitem>
@@ -583,9 +584,9 @@ Updated to revision 2.
         that you will use here are <command>svn add</command>,
         <command>svn delete</command>, <command>svn copy</command>,
         and <command>svn move</command>.  However, if you are merely
-        editing a file (or files) that is already in Subversion, you
-        may not need to use any of these commands until you commit.
-        Changes you can make to your working copy:</para>
+        editing files that are already in Subversion, you may not need
+        to use any of these commands until you commit.  Changes you can
+        make to your working copy:</para>
       
       <variablelist>
         
@@ -799,9 +800,11 @@ $ svn status
   L    abc.c               # svn has a lock in its .svn directory for abc.c
 M      bar.c               # the content in bar.c has local modifications
  M     baz.c               # baz.c has property but no content modifications
+X      3rd_party           # this dir is part of an externals definition
 ?      foo.o               # svn doesn't manage foo.o
 !      some_dir            # svn manages this, but it's either missing or incomplete
 ~      qux                 # versioned as dir, but is file, or vice versa
+I      .screenrc           # this file is ignored
 A  +   moved_dir           # added with history of where it came from
 M  +   moved_dir/README    # added with history and has local modifications
 D      stuff/fish.c        # this file is scheduled for deletion
@@ -833,7 +836,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>C     file</computeroutput></term>
             <listitem>
-              <para><filename>file_or_dir</filename> is in a state of
+              <para>The file <filename>file</filename> is in a state of
                 conflict.  That is, changes received from the server
                 during an update overlap with local changes that you
                 have in your working copy.  You must resolve this
@@ -854,7 +857,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>M      file</computeroutput></term>
             <listitem>
-              <para>The contents of file <filename>file</filename> have
+              <para>The contents of the file <filename>file</filename> have
                 been modified.</para>
             </listitem>
           </varlistentry>
@@ -912,6 +915,19 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
                 and created a directory in its place, without using the
                 <command>svn delete</command> or <command>svn add</command>
                 commands.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><computeroutput>I      file_or_dir</computeroutput></term>
+            <listitem>
+              <para>Subversion is <quote>ignoring</quote> the file or
+                directory <filename>file_or_dir</filename>, probably
+                because you told it to.  For more information on ignored
+                files, see <xref linkend="svn-ch-7-sect-2.3.3"/>.
+                Note that this symbol only shows up if you pass the
+                <option>--no-ignore</option> option to <command>svn
+                status</command>.</para>
             </listitem>
           </varlistentry>
 
@@ -1825,7 +1841,7 @@ $
         <para>As we've seen, invoking <command>svn diff</command> with
           no switches will compare your working files to the cached
           <quote>pristine</quote> copies in
-          the<filename>.svn</filename> area:</para>
+          the <filename>.svn</filename> area:</para>
         
         <screen>
 $ svn diff
@@ -2087,6 +2103,11 @@ bar.c
 foo.c
 subdir/
 </screen>
+
+      <para>Note that after the import is finished, the original tree
+        is <emphasis>not</emphasis> converted into a working copy.  To
+        start working, you still need to <command>svn
+        checkout</command> a fresh working copy of the tree.</para>
 
     </sect2>
 

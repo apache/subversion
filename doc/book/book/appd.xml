@@ -18,7 +18,7 @@
   </simplesect>
 
   <!-- ******************************************************************* -->
-  <!-- *** SECTION 1:  REPOSITORY CONVERTERS                           *** -->
+  <!-- *** SECTION 1:  CLIENTS AND PLUGINS                             *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ap-d-sect-1">
     <title>Clients and Plugins</title>
@@ -49,7 +49,7 @@
         <term>RapidSVN (<systemitem
           class="url">http://rapidsvn.tigris.org/</systemitem>)</term>
         <listitem><para>Cross-platform Subversion GUI, based on the
-          WxPython libaries</para></listitem>
+          WxPython libraries</para></listitem>
       </varlistentry>
 
       <varlistentry>
@@ -162,6 +162,12 @@
         <term>cvs2svn (<systemitem
           class="url">http://cvs2svn.tigris.org/</systemitem>)</term>
        <listitem><para>CVS-to-Subversion conversion</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>vss2svn (<systemitem
+          class="url">http://vss2svn.tigris.org/</systemitem>)</term>
+       <listitem><para>Microsoft SourceSafe to Subversion conversion</para></listitem>
       </varlistentry>
 
       <varlistentry>

@@ -77,7 +77,7 @@
         <varlistentry>
           <term>Properties</term>
           <listitem>
-            <para>This is same idea present in
+            <para>This is the same idea present in
               Subversion&mdash;metadata attached to files and
               collections.  A client can list or retrieve properties
               attached to a resource with the new
@@ -162,7 +162,7 @@
             <literal>CHECKOUT</literal>, <literal>PUT</literal>,
             <literal>CHECKIN</literal>.  After each
             <literal>CHECKIN</literal>, a new VR is created, and
-            edited VCR's contents now <quote>point to</quote> the
+            the edited VCR's contents now <quote>point to</quote> the
             latest VR.  Each VCR has also has a <quote>history</quote>
             resource which tracks and orders its various VR
             states.</para>
@@ -309,13 +309,12 @@
               Send a custom <literal>REPORT</literal> request that
               describes the mixed-revision (and mixed-url) state of
               the working copy.  The server sends a custom response
-              that describes which items need updating.  The client
-              loops over the response, performing
-              <literal>GET</literal> and <literal>PROPFIND</literal>
-              requests as needed.  For updates and switches, install
-              the new data in the working copy.  For diff and merge
-              commands, compare the data to the working copy, possibly
-              applying changes as local modifications.
+              that describes which items need updating and includes
+              binary deltas of file contents.  Parses the response.
+              For updates and switches, install the new data in the
+              working copy.  For diff and merge commands, compare the
+              data to the working copy, possibly applying changes as
+              local modifications.
             </para>
           </listitem>
         </varlistentry>
@@ -490,20 +489,33 @@
         Network Places.</para>
 
       <para>Most write operations work fine against an autoversioning
-        mod_dav_svn server, but there are few problems:</para>
+        mod_dav_svn server, but there are a few problems:</para>
 
       <itemizedlist>
 
         <listitem>
-          <para>If the computer is a member of an NT Domain, then it
-            seems to be unable to connect to the WebDAV share.  It
-            repeatedly asks for a name and password, even when the
+          <para>If a Windows XP computer is a member of an NT Domain,
+            then it seems to be unable to connect to the WebDAV share.
+            It repeatedly asks for a name and password, even when the
             Apache server isn't issuing an authentication challenge!
-            Some have speculated that this might happen because
-            WebFolders is specifically designed to operate against
-            Microsoft's SharePoint DAV server.  If the machine isn't
-            part of an NT Domain, then the share is mounted without a
-            problem.  This mystery is not yet solved.</para>
+            If the machine isn't part of an NT Domain, then the share
+            is mounted without a problem.</para>
+            
+          <para>This problem seems to stem from changes in the way
+            Windows XP creates WebFolder shortcuts (
+            <filename>.lnk</filename> files).  It sometimes replaces
+            the URL of the WebDAV share with a Windows
+            <quote>UNC</quote> (Universal Naming Convention) path
+            instead.  This causes Explorer to attempt a connection
+            using SMB instead of HTTP.</para>
+            
+          <para>A workaround for this problem is to create the
+            <filename>.lnk</filename> shortcut on a Windows 2000
+            computer and then copy this shortcut to the Windows XP
+            computer.  It would probably also be possible to
+            <quote>fix</quote> the shortcut using a HEX editor, if
+            one were to reverse-engineer the <filename>.lnk</filename>
+            file format.</para>
         </listitem>
 
         <listitem>

@@ -39,7 +39,7 @@
     
     <para>Apache is an extremely popular webserver; using the
       <command>mod_dav_svn</command> module, Apache can access a
-      repository and make it available to clients via WebDAV/DeltaV
+      repository and make it available to clients via the WebDAV/DeltaV
       protocol, which is an extension of HTTP.  In the other corner is
       <command>svnserve</command>: a small, standalone server
       program that speaks a custom protocol with clients.  Table 6-1
@@ -429,7 +429,7 @@ svn stream tcp nowait svnowner /usr/local/bin/svnserve svnserve -i
 </screen>
 
       <para>Make sure <quote>svnowner</quote> is a user which has
-        appopriate permissions to access your repositories.  Now, when
+        appropriate permissions to access your repositories.  Now, when
         a client connection comes into your server on port 3690,
         <command>inetd</command> will spawn an
         <command>svnserve</command> process to service it.  </para>
@@ -559,11 +559,12 @@ $ svn checkout svn://host.example.com/project1
       <para>At the time of writing, the server only knows how to send
         a CRAM-MD5 <footnote><para>See RFC 2195.</para></footnote>
         authentication challenge.  In essence, the server sends a bit
-        of data to the client.  The client uses its password to
-        encrypt the data with the MD5 hash algorithm, and sends it
-        back.  The server performs the same computation with the
-        stored password to verify that the result is identical.  At no
-        point does the actual password travel over the network.</para>
+        of data to the client.  The client uses the MD5 hash algorithm
+        to create a fingerprint of the data and password combined,
+        then sends the fingerprint as a response.  The server performs
+        the same computation with the stored password to verify that
+        the result is identical.  <emphasis>At no point does the
+        actual password travel over the network.</emphasis></para>
 
       <para>It's also possible, of course, for the client to be
         externally authenticated via a tunnel agent, such as
@@ -720,15 +721,15 @@ baz
 
       <para>What's happening here is that the Subversion client is
         invoking a local <command>ssh</command> process, connecting to
-        <literal>host.example.com</literal>, authenticating as user
+        <literal>host.example.com</literal>, authenticating as the user
         <literal>harry</literal>, then spawning a private
         <command>svnserve</command> process on the remote machine,
-        running as user <literal>harry</literal>.  The
+        running as the user <literal>harry</literal>.  The
         <command>svnserve</command> command is being invoked in tunnel
         mode (<option>-t</option>) and all network protocol is being
         <quote>tunneled</quote> over the encrypted connection by
         <command>ssh</command>, the tunnel-agent.
-        <command>svnserve</command> is aware that it's running as user
+        <command>svnserve</command> is aware that it's running as the user
         <literal>harry</literal>, and if the client performs a commit,
         the authenticated username will be attributed as the author of
         the new revision.</para>
@@ -800,6 +801,18 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         variable&mdash;$JOESSH would be executed instead of
         <filename>/opt/alternate/ssh -p 29934</filename>.</para>
 
+      <para>A final note: when using <literal>svn+ssh://</literal>
+        URLs to access a repository, remember that it's the
+        <command>ssh</command> program prompting you for
+        authentication, and <emphasis>not</emphasis> the
+        <command>svn</command> program.  That means there's no
+        automatic password caching going on (see <xref
+        linkend="svn-ch-6-sect-2.2"/>).  If you want to prevent
+        <command>ssh</command> from repeatedly asking for your
+        password, you'll need to use a separate memory-caching tool
+        like <command>ssh-agent</command> on a Unix-like system, or
+        <command>pageant</command> on Windows.</para>
+
     </sect2>
 
   </sect1>
@@ -819,12 +832,12 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       extension to HTTP 1.1 (see <systemitem
       class="url">http://www.webdav.org/</systemitem> for more
       information.) This protocol takes the ubiquitous HTTP protocol
-      that is core of the World Wide Web, and adds
+      that is the core of the World Wide Web, and adds
       writing&mdash;specifically, versioned
       writing&mdash;capabilities.  The result is a standardized,
       robust system that is conveniently packaged as part of the
       Apache 2.0 software, is supported by numerous operating systems
-      and third-party products, and which doesn't require network
+      and third-party products, and doesn't require network
       administrators to open up yet another custom port.
       <footnote>
         <para>They really hate doing that.</para>
@@ -1022,7 +1035,7 @@ LoadModule dav_svn_module     modules/mod_dav_svn.so
       <para>Be sure that when you define your new
         <literal>Location</literal>, it doesn't overlap with other
         exported Locations.  For example, if your main
-        <literal>DocumentRoot</literal> to <filename>/www</filename>,
+        <literal>DocumentRoot</literal> is <filename>/www</filename>,
         do not export a Subversion repository in <literal>&lt;Location
         /www/repos&gt;</literal>.  If a request comes in for the URI
         <filename>/www/repos/foo.c</filename>, Apache won't know
@@ -1125,7 +1138,7 @@ ServerName svn.example.com
       <sect3 id="svn-ch-6-sect-4.3.1">
         <title>Basic HTTP Authentication</title>
         
-        <para>The easiest way to authenticate an client is via the
+        <para>The easiest way to authenticate a client is via the
           HTTP Basic authentication mechanism, which simply uses a
           username and password to verify that a user is who she says
           she is.  Apache provides an <command>htpasswd</command>
@@ -1381,6 +1394,13 @@ ssl-client-cert-password = somepassword
     <sect2 id="svn-ch-6-sect-4.4">
       <title>Authorization Options</title>
 
+      <para>At this point, you've configured authentication, but not
+        authorization.  Apache is able to challenge clients and
+        confirm identities, but it has not been told how to allow or
+        restrict access to the clients bearing those identities.  This
+        section describes two strategies for controlling access to
+        your repositories.</para>
+
       <sect3 id="svn-ch-6-sect-4.4.1">
         <title>Blanket Access Control</title>
 
@@ -1393,7 +1413,7 @@ ssl-client-cert-password = somepassword
           to your <literal>&lt;Location&gt;</literal> block.  Using
           our previous example, this would mean that only clients that
           claimed to be either <literal>harry</literal> or
-          <literal>sally</literal>, and which provided the correct
+          <literal>sally</literal>, and provided the correct
           password for their respective username, would be allowed to
           do anything with the Subversion repository:</para>
     
@@ -1596,7 +1616,7 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
 
         <para>The syntax of the access file is the same familiar one
           used by <command>svnserve.conf</command> and the runtime
-          configuration files.  Lines that start with hash
+          configuration files.  Lines that start with a hash
           (<literal>#</literal>) are ignored.  In its simplest form,
           each section names a repository and path within it, and the
           authenticated usernames are the option names within each
@@ -1625,14 +1645,14 @@ harry = rw
 sally = r
 </screen>
 
-        <para>In this first example, user <literal>harry</literal> has
+        <para>In this first example, the user <literal>harry</literal> has
           full read and write access on the
           <filename>/branches/calc/bug-142</filename> directory in the
-          <literal>calc</literal> repository, but user
+          <literal>calc</literal> repository, but the user
           <literal>sally</literal> has read-only access.  Any other
           users are blocked from accessing this directory.</para>
 
-        <para>Of course, permissions <quote>inherit</quote> from
+        <para>Of course, permissions are inherited from
           parent to child directory.  That means that we can specify a
           subdirectory with a different access policy for
           Sally:</para>
@@ -1670,6 +1690,14 @@ harry =
           access at all to the <filename>secret</filename>
           subdirectory within it.</para>
 
+        <para>The thing to remember is that the most specific path
+          always matches first.  The <command>mod_authz_svn</command>
+          module tries to match the path itself, and then the parent
+          of the path, then the parent of that, and so on.  The net
+          effect is that mentioning a specific path in the accessfile
+          will always override any permissions inherited from parent
+          directories.</para>
+
         <para>By default, nobody has any access to the repository at
           all.  That means that if you're starting with an empty file,
           you'll probably want to give at least read permission to all
@@ -1687,7 +1715,7 @@ harry =
           all repositories world readable to all users, whether you're
           using <literal>SVNPath</literal> or
           <literal>SVNParentPath</literal>.  Once all users have
-          read-access to the repositor(ies), you can give explicit
+          read-access to the repositories, you can give explicit
           <literal>rw</literal> permission to certain users on specific
           subdirectories within specific repositories.</para>
 
@@ -1714,7 +1742,7 @@ everyone = harry, sally, joe, frank, sally, jane
 </screen>
 
         <para>Groups can be granted access control just like users.
-          Distinguish them with an ampersane (<literal>@</literal>)
+          Distinguish them with an <quote>at</quote> (<literal>@</literal>)
           prefix:</para>
 
         <screen>
@@ -1734,6 +1762,10 @@ jane = r
 
     <sect2 id="svn-ch-6-sect-4.5">
       <title>Extra Goodies</title>
+
+      <para>We've covered most of the authentication and authorization
+        options for Apache and mod_dav_svn.  But there are a few other
+        nice features that Apache provides.</para>
 
       <sect3 id="svn-ch-6-sect-4.5.1">
         <title>Repository Browsing</title>
@@ -1986,7 +2018,7 @@ umask 002
       <para>It can be quite tricky to get a bunch of users with
         existing SSH accounts to share a repository without
         permissions problems.  If you're confused about all the things
-        that you (as an admininstrator) need to do on a Unix-like
+        that you (as an administrator) need to do on a Unix-like
         system, here's a quick checklist that resummarizes some of
         things discussed in this section:</para>
 
@@ -2005,7 +2037,10 @@ umask 002
             it lives in <literal>$PATH</literal>) is actually a
             wrapper script which sets <command>umask 002</command> and
             executes the real <command>svnserve</command>
-            binary.</para>
+            binary.  Take similar measures when using
+            <command>svnlook</command> and
+            <command>svnadmin</command>.  Either run them with a sane
+            umask, or wrap them as described above.</para>
         </listitem>
 
         <listitem>

@@ -293,7 +293,7 @@
         added dimension to the Subversion filesystem universe.</para>
 
       <figure id="svn-ch-8-dia-2">
-        <title>Revisioning time&mdash;the third dimension!</title>
+        <title>Versioning time&mdash;the third dimension!</title>
         <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
@@ -321,8 +321,8 @@
         code when certain actions take place.  These scripts are
         useful for notification, authorization, or whatever purposes
         the repository administrator desires.  This type of
-        functionality, and other utility provided by the repository
-        library, is not strictly related to implementing a versioning
+        functionality, and other utilities provided by the repository
+        library, are not strictly related to implementing a versioning
         filesystem, which is why it was placed into its own
         library.</para>
       
@@ -336,7 +336,7 @@
         repository layer because they have hooks associated with them.
         In the future, other events may be wrapped by the repository
         API.  All of the remaining filesystem interaction will
-        continue to occur directly with libsvn_fs API, though.</para>
+        continue to occur directly via the libsvn_fs API, though.</para>
 
       <para>For example, here is a code segment that illustrates the
         use of both the repository and filesystem interfaces to create
@@ -537,7 +537,7 @@ The following repository access (RA) modules are available:
 
         <para>The libsvn_ra_dav library is designed for use by clients
           that are being run on different machines than the servers
-          with which they communicating, specifically machines reached
+          with which they communicating, specifically servers reached
           using URLs that contain the <literal>http:</literal> or
           <literal>https:</literal> protocol portions.  To understand
           how this module works, we should first mention a couple of
@@ -615,8 +615,8 @@ The following repository access (RA) modules are available:
           communications with the Apache server (whose own mod_ssl can
           <quote>speak the language</quote>).  Also, both Neon itself
           and Apache's mod_deflate can understand the
-          <quote>deflate</quote> algorithm (the same used by the PKZIP
-          and gzip programs), so requests can be sent in smaller,
+          <quote>deflate</quote> algorithm (the same one used by the
+          PKZIP and gzip programs), so requests can be sent in smaller,
           compressed chunks across the wire.  Other complex features
           that Subversion hopes to support in the future include the
           ability to automatically handle server-specified redirects
@@ -672,8 +672,8 @@ The following repository access (RA) modules are available:
           repository and filesystem libraries, so no network
           communication is required at all.</para>
 
-        <para>Subversion requires the server name included as part of
-          the <literal>file:</literal> URL be either
+        <para>Subversion requires that the server name included as part
+          of the <literal>file:</literal> URL be either
           <literal>localhost</literal> or empty, and that there be no
           port specification.  In other words, your URLs should look
           like either
@@ -728,7 +728,7 @@ The following repository access (RA) modules are available:
         accomplish this, the library stores administrative information
         about each working copy directory within a special
         subdirectory.  This subdirectory, named
-        <filename>.svn</filename> is present in each working copy
+        <filename>.svn</filename>, is present in each working copy
         directory and contains various other files and directories
         which record state and provide a private workspace for
         administrative action.  For those familiar with CVS, this
@@ -822,8 +822,8 @@ The following repository access (RA) modules are available:
       underscore (<literal>__</literal>).  Functions that are private
       to a given source file have no special prefixing, and are declared
       <literal>static</literal>.  Of course, a compiler isn't
-      interested in these naming conventions, but they definitely help
-      to clarify the scope of a given function or datatype.</para>
+      interested in these naming conventions, but they help to clarify
+      the scope of a given function or datatype.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-8-sect-2.1">
@@ -837,7 +837,7 @@ The following repository access (RA) modules are available:
         attempt to separate the OS-specific bits from the
         OS-independent portions of the code.  The result was a library
         that provides a generic API for performing operations that
-        differ mildly&mdash;or wildly&mdash;from OS to OS.  While
+        differ mildly&mdash;or wildly&mdash;from OS to OS.  While the
         Apache HTTP Server was obviously the first user of the APR
         library, the Subversion developers immediately recognized the
         value of using APR as well.  This means that there are
@@ -856,11 +856,11 @@ The following repository access (RA) modules are available:
         datatypes, such as dynamic arrays and hash tables.  Subversion
         uses these types extensively throughout the codebase.  But
         perhaps the most pervasive APR datatype, found in nearly every
-        Subversion API prototype, is the apr_pool_t&mdash;the APR
-        memory pool.  Subversion uses pools internally for all its
-        memory allocation needs (unless an external library requires a
-        different memory management schema for data passed through its
-        API),
+        Subversion API prototype, is the
+        <literal>apr_pool_t</literal>&mdash;the APR memory pool.
+        Subversion uses pools internally for all its memory allocation
+        needs (unless an external library requires a different memory
+        management schema for data passed through its API),
         <footnote>
           <para>Neon and Berkeley DB are examples of such libraries.</para>
         </footnote>
@@ -938,7 +938,7 @@ The following repository access (RA) modules are available:
         often that flexibility comes at the cost of performance.  That
         is why using a tightly-optimized, C-based interface and
         library suite, combined with a powerful, flexible binding
-        language is so appealing.</para>
+        language, is so appealing.</para>
 
       <para>Let's look at an example that uses Subversion's Python
         SWIG bindings.  Our example will do the same thing as our last
@@ -988,13 +988,12 @@ def crawl_filesystem_dir (root, directory, pool):
         stretch on quite a bit longer.  The same routine in C would
         need to pay close attention to memory usage, and need to use
         custom datatypes for representing the hash of entries and the
-        list of paths.  Python has hashes and lists (called
-        <quote>dictionaries</quote> and <quote>sequences</quote>,
-        respectively) as built-in datatypes, and provides a wonderful
-        selection of methods for operating on those types.  And since
-        Python uses reference counting and garbage collection, users
-        of the language don't have to bother themselves with
-        allocating and freeing memory.</para>
+        list of paths.  Python has hashes (called
+        <quote>dictionaries</quote>) and lists as built-in datatypes,
+        and provides a wonderful selection of methods for operating on
+        those types.  And since Python uses reference counting and
+        garbage collection, users of the language don't have to bother
+        themselves with allocating and freeing memory.</para>
 
       <para>In the previous section of this chapter, we mentioned the
         <filename>libsvn_client</filename> interface, and how it
@@ -1042,7 +1041,7 @@ if __name__ == '__main__':
         the SWIG interface files properly configured, generation of
         the specific wrappers for all the supported SWIG languages
         (which currently includes versions of C#, Guile, Java,
-        Mzscheme, OCaml, Perl, PHP, Python, Ruby, and Tcl) should
+        MzScheme, OCaml, Perl, PHP, Python, Ruby, and Tcl) should
         theoretically be trivial.  Still, some extra programming is
         required to compensate for complex APIs that SWIG needs some
         help generalizing.  For more information on SWIG itself, see
@@ -1644,7 +1643,7 @@ A  build.conf
 
       <para>In the best-case scenario, you will have actually added
         appropriate tests to that test suite which verify that your
-        proposed changes actually work as expected.  In fact,
+        proposed changes work as expected.  In fact,
         sometimes the best contribution a person can make is solely
         the addition of new tests.  You can write regression tests for
         functionality that currently works in Subversion as a way to

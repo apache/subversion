@@ -93,7 +93,7 @@
     <para>As before, assume that Sally and you both have working
       copies of the <quote>calc</quote> project.  Specifically, you
       each have a working copy of <filename>/calc/trunk</filename>.
-      All the files for the project are in this subdirectory (rather
+      All the files for the project are in this subdirectory rather
       than in <filename>/calc</filename> itself, because your team has
       decided that <filename>/calc/trunk</filename> is where the
       <quote>main line</quote> of development is going to take
@@ -180,13 +180,13 @@ Checked out revision 340.
 
 <screen>
 $ cd bigwc
-$ svn copy trunk/ branches/my-calc-branch
+$ svn copy trunk branches/my-calc-branch
 $ svn status
 A  +   branches/my-calc-branch
 </screen>
 
       <para>In this case, the <command>svn copy</command> command
-        recursively copies the <filename>trunk/</filename> working
+        recursively copies the <filename>trunk</filename> working
         directory to a new working directory,
         <filename>branches/my-calc-branch</filename>.  As you can see
         from the <command>svn status</command> command, the new
@@ -646,7 +646,7 @@ done
       <para>A word of warning: while <command>svn diff</command> and
         <command>svn merge</command> are very similar in concept, they
         do have different syntax in many cases.  Be sure to read about
-        them in Chapter 8 for details, or ask <command>svn
+        them in Chapter 9 for details, or ask <command>svn
         help</command>.  For example, <command>svn merge</command>
         requires a working-copy path as a target, i.e. a place where
         it should apply the tree-changes.  If the target isn't
@@ -1435,7 +1435,8 @@ Committed revision 351.
 </screen>
 
       <para>This example assumes that a
-        <filename>/calc/tags</filename> directory already exists.
+        <filename>/calc/tags</filename> directory already exists.  (If it
+        doesn't, see <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
         After the copy completes, the new
         <filename>release-1.0</filename> directory is forever a
         snapshot of how the project looked in the
@@ -1507,7 +1508,7 @@ Committed revision 351.
 
 <screen>
 $ ls
-./    ../   my-working-copy/
+my-working-copy/
 
 $ svn copy my-working-copy http://svn.example.com/repos/calc/tags/mytag
 

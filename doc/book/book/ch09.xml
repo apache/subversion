@@ -481,7 +481,7 @@ $ svn log -r 1729:{2002-02-17}
     <sect2 id="svn-ch-9-sect-1.2">
       <title><command>svn</command> Subcommands</title>
 
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-add">
         <refnamediv>
           <refname>svn add</refname>
           <refpurpose>Add files and directories.</refpurpose>
@@ -509,6 +509,11 @@ $ svn log -r 1729:{2002-02-17}
         <refsect1>
           <title>Changes</title>
           <para>Working Copy</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Accesses Repository</title>
+          <para>No</para>
         </refsect1>
         
         <refsect1>
@@ -557,7 +562,7 @@ A         otherdir
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-blame">
         <refnamediv>
           <refname>svn blame</refname>
           <refpurpose>Show author and revision information in-line
@@ -619,7 +624,7 @@ $ svn blame http://svn.red-bean.com/repos/test/readme.txt
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-cat">
         <refnamediv>
           <refname>svn cat</refname>
           <refpurpose>Output the contents of the specified files or
@@ -698,7 +703,7 @@ Latest revision fresh from the repository!
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-checkout">
         <refnamediv>
           <refname>svn checkout</refname>
           <refpurpose>Check out a working copy from a repository.</refpurpose>
@@ -828,7 +833,7 @@ Updated to revision 3.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-cleanup">
         <refnamediv>
           <refname>svn cleanup</refname>
           <refpurpose>Recursively clean up the working copy.</refpurpose>
@@ -901,7 +906,7 @@ $ svn cleanup /path/to/working-copy
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-commit">
         <refnamediv>
           <refname>svn commit</refname>
           <refpurpose>Send changes from your working copy to the repository.</refpurpose>
@@ -1027,7 +1032,7 @@ Committed revision 7.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-copy">
         <refnamediv>
           <refname>svn copy</refname>
           <refpurpose>Copy a file or directory in a working copy or
@@ -1195,9 +1200,9 @@ Committed revision 13.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-delete">
         <refnamediv>
-          <refname>svn delete </refname>
+          <refname>svn delete</refname>
           <refpurpose>Delete an item from a working copy
             or the repository.</refpurpose>
         </refnamediv>
@@ -1301,7 +1306,7 @@ D         over-there
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-diff">
         <refnamediv>
           <refname>svn diff</refname>
           <refpurpose>Display the differences between two paths.</refpurpose>
@@ -1548,7 +1553,7 @@ Index: COMMITTERS
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-export">
         <refnamediv>
           <refname>svn export</refname>
           <refpurpose>Export a clean directory tree.</refpurpose>
@@ -1634,7 +1639,7 @@ Exported revision 15.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-help">
         <refnamediv>
           <refname>svn help</refname>
           <refpurpose>Help!</refpurpose>
@@ -1676,7 +1681,7 @@ Exported revision 15.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-import">
         <refnamediv>
           <refname>svn import</refname>
           <refpurpose>Recursively commit a copy of PATH to URL.</refpurpose>
@@ -1760,12 +1765,17 @@ Adding         myproj/sample.txt
 Transmitting file data .........
 Committed revision 19.
 </screen>
+
+          <para>After importing data, note that the original tree is
+            <emphasis>not</emphasis> under version control.  To start
+            working, you still need to <command>svn checkout</command>
+            a fresh working copy of the tree.</para>
           
         </refsect1>
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-info">
         <refnamediv>
           <refname>svn info</refname>
           <refpurpose>Print information about PATHs.</refpurpose>
@@ -1861,7 +1871,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-list">
         <refnamediv>
           <refname>svn list</refname>
           <refpurpose>List directory entries in the repository.</refpurpose>
@@ -1959,7 +1969,7 @@ $ svn list --verbose file:///tmp/repos
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-log">
         <refnamediv>
           <refname>svn log</refname>
           <refpurpose>Display commit log messages.</refpurpose>
@@ -2059,7 +2069,7 @@ r17 | sally | 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003) | 2 lines
           <screen>
 $ svn log foo.c
 ------------------------------------------------------------------------
-r32 | sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
+r32 | sally | 2003-01-13 00:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
 
 Added defines.
 ------------------------------------------------------------------------
@@ -2073,7 +2083,7 @@ r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
           <screen>
 $ svn log http://svn.red-bean.com/repos/test/foo.c
 ------------------------------------------------------------------------
-r32 | sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
+r32 | sally | 2003-01-13 00:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
 
 Added defines.
 ------------------------------------------------------------------------
@@ -2088,7 +2098,7 @@ r28 | sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
           <screen>
 $ svn log http://svn.red-bean.com/repos/test/ foo.c bar.c
 ------------------------------------------------------------------------
-r32 | sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
+r32 | sally | 2003-01-13 00:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
 
 Added defines.
 ------------------------------------------------------------------------
@@ -2205,7 +2215,7 @@ Made a change.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-merge">
         <refnamediv>
           <refname>svn merge</refname>
           <refpurpose>Apply the differences between two sources to a
@@ -2319,7 +2329,7 @@ U  thhgttg.txt
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-mkdir">
         <refnamediv>
           <refname>svn mkdir</refname>
           <refpurpose>Create a new directory under version control.</refpurpose>
@@ -2399,7 +2409,7 @@ Committed revision 26.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-move">
         <refnamediv>
           <refname>svn move</refname>
           <refpurpose>Move a file or directory.</refpurpose>
@@ -2507,7 +2517,7 @@ Committed revision 27.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-propdel">
         <refnamediv>
           <refname>svn propdel</refname>
           <refpurpose>Remove a property from an item.</refpurpose>
@@ -2522,7 +2532,7 @@ Committed revision 27.
 
           <para>This removes properties from files, directories, or
             revisions.  The first form removes versioned properties
-            in working copy, while the second removes unversioned
+            in your working copy, while the second removes unversioned
             remote properties on a repository revision.</para>
         </refsect1>
 
@@ -2579,7 +2589,7 @@ property 'release-date' deleted from repository revision '26'
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-propedit">
         <refnamediv>
           <refname>svn propedit</refname>
           <refpurpose>Edit the property of one or more items under
@@ -2649,7 +2659,7 @@ Set new value for property 'svn:keywords' on 'foo.c'
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-propget">
         <refnamediv>
           <refname>svn propget</refname>
           <refpurpose>Print the value of a property.</refpurpose>
@@ -2726,7 +2736,7 @@ Began journal.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-proplist">
         <refnamediv>
           <refname>svn proplist</refname>
           <refpurpose>List all properties.</refpurpose>
@@ -2741,7 +2751,7 @@ Began journal.
 
           <para>List all properties on files, directories, or
             revisions.  The first form lists versioned properties in
-            working copy, while the second lists unversioned remote
+            your working copy, while the second lists unversioned remote
             properties on a repository revision.</para>
         </refsect1>
 
@@ -2807,7 +2817,7 @@ Properties on 'foo.c':
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-propset">
         <refnamediv>
           <refname>svn propset</refname>
           <refpurpose>Set PROPNAME to PROPVAL on files, directories, or revisions.</refpurpose>
@@ -2938,7 +2948,7 @@ property 'owner-pic' set on 'moo.c'
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-resolved">
         <refnamediv>
           <refname>svn resolved</refname>
           <refpurpose>Remove <quote>conflicted</quote> state on
@@ -3022,7 +3032,7 @@ foo.c.r31
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-revert">
         <refnamediv>
           <refname>svn revert</refname>
           <refpurpose>Undo all local edits.</refpurpose>
@@ -3120,7 +3130,7 @@ $ svn status
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-status">
         <refnamediv>
           <refname>svn status</refname>
           <refpurpose>Print the status of working copy files and directories.</refpurpose>
@@ -3183,6 +3193,13 @@ $ svn status
               <listitem>
                 <para>Item is in conflict with updates received from
                 the repository.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>'X'</term>
+              <listitem>
+                <para>Item is related to an externals definition.</para>
               </listitem>
             </varlistentry>
 
@@ -3303,7 +3320,7 @@ $ svn status
             <varlistentry>
               <term>' '</term>
               <listitem>
-                <para>Item is child of its parent directory.</para>
+                <para>Item is a child of its parent directory.</para>
               </listitem>
             </varlistentry>
             
@@ -3443,7 +3460,7 @@ Head revision:   981
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-switch">
         <refnamediv>
           <refname>svn switch</refname>
           <refpurpose>Update working copy to a different URL.</refpurpose>
@@ -3532,11 +3549,21 @@ Updated to revision 31.
               copy.</para>
           </tip>
 
-          <para>If the location of your repository changes and you
-             have an existing working copy that you'd like to continue
-             to use, you can use <command>svn switch
-             --relocate</command> to change your working copy from one
-             URL to another:</para>
+          <para>Sometimes an administrator might change the "base
+             location" of your repository &mdash; in other words,
+             the contents of the repository doesn't change, but the
+             main URL used to reach the root of the repository does.
+             For example, the hostname may change, or the URL schema,
+             or perhaps just the path which leads to the repository.
+             Rather than checkout a new working copy, you can have the
+             <command>svn switch</command> command "rewrite" the the
+             beginnings of all the URLs in your working copy.  Use the
+             <option>--relocate</option> command to do the
+             substitution.  No file contents are changed, nor is the
+             repository contacted.  It's similar to running a perl
+             script over your working copy <filename>.svn/</filename>
+             directories which runs
+             <command>s/OldRoot/NewRoot/</command>.</para>
 
           <screen>
 $ svn checkout file:///tmp/repos test
@@ -3560,7 +3587,7 @@ At revision 3.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-1.2-re-update">
         <refnamediv>
           <refname>svn update</refname>
           <refpurpose>Update your working copy.</refpurpose>
@@ -3817,7 +3844,7 @@ Updated to revision 30.
       <title><command>svnadmin</command> Subcommands</title>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-create">
         <refnamediv>
           <refname>svnadmin create</refname>
           <refpurpose>Create a new, empty repository.</refpurpose>
@@ -3859,7 +3886,7 @@ $ svnadmin create /usr/local/svn/repos
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-deltify">
         <refnamediv>
           <refname>svnadmin deltify</refname>
           <refpurpose>Deltify changed paths in a revision range.</refpurpose>
@@ -3895,7 +3922,7 @@ $ svnadmin create /usr/local/svn/repos
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-dump">
         <refnamediv>
           <refname>svnadmin dump</refname>
           <refpurpose>Dump the contents of filesystem to stdout.</refpurpose>
@@ -3959,7 +3986,7 @@ Content-length: 101
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-help">
         <refnamediv>
           <refname>svnadmin help</refname>
         </refnamediv>
@@ -3985,7 +4012,7 @@ Content-length: 101
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-hotcopy">
         <refnamediv>
           <refname>svnadmin hotcopy</refname>
           <refpurpose>Make a hot copy of a repository.</refpurpose>
@@ -4004,7 +4031,9 @@ Content-length: 101
           <literal>--clean-logs</literal> switch,
           <command>svnadmin</command> will perform a hotcopy of your
           repository, and then remove unused Berkeley DB logs from the
-          original repository.</para>
+          original repository.  You can run this command at any time and make
+          a safe copy of the repository, regardless of whether other processes
+          are using the repository.</para>
 
         </refsect1>
 
@@ -4019,7 +4048,7 @@ Content-length: 101
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-list-dblogs">
         <refnamediv>
           <refname>svnadmin list-dblogs</refname>
           <refpurpose>Ask Berkeley DB which log files exist for a given
@@ -4045,7 +4074,7 @@ Content-length: 101
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-list-unused-dblogs">
         <refnamediv>
           <refname>svnadmin list-unused-dblogs</refname>
           <refpurpose>Ask Berkeley DB which log files can be safely
@@ -4087,7 +4116,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-load">
         <refnamediv>
           <refname>svnadmin load</refname> <refpurpose>Read a
             <quote>dumpfile-formatted</quote> stream from
@@ -4145,7 +4174,7 @@ $ svnadmin load --parent-dir new/subdir/for/project /usr/local/svn/restored &lt;
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-lstxns">
         <refnamediv>
           <refname>svnadmin lstxns</refname>
           <refpurpose>Print the names of all uncommitted transactions.</refpurpose>
@@ -4179,7 +4208,7 @@ $ svnadmin lstxns /usr/local/svn/repos/
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-recover">
         <refnamediv>
           <refname>svnadmin recover</refname>
           <refpurpose>Recover any lost state in a repository.</refpurpose>
@@ -4213,7 +4242,7 @@ The latest repos revision is 34.
 
       <!-- ================================================================= -->
 
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-rmtxns">
         <refnamediv>
           <refname>svnadmin rmtxns</refname>
           <refpurpose>Delete transactions from a repository.</refpurpose>
@@ -4262,7 +4291,7 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
 
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-setlog">
         <refnamediv>
           <refname>svnadmin setlog</refname>
           <refpurpose>Set the log-message on a revision.</refpurpose>
@@ -4316,7 +4345,7 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-2.2-re-verify">
         <refnamediv>
           <refname>svnadmin verify</refname>
           <refpurpose>Verify the data stored in the repository.</refpurpose>
@@ -4378,7 +4407,7 @@ $ svnadmin verify /usr/local/svn/repos/
       
       <para>Switches in <command>svnlook</command> are global, just
         like in <command>svn</command> and
-        <command>svnadmin</command>, however, most switches only
+        <command>svnadmin</command>; however, most switches only
         apply to one subcommand since the functionality of
         <command>svnlook</command> is (intentionally) limited in
         scope.</para>
@@ -4409,7 +4438,7 @@ $ svnadmin verify /usr/local/svn/repos/
           <term><option>--transaction</option>
             (<option>-t</option>)</term>
           <listitem>
-            <para>Specify a particular transaction id that you wish to
+            <para>Specify a particular transaction ID that you wish to
               examine. </para>
           </listitem>
         </varlistentry>
@@ -4430,7 +4459,7 @@ $ svnadmin verify /usr/local/svn/repos/
     <sect2 id="svn-ch-9-sect-3.2">
       <title><command>svnlook</command></title>
 
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-author">
         <refnamediv>
           <refname>svnlook author</refname>
           <refpurpose>Print the author.</refpurpose>
@@ -4470,7 +4499,7 @@ sally
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-cat">
         <refnamediv>
           <refname>svnlook cat</refname>
           <refpurpose>Print the contents of a file.</refpurpose>
@@ -4522,7 +4551,7 @@ Contents:
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-changed">
         <refnamediv>
           <refname>svnlook changed</refname>
           <refpurpose>Print the paths that were changed.</refpurpose>
@@ -4570,7 +4599,7 @@ A   trunk/vendors/deli/pickle.txt
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-date">
         <refnamediv>
           <refname>svnlook date</refname>
           <refpurpose>Print the datestamp.</refpurpose>
@@ -4610,7 +4639,7 @@ $ svnlook date -r 40 /tmp/repos/
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-diff">
         <refnamediv>
           <refname>svnlook diff</refname>
           <refpurpose>Print differences of changed files and properties.</refpurpose>
@@ -4656,6 +4685,10 @@ Modified: trunk/vendors/deli/sandwich.txt
 @@ -0,0 +1 @@
 +Don't forget the mayo!
 
+Modified: trunk/vendors/deli/logo.jpg
+==============================================================================
+(Binary files differ)
+
 Deleted: trunk/vendors/deli/chips.txt
 ==============================================================================
 
@@ -4663,11 +4696,15 @@ Deleted: trunk/vendors/deli/pickle.txt
 ==============================================================================
 </screen>
           
+       <para>
+       If a file has a non-textual <literal>svn:mime-type</literal>
+       property, then the differences are not explicitly shown.
+       </para>
         </refsect1>
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-dirs-changed">
         <refnamediv>
           <refname>svnlook dirs-changed</refname>
           <refpurpose>Print the directories that were themselves changed.</refpurpose>
@@ -4708,9 +4745,9 @@ trunk/vendors/deli/
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-help">
         <refnamediv>
-          <refname>svnlook help </refname>
+          <refname>svnlook help</refname>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4733,7 +4770,7 @@ trunk/vendors/deli/
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-history">
         <refnamediv>
           <refname>svnlook history</refname>
           <refpurpose>Print information about the history of a path in
@@ -4793,7 +4830,7 @@ REVISION   PATH &lt;ID&gt;
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-info">
         <refnamediv>
           <refname>svnlook info</refname>
           <refpurpose>Print the author, datestamp, log message size,
@@ -4837,7 +4874,7 @@ Rearrange lunch.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-log">
         <refnamediv>
           <refname>svnlook log</refname>
           <refpurpose>Print the log message.</refpurpose>
@@ -4876,7 +4913,7 @@ Rearrange lunch.
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-propget">
         <refnamediv>
           <refname>svnlook propget</refname>
           <refpurpose>Print the raw value of a property on a path in
@@ -4911,8 +4948,8 @@ Rearrange lunch.
         <refsect1>
           <title>Examples</title>
 
-          <para>This shows the value of the file
-            <filename>/trunk/sandwich</filename> in the
+          <para>This shows the value of the <quote>seasonings</quote> property
+            on the file <filename>/trunk/sandwich</filename> in the
             <literal>HEAD</literal> revision:</para>
 
           <screen>
@@ -4924,7 +4961,7 @@ mustard
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-proplist">
         <refnamediv>
           <refname>svnlook proplist</refname>
           <refpurpose>Print the names and values of versioned file and
@@ -4983,7 +5020,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-tree">
         <refnamediv>
           <refname>svnlook tree</refname>
           <refpurpose>Print the tree.</refpurpose>
@@ -4997,7 +5034,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
 
           <para>Print the tree, starting at <replaceable>PATH_IN_REPOS</replaceable> (if
             supplied, at the root of the tree otherwise), optionally
-            showing node revision ids.</para>
+            showing node revision IDs.</para>
         </refsect1>
 
         <refsect1>
@@ -5031,7 +5068,7 @@ $ svnlook tree -r 40 /usr/local/svn/repos --show-ids
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-uuid">
         <refnamediv>
           <refname>svnlook uuid</refname>
           <refpurpose>Print the repository's
@@ -5064,7 +5101,7 @@ e7fe1b91-8cd5-0310-98dd-2f12e793c5e8
       </refentry>
 
       <!-- ================================================================= -->
-      <refentry>
+      <refentry id="svn-ch-9-sect-3.2-re-youngest">
         <refnamediv>
           <refname>svnlook youngest</refname>
           <refpurpose>Print the youngest revision number.</refpurpose>

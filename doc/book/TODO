@@ -3,6 +3,15 @@ This is a -*- text -*- file.
 
 --------------------------------------------------------------
 
+To be fixed by someone:
+
+  - When using shared working copies, a user changing the permissions
+    of a file directly (svn ps svn:executable) or indirectly
+    (i.e. through an update), must own that file.  There is no way to
+    do this automatically which does not involve possible data loss.
+
+--------------------------------------------------------------
+
 Put in best-practices doc:
 
   - (perhaps) suggest the use of environment variables to represent
@@ -13,7 +22,7 @@ Put in best-practices doc:
 --------------------------------------------------------------
 To be fixed by someone:
 
- - we seem to inconstisently assume repositories live either in
+ - we seem to inconsistently assume repositories live either in
    /usr/local/svn/ or /usr/local/repositories/ throughout the book.
    We ought to consistify.
 
@@ -23,21 +32,25 @@ To be fixed by cmpilato:
 
 ch05:
 
-   - document that if either the start-commit or pre-commit hook
-     fails, STDERR is marshalled back to the client.  (not true of
-     post-commit, see issue 443).
 
+ch07:
 
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
+ch04:
 
-appC:
+   - 'mixed tag' section.  explain how 'svn cp URL' works, that it's
+     not just a literal 'cp -R' to the repository.  mixed-rev
+     directories can create a repos tree different than you expect.
+     the mixed-tag example assumes you start with a WC all at one
+     revision, then only back/fore-date *files*, not dirs.
 
-   "Mapping Subversion to DeltaV": checkouts don't cause the client to
-   do repeated GET and PROPFIND requests.  The data is all embedded in
-   the REPORT response now.
+
+ch06:  
+
+
 
 
 -----------------------------------------------
@@ -68,13 +81,14 @@ List of 1.1 features/changes
     also show new libraries in ch01 'big picture' diagram and ch08
     library listing.
 
-  * updates no longer create fs transactions (does this need to be
-    documented?  does anyone care other than developers?)
-
   * slightly tweaked 'svn diff' syntax allows things like
     'svn diff -rX:Y URL@Z'.   Probably need to explain 'peg' objects,
     so folks can understand how/when renames are followed by certain
     commands.
+
+       --> really, we need a whole new section full of examples that
+           demonstrate syntaxes that follow history, vs. those that
+           don't.
 
   * do we need to tell people how to activate localized client
     output?  or is that just widespread knowledge?
@@ -85,3 +99,18 @@ List of 1.1 features/changes
 
   * svn export --native-eol
 
+  * In the section on "Supporting Multiple Repository Access Methods",
+    the chmod g+s command is no longer necessary for repositories
+    created with svn 1.1, since we take care of that now.
+
+  * document svn:special property, and how symlinks can be put under
+    version control.   and what (doesn't) happen on win32.
+
+  * Add a note somewhere clarifying that the command line client auto-escapes
+    URIs and supports "IRI" syntax.
+
+  * New $Revision$ alias
+
+  * New non-blocking 'svnadmin recover' lock behavior, with --wait option
+
+  * New 'SVNPathAuthz Off' directive

@@ -99,7 +99,7 @@
         program have the final word on behavior.  On Unix-like
         platforms, the system-wide configuration area is expected to be
         the <filename>/etc/subversion</filename> directory; on Windows
-        machines, it again looks for a <filename>Subversion</filename>
+        machines, it looks for a <filename>Subversion</filename>
         directory inside the common Application Data location (again,
         as specified by the Windows Registry).  Unlike the per-user
         case, the <command>svn</command> program does not attempt to
@@ -117,7 +117,7 @@
         a text editor, and modify the desired option's value.  If at
         any time you wish to have the default configuration settings
         restored, you can simply remove (or rename) your configuration
-        directory, and then run some innocuous <command>svn</command>
+        directory and then run some innocuous <command>svn</command>
         command, such as <command>svn --version</command>.  A new
         configuration directory with the default contents will be
         created.</para>
@@ -378,8 +378,9 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>ssl-authority-files</literal></term>
             <listitem>
-              <para>A semi-colon delimited list of paths to files containing
-                certificates of the certificate authorities (or CAs) that
+              <para>This is a semicolon-delimited list of paths to files
+                containing certificates of the certificate authorities
+                (or CAs) that
                 are accepted by the Subversion client when accessing the
                 repository over HTTPS.</para>
             </listitem>
@@ -395,7 +396,7 @@ collabnet = svn.collab.net
           <varlistentry>
             <term><literal>ssl-client-cert-file</literal></term>
             <listitem>
-              <para>If host (or set of hosts) requries an SSL client
+              <para>If a host (or set of hosts) requires an SSL client
                 certificate, you'll normally be prompted for a path to
                 your certificate.  By setting this variable to that
                 same path, Subversion will be able to find your client
@@ -924,7 +925,7 @@ $
           Since the properties aren't versioned, you run the risk of
           losing information if you aren't careful with your edits.
           The repository administrator can setup methods to protect
-          against this lossage, but by default, modification of
+          against this loss, and by default, modification of
           unversioned properties is disabled.</para>
 
       </sidebar>
@@ -1226,8 +1227,8 @@ $ svn status calc
 
         <para>In this example, you have made some property
           modifications to <filename>button.c</filename>, but in your
-          working copy you also have some unversioned files, in this
-          case, the latest <filename>calculator</filename> program
+          working copy you also have some unversioned files:
+          the latest <filename>calculator</filename> program
           that you've compiled from your source code, a source file
           named <filename>data.c</filename>, and a set of debugging
           output log files.  Now, you know that your build system
@@ -1324,7 +1325,7 @@ I      calc/debug_log.3.gz
           a <firstterm>keyword anchor</firstterm> at the desired
           location in the file.  This anchor is just a string of text
           formatted as
-          <literal>$</literal><replaceable>KeywordName</replaceable><literal>$</literal></para>
+          <literal>$</literal><replaceable>KeywordName</replaceable><literal>$</literal>.</para>
 
         <para>Subversion defines the list of keywords available for
           substitution.  That list contains the following five
@@ -1350,6 +1351,7 @@ I      calc/debug_log.3.gz
                 which this file changed in the repository, and looks
                 something like <literal>$LastChangedRevision: 144
                 $</literal>.  It may be abbreviated as
+                <literal>Revision</literal> or
                 <literal>Rev</literal>.</para>
             </listitem>
           </varlistentry>
@@ -1573,7 +1575,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
                 contains a file with an
                 <literal>svn:eol-style</literal> property set to
                 <literal>native</literal>, that file will contain
-                <literal>CRLF</literal> EOL markers.  A unix user
+                <literal>CRLF</literal> EOL markers.  A Unix user
                 checking out a working copy which contains the same
                 file will see <literal>LF</literal> EOL markers in his
                 copy of the file.</para>
@@ -1773,7 +1775,10 @@ Fetching external item into calc/third-party/skins
       themselves.</para>
 
     <para>The support that exists for externals definitions in
-      Subversion today can be a little misleading, though.  The
+      Subversion today can be a little misleading, though.  First, an
+      externals definition can only point to directories, not files.
+      Second, the externals definition cannot point to relative paths
+      (paths like <filename>../../skins/myskin</filename>).  Third, the
       working copies created via the externals definition support are
       still disconnected from the primary working copy (on whose
       versioned directories the <literal>svn:externals</literal>
@@ -1790,7 +1795,7 @@ Fetching external item into calc/third-party/skins
       not affect what gets checked out as an external (though the
       relative local target subdirectory will, of course, move with
       renamed directory).  This can be confusing&mdash;even
-      frustrating&mdash;in certain situtations.  For example, if you
+      frustrating&mdash;in certain situations.  For example, if you
       use externals definitions on a directory in your
       <filename>/trunk</filename> development line which point to
       other areas of that same line, and then you use <command>svn
