@@ -44,6 +44,13 @@ adm_subdir (void)
 }
 
 
+svn_string_t *
+svn_wc__adm_subdir (apr_pool_t *pool)
+{
+  return svn_string_create (adm_subdir (), pool);
+}
+
+
 /* Extend PATH to the name of something in PATH's administrative area.
  * Returns the number of path components added to PATH.
  * 
@@ -935,6 +942,36 @@ svn_wc__ensure_adm (svn_string_t *path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__adm_destroy (svn_string_t *path, apr_pool_t *pool)
+{
+#if 0
+  /* Try to lock the admin directory, hoping that this function will
+     eject an error if we're already locked (which is fine, cause if
+     it is already locked, we certainly don't want to blow it away. */
+  SVN_ERR (svn_wc__lock (path, 0, pool));
+
+  /* Well, I think the coast is clear for blowing away this directory
+     (which should also remove the lock file we created above) */
+    {
+      apr_status_t apr_err;
+      svn_string_t *adm_path = svn_string_dup (path, pool);
+
+      svn_path_add_component (adm_path, svn_wc__adm_subdir (pool), 
+                              svn_path_local_style);
+      /* Can't just call apr_dir_remove() here, because that requires
+         that the directory be empty.  todo: svn_io_tree_remove? */
+      apr_err = apr_dir_remove (adm_path->data, pool);
+      if (apr_err)
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "error removing administrative directory for %s",
+           path->data);
+    }
+#endif /* 0 */
+  return SVN_NO_ERROR;
+}
 
 
 /* 

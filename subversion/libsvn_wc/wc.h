@@ -243,6 +243,12 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_revnum_t ancestor_revision,
                                  apr_pool_t *pool);
 
+
+/* Blow away the admistrative directory associated with directory
+   PATH, make sure beforehand that it isn't locked. */
+svn_error_t *svn_wc__adm_destroy (svn_string_t *path,
+                                  apr_pool_t *pool);
+
 
 /*** The log file. ***/
 

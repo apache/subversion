@@ -32,7 +32,7 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_delete (svn_string_t *file, svn_boolean_t force, apr_pool_t *pool)
+svn_client_delete (svn_string_t *path, svn_boolean_t force, apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -40,18 +40,18 @@ svn_client_delete (svn_string_t *file, svn_boolean_t force, apr_pool_t *pool)
   /* kff todo: hmm, this seems to be file-specific, which is probably bad. */
 
   /* Mark the entry for deletion. */
-  err = svn_wc_delete_file (file, pool);
+  err = svn_wc_delete (path, pool);
   if (err)
     return err;
 
   if (force)
     {
       /* Remove the file. */
-      apr_err = apr_file_remove (file->data, pool);
+      apr_err = apr_file_remove (path->data, pool);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "svn_client_delete: error deleting %s",
-                                  file->data);
+                                  path->data);
     }
 
   return SVN_NO_ERROR;
