@@ -41,13 +41,8 @@ svn_cl__propedit (apr_getopt_t *os,
   svn_stringbuf_t *propname;
   apr_array_header_t *targets;
   int i;
-  const char *editor_cmd;
 
-  /* ### todo:  remove this once the feature is completed. */
-  return svn_error_create 
-    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool, 
-     "Property editing (via `propedit') has not been implemented.");
-
+  /* Validate the input. */
   SVN_ERR (svn_cl__parse_num_args (os, opt_state, "propedit", 1, pool));
 
   /* Get the property's name. */
@@ -59,28 +54,62 @@ svn_cl__propedit (apr_getopt_t *os,
   /* Add "." if user passed 0 file arguments */
   svn_cl__push_implicit_dot_target (targets, pool);
 
-  /* Get the EDITOR environment variable. */
-  editor_cmd = getenv ("EDITOR");
-  if (! editor_cmd)
-    return svn_error_create (SVN_ERR_MISSING_ENV_VARIABLE, 0, NULL, 
-                             pool, "EDITOR");
-
   /* For each target, edit the property PNAME. */
   for (i = 0; i < targets->nelts; i++)
     {
       apr_hash_t *props;
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      svn_string_t *propval;
+      svn_stringbuf_t *new_propval;
+      svn_stringbuf_t *base_dir = target;
+      svn_wc_entry_t *entry;
 
       /* Fetch the current property. */
       SVN_ERR (svn_client_propget (&props, propname->data, target->data,
                                    FALSE, pool));
 
-      /* ### todo: all the following: */
+      /* Get the property value. */
+      propval = apr_hash_get (props, propname->data, propname->len);
+      if (! propval)
+        propval = svn_string_create ("", pool);
 
-      /* Dump its contents to a temporary file. */
-      /* Throw the file into the EDITOR. */
-      /* Now, re-read the contents of the file... */
+      /* Split the path if it is a file path. */
+      SVN_ERR (svn_wc_entry (&entry, target, pool));
+      if (! entry)
+        return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
+                                 pool, target->data);
+      if (entry->kind == svn_node_file)
+        {
+          svn_path_split (target, &base_dir, NULL, pool);
+        }
+      
+      /* Run the editor on a temporary file which contains the
+         original property value... */
+      SVN_ERR (svn_cl__edit_externally (&new_propval,
+                                        base_dir,
+                                        propval,
+                                        pool));
+
       /* ...and re-set the property's value accordingly. */
+      if (new_propval)
+        {
+          propval->data = new_propval->data;
+          propval->len = new_propval->len;
+          SVN_ERR (svn_client_propset (propname->data,
+                                       propval,
+                                       target->data,
+                                       FALSE,
+                                       pool));
+          printf ("Set new value for property `%s' on `%s'\n",
+                  propname->data,
+                  target->data);
+        }
+      else
+        {
+          printf ("No changes to property `%s' on `%s'\n",
+                  propname->data,
+                  target->data);
+        }
     }
 
   return SVN_NO_ERROR;

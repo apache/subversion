@@ -38,53 +38,24 @@
 
 /*** Code. ***/
 
-/*
- * Prints a single status line to a given file about the given entry.
- */
-static void 
-print_short_format (apr_file_t *file,
-                    const char *path,
-                    svn_wc_status_t *status)
-{
-  char str_status[5];
-  char array[128];
-  apr_size_t size;
 
-  if (! status)
-    return;
-
-  /* Create local-mod status code block. */
-  if (status->text_status !=  svn_wc_status_unversioned)
-    {
-      /* skip locally present files that aren't versioned, they won't
-         serve any purpose in this output */
-
-      svn_cl__generate_status_codes (str_status,
-                                     status->text_status,
-                                     status->prop_status,
-                                     status->locked,
-                                     status->copied);
-
-      apr_snprintf(array, 128, "SVN:   %s   %s\n", str_status, path);
-
-      size = strlen(array);
-
-      apr_file_write(file, array, &size);
-    }
-}
-
-/*
- * Walks throught the 'nelts' of the given hash and calls the status-
- * print function for each.
- */
-void static
-print_status (apr_file_t *file,
-              apr_hash_t *statushash, 
-              apr_pool_t *pool)
+/* For each item in STATUSHASH (a hash of svn_wc_status_t * items),
+   append a short descriptive status output regarding that item to
+   *OUTSTR.  Use POOL for all allocations. */
+static void
+append_statuses (svn_stringbuf_t **outstr,
+                 apr_hash_t *statushash, 
+                 apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *statusarray;
   svn_wc_status_t *status = NULL;
+
+  if (! outstr)
+    return;
+
+  if (! *outstr)
+    *outstr = svn_stringbuf_create ("", pool);
 
   /* Convert the unordered hash to an ordered, sorted array */
   statusarray = apr_hash_sorted_keys (statushash,
@@ -95,346 +66,279 @@ print_status (apr_file_t *file,
   for (i = 0; i < statusarray->nelts; i++)
     {
       const svn_item_t *item;
+      char str_status[5];
+      char array[128];
+      const char *path;
 
-      item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
+      /* Get the item from the sorted array. */
+      item = &APR_ARRAY_IDX (statusarray, i, const svn_item_t);
       status = item->value;
+      path = item->key;
 
-      print_short_format (file, item->key, status);
+      /* Ignore unversioned things. */
+      if (status->text_status == svn_wc_status_unversioned)
+        continue;
+
+      /* Create local-mod status code block. */
+      svn_cl__generate_status_codes (str_status,
+                                     status->text_status,
+                                     status->prop_status,
+                                     status->locked,
+                                     status->copied);
+  
+      /* Write status codes out to FILE. */
+      apr_snprintf (array, 128, "SVN:   %s   %s\n", str_status, path);
+      svn_stringbuf_appendcstr (*outstr, array);
     }
 }
 
-/*
- * This function gather a status output to be used within a commit message,
- * possibly edited in your favourite $EDITOR.
- */
+
+/* Create the default log message contents, and return it in *OUTSTR.
+   Part of this involves gathering status output about TARGETS.  Use
+   POOL for all necessary allocations. */
 static svn_error_t *
-write_status_to_file(apr_pool_t *pool,
-                     apr_file_t *file,
-                     svn_client_auth_baton_t *auth_baton,
-                     svn_cl__opt_state_t *opt_state,
-                     apr_array_header_t *targets)
+init_log_contents (svn_stringbuf_t **outstr,
+                   svn_client_auth_baton_t *auth_baton,
+                   svn_cl__opt_state_t *opt_state,
+                   apr_array_header_t *targets,
+                   apr_pool_t *pool)
 {
+#define DEFAULT_MSG \
+"\n"\
+"SVN: ---------------------------------------------------------------------\n"\
+"SVN: Enter Log.  Lines beginning with 'SVN:' are removed automatically\n"\
+"SVN: \n"\
+"SVN: Current status of the target files and directories:\n"\
+"SVN: \n"
+
   apr_hash_t *statushash;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
-
   int i;
+  const char *default_msg = DEFAULT_MSG;
+
+  if (! outstr)
+    return SVN_NO_ERROR;
+
+  if (! *outstr)
+    *outstr = svn_stringbuf_create ("", pool);
+ 
+  /* Add the default message to the output. */
+  svn_stringbuf_appendcstr (*outstr, default_msg);
+
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
 
       /* Retrieve a hash of status structures with the information
-         requested by the user.
-
-         svn_client_status directly understands the three commandline
-         switches (-n, -u, -[vV]) : */
-
+         requested by the user.  svn_client_status directly
+         understands three commandline switches (-n, -u, -[vV]) : */
       SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
                                   opt_state->nonrecursive ? 0 : 1,
                                   opt_state->verbose,
                                   FALSE, /* no update */
                                   pool));
 
-      /* Now print the structures to the screen.
-         The flag we pass indicates whether to use the 'detailed'
-         output format or not. */
-      print_status (file,
-                    statushash, 
-                    pool);
+      /* Now append the structures to the output string.  */
+      append_statuses (outstr, statushash, pool);
     }
 
   return SVN_NO_ERROR;
 }
 
-/*
- * Invoke $EDITOR to get a commit message.
- */
-static svn_error_t *
-message_from_editor(apr_pool_t *pool,
-                    apr_array_header_t *targets,
-                    svn_client_auth_baton_t *auth_baton,
-                    svn_stringbuf_t *path,
-                    svn_cl__opt_state_t *opt_state,
-                    svn_stringbuf_t **messagep )
+
+
+/* Strip out lines beginning with SVN: from LOG_MSG. */
+static void
+strip_ignored_lines (svn_stringbuf_t *log_msg)
 {
-  char const *editor;
-  char *command;
-  size_t editorlen;
-  apr_file_t *tempfile;
-  apr_status_t rc;
-  const char *fullfile;
+  char *ptr = log_msg->data;
+  char *prefix;
 
-  /* default is no returned message */
-  *messagep = NULL;
-
-  /* try to get an editor to use */
-  editor = getenv ("SVN_EDITOR");
-  if(NULL == editor)
-    editor = getenv ("EDITOR");
-  if(NULL == editor)
-    editor = getenv ("VISUAL");
-
-  if(NULL == editor)
+  do
     {
-      /* no custom editor, use built-in defaults */
-#ifdef SVN_WIN32
-      editor = "notepad.exe";
-#else
-      editor = "vi";
-#endif
-    }
-
-  /* this sets up a new temporary file for us */
-  SVN_ERR (svn_wc_create_tmp_file (&tempfile,
-                                   path,
-                                   FALSE, /* do *not* delete on close */
-                                   pool));
-
-  /* we need to know the name of the temporary file */
-  apr_file_name_get (&fullfile, tempfile);
-
-  editorlen = strlen (editor);
-
-  command = (char *)malloc (editorlen + strlen(fullfile) + 2);
-
-#define DEFAULT_MSG \
-"\nSVN: ----------------------------------------------------------------------\n" \
-"SVN: Enter Log.  Lines beginning with 'SVN:' are removed automatically\n" \
-"SVN: \n" \
-"SVN: Current status of the target files and directories:\n"\
-"SVN: \n"
-
-  if (command)
-    {
-      apr_finfo_t finfo_before;
-      apr_finfo_t finfo_after;
-      apr_size_t size, written;
-
-      size = strlen (DEFAULT_MSG);
-
-      rc = apr_file_write_full (tempfile, DEFAULT_MSG, size, &written);
-
-      write_status_to_file (pool, tempfile, auth_baton, opt_state, targets);
-
-      apr_file_close (tempfile);
-
-      /* we didn't manage to write the complete file, we can't fulfill
-         what we're set out to do, get out */
-      /* ### FIXME: The documentation for apr_file_full_write()
-         doesn't explicitly promise that if size != written, then
-         there *must* be an error returned, so below we handle the two
-         cases separately.  But a glance at apr_file_full_write's 
-         implementation, on Unix at least, shows that it could
-         document that promise.  Maybe we should fix the doc in APR,
-         and just check rc below?  */
-      if (! APR_STATUS_IS_SUCCESS (rc))
+      if ((prefix = strstr (ptr, "SVN:")))
         {
-          return svn_error_createf
-            (rc, 0, NULL, pool, "Trouble writing `%s'", fullfile);
+          /* We found an instance of "SVN:" */
+
+          /* Is this instance the first bit of data in the file?  Or
+             is it preceded by a newline character? */
+          if ((prefix == log_msg->data) ||
+              ((prefix[-1] == '\n') || (prefix[-1] == '\r')))
+            {
+              /* This instance of "SVN:" is the start of a line. */
+
+              /* Find the end of this line.  ### todo: This needs a
+                 little better intelligence since a LF is not the
+                 end-of-line on every imaginable system .*/
+              char *eol = strchr (prefix, '\n');
+              size_t linelen;
+
+              if (! eol)
+                {
+                  /* This is the last line, so just hack it off. */
+                  linelen = strlen (prefix);
+                  log_msg->len -= linelen;
+                  log_msg->data[log_msg->len] = 0;
+                  break;
+                }
+
+              /* Increment EOL past the ... EOL. */
+              eol++; 
+
+              /* The line about to get removed measures from 'prefix'
+                 to 'eol'. */
+              linelen = eol - prefix;
+
+              /* Shift the remaining data "left" by the length of the
+                 line we're removing. */
+              memmove (prefix, eol,
+                       log_msg->len - (prefix - log_msg->data) - linelen);
+              log_msg->len -= linelen;
+              log_msg->data[log_msg->len] = 0;
+
+              /* Continue searching from here. */
+              ptr = prefix;
+            }
+          else
+            {
+              /* Substring found, but not on the first column of a
+                 line.  Just continue from here.  */
+              ptr = prefix + 1;
+            }
         }
-      else if (written != size)
-        {
-          /* ### FIXME: this error code may change when there is a
-             general need to revamp the client's error code system. */
-          return svn_error_createf
-            (SVN_ERR_INCOMPLETE_DATA,
-             0, NULL, pool, "Failed to completely write `%s'", fullfile);
-        }
-
-      /* Get information about the temporary file before the user has
-         been allowed to edit any message */
-      apr_stat (&finfo_before, fullfile,
-                APR_FINFO_MTIME|APR_FINFO_SIZE, pool);
-  
-      /* create the command line */
-      apr_snprintf (command, editorlen + strlen(fullfile) + 2,
-                   "%s %s", editor, fullfile);
-      /* run the editor command line */
-      system (command);
-
-      /* Get information about the message file after the assumed editing. */
-      apr_stat (&finfo_after, fullfile,
-                APR_FINFO_MTIME|APR_FINFO_SIZE, pool);
-      
-      /* Check if there seems to be any changes in the file */
-      if((finfo_before.mtime == finfo_after.mtime) &&
-         (finfo_before.size == finfo_after.size))
-        {
-          /* The file doesn't seem to have been modified, no
-             need to load it and strip it and such */
-        }
-      else {
-        apr_file_t *read_file;
-
-        /* we have a commit message in a temporary file, get it */
-        rc = apr_file_open (&read_file, fullfile,
-                            APR_READ, APR_UREAD, pool);
-
-        if(APR_SUCCESS != rc) /* open failed */
-          {
-            /* This is an annoying situation, as the file seems to have
-               been edited but we can't read it! */
-          }
-        else
-          {
-            /* read the entire file into one chunk of memory */
-            char readbuffer[1024];
-            svn_stringbuf_t *entirefile;
-            char *ptr;
-            char *prefix;
-            
-            /* create a buffer */
-            entirefile = svn_stringbuf_ncreate ("", 0, pool);
-
-            do
-              {
-                size = sizeof (readbuffer);
-                apr_file_read (read_file, readbuffer, &size);
-
-                /* append chunk to the entirefile string */
-                svn_stringbuf_appendbytes (entirefile, readbuffer, size);
-
-                if( size != sizeof (readbuffer))
-                  {
-                    /* partly filled buffer, this is the end */
-                    break; /* out of loop */
-                  }
-              }
-            while(1);
-
-            /* close the file */
-            apr_file_close (read_file);
-
-            /* a full chunk was read, now strip all the SVN: lines, but
-               nothing else */
-            ptr = entirefile->data;
-
-            do
-              {
-                prefix=strstr (ptr, "SVN:");
-
-                if(prefix)
-                  {
-                    /* substring found */
-
-                    if( (prefix == entirefile->data) ||
-                        ((prefix[-1] == '\n') || (prefix[-1] == '\r')))
-                      {
-                        /* it is on the start of a line */
-
-                        /* Figure out the end of the line. This needs a little
-                           better intelligence since a LF is not the
-                           end-of-line on every imaginable system .*/
-                        char *eol= strchr(prefix, '\n');
-                        size_t linelen;
-
-                        if(NULL == eol)
-                          {
-                            /* last line, we just make the buffer shorter,
-                               no need to move around any data */
-                            linelen = strlen(prefix);
-
-                            entirefile->len -= linelen;
-
-                            /* set a new zero terminator */
-                            entirefile->data [ entirefile->len] = 0;
-
-                            break;
-                          }
-
-                        eol++; /* eol now points to the first character
-                                  beyond */
-
-                        /* this line that is about to get cut off measures
-                           from 'prefix' to 'eol' */
-                        linelen = eol-prefix;
-
-                        /* move the rest of the chunk over this line that
-                           shouldn't be a part of the final message */
-                        memmove (prefix, eol,
-                                 entirefile->len - (prefix-entirefile->data) -
-                                 linelen);
-
-                        /* decrease total message size */
-                        entirefile->len -= linelen;
-
-                        /* set a new zero terminator */
-                        entirefile->data [ entirefile->len] = 0;
-
-                        /* continue searching from here */
-                        ptr = prefix;
-                      }
-                    else
-                      {
-                        /* substring found but not on the first column of
-                           a line, just continue from here */
-                        ptr = prefix+1;
-                      }
-                  }
-              }
-            while(prefix);
-
-            /* set the return-message to the entire-file buffer */
-            *messagep = entirefile;
-          }
-        
-      }
-
-      /* free the memory allocated for the command line here */
-      free (command);
     }
-  else
-    {
-      /* major memory problem */
-    }
-
-  /* remove the temporary file */
-  apr_file_remove (fullfile, pool);
-
-  return SVN_NO_ERROR;
-
+  while (prefix);
 }
 
-/*
- * Store the given message in a "random" file name in the given path.
- * This function also outputs this fact to stdout for users to see.
- */
+
+
+/* Write out the contents of MESSAGE to a temporary file (based on
+   PATH), and use stdout to tell the user where you wrote the data.
+   Use POOL for all allocations. */
 static svn_error_t *
-store_message(svn_stringbuf_t *message,
-              svn_stringbuf_t *path,
-              apr_pool_t *pool)
+store_message (svn_stringbuf_t *message,
+               svn_stringbuf_t *path,
+               apr_pool_t *pool)
 {
-  /* Store the message in a temporary file name and display the
-     file name to the user */
   apr_file_t *tempfile;
   apr_size_t size;
-  apr_status_t rc;
+  apr_status_t apr_err;
   const char *fullfile;
 
-  SVN_ERR (svn_wc_create_tmp_file (&tempfile,
-                                   path,
-                                   FALSE, /* do *not* delete on close */
-                                   pool));
-
-  /* we need to know the name of the temporary file */
+  /* Create a temporary file, and ask APR for its name.  */
+  SVN_ERR (svn_wc_create_tmp_file (&tempfile, path, FALSE, pool));
   apr_file_name_get (&fullfile, tempfile);
 
   size = message->len;
-  rc = apr_file_write (tempfile, message->data, &size);
+  apr_err = apr_file_write (tempfile, message->data, &size);
+  apr_file_close (tempfile);
 
-  apr_file_close(tempfile);
-
-  if (APR_SUCCESS == rc)
+  if (! apr_err)
     {
-      printf("The commit message has been stored in this location:\n%s\n",
-             fullfile);
+      printf ("The commit message has been stored in this location:\n%s\n",
+              fullfile);
     }
   else 
     {
-      /* FIX! return a proper error message here */
+      /* ### todo: Return a proper error message here. */
     }
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+query_for_log_message (svn_stringbuf_t **message,
+                       svn_boolean_t *abort_commit,
+                       svn_stringbuf_t *base_dir,
+                       svn_client_auth_baton_t *auth_baton,
+                       svn_cl__opt_state_t *opt_state,
+                       apr_array_header_t *targets,
+                       apr_pool_t *pool)
+{
+  svn_stringbuf_t *default_message = NULL;
+  svn_string_t contents;
+
+  *message = NULL;
+  *abort_commit = FALSE;
+  
+  /* Get the default message. */
+  SVN_ERR (init_log_contents (&default_message, auth_baton, opt_state, 
+                              targets, pool));
+
+  /* If we couldn't generate a default message, but no errors occured,
+     just ... um ... go with an empty message, yeah! */
+  if (! default_message)
+    default_message = svn_stringbuf_create ("", pool);
+
+  /* Convert to a regular string. */
+  contents.data = default_message->data;
+  contents.len = default_message->len;
+
+  while (! *message)
+    {
+      svn_stringbuf_t *editor_message = NULL;
+      
+      /* There was no commit message given anywhere in the command line,
+         fire up our favourite editor to get one instead! */
+
+      /* Now, edit the message. */
+      SVN_ERR (svn_cl__edit_externally (&editor_message,
+                                        base_dir,
+                                        &contents,
+                                        pool));
+
+      if (editor_message)
+        {
+          /* We did get message, now check if it is anything more than
+             just white space as we will consider white space only as
+             empty.  */
+          int len;
+
+          /* Strip off the lines we don't care about. */
+          strip_ignored_lines (editor_message);
+
+          for (len = editor_message->len; len >= 0; len--)
+            {
+              if (!apr_isspace (editor_message->data[len]))
+                break;
+            }
+
+          if (len >= 0)
+            *message = editor_message;
+        }
+
+      /* message can still be NULL here if none was entered or if an
+         error occurred */
+      if (! *message)
+        {
+          char *reply;
+          svn_cl__prompt_user (&reply,
+                               "\nLog message unchanged or not specified\n"
+                               "a)bort, c)ontinue, e)dit\n",
+                               FALSE, /* don't hide the reply */
+                               NULL, pool);
+          if (reply)
+            {
+              char letter = apr_tolower (reply[0]);
+
+              if ('a' == letter)
+                {
+                  *abort_commit = TRUE;
+                  return SVN_NO_ERROR;
+                }
+              else if ('c' == letter) 
+                break;
+
+              /* Anything else will cause a loop and have the editor
+                 restarted! */
+            }
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t *
 svn_cl__commit (apr_getopt_t *os,
@@ -452,9 +356,9 @@ svn_cl__commit (apr_getopt_t *os,
   void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_stringbuf_t *messagep=NULL;
-  svn_error_t *error;
+  svn_error_t *err;
   svn_revnum_t revnum;
+  svn_boolean_t used_editor_for_message = FALSE;
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -502,54 +406,18 @@ svn_cl__commit (apr_getopt_t *os,
   else
     trace_dir = base_dir;
 
-  while (NULL == message)
+  if (! message)
     {
-      /* There was no commit message given anywhere in the command line,
-         fire up our favourite editor to get one instead! */
-
-      /* no message given, try getting one from $EDITOR */
-      message_from_editor (pool, targets, auth_baton,
-                           base_dir, opt_state, &messagep);
-
-      if(messagep)
+      svn_boolean_t abort_commit = FALSE;
+      
+      used_editor_for_message = TRUE;
+      SVN_ERR (query_for_log_message (&message, &abort_commit,
+                                      base_dir, auth_baton, opt_state,
+                                      targets, pool));
+      if (abort_commit)
         {
-          /* We did get message, now check if it is anything more than just
-             white space as we will consider white space only as empty */
-          int len;
-
-          for (len=messagep->len; len>=0; len--)
-              if(!apr_isspace (messagep->data[len]))
-                break;
-          if (len >= 0)
-            /* there was something else besides space */
-            message = messagep;
-        }
-
-      /* message can still be NULL here if none was entered or if an
-         error occurred */
-      if(NULL == message)
-        {
-          char *reply;
-          svn_cl__prompt_user (&reply,
-                               "\nLog message unchanged or not specified\n"
-                               "a)bort, c)ontinue, e)dit\n",
-                               FALSE, /* don't hide the reply */
-                               NULL, pool);
-          if (reply)
-            {
-              char letter = apr_tolower(reply[0]);
-
-              if('a' == letter)
-                {
-                  printf("*** Commit aborted!\n");
-                  return SVN_NO_ERROR;
-                }
-              else if('c' == letter) 
-                break;
-
-              /* anything else will cause a loop and have the editor
-                 restarted! */
-            }
+          printf ("*** Commit aborted.\n");
+          return SVN_NO_ERROR;
         }
     }
 
@@ -566,28 +434,26 @@ svn_cl__commit (apr_getopt_t *os,
     revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
 
   /* Commit. */
-  error = svn_client_commit (&commit_info,
-                             NULL, NULL,
-                             opt_state->quiet ? NULL : trace_editor, 
-                             opt_state->quiet ? NULL : trace_edit_baton,
-                             auth_baton,
-                             targets,
-                             message,
-                             opt_state->xml_file,
-                             revnum,
-                             pool);
+  err = svn_client_commit (&commit_info,
+                           NULL, NULL,
+                           opt_state->quiet ? NULL : trace_editor, 
+                           opt_state->quiet ? NULL : trace_edit_baton,
+                           auth_baton,
+                           targets,
+                           message,
+                           opt_state->xml_file,
+                           revnum,
+                           pool);
 
-  if (error)
+  if (err)
     {
-      if (messagep)
-        /* An editor was used and the commit failed, we store the 
-           edited message for the user's convenience. This function in
-           itself can of course also fail which makes it troublesome! */
-        store_message(message, base_dir, pool);
-
-      return error;
+      /* If an editor was used and the commit failed, we store the
+         edited message for the user's convenience.  This function in
+         itself can of course also fail which makes it troublesome!  */
+      if ((used_editor_for_message) && (message))
+        store_message (message, base_dir, pool);
+      return err;
     }
-
 
   if (commit_info)
     svn_cl__print_commit_info (commit_info);
