@@ -516,6 +516,7 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
       /* ### assuming a baseline */
       comb->res.uri = dav_svn_build_uri(&comb->res, DAV_SVN_BUILD_URI_BASELINE,
                                         comb->priv.root.rev, NULL,
+                                        0 /* add_href */,
                                         comb->res.pool);
     }
 
@@ -1292,7 +1293,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
                            "on 'regular' resources [at this time].");
     }
 
-  /* assert: collection resource. isdir == TRUE */
+  /* assert: collection resource. isdir == TRUE. repos_path != NULL. */
 
   /* append "/" to the paths, in preparation for appending child names */
   svn_string_appendcstr(ctx->info.uri_path, "/");
@@ -1418,7 +1419,10 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   ctx.uri = svn_string_create(params->root->uri, params->pool);
 
   /* same for repos_path */
-  ctx.repos_path = svn_string_create(ctx.info.repos_path, params->pool);
+  if (ctx.info.repos_path == NULL)
+    ctx.repos_path = NULL;
+  else
+    ctx.repos_path = svn_string_create(ctx.info.repos_path, params->pool);
 
   /* if we have a collection, then ensure the URI has a trailing "/" */
   /* ### get_resource always kills the trailing slash... */
@@ -1430,7 +1434,8 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   ctx.res.uri = ctx.uri->data;
 
   /* the current resource's repos_path is stored in ctx.repos_path */
-  ctx.info.repos_path = ctx.repos_path->data;
+  if (ctx.repos_path != NULL)
+    ctx.info.repos_path = ctx.repos_path->data;
 
   /* ### is the root already/always open? need to verify */
 

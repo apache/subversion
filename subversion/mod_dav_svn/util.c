@@ -34,29 +34,32 @@ const char *dav_svn_build_uri(const dav_resource *resource,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
                               const char *path,
+                              int add_href,
                               apr_pool_t *pool)
 {
   const char *root_path = resource->info->repos->root_path;
   const char *special_uri = resource->info->repos->special_uri;
+  const char *href1 = add_href ? "<D:href>" : "";
+  const char *href2 = add_href ? "</D:href>" : "";
 
   switch (what)
     {
     case DAV_SVN_BUILD_URI_BC:
-      return apr_psprintf(pool, "%s/%s/bc/%ld/",
-                          root_path, special_uri, revision);
+      return apr_psprintf(pool, "%s%s/%s/bc/%ld/%s",
+                          href1, root_path, special_uri, revision, href2);
 
     case DAV_SVN_BUILD_URI_VERSION:
       /* path is the STABLE_ID */
-      return apr_psprintf(pool, "%s/%s/ver/%s",
-                          root_path, special_uri, path);
+      return apr_psprintf(pool, "%s%s/%s/ver/%s%s",
+                          href1, root_path, special_uri, path, href2);
 
     case DAV_SVN_BUILD_URI_BASELINE:
-      return apr_psprintf(pool, "%s/%s/bln/%ld",
-                          root_path, special_uri, revision);
+      return apr_psprintf(pool, "%s%s/%s/bln/%ld%s",
+                          href1, root_path, special_uri, revision, href2);
 
     case DAV_SVN_BUILD_URI_VCC:
-      return apr_psprintf(pool, "%s/%s/vcc/" DAV_SVN_DEFAULT_VCC_NAME,
-                          root_path, special_uri);
+      return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN_DEFAULT_VCC_NAME "%s",
+                          href1, root_path, special_uri, href2);
 
     default:
       /* programmer error somewhere */

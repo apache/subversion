@@ -241,6 +241,7 @@ const char *dav_svn_build_uri(const dav_resource *resource,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
                               const char *path,
+                              int add_href,
                               apr_pool_t *pool);
 
 
