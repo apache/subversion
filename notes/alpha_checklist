@@ -282,9 +282,9 @@ A. Fitz and gstein will do a general pool review including documenting
    removed from various structures and take a pool from the caller
    (may involve changing arguments, etc).
 
-V B. Relevant to the following message:
-         Subject: Directory versions in the wc
-         Message-Id: <200104031845.OAA06867@egyptian-gods.MIT.EDU>
+B. Relevant to the following message:
+       Subject: Directory versions in the wc
+       Message-Id: <200104031845.OAA06867@egyptian-gods.MIT.EDU>
 
    Our solution is that if you type 'svn rm foo' and then you commit
    foo and your dir itself is not up to date then the commit succeeds
