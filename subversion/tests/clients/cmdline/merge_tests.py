@@ -1620,6 +1620,117 @@ def merge_skips_obstructions(sbox):
                                        expected_skip)
 
 
+#----------------------------------------------------------------------
+# At one stage a merge that added items with the same name as missing
+# items would attempt to add the items and fail, leaving the working
+# copy locked and broken.
+
+def merge_into_missing(sbox):
+  "merge into missing must not break working copy"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = svntest.main.current_repo_url + '/A/B/F'
+  Q_path = os.path.join(F_path, 'Q')
+  foo_path = os.path.join(F_path, 'foo')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Q_path)
+  svntest.main.file_append(foo_path, "foo")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', foo_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/Q'       : Item(verb='Adding'),
+    'A/B/F/foo'     : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/Q'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  R_path = os.path.join(Q_path, 'R')
+  bar_path = os.path.join(R_path, 'bar')
+  baz_path = os.path.join(Q_path, 'baz')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', R_path)
+  svntest.main.file_append(bar_path, "bar")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', bar_path)
+  svntest.main.file_append(baz_path, "baz")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', baz_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/Q/R'     : Item(verb='Adding'),
+    'A/B/F/Q/R/bar' : Item(verb='Adding'),
+    'A/B/F/Q/baz'   : Item(verb='Adding'),
+    })
+  expected_status.add({
+    'A/B/F/Q/R'     : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/B/F/Q/R/bar' : Item(status='  ', wc_rev=3, repos_rev=3),
+    'A/B/F/Q/baz'   : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+  expected_status.tweak(repos_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  os.unlink(foo_path)
+  svntest.main.safe_rmtree(Q_path)
+
+  expected_output = wc.State(F_path, {
+    })
+  expected_disk = wc.State('', {
+    })
+  expected_status = wc.State(F_path, {
+    ''     : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=1, repos_rev=3)
+  expected_skip = wc.State(F_path, {
+    'Q'   : Item(),
+    'foo' : Item(),
+    })
+
+  ### Need to real and dry-run separately since real merge notifies Q
+  ### twice!
+  svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       0, 0, '--dry-run')
+
+  svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       0, 0)
+
+  # This merge fails when it attempts to descend into the missing
+  # directory.  That's OK, there is no real need to support merge into
+  # an incomplete working copy, so long as when it fails it doesn't
+  # break the working copy.
+  svntest.main.run_svn('Working copy not locked',
+                       'merge', '-r1:3', '--dry-run', F_url, F_path)
+
+  svntest.main.run_svn('Working copy not locked',
+                       'merge', '-r1:3', F_url, F_path)
+
+  # Check working copy is not locked.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=3)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1639,6 +1750,7 @@ test_list = [ None,
               merge_one_file,
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
+              merge_into_missing,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
