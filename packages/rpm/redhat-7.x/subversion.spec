@@ -452,8 +452,8 @@ rm -rf $RPM_BUILD_ROOT
 %config %{apache_dir}/conf/subversion.conf
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.la
-%{apache_dir}/lib/httpd/modules/mod_authz_svn.so
+%{apache_dir}/modules/mod_authz_svn.la
+%{apache_dir}/modules/mod_authz_svn.so
 
 %files python
 %defattr(-,root,root)
