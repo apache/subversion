@@ -106,6 +106,9 @@ typedef enum svn_errno_t {
   /* Something's wrong with the log file format. */
   SVN_ERR_WC_BAD_ADM_LOG,
 
+  /* Unable to get ancestry for an entry, which should never happen. */
+  SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
+
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
 
