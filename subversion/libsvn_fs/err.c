@@ -229,6 +229,19 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 }
 
 
+/* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
+svn_error_t *
+svn_fs__err_not_directory (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, fs->pool,
+     "`%s' is not a directory in filesystem `%s'",
+     path, fs->env_path);
+}
+
+
+
 
 /* 
  * local variables:
