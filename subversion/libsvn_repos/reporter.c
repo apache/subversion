@@ -121,7 +121,10 @@ static const char *get_from_path_map(apr_hash_t *hash,
   my_path = svn_stringbuf_create (path, pool);
   do 
     {
+      apr_size_t len = my_path->len;
       svn_path_remove_component (my_path);
+      if (my_path->len == len)
+        break;
       if ((repos_path = apr_hash_get (hash, my_path->data, my_path->len)))
         {
           /* we found a mapping ... but of one of PATH's parents.
