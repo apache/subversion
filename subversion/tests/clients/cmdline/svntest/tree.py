@@ -20,7 +20,7 @@ import re
 import string
 import os.path
 
-import svn_test_main
+import main
 
 
 
@@ -185,7 +185,7 @@ def get_props(path):
   # respecting the black-box paradigm.
 
   props = {}
-  output = svn_test_main.run_svn("proplist", path)
+  output = main.run_svn("proplist", path)
 
   for line in output:
     name, value = line.split(':')

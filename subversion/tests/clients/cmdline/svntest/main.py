@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  svn_test_main.py: a shared, automated test suite for Subversion
+#  main.py: a shared, automated test suite for Subversion
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -20,7 +20,7 @@
 #
 #  Write a new python script that
 #
-#     1) imports this module
+#     1) imports this 'svntest' package
 #
 #     2) contains a number of related 'test' routines.  (Each test
 #        routine should take no arguments, and return a 0 on success or
@@ -29,7 +29,7 @@
 #
 #     3) places all the tests into a list that begins with None.
 #
-#     4) calls svn_test_main.client_test() on the list.
+#     4) calls svntest.main.client_test() on the list.
 #
 #  Also, your tests will probably want to use some of the common
 #  routines in the 'Utilities' section below.
@@ -181,7 +181,7 @@ def copy_greek_tree():
 # Main functions
 
 # Func to run one test in the list.
-def run_test(n, test_list):
+def run_one_test(n, test_list):
   "Run the Nth client test in TEST_LIST, return the result."
 
   if (n < 1) or (n > len(test_list) - 1):
@@ -202,7 +202,7 @@ def run_test(n, test_list):
 # 1) No arguments: all tests are run
 # 2) Number 'n' as arg: only test n is run
 # 3) String "list" as arg: test description is displayed with number
-def client_test(test_list):
+def run_tests(test_list):
   "Main routine to run all tests in TEST_LIST."
 
   testnum = 0
@@ -219,7 +219,7 @@ def client_test(test_list):
     else:
       try:
         testnum = int(sys.argv[1])        
-        return run_test(testnum, test_list)
+        return run_one_test(testnum, test_list)
       except ValueError:
         print "warning: ignoring bogus argument"
         
@@ -227,7 +227,7 @@ def client_test(test_list):
   got_error = 0
   for n in range(len(test_list)):
     if n:
-      got_error = run_test(n, test_list)
+      got_error = run_one_test(n, test_list)
   return got_error
 
 
