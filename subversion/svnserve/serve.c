@@ -119,8 +119,12 @@ static enum access_type current_access(server_baton_t *b)
   return get_access(b, (b->user) ? AUTHENTICATED : UNAUTHENTICATED);
 }
 
+/* Send authentication mechs for ACCESS_TYPE to the client.  If NEEDS_USERNAME
+   is true, don't send anonymous mech even if that would give the desired
+   access. */
 static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                               server_baton_t *b, enum access_type required)
+                               server_baton_t *b, enum access_type required,
+                               svn_boolean_t needs_username)
 {
   if (get_access(b, UNAUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
@@ -131,32 +135,49 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+/* Set the user of B to USER.  Create an svn_fs_access_t for the user and
+   associate it with the batons filesystem. */
+static svn_error_t *
+set_user(server_baton_t *b, apr_pool_t *pool, const char *user)
+{
+  svn_fs_access_t *fs_access;
+
+  SVN_ERR(svn_fs_create_access(&fs_access, user, pool));
+  SVN_ERR(svn_fs_set_access(b->fs, fs_access));
+  b->user = user;
+
+  return SVN_NO_ERROR;
+}
+
 /* Authenticate, once the client has chosen a mechanism and possibly
  * sent an initial mechanism token.  On success, set *success to true
  * and b->user to the authenticated username (or NULL for anonymous).
  * On authentication failure, report failure to the client and set
- * *success to FALSE.  On communications failure, return an error. */
+ * *success to FALSE.  On communications failure, return an error.
+ * If NEEDS_USERNAME is TRUE, don't allow anonymous authentication. */
 static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                          const char *mech, const char *mecharg,
                          server_baton_t *b, enum access_type required,
+                         svn_boolean_t needs_username,
                          svn_boolean_t *success)
 {
+  const char *user;
   *success = FALSE;
 
   if (get_access(b, AUTHENTICATED) >= required
       && b->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
     {
-      b->user = b->tunnel_user;
-      if (*mecharg && strcmp(mecharg, b->user) != 0)
+      if (*mecharg && strcmp(mecharg, b->tunnel_user) != 0)
         return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                       "Requested username does not match");
+      SVN_ERR(set_user(b, pool, b->tunnel_user));
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
     }
 
   if (get_access(b, UNAUTHENTICATED) >= required
-      && strcmp(mech, "ANONYMOUS") == 0)
+      && strcmp(mech, "ANONYMOUS") == 0 && ! needs_username)
     {
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
       *success = TRUE;
@@ -165,7 +186,10 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   if (get_access(b, AUTHENTICATED) >= required
       && b->pwdb && strcmp(mech, "CRAM-MD5") == 0)
-    return svn_ra_svn_cram_server(conn, pool, b->pwdb, &b->user, success);
+    {
+      SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->pwdb, &user, success));
+      return set_user(b, pool, user);
+    }
 
   return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                 "Must authenticate with listed mechanism");
@@ -176,20 +200,22 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * exchange, the caller should check current_access(b) to see if
  * authentication succeeded. */
 static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 server_baton_t *b, enum access_type required)
+                                 server_baton_t *b, enum access_type required,
+                                 svn_boolean_t needs_username)
 {
   svn_boolean_t success;
   const char *mech, *mecharg;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
-  SVN_ERR(send_mechs(conn, pool, b, required));
+  SVN_ERR(send_mechs(conn, pool, b, required, needs_username));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)c)", b->realm));
   do
     {
       SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &mech, &mecharg));
       if (!*mech)
         break;
-      SVN_ERR(auth(conn, pool, mech, mecharg, b, required, &success));
+      SVN_ERR(auth(conn, pool, mech, mecharg, b, required, needs_username,
+                   &success));
     }
   while (!success);
   return SVN_NO_ERROR;
@@ -204,16 +230,22 @@ static svn_error_t *trivial_auth_request(svn_ra_svn_conn_t *conn,
   return svn_ra_svn_write_cmd_response(conn, pool, "()c", "");
 }
 
+/* Ensure that the client has write access.  If the client already has
+   write access, just send a trivial auth request.  Else, try to authenticate
+   the client.  If NEEDS_USERNAME is TRUE, only use auth mechs that will yield
+   a username.  Return an error if write access couldn't be achieved. */
 static svn_error_t *must_have_write_access(svn_ra_svn_conn_t *conn,
-                                           apr_pool_t *pool, server_baton_t *b)
+                                           apr_pool_t *pool, server_baton_t *b,
+                                           svn_boolean_t needs_username)
 {
-  if (current_access(b) == WRITE_ACCESS)
+  if (current_access(b) == WRITE_ACCESS
+      && (! needs_username || b->user))
     return trivial_auth_request(conn, pool, b);
 
   /* If we can get write access by authenticating, try that. */
   if (b->user == NULL && get_access(b, AUTHENTICATED) == WRITE_ACCESS
       && (b->tunnel_user || b->pwdb) && b->protocol_version >= 2)
-    SVN_ERR(auth_request(conn, pool, b, WRITE_ACCESS));
+    SVN_ERR(auth_request(conn, pool, b, WRITE_ACCESS, needs_username));
 
   if (current_access(b) != WRITE_ACCESS)
     return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
@@ -401,6 +433,22 @@ static svn_error_t *write_prop_diffs(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Write out a lock to the client. */
+static svn_error_t *write_lock(svn_ra_svn_conn_t *conn,
+                               apr_pool_t *pool,
+                               svn_lock_t *lock)
+{
+  const char *cdate, *edate;
+
+  cdate = svn_time_to_cstring(lock->creation_date, pool);
+  edate = lock->expiration_date
+    ? svn_time_to_cstring(lock->expiration_date, pool) : NULL;
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cccc(?c)", lock->path,
+                                 lock->token, lock->owner, cdate, edate));
+
+  return SVN_NO_ERROR;
+}
+
 static const char *kind_word(svn_node_kind_t kind)
 {
   switch (kind)
@@ -487,7 +535,7 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_string_t *value;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
-  SVN_ERR(must_have_write_access(conn, pool, b));
+  SVN_ERR(must_have_write_access(conn, pool, b, FALSE));
   SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
                                             name, value, NULL, NULL, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -550,7 +598,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t new_rev;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &log_msg));
-  SVN_ERR(must_have_write_access(conn, pool, b));
+  SVN_ERR(must_have_write_access(conn, pool, b, FALSE));
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
@@ -1136,6 +1184,95 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                         apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path;
+  svn_boolean_t force;
+  svn_lock_t *l;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &path, &force));
+
+  SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
+
+  SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, path, force, 0, pool));
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w(!", "success"));
+  SVN_ERR(write_lock(conn, pool, l));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                           apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  const char *token;
+  svn_boolean_t force;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &token, &force));
+
+  SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
+
+  SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, token, force, pool));
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                             apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path;
+  svn_lock_t *l;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", path));
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  SVN_CMD_ERR(svn_fs_get_lock_from_path(&l, b->fs, path, pool));
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w((!", "success"));
+  if (l)
+    SVN_ERR(write_lock(conn, pool, l));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)))"));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                              apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path;
+  apr_hash_t *locks;
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  svn_lock_t *l;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  
+  SVN_CMD_ERR(svn_fs_get_locks(&locks, b->fs, path, pool));
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(w((!", "success"));
+  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, NULL, &val);
+      l = val;
+      SVN_ERR(write_lock(conn, pool, l));
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+
+  return SVN_NO_ERROR;
+}
+
 
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-latest-rev",  get_latest_rev },
@@ -1154,6 +1291,10 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "check-path",      check_path },
   { "get-locations",   get_locations },
   { "get-file-revs",   get_file_revs },
+  { "lock",            lock },
+  { "unlock",          unlock },
+  { "get-lock",        get_lock },
+  { "get-locks",       get_locks },
   { NULL }
 };
 
@@ -1334,7 +1475,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
    * start sending an empty mechlist. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
-  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS));
+  SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(w))",
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE));
 
@@ -1355,7 +1496,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "nw(?c)l",
                                      &ver, &mech, &mecharg, &caplist));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
-      SVN_ERR(auth(conn, pool, mech, mecharg, &b, READ_ACCESS, &success));
+      SVN_ERR(auth(conn, pool, mech, mecharg, &b, READ_ACCESS, FALSE,
+                   &success));
       if (!success)
         return svn_ra_svn_flush(conn, pool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "c", &client_url));
@@ -1383,7 +1525,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       err = find_repos(client_url, params->root, &b, pool);
       if (!err)
         {
-          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS));
+          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
           if (current_access(&b) == NO_ACCESS)
             err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                    "Not authorized for access");
