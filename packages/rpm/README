@@ -15,20 +15,20 @@ This build requires certain other packages to be installed.
 
        db >= 4.0.14
        expat (comes with RedHat)
-       neon = 0.19.[2-3]
-       apache >= 2.0.36 (includes apr/apr-util) (for subversion-server)
+       neon = 0.19.4
+       apache >= 2.0.37 (includes apr/apr-util) (for subversion-server)
 
     B. To compile:
 
        autoconf >= 2.52
-       apache >= 2.0.36
-       apache-devel >= 2.0.36
+       apache >= 2.0.37
+       apache-devel >= 2.0.37
        expat-devel
        libtool >= 1.4.2
-       neon = 0.19.[2-3]
+       neon = 0.19.4
        python >= 1.5.2 (2.0 or greater to run check programs)
 
-    The non-standard packages apache-2.0.36, db, and neon, can be found at:
+    The non-standard packages apache, db, and neon, can be found at:
 
     http://summersoft.fay.ar.us/pub/linux/RPMS/i386
     http://summersoft.fay.ar.us/pub/linux/RPMS/ppc
