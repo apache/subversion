@@ -477,14 +477,7 @@ svn_cl__log (apr_getopt_t *os,
          extra code complexity to get around this slight inefficiency
          doesn't seem worth it, however.  */
 
-      opt_state->end_revision.kind = opt_state->start_revision.kind;
-      opt_state->end_revision.value = opt_state->start_revision.value;
-
-      opt_state->end_revision.value.number
-        = opt_state->start_revision.value.number;
-
-      opt_state->end_revision.value.date
-        = opt_state->start_revision.value.date;
+      opt_state->end_revision = opt_state->start_revision;
     }
   else if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
     {
