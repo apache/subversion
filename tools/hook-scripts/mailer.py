@@ -59,6 +59,9 @@ class SMTPOutput:
     self.buffer = cStringIO.StringIO()
     self.write = self.buffer.write
 
+    self.write("From: %s\nTo: %s\n\n" % (self.cfg.general.from_addr,
+                                         self.cfg.general.to_addr))
+
   def finish(self):
     import smtplib
     server = smtplib.SMTP(self.cfg.general.smtp_hostname)
