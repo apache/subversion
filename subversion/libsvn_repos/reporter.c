@@ -85,9 +85,9 @@ svn_repos_finish_report (void *report_baton)
                                  rbaton->pool));
   
   /* Ah!  The good stuff!  dir_delta does all the hard work. */  
-  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, rbaton->base_path->data,
+  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, rbaton->base_path,
                                 rbaton->path_rev_hash,
-                                rev_root, rbaton->base_path->data,
+                                rev_root, rbaton->base_path,
                                 rbaton->update_editor,             
                                 rbaton->update_edit_baton,
                                 rbaton->pool));

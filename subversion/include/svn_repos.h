@@ -140,17 +140,52 @@ svn_repos_finish_report (void *report_baton);
 
    Do any allocation necessary for the delta computation in POOL.
    This function's maximum memory consumption is at most roughly
-   proportional to the greatest depth of TARGET, not the total size of
-   the delta.  */
+   proportional to the greatest depth of TARGET_PATH, not the total
+   size of the delta.  */
 svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *source_root,
-                     const char *source_path,
+                     svn_string_t *source_path,
                      apr_hash_t *source_rev_diffs,
                      svn_fs_root_t *target_root,
-                     const char *target_path,
+                     svn_string_t *target_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      apr_pool_t *pool);
+
+
+/* Use the provided EDITOR and EDIT_BATON to describe the changes
+   necessary for making a given node (and its descendants, if it a
+   directory) under SOURCE_ROOT look exactly as it does under
+   TARGET_ROOT.  ENTRY is the node to update, and is either NULL or a
+   single path component.  If ENTRY is NULL, then compute the
+   difference between the entire tree anchored at PARENT_DIR under
+   SOURCE_ROOT and TARGET_ROOT.  Else, describe the changes needed to
+   update only that entry in PARENT_DIR.  TARGET_ROOT is a revision
+   root.
+
+   SOURCE_REV_DIFFS is a hash (whose keys are character string paths,
+   and whose values are pointers to svn_revnum_t's) which describes
+   the base revisions of the items in the SOURCE_PARENT tree.  This hash
+   need only contain the base revision for the top of that tree, and
+   then those paths that have a base revision that differs from that
+   of their parent directory.
+
+   The caller must call editor->close_edit on EDIT_BATON;
+   svn_fs_dir_delta does not close the edit itself.
+
+   Do any allocation necessary for the delta computation in POOL.
+   This function's maximum memory consumption is at most roughly
+   proportional to the greatest depth of SOURCE_PATH under
+   TARGET_ROOT, not the total size of the delta.  */
+svn_error_t *
+svn_repos_update (svn_fs_root_t *target_root,
+                  svn_fs_root_t *source_root,
+                  svn_string_t *parent_dir,
+                  svn_string_t *entry,
+                  apr_hash_t *source_rev_diffs,
+                  const svn_delta_edit_fns_t *editor,
+                  void *edit_baton,
+                  apr_pool_t *pool);
 
 
 #endif /* SVN_REPOS_H */

@@ -402,9 +402,12 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   mrc.root = committed_root;
   mrc.repos = repos;
 
-  serr = svn_repos_dir_delta(previous_root, "/", revs,
-                             committed_root, "/",
+  serr = svn_repos_dir_delta(previous_root, 
+                             svn_string_create ("/", pool), revs,
+                             committed_root, 
+                             svn_string_create ("/", pool),
                              editor, &mrc, pool);
+
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
