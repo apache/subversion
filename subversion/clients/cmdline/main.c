@@ -67,7 +67,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"username",      svn_cl__auth_username_opt, 1, "specify a username ARG"},
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
     {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
-    {"targets",       't', 1, "pass contents of file \"ARG\" as additional args"},
+    {"targets",       svn_cl__longopt_t, 1, "pass contents of file \"ARG\" as additional args"},
     {0,               0, 0}
   };
 
