@@ -130,6 +130,30 @@ Greg:
 
    - security checks (e.g. system() usage in wc/get_editor)
 
+
+Working Copy:
+
+  TBDesigned:
+    The WC will need to have some knowledge of "the repository"
+    associated with any given resource. Given a working copy, the
+    client cannot know whether a two URLs are within the same
+    repository or not, so it doesn't know whether one or multiple
+    commit sequences are required to commit the whole working copy.
+
+    The RA layer (in conjunction with the server) will need to somehow
+    tell the WC about the repository associated with a given directory
+    (or long term, each file?). At commit time, the WC sorts out how
+    many repositories are involved, and performs a commit per
+    repository.
+
+    [ We never really had a story for discriminating multiple
+      repositories within a given WC. Stopping to think about it, it
+      was just a hand-wave. Given the flexibility in URLs and virtual
+      hosting on the server and whatnot, static analysis of a URL will
+      never be sufficient, but the server can always state
+      definitively the repository for any given resource. ]
+
+
 Filesystem:
 
   (Branko and Karl have made this list here to keep straight the order in
