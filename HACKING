@@ -1,4 +1,4 @@
-SUBVERSION HACKING INFORMATION		[$Date: 2000-12-19 03:47:25 $]	-*-text-*-
+								-*-text-*-
 
 If you are contributing code to the Subversion project, please read
 this first.
@@ -6,7 +6,7 @@ this first.
                      ============================
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
-              Last updated:  $Date: 2000-12-19 03:47:25 $
+              Last updated:  $Date: 2000-12-19 04:01:07 $
 
 
 TABLE OF CONTENTS
