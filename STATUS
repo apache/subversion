@@ -1,0 +1,29 @@
+This file tracks the status of releases in the 1.2.x line.
+
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.2.0:
+================
+
+Candidate changes that seem to have become stalled
+due to persistent lack of votes:
+
+  [None]
+
+Candidate changes:
+
+  * r13930
+    In the help for `svnadmin create`, show the default file
+    system backend type for the --fs-type option.
+    Justification: That we did not previously display this info was
+      likely legacy; it should've been added with the introduction
+      of fsfs.  As the default to fsfs is a change in behavior for
+      1.2.0, it's now especially important to display this info.
+    Votes:
+      +1: dlr
+
+Approved changes (further review is welcome, but not required):
+
+  [None]
