@@ -236,13 +236,13 @@ class ChangeCollector(svn.delta.Editor):
       self.changes[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
-      self.changes[dir_baton] = _change(ChangeCollector.DIR,
-                                        True,
-                                        dir_baton[1], # base_path
-                                        dir_baton[2], # base_rev
-                                        dir_path,     # path
-                                        False,        # added
-                                        )
+      self.changes[dir_path] = _change(ChangeCollector.DIR,
+                                       True,
+                                       dir_baton[1], # base_path
+                                       dir_baton[2], # base_rev
+                                       dir_path,     # path
+                                       False,        # added
+                                       )
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
