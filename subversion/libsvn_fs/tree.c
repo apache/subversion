@@ -2816,15 +2816,9 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 
           (*((svn_revnum_t *) apr_array_push (array))) = revision;
 
-          /* Hack up TMP_ID so that it represents its own predecessor.
-             Node IDs come in pairs, terminated by a trailing -1. So
-             we process a pair until the ID gets down to zero, then
-             mock up the -1 so we'll process the previous one.  */
-        tmp_id->digits[len - 1]--;
-        if (tmp_id->digits[len - 1] == 0)
-          tmp_id->digits[len - 2] = -1;
+          svn_fs__precede_id (tmp_id);
         }
-      while ((tmp_id->digits[0] != -1) && (tmp_id->digits[1] != -1));
+      while (tmp_id->digits[0] != -1);
     }
 
   /* Now sort the array */

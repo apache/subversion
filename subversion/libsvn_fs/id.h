@@ -108,14 +108,21 @@ int svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b);
 int svn_fs__id_length (const svn_fs_id_t *id);
 
 
-/* Return the predecessor id to ID, allocated in POOL.  If there is no
-   possible predecessor id, return NULL.
+/* Convert ID to its predecessor.  If there is no possible predecessor
+   id, set ID to the empty id (that is, an id of zero length, whose
+   first digit is -1).  No allocation is performed, as ID can only
+   stay the same length or shrink.
 
    Does not check that the predecessor id is actually present in the
    filesystem.
 
    Does not check that ID is a valid node revision ID.  If you pass in
    something else, the results are undefined.  */
+void svn_fs__precede_id (svn_fs_id_t *id);
+
+
+/* Like svn_fs__precede_id(), but return the predecessor allocated in
+   POOL.  If no possible predecessor, still return an empty id.  */
 svn_fs_id_t *svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
