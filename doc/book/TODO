@@ -98,13 +98,6 @@ To be fixed by fitz:
 
 To be fixed by sussman:
 
-  - ch01, "how this book is organized".  Expand this section vastly,
-    to give general pointers to different sections.  Many people will
-    open the book for the first time and just want to know "HOWTO" do
-    a particular thing quickly.  This section should help them jump to
-    the right chapter.  (This should address Ben Gross's concerns about
-    the first few chapters -- that they all assume you already have a
-    working svn system.)
 
   - New "Server Configuration" Chapter:   chapter 5 will still be all
     about repository management:  creation, tuning, BDB maintentance,
@@ -166,10 +159,6 @@ To be fixed by sussman:
   - appA should mention no $Log$ keyword.  Or maybe it should mention
     what keywords *do* exist as well.
 
-  - somehow clarify that --username has no affect on svn:// or
-    svn+ssh://.   Actually;  look at r7060.  Maybe it *does* do
-    something now.
-
   - ch04:  new "use-cases" section:
 
       - resurrecting a deleted file or directory.  (how do I find out
@@ -179,7 +168,6 @@ To be fixed by sussman:
       - move use-case to new section:  undoing a committed change.
 
       - move use-case to new section:  merging one branch to another.
-
        
   - in httpd.conf setup, remind people not to put the svn <Location>
     within an existing DocumentRoot, else the 301 error.
