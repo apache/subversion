@@ -258,12 +258,17 @@ svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool)
    contains ASCII.  */
 
 void
-svn_string_print (const svn_string_t *str, FILE *stream)
+svn_string_print (const svn_string_t *str, 
+                  FILE *stream, 
+                  svn_boolean_t show_all_fields)
 {
   if (str->len >= 0) 
     {
-      fprintf (stream, "String blocksize: %d, length: %d\n", 
-               str->blocksize, str->len);
+      if (show_all_fields)
+        {
+          fprintf (stream, "String blocksize: %d, length: %d\n", 
+                   str->blocksize, str->len);
+        }
       fwrite (str->data, 1, str->len, stream);
       fprintf (stream, "\n");
     }

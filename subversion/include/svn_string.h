@@ -101,7 +101,8 @@ char * svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool);
 
 /* convenience routine */
 
-void svn_string_print (const svn_string_t *str, FILE *stream);
+void svn_string_print (const svn_string_t *str, FILE *stream,
+                       svn_boolean_t show_all_fields);
 
 #endif  /* __SVN_STRING_H__ */
 

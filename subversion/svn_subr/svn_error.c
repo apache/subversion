@@ -60,22 +60,16 @@ svn_create_error (ap_status_t err,
   svn_error_t *new_error = (svn_error_t *) ap_palloc (pool,
                                                       sizeof(svn_error_t));
 
-  svn_string_t *desc = 
-    svn_string_create ("Really really long string because I'm too lazy to implement this routine now", pool);
-
-  char *strerror_msg;
-
+  char *strerror_msg = ap_palloc (pool, 100);
 
   new_error->err = err;
   new_error->fatal = fatal;
   new_error->message = message;
   new_error->canonical_errno = ap_canonical_error (errno);
 
-  /* ap_strerror() should overwrite the "desc" bytestring buffer... */
-  strerror_msg = 
-    ap_strerror (err, (char *) desc->data, (ap_size_t) desc->len);
+  ap_strerror (err, strerror_msg, 100);
 
-  new_error->description = svn_string_create (strerror_msg, pool);
+  new_error->description = strerror_msg;
 
 
   return new_error;
@@ -86,9 +80,14 @@ svn_create_error (ap_status_t err,
 void
 svn_handle_error (svn_error_t *err)
 {
-  printf ("svn_error: errno %d\n", err->err);
-  svn_string_print (err->message, stderr);
-  svn_string_print (err->description, stderr);
+  printf ("---------- svn error handler here:\n");
+  printf ("svn_error: errno %d, %s\n", 
+          err->err, err->description);
+  printf ("     ");
+  fflush (stdout);
+  svn_string_print (err->message, stderr, FALSE);
+  printf ("\n");
+  fflush (stdout);
 
   /* We can examine the APR canonicalized error here, make general
      logical desciions if we wish.*/

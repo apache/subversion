@@ -27,5 +27,7 @@ main ()
 
   configdata = svn_parse (myfile, pool);
 
+
+  printf ("Test complete, exiting cleanly.\n\n");
   return 0;
 }

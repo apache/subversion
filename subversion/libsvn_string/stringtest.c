@@ -27,41 +27,41 @@ main ()
 
   /* Create a bytestring from a null-terminated C string */
   a = svn_string_create ("hello", pglobal);
-  svn_string_print (a, stdout);
+  svn_string_print (a, stdout, TRUE);
 
   /* Alternate: create a bytestring from a part of an array */
   b = svn_string_ncreate ("a longish phrase of sorts", 16, pglobal);
-  svn_string_print (b, stdout);
+  svn_string_print (b, stdout, TRUE);
 
   /* Append b to a, growing a's storage if necessary */
   svn_string_appendstr (a, b, pglobal);
-  svn_string_print (a, stdout);
+  svn_string_print (a, stdout, TRUE);
 
   /* Do it again, with an inline string creation for kicks. */
   svn_string_appendstr (a, svn_string_create(" xtra", pglobal), pglobal);
-  svn_string_print (a, stdout);
+  svn_string_print (a, stdout, TRUE);
 
   /* Alternate:  append a specific number of bytes */
   svn_string_appendbytes (a, "some bytes to frob", 7, pglobal);
-  svn_string_print (a, stdout);
+  svn_string_print (a, stdout, TRUE);
 
   /* Duplicate a bytestring, then compare if they're equal */
   c = svn_string_dup (b, pglobal);
-  svn_string_print (c, stdout);
+  svn_string_print (c, stdout, TRUE);
 
   printf ("comparison of c and b is: %d\n", svn_string_compare (c, b));
   printf ("comparison of a and b is: %d\n", svn_string_compare (a, b));
 
   /* Set a bytestring to NULL, and query this fact. */
   svn_string_setempty (c);
-  svn_string_print (c, stdout);
+  svn_string_print (c, stdout, TRUE);
   
   printf ("is C empty? : %d\n", svn_string_isempty (c));
   printf ("is A empty? : %d\n", svn_string_isempty (a));
   
   /* Fill a bytestring with hash marks */
   svn_string_fillchar (a, '#');
-  svn_string_print (a, stdout);
+  svn_string_print (a, stdout, TRUE);
 
   /* Return a C string from a bytestring */
   msg = svn_string_2cstring (b, pglobal);
