@@ -177,7 +177,7 @@ svn_io_open_unique_file (apr_file_t **f,
                             0,
                             NULL,
                             pool,
-                            "svn_io_unique_name: unable to make name for "
+                            "svn_io_open_unique_file: unable to make name for "
                             "%s", path->data);
 }
 
