@@ -26,6 +26,7 @@
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_io.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 
@@ -124,6 +125,11 @@ usage (const char *progname, int exit_code)
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
      "\n"
+     "  setlog    REPOS_PATH REVNUM FILE\n"
+     "      Set the log-message on revision REVNUM to the contents of FILE.\n"
+     "      (Careful!  Revision props are not historied, so this command\n"
+     "       will -permanently- overwrite the previous log message.)\n"
+     "\n"
      "  recover   REPOS_PATH\n"
      "      Run the Berkeley DB recovery procedure on a repository.  Do\n"
      "      this if you've been getting errors indicating that recovery\n"
@@ -153,6 +159,7 @@ main (int argc, const char * const *argv)
     is_lsrevs = 0,
     is_rmtxns = 0,
     is_createtxn = 0,
+    is_setlog = 0,
     is_recover = 0;
   const char *path = NULL;
 
@@ -174,6 +181,7 @@ main (int argc, const char * const *argv)
          || (is_lsrevs = strcmp(argv[1], "lsrevs") == 0)
          || (is_rmtxns = strcmp(argv[1], "rmtxns") == 0)
          || (is_createtxn = strcmp(argv[1], "createtxn") == 0)
+         || (is_setlog = strcmp(argv[1], "setlog") == 0)
          || (is_recover = strcmp(argv[1], "recover") == 0)))
     {
       usage (argv[0], 1);
@@ -372,6 +380,38 @@ main (int argc, const char * const *argv)
       if (err) goto error;
 
       err = svn_fs_close_txn (txn);
+      if (err) goto error;
+    }
+  else if (is_setlog)
+    {
+      svn_revnum_t the_rev;
+      svn_stringbuf_t *file_contents;
+      svn_string_t log_contents;
+      svn_string_t log_prop = {SVN_PROP_REVISION_LOG,
+                               strlen(SVN_PROP_REVISION_LOG)};
+
+      if (argc != 5)
+        {
+          printf ("Error: `setlog' requires exactly 3 arguments.\n");
+          exit(1);
+        }
+      
+      /* get revision and file from argv[] */
+      the_rev = (svn_revnum_t) atoi (argv[3]);
+      err = svn_string_from_file (&file_contents, argv[4], pool); 
+      if (err) goto error;
+
+      log_contents.data = file_contents->data;
+      log_contents.len = file_contents->len;
+
+      /* open the filesystem  */
+      err = svn_repos_open (&fs, path, pool);
+      if (err) goto error;
+
+      /* set the revision property */
+      err = svn_fs_change_rev_prop (fs, the_rev,
+                                    &log_prop, &log_contents,
+                                    pool);
       if (err) goto error;
     }
   else if (is_recover)
