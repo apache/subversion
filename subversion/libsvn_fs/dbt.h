@@ -1,4 +1,4 @@
-/* convert-size.h : interface to ascii-to-size and vice-versa conversions
+/* dbt.h --- interface to DBT-frobbing functions
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -46,29 +46,51 @@
  * individuals on behalf of Collab.Net.
  */
 
-#ifndef SVN_LIBSVN_FS_CONVERT_SIZE_H
-#define SVN_LIBSVN_FS_CONVERT_SIZE_H
+#ifndef SVN_LIBSVN_FS_DBT_H
+#define SVN_LIBSVN_FS_DBT_H
 
-#include "apr.h"
+#include "db.h"
+#include "apr_pools.h"
 
-/* Return the value of the string of digits at DATA as an ASCII
-   decimal number.  The string is at most LEN bytes long.  The value
-   of the number is at most MAX.  Set *END to the address of the first
-   byte after the number, or zero if an error occurred while
-   converting the number (overflow, for example).
-
-   We would like to use strtoul, but that family of functions is
-   locale-dependent, whereas we're trying to parse data in a
-   local-independent format.  */
-
-apr_size_t svn_fs__getsize (char *data, apr_size_t len, char **endptr,
-			    apr_size_t max);
+/* Set all fields of DBT to zero.  Return DBT.  */
+DBT *svn_fs__clear_dbt (DBT *dbt);
 
 
-/* Store the ASCII decimal representation of VALUE at DATA.  Return
-   the length of the representation if all goes well; return zero if
-   the result doesn't fit in LEN bytes.  */
-int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
+/* Set DBT to refer to the SIZE bytes at DATA.  Return DBT.  */
+DBT *svn_fs__set_dbt (DBT *dbt, char *data, u_int32_t size);
 
 
-#endif /* SVN_LIBSVN_FS_CONVERT_SIZE_H */
+/* Prepare DBT to hold data returned from Berkeley DB.  Return DBT.
+
+   Clear all its fields to zero, but set the DB_DBT_MALLOC flag,
+   requesting that Berkeley DB place the returned data in a freshly
+   malloc'd block.  If the database operation succeeds, the caller
+   then owns the data block, and is responsible for making sure it
+   gets freed.  
+
+   Use this with svn_fs__track_dbt:
+
+       svn_fs__result_dbt (&foo);
+       ... some Berkeley DB operation that puts data in foo ...
+       svn_fs__track_dbt (&foo, pool);
+
+   This arrangement is:
+   - thread-safe --- the returned data is allocated via malloc, and
+     won't be overwritten if some other thread performs an operation
+     on the same table.  See the explanation of ``Retrieved key/data
+     permanence'' in the section of the Berkeley DB manual on the DBT
+     type.
+   - pool-friendly --- the data returned by Berkeley DB is now guaranteed
+     to be freed when POOL is cleared.  */
+DBT *svn_fs__result_dbt (DBT *dbt);
+
+
+/* Arrange for POOL to `track' DBT's data: when POOL is cleared,
+   DBT->data will be freed, using `free'.  If DBT->data is zero,
+   do nothing.
+
+   This is meant for use with svn_fs__result_dbt; see the explanation
+   there.  */
+DBT *svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool);
+
+#endif /* SVN_LIBSVN_FS_DBT_H */

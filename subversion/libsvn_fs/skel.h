@@ -139,12 +139,24 @@ typedef struct skel_t skel_t;
    how the caller can use the structure.  We only want to say that
    *we* won't change it --- we don't want to prevent the caller from
    changing it --- but C's type system doesn't allow us to say that.  */
-skel_t *svn_fs__skel_parse (char *data, apr_size_t len,
+skel_t *svn_fs__parse_skel (char *data, apr_size_t len,
 			    apr_pool_t *pool);
 
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
-svn_string_t *svn_fs__skel_unparse (skel_t *skel, apr_pool_t *pool);
+svn_string_t *svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool);
+
+
+
+/* Examining skels.  */
+
+
+/* Return true iff SKEL is an atom whose data is the same as STR.  */
+int svn_fs__is_atom (skel_t *skel, const char *str);
+
+
+/* Return the length of the list skel SKEL.  Atoms have a length of -1.  */
+int svn_fs__list_length (skel_t *skel);
 
 
 #endif /* SVN_LIBSVN_FS_SKEL_H */

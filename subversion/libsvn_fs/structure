@@ -94,7 +94,9 @@ A node version skel has one of the following forms:
 
 ("file" PROPLIST DATA)
     This node version is a file.  DATA is an atom giving the full
-    contents of the file.
+    contents of the file.  (In the future, DATA may be a list,
+    indicating that the fulltext of the file is stored elsewhere in
+    the database, or perhaps in an ordinary Unix file.)
 
 ("directory" PROPLIST (ENTRY ...))
     This node version is a directory.  The list (ENTRY ...) gives the

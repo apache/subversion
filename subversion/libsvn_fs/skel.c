@@ -46,6 +46,7 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include "string.h"
 #include "svn_string.h"
 #include "fs.h"
 #include "convert-size.h"
@@ -104,7 +105,7 @@ static skel_t *explicit_atom (char *data, apr_size_t len,
 
 
 skel_t *
-svn_fs__skel_parse (char *data,
+svn_fs__parse_skel (char *data,
 		    apr_size_t len,
 		    apr_pool_t *pool)
 {
@@ -300,7 +301,7 @@ static svn_string_t *unparse (skel_t *, svn_string_t *, int,
 
 
 svn_string_t *
-svn_fs__skel_unparse (skel_t *skel, apr_pool_t *pool)
+svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
 {
   svn_string_t *str;
   
@@ -456,4 +457,43 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
     }
 
   return str;
+}
+
+
+
+/* Examining skels.  */
+
+
+int
+svn_fs__is_atom (skel_t *skel, const char *str)
+{
+  if (skel
+      && skel->is_atom)
+    {
+      int len = strlen (str);
+
+      return (skel->len == len
+	      && ! memcmp (skel->data, str, len));
+    }
+  else
+    return 0;
+}
+
+
+int
+svn_fs__list_length (skel_t *skel)
+{
+  if (! skel
+      || skel->is_atom)
+    return -1;
+
+  {
+    int len = 0;
+    skel_t *child;
+
+    for (child = skel->children; child; child = child->next)
+      len++;
+
+    return len;
+  }
 }

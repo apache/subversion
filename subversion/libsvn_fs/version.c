@@ -1,5 +1,4 @@
-/*
- * err.c : implementation of fs-private error functions
+/* version.c --- functions for working with filesystem versions
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -47,68 +46,103 @@
  * individuals on behalf of Collab.Net.
  */
 
+#include "db.h"
 
-
-#include <stdlib.h>
-#include <stdarg.h>
-#include <db.h>
-#include "apr_strings.h"
 #include "svn_fs.h"
 #include "fs.h"
+#include "version.h"
 #include "err.h"
+#include "id.h"
+#include "convert-size.h"
+#include "skel.h"
+#include "dbt.h"
 
-svn_error_t *
-svn_fs__dberr (apr_pool_t *pool, int db_err)
+
+/* Building some often-used error objects.  */
+
+static svn_error_t *
+corrupt_version (svn_fs_t *fs, svn_vernum_t v)
 {
-  return svn_error_create (SVN_ERR_BERKELEY_DB,
-			   db_err,
-			   0,
-			   pool,
-                           db_strerror (db_err));
+  return
+    svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+		       "corrupt root data for version %d of filesystem `%s'",
+		       v, fs->env_path);
 }
 
 
-svn_error_t *
-svn_fs__dberrf (apr_pool_t *pool, int db_err, char *fmt, ...)
+
+/* Reading versions.  */
+
+
+/* Set *SKEL to the VERSION skel of version V of the filesystem FS.
+   SKEL and the data block it points into will both be freed when POOL
+   is cleared.
+
+   Beyond verifying that it's a syntactically valid skel, this doesn't
+   validate the data returned at all.  */
+static svn_error_t *
+get_version_skel (skel_t **skel,
+		  svn_fs_t *fs,
+		  svn_vernum_t v, 
+		  apr_pool_t *pool)
 {
-  va_list ap;
-  char *msg;
+  DBT key, value;
+  char key_bytes[200];
+  int key_len;
+  skel_t *version;
 
-  va_start (ap, fmt);
-  msg = apr_pvsprintf (pool, fmt, ap);
-  va_end (ap);
+  SVN_ERR (svn_fs__check_fs (fs));
 
-  return svn_error_createf (SVN_ERR_BERKELEY_DB, db_err, 0, pool, 
-			    "%s%s", msg, db_strerror (db_err));
+  /* Generate the ASCII decimal form of the version number.  */
+  key_len = svn_fs__putsize (key_bytes, sizeof (key_bytes), v);
+  if (! key_len)
+    abort ();
+  svn_fs__set_dbt (&key, key_bytes, key_len);
+
+  svn_fs__result_dbt (&value);
+  SVN_ERR (DB_ERR (fs, "reading version root from filesystem",
+		   fs->versions->get (fs->versions,
+				      0, /* no transaction */
+				      &key, &value, 0)));
+  svn_fs__track_dbt (&value, pool);
+
+  version = svn_fs__parse_skel (value.data, value.size, pool);
+  if (! version)
+    return corrupt_version (fs, v);
+  *skel = version;
+  return 0;
 }
 
 
-int
-svn_fs__pool_abort (int retcode)
-{
-  abort ();
-}
-
-
+/* Set *ID to ID of the root of version V of the filesystem FS.
+   Allocate the ID in POOL.  */
 svn_error_t *
-svn_fs__check_db (svn_fs_t *fs, const char *operation, int db_err)
+svn_fs__version_root (svn_fs_id_t **id_p,
+		      svn_fs_t *fs,
+		      svn_vernum_t v,
+		      apr_pool_t *pool)
 {
-  if (! db_err)
-    return 0;
-  else
-    return svn_fs__dberrf (fs->pool, db_err,
-			   "Berkeley DB error while %s for "
-			   "filesystem %s:\n", operation,
-			   fs->env_path ? fs->env_path : "(none)");
-}
+  apr_pool_t *subpool = svn_pool_create (pool, 0);
+  skel_t *version, *id_skel;
+  svn_fs_id_t *id;
 
+  SVN_ERR (get_version_skel (&version, fs, v, subpool));
+  if (svn_fs__list_length (version) != 3
+      || ! svn_fs__is_atom (version->children, "version"))
+    goto corrupt;
 
-svn_error_t *
-svn_fs__check_fs (svn_fs_t *fs)
-{
-  if (fs->env)
-    return 0;
-  else
-    return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0, 0, fs->pool,
-			     "filesystem object has not been opened yet");
+  id_skel = version->children->next;
+  if (! id_skel->is_atom)
+    goto corrupt;
+
+  id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
+  if (! id)
+    goto corrupt;
+
+  *id_p = id;
+  return 0;
+
+ corrupt:
+  apr_destroy_pool (subpool);
+  return corrupt_version (fs, v);
 }
