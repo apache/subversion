@@ -40,7 +40,6 @@
 
 #include "svn_types.h"
 #include "svn_string.h"
-#include "svn_auth.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_ra.h"    /* for svn_ra_reporter_t type */

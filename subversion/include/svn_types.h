@@ -22,10 +22,10 @@
 #ifndef SVN_TYPES_H
 #define SVN_TYPES_H
 
-#include <apr.h>        /* for apr_size_t */
-
-/* ### these should go away, but I don't feel like working on it yet */
+/* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
+
+#include <apr.h>        /* for apr_size_t */
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>

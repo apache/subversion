@@ -33,9 +33,9 @@
 #define SVN_CLIENT_H
 
 #include <apr_tables.h>
+
 #include "svn_types.h"
 #include "svn_wc.h"
-#include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_opt.h"

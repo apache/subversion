@@ -28,8 +28,6 @@
 
 #include <apr.h>
 #include <apr_pools.h>
-#include <apr_tables.h>
-#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_string.h"

@@ -27,6 +27,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
+#include "svn_io.h"                     /* for svn_io_stat() */
 
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty

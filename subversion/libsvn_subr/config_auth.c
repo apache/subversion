@@ -19,11 +19,13 @@
 
 
 #include <apr_md5.h>
-#include "config_impl.h"
+
 #include "svn_path.h"
 #include "svn_md5.h"
 #include "svn_hash.h"
+#include "svn_io.h"
 
+#include "config_impl.h"
 
 
 /* Helper for svn_config_{read|write}_auth_data.  Return a path to a
