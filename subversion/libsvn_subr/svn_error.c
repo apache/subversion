@@ -232,7 +232,7 @@ svn_pool_clear (apr_pool_t *p)
       subpool_of_p_p = 1;   /* The only possibility. */
     }
 
-  apr_clear_pool (p);
+  apr_pool_clear (p);
 
   /* Clearing the pool invalidated all userdata attached to it,
      so we must reattach its error pool.  However, clearing a pool
