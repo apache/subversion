@@ -155,7 +155,6 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
 {
   ne_request *req;
   svn_stringbuf_t *url_str = escape_url(url, ras->pool);
-  int rv;
 
   /* create/prep the request */
   req = ne_request_create(ras->sess, method, url_str->data);
@@ -167,17 +166,9 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                method, url_str->data);
     }
 
-  /* run the request and get the resulting status code. */
-  rv = ne_request_dispatch(req);
-  *code = ne_get_status(req)->code;
-  ne_request_destroy(req);
-
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_pstrcat(ras->pool, method, " failed", NULL);
-
-      return svn_ra_dav__convert_error(ras->sess, msg, rv, ras->pool);
-    }
+  /* run the request and get the resulting status code (and svn_error_t) */
+  SVN_ERR( svn_ra_dav__request_dispatch(code, req, ras->sess,
+                                        method, url, ras->pool) );
 
   return NULL;
 }
@@ -358,7 +349,6 @@ static svn_error_t * add_child(resource_t **child,
 static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 {
   ne_request *req;
-  int rv;
   int code;
   const char *body;
   const char *locn = NULL;
@@ -403,38 +393,11 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   ne_add_response_header_handler(req, "location",
                                  ne_duplicate_header, (void *)&locn);
 
-  /* run the request and get the resulting status code. */
-  rv = ne_request_dispatch(req);
-  code = ne_get_status(req)->code;
-  ne_request_destroy(req);
-
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_psprintf(cc->ras->pool, "CHECKOUT of %s",
-                                     url_str->data);
-      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, cc->ras->pool);
-    }
-
-  if (code != 201)
-    {
-      if (code == 409)
-        {
-          return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                                   cc->ras->pool,
-                                   "Server returned a Conflict Error:\n "
-                                   "Your copy of '%s' " 
-                                   "is probably out-of-date.",
-                                   res->local_path);
-        }
-      /* ### other likely status codes we can look for? */
-      else
-        {
-          return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                                   cc->ras->pool,
-                                   "Failed CHECKOUT request (http #%d) (%s)",
-                                   code, url_str->data);
-        }
-    }
+  /* run the request and get the resulting status code (and svn_error_t) */
+  SVN_ERR( svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
+                                        "CHECKOUT", url_str->data, 
+                                        cc->ras->pool) );
+  
   if (locn == NULL)
     {
       return svn_error_create(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
@@ -507,7 +470,6 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   resource_baton_t *rb)
 {
   ne_request *req;
-  int rv;
   int code;
   ne_buffer *body; /* ### using an ne_buffer because it can realloc */
   svn_stringbuf_t *url_str;
@@ -562,17 +524,10 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
-  rv = ne_request_dispatch(req);
-  code = ne_get_status(req)->code;
-  ne_request_destroy(req);
-  ne_buffer_destroy(body);
+  /* run the request and get the resulting status code (and svn_error_t) */
+  SVN_ERR( svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
+                                        url_str->data, ras->pool) );
 
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_psprintf(ras->pool, "PROPPATCH of %s",
-                                     url_str->data);
-      return svn_ra_dav__convert_error(ras->sess, msg, rv, ras->pool);
-    }
   if (code != 207)
     {
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
@@ -925,9 +880,9 @@ static svn_error_t * commit_stream_close(void *baton)
   resource_t *rsrc = pb->file->rsrc;
   ne_request *req;
   int fdesc;
-  int rv;
   int code;
   apr_status_t status;
+  svn_error_t *err;
   apr_off_t offset = 0;
   svn_stringbuf_t *url_str = escape_url(rsrc->wr_url, pb->pool);
 
@@ -964,37 +919,18 @@ static svn_error_t * commit_stream_close(void *baton)
   /* Give the filedescriptor to neon. */
   ne_set_request_body_fd(req, fdesc);
 
-  /* run the request and get the resulting status code. */
-  rv = ne_request_dispatch(req);
+  /* run the request and get the resulting status code (and svn_error_t) */
+  err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
+                                     "PUT", url_str->data, cc->ras->pool);
 
   /* we're done with the file.  this should delete it. */
   (void) apr_file_close(pb->tmpfile);
 
-  /* fetch the status, then clean up the request */
-  code = ne_get_status(req)->code;
-  ne_request_destroy(req);
-
   /* toss the pool. all things pb are now history */
   svn_pool_destroy(pb->pool);
 
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_psprintf(cc->ras->pool, "PUT of %s",
-                                     url_str->data);
-      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, cc->ras->pool);
-    }
-
-  /* if it didn't returned 201 (Created) or 204 (No Content), then puke */
-  /* ### is that right? what else might we see? be more robust. */
-  if (code != 201 && code != 204)
-    {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               cc->ras->pool,
-                               "The PUT request did not complete "
-                               "properly (status: %d) (%s)",
-                               code, url_str->data);
-    }
+  if (err)
+    return err;
 
   return NULL;
 }

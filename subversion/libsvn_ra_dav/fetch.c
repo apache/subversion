@@ -435,7 +435,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
   ne_request *req;
-  int rv;
+  svn_error_t *err;
   int code;
 
   /* See if we can get a version URL for this resource. This will refer to
@@ -475,10 +475,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
   /* complete initialization of the body reading context */
   cgc.subctx = subctx;
 
-  /* do the response now */
-  rv = ne_request_dispatch(req);
-  code = ne_get_status(req)->code;
-  ne_request_destroy(req);
+  /* run the request and get the resulting status code (and svn_error_t) */
+  err = svn_ra_dav__request_dispatch(&code, req, sess, "GET", url, pool);
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
@@ -489,10 +487,9 @@ static svn_error_t *custom_get_request(ne_session *sess,
   if (cgc.err)
     return cgc.err;
 
-  if (rv != NE_OK)
-    {
-      return svn_ra_dav__convert_error(sess, "fetching a file", rv, pool);
-    }
+  if (err)
+    return err;
+
   if (code != 200 && code != 226)
     {
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
