@@ -33,7 +33,7 @@ static svn_repos_node_t *
 create_node (const char *name, 
              apr_pool_t *pool)
 {
-  svn_repos_node_t *node = apr_palloc (pool, sizeof (svn_repos_node_t));
+  svn_repos_node_t *node = apr_pcalloc (pool, sizeof (svn_repos_node_t));
   node->action = 'R';
   node->kind = svn_node_unknown;
   node->name = apr_pstrdup (pool, name);
