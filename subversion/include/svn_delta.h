@@ -335,9 +335,9 @@ typedef struct svn_delta_digger_t
                                svn_delta_stackframe_t *frame);
 
   /* Caller optionally decides what to do with unrecognized elements. */
-  svn_error_t (*unknown_elt_handler) (struct svn_delta_digger_t *digger,
-                                      const char *name,
-                                      const char **atts);
+  svn_error_t *(*unknown_elt_handler) (struct svn_delta_digger_t *digger,
+                                       const char *name,
+                                       const char **atts);
 
 } svn_delta_digger_t;
 
