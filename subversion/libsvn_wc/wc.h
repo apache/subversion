@@ -563,19 +563,6 @@ svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
                                    apr_pool_t *pool,
                                    ...);
 
-#if 0 && THE_OLD_WAY_OF_DOING_THINGS
-svn_error_t *svn_wc__entry_fold_sync (svn_stringbuf_t *path,
-                                      svn_stringbuf_t *name,
-                                      svn_revnum_t revision,
-                                      enum svn_node_kind kind,
-                                      int state,
-                                      apr_time_t text_time,
-                                      apr_time_t prop_time,
-                                      apr_pool_t *pool,
-                                      apr_hash_t *atts,
-#endif
-
-
 /* Remove entry NAME from ENTRIES, unconditionally. */
 void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 

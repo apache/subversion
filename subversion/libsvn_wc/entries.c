@@ -753,6 +753,7 @@ check_entries (apr_hash_t *entries,
        "'%s' has no default entry",
        path->data);
 
+  /* Validate DEFAULT_ENTRY's current schedule. */
   switch (default_entry->schedule)
     {
     case svn_wc_schedule_normal:
@@ -762,10 +763,8 @@ check_entries (apr_hash_t *entries,
       /* These are all valid states */
       break;
 
-    case svn_wc_schedule_unadd:
-    case svn_wc_schedule_undelete:
     default:
-      /* These are all INvalid states */
+      /* This is an invalid state */
       return svn_error_createf
         (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
          "Directory '%s' has an invalid schedule",
@@ -789,6 +788,7 @@ check_entries (apr_hash_t *entries,
       if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR ))
         continue;
 
+      /* Validate THIS_ENTRY's current schedule. */
       switch (this_entry->schedule)
         {
         case svn_wc_schedule_normal:
@@ -798,10 +798,8 @@ check_entries (apr_hash_t *entries,
           /* These are all valid states */
           break;
 
-        case svn_wc_schedule_unadd:
-        case svn_wc_schedule_undelete:
         default:
-          /* These are all INvalid states */
+          /* This is an invalid state */
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT, 0, NULL, pool,
              "'%s' in directory '%s' has an invalid schedule",
@@ -1156,18 +1154,12 @@ fold_state_changes (apr_hash_t *entries,
 {
   svn_wc_entry_t *entry, *this_dir_entry;
 
-  /* Get the current entry */
-  entry = apr_hash_get (entries, name->data, name->len);
-
-  /* Get the default entry */
-  this_dir_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
-                                 APR_HASH_KEY_STRING);
-
-  /* Make sure the input is valid. */
-
   /* If we're not supposed to be bothering with this anyway...return. */
   if (! (*modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE))
     return SVN_NO_ERROR;
+
+  /* Get the current entry */
+  entry = apr_hash_get (entries, name->data, name->len);
 
   /* If we're not about to modify the existence, we'll use the
      existence of the current entry (if one it exists -- ha!) */
@@ -1210,6 +1202,10 @@ fold_state_changes (apr_hash_t *entries,
            name->data);
     }
 
+  /* Get the default entry */
+  this_dir_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
+                                 APR_HASH_KEY_STRING);
+
   /* At this point, we know the following things:
 
      1. There is already an entry for this item in the entries file
@@ -1240,13 +1236,6 @@ fold_state_changes (apr_hash_t *entries,
            "fold_state_changes: Can't replace '%s' in deleted directory"
            "--try undeleting its parent directory first",
            name->data);
-      if (*schedule == svn_wc_schedule_undelete)
-        return 
-          svn_error_createf 
-          (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-           "fold_state_changes: Can't undelete '%s' in deleted directory"
-           "--try undeleting its parent directory first",
-           name->data);
     }
 
   switch (entry->schedule)
@@ -1255,11 +1244,8 @@ fold_state_changes (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
-        case svn_wc_schedule_unadd:
-        case svn_wc_schedule_undelete:
-          /* There are all no-op cases.  _normal is trivial, _unadd
-             and _undelete might merit a warning, but whatever.  Reset
-             the schedule modification bit and move along. */
+          /* Normal is a trivial no-op case. Reset the
+             schedule modification bit and move along. */
           *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
           return SVN_NO_ERROR;
 
@@ -1289,22 +1275,18 @@ fold_state_changes (apr_hash_t *entries,
         case svn_wc_schedule_normal:
         case svn_wc_schedule_add:
         case svn_wc_schedule_replace:
-        case svn_wc_schedule_undelete:
           /* These are all no-op cases.  Normal is obvious, as is add.
              Replace on an entry marked for addition breaks down to
              (add + (delete + add)), which resolves to just (add), and
              since this entry is already marked with (add), this too
-             is a no-op.  Undelete might merit a warning about
-             undeleting stuff that isn't deleted, but we opt not to
-             care. */
+             is a no-op. */
           *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
           return SVN_NO_ERROR;
 
 
         case svn_wc_schedule_delete:
-        case svn_wc_schedule_unadd:
-          /* Not-yet-versioned item being deleted or un-added?  Just
-             remove the entry altogether. */
+          /* Not-yet-versioned item being deleted, Just
+             remove the entry. */
           apr_hash_set (entries, name->data, name->len, NULL);
           return SVN_NO_ERROR;
         }
@@ -1315,7 +1297,6 @@ fold_state_changes (apr_hash_t *entries,
         {
         case svn_wc_schedule_normal:
         case svn_wc_schedule_delete:
-        case svn_wc_schedule_unadd:
           /* These are no-op cases. */
           *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
           return SVN_NO_ERROR;
@@ -1333,13 +1314,7 @@ fold_state_changes (apr_hash_t *entries,
              (delete + (delete + add)), which might deserve a warning,
              but whatever. */
           return SVN_NO_ERROR;
-            
 
-        case svn_wc_schedule_undelete:
-          /* Undeleting a to-be-deleted entry resets the schedule to
-             'normal'. */
-          *schedule = svn_wc_schedule_normal;
-          return SVN_NO_ERROR;
         }
       break;
 
@@ -1364,23 +1339,9 @@ fold_state_changes (apr_hash_t *entries,
         case svn_wc_schedule_delete:
           /* Deleting a to-be-replaced entry breaks down to ((delete +
              add) + delete) which resolves to a flat deletion. */
-        case svn_wc_schedule_unadd:
-          /* Unadding a to-be-replaced entry breaks down to ((delete +
-             add) - add), which leaves just the deletion. */
           *schedule = svn_wc_schedule_delete;
           return SVN_NO_ERROR;
 
-
-        case svn_wc_schedule_undelete:
-          /* Despite the fact that the to-be-replaced state of this
-             entry implies a deletion action, that's buried under an
-             addition action. */
-          return 
-            svn_error_createf 
-            (SVN_ERR_WC_ENTRY_BOGUS_MERGE, 0, NULL, pool,
-             "fold_state_changes: Can't undelete '%s' marked for replacement"
-             "--try unadding this entry first",
-             name->data);
         }
       break;
 

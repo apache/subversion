@@ -36,9 +36,10 @@
 
 svn_error_t *
 svn_client_revert (svn_stringbuf_t *path,
+                   svn_boolean_t recursive,
                    apr_pool_t *pool)
 {
-  return svn_wc_revert (path, pool);
+  return svn_wc_revert (path, recursive, pool);
 }
 
 
@@ -47,3 +48,6 @@ svn_client_revert (svn_stringbuf_t *path,
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: */
+
+
+

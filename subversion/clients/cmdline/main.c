@@ -64,11 +64,6 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "ad",         TRUE, NULL, NULL },
   { "new",        TRUE, NULL, NULL },
 
-  { "unadd",      FALSE, svn_cl__unadd,
-    "Recursively un-add files and directories marked for addition.\n"
-    "usage: unadd [TARGETS]\n" },
-  { "unad",       TRUE, NULL, NULL },
-
   { "checkout",   FALSE, svn_cl__checkout,
     "Check out a working directory from a repository.\n"
     "usage: checkout REPOSPATH1 [REPOSPATH2 REPOSPATH3...]\n" },
@@ -85,12 +80,6 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "del",        TRUE, NULL, NULL },
   { "remove",     TRUE, NULL, NULL },
   { "rm",         TRUE, NULL, NULL },
-
-  { "undelete",   FALSE, svn_cl__undelete,
-    "Undelete files and directories marked for deletion.\n"
-    "usage: undelete [TARGETS]\n" },
-  { "undel",      TRUE, NULL, NULL },
-  { "unrm",       TRUE, NULL, NULL },
 
   { "help",       FALSE, svn_cl__help,
     "Display this usage message.\n"

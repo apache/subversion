@@ -329,7 +329,28 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
 }
 
 
+/* Remove FILE if it exists and is a file.  If it does not exist, do
+   nothing.  If it is not a file, error. */
+static svn_error_t *
+remove_file_if_present (svn_stringbuf_t *file, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  enum svn_node_kind kind;
+  
+  SVN_ERR (svn_io_check_path (file, &kind, pool));
 
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+
+  /* Else. */
+
+  apr_err = apr_file_remove (file->data, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool, "Unable to remove '%s'", file->data);
+
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -356,8 +377,6 @@ svn_wc_copy (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 
 enum mark_tree_state {
   mark_tree_state_delete = 1,
-  mark_tree_state_unadd,
-  mark_tree_state_undelete
 };
 
 
@@ -373,17 +392,6 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
 
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
-
-  /* Handle "this dir" for cases that need it handled before
-     recursion. */
-  if (state == mark_tree_state_undelete)
-    SVN_ERR (svn_wc__entry_modify
-             (dir, NULL, 
-              SVN_WC__ENTRY_MODIFY_SCHEDULE,
-              SVN_INVALID_REVNUM, svn_node_dir,
-              svn_wc_schedule_undelete,
-              svn_wc_existence_normal,
-              FALSE, 0, 0, NULL, pool, NULL));
 
   /* Mark each entry in the entries file. */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -435,46 +443,6 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                    "Error reporting deleted item `%s'", fullpath->data);
             }
           break;
-
-        case mark_tree_state_unadd:
-          SVN_ERR (svn_wc__entry_modify
-                   (dir, basename, 
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                    SVN_INVALID_REVNUM, entry->kind,
-                    svn_wc_schedule_unadd,
-                    svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, subpool, NULL));
-          if (fbtable)
-            {
-              apr_status_t apr_err;
-
-              apr_err = fbtable->report_unadded_item (fullpath->data, pool);
-              if (apr_err)
-                return svn_error_createf 
-                  (apr_err, 0, NULL, pool,
-                   "Error reporting unadded item `%s'", fullpath->data);
-            }
-          break;
-
-        case mark_tree_state_undelete: 
-          SVN_ERR (svn_wc__entry_modify
-                   (dir, basename, 
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                    SVN_INVALID_REVNUM, entry->kind,
-                    svn_wc_schedule_undelete,
-                    svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, subpool, NULL));
-          if (fbtable)
-            {
-              apr_status_t apr_err;
-
-              apr_err = fbtable->report_undeleted_item (fullpath->data, pool);
-              if (apr_err)
-                return svn_error_createf 
-                  (apr_err, 0, NULL, pool,
-                   "Error reporting undeleted item `%s'", fullpath->data);
-            }
-          break;
         }
 
       /* Reset FULLPATH to just hold this dir's name. */
@@ -491,14 +459,6 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
               SVN_WC__ENTRY_MODIFY_SCHEDULE,
               SVN_INVALID_REVNUM, svn_node_dir,
               svn_wc_schedule_delete,
-              svn_wc_existence_normal,
-              FALSE, 0, 0, NULL, pool, NULL));
-  if (state == mark_tree_state_unadd)
-    SVN_ERR (svn_wc__entry_modify
-             (dir, NULL,
-              SVN_WC__ENTRY_MODIFY_SCHEDULE,
-              SVN_INVALID_REVNUM, svn_node_dir,
-              svn_wc_schedule_unadd,
               svn_wc_existence_normal,
               FALSE, 0, 0, NULL, pool, NULL));
 
@@ -566,275 +526,273 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 }
 
 
-svn_error_t *
-svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
+static svn_error_t *
+add_to_revision_control (svn_stringbuf_t *path,
+                         enum svn_node_kind kind,
+                         apr_pool_t *pool)
 {
   svn_stringbuf_t *parent_dir, *basename;
-  svn_wc_entry_t *orig_entry, *entry;
-  svn_stringbuf_t *ancestor_path;
+  svn_wc_entry_t *orig_entry;
+  svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
+  apr_status_t apr_err;
 
-  /* Get the original entry for this directory if one exists (perhaps
+  /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing). */
-  if (svn_wc_entry (&orig_entry, dir, pool))
+  if (svn_wc_entry (&orig_entry, path, pool))
     orig_entry = NULL;
 
   /* You can only add something that is a) not in revision control, or
      b) slated for deletion from revision control, or c) already
      `deleted' from revision control.  */
-  if (orig_entry && 
-      ((orig_entry->schedule != svn_wc_schedule_delete)
-       && (orig_entry->existence != svn_wc_existence_deleted)))
-    return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-       "Directory '%s' is already under revision control",
-       dir->data);
-
-  /* Get the entry for this directory's parent.  We need to snatch the
-     ancestor path out of there. */
-  svn_path_split (dir, &parent_dir, &basename, svn_path_local_style, pool);
+  if (orig_entry)
+    {
+      if ((orig_entry->schedule != svn_wc_schedule_delete)
+          && (orig_entry->existence != svn_wc_existence_deleted))
+        {
+          return svn_error_createf 
+            (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+             "'%s' is already under revision control",
+             path->data);
+        }
+      else if (orig_entry->kind != kind)
+        {
+          /* ### todo:  At some point, we obviously don't want to
+             block replacements where the node kind changes.  When
+             this happens, svn_wc_revert() needs to learn how to
+             revert this situation.  */
+          return svn_error_createf 
+            (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+             "Could not replace '%s' with a node of a differing type"
+             " -- try committing your deletion first and then re-adding '%s'",
+             path->data, path->data);
+        }
+    }
+    
+  /* Split off the basename from the parent directory. */
+  svn_path_split (path, &parent_dir, &basename, svn_path_local_style, pool);
   if (svn_path_is_empty (parent_dir, svn_path_local_style))
     parent_dir = svn_stringbuf_create (".", pool);
-  SVN_ERR (svn_wc_entry (&entry, parent_dir, pool));
-  
-  /* Derive the ancestor path for our new addition here. */
-  ancestor_path = svn_stringbuf_dup (entry->ancestor, pool);
-  svn_path_add_component (ancestor_path, basename, svn_path_url_style);
-  
-  /* Make sure this new directory has an admistrative subdirectory
-     created inside of it */
-  SVN_ERR (svn_wc__ensure_adm (dir, ancestor_path, 0, pool));
 
-  /* Now, add the entry for this directory to the parent_dir's entries
-     file, marking it for addition. */
+  /* Now, add the entry for this directory to the parent_dir's
+     entries file, marking it for addition. */
+  /* ### todo:  Should we NOT reset the revision if this is a replace? */
   SVN_ERR (svn_wc__entry_modify
-           (parent_dir, basename, 
+           (parent_dir, basename,
             (SVN_WC__ENTRY_MODIFY_SCHEDULE
              | SVN_WC__ENTRY_MODIFY_REVISION
              | SVN_WC__ENTRY_MODIFY_KIND),
-            0, svn_node_dir,
+            0, kind,
             svn_wc_schedule_add,
             svn_wc_existence_normal,
             FALSE, 0, 0, NULL, pool, NULL));
 
-  /* And finally, make sure this entry is marked for addition in its
-     own administrative directory. */
-  SVN_ERR (svn_wc__entry_modify
-           (dir, NULL,
-            (SVN_WC__ENTRY_MODIFY_SCHEDULE
-             | SVN_WC__ENTRY_MODIFY_REVISION
-             | SVN_WC__ENTRY_MODIFY_KIND
-             | SVN_WC__ENTRY_MODIFY_FORCE),
-            0, svn_node_dir,
-            ((orig_entry && orig_entry->schedule == svn_wc_schedule_delete) 
-             ? svn_wc_schedule_replace : svn_wc_schedule_add),
-            svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, pool, NULL));
+  /* If this is a replacement, we need to reset the properties for
+     PATH. */
+  if (orig_entry)
+    {
+      svn_stringbuf_t *prop_path;
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, FALSE, pool));
+      SVN_ERR (remove_file_if_present (prop_path, pool));
+    }
 
+  if (kind == svn_node_file)
+    {
+      const char *mimetype;
+
+      /* Try to detect the mime-type of this new addition. */
+      SVN_ERR (svn_io_detect_mimetype (&mimetype, path->data, pool));
+      if (mimetype)
+        SVN_ERR (svn_wc_prop_set 
+                 (svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
+                  svn_stringbuf_create (mimetype, pool),
+                  path,
+                  pool));
+    }  
+  else
+    {
+      svn_wc_entry_t *p_entry;
+      svn_stringbuf_t *ancestor_path;
+
+      /* Get the entry for this directory's parent.  We need to snatch
+         the ancestor path out of there. */
+      SVN_ERR (svn_wc_entry (&p_entry, parent_dir, pool));
+  
+      /* Derive the ancestor path for our new addition here. */
+      ancestor_path = svn_stringbuf_dup (p_entry->ancestor, pool);
+      svn_path_add_component (ancestor_path, basename, svn_path_url_style);
+  
+      /* Make sure this new directory has an admistrative subdirectory
+         created inside of it */
+      SVN_ERR (svn_wc__ensure_adm (path, ancestor_path, 0, pool));
+
+      /* And finally, make sure this entry is marked for addition in
+         its own administrative directory. */
+      SVN_ERR (svn_wc__entry_modify
+               (path, NULL,
+                (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                 | SVN_WC__ENTRY_MODIFY_REVISION 
+                 | SVN_WC__ENTRY_MODIFY_KIND
+                 | SVN_WC__ENTRY_MODIFY_FORCE),
+                0, svn_node_dir,
+                ((orig_entry 
+                  && orig_entry->schedule == svn_wc_schedule_delete) 
+                 ? svn_wc_schedule_replace 
+                 : svn_wc_schedule_add),
+                svn_wc_existence_normal,
+                FALSE, 0, 0, NULL, pool, NULL));
+    }
+  
   /* Now, call our client feedback function. */
-  {
-    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
-    if (fbtable)
-      {
-        apr_status_t apr_err;
-
-        apr_err = fbtable->report_added_item (dir->data, pool);
-        if (apr_err)
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "Error reporting added item `%s'", dir->data);
-      }
-  }
+  if (fbtable)
+    {
+      apr_err = fbtable->report_added_item (path->data, pool);
+      if (apr_err)
+        return svn_error_createf 
+          (apr_err, 0, NULL, pool,
+           "Error reporting added item `%s'", path->data);
+    }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
+{
+  return add_to_revision_control (dir, svn_node_dir, pool);
 }
 
 
 svn_error_t *
 svn_wc_add_file (svn_stringbuf_t *file, apr_pool_t *pool)
 {
-  svn_stringbuf_t *dir, *basename;
-  svn_wc_entry_t *orig_entry;
-
-  /* Get the original entry for this directory if one exists (perhaps
-     this is actually a replacement of a previously deleted thing). */
-  SVN_ERR (svn_wc_entry (&orig_entry, file, pool));
-
-  /* You can only add something that is a) not in revision control, or
-     b) slated for deletion from revision control, or c) already
-     `deleted' from revision control.  */
-  if (orig_entry && 
-      ((orig_entry->schedule != svn_wc_schedule_delete)
-       && (orig_entry->existence != svn_wc_existence_deleted)))
-    return svn_error_createf 
-      (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-       "File '%s' is already under revision control",
-       file->data);
-
-  svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
-
-  SVN_ERR (svn_wc__entry_modify
-           (dir, basename,
-            (SVN_WC__ENTRY_MODIFY_SCHEDULE
-             | SVN_WC__ENTRY_MODIFY_REVISION
-             | SVN_WC__ENTRY_MODIFY_KIND),
-            0, svn_node_file,
-            svn_wc_schedule_add,
-            svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, pool, NULL));
-
-  /* Try to detect the mime-type of this new addition. */
-  {
-    const char *mimetype;
-
-    SVN_ERR (svn_io_detect_mimetype (&mimetype, file->data, pool));
-    if (mimetype)
-      SVN_ERR (svn_wc_prop_set 
-               (svn_stringbuf_create (SVN_PROP_MIME_TYPE, pool),
-                svn_stringbuf_create (mimetype, pool),
-                file,
-                pool));
-  }
-
-  /* Now, call our client feedback function. */
-  {
-    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
-    if (fbtable)
-      {
-        apr_status_t apr_err;
-
-        apr_err = fbtable->report_added_item (file->data, pool);
-        if (apr_err)
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "Error reporting added item `%s'", file->data);
-      }
-  }
-  
-  return SVN_NO_ERROR;
+  return add_to_revision_control (file, svn_node_file, pool);
 }
 
 
-svn_error_t *
-svn_wc_unadd (svn_stringbuf_t *path, 
-              apr_pool_t *pool)
+
+/* Thoughts on Reversion. 
+
+    What does is mean to revert a given PATH in a tree?  We'll
+    consider things by their modifications.
+
+    Adds
+
+    - For files, svn_wc_remove_from_revision_control(), baby.
+
+    - Added directories may contain nothing but added children, and
+      reverting the addition of a directory necessary means reverting
+      the addition of all the directory's children.  Again,
+      svn_wc_remove_from_revision_control() should do the trick.
+
+    Deletes
+
+    - Restore properties to their unmodified state.
+
+    - For files, restore the pristine contents, and reset the schedule
+      to 'normal'.
+
+    - For directories, reset the schedule to 'normal'.  All children
+      of a directory marked for deletion must also be marked for
+      deletion, but it's okay for those children to remain deleted even
+      if their parent directory is restored.  That's what the
+      recursive flag is for.
+
+    Replaces
+
+    - Restore properties to their unmodified state.
+
+    - For files, restore the pristine contents, and reset the schedule
+      to 'normal'.
+
+    - For directories, reset the schedule to normal.  A replaced
+      directory can have deleted children (left over from the initial
+      deletion), replaced children (children of the initial deletion
+      now re-added), and added children (new entries under the
+      replaced directory).  Since this is technically an addition, it
+      necessitates recursion.
+
+    Modifications
+
+    - Restore properties and, for files, contents to their unmodified
+      state.
+
+*/
+static svn_error_t *
+revert_admin_things (svn_stringbuf_t *parent_dir,
+                     svn_stringbuf_t *entry,
+                     enum svn_node_kind kind,
+                     apr_pool_t *pool)
 {
-  svn_wc_entry_t *entry;
-  svn_stringbuf_t *dir, *basename;
+  svn_stringbuf_t *full_path, *thing, *pristine_thing;
+  svn_error_t *err;
+  svn_boolean_t text_modified_p, prop_modified_p;
+  apr_time_t tstamp, pstamp;
 
-  /* Get the entry for PATH */
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "'%s' does not appear to be under revision control", path->data);
+  full_path = svn_stringbuf_dup (parent_dir, pool);
+  if (entry)
+    svn_path_add_component (full_path, entry, svn_path_local_style);
 
-  if (entry->kind == svn_node_dir)
+  /* ### todo:  WARNING WARNING WARNING!!  This is NOT crash-proof! */
+  /* ### todo:  WARNING WARNING WARNING!!  This is NOT crash-proof! */
+  /* ### todo:  WARNING WARNING WARNING!!  This is NOT crash-proof! */
+
+  SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, full_path, pool));  
+  if (prop_modified_p)
     {
-      /* Recursively un-mark a whole tree for addition. */
-      SVN_ERR (mark_tree (path, mark_tree_state_unadd, pool));
+      SVN_ERR (svn_wc__prop_path (&thing, full_path, 0, pool)); 
+      SVN_ERR (svn_wc__prop_base_path (&pristine_thing, full_path, 0, pool));
+      err = svn_io_copy_file (pristine_thing, thing, pool);
+      if (err)
+        return svn_error_createf 
+          (err->apr_err, 0, NULL, pool,
+           "revert_admin_things:  Error restoring pristine props for '%s'", 
+           full_path->data);
+      SVN_ERR (svn_io_file_affected_time (&pstamp, thing, pool));
     }
 
-  /* We need to un-mark this entry for addition in its parent's entries
-     file, so we split off basename from the parent path, then fold in
-     the addition of a delete flag. */
-  svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (dir, svn_path_local_style))
-    svn_stringbuf_set (dir, ".");
-  
-  SVN_ERR (svn_wc__entry_modify
-           (dir, basename,
-            SVN_WC__ENTRY_MODIFY_SCHEDULE,
-            SVN_INVALID_REVNUM, svn_node_none,
-            svn_wc_schedule_unadd,
-            svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, pool, NULL));
-
-  /* Now, call our client feedback function. */
-  {
-    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
-    if (fbtable)
-      {
-        apr_status_t apr_err;
-
-        apr_err = fbtable->report_unadded_item (path->data, pool);
-        if (apr_err)
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "Error reporting un-added item `%s'", path->data);
-      }
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Un-mark a PATH for deletion.  If RECURSE is TRUE and PATH
-   represents a directory, un-mark the entire tree under PATH for
-   deletion.  */
-svn_error_t *
-svn_wc_undelete (svn_stringbuf_t *path, 
-                 svn_boolean_t recursive,
-                 apr_pool_t *pool)
-{
-  svn_wc_entry_t *entry;
-  svn_stringbuf_t *dir, *basename;
-
-  /* Get the entry for PATH */
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "'%s' does not appear to be under revision control", path->data);
-
-  if (entry->kind == svn_node_dir)
+  if (kind == svn_node_file)
     {
-      if (recursive)
+      SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, pool));
+      if (text_modified_p)
         {
-          /* Recursively un-mark a whole tree for deletion. */
-          SVN_ERR (mark_tree (path, mark_tree_state_undelete, pool));
-        }
-      else
-        {
-          /* Just mark the "this dir" entry for this directory. */
-          SVN_ERR (svn_wc__entry_modify
-                   (path, NULL,
-                    SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                    SVN_INVALID_REVNUM, svn_node_none,
-                    svn_wc_schedule_undelete,
-                    svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, pool, NULL));
+          /* If there are textual mods, copy the text-base out into
+             the working copy, and update the timestamp in the entries
+             file. */
+          pristine_thing = svn_wc__text_base_path (full_path, 0, pool);
+          err = svn_io_copy_file (pristine_thing, full_path, pool);
+          if (err)
+            return svn_error_createf 
+              (err->apr_err, 0, NULL, pool,
+               "revert_admin_things:  Error restoring pristine text for '%s'", 
+               full_path->data);
+          SVN_ERR (svn_io_file_affected_time (&tstamp, full_path, pool));
         }
     }
 
-  /* We need to un-mark this entry for deletion in its parent's entries
-     file, so we split off basename from the parent path, then fold in
-     the addition of a delete flag. */
-  svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
-  if (svn_path_is_empty (dir, svn_path_local_style))
-    svn_stringbuf_set (dir, ".");
   
-  SVN_ERR (svn_wc__entry_modify
-           (dir, basename,
-            SVN_WC__ENTRY_MODIFY_SCHEDULE,
-            SVN_INVALID_REVNUM, svn_node_none,
-            svn_wc_schedule_undelete,
-            svn_wc_existence_normal,
-            FALSE, 0, 0, NULL, pool, NULL));
+  if (text_modified_p || prop_modified_p)
+    {
+      apr_uint64_t modify_flags = 0;
+      modify_flags |= (text_modified_p ? SVN_WC__ENTRY_MODIFY_TEXT_TIME : 0);
+      modify_flags |= (prop_modified_p ? SVN_WC__ENTRY_MODIFY_PROP_TIME : 0);
 
-  /* Now, call our client feedback function. */
-  {
-    svn_pool_feedback_t *fbtable = svn_pool_get_feedback_vtable (pool);
-    if (fbtable)
-      {
-        apr_status_t apr_err;
-
-        apr_err = fbtable->report_undeleted_item (path->data, pool);
-        if (apr_err)
-          return svn_error_createf 
-            (apr_err, 0, NULL, pool,
-             "Error reporting un-deleted item `%s'", path->data);
-      }
-  }
+      /* Update the entries file. */
+      SVN_ERR (svn_wc__entry_modify
+               (parent_dir, 
+                entry,
+                modify_flags,
+                SVN_INVALID_REVNUM, 
+                svn_node_none, 
+                svn_wc_schedule_normal,
+                svn_wc_existence_normal, 
+                FALSE, 
+                tstamp, 
+                pstamp, 
+                NULL, 
+                pool, 
+                NULL));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -842,17 +800,12 @@ svn_wc_undelete (svn_stringbuf_t *path,
 
 svn_error_t *
 svn_wc_revert (svn_stringbuf_t *path,
+               svn_boolean_t recursive,
                apr_pool_t *pool)
 {
-  /* Make sure PATH is a file, which is all that's currently
-     supported.  ### todo.  Make this work for dirs and props and
-     stuff.  */
   enum svn_node_kind kind;
-  svn_stringbuf_t *pristine_path, *parent_dir, *basename;
-  apr_status_t apr_err;
-  svn_error_t *err;
+  svn_stringbuf_t *p_dir, *basename;
   svn_wc_entry_t *entry;
-  apr_time_t timestamp;
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
@@ -860,64 +813,143 @@ svn_wc_revert (svn_stringbuf_t *path,
     return svn_error_createf 
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "Cannot revert '%s' -- not a versioned resource", path->data);
-  if (entry->kind != svn_node_file)
+
+  /* Safeguard 2:  can we handle this node kind? */
+  if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf 
-      (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
        "Cannot revert '%s' -- unsupported entry node kind", path->data);
 
-  /* Safeguard 2:  can we handle this node type? */
+  /* Safeguard 3:  can we deal with the node kind of PATH current in
+     the working copy? */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind != svn_node_file && kind != svn_node_none)
+  if ((kind != svn_node_none)
+      && (kind != svn_node_file)
+      && (kind != svn_node_dir))
     return svn_error_createf 
-      (SVN_ERR_WC_IS_NOT_FILE, 0, NULL, pool,
-       "Cannot revert '%s' -- unsupported node type", path->data);
-
-  /* Get the path to the pristine copy of this file.  */
-  pristine_path = svn_wc__text_base_path (path, FALSE, pool);
-  if (! pristine_path)
-    return svn_error_createf 
-      (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
-       "svn_wc_revert:  Cannot find pristine copy for '%s'", 
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+       "Cannot revert '%s' -- unsupported node kind in working copy", 
        path->data);
 
-  if (kind != svn_node_none)
+  /* Split the basename from the parent path. */
+  svn_path_split (path, &p_dir, &basename, svn_path_local_style, pool);
+  if (svn_path_is_empty (p_dir, svn_path_local_style))
+    p_dir = svn_stringbuf_create (".", pool);
+
+  /*** Reverting added items. ***/
+  if (entry->schedule == svn_wc_schedule_add)
     {
-      /* Remove the working copy file... */
-      apr_err = apr_file_remove (path->data, pool);
-      if (apr_err)
-        return svn_error_createf 
-          (apr_err, 0, NULL, pool,
-           "svn_wc_revert:  Error removing working copy file '%s'", 
-           path->data);
+      /* Remove the item from revision control, and get outta here
+         (recursion is not an option here). */
+      if (entry->kind == svn_node_dir)
+        return svn_wc_remove_from_revision_control 
+          (path, 
+           svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool),
+           FALSE, pool);
+      else
+        return svn_wc_remove_from_revision_control (p_dir, basename, 
+                                                    FALSE, pool);
     }
 
-  /* ...then copy the pristine version into the "live" working copy. */
-  err = svn_io_copy_file (pristine_path, path, pool);
-  if (err)
-    return svn_error_createf 
-      (err->apr_err, 0, NULL, pool,
-       "svn_wc_revert:  Error restoring pristine copy of '%s'", 
-       path->data);
+  /*** Reverting other modifications. ***/
 
-  /* Finally, change the timestamp of the entry to match the timestamp
-     of our freshly copied file.  */
-  svn_path_split (path, &parent_dir, &basename, svn_path_local_style, pool);
-  SVN_ERR (svn_io_file_affected_time (&timestamp, path, pool));
-  SVN_ERR (svn_wc__entry_modify
-           (parent_dir,
-            basename,
-            SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-            SVN_INVALID_REVNUM,
-            svn_node_none,
-            svn_wc_schedule_normal,
-            svn_wc_existence_normal,
-            TRUE,
-            timestamp,
-            0,
-            NULL,
-            pool,
-            NULL));
+  /* Regular prop and text edit. */
+  if (entry->schedule == svn_wc_schedule_normal)
+    {
+      /* Revert the prop and text mods (if any). */
+      if (entry->kind == svn_node_dir)
+        SVN_ERR (revert_admin_things (path, NULL, entry->kind, pool));
+      else
+        SVN_ERR (revert_admin_things (p_dir, basename, entry->kind, pool));
+    }
 
+  /* Deletions and replacements. */
+  else if ((entry->schedule == svn_wc_schedule_delete) 
+           || (entry->schedule == svn_wc_schedule_replace))
+    {
+      /* Revert the prop and text mods (if any). */
+      if (entry->kind == svn_node_dir)
+        SVN_ERR (revert_admin_things (path, NULL, entry->kind, pool));
+      else
+        SVN_ERR (revert_admin_things (p_dir, basename, entry->kind, pool));
+
+      /* Reset the schedule to normal. */
+      SVN_ERR (svn_wc__entry_modify
+               (p_dir,
+                basename,
+                SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
+                SVN_INVALID_REVNUM,
+                svn_node_none,
+                svn_wc_schedule_normal,
+                svn_wc_existence_normal,
+                TRUE,
+                0,
+                0,
+                NULL,
+                pool,
+                NULL));
+
+      /* For directories only. */
+      if (entry->kind == svn_node_dir) 
+        {
+          /* Force recursion on replaced directories. */
+          if (entry->schedule == svn_wc_schedule_replace)
+            recursive = TRUE;
+
+          /* Reset the schedule to normal in the directory itself. */
+          SVN_ERR (svn_wc__entry_modify
+                   (path,
+                    NULL,
+                    SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
+                    SVN_INVALID_REVNUM,
+                    svn_node_none,
+                    svn_wc_schedule_normal,
+                    svn_wc_existence_normal,
+                    TRUE,
+                    0,
+                    0,
+                    NULL,
+                    pool,
+                    NULL));
+        }
+    }
+
+  /* Finally, recurse if requested. */
+  if (recursive && (entry->kind == svn_node_dir))
+    {
+      apr_hash_t *entries;
+      apr_hash_index_t *hi;
+      svn_stringbuf_t *full_entry_path = svn_stringbuf_dup (path, pool);
+
+      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          const char *keystring;
+          apr_size_t klen;
+          void *val;
+          
+          /* Get the next entry */
+          apr_hash_this (hi, &key, &klen, &val);
+          keystring = (const char *) key;
+
+          /* Skip "this dir" */
+          if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
+            continue;
+
+          /* Add the entry name to FULL_ENTRY_PATH. */
+          svn_path_add_component_nts (full_entry_path,
+                                      keystring,
+                                      svn_path_local_style);
+
+          /* Revert the entry. */
+          SVN_ERR (svn_wc_revert (full_entry_path, TRUE, pool));
+
+          /* Return FULL_ENTRY_PATH to its pre-appended state. */
+          svn_stringbuf_set (full_entry_path, path->data);
+        }
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -928,30 +960,6 @@ svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
                                apr_pool_t *pool)
 {
   *pristine_path = svn_wc__text_base_path (path, FALSE, pool);
-  return SVN_NO_ERROR;
-}
-
-
-/* Remove FILE if it exists and is a file.  If it does not exist, do
-   nothing.  If it is not a file, error. */
-static svn_error_t *
-remove_file_if_present (svn_stringbuf_t *file, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  enum svn_node_kind kind;
-  
-  SVN_ERR (svn_io_check_path (file, &kind, pool));
-
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR;
-
-  /* Else. */
-
-  apr_err = apr_file_remove (file->data, pool);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL, pool, "Unable to remove '%s'", file->data);
-
   return SVN_NO_ERROR;
 }
 

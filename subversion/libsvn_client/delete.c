@@ -61,22 +61,6 @@ svn_client_delete (svn_stringbuf_t *path,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_client_undelete (svn_stringbuf_t *path,
-                     svn_boolean_t recursive,
-                     apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  /* Mark the entry for deletion. */
-  err = svn_wc_undelete (path, recursive, pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
 
 /* 
  * local variables:

@@ -85,12 +85,7 @@ public interface Client {
 
   public void add(String path, boolean recursive) throws SubversionException;
 
-  public void unAdd(String path) throws SubversionException;
-
   public void delete(String path, boolean force) throws SubversionException;
-
-  public void unDelete(String path, boolean recursive)
-    throws SubversionException;
 
   /**
    * Import a tree, using optional pre- and post-commit hook editors
