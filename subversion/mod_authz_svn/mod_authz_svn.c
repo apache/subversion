@@ -256,6 +256,7 @@ static int req_check_access(request_rec *r,
     svn_config_t *access_conf = NULL;
     svn_error_t *svn_err;
     const char *cache_key;
+    void *user_data;
 
     switch (r->method_number) {
     /* All methods requiring read access to r->uri */
@@ -350,7 +351,8 @@ static int req_check_access(request_rec *r,
 
     /* Retrieve/cache authorization file */
     cache_key = apr_pstrcat(r->pool, "mod_authz_svn:", conf->access_file, NULL);
-    apr_pool_userdata_get((void **)&access_conf, cache_key, r->connection->pool);
+    apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
+    access_conf = user_data;
     if (access_conf == NULL) {
         svn_err = svn_config_read(&access_conf, conf->access_file, FALSE,
                                   r->connection->pool);
