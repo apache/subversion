@@ -46,12 +46,14 @@ foreach (@ARGV) {
     open SVN, "-|", qw(svn status --no-ignore -v), $_
       or die "Can't call program \"svn\": $!\n";
     while (<SVN>) {
-        if (/^[\?I]\s+(.+)$/) {
+        if (/^[\?ID]/) {
+            my $file = (split)[-1];
             if ($print) {
-                print "$1\n";
+                print "$file\n";
             }
             else {
-                rmtree( $1, !$quiet, !$force );
+                rmtree( $file, !$quiet, !$force )
+                  or warn "Could not remove $file: $!; check permissions\n";
             }
         }
     }
