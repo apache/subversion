@@ -1,5 +1,5 @@
 %define apache_version 2.0.48-0.1
-%define neon_version 0.24.4
+%define neon_version 0.24.5
 %define swig_version 1.3.19
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -105,6 +105,11 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Apr 19 2004 Blair Zajac <blair@orcaware.com> 1.0.2-9438
+- Require neon 0.24.5 to fix format string vulnerabilities in XML/207
+  response handling.  See
+  http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
+
 * Thu Feb 19 2004 David Summers <david@summersoft.fay.ar.us> 0.37.0-8770
 - cvs2svn.1 man page taken out of distribution.  Change RPM so that if it
   just so happens to magically reappear someday then it will get put into
