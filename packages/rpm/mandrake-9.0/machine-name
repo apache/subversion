@@ -1,0 +1,1 @@
+uname -rm|sed 's/ /-/g' | sed 's/\//\\\//g'
