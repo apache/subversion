@@ -120,13 +120,14 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
    * txn_commit() inside close_edit().  That would result in writers
    * interfering with writers unnecessarily.
    * 
-   * Instead, we take small steps.  When we clone the root node, it
-   * actually gets a new node -- a mutable one -- in the nodes table.
-   * If we clone the next dir down, it gets a new node then too.  When
-   * it's time to commit, we'll walk those nodes (it doesn't matter in
-   * what order), looking for irreconcilable conflicts but otherwise
-   * merging changes from immutable dir nodes into our mutable ones.
-   *
+   * Instead, we take small steps.  As the driver calls editing
+   * functions to build the new tree from the old one, we clone each
+   * node that is changed, using a separate Berkeley DB transaction
+   * for each cloning.  When it's time to commit, we'll walk those
+   * nodes (it doesn't matter in what order), looking for
+   * irreconcileable conflicts but otherwise merging changes from
+   * revisions committed since we started work into our transaction.
+   * 
    * When our private tree is all in order, we lock a revision and
    * walk again, making sure the final merge states are sane.  Then we
    * mark them all as immutable and hook in the new root.
@@ -432,11 +433,105 @@ replace_file (svn_string_t *name,
 }
 
 
+struct change_prop_args
+{
+  dag_node_t *node;
+  svn_string_t *name;
+  svn_string_t *value;
+};
+
+
+static svn_error_t *
+txn_body_change_prop (void *void_args, trail_t *trail)
+{
+  struct change_prop_args *args = void_args;
+  skel_t *proplist;
+  skel_t *this, *last;
+  svn_string_t *name = args->name, *value = args->value;
+  svn_boolean_t found_it;
+
+  /* todo: we should decide if change_file_prop()'s semantics require
+     an error if deleting a non-existent property. */
+
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, args->node, trail));
+
+  /* From structure:
+   *
+   *   PROPLIST ::= (PROP ...) ;
+   *      PROP ::= atom atom ;
+   * 
+   * The proplist returned by svn_fs__dag_get_proplist is guaranteed
+   * to be well-formed, so we don't bother to error check as we walk
+   * it.
+   */
+  for (this = proplist->children, last = proplist->children;
+       this != NULL;
+       last = this, this = this->next->next)
+    {
+      if ((this->len == name->len)
+          && (memcmp (this->data, name->data, name->len) == 0))
+        {
+          found_it = 1;
+          
+          if (value)  /* set a new value */
+            {
+              skel_t *value_skel = this->next;
+              value_skel->data = value->data;
+              value_skel->len = value->len;
+            }
+          else        /* make the property disappear */
+            {
+              if (last == proplist->children)
+                proplist->children = this->next->next;
+              else
+                last->next->next = this->next->next;
+            }
+          
+          break;
+        }
+    }
+
+  if (! found_it)
+    {
+      if (value)
+        {
+          skel_t *new_name_skel
+            = svn_fs__mem_atom (name->data, name->len, trail->pool);
+          skel_t *new_value_skel
+            = svn_fs__mem_atom (value->data, value->len, trail->pool);
+
+          svn_fs__prepend (new_value_skel, proplist);
+          svn_fs__prepend (new_name_skel, proplist);
+        }
+      else
+        {
+          /* todo: see comment at start of function about erroring if try
+             to delete a non-existent property */
+        }
+    }
+
+  SVN_ERR (svn_fs__dag_set_proplist (args->node, proplist, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 change_file_prop (void *file_baton,
                   svn_string_t *name,
                   svn_string_t *value)
 {
+  struct file_baton *fb = file_baton;
+  struct change_prop_args args;
+
+  args.node = fb->node;
+  args.name = name;
+  args.value = value;
+
+  SVN_ERR (svn_fs__retry_txn (fb->parent->edit_baton->fs,
+                              txn_body_change_prop, &args,
+                              fb->parent->edit_baton->pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -446,6 +541,17 @@ change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
+  struct dir_baton *dirb = dir_baton;
+  struct change_prop_args args;
+
+  args.node = dirb->node;
+  args.name = name;
+  args.value = value;
+
+  SVN_ERR (svn_fs__retry_txn (dirb->edit_baton->fs,
+                              txn_body_change_prop, &args,
+                              dirb->edit_baton->pool));
+
   return SVN_NO_ERROR;
 }
 
