@@ -935,6 +935,15 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;
+
+  /* ### todo: The following should be:
+
+     po[0].value = apr_xml_quote_string (cc->ras->pool, log_msg->data, 1); 
+     
+     but that will have to wait until Subversion makes use of the
+     apr-util library (we'll also #include <apr_xml.h> when that
+     happens.  This should clear up Issue #475.
+  */
   po[0].value = log_msg->data;  /* ### do not allow embedded nulls */
 
   rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
