@@ -327,37 +327,40 @@ read_digest_file (apr_hash_t **children_p,
 
 
 /*** Lock helper functions (path here are still FS paths, not on-disk
-     schema-supportting paths) ***/
+     schema-supporting paths) ***/
 
 
 /* Write LOCK in FS to the actual OS filesystem. */
-/* ### TODO:  Um, subpools? */
 static svn_error_t *
 set_lock (svn_fs_t *fs,
           svn_lock_t *lock,
           apr_pool_t *pool)
 {
-  const char *this_path = lock->path;
-  const char *last_child = NULL;
+  svn_stringbuf_t *this_path = svn_stringbuf_create (lock->path, pool);
+  svn_stringbuf_t *last_child = svn_stringbuf_create ("", pool);
+  apr_pool_t *subpool;
 
   assert (lock);
 
   /* Iterate in reverse, creating the lock for LOCK->path, and then
      just adding entries for its parent, until we reach a parent
      that's already listed in *its* parent. */ 
+  subpool = svn_pool_create (pool);
   while (1729)
     {
       const char *digest_path, *parent_dir, *digest_file;
       apr_hash_t *this_children;
       svn_lock_t *this_lock;
 
+      svn_pool_clear (subpool);
+
       /* Calculate the DIGEST_PATH for the currently FS path, and then
          split it into a PARENT_DIR and DIGEST_FILE basename. */
-      digest_path = digest_path_from_path (fs, this_path, pool);
-      svn_path_split (digest_path, &parent_dir, &digest_file, pool);
+      digest_path = digest_path_from_path (fs, this_path->data, subpool);
+      svn_path_split (digest_path, &parent_dir, &digest_file, subpool);
 
       SVN_ERR (read_digest_file (&this_children, &this_lock, fs, 
-                                 digest_path, pool));
+                                 digest_path, subpool));
 
       /* We're either writing a new lock (first time through only) or
          a new entry (every time but the first). */
@@ -365,60 +368,66 @@ set_lock (svn_fs_t *fs,
         {
           this_lock = lock;
           lock = NULL;
-          last_child = digest_file;
+          svn_stringbuf_set (last_child, digest_file);
         }
       else
         {
           /* If we already have an entry for this path, we're done. */
-          if (apr_hash_get (this_children, last_child, APR_HASH_KEY_STRING))
+          if (apr_hash_get (this_children, last_child->data, last_child->len))
             break;
-          apr_hash_set (this_children, last_child, 
-                        APR_HASH_KEY_STRING, (void *)1);
+          apr_hash_set (this_children, last_child->data, 
+                        last_child->len, (void *)1);
         }
       SVN_ERR (write_digest_file (this_children, this_lock, fs, 
-                                  digest_path, pool));
+                                  digest_path, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if (strcmp (this_path, "/") == 0)
+      if ((this_path->len == 1) && (this_path->data[0] == '/'))
         break;
-      this_path = svn_path_dirname (this_path, pool);
+      svn_stringbuf_set (this_path, 
+                         svn_path_dirname (this_path->data, subpool));
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
 /* Delete LOCK from FS in the actual OS filesystem. */
-/* ### TODO:  Um, subpools? */
 static svn_error_t *
 delete_lock (svn_fs_t *fs, 
              svn_lock_t *lock,
              apr_pool_t *pool)
 {
-  const char *this_path = lock->path;
-  const char *child_to_kill = NULL;
+  svn_stringbuf_t *this_path = svn_stringbuf_create (lock->path, pool);
+  svn_stringbuf_t *child_to_kill = svn_stringbuf_create ("", pool);
+  apr_pool_t *subpool;
 
   assert (lock);
 
   /* Iterate in reverse, deleting the lock for LOCK->path, and then
      pruning entries from its parents. */
+  subpool = svn_pool_create (pool);
   while (1729)
     {
       const char *digest_path, *parent_dir, *digest_file;
       apr_hash_t *this_children;
       svn_lock_t *this_lock;
 
+      svn_pool_clear (subpool);
+
       /* Calculate the DIGEST_PATH for the currently FS path, and then
          split it into a PARENT_DIR and DIGEST_FILE basename. */
-      digest_path = digest_path_from_path (fs, this_path, pool);
-      svn_path_split (digest_path, &parent_dir, &digest_file, pool);
+      digest_path = digest_path_from_path (fs, this_path->data, subpool);
+      svn_path_split (digest_path, &parent_dir, &digest_file, subpool);
 
       SVN_ERR (read_digest_file (&this_children, &this_lock, fs, 
-                                 digest_path, pool));
+                                 digest_path, subpool));
 
       /* If we are supposed to drop the last entry from this path's
          children list, do so. */
-      if (child_to_kill)
-        apr_hash_set (this_children, child_to_kill, APR_HASH_KEY_STRING, NULL);
+      if (child_to_kill->len)
+        apr_hash_set (this_children, child_to_kill->data, 
+                      child_to_kill->len, NULL);
         
       /* Delete the lock (first time through only). */
       if (lock)
@@ -431,22 +440,25 @@ delete_lock (svn_fs_t *fs,
         {
           /* Special case:  no goodz, no file.  And remember to nix
              the entry for it in its parent. */
-          return svn_io_remove_file (digest_path, pool);
-          child_to_kill = svn_path_basename (digest_path, pool);
+          svn_stringbuf_set (child_to_kill, 
+                             svn_path_basename (digest_path, subpool));
+          SVN_ERR (svn_io_remove_file (digest_path, subpool));
         }
       else
         {
           SVN_ERR (write_digest_file (this_children, this_lock, fs, 
-                                      digest_path, pool));
-          child_to_kill = NULL;
+                                      digest_path, subpool));
+          svn_stringbuf_setempty (child_to_kill);
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if (strcmp (this_path, "/") == 0)
+      if ((this_path->len == 1) && (this_path->data[0] == '/'))
         break;
-      this_path = svn_path_dirname (this_path, pool);
+      svn_stringbuf_set (this_path, 
+                         svn_path_dirname (this_path->data, subpool));
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
