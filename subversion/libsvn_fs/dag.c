@@ -11,6 +11,7 @@
  * ====================================================================
  */
 
+#include <string.h>
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -365,6 +366,7 @@ svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
 }
 
 
+
 svn_error_t *
 svn_fs__dag_dir_entries (skel_t **entries_p,
                          dag_node_t *node,
@@ -394,6 +396,79 @@ svn_fs__dag_dir_entries (skel_t **entries_p,
     }
   
   *entries_p = entries;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__dag_set_entry (dag_node_t *node,
+                       const char *entry,
+                       svn_fs_id_t *id,
+                       trail_t *trail)
+{
+  /* kff todo: Argh, is this redundant?  Could it be implemented using
+     find_dir_entry(), add_new_entry() and replace_dir_entry()?  */
+
+  skel_t *node_revision;
+  skel_t *entries;
+  skel_t *this_entry;
+  svn_boolean_t is_mutable;
+  svn_boolean_t found_it;
+  int entry_len = strlen (entry);
+  svn_string_t *id_str = svn_fs_unparse_id (id, trail->pool);
+
+  /* Check it's a directory. */
+  if (! svn_fs__dag_is_directory (node))
+    return svn_error_create
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+       "Attempted to set entry in non-directory node.");
+  
+  /* Check it's mutable. */
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+  if (! is_mutable)
+    return svn_error_create
+      (SVN_ERR_FS_NOT_DIRECTORY, 0, NULL, trail->pool,
+       "Attempted to set entry in immutable node.");
+
+  /* Get and dup the entries. */
+  SVN_ERR (get_node_revision (&node_revision, node, trail));
+  node_revision = svn_fs__copy_skel (node_revision, trail->pool);
+  entries = node_revision->children->next;
+
+  /* Look for this entry. */
+  for (this_entry = entries->children, found_it = 0;
+       this_entry;
+       this_entry = this_entry->next)
+    {
+      skel_t *name = this_entry->children;
+
+      if ((name->len == entry_len)
+          && (strncmp (name->data, entry, entry_len) == 0))
+        {
+          this_entry->children->next->data = id_str->data;
+          this_entry->children->next->len = id_str->len;
+          found_it = 1;
+        }
+    }
+
+  if (! found_it)
+    {
+      skel_t *new_entry_skel, *name_skel, *id_skel;
+
+      /* Create the new entry. */
+      new_entry_skel = svn_fs__make_empty_list (trail->pool);
+      name_skel = svn_fs__str_atom (entry, trail->pool);
+      id_skel = svn_fs__str_atom (id_str->data, trail->pool);
+      svn_fs__prepend (id_skel, new_entry_skel);
+      svn_fs__prepend (name_skel, new_entry_skel);
+
+      /* Stuff it onto the list. */
+      svn_fs__prepend (new_entry_skel, entries);
+    }
+
+  /* Store it. */
+  SVN_ERR (set_node_revision (node, node_revision, trail));
+
   return SVN_NO_ERROR;
 }
 
@@ -595,6 +670,7 @@ replace_dir_entry (dag_node_t *parent,
 
   /* Go get a fresh NODE-REVISION for the parent. */
   SVN_ERR (get_node_revision (&parent_rev, parent, trail));
+  parent_rev = svn_fs__copy_skel (parent_rev, trail->pool);
 
   /* Find the entry that we're interested in, by name, as a pointer
      into the PARENT_REV skel. */
@@ -746,6 +822,47 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs__dag_reroot_txn (svn_fs_t *fs,
+                        const char *svn_txn,
+                        svn_fs_id_t *id,
+                        trail_t *trail)
+{
+  dag_node_t *node;
+  svn_fs_id_t *root_id, *base_id;
+  svn_boolean_t is_mutable;
+
+  SVN_ERR (svn_fs__get_txn (&root_id, &base_id, fs, svn_txn, trail));
+
+  /* Ensure that this transaction has not yet received changes. */
+  if (! svn_fs_id_eq (root_id, base_id))
+    {
+      return svn_error_createf
+        (SVN_ERR_FS_TXN_NOT_PRISTINE, 0, 0, trail->pool,
+         "txn `%s' not pristine", svn_txn);
+    }
+
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, node, trail));
+  
+  if (is_mutable)
+    {
+      skel_t *node_revision;
+      svn_fs_id_t *new_id;
+
+      SVN_ERR (svn_fs__get_node_revision (&node_revision, fs, id, trail));
+      SVN_ERR (svn_fs__create_successor (&new_id, fs, base_id, node_revision,
+                                         trail));
+      SVN_ERR (svn_fs__set_txn_root (fs, svn_txn, new_id, trail));
+    }
+  else  /* not mutable, so becomes both new base and new root */
+    {
+      SVN_ERR (svn_fs__set_txn_roots (fs, svn_txn, id, trail));
+    }
+  
+  return SVN_NO_ERROR;
+}
 
 
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,

@@ -158,6 +158,26 @@ svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
                                      trail_t *trail);
 
 
+/* Change one or both roots of an as-yet-unmodified transaction.
+   (Assume that TXN below refers to the txn named by TXN_NAME.)
+
+   If ID refers to an immutable node, then re-base TXN by setting both
+   of its roots to ID.
+   
+   If ID refers to a mutable node, then make a new mutable root for
+   TXN and *copy* ID's content over, because we certainly wouldn't
+   want to share ID with some other txn.  TXN's base remains
+   unchanged.
+
+   If TXN is not pristine (i.e., already has a mutable root), return
+   the error SVN_ERR_FS_TXN_NOT_PRISTINE.
+*/
+svn_error_t *svn_fs__dag_reroot_txn (svn_fs_t *fs,
+                                     const char *svn_txn,
+                                     svn_fs_id_t *id,
+                                     trail_t *trail);
+
+
 /* Commit the transaction SVN_TXN in FS, as part of TRAIL.  This entails:
    - marking the tree of mutable nodes at SVN_TXN's root as immutable,
      and marking all their contents as stable
@@ -205,6 +225,15 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
 svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
                                       dag_node_t *node,
                                       trail_t *trail);
+
+
+/* Set ENTRY in NODE to point to ID, as part of TRAIL.
+   NODE must be a mutable directory.  ID can refer to a mutable or
+   immutable node.  If ENTRY does not exist, it will be created.  */
+svn_error_t *svn_fs__dag_set_entry (dag_node_t *node,
+                                    const char *entry,
+                                    svn_fs_id_t *id,
+                                    trail_t *trail);
 
 
 /* Make a new mutable clone of the node named NAME in PARENT, and

@@ -404,7 +404,7 @@ unparse (skel_t *skel, svn_string_t *str, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__str_atom (char *str, apr_pool_t *pool)
+svn_fs__str_atom (const char *str, apr_pool_t *pool)
 {
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
   skel->is_atom = 1;

@@ -68,6 +68,18 @@ svn_error_t *svn_fs__set_txn_root (svn_fs_t *fs,
                                    trail_t *trail);
 
 
+/* Set both the root and base root directories of the Subversion
+   transaction SVN_TXN in FS to NEW_ID, as part of TRAIL.  TXN's old
+   root and base must be the same; if they differ, the error
+   SVN_ERR_FS_TXN_NOT_PRISTINE is returned.  Do any necessary
+   temporary allocation in TRAIL->pool.  */
+svn_error_t *
+svn_fs__set_txn_roots (svn_fs_t *fs,
+                       const char *svn_txn,
+                       const svn_fs_id_t *new_id,
+                       trail_t *trail);
+
+
 /* Set *NAMES_P to a null-terminated array of strings, giving the
    names of all currently active transactions in FS, as part of TRAIL.
    Allocate the array and the names in TRAIL->pool.  */

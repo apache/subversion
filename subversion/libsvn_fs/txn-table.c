@@ -254,6 +254,25 @@ svn_fs__set_txn_root (svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_fs__set_txn_roots (svn_fs_t *fs,
+                       const char *svn_txn,
+                       const svn_fs_id_t *new_id,
+                       trail_t *trail)
+{
+  svn_fs_id_t *old_root_id, *base_root_id;
+
+  SVN_ERR (svn_fs__get_txn (&old_root_id, &base_root_id, fs, svn_txn, trail));
+
+  if (! svn_fs_id_eq (old_root_id, base_root_id))
+    return svn_fs__err_txn_not_pristine (fs, svn_txn);
+  else if (! svn_fs_id_eq (old_root_id, new_id))
+    SVN_ERR (put_txn (fs, svn_txn, new_id, new_id, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *svn_fs__get_txn_list (char ***names_p,
                                    svn_fs_t *fs,
                                    apr_pool_t *pool,

@@ -114,7 +114,7 @@ skel_t *svn_fs__parse_skel (char *data, apr_size_t len,
 
 /* Create an atom skel whose contents are the C string STR, allocated
    from POOL.  */
-skel_t *svn_fs__str_atom (char *str, apr_pool_t *pool);
+skel_t *svn_fs__str_atom (const char *str, apr_pool_t *pool);
 
 
 /* Create an atom skel whose contents are the LEN bytes at ADDR,
