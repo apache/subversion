@@ -23,9 +23,6 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
-  - Figures 5.1 and 5.2 need to be replaced.  5.1 needs to grow "tags"
-    directories, and 5.2 needs to be changed to show grouped project roots.
-
   - ch07: maybe an explanation for the person writing a new main()
     application... what are all those callbacks in the ctx_t used for?
     people have asked this in irc.  what sort of things does an
