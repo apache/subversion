@@ -140,8 +140,8 @@ delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 static svn_error_t *
 add_directory (svn_string_t *name,
                void *walk_baton, void *parent_baton,
-               svn_string_t *base_path,
-               svn_vernum_t base_version,
+               svn_string_t *ancestor_path,
+               svn_vernum_t ancestor_version,
                void **child_baton)
 {
   /* todo: we're not yet special-casing top_dir.  When we do, it'll be
@@ -162,8 +162,8 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *walk_baton, void *parent_baton,
-                   svn_string_t *base_path,
-                   svn_vernum_t base_version,
+                   svn_string_t *ancestor_path,
+                   svn_vernum_t ancestor_version,
                    void **child_baton)
 {
   return 0;
@@ -229,11 +229,11 @@ begin_textdelta (void *walk_baton, void *parent_baton,
 static svn_error_t *
 add_file (svn_string_t *name,
           void *walk_baton, void *parent_baton,
-          svn_string_t *base_path,
-          svn_vernum_t base_version)
+          svn_string_t *ancestor_path,
+          svn_vernum_t ancestor_version)
 {
-  printf ("file \"%s\" (%s, %ld)\n",
-          name->data, base_path->data, base_version);
+  printf ("add file \"%s\" (%s, %ld)\n",
+          name->data, ancestor_path->data, ancestor_version);
   return 0;
 }
 
@@ -241,11 +241,11 @@ add_file (svn_string_t *name,
 static svn_error_t *
 replace_file (svn_string_t *name,
               void *walk_baton, void *parent_baton,
-              svn_string_t *base_path,
-              svn_vernum_t base_version)
+              svn_string_t *ancestor_path,
+              svn_vernum_t ancestor_version)
 {
-  printf ("file \"%s\" (%s, %ld)\n",
-          name->data, base_path->data, base_version);
+  printf ("replace file \"%s\" (%s, %ld)\n",
+          name->data, ancestor_path->data, ancestor_version);
   return 0;
 }
 
