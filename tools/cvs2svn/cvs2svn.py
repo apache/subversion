@@ -662,7 +662,7 @@ class RepositoryMirror:
     actual_copy_rev = copyfrom_rev
     if copyfrom_path:
       new_val = self.probe_path(copyfrom_path, copyfrom_rev)
-      if new_val == None:
+      if new_val is None:
         # Sometimes a branch is rooted in a revision that RCS has
         # marked as 'dead'.  Since that path will have been deleted in
         # the corresponding Subversion revision, we use the revision
@@ -798,7 +798,7 @@ class RepositoryMirror:
     for parent_item in parent_chain:
       pkey = parent_item[1]
       pval = marshal.loads(self.nodes_db[pkey])
-      if prune and (new_key == None) and is_prunable(pval):
+      if prune and (new_key is None) and is_prunable(pval):
         pruned_count = pruned_count + 1
         pass
         # Do nothing more.  All the action takes place when we hit a
@@ -806,7 +806,7 @@ class RepositoryMirror:
       else:
         # We hit a non-prunable, or aren't pruning, so bubble up the new gospel.
         pval[self.mutable_flag] = 1
-        if new_key == None:
+        if new_key is None:
           del pval[prev_entry_name]
         else:
           pval[prev_entry_name] = new_key
@@ -816,7 +816,7 @@ class RepositoryMirror:
       if new_key:
         self.nodes_db[new_key] = marshal.dumps(pval)
 
-    if new_key == None:
+    if new_key is None:
       new_key = gen_key()
       self.nodes_db[new_key] = marshal.dumps(self.empty_mutable_thang)
 
@@ -947,7 +947,7 @@ class Dumper:
   def probe_path(self, path):
     """Return true if PATH exists in the youngest tree of the svn
     repository, else return None.  PATH does not start with '/'."""
-    if self.repos_mirror.probe_path(path) == None:
+    if self.repos_mirror.probe_path(path) is None:
       return None
     else:
       return 1
