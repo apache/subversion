@@ -1,12 +1,8 @@
+Last updated: $Date: 2001-04-17 21:17:04 $
 
-           DOCUMENT IN PROGRESS.  PLEASE DO NOT READ YET.
-
-   [This is for eventual review by others, in particular JimB.  By the
-   way, JimB may be about to commit a roadmap/spec for these
-   improvements himself, but that's okay -- I'm still finding it
-   helpful to consider the problem from scratch.  -kff]
-
-Last updated: $Date: 2001-04-16 23:05:15 $
+Please review, folks.  I'm planning to start on implementation of
+section (a) right away, and then consider (b) and (c) more carefully
+after (a) is done.
 
 Three related things that need to happen in the filesystem before we
 get to alpha:
@@ -24,64 +20,108 @@ get to alpha:
 a) File contents need to be moved into a separate table.
 ========================================================
 
-There will be a new table, `strings'.  The keys will simply be numbers
-(or whatever -- the point is, they're not node rev IDs), and the
-values are, well, strings.  Not skels, just strings.  Berkeley keeps
-track of length for us anyway, so no point making them skels.
+There is a new table, `strings'.  The keys are numbers (or whatever --
+the point is, they're not node rev IDs), and the values are, well,
+strings.  A string may represent a skel, or it may simply be the
+contents of a file.  Since Berkeley keeps track of length for us
+anyway, there's no point using skels for straight file contents.
 
 Before we go on, here's some background from `structure':
 
-   If a NODE-REVISION's header's KIND is "file", then the
-   node-revision skel represents a file, and has the form:
-
-      (HEADER DATA)
-
-   where DATA is an atom giving the full contents of the file.  (In
-   the future, DATA may have other alternate forms, indicating that
-   the fulltext of the file is stored elsewhere in the database, or
-   perhaps in an ordinary Unix file.)
+   ! NODE-REVISION and HEADER: how we represent a node revision
+   ! 
+   ! We represent a given revision of a file or directory node using a list
+   ! skel (see skel.h for an explanation of skels).  A node revision skel
+   ! has the form:
+   ! 
+   !     (HEADER KIND-SPECIFIC ...)
+   ! 
+   ! where HEADER is a header skel, whose structure is common to all nodes,
+   ! and the KIND-SPECIFIC elements carry data dependent on what kind of
+   ! node this is --- file, directory, etc.
+   ! 
+   ! HEADER has the form:
+   ! 
+   !     (KIND PROPLIST FLAG ...)
+   !
+   ! [...]
+   !
+   ! If a NODE-REVISION's header's KIND is "file", then the
+   ! node-revision skel represents a file, and has the form:
+   !
+   !    (HEADER DATA)
+   !
+   ! where DATA is an atom giving the full contents of the file.  (In
+   ! the future, DATA may have other alternate forms, indicating that
+   ! the fulltext of the file is stored elsewhere in the database, or
+   ! perhaps in an ordinary Unix file.)
+   !
+   ! [...]
+   !
+   ! If the header's KIND is "dir", then the node-revision skel
+   ! represents a directory, and has the form:
+   ! 
+   !     (HEADER PROPLIST (ENTRY ...))
 
 Great, thank you `structure'.  Take it away, Eric the Orchestra
 Leader...
 
-We now define one of those hitherto speculative alternate forms:
+The goal is to separate property lists from file contents, and store
+both separately from node revisions.  We break PROPLIST out of HEADER,
+and put PROPLIST and DATA in the `strings' table:
 
-   DATA := atom | ("strings" KEY) ;
-   KEY  := atom ;                     /* a key in the `strings' table */
+   ! NODE-REVISION and HEADER: how we represent a node revision
+   ! 
+   ! We represent a given revision of a file or directory node using a list
+   ! skel (see skel.h for an explanation of skels).  A node revision skel
+   ! has the form:
+   ! 
+   !     (HEADER PROPLIST KIND-SPECIFIC ...)
+   ! 
+   ! where HEADER is a header skel, whose structure is common to all
+   ! nodes, PROPLIST is a property list, whose structure is also
+   ! common to all nodes, and the KIND-SPECIFIC elements carry data
+   ! dependent on what kind of node this is --- file, directory, etc.
+   ! 
+   ! HEADER has the form:
+   ! 
+   !     (KIND FLAG ...)
+   !
+   ! [...]
+   !
+   ! If a NODE-REVISION's header's KIND is "file", then the
+   ! node-revision skel represents a file, and has the form:
+   !
+   !    (HEADER PROP-KEY CONTENTS-KEY)
+   !
+   ! where PROP-KEY and CONTENTS-KEY are keys into the `strings'
+   ! table, the values for which are the property list skel and node
+   ! revision's contents, respectively.  For files, the content is a
+   ! straight string, for directories, it is a skel:
+   ! 
+   !     (ENTRY ...)
 
-Fine, except that supporting both forms of DATA -- the atom form and
-the forwarding pointer form of DATA -- is probably a lot of complexity
-for not much gain.  So let's just do this:
+Now,
 
-   DATA := atom ;                     /* a key into the `strings' table */
-
-(The reason supporting both would be too much complexity will become
-clearer when we discuss item (c) later.  In case you were wondering.)
-
-Next,
-
-   - Replace dag_node_t->node_revision with two fields:
-     dag_node_t->node_rev_header and dag_node_t->node_rev_data.
+   - Replace dag_node_t->node_revision with three fields:
+     dag_node_t->node_rev_header, dag_node_t->node_rev_proplist, and
+     dag_node_t->node_rev_contents.
 
    - Replace svn_fs__get_node_revision() with, you guessed it,
-     svn_fs__get_node_rev_header() and svn_fs__get_node_rev_data().
+     svn_fs__get_node_rev_header(), svn_fs__get_node_rev_proplist(),
+     and svn_fs__get_node_rev_contents().
 
-   - Find all callers of svn_fs__get_node_revision().  You know what
-     to do.  Some of them will only need to call
-     svn_fs__get_node_rev_header(), yay, they'll never need to touch
-     the contents.
+   - Find all callers of svn_fs__get_node_revision(), change each of
+     them to call whatever subset of the above three new functions is
+     appropriate.
 
    - Split svn_fs__put_node_revision() similarly, etc, etc.
 
 
-I think only files store their data in the `strings' table, which
-would mean that svn_fs__get_node_rev_data() would have one code path
-to retrieve a directory's entries list, and a different path to get a
-file's data.  Not a huge deal, just something to think about.
-
-
 b) Operate on portions of files efficiently.
 ============================================
+
+   [still pondering this section]
 
 You're gonna love Berkeley DB even more after this, if that were
 possible... The basic story is, you tell your DBT you're only
@@ -94,9 +134,7 @@ in the usual way.  Here's how:
 
 If it's a read operation, Berkeley will read the specified range.  If
 some of those bytes don't exist, the read will still succeed, and null
-bytes will be returned for the absent ones.  This is good for reading
-into a fixed-size window, I guess -- cleanses the unused portion
-automatically for you.  Heh.
+bytes will be returned for the absent ones.
 
 If it's a write operation, and dbt->size != dbt->dlen, then that range
 of the record will grow or shrink accordingly.  See
@@ -104,14 +142,16 @@ http://www.sleepycat.com/docs/ref/am/partial.html for details.
 
 Here's how we take advantage of this:
 
-   - dag_node_t gets two new fields: data_offset and data_len.  They
-     apply to the node's cache of the data, not the header.
+   - dag_node_t gets two new fields: contents_offset and contents_len.
+     They apply to the node's cache of the contents, not the header or
+     proplist.
 
-   - svn_fs__get_node_rev_data() takes offset and len arguments,
+   - svn_fs__get_node_rev_contents() takes offset and len arguments,
      fetches only that data.  The dag_node_t will remember the offset
      and len.
 
-   - svn_fs__put_node_rev_data() takes offset and len args as well.
+   - svn_fs__put_node_rev_contents() takes offset and len args as
+     well.
 
    - change set_node_revision() accordingly.
 
@@ -123,14 +163,11 @@ of course, so it won't be necessary to know the size in advance.
 
 Thought: possibly we should stop storing data in the dag_node_t
 itself, and just return the data in a void pointer passed to
-svn_fs__get_node_rev_data().  Still pondering.
+svn_fs__get_node_rev_contents().  Still pondering.
 
 
 c) Reverse-delta storage.
 =========================
-
-The basic story is, we use Berkeley DB's partial record features to do
-the random access and windowing of our delta algorithm.
 
 Here's how nodes are represented now:
    
@@ -140,17 +177,70 @@ Here's how nodes are represented now:
           CHECKSUM ::= ("md5" BYTES) ;
        DATA, BYTES ::= atom ;
 
-Let's change it to this:
+However, now that properties and contents live separately from the
+node revision, we can't deltify across the entire node revision; we
+have to treat the property list and file contents separately from each
+other and from the node revision itself.  So the change will actually
+affect more than what's mentioned above.  Here's the new grammar, with
+changes for deltification and with copy nodes removed, since we don't
+seem to be using them now:
 
-    REPRESENTATION ::= ("fulltext" NODE-REVISION)
-                     | ("younger" DELTA CHECKSUM) 
-                     | ("delta" BASE DELTA CHECKSUM) ;
-              BASE ::= atom ;        /* a key into the `strings' table */
-             DELTA ::= ("svndiff" DATA) ;
-          CHECKSUM ::= ("md5" BYTES) ;
-             BYTES ::= atom ;
-             DATA  ::= atom ;        /* a key into the `strings' table */
+   ! Table keys:
+   !                   ID ::= node.revision-id ;
+   !                  TXN ::= number ;
+   !
+   ! Filesystem revisions:
+   !             REVISION ::= ("revision" ID PROPLIST) ;
+   !             PROPLIST ::= (PROP ...) ;
+   !                 PROP ::= atom atom ;
+   !
+   ! Transactions:
+   !          TRANSACTION ::= ("transaction" ROOT-ID BASE-ROOT-ID) ;
+   !              ROOT-ID ::= node.revision-id ;
+   !         BASE-ROOT-ID ::= node.revision-id ;
+   !
+   ! Node revisions:
+   !        NODE-REVISION ::= FILE | DIR ;
+   !                 FILE ::= (HEADER PROPLIST CONTENTS) ;
+   !                  DIR ::= (HEADER PROPLIST (ENTRY ...)) ;
+   !                ENTRY ::= (NAME ID) ;
+   !                 NAME ::= atom ;
+   !
+   !               HEADER ::= (KIND FLAG ...) ;
+   !                 KIND ::= "file" | "dir" ;
+   !                 FLAG ::= ("mutable" PARENT-ID) ;
+   !            PARENT-ID ::= "" | node.revision-id ;
+   !      SOURCE-REVISION ::= number ;
+   !
+   !   CONTENTS, PROPLIST ::= ("fulltext" STRING-KEY)
+   !                        | ("shared" ID)
+   !                        | ("svndiff" BASE-ID STRING-KEY CHECKSUM) ;
+   !
+   !           STRING-KEY ::= atom ;    /* a key into the `strings' table */
+   !
+   !             CHECKSUM ::= ("md5" BYTES) ;
+   !                BYTES ::= atom ;
 
-... finish tomorrow morning ...
+If CONTENTS is a fulltext, the `("string" STRING-KEY)' form is used.
+If CONTENTS does not point to the fulltext string directly, then it is
+either the same as some other node's contents, or a delta against some
+other node's contents.  These situations are expressed as "shared" and
+"svndiff", respectively.  In either case, we retrieve the contents via
+the other node's ID, instead of referring directly to an entry in
+`strings'.  That way, when we convert a node N's fulltext to a delta,
+we know that only N refers directly to the old fulltext string.
+Everyone else goes through N, or through a chain eventually leading
+through N.
 
+PROPLISTs work the same way.
 
+REPRESENTATION skels go away.  Node revisions are always stored as
+fulltext, now each one is just a header plus pointers to proplist and
+contents.
+
+--- todo ---
+
+Okay, I think the above is accurate as far as it goes.  We still need
+to talk about how reverse deltification actually happens, though,
+including: avoiding holding a whole file in memory, and composing
+svndiff deltas to avoid the naive chain of fulltext productions.
