@@ -72,7 +72,7 @@ main (int argc, char **argv)
   void *edit_baton;
   svn_string_t *repos;
   svn_string_t *anc_path;
-  svn_vernum_t version;
+  svn_revnum_t revision;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
@@ -99,10 +99,10 @@ main (int argc, char **argv)
   anc_path = svn_string_create("", pool);
 
   /* ### how can we know this before we start fetching crap? */
-  version = 1;
+  revision = 1;
 
   err = svn_wc_get_checkout_editor(svn_string_create(dir, pool),
-                                   repos, anc_path, version,
+                                   repos, anc_path, revision,
                                    &editor, &edit_baton, pool);
   if (err)
     goto error;

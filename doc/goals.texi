@@ -33,9 +33,9 @@ going into too much detail, let's just say that CVS's repository
 structure is showing its age.)
 
 @item
-Commits are atomic.  Each commit results in a single version number,
+Commits are atomic.  Each commit results in a single revision number,
 which refers to the state of the entire tree.  Files no longer have
-their own version numbers.
+their own revision numbers.
 
 @item
 The locking scheme is only as strict as absolutely necessary.
@@ -75,10 +75,10 @@ Others are not so obvious, and are explained in greater detail below.
 @section Rename/removal/resurrection support
 
 Full rename support means you can trace through ancestry by name
-@emph{or} by entity.  For example, if you say "Give me version 12 of
-foo.c", do you mean version 12 of the file whose name is @emph{now}
-foo.c (but perhaps it was named bar.c back at version 12), or the file
-whose name was foo.c in version 12 (perhaps that file no longer exists,
+@emph{or} by entity.  For example, if you say "Give me revision 12 of
+foo.c", do you mean revision 12 of the file whose name is @emph{now}
+foo.c (but perhaps it was named bar.c back at revision 12), or the file
+whose name was foo.c in revision 12 (perhaps that file no longer exists,
 or has a different name now)?  In Subversion, both interpretations are
 available to the user.
 
@@ -129,8 +129,8 @@ Both of these changes are done on the client side; the repository does
 not even know about them.
 
 Changes to file type are versioned -- the type is associated with a
-particular version of the file, and new versions inherit from previous
-versions except when told otherwise.
+particular revision of the file, and new revisions inherit from previous
+revisions except when told otherwise.
 
 @c -----------------------------------------------------------------------
 @node I18N/Multilingual support
@@ -198,7 +198,7 @@ Subversion supports client-side plug-in diff programs.
 
 There is no need for Subversion to have every possible diff mechanism
 built in.  It can invoke a user-specified client-side diff program on
-the two versions of the file(s) locally.
+the two revisions of the file(s) locally.
 
 @c -----------------------------------------------------------------------
 @node Better merging
@@ -217,14 +217,14 @@ For details, @xref{Merging and Ancestry}.
 For text files, Subversion resolves conflicts similarly to CVS, by
 folding repository changes into the working files with conflict markers.
 But, for @emph{both} text and binary files, Subversion also always puts
-the pristine repository version in one temporary file, and the pristine
-working copy version in another temporary file.
+the pristine repository revision in one temporary file, and the pristine
+working copy revision in another temporary file.
 
 Thus, in a text conflict, the user has three files readily at hand,
 
 @enumerate
 @item the original working copy file
-@item the repository version from which the update was taken
+@item the repository revision from which the update was taken
 @item the combined file, with conflict markers
 @end enumerate
 

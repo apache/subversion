@@ -60,7 +60,7 @@
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
-#include "version.h"
+#include "revision.h"
 #include "node.h"
 #include "txn.h"
 
@@ -121,7 +121,7 @@ cleanup_fs (svn_fs_t *fs)
   int db_err;
 
   /* Close the databases.  */
-  SVN_ERR (cleanup_fs_db (fs, &fs->versions, "versions"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
 
@@ -290,7 +290,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Create the databases in the environment.  */
-  svn_err = svn_fs__create_versions (fs);
+  svn_err = svn_fs__create_revisions (fs);
   if (svn_err) goto error;
   svn_err = svn_fs__create_nodes (fs);
   if (svn_err) goto error;
@@ -329,7 +329,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
 
   /* Open the various databases.  */
-  svn_err = svn_fs__open_versions (fs);
+  svn_err = svn_fs__open_revisions (fs);
   if (svn_err) goto error;
   svn_err = svn_fs__open_nodes (fs);
   if (svn_err) goto error;

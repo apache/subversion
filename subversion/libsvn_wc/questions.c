@@ -95,11 +95,11 @@ svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool)
    In other words, we're looking to see if a user has made local
    modifications to a file since the last update or commit.
 
-   Note: Assuming that F lives in a directory D at version V, please
+   Note: Assuming that F lives in a directory D at revision V, please
    notice that we are *NOT* answering the question, "are the contents
-   of F different than version V of F?"  While F may be at a different
-   version number than its parent directory, but we're only looking
-   for local edits on F, not for consistent directory versions.  
+   of F different than revision V of F?"  While F may be at a different
+   revision number than its parent directory, but we're only looking
+   for local edits on F, not for consistent directory revisions.  
 
    TODO:  the logic of the routines on this page might change in the
    future, as they bear some relation to the user interface.  For
@@ -317,10 +317,10 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
   svn_string_t *textbase_filename;
   svn_boolean_t different_filesizes, equal_timestamps;
                      
-  /* Get the full path of the textbase version of filename */
+  /* Get the full path of the textbase revision of filename */
   textbase_filename = svn_wc__text_base_path (filename, 0, pool);
 
-  /* Simple case:  if there's no text-base version of the file, all we
+  /* Simple case:  if there's no text-base revision of the file, all we
      can do is look at timestamps.  */
   if (! textbase_filename)
     {
@@ -335,7 +335,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
   
-  /* Better case:  we have a text-base version of the file, so there
+  /* Better case:  we have a text-base revision of the file, so there
      are at least three tests we can try in succession. */
   else
     {     

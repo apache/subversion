@@ -1,4 +1,4 @@
-/* convert-size.c --- implementation of size/string conversion functions
+/* convert-size.c --- implementation of size/string conrevision functions
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.

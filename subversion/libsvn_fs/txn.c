@@ -53,7 +53,7 @@
 #include "svn_fs.h"
 #include "fs.h"
 #include "txn.h"
-#include "version.h"
+#include "revision.h"
 #include "node.h"
 #include "skel.h"
 #include "convert-size.h"
@@ -122,14 +122,14 @@ no_such_txn (svn_fs_txn_t *txn)
 
 
 static svn_error_t *
-bad_txn_root (svn_fs_txn_t *txn, svn_vernum_t version)
+bad_txn_root (svn_fs_txn_t *txn, svn_revnum_t revision)
 {
   return
     svn_error_createf
     (SVN_ERR_FS_BAD_REPLACE_ROOT, 0, 0, txn->fs->pool,
      "the root directory of transaction `%s' is not a direct descendent\n"
-     "of the root of version `%ld', in filesystem `%s'",
-     txn->id, version, txn->fs->env_path);
+     "of the root of revision `%ld', in filesystem `%s'",
+     txn->id, revision, txn->fs->env_path);
 }
 
 
@@ -422,7 +422,7 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 struct replace_root_args {
   svn_fs_dir_t **root_p;
   svn_fs_txn_t *svn_txn;
-  svn_vernum_t version;
+  svn_revnum_t revision;
 };
 
 
@@ -434,9 +434,9 @@ replace_root_body (void *baton,
   struct replace_root_args *args = baton;
   svn_fs_dir_t **root_p = args->root_p;
   svn_fs_txn_t *svn_txn = args->svn_txn;
-  svn_vernum_t version = args->version;
+  svn_revnum_t revision = args->revision;
 
-  svn_fs_id_t *version_root_id;
+  svn_fs_id_t *revision_root_id;
   svn_fs_node_t *txn_root;
 
   /* The TRANSACTION skel for SVN_TXN, and the sub-skel that holds its
@@ -444,9 +444,9 @@ replace_root_body (void *baton,
      have the root directory cached in the SVN_TXN object already.  */
   skel_t *txn_skel, *root_skel;
 
-  /* Find the root of VERSION in the transaction's filesystem.  */
-  SVN_ERR (svn_fs__version_root (&version_root_id, svn_txn->fs, version,
-				 svn_txn->pool));
+  /* Find the root of REVISION in the transaction's filesystem.  */
+  SVN_ERR (svn_fs__revision_root (&revision_root_id, svn_txn->fs, revision,
+                                  svn_txn->pool));
 
   /* Have we cached the transaction's root directory ID?  */
   if (! svn_txn->root)
@@ -478,9 +478,9 @@ replace_root_body (void *baton,
   if (svn_txn->root)
     {
       /* Yes, we have a root directory.  Make sure it's a direct
-         ancestor of the root version.  */
-      if (! svn_fs__is_parent (version_root_id, svn_txn->root))
-	return bad_txn_root (svn_txn, version);
+         ancestor of the root revision.  */
+      if (! svn_fs__is_parent (revision_root_id, svn_txn->root))
+	return bad_txn_root (svn_txn, revision);
 
       /* The root directory ID looks reasonable, so open the actual node.  */
       SVN_ERR (svn_fs__open_node_by_id (&txn_root, svn_txn->fs,
@@ -490,16 +490,16 @@ replace_root_body (void *baton,
     {
       /* No, this transaction has no root directory yet.  */
       svn_error_t *svn_err;
-      svn_fs_node_t *version_root;
+      svn_fs_node_t *revision_root;
 
-      /* Open VERSION's root directory, create an immediate successor
+      /* Open REVISION's root directory, create an immediate successor
          to it, and establish that as SVN_TXN's root.  */
-      SVN_ERR (svn_fs__open_node_by_id (&version_root,
-					svn_txn->fs, version_root_id,
+      SVN_ERR (svn_fs__open_node_by_id (&revision_root,
+					svn_txn->fs, revision_root_id,
 					db_txn));
-      svn_err = svn_fs__create_successor (&txn_root, version_root,
+      svn_err = svn_fs__create_successor (&txn_root, revision_root,
 					  svn_txn, db_txn);
-      svn_fs_close_node (version_root);
+      svn_fs_close_node (revision_root);
       if (svn_err)
 	return svn_err;
 
@@ -544,13 +544,13 @@ replace_root_body (void *baton,
 svn_error_t *
 svn_fs_replace_root (svn_fs_dir_t **root_p,
 		     svn_fs_txn_t *txn,
-		     svn_vernum_t version)
+		     svn_revnum_t revision)
 {
   struct replace_root_args args;
 
   args.root_p = root_p;
   args.svn_txn = txn;
-  args.version = version;
+  args.revision = revision;
 
   return svn_fs__retry_txn (txn->fs, replace_root_body, &args);
 }

@@ -381,8 +381,8 @@ typedef struct svn_delta_edit_fns_t
 
      The `add_file', `add_directory', `replace_file', and
      `replace_directory' functions all take arguments ANCESTOR_PATH
-     and ANCESTOR_VERSION.  If ANCESTOR_PATH is non-zero, then
-     ANCESTOR_PATH and ANCESTOR_VERSION indicate the ancestor of the
+     and ANCESTOR_REVISION.  If ANCESTOR_PATH is non-zero, then
+     ANCESTOR_PATH and ANCESTOR_REVISION indicate the ancestor of the
      resulting object.
 
      There are six restrictions on the order in which the producer
@@ -460,7 +460,7 @@ typedef struct svn_delta_edit_fns_t
   svn_error_t *(*add_directory) (svn_string_t *name,
                                  void *parent_baton,
                                  svn_string_t *ancestor_path,
-                                 svn_vernum_t ancestor_version,
+                                 svn_revnum_t ancestor_revision,
                                  void **child_baton);
 
   /* We are going to change the directory entry named NAME to a
@@ -472,7 +472,7 @@ typedef struct svn_delta_edit_fns_t
   svn_error_t *(*replace_directory) (svn_string_t *name,
                                      void *parent_baton,
                                      svn_string_t *ancestor_path,
-                                     svn_vernum_t ancestor_version,
+                                     svn_revnum_t ancestor_revision,
                                      void **child_baton);
 
   /* Change the value of a directory's property.
@@ -500,7 +500,7 @@ typedef struct svn_delta_edit_fns_t
   svn_error_t *(*add_file) (svn_string_t *name,
                             void *parent_baton,
                             svn_string_t *ancestor_path,
-                            svn_vernum_t ancestor_version,
+                            svn_revnum_t ancestor_revision,
                             void **file_baton);
 
   /* We are going to change the directory entry named NAME to a file.
@@ -510,10 +510,10 @@ typedef struct svn_delta_edit_fns_t
   svn_error_t *(*replace_file) (svn_string_t *name,
                                 void *parent_baton,
                                 svn_string_t *ancestor_path,
-                                svn_vernum_t ancestor_version,
+                                svn_revnum_t ancestor_revision,
                                 void **file_baton);
 
-  /* Apply a text delta, yielding the new version of a file.
+  /* Apply a text delta, yielding the new revision of a file.
 
      FILE_BATON indicates the file we're creating or updating, and the
      ancestor file on which it is based; it is the baton set by some
@@ -617,13 +617,13 @@ typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
 /* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
    PARSER that will call into it (and feed EDIT_BATON to its
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
-   BASE_VERSION as default "context variables" when computing ancestry
+   BASE_REVISION as default "context variables" when computing ancestry
    within a tree-delta. */
 svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                                          const svn_delta_edit_fns_t *editor,
                                          void *edit_baton,
                                          svn_string_t *base_path, 
-                                         svn_vernum_t base_version,
+                                         svn_revnum_t base_revision,
                                          apr_pool_t *pool);
 
 
@@ -651,7 +651,7 @@ svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton,
                                        svn_string_t *base_path,
-                                       svn_vernum_t base_version,
+                                       svn_revnum_t base_revision,
                                        apr_pool_t *pool);
 
 

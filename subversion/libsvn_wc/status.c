@@ -74,8 +74,8 @@ add_status_structure (apr_hash_t *statushash,
   svn_wc_status_t *statstruct = apr_pcalloc (pool, sizeof(*statstruct));
 
   /* Copy info from entry struct to status struct */
-  statstruct->local_ver = entry->version;
-  statstruct->repos_ver = SVN_INVALID_VERNUM;  /* svn_client_status()
+  statstruct->local_ver = entry->revision;
+  statstruct->repos_ver = SVN_INVALID_REVNUM;  /* svn_client_status()
                                                   will fill this in */
   
   if (entry->flags & SVN_WC__ENTRY_ADD)
@@ -115,7 +115,7 @@ add_status_structure (apr_hash_t *statushash,
 /* Given a PATH to a working copy files or dir, return a STATUSHASH
    which maps names to status structures.  For each struct, all fields
    will be filled in _except_ for the field containing the current
-   repository version; this will be filled in by svn_client_status(),
+   repository revision; this will be filled in by svn_client_status(),
    the primary caller of this routine. */
 svn_error_t *
 svn_wc_get_status (apr_hash_t *statushash,

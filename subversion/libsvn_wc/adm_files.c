@@ -712,7 +712,7 @@ static svn_error_t *
 check_adm_exists (int *exists,
                   svn_string_t *path,
                   svn_string_t *ancestor_path,
-                  svn_vernum_t ancestor_version,
+                  svn_revnum_t ancestor_revision,
                   apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
@@ -955,7 +955,7 @@ init_adm (svn_string_t *path,
 
 
   /* Now unlock it.  It's now a valid working copy directory, that
-     just happens to be at version 0. */
+     just happens to be at revision 0. */
   err = svn_wc__unlock (path, pool);
   if (err)
     return err;
@@ -969,13 +969,13 @@ init_adm (svn_string_t *path,
  * based at REPOSITORY.
  *
  * Creates the adm area if none, in which case PATH starts out at
- * version 0.
+ * revision 0.
  */
 svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
                     svn_string_t *repository,
                     svn_string_t *ancestor_path,
-                    svn_vernum_t ancestor_version,
+                    svn_revnum_t ancestor_revision,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -985,7 +985,7 @@ svn_wc__ensure_adm (svn_string_t *path,
   err = check_adm_exists (&exists_already,
                           path,
                           ancestor_path,
-                          ancestor_version,
+                          ancestor_revision,
                           pool);
   if (err)
     return err;

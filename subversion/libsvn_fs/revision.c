@@ -1,4 +1,4 @@
-/* version.c --- functions for working with filesystem versions
+/* revision.c --- functions for working with filesystem revisions
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -50,7 +50,7 @@
 
 #include "svn_fs.h"
 #include "fs.h"
-#include "version.h"
+#include "revision.h"
 #include "err.h"
 #include "id.h"
 #include "convert-size.h"
@@ -62,88 +62,88 @@
 
 
 static svn_error_t *
-corrupt_version (svn_fs_t *fs, svn_vernum_t v)
+corrupt_revision (svn_fs_t *fs, svn_revnum_t v)
 {
   return
     svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-		       "corrupt root data for version %ld of filesystem `%s'",
+		       "corrupt root data for revision %ld of filesystem `%s'",
 		       v, fs->env_path);
 }
 
 
 static svn_error_t *
-no_such_version (svn_fs_t *fs, svn_vernum_t v)
+no_such_revision (svn_fs_t *fs, svn_revnum_t v)
 {
   return
-    svn_error_createf (SVN_ERR_FS_NO_SUCH_VERSION, 0, 0, fs->pool,
-		       "filesystem `%s' has no version number %ld",
+    svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, fs->pool,
+		       "filesystem `%s' has no revision number %ld",
 		       fs->env_path, v);
 }
 
 
 
-/* Reading versions.  */
+/* Reading revisions.  */
 
 
-/* Set *SKEL to the VERSION skel of version V of the filesystem FS.
+/* Set *SKEL to the REVISION skel of revision V of the filesystem FS.
    SKEL and the data block it points into will both be freed when POOL
    is cleared.
 
    Beyond verifying that it's a syntactically valid skel, this doesn't
    validate the data returned at all.  */
 static svn_error_t *
-get_version_skel (skel_t **skel,
-		  svn_fs_t *fs,
-		  svn_vernum_t v, 
-		  apr_pool_t *pool)
+get_revision_skel (skel_t **skel,
+                   svn_fs_t *fs,
+                   svn_revnum_t v, 
+                   apr_pool_t *pool)
 {
   db_recno_t recno;
   DBT key, value;
   int db_err;
-  skel_t *version;
+  skel_t *revision;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  /* Turn the version number into a Berkeley DB record number.
-     Versions are numbered starting with zero; Berkeley DB record numbers
+  /* Turn the revision number into a Berkeley DB record number.
+     Revisions are numbered starting with zero; Berkeley DB record numbers
      begin with one.  */
   recno = v + 1;
   svn_fs__set_dbt (&key, &recno, sizeof (recno));
 
   svn_fs__result_dbt (&value);
-  db_err = fs->versions->get (fs->versions, 0, /* no transaction */ 
-			      &key, &value, DB_SET_RECNO);
+  db_err = fs->revisions->get (fs->revisions, 0, /* no transaction */ 
+                               &key, &value, DB_SET_RECNO);
   if (db_err == DB_NOTFOUND)
-    return no_such_version (fs, v);
-  SVN_ERR (DB_WRAP (fs, "reading version root from filesystem", db_err));
+    return no_such_revision (fs, v);
+  SVN_ERR (DB_WRAP (fs, "reading revision root from filesystem", db_err));
   svn_fs__track_dbt (&value, pool);
 
-  version = svn_fs__parse_skel (value.data, value.size, pool);
-  if (! version)
-    return corrupt_version (fs, v);
-  *skel = version;
+  revision = svn_fs__parse_skel (value.data, value.size, pool);
+  if (! revision)
+    return corrupt_revision (fs, v);
+  *skel = revision;
   return 0;
 }
 
 
-/* Set *ID to ID of the root of version V of the filesystem FS.
+/* Set *ID to ID of the root of revision V of the filesystem FS.
    Allocate the ID in POOL.  */
 svn_error_t *
-svn_fs__version_root (svn_fs_id_t **id_p,
-		      svn_fs_t *fs,
-		      svn_vernum_t v,
-		      apr_pool_t *pool)
+svn_fs__revision_root (svn_fs_id_t **id_p,
+                       svn_fs_t *fs,
+                       svn_revnum_t v,
+                       apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
-  skel_t *version, *id_skel;
+  skel_t *revision, *id_skel;
   svn_fs_id_t *id;
 
-  SVN_ERR (get_version_skel (&version, fs, v, subpool));
-  if (svn_fs__list_length (version) != 3
-      || ! svn_fs__is_atom (version->children, "version"))
+  SVN_ERR (get_revision_skel (&revision, fs, v, subpool));
+  if (svn_fs__list_length (revision) != 3
+      || ! svn_fs__is_atom (revision->children, "revision"))
     goto corrupt;
 
-  id_skel = version->children->next;
+  id_skel = revision->children->next;
   if (! id_skel->is_atom)
     goto corrupt;
 
@@ -156,47 +156,47 @@ svn_fs__version_root (svn_fs_id_t **id_p,
 
  corrupt:
   apr_destroy_pool (subpool);
-  return corrupt_version (fs, v);
+  return corrupt_revision (fs, v);
 }
 
 
 
-/* Writing versions.  */
+/* Writing revisions.  */
 
 
-/* Add SKEL as a new version to FS's `versions' table.  Set *V_P to
-   the number of the new version created.  Do this as part of the
+/* Add SKEL as a new revision to FS's `revisions' table.  Set *V_P to
+   the number of the new revision created.  Do this as part of the
    Berkeley DB transaction TXN; if TXN is zero, then make the change
    without transaction protection.
 
    Do any necessary temporary allocation in POOL.  */
 static svn_error_t *
-put_version_skel (svn_vernum_t *v_p,
+put_revision_skel (svn_revnum_t *v_p,
 		  svn_fs_t *fs,
 		  skel_t *skel,
 		  DB_TXN *txn,
 		  apr_pool_t *pool)
 {
   db_recno_t recno;
-  DB *versions = fs->versions;
+  DB *revisions = fs->revisions;
   DBT key, value;
 
   /* Since we use the DB_APPEND flag, the `put' call sets recno to the record
-     number of the new version.  */
+     number of the new revision.  */
   recno = 0;
   svn_fs__clear_dbt (&key);
   key.data = &recno;
   key.size = key.ulen = sizeof (recno);
   key.flags |= DB_DBT_USERMEM;
 
-  SVN_ERR (DB_WRAP (fs, "adding new version",
-		    versions->put (versions, txn,
-				   &key,
-				   svn_fs__skel_to_dbt (&value, skel, pool),
-				   DB_APPEND)));
+  SVN_ERR (DB_WRAP (fs, "adding new revision",
+		    revisions->put (revisions, txn,
+                                    &key,
+                                    svn_fs__skel_to_dbt (&value, skel, pool),
+                                    DB_APPEND)));
 
-  /* Turn the record number into a Subversion version number.
-     Versions are numbered starting with zero; Berkeley DB record numbers
+  /* Turn the record number into a Subversion revision number.
+     Revisions are numbered starting with zero; Berkeley DB record numbers
      begin with one.  */
   *v_p = recno - 1;
   return 0;
@@ -204,61 +204,61 @@ put_version_skel (svn_vernum_t *v_p,
 
 
 
-/* Creating and opening a filesystem's `versions' table.  */
+/* Creating and opening a filesystem's `revisions' table.  */
 
 
-/* Open / create FS's `versions' table.  FS->env must already be open;
-   this function initializes FS->versions.  If CREATE is non-zero, assume
+/* Open / create FS's `revisions' table.  FS->env must already be open;
+   this function initializes FS->revisions.  If CREATE is non-zero, assume
    we are creating the filesystem afresh; otherwise, assume we are
    simply opening an existing database.  */
 static svn_error_t *
-make_versions (svn_fs_t *fs, int create)
+make_revisions (svn_fs_t *fs, int create)
 {
-  DB *versions;
+  DB *revisions;
 
-  SVN_ERR (DB_WRAP (fs, "allocating `versions' table object",
-		    db_create (&versions, fs->env, 0)));
+  SVN_ERR (DB_WRAP (fs, "allocating `revisions' table object",
+		    db_create (&revisions, fs->env, 0)));
   SVN_ERR (DB_WRAP (fs,
 		    (create
-		     ? "creating `versions' table"
-		     : "opening `versions' table"),
-		    versions->open (versions, "versions", 0, DB_RECNO,
-				    create ? (DB_CREATE | DB_EXCL) : 0,
-				    0666)));
+		     ? "creating `revisions' table"
+		     : "opening `revisions' table"),
+		    revisions->open (revisions, "revisions", 0, DB_RECNO,
+                                     create ? (DB_CREATE | DB_EXCL) : 0,
+                                     0666)));
 
   if (create)
     {
-      /* Create the initial version.  */
-      static char version_0[] = "(version 3 1.1 ())";
-      skel_t *version_skel = svn_fs__parse_skel (version_0,
-						 sizeof (version_0) - 1,
-						 fs->pool);
-      svn_vernum_t v;
-      SVN_ERR (put_version_skel (&v, fs, version_skel, 0, fs->pool));
+      /* Create the initial revision.  */
+      static char revision_0[] = "(revision 3 1.1 ())";
+      skel_t *revision_skel = svn_fs__parse_skel (revision_0,
+                                                  sizeof (revision_0) - 1,
+                                                  fs->pool);
+      svn_revnum_t v;
+      SVN_ERR (put_revision_skel (&v, fs, revision_skel, 0, fs->pool));
 
-      /* That had better have created version zero.  */
+      /* That had better have created revision zero.  */
       if (v != 0)
 	abort ();
     }
 
-  fs->versions = versions;
+  fs->revisions = revisions;
   return 0;
 }
 
 
-/* Create a new `versions' table for the new filesystem FS.  FS->env
-   must already be open; this sets FS->versions.  */
+/* Create a new `revisions' table for the new filesystem FS.  FS->env
+   must already be open; this sets FS->revisions.  */
 svn_error_t *
-svn_fs__create_versions (svn_fs_t *fs)
+svn_fs__create_revisions (svn_fs_t *fs)
 {
-  return make_versions (fs, 1);
+  return make_revisions (fs, 1);
 }
 
 
-/* Open the existing `versions' table for the filesystem FS.  FS->env
-   must already be open; this sets FS->versions.  */
+/* Open the existing `revisions' table for the filesystem FS.  FS->env
+   must already be open; this sets FS->revisions.  */
 svn_error_t *
-svn_fs__open_versions (svn_fs_t *fs)
+svn_fs__open_revisions (svn_fs_t *fs)
 {
-  return make_versions (fs, 0);
+  return make_revisions (fs, 0);
 }

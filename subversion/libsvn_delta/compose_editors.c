@@ -141,7 +141,7 @@ static svn_error_t *
 add_directory (svn_string_t *name,
                void *parent_baton,
                svn_string_t *ancestor_path,
-               long int ancestor_version,
+               long int ancestor_revision,
                void **child_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -154,7 +154,7 @@ add_directory (svn_string_t *name,
   if (d->edit_baton->editor_1->add_directory)
     {
       err = (* (d->edit_baton->editor_1->add_directory))
-        (name, d->dir_baton_1, ancestor_path, ancestor_version,
+        (name, d->dir_baton_1, ancestor_path, ancestor_revision,
          &(child->dir_baton_1));
       if (err)
         return err;
@@ -163,7 +163,7 @@ add_directory (svn_string_t *name,
   if (d->edit_baton->editor_2->add_directory)
     {
       err = (* (d->edit_baton->editor_2->add_directory))
-        (name, d->dir_baton_2, ancestor_path, ancestor_version,
+        (name, d->dir_baton_2, ancestor_path, ancestor_revision,
          &(child->dir_baton_2));
       if (err)
         return err;
@@ -179,7 +179,7 @@ static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
-                   long int ancestor_version,
+                   long int ancestor_revision,
                    void **child_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -192,7 +192,7 @@ replace_directory (svn_string_t *name,
   if (d->edit_baton->editor_1->replace_directory)
     {
       err = (* (d->edit_baton->editor_1->replace_directory))
-        (name, d->dir_baton_1, ancestor_path, ancestor_version,
+        (name, d->dir_baton_1, ancestor_path, ancestor_revision,
          &(child->dir_baton_1));
       if (err)
         return err;
@@ -201,7 +201,7 @@ replace_directory (svn_string_t *name,
   if (d->edit_baton->editor_2->replace_directory)
     {
       err = (* (d->edit_baton->editor_2->replace_directory))
-        (name, d->dir_baton_2, ancestor_path, ancestor_version,
+        (name, d->dir_baton_2, ancestor_path, ancestor_revision,
          &(child->dir_baton_2));
       if (err)
         return err;
@@ -360,7 +360,7 @@ static svn_error_t *
 add_file (svn_string_t *name,
           void *parent_baton,
           svn_string_t *ancestor_path,
-          long int ancestor_version,
+          long int ancestor_revision,
           void **file_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -372,7 +372,7 @@ add_file (svn_string_t *name,
   if (d->edit_baton->editor_1->add_file)
     {
       err = (* (d->edit_baton->editor_1->add_file))
-        (name, d->dir_baton_1, ancestor_path, ancestor_version,
+        (name, d->dir_baton_1, ancestor_path, ancestor_revision,
          &(fb->file_baton_1));
       if (err)
         return err;
@@ -381,7 +381,7 @@ add_file (svn_string_t *name,
   if (d->edit_baton->editor_2->add_file)
     {
       err = (* (d->edit_baton->editor_2->add_file))
-        (name, d->dir_baton_2, ancestor_path, ancestor_version,
+        (name, d->dir_baton_2, ancestor_path, ancestor_revision,
          &(fb->file_baton_2));
       if (err)
         return err;
@@ -396,7 +396,7 @@ static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
               svn_string_t *ancestor_path,
-              long int ancestor_version,
+              long int ancestor_revision,
               void **file_baton)
 {
   struct dir_baton *d = parent_baton;
@@ -408,7 +408,7 @@ replace_file (svn_string_t *name,
   if (d->edit_baton->editor_1->replace_file)
     {
       err = (* (d->edit_baton->editor_1->replace_file))
-        (name, d->dir_baton_1, ancestor_path, ancestor_version,
+        (name, d->dir_baton_1, ancestor_path, ancestor_revision,
          &(fb->file_baton_1));
       if (err)
         return err;
@@ -417,7 +417,7 @@ replace_file (svn_string_t *name,
   if (d->edit_baton->editor_2->replace_file)
     {
       err = (* (d->edit_baton->editor_2->replace_file))
-        (name, d->dir_baton_2, ancestor_path, ancestor_version,
+        (name, d->dir_baton_2, ancestor_path, ancestor_revision,
          &(fb->file_baton_2));
       if (err)
         return err;

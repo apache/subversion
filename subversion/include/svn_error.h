@@ -118,8 +118,8 @@ typedef enum svn_errno_t {
   /* Entry already exists when adding a file. */
   SVN_ERR_WC_ENTRY_EXISTS,
 
-  /* Unable to get version for an entry. */
-  SVN_ERR_WC_ENTRY_MISSING_VERSION,
+  /* Unable to get revision for an entry. */
+  SVN_ERR_WC_ENTRY_MISSING_REVISION,
 
   /* Unable to get ancestry for an entry. */
   SVN_ERR_WC_ENTRY_MISSING_ANCESTRY,
@@ -160,8 +160,8 @@ typedef enum svn_errno_t {
   /* The name given is not a valid directory entry name, or filename.  */
   SVN_ERR_FS_PATH_SYNTAX,
 
-  /* The filesystem has no version by the given number.  */
-  SVN_ERR_FS_NO_SUCH_VERSION,
+  /* The filesystem has no revision by the given number.  */
+  SVN_ERR_FS_NO_SUCH_REVISION,
 
   /* The filesystem has no transaction with the given name.  */
   SVN_ERR_FS_NO_SUCH_TRANSACTION,
@@ -174,7 +174,7 @@ typedef enum svn_errno_t {
 
   /* The user has called `svn_fs_replace_root' more than once on a
      given transaction (which is permitted), but specified different
-     version numbers each time.  */
+     revision numbers each time.  */
   SVN_ERR_FS_BAD_REPLACE_ROOT,
 
   /* The caller attempted to change a node which is not mutable.  */

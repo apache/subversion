@@ -76,7 +76,7 @@ svn_error_t *svn_wc__check_wc (svn_string_t *path, apr_pool_t *pool);
  * when someone changed something else about the file (such as
  * permissions).
  *
- * Since Subversion versions both kinds of information, our timestamp
+ * Since Subversion revisions both kinds of information, our timestamp
  * comparisons have to notice either kind of change.  That's why this
  * function gives the time of whichever kind came later.  APR will
  * hopefully make sure that both ctime and mtime always have useful
@@ -124,7 +124,7 @@ svn_error_t *svn_wc__locked (svn_boolean_t *locked,
 /* Create DIR as a working copy directory. */
 svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
                                      svn_string_t *ancestor_path,
-                                     svn_vernum_t ancestor_vernum,
+                                     svn_revnum_t ancestor_revnum,
                                      apr_pool_t *pool);
 
 
@@ -249,12 +249,12 @@ svn_string_t *svn_wc__text_base_path (const svn_string_t *path,
  * 
  * REPOSITORY is a repository string for initializing the adm area.
  *
- * VERSION is the version for this directory.  kff todo: ancestor_path?
+ * REVISION is the revision for this directory.  kff todo: ancestor_path?
  */
 svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
                                 svn_string_t *repository,
                                 svn_string_t *ancestor_path,
-                                svn_vernum_t ancestor_version,
+                                svn_revnum_t ancestor_revision,
                                 apr_pool_t *pool);
 
 
@@ -269,7 +269,7 @@ svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
                                  svn_string_t *ancestor_path,
-                                 svn_vernum_t ancestor_version,
+                                 svn_revnum_t ancestor_revision,
                                  apr_pool_t *pool);
 
 
@@ -313,29 +313,29 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
  *      compare SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME with working file
  *         if they're the same, use working file's timestamp
  *         else use SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME's timestamp
- *      set SVN_WC__LOG_ATTR_NAME's version to N
+ *      set SVN_WC__LOG_ATTR_NAME's revision to N
  */
 #define SVN_WC__LOG_COMMITTED           "committed"
 
 /** Log attributes. **/
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_VERSION        "version"
+#define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
 
 /* Starting at PATH, write out log entries indicating that a commit
- * succeeded, using VERSION as the new version number.  run_log will
+ * succeeded, using REVISION as the new revision number.  run_log will
  * use these log items to complete the commit. 
  * 
  * Targets is a hash of files/dirs that actually got committed --
  * these are the only ones who we can write log items for, and whose
- * version numbers will get set.  todo: eventually this hash will be
+ * revision numbers will get set.  todo: eventually this hash will be
  * of the sort used by svn_wc__compose_paths(), as with all entries
  * recursers.
  */
 svn_error_t *svn_wc__log_commit (svn_string_t *path,
                                  apr_hash_t *targets,
-                                 svn_vernum_t version,
+                                 svn_revnum_t revision,
                                  apr_pool_t *pool);
 
 
@@ -374,7 +374,7 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
 #define SVN_WC__ENTRIES_ENTRY          "entry"
 #define SVN_WC__ENTRIES_ATTR_NAME      "name"
-#define SVN_WC__ENTRIES_ATTR_VERSION   "version"
+#define SVN_WC__ENTRIES_ATTR_REVISION  "revision"
 #define SVN_WC__ENTRIES_ATTR_KIND      "kind"
 #define SVN_WC__ENTRIES_ATTR_TIMESTAMP "timestamp"
 #define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
@@ -391,7 +391,7 @@ typedef struct svn_wc__entry_t
   /* Note that the entry's name is not stored here, because it is the
      hash key for which this is the value. */
 
-  svn_vernum_t version;        /* Base version.  (Required) */
+  svn_revnum_t revision;       /* Base revision.  (Required) */
   svn_string_t *ancestor;      /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
@@ -446,7 +446,7 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
    exists. */
 svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
                                 svn_string_t *name,
-                                svn_vernum_t version,
+                                svn_revnum_t revision,
                                 enum svn_node_kind kind,
                                 int flags,
                                 apr_time_t timestamp,
@@ -458,8 +458,8 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
  * 
  * If NAME is null, it means the dir's own entry, as usual.
  * 
- * If VERSION is SVN_INVALID_VERNUM, then the entry's version number
- * will not be changed, else it will be set to VERSION.
+ * If REVISION is SVN_INVALID_REVNUM, then the entry's revision number
+ * will not be changed, else it will be set to REVISION.
  * 
  * If KIND is svn_node_none, then the entry's kind will not be
  * changed, else it will be set to KIND.
@@ -481,7 +481,7 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
  */
 svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
-                                       svn_vernum_t version,
+                                       svn_revnum_t revision,
                                        enum svn_node_kind kind,
                                        int flags,
                                        apr_time_t timestamp,
@@ -527,7 +527,7 @@ svn_error_t *svn_wc__copy_file (svn_string_t *src,
 /*** Diffing and merging ***/
 
 /* Nota bene: here, diffing and merging is about discovering local changes
- * to a file and merging them back into an updated version of that
+ * to a file and merging them back into an updated revision of that
  * file, not about txdeltas.
  */
 

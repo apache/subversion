@@ -66,7 +66,7 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                svn_string_t *path,
                                svn_string_t *xml_src,
                                svn_string_t *ancestor_path,
-                               svn_vernum_t ancestor_version,
+                               svn_revnum_t ancestor_revision,
                                apr_pool_t *pool);
 
 
@@ -77,7 +77,7 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              void *after_edit_baton,
                              svn_string_t *path,
                              svn_string_t *xml_src,
-                             svn_vernum_t ancestor_version,
+                             svn_revnum_t ancestor_revision,
                              apr_pool_t *pool);
 
 

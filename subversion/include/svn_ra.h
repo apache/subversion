@@ -77,13 +77,13 @@ svn_error_t * svn_ra_checkout (svn_ra_session_t *ras,
 
 /* Return an *EDITOR and *EDIT_BATON for transmitting a commit to the
    server.  Also, the editor guarantees that if close_edit() returns
-   successfully, that *NEW_VERSION will be set to the version number
+   successfully, that *NEW_REVISION will be set to the revision number
    resulting from the commit. */
 svn_error_t *
 svn_ra_get_commit_editor(svn_ra_session_t *ras,
                          const svn_delta_edit_fns_t **editor,
                          void **edit_baton,
-                         svn_vernum_t *new_version);
+                         svn_revnum_t *new_revision);
 
 
 svn_error_t * svn_ra_get_update_editor(const svn_delta_edit_fns_t **editor,

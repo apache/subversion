@@ -65,14 +65,14 @@
 /* Building error objects.  */
 
 static svn_error_t *
-corrupt_node_version (svn_fs_t *fs, svn_fs_id_t *id)
+corrupt_node_revision (svn_fs_t *fs, svn_fs_id_t *id)
 {
   svn_string_t *unparsed_id = svn_fs__unparse_id (id, fs->pool);
 
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-     "corrupt node version for node `%s' in filesystem `%s'",
+     "corrupt node revision for node `%s' in filesystem `%s'",
      unparsed_id->data, fs->env_path);
 }
 
@@ -94,7 +94,7 @@ svn_fs__file_from_skel (svn_fs_node_t **node,
   if (svn_fs__list_length (nv) != 3
       || ! nv->children->next->is_atom
       || ! nv->children->next->next->is_atom)
-    return corrupt_node_version (fs, id);
+    return corrupt_node_revision (fs, id);
 
   file = ((svn_fs_file_t *)
 	  svn_fs__init_node (sizeof (*file), fs, id, kind_file));
@@ -105,7 +105,7 @@ svn_fs__file_from_skel (svn_fs_node_t **node,
   if (! file->node.proplist)
     {
       apr_destroy_pool (file->node.pool);
-      return corrupt_node_version (fs, id);
+      return corrupt_node_revision (fs, id);
     }
 
   /* Make a copy of the file's contents.  */

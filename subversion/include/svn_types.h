@@ -75,11 +75,11 @@ enum svn_node_kind
 };
 
 
-typedef long int svn_vernum_t;
+typedef long int svn_revnum_t;
 
-/* This is never a valid version number.  (Actually, anything less
-   than 0 is never a valid version number.) */
-#define SVN_INVALID_VERNUM -1
+/* This is never a valid revision number.  (Actually, anything less
+   than 0 is never a valid revision number.) */
+#define SVN_INVALID_REVNUM -1
 
 
 /* YABT:  Yet Another Boolean Type */

@@ -70,7 +70,7 @@ deltas are not invertible: you cannot always reconstruct the source
 string given the target string and delta.
 
 The standard Unix ``diff'' format is one possible representation for
-text deltas; however, diffs are not ideal for internal use by a version
+text deltas; however, diffs are not ideal for internal use by a revision
 control system, for several reasons:
 @itemize @bullet
 @item
@@ -102,7 +102,7 @@ format.
 @subsection Property Deltas
 
 A property delta describes changes to a property list, of the sort
-associated with files, directories, and directory entries, and version
+associated with files, directories, and directory entries, and revision
 numbers.  A property delta can record creating, deleting, and changing
 the text of any number of properties.
 
@@ -174,7 +174,7 @@ A tree delta is interpreted in the context of three parameters:
 @var{source-root}, the name of the directory to which this complete
 tree delta applies,
 @item
-@var{version}, indicating a particular version of @dots{}
+@var{revision}, indicating a particular revision of @dots{}
 @item
 @var{source-dir}, which is a directory in the source tree that we are
 currently modifying to yield @dots{}
@@ -276,7 +276,7 @@ In the @code{file} and @code{directory} elements described above, each
 
 @item ancestor='@var{path}'
 The ancestor of the new or changed file or directory is
-@file{@var{source-root}/@var{path}}, in @var{version}.  When this
+@file{@var{source-root}/@var{path}}, in @var{revision}.  When this
 appears as an attribute of a @code{file} element, the element's text
 delta should be applied to @file{@var{source-root}/@var{path}}.  When
 this appears as an attribute of a @code{directory} element,
@@ -293,14 +293,14 @@ were an imaginary empty directory.
 @item @var{nothing}
 If neither an @code{ancestor} nor a @code{new} attribute is given, this
 is an abbreviation for @code{ancestor='@var{source-dir}/@var{name}'},
-with the same version number.  This makes the common case --- files or
+with the same revision number.  This makes the common case --- files or
 directories modified in place --- more compact.
 
 @end table
 
 If the @var{ancestor} spec is not @code{new='true'}, it may also contain
-the text @code{version='@var{v}'}, indicating a new value for
-@var{version}, in which we should find the ancestor.
+the text @code{revision='@var{rev}'}, indicating a new value for
+@var{revision}, in which we should find the ancestor.
 
 If a filename or path appearing as a @var{name} or @var{path} in the
 description above contains the characters @samp{&}, @samp{<}, or
@@ -549,7 +549,7 @@ of "CVS":
 @end example
 
 Each @file{dir/SVN/} directory records the files in @file{dir}, their
-version numbers and property lists, pristine versions of all the files
+revision numbers and property lists, pristine revisions of all the files
 (for client-side delta generation), the repository from which @file{dir}
 came, and any local changes (such as uncommitted adds, deletes, and
 renames) that affect @file{dir}.
@@ -561,9 +561,9 @@ unit as possible.
 
 For example, immediately after a checkout the administrative information
 for the entire working tree @emph{could} be stored in one top-level
-file.  But subdirectories instead keep track of their own version
+file.  But subdirectories instead keep track of their own revision
 information.  This would be necessary anyway once the user starts
-committing new versions for particular files, and it also makes it
+committing new revisions for particular files, and it also makes it
 easier for the user to prune a big, complete tree into a small subtree
 and still have a valid working copy.
 
@@ -582,14 +582,14 @@ TBD).
 
 @item
 A @file{text-base} directory, containing the pristine repository
-versions of the files in the corresponding working directory
+revisions of the files in the corresponding working directory
 
 @item 
 A @file{prop-base} directory, containing property names and values for
 each file in the working directory.
 
 @item
-An @file{entries} file, which holds version numbers and other
+An @file{entries} file, which holds revision numbers and other
 information for this directory and its files, and records the presence
 of subdirs.
 

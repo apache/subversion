@@ -167,7 +167,7 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 
 
 
-/* Node and Node Version ID's.  */
+/* Node and Node Revision ID's.  */
 
 /* In a Subversion filesystem, a `node' corresponds roughly to an
    `inode' in a Unix filesystem:
@@ -180,61 +180,61 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
      different name.  So a node's identity isn't bound to a particular
      filename.
 
-   A `node version' refers to a node's contents at a specific point in
-   time.  Changing a node's contents always creates a new version of that
-   node.  Once created, a node version's contents never change.
+   A `node revision' refers to a node's contents at a specific point in
+   time.  Changing a node's contents always creates a new revision of that
+   node.  Once created, a node revision's contents never change.
 
-   When we create a node, its initial contents are the initial version of
+   When we create a node, its initial contents are the initial revision of
    the node.  As users make changes to the node over time, we create new
-   versions of that same node.  When a user commits a change that deletes
-   a file from the filesystem, we don't delete the node, or any version
-   of it --- those stick around to allow us to recreate prior versions of
+   revisions of that same node.  When a user commits a change that deletes
+   a file from the filesystem, we don't delete the node, or any revision
+   of it --- those stick around to allow us to recreate prior revisions of
    the filesystem.  Instead, we just remove the reference to the node
    from the directory.
 
-   Within the database, we refer to nodes and node versions using strings
+   Within the database, we refer to nodes and node revisions using strings
    of numbers separated by periods that look a lot like RCS revision
    numbers.
 
-     node_id ::= number | node_version_id "." number
-     node_version_id ::= node_id "." number
+     node_id ::= number | node_revision_id "." number
+     node_revision_id ::= node_id "." number
 
    So: 
    - "100" is a node id.
-   - "100.10" is a node version id, referring to version 10 of node 100.
+   - "100.10" is a node revision id, referring to revision 10 of node 100.
    - "100.10.3" is a node id, referring to the third branch based on
-     version 10 of node 100.
-   - "100.10.3.4" is a node version id, referring to version 4 of
-     of the third branch from version 10 of node 100.
+     revision 10 of node 100.
+   - "100.10.3.4" is a node revision id, referring to revision 4 of
+     of the third branch from revision 10 of node 100.
    And so on.
 
-   Node version numbers start with 1.  Thus, N.1 is the first version
+   Node revision numbers start with 1.  Thus, N.1 is the first revision
    of node N.
 
    Node / branch numbers start with 1.  Thus, N.M.1 is the first
    branch off of N.M.
 
    A directory entry identifies the file or subdirectory it refers to
-   using a node version number --- not a node number.  This means that
+   using a node revision number --- not a node number.  This means that
    a change to a file far down in a directory hierarchy requires the
    parent directory of the changed node to be updated, to hold the new
-   node version ID.  Now, since that parent directory has changed, its
+   node revision ID.  Now, since that parent directory has changed, its
    parent needs to be updated.
 
    If a particular subtree was unaffected by a given commit, the node
-   version ID that appears in its parent will be unchanged.  When
+   revision ID that appears in its parent will be unchanged.  When
    doing an update, we can notice this, and ignore that entire
    subtree.  This makes it efficient to find localized changes in
    large trees.
 
-   Note that the number specifying a particular version of a node is
-   unrelated to the global filesystem version when that node version
-   was created.  So 100.10 may have been created in filesystem version
+   Note that the number specifying a particular revision of a node is
+   unrelated to the global filesystem revision when that node revision
+   was created.  So 100.10 may have been created in filesystem revision
    1218; 100.10.3.2 may have been created any time after 100.10; it
    doesn't matter.
 
-   Since version numbers increase by one each time a delta is added,
-   we can compute how many deltas separate two related node versions
+   Since revision numbers increase by one each time a delta is added,
+   we can compute how many deltas separate two related node revisions
    simply by comparing their ID's.  For example, the distance between
    100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
    common ancestor, 100.10 (two deltas), plus the distance from 100.10
@@ -244,8 +244,8 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
    not necessarily an accurate indicator of how different two files
    are --- a single delta could be a minor change, or a complete
    replacement.  Furthermore, the filesystem may decide arbitrary to
-   store a given node version as a delta or as full text --- perhaps
-   depending on how recently the node was used --- so version id
+   store a given node revision as a delta or as full text --- perhaps
+   depending on how recently the node was used --- so revision id
    distance isn't necessarily an accurate predictor of retrieval time.
 
    If you have insights about how this stuff could work better, let me
@@ -256,26 +256,26 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
    a source tree for changed files.  */
 
 
-/* Within the code, we represent node and node version ID's as arrays
+/* Within the code, we represent node and node revision ID's as arrays
    of integers, terminated by a -1 element.  This is the type of an
    element of a node ID.  */
-typedef svn_vernum_t svn_fs_id_t;
+typedef svn_revnum_t svn_fs_id_t;
 
 
 /* Return the number of components in ID, not including the final -1.  */
 int svn_fs_id_length (svn_fs_id_t *id);
 
 
-/* Return non-zero iff the node or node version ID's A and B are equal.  */
+/* Return non-zero iff the node or node revision ID's A and B are equal.  */
 int svn_fs_id_eq (svn_fs_id_t *a, svn_fs_id_t *b);
 
 
-/* Return non-zero iff node version A is an ancestor of node version B.  
+/* Return non-zero iff node revision A is an ancestor of node revision B.  
    If A == B, then we consider A to be an ancestor of B.  */
 int svn_fs_id_is_ancestor (svn_fs_id_t *a, svn_fs_id_t *b);
 
 
-/* Return the distance between node versions A and B.  Return -1 if
+/* Return the distance between node revisions A and B.  Return -1 if
    they are completely unrelated.  */
 int svn_fs_id_distance (svn_fs_id_t *a, svn_fs_id_t *b);
 
@@ -366,10 +366,10 @@ svn_fs_node_t *svn_fs_dir_to_node (svn_fs_dir_t *dir);
 
 
 /* Set *DIR to point to a directory object representing the root
-   directory of version V of filesystem FS.  */
+   directory of revision V of filesystem FS.  */
 svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
 			       svn_fs_t *fs,
-			       svn_vernum_t v);
+			       svn_revnum_t v);
 
 
 /* Set *CHILD_P to a node object representing the node named NAME in
@@ -412,7 +412,7 @@ typedef struct svn_fs_dirent_t {
   /* The name of this directory entry.  */
   svn_string_t *name;
 
-  /* The node version ID it names.  */
+  /* The node revision ID it names.  */
   svn_fs_id_t *id;
 
 } svn_fs_dirent_t;
@@ -525,12 +525,12 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
    The filesystem implementation guarantees that your commit will
    either:
    - succeed completely, so that all of the changes are committed to
-     create a new version of the filesystem, or
+     create a new revision of the filesystem, or
    - fail completely, leaving the filesystem unchanged.
 
    Until you commit the transaction, any changes you make are
    invisible.  Only when your commit succeeds do they become visible
-   to the outside world, as a new version of the filesystem.
+   to the outside world, as a new revision of the filesystem.
 
    If you begin a transaction, and then decide you don't want to make
    the change after all (say, because your net connection with the
@@ -540,16 +540,16 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
 
    The only way to change the contents of files or directories, or
    their properties, is by making a transaction and creating a new
-   version, as described above.  Once a version has been committed, it
+   revision, as described above.  Once a revision has been committed, it
    never changes again; the filesystem interface provides no means to
-   go back and edit the contents of an old version.  Once history has
+   go back and edit the contents of an old revision.  Once history has
    been recorded, it is set in stone.  Clients depend on this property
    to do updates and commits reliably; proxies depend on this property
    to cache changes accurately; and so on.
 
 
    There are two kinds of nodes: mutable, and immutable.  The
-   committed versions in the filesystem consist entirely of immutable
+   committed revisions in the filesystem consist entirely of immutable
    nodes, whose contents never change.  An incomplete transaction,
    which the user is in the process of constructing, uses mutable
    nodes for those nodes which have been changed so far, and refer
@@ -558,27 +558,27 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
    committed transactions, never refer to mutable nodes, which are
    part of uncommitted transactions.
 
-   The functions above start from some version's root directory, and
+   The functions above start from some revision's root directory, and
    walk down from there; they can only access immutable nodes, in
-   extant versions of the filesystem.  Since those nodes are in the
+   extant revisions of the filesystem.  Since those nodes are in the
    history, they can never change.  The functions below, for building
    transactions, create mutable nodes.  They refer to new nodes (or
-   new versions of existing nodes), which you can change as necessary
-   to create the new version the way you want.
+   new revisions of existing nodes), which you can change as necessary
+   to create the new revision the way you want.
 
    In other words, you use immutable nodes for reading committed,
-   fixed versions of the filesystem, and you use mutable nodes for
+   fixed revisions of the filesystem, and you use mutable nodes for
    building new directories and files, as part of a transaction.
 
    Note that the terms "immutable" and "mutable" describe whether the
-   nodes are part of a committed filesystem version or not --- not the
+   nodes are part of a committed filesystem revision or not --- not the
    permissions on the nodes they refer to.  Even if you aren't
    authorized to modify the filesystem's root directory, you could
    still have a mutable directory object referring to it.  Since it's
    mutable, you could call `svn_fs_replace_subdir' to get another
    mutable directory object referring to a directory you do have
    permission to change.  Mutability refers to the role of the node
-   --- part of an existing version, or part of a new one --- which is
+   --- part of an existing revision, or part of a new one --- which is
    independent of your authorization to make changes in a particular
    place.
 
@@ -600,10 +600,10 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream,
 
    Any of these functions may return an SVN_ERR_FS_CONFLICT error.
    This means that the change you requested conflicts with some other
-   change committed to the repository since the base version you
+   change committed to the repository since the base revision you
    selected.  If you get this error, the transaction you're building
    is still live --- it's up to you whether you want to abort the
-   transaction entirely, try a different version of the change, or
+   transaction entirely, try a different revision of the change, or
    drop the conflicting part from the change.  But if you want to
    abort, you'll still need to call svn_fs_abort_txn; simply getting a
    conflict error doesn't free the temporary resources held by the
@@ -615,7 +615,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
 /* Begin a new transaction on the filesystem FS; when committed, this
-   transaction will create a new version.  Set *TXN to a pointer to
+   transaction will create a new revision.  Set *TXN to a pointer to
    an object representing the new transaction.  */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn,
 			       svn_fs_t *fs);
@@ -624,7 +624,7 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn,
 /* Commit the transaction TXN.  If the transaction conflicts with
    other changes committed to the repository, return an
    SVN_ERR_FS_CONFLICT error.  Otherwise, create a new filesystem
-   version containing the changes made in TXN, and return zero.
+   revision containing the changes made in TXN, and return zero.
 
    If the commit succeeds, it frees TXN, and any temporary resources
    it holds.  If the commit fails, TXN is still valid; you can make
@@ -667,7 +667,7 @@ void svn_fs_kill_cleanup_txn (apr_pool_t *pool, svn_fs_txn_t *txn);
 void svn_fs_run_cleanup_txn (apr_pool_t *pool, svn_fs_txn_t *txn);
 
 
-/* Select the root directory of version VERSION as the base root
+/* Select the root directory of revision REVISION as the base root
    directory for the transaction TXN.  Set *ROOT to a directory object
    for that root dir.  ROOT is a mutable directory object.
 
@@ -677,7 +677,7 @@ void svn_fs_run_cleanup_txn (apr_pool_t *pool, svn_fs_txn_t *txn);
    you your first mutable directory object.  */
 svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
 				  svn_fs_txn_t *txn,
-				  svn_vernum_t version);
+				  svn_revnum_t revision);
 
 
 /* Delete the entry named NAME from the directory DIR.  DIR must be a

@@ -72,7 +72,7 @@
 svn_error_t *
 svn_client_commit (svn_string_t *path,
                    svn_string_t *xml_dst,
-                   svn_vernum_t version,  /* this param is temporary */
+                   svn_revnum_t revision,  /* this param is temporary */
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -115,7 +115,7 @@ svn_client_commit (svn_string_t *path,
                               "error closing %s", xml_dst->data);
   
   /* Step 2: tell the working copy the commit succeeded. */
-  err = svn_wc_close_commit (path, version, targets, pool);
+  err = svn_wc_close_commit (path, revision, targets, pool);
   if (err)
     return err;
 

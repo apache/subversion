@@ -73,7 +73,7 @@
  * based at REPOSITORY.
  *
  * Creates the adm area if none, in which case PATH starts out at
- * version 0.
+ * revision 0.
  *
  * Note: The adm area's lock-state is not changed by this function,
  * and if the adm area is created, it is left in an unlocked state.
@@ -82,7 +82,7 @@ svn_error_t *
 svn_wc__ensure_wc (svn_string_t *path,
                    svn_string_t *repository,
                    svn_string_t *ancestor_path,
-                   svn_vernum_t ancestor_version,
+                   svn_revnum_t ancestor_revision,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -90,7 +90,7 @@ svn_wc__ensure_wc (svn_string_t *path,
   err = svn_wc__ensure_adm (path,
                             repository,
                             ancestor_path,
-                            ancestor_version,
+                            ancestor_revision,
                             pool);
   if (err)
     return err;
@@ -104,13 +104,13 @@ svn_wc__ensure_wc (svn_string_t *path,
 
 svn_error_t *
 svn_wc_close_commit (svn_string_t *path,
-                     svn_vernum_t new_version,
+                     svn_revnum_t new_revision,
                      apr_hash_t *targets,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  err = svn_wc__log_commit (path, targets, new_version, pool);
+  err = svn_wc__log_commit (path, targets, new_revision, pool);
   if (err)
     return err;
 
@@ -154,7 +154,7 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
 
   err = svn_wc__entry_merge_sync (dir,
                                   basename,
-                                  SVN_INVALID_VERNUM,
+                                  SVN_INVALID_REVNUM,
                                   svn_node_file,
                                   SVN_WC__ENTRY_DELETE,
                                   0,

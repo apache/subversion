@@ -404,7 +404,7 @@ replace_related (struct context *c, void *dir_baton,
 		 svn_string_t *ancestor_name)
 {
   svn_string_t *ancestor_path;
-  svn_vernum_t ancestor_version;
+  svn_revnum_t ancestor_revision;
   svn_fs_node_t *a, *t;
 
   /* Open the ancestor and target nodes.  */
@@ -418,8 +418,8 @@ replace_related (struct context *c, void *dir_baton,
   svn_path_add_component (ancestor_path, ancestor_name,
 			  svn_path_repos_style);
 
-  /* Get the ancestor's version number.  */
-  ancestor_version = svn_fs_node_version (a);
+  /* Get the ancestor's revision number.  */
+  ancestor_revision = svn_fs_node_revision (a);
 
   if (svn_fs_node_is_file (t))
     {
@@ -427,7 +427,7 @@ replace_related (struct context *c, void *dir_baton,
 
       /* Do the replace, yielding a baton for the file.  */
       SVN_ERR (c->editor->replace_file (target_name, dir_baton,
-					ancestor_path, ancestor_version,
+					ancestor_path, ancestor_revision,
 					&file_baton));
 
       /* Apply the text delta.  */
@@ -445,7 +445,7 @@ replace_related (struct context *c, void *dir_baton,
       /* Do the replace, yielding a baton for the new subdirectory.  */
       SVN_ERR (c->editor->replace_directory (target_name,
 					     dir_baton,
-					     ancestor_path, ancestor_version,
+					     ancestor_path, ancestor_revision,
 					     &subdir_baton));
 
       /* Compute the delta for those subdirs.  */

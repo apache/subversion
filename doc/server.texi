@@ -70,7 +70,7 @@ First, read the section below (@xref{Repository Structure}.) for a
 general overview of how the fileystem works.
 
 Once you've done this, read Jim Blandy's own structural overview, which
-explains how nodes and versions are organized (among other things) in
+explains how nodes and revisions are organized (among other things) in
 the filesystem implementation: @file{subversion/libsvn_fs/structure}.
 
 Finally, read the well-documented API in
@@ -91,7 +91,7 @@ Finally, read the well-documented API in
 @subsubsection Schema
 
 To begin, please be sure that you're already casually familiar with
-Subversion's ideas of files, directories, and version histories.  If
+Subversion's ideas of files, directories, and revision histories.  If
 not, @xref{Model}.  We can now offer precise, technical descriptions of
 the terms introduced there.
 
@@ -129,9 +129,9 @@ property list, and @var{node} is a node number.
 A @dfn{directory} is an unordered list of directory entries, and a
 property list.
 
-A @dfn{version} is a node number and a property list.
+A @dfn{revision} is a node number and a property list.
 
-A @dfn{history} is an array of versions, indexed by a contiguous range
+A @dfn{history} is an array of revisions, indexed by a contiguous range
 of non-negative integers containing 0.
 
 A @dfn{repository} consists of node table and a history.
@@ -157,11 +157,11 @@ A @dfn{repository} consists of node table and a history.
 Now that we've explained the form of the data, we make some restrictions
 on that form.
 
-@b{Every version has a root directory.}  Every version's node number is
+@b{Every revision has a root directory.}  Every revision's node number is
 a valid node number, and the node it refers to is always a directory.
-We call this the version's @dfn{root directory}.
+We call this the revision's @dfn{root directory}.
 
-@b{Version 0 always contains an empty root directory.}  This baseline
+@b{Revision 0 always contains an empty root directory.}  This baseline
 makes it easy to check out whole projects from the repository.
 
 @b{Directories contain only valid links.}
@@ -181,7 +181,7 @@ tree.  However, it would be distracting and unhelpful to replace the
 familiar term ``directory tree'' with the unfamiliar term ``directory
 DAG'', so we still call it a ``directory tree'' here.
 
-@b{There are no dead nodes.}  Every node is a child of some version's
+@b{There are no dead nodes.}  Every node is a child of some revision's
 root directory.
 
 @c  </jimb>
@@ -191,12 +191,12 @@ root directory.
 @subsubsection Bubble-Up Method
 
 This section provides a conversational explanation of how the repository
-actually stores and versions file trees.  It's not critical knowledge
+actually stores and revisions file trees.  It's not critical knowledge
 for a programmer using the Subversion Filesystem API, but most people
 probably still want to know what's going on ``under the hood'' of the
 repository.
 
-Suppose we have a new project, at version 1, looking like this (using
+Suppose we have a new project, at revision 1, looking like this (using
 CVS syntax):
 
 @example
@@ -226,14 +226,14 @@ Parent-child links go both ways (i.e., a child knows who all its parents
 are), but a node's name is stored only in its parent, because a node
 with multiple parents may have different names in different parents.
 
-At the top of the repository is an array of version numbers,
-stretching off to infinity.  Since the project is at version 1, only
-index 1 points to anything; it points to the root node of version 1 of
+At the top of the repository is an array of revision numbers,
+stretching off to infinity.  Since the project is at revision 1, only
+index 1 points to anything; it points to the root node of revision 1 of
 the project:
 
 @example
 @group
-                    ( myproj's version array )
+                    ( myproj's revision array )
        ______________________________________________________
       |___1_______2________3________4________5_________6_____...
           |
@@ -285,7 +285,7 @@ connected to anything yet, it's just hanging out there in space:
 @end group
 @end example
 
-Next, we create a @emph{new} version of its parent directory:
+Next, we create a @emph{new} revision of its parent directory:
 
 @example
 @group
@@ -304,7 +304,7 @@ Next, we create a @emph{new} version of its parent directory:
 @end group
 @end example
 
-We continue up the line, creating a new version of the next parent
+We continue up the line, creating a new revision of the next parent
 directory:
 
 @example
@@ -331,7 +331,7 @@ directory:
 @end group
 @end example
 
-Now it gets more tricky: we need to create a new version of the root
+Now it gets more tricky: we need to create a new revision of the root
 directory.  This new root directory needs an entry to point to the
 ``new'' directory A, but directory B hasn't changed at all.  Therefore,
 our new root directory also has an entry that still points to the
@@ -377,8 +377,8 @@ our new root directory also has an entry that still points to the
 @end example
 
 Finally, after all our new nodes are written, we finish the ``bubble
-up'' process by linking this new tree to the next available version in
-the history array.  In this case, the new tree becomes version 2 in the
+up'' process by linking this new tree to the next available revision in
+the history array.  In this case, the new tree becomes revision 2 in the
 repository.
 
 @example
@@ -420,7 +420,7 @@ repository.
 @end group
 @end example
 
-Generalizing on this example, you can now see that each ``version'' in
+Generalizing on this example, you can now see that each ``revision'' in
 the repository history represents a root node of a unique tree (and an
 atomic commit to the whole filesystem.)  There are many trees in the
 repository, and many of them share nodes.
@@ -429,9 +429,9 @@ Many nice behaviors come from this model:
 
 @enumerate
 @item
-  @b{Easy reads.}  If a filesystem reader wants to locate version
+  @b{Easy reads.}  If a filesystem reader wants to locate revision
 @var{X} of file @file{foo.c}, it need only traverse the repository's
-history, locate version @var{X}'s root node, then walk down the tree to
+history, locate revision @var{X}'s root node, then walk down the tree to
 @file{foo.c}.
 @item
   @b{Writers don't interfere with readers.}  Writers can continue to
@@ -441,7 +441,7 @@ visible to readers after the writer makes its final ``link'' to the
 repository's history.
 @item
   @b{File structure is versioned.}  Unlike CVS, the very structure of
-each tree is being saved from version to version.  File and directory
+each tree is being saved from revision to revision.  File and directory
 renames, additions, and deletions are part of the repository's history.
 @end enumerate
 
@@ -493,8 +493,8 @@ parent directory has a different dir_entry, one which points the
 From here, we finish with the bubble-up process.  We make new parent
 directories up to the top, culminating in a new root directory with two
 dir_entries (one points to the old ``B'' directory node we've had all
-along, the other to the new version of ``A''), and finally link the new
-tree to the history as version 3:
+along, the other to the new revision of ``A''), and finally link the new
+tree to the history as revision 3:
 
 @example
 @group
@@ -543,7 +543,7 @@ easily shared, we simply create a @emph{new} directory entry that points
 to an existing directory node.  It's an extremely cheap way of copying a
 tree; we call this new entry a @dfn{clone}.
 
-Let's go back to our original tree, assuming that we're at version 6 to
+Let's go back to our original tree, assuming that we're at revision 6 to
 begin with:
 
 @example
@@ -629,14 +629,14 @@ Let's ``tag'' directory A.  To make the clone, we create a new dir_entry
 
 Now we're all set.  In the future, the contents of directories A and B
 may change quite a lot.  However, assuming we never make any changes to
-directory T, it will @emph{always} point to a particular pristine version
+directory T, it will @emph{always} point to a particular pristine revision
 of directory A.  (We can use permissions to prevent anyone from writing
 to directory T.)  Thus, T is a tag.
 
 However, if we @emph{do} decide to allow commits in directory T, and now
-our repository tree increments to version 8, then T becomes a branch.
+our repository tree increments to revision 8, then T becomes a branch.
 Specifically, it's a branch of directory A which ``broke off'' from the
-main line at version 8.
+main line at revision 8.
 
 @node Diffy Storage
 @subsubsection Diffy Storage
@@ -645,9 +645,9 @@ You may have been thinking, ``Gee, this bubble up method seems nice, but
 it sure wastes a lot of space.  Every commit to the repository creates
 an entire line of new directory nodes!''
 
-Like many other version control systems, Subversion stores changes as
+Like many other revision control systems, Subversion stores changes as
 differences.  It doesn't make complete copies of nodes; instead, it
-stores the @emph{latest} version as a full text, and previous versions
+stores the @emph{latest} revision as a full text, and previous revisions
 as a succession of reverse diffs (the word "diff" is used loosely here
 -- for files, it means vdeltas, for directories, it means a format that
 expresses changes to directories).

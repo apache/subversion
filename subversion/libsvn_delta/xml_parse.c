@@ -145,7 +145,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
       return SVN_NO_ERROR;
     }
   else if (frame->ancestor_path
-           && (frame->ancestor_version >= 0))
+           && (frame->ancestor_revision >= 0))
     {
       /* It is the kind of frame that needs ancestry information, but
          all its ancestry information is already set. */
@@ -172,7 +172,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
                * I'm glad you asked.
                *
                * It's because ancestry needs to be an absolute
-               * path in existing repository version.  There's no
+               * path in existing repository revision.  There's no
                * guarantee that the `name' fields we've seen so far
                * are actually in the repository, and even if they
                * were, there's no guarantee that the first frame with
@@ -193,13 +193,13 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
                                       svn_path_repos_style);
             }
 
-          /* If ancestor_version not set, and see it here, then set it. */
-          if ((frame->ancestor_version < 0) && (p->ancestor_version >= 0))
-            frame->ancestor_version = p->ancestor_version;
+          /* If ancestor_revision not set, and see it here, then set it. */
+          if ((frame->ancestor_revision < 0) && (p->ancestor_revision >= 0))
+            frame->ancestor_revision = p->ancestor_revision;
 
           /* If we have all the ancestry information we need, then
              stop the search. */
-          if ((frame->ancestor_version >= 0) && frame->ancestor_path)
+          if ((frame->ancestor_revision >= 0) && frame->ancestor_path)
             break;
 
           /* Else, keep searching. */
@@ -207,7 +207,7 @@ maybe_derive_ancestry (svn_xml__stackframe_t *frame,
         }
 
       if ((frame->ancestor_path == NULL)
-          || (frame->ancestor_version == SVN_INVALID_VERNUM))
+          || (frame->ancestor_revision == SVN_INVALID_REVNUM))
         return svn_error_create (SVN_ERR_XML_MISSING_ANCESTRY,
                                  0,
                                  NULL,
@@ -382,7 +382,7 @@ do_stack_append (svn_xml__digger_t *digger,
   
   /* ancestry information can only appear as <file> or <dir> attrs */
   else if ((new_frame->ancestor_path
-            || (new_frame->ancestor_version >= 0))
+            || (new_frame->ancestor_revision >= 0))
            && (new_frame->tag != svn_delta__XML_file)
            && (new_frame->tag != svn_delta__XML_dir))
     return xml_validation_error (pool, tagname, FALSE);
@@ -493,7 +493,7 @@ do_directory_callback (svn_xml__digger_t *digger,
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
   ver = svn_xml_get_attr_value ("ver", atts);
   if (ver)
-    youngest_frame->ancestor_version = atoi (ver);
+    youngest_frame->ancestor_revision = atoi (ver);
 
   /* Call our editor's callback. */
   if (replace_p)
@@ -501,14 +501,14 @@ do_directory_callback (svn_xml__digger_t *digger,
       (dir_name,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
-       youngest_frame->ancestor_version,
+       youngest_frame->ancestor_revision,
        &(youngest_frame->baton));
   else
     err = digger->editor->add_directory
       (dir_name,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
-       youngest_frame->ancestor_version,
+       youngest_frame->ancestor_revision,
        &(youngest_frame->baton));
 
   if (err) 
@@ -587,7 +587,7 @@ do_file_callback (svn_xml__digger_t *digger,
     youngest_frame->ancestor_path = svn_string_create (ancestor, digger->pool);
   ver = svn_xml_get_attr_value ("ver", atts);
   if (ver)
-    youngest_frame->ancestor_version = atoi (ver);
+    youngest_frame->ancestor_revision = atoi (ver);
 
   /* Call our editor's callback, and get back a window handler & baton. */
   if (replace_p)
@@ -595,14 +595,14 @@ do_file_callback (svn_xml__digger_t *digger,
       (filename,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
-       youngest_frame->ancestor_version,
+       youngest_frame->ancestor_revision,
        &(youngest_frame->file_baton));
   else
     err = digger->editor->add_file 
       (filename,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
-       youngest_frame->ancestor_version,
+       youngest_frame->ancestor_revision,
        &(youngest_frame->file_baton));
   
   if (err)
@@ -989,8 +989,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   svn_xml__stackframe_t *new_frame
     = apr_pcalloc (my_digger->pool, sizeof (*new_frame));
 
-  /* Initialize the ancestor version to a recognizably invalid value. */
-  new_frame->ancestor_version = SVN_INVALID_VERNUM;
+  /* Initialize the ancestor revision to a recognizably invalid value. */
+  new_frame->ancestor_revision = SVN_INVALID_REVNUM;
 
   /* Set the tag field */
   err = set_tag_type (new_frame, name, my_digger);
@@ -1013,10 +1013,10 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (value)
     new_frame->ancestor_path = svn_string_create (value, my_digger->pool);
   
-  /* Set ancestor version in frame, if there's any such attribute in ATTS */
+  /* Set ancestor revision in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value ("ver", atts);
   if (value)
-    new_frame->ancestor_version = atoi (value);
+    new_frame->ancestor_revision = atoi (value);
 
   /* Set "id" in frame, if there's any such attribute in ATTS */
   value = svn_xml_get_attr_value ("id", atts);
@@ -1028,7 +1028,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (new_frame->tag == svn_delta__XML_deltapkg)
     {
       new_frame->ancestor_path = my_digger->base_path;
-      new_frame->ancestor_version = my_digger->base_version;
+      new_frame->ancestor_revision = my_digger->base_revision;
     }
 
   /* If this frame represents a new tree-delta, we need to fill in its
@@ -1388,14 +1388,14 @@ xml_handle_data (void *userData, const char *data, int len)
 /* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
    PARSER that will call into it (and feed EDIT_BATON to its
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
-   BASE_VERSION as default "context variables" when computing ancestry
+   BASE_REVISION as default "context variables" when computing ancestry
    within a tree-delta. */
 svn_error_t *
 svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            const svn_delta_edit_fns_t *editor,
                            void *edit_baton,
                            svn_string_t *base_path, 
-                           svn_vernum_t base_version,
+                           svn_revnum_t base_revision,
                            apr_pool_t *pool)
 {
   svn_delta_xml_parser_t *delta_parser;
@@ -1414,7 +1414,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->stack            = NULL;
   digger->editor           = editor;
   digger->base_path        = base_path;
-  digger->base_version     = base_version;
+  digger->base_revision    = base_revision;
   digger->edit_baton       = edit_baton;
   digger->rootdir_baton    = NULL;
   digger->dir_baton        = NULL;
@@ -1503,7 +1503,7 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
                           svn_string_t *base_path,
-                          svn_vernum_t base_version,
+                          svn_revnum_t base_revision,
                           apr_pool_t *pool)
 {
   char buf[BUFSIZ];
@@ -1517,7 +1517,7 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                                     editor,
                                     edit_baton,
                                     base_path,
-                                    base_version,
+                                    base_revision,
                                     pool);
   if (err)
     return err;

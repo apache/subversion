@@ -75,9 +75,9 @@ struct svn_fs_t {
      This establishes the scope of the filesystem's transactions.  */
   DB_ENV *env;
 
-  /* A btree mapping version numbers onto root directories and
-     property lists.  See versions.c for the details.  */
-  DB *versions;
+  /* A btree mapping revision numbers onto root directories and
+     property lists.  See revisions.c for the details.  */
+  DB *revisions;
 
   /* A btree mapping node id's onto node representations.  */
   DB *nodes;

@@ -6,7 +6,7 @@ you interact with, how they behave, and how they relate to each other.
 
 @menu
 * Working Directories and Repositories::  
-* Transactions and Version Numbers::  
+* Transactions and Revision Numbers::  
 * How Working Directories Track the Repository::  
 * Subversion Does Not Lock Files::  
 * Properties::                  
@@ -138,8 +138,8 @@ the same file.
 
 
 @c -----------------------------------------------------------------------
-@node Transactions and Version Numbers
-@section Transactions and Version Numbers
+@node Transactions and Revision Numbers
+@section Transactions and Revision Numbers
 
 A Subversion @samp{commit} operation can publish changes to any number
 of files and directories as a single atomic transaction.  In your
@@ -155,34 +155,34 @@ may call a commit a @dfn{transaction} when we want to emphasize its
 indivisible nature.
 
 Each time the repository accepts a transaction, this creates a new state
-of the tree, called a @dfn{version}.  Each version is assigned a unique
-natural number, one greater than the number of the previous version.
-The initial version of a freshly created repository is numbered zero,
+of the tree, called a @dfn{revision}.  Each revision is assigned a unique
+natural number, one greater than the number of the previous revision.
+The initial revision of a freshly created repository is numbered zero,
 and consists of an empty root directory.
 
-Since each transaction creates a new version, with its own number, we
+Since each transaction creates a new revision, with its own number, we
 can also use these numbers to refer to transactions; transaction @var{n}
-is the transaction which created version @var{n}.  There is no
+is the transaction which created revision @var{n}.  There is no
 transaction numbered zero.
 
-Unlike those of many other systems, Subversion's version numbers apply
-to an entire tree, not individual files.  Each version number selects an
+Unlike those of many other systems, Subversion's revision numbers apply
+to an entire tree, not individual files.  Each revision number selects an
 entire tree.
 
 It's important to note that working directories do not always correspond
-to any single version in the repository; they may contain files from
-several different versions.  For example, suppose you check out a
-working directory from a repository whose most recent version is 4:
+to any single revision in the repository; they may contain files from
+several different revisions.  For example, suppose you check out a
+working directory from a repository whose most recent revision is 4:
 @example
 write/Makefile:4
       document.c:4
       search.c:4
 @end example
 
-At the moment, this working directory corresponds exactly to version 4
+At the moment, this working directory corresponds exactly to revision 4
 in the repository.  However, suppose you make a change to
 @file{search.c}, and commit that change.  Assuming no other commits have
-taken place, your commit will create version 5 of the repository, and
+taken place, your commit will create revision 5 of the repository, and
 your working directory will look like this:
 @example
 write/Makefile:4
@@ -190,7 +190,7 @@ write/Makefile:4
       search.c:5
 @end example
 Suppose that, at this point, Felix commits a change to
-@file{document.c}, creating version 6.  If you use @samp{svn update} to
+@file{document.c}, creating revision 6.  If you use @samp{svn update} to
 bring your working directory up to date, then it will look like this:
 @example
 write/Makefile:6
@@ -199,11 +199,11 @@ write/Makefile:6
 @end example
 Felix's changes to @file{document.c} will appear in your working copy of
 that file, and your change will still be present in @file{search.c}.  In
-this example, the text of @file{Makefile} is identical in versions 4, 5,
-and 6, but Subversion will mark your working copy with version 6 to
+this example, the text of @file{Makefile} is identical in revisions 4, 5,
+and 6, but Subversion will mark your working copy with revision 6 to
 indicate that it is still current.  So, after you do a clean update at
 the root of your working directory, your working directory will
-generally correspond exactly to some version in the repository.
+generally correspond exactly to some revision in the repository.
 
 
 @c -----------------------------------------------------------------------
@@ -214,7 +214,7 @@ For each file in a working directory, Subversion records two essential
 pieces of information:
 @itemize @bullet
 @item
-what version of what repository file your working copy is based on (this is called the file's @dfn{base version}), and
+what revision of what repository file your working copy is based on (this is called the file's @dfn{base revision}), and
 @item
 a timestamp recording when the local copy was last updated.
 @end itemize
@@ -225,17 +225,17 @@ tell which of the following four states a file is in:
 @item
 @b{Unchanged, and current.}  The file is unchanged in the working
 directory, and no changes to that file have been committed to the
-repository since its base version.
+repository since its base revision.
 @item
 @b{Locally changed, and current}.  The file has been changed in the
 working directory, and no changes to that file have been committed to
-the repository since its base version.  There are local changes that
+the repository since its base revision.  There are local changes that
 have not been committed to the repository.
 @item
 @b{Unchanged, and out-of-date}.  The file has not been changed in the
 working directory, but it has been changed in the repository.  The file
 should eventually be updated, to make it current with the public
-version.
+revision.
 @item
 @b{Locally changed, and out-of-date}.  The file has been changed both
 in the working directory, and in the repository.  The file should be
@@ -257,7 +257,7 @@ Then, the following sequence of events will occur:
 @itemize @bullet
 @item
 Suppose Felix tries to commit his changes to @file{search.c} first.  His
-commit will succeed, and his text will appear in the latest version in
+commit will succeed, and his text will appear in the latest revision in
 the repository.
 @item
 When you attempt to commit your changes to @file{search.c}, Subversion
@@ -273,7 +273,7 @@ changes.  In either case,
 Subversion carefully preserves a copy of the original pre-merge text.
 @item
 Once you have verified that Felix's changes and your changes have been
-merged correctly, you can commit the new version of @file{search.c},
+merged correctly, you can commit the new revision of @file{search.c},
 which now contains everyone's changes.
 @end itemize
 
@@ -328,7 +328,7 @@ given a property list may have the same name.  Although the word `list'
 usually denotes an ordered sequence, there is no fixed order to the
 properties in a property list; the term `property list' is historical.
 
-Each version number, file, directory, and directory entry in the
+Each revision number, file, directory, and directory entry in the
 Subversion repository, has its own property list.  Subversion puts these
 property lists to several uses:
 @itemize @bullet
@@ -377,14 +377,14 @@ CVS users avoid this problem by using branch- and merge-point tags, but
 that involves a lot of unwieldy bookkeeping.)
 
 In Subversion, merges are remembered by recording @dfn{ancestry sets}.
-A version's ancestry set is the set of all changes "accounted for" in
-that version.  By maintaining ancestry sets, and consulting them when
+A revision's ancestry set is the set of all changes "accounted for" in
+that revision.  By maintaining ancestry sets, and consulting them when
 doing merges, Subversion can detect when it would apply the same patch
 twice, and spare users much bookkeeping.  Ancestry sets are stored as
 properties.
 
-In the examples below, bear in mind that version numbers usually refer
-to changes, rather than the full contents of that version.  For example,
+In the examples below, bear in mind that revision numbers usually refer
+to changes, rather than the full contents of that revision.  For example,
 "the change A:4" means "the delta that resulted in A:4", not "the full
 contents of A:4".
 
@@ -425,8 +425,8 @@ will be represented with a more compact notation:
 @end example
 
 Now assume there's a branch B based, or "rooted", at A:2.  (This
-postulates an entirely different version history, of course, and the
-global version numbers in the diagrams will change to reflect it.)
+postulates an entirely different revision history, of course, and the
+global revision numbers in the diagrams will change to reflect it.)
 Here's what the project looks like with the branch:
 
 @example
