@@ -1485,6 +1485,10 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     else
       title = ap_escape_html(resource->pool, resource->info->repos_path);
 
+    if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+      title = apr_psprintf(resource->pool, "Revision %ld: %s",
+                           resource->info->root.rev, title);
+
     bb = apr_brigade_create(resource->pool);
     ap_fprintf(output, bb,
                "<html><head><title>%s</title></head>"
