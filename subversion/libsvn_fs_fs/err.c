@@ -29,7 +29,7 @@
 svn_error_t *
 svn_fs__check_fs (svn_fs_t *fs)
 {
-  if (fs->env)
+  if (fs->uuid)
     return SVN_NO_ERROR;
   else
     return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,

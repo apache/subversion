@@ -20,9 +20,6 @@
 #include <string.h>
 #include <errno.h>              /* for EINVAL */
 
-#define APU_WANT_DB
-#include <apu_want.h>
-
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
@@ -36,63 +33,15 @@
 #include "dag.h"
 #include "svn_private_config.h"
 
-#include "bdb/bdb-err.h"
-#include "bdb/bdb_compat.h"
-#include "bdb/nodes-table.h"
-#include "bdb/rev-table.h"
-#include "bdb/txn-table.h"
-#include "bdb/copies-table.h"
-#include "bdb/changes-table.h"
-#include "bdb/reps-table.h"
-#include "bdb/strings-table.h"
-#include "bdb/uuids-table.h"
-
 
 /* Checking for return values, and reporting errors.  */
-
-/* Check that we're using the right Berkeley DB version. */
-/* FIXME: This check should be abstracted into the DB back-end layer. */
-static svn_error_t *
-check_bdb_version (apr_pool_t *pool)
-{
-  int major, minor, patch;
-
-  db_version (&major, &minor, &patch);
-
-  /* First, check that we're using a reasonably correct of Berkeley DB. */
-  if ((major < SVN_FS_WANT_DB_MAJOR)
-      || (major == SVN_FS_WANT_DB_MAJOR && minor < SVN_FS_WANT_DB_MINOR)
-      || (major == SVN_FS_WANT_DB_MAJOR && minor == SVN_FS_WANT_DB_MINOR
-          && patch < SVN_FS_WANT_DB_PATCH))
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "Bad database version: got %d.%d.%d,"
-                              " should be at least %d.%d.%d",
-                              major, minor, patch,
-                              SVN_FS_WANT_DB_MAJOR,
-                              SVN_FS_WANT_DB_MINOR,
-                              SVN_FS_WANT_DB_PATCH);
-
-  /* Now, check that the version we're running against is the same as
-     the one we compiled with. */
-  if (major != DB_VERSION_MAJOR || minor != DB_VERSION_MINOR)
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0,
-                              "Bad database version:"
-                              " compiled with %d.%d.%d,"
-                              " running against %d.%d.%d",
-                              DB_VERSION_MAJOR,
-                              DB_VERSION_MINOR,
-                              DB_VERSION_PATCH,
-                              major, minor, patch);
-  return SVN_NO_ERROR;
-}
-
 
 /* If FS is already open, then return an SVN_ERR_FS_ALREADY_OPEN
    error.  Otherwise, return zero.  */
 static svn_error_t *
 check_already_open (svn_fs_t *fs)
 {
-  if (fs->env)
+  if (fs->uuid)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0,
                              "Filesystem object already open");
   else
@@ -112,176 +61,6 @@ default_warning_func (void *baton, svn_error_t *err)
 }
 
 
-/* Cleanup functions.  */
-
-/* Close a database in the filesystem FS.
-   DB_PTR is a pointer to the DB pointer in *FS to close.
-   NAME is the name of the database, for use in error messages.  */
-static svn_error_t *
-cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
-{
-  if (*db_ptr)
-    {
-      DB *db = *db_ptr;
-      char *msg = apr_psprintf (fs->pool, "closing '%s' database", name);
-      int db_err;
-
-      *db_ptr = 0;
-      db_err = db->close (db, 0);
-
-#if SVN_BDB_HAS_DB_INCOMPLETE
-      /* We can ignore DB_INCOMPLETE on db->close and db->sync; it
-       * just means someone else was using the db at the same time
-       * we were.  See the Berkeley documentation at:
-       * http://www.sleepycat.com/docs/ref/program/errorret.html#DB_INCOMPLETE
-       * http://www.sleepycat.com/docs/api_c/db_close.html
-       */
-      if (db_err == DB_INCOMPLETE)
-        db_err = 0;
-#endif /* SVN_BDB_HAS_DB_INCOMPLETE */
-
-      SVN_ERR (BDB_WRAP (fs, msg, db_err));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Close whatever Berkeley DB resources are allocated to FS.  */
-static svn_error_t *
-cleanup_fs (svn_fs_t *fs)
-{
-  DB_ENV *env = fs->env;
-
-  if (! env)
-    return SVN_NO_ERROR;
-
-  /* Close the databases.  */
-  SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->copies, "copies"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->changes, "changes"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->representations, "representations"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->uuids, "uuids"));
-
-  /* Finally, close the environment.  */
-  fs->env = 0;
-  SVN_ERR (BDB_WRAP (fs, "closing environment",
-                    env->close (env, 0)));
-
-  return SVN_NO_ERROR;
-}
-
-#if 0   /* Set to 1 for instrumenting. */
-static void print_fs_stats(svn_fs_t *fs)
-{
-  DB_TXN_STAT *t;
-  DB_LOCK_STAT *l;
-  int db_err;
-
-  /* Print transaction statistics for this DB env. */
-  if ((db_err = fs->env->txn_stat (fs->env, &t, 0)) != 0)
-    fprintf (stderr, "Error running fs->env->txn_stat(): %s",
-             db_strerror (db_err));
-  else
-    {
-      printf ("*** DB transaction stats, right before closing env:\n");
-      printf ("   Number of transactions currently active: %d\n",
-              t->st_nactive);
-      printf ("   Max number of active transactions at any one time: %d\n",
-              t->st_maxnactive);
-      printf ("   Number of transactions that have begun: %d\n",
-              t->st_nbegins);
-      printf ("   Number of transactions that have aborted: %d\n",
-              t->st_naborts);
-      printf ("   Number of transactions that have committed: %d\n",
-              t->st_ncommits);
-      printf ("   Number of times a thread was forced to wait: %d\n",
-              t->st_region_wait);
-      printf ("   Number of times a thread didn't need to wait: %d\n",
-              t->st_region_nowait);
-      printf ("*** End DB transaction stats.\n\n");
-    }
-
-  /* Print transaction statistics for this DB env. */
-  if ((db_err = fs->env->lock_stat (fs->env, &l, 0)) != 0)
-    fprintf (stderr, "Error running fs->env->lock_stat(): %s",
-             db_strerror (db_err));
-  else
-    {
-      printf ("*** DB lock stats, right before closing env:\n");
-      printf ("   The number of current locks: %d\n",
-              l->st_nlocks);
-      printf ("   Max number of locks at any one time: %d\n",
-              l->st_maxnlocks);
-      printf ("   Number of current lockers: %d\n",
-              l->st_nlockers);
-      printf ("   Max number of lockers at any one time: %d\n",
-              l->st_maxnlockers);
-      printf ("   Number of current objects: %d\n",
-              l->st_nobjects);
-      printf ("   Max number of objects at any one time: %d\n",
-              l->st_maxnobjects);
-      printf ("   Total number of locks requested: %d\n",
-              l->st_nrequests);
-      printf ("   Total number of locks released: %d\n",
-              l->st_nreleases);
-      printf ("   Total number of lock reqs failed because "
-              "DB_LOCK_NOWAIT was set: %d\n", l->st_nnowaits);
-      printf ("   Total number of locks not immediately available "
-              "due to conflicts: %d\n", l->st_nconflicts);
-      printf ("   Number of deadlocks detected: %d\n", l->st_ndeadlocks);
-      printf ("   Number of times a thread waited before "
-              "obtaining the region lock: %d\n", l->st_region_wait);
-      printf ("   Number of times a thread didn't have to wait: %d\n",
-              l->st_region_nowait);
-      printf ("*** End DB lock stats.\n\n");
-    }
-
-}
-#else
-#  define print_fs_stats(fs)
-#endif /* 0/1 */
-
-/* An APR pool cleanup function for a filesystem.  DATA must be a
-   pointer to the filesystem to clean up.
-
-   When the filesystem object's pool is freed, we want the resources
-   held by Berkeley DB to go away, just like everything else.  So we
-   register this cleanup function with the filesystem's pool, and let
-   it take care of closing the databases, the environment, and any
-   other DB objects we might be using.  APR calls this function before
-   actually freeing the pool's memory.
-
-   It's a pity that we can't return an svn_error_t object from an APR
-   cleanup function.  For now, we return the rather generic
-   SVN_ERR_FS_CLEANUP, and pass the real svn_error_t to the registered
-   warning callback.  */
-
-static apr_status_t
-cleanup_fs_apr (void *data)
-{
-  svn_fs_t *fs = data;
-  svn_error_t *err;
-
-  print_fs_stats (fs);
-
-  err = cleanup_fs (fs);
-  if (! err)
-    return APR_SUCCESS;
-
-  /* Darn. An error during cleanup. Call the warning handler to
-     try and do something "right" with this error. Note that
-     the default will simply abort().  */
-  (*fs->warning) (fs->warning_baton, err);
-
-  svn_error_clear (err);
-
-  return SVN_ERR_FS_CLEANUP;
-}
-
-
 /* Allocating and freeing filesystem objects.  */
 
 svn_fs_t *
@@ -297,10 +76,11 @@ svn_fs_new (apr_hash_t *fs_config, apr_pool_t *parent_pool)
   new_fs->warning = default_warning_func;
   new_fs->config = fs_config;
 
+  /*
   apr_pool_cleanup_register (new_fs->pool, new_fs,
                              cleanup_fs_apr,
                              apr_pool_cleanup_null);
-
+  */
   return new_fs;
 }
 
@@ -315,275 +95,20 @@ svn_fs_set_warning_func (svn_fs_t *fs,
 }
 
 
-svn_error_t *
-svn_fs_set_berkeley_errcall (svn_fs_t *fs, 
-                             void (*db_errcall_fcn) (const char *errpfx,
-                                                     char *msg))
-{
-  SVN_ERR (svn_fs__check_fs (fs));
-  fs->env->set_errcall(fs->env, db_errcall_fcn);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Allocating an appropriate Berkeley DB environment object.  */
-
-/* Allocate a Berkeley DB environment object for the filesystem FS,
-   and set up its default parameters appropriately.  */
-static svn_error_t *
-allocate_env (svn_fs_t *fs)
-{
-  /* Allocate a Berkeley DB environment object.  */
-  SVN_ERR (BDB_WRAP (fs, "allocating environment object",
-                    db_env_create (&fs->env, 0)));
-
-  /* Needed on Windows in case Subversion and Berkeley DB are using
-     different C runtime libraries  */
-  SVN_ERR (BDB_WRAP (fs, "setting environment object's allocation functions",
-                     fs->env->set_alloc (fs->env, malloc, realloc, free)));
-
-  /* If we detect a deadlock, select a transaction to abort at random
-     from those participating in the deadlock.  */
-  SVN_ERR (BDB_WRAP (fs, "setting deadlock detection policy",
-                    fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Filesystem creation/opening. */
 const char *
 svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 {
-  return apr_pstrdup (pool, fs->path);
+  abort ();
 }
-
-
-/* Write the DB_CONFIG file. */
-static svn_error_t *
-bdb_write_config  (svn_fs_t *fs)
-{
-  const char *dbconfig_file_name =
-    svn_path_join (fs->path, "DB_CONFIG", fs->pool);
-  apr_file_t *dbconfig_file = NULL;
-  int i;
-
-  static const char dbconfig_contents[] =
-    "# This is the configuration file for the Berkeley DB environment\n"
-    "# used by your Subversion repository.\n"
-    "# You must run 'svnadmin recover' whenever you modify this file,\n"
-    "# for your changes to take effect.\n"
-    "\n"
-    "### Lock subsystem\n"
-    "#\n"
-    "# Make sure you read the documentation at:\n"
-    "#\n"
-    "#   http://www.sleepycat.com/docs/ref/lock/max.html\n"
-    "#\n"
-    "# before tweaking these values.\n"
-    "set_lk_max_locks   2000\n"
-    "set_lk_max_lockers 2000\n"
-    "set_lk_max_objects 2000\n"
-    "\n"
-    "### Log file subsystem\n"
-    "#\n"
-    "# Make sure you read the documentation at:\n"
-    "#\n"
-    "#   http://www.sleepycat.com/docs/api_c/env_set_lg_bsize.html\n"
-    "#   http://www.sleepycat.com/docs/api_c/env_set_lg_max.html\n"
-    "#   http://www.sleepycat.com/docs/ref/log/limits.html\n"
-    "#\n"
-    "# Increase the size of the in-memory log buffer from the default\n"
-    "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
-    "# 10 Mbytes to 1 Mbyte.  This will help reduce the amount of disk\n"
-    "# space required for hot backups.  The size of the log file must be\n"
-    "# at least four times the size of the in-memory log buffer.\n"
-    "#\n"
-    "# Note: Decreasing the in-memory buffer size below 256 Kbytes\n"
-    "# will hurt commit performance. For details, see this post from\n"
-    "# Daniel Berlin <dan@dberlin.org>:\n"
-    "#\n"
-    "# http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=161960\n"
-    "set_lg_bsize     262144\n"
-    "set_lg_max      1048576\n";
-
-  /* Run-time configurable options.
-     Each option set consists of a minimum required BDB version, a
-     config hash key, a header, an inactive form and an active
-     form. We always write the header; then, depending on the
-     run-time configuration and the BDB version we're compiling
-     against, we write either the active or inactive form of the
-     value. */
-  static const struct
-  {
-    int bdb_major;
-    int bdb_minor;
-    const char *config_key;
-    const char *header;
-    const char *inactive;
-    const char *active;
-  } dbconfig_options[] = {
-    /* Controlled by "svnadmin create --bdb-txn-nosync" */
-    { 4, 0, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-      /* header */
-      "#\n"
-      "# Disable fsync of log files on transaction commit. Read the\n"
-      "# documentation about DB_TXN_NOSYNC at:\n"
-      "#\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
-      "#\n"
-      "# [requires Berkeley DB 4.0]\n",
-      /* inactive */
-      "# set_flags DB_TXN_NOSYNC\n",
-      /* active */
-      "set_flags DB_TXN_NOSYNC\n" },
-    /* Controlled by "svnadmin create --bdb-log-keep" */
-    { 4, 2, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
-      /* header */
-      "#\n"
-      "# Enable automatic removal of unused transaction log files.\n"
-      "# Read the documentation about DB_LOG_AUTOREMOVE at:\n"
-      "#\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
-      "#\n"
-      "# [requires Berkeley DB 4.2]\n",
-      /* inactive */
-      "# set_flags DB_LOG_AUTOREMOVE\n",
-      /* active */
-      "set_flags DB_LOG_AUTOREMOVE\n" },
-  };
-  static const int dbconfig_options_length =
-    sizeof (dbconfig_options)/sizeof (*dbconfig_options);
-
-
-  SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                             fs->pool));
-
-  SVN_ERR (svn_io_file_write_full (dbconfig_file, dbconfig_contents,
-                                   sizeof (dbconfig_contents) - 1, NULL,
-                                   fs->pool));
-
-  /* Write the variable DB_CONFIG flags. */
-  for (i = 0; i < dbconfig_options_length; ++i)
-    {
-      void *value = NULL;
-      const char *choice;
-
-      if (fs->config)
-        {
-          value = apr_hash_get (fs->config,
-                                dbconfig_options[i].config_key,
-                                APR_HASH_KEY_STRING);
-        }
-
-      SVN_ERR(svn_io_file_write_full (dbconfig_file,
-                                      dbconfig_options[i].header,
-                                      strlen (dbconfig_options[i].header),
-                                      NULL, fs->pool));
-
-      if (((DB_VERSION_MAJOR == dbconfig_options[i].bdb_major
-            && DB_VERSION_MINOR >= dbconfig_options[i].bdb_minor)
-           || DB_VERSION_MAJOR > dbconfig_options[i].bdb_major)
-          && value != NULL && strcmp (value, "0") != 0)
-        choice = dbconfig_options[i].active;
-      else
-        choice = dbconfig_options[i].inactive;
-
-      SVN_ERR (svn_io_file_write_full (dbconfig_file, choice, strlen (choice),
-                                       NULL, fs->pool));
-    }
-
-  SVN_ERR (svn_io_file_close (dbconfig_file, fs->pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
-  apr_status_t apr_err;
-  svn_error_t *svn_err;
-  const char *path_apr;
-  const char *path_native;
-
-  SVN_ERR (check_bdb_version (fs->pool));
-  SVN_ERR (check_already_open (fs));
-
-  /* Initialize the fs's path. */
-  fs->path = apr_pstrdup (fs->pool, path);
-  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, fs->path, fs->pool));
-
-  /* Create the directory for the new Berkeley DB environment.  */
-  apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, fs->pool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err,
-                               "Can't create Berkeley DB environment dir '%s'",
-                               fs->path);
-
-  SVN_ERR (bdb_write_config (fs));
-
-  svn_err = allocate_env (fs);
-  if (svn_err) goto error;
-
-  /* Create the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
-  svn_err = BDB_WRAP (fs, "creating environment",
-                     fs->env->open (fs->env, path_native,
-                                    (DB_CREATE
-                                     | DB_INIT_LOCK 
-                                     | DB_INIT_LOG
-                                     | DB_INIT_MPOOL
-                                     | DB_INIT_TXN),
-                                    0666));
-  if (svn_err) goto error;
-
-  /* Create the databases in the environment.  */
-  svn_err = BDB_WRAP (fs, "creating 'nodes' table",
-                     svn_fs__bdb_open_nodes_table (&fs->nodes, fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'revisions' table",
-                     svn_fs__bdb_open_revisions_table (&fs->revisions,
-                                                       fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'transactions' table",
-                     svn_fs__bdb_open_transactions_table (&fs->transactions,
-                                                          fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'copies' table",
-                     svn_fs__bdb_open_copies_table (&fs->copies,
-                                                    fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'changes' table",
-                     svn_fs__bdb_open_changes_table (&fs->changes,
-                                                     fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'representations' table",
-                     svn_fs__bdb_open_reps_table (&fs->representations,
-                                                  fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'strings' table",
-                     svn_fs__bdb_open_strings_table (&fs->strings,
-                                                     fs->env, TRUE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "creating 'uuids' table",
-                     svn_fs__bdb_open_uuids_table (&fs->uuids,
-                                                   fs->env, TRUE));
-  if (svn_err) goto error;
-
-  /* Initialize the DAG subsystem. */
-  svn_err = svn_fs__dag_init_fs (fs);
-  if (svn_err) goto error;
+  abort ();
 
   return SVN_NO_ERROR;
-
-error:
-  svn_error_clear (cleanup_fs (fs));
-  return svn_err;
 }
 
 
@@ -593,135 +118,13 @@ error:
 svn_error_t *
 svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
-  svn_error_t *svn_err;
-  const char *path_native;
-
-  SVN_ERR (check_bdb_version (fs->pool));
-  SVN_ERR (check_already_open (fs));
-
-  /* Initialize paths. */
-  fs->path = apr_pstrdup (fs->pool, path);
-
-  svn_err = allocate_env (fs);
-  if (svn_err) goto error;
-
-  /* Open the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
-  svn_err = BDB_WRAP (fs, "opening environment",
-                     fs->env->open (fs->env, path_native,
-                                    (DB_CREATE
-                                     | DB_INIT_LOCK
-                                     | DB_INIT_LOG
-                                     | DB_INIT_MPOOL
-                                     | DB_INIT_TXN),
-                                    0666));
-  if (svn_err) goto error;
-
-  /* Open the various databases.  */
-  svn_err = BDB_WRAP (fs, "opening 'nodes' table",
-                     svn_fs__bdb_open_nodes_table (&fs->nodes, 
-                                                   fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'revisions' table",
-                     svn_fs__bdb_open_revisions_table (&fs->revisions,
-                                                       fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'transactions' table",
-                     svn_fs__bdb_open_transactions_table (&fs->transactions,
-                                                          fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'copies' table",
-                     svn_fs__bdb_open_copies_table (&fs->copies,
-                                                    fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'changes' table",
-                     svn_fs__bdb_open_changes_table (&fs->changes,
-                                                     fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'representations' table",
-                     svn_fs__bdb_open_reps_table (&fs->representations,
-                                                  fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'strings' table",
-                     svn_fs__bdb_open_strings_table (&fs->strings,
-                                                     fs->env, FALSE));
-  if (svn_err) goto error;
-  svn_err = BDB_WRAP (fs, "opening 'uuids' table",
-                     svn_fs__bdb_open_uuids_table (&fs->uuids,
-                                                   fs->env, FALSE));
-  if (svn_err) goto error;
+  abort ();
 
   return SVN_NO_ERROR;
-  
- error:
-  svn_error_clear (cleanup_fs (fs));
-  return svn_err;
 }
 
 
 /* Copying a live Berkeley DB-base filesystem.  */
-
-/**
- * Delete all unused log files from DBD enviroment at @a live_path that exist 
- * in @a backup_path.
- */
-static svn_error_t *
-svn_fs__clean_logs(const char *live_path, 
-                   const char *backup_path, 
-                   apr_pool_t *pool) 
-{
-  apr_array_header_t *logfiles;
-
-  SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
-                                     live_path,
-                                     TRUE,        /* Only unused logs */
-                                     pool));
-
-  {  /* Process unused logs from live area */
-    int idx;
-    apr_pool_t *sub_pool = svn_pool_create (pool);
-
-    /* Process log files. */
-    for (idx = 0; idx < logfiles->nelts; idx++)
-      {
-        const char *log_file = APR_ARRAY_IDX (logfiles, idx, const char *);
-        const char *live_log_path;
-        const char *backup_log_path;
-
-        svn_pool_clear (sub_pool);
-        live_log_path = svn_path_join (live_path, log_file, sub_pool);
-        backup_log_path = svn_path_join (backup_path, log_file, sub_pool);
-
-        { /* Compare files. No point in using MD5 and wasting CPU cycles as we 
-             got full copies of both logs */
-          
-          svn_boolean_t files_match = FALSE;
-          svn_node_kind_t kind;
-
-          /* Check to see if there is a corresponding log file in the backup 
-             directory */
-          SVN_ERR (svn_io_check_path (backup_log_path, &kind, pool));
-          
-          /* If the copy of the log exists, compare them */
-          if (kind == svn_node_file)
-            SVN_ERR (svn_io_files_contents_same_p (&files_match, 
-                                                   live_log_path, 
-                                                   backup_log_path, 
-                                                   sub_pool));
-                                                   
-          /* If log files do not match, go to the next log filr. */
-          if (files_match == FALSE)
-            continue;
-        }
-
-        SVN_ERR (svn_io_remove_file (live_log_path, sub_pool));
-      }
-
-    svn_pool_destroy (sub_pool);
-  }
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs_hotcopy_berkeley (const char *src_path, 
@@ -729,47 +132,7 @@ svn_fs_hotcopy_berkeley (const char *src_path,
                          svn_boolean_t clean_logs, 
                          apr_pool_t *pool)
 {
-  /* Check DBD version, just in case */
-  SVN_ERR (check_bdb_version (pool));
-
-  /* Copy the DB_CONFIG file. */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
-  
-  /* Copy the databases.  */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "nodes", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "revisions", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "transactions", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "copies", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "changes", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "representations", 
-                                 pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "strings", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "uuids", pool));
-
-  {
-    apr_array_header_t *logfiles;
-    int idx;
-
-    SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
-                                       src_path,
-                                       FALSE,   /* All logs */
-                                       pool));
-
-    /* Process log files. */
-    for (idx = 0; idx < logfiles->nelts; idx++)
-      {
-        SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, 
-                                       APR_ARRAY_IDX (logfiles, idx,
-                                                      const char *),
-                                       pool));
-      }
-  }
-
-  /* Since this is a copy we will have exclusive access to the repository. */
-  SVN_ERR (svn_fs_berkeley_recover (dest_path, pool));
-
-  if (clean_logs == TRUE)
-    SVN_ERR (svn_fs__clean_logs (src_path, dest_path, pool));
+  abort ();
 
   return SVN_NO_ERROR;
 }
@@ -782,29 +145,7 @@ svn_error_t *
 svn_fs_berkeley_recover (const char *path,
                          apr_pool_t *pool)
 {
-  DB_ENV *env;
-  const char *path_native;
-
-  SVN_BDB_ERR (db_env_create (&env, 0));
-
-  /* Here's the comment copied from db_recover.c:
-   
-     Initialize the environment -- we don't actually do anything
-     else, that all that's needed to run recovery.
-   
-     Note that we specify a private environment, as we're about to
-     create a region, and we don't want to leave it around.  If we
-     leave the region around, the application that should create it
-     will simply join it instead, and will then be running with
-     incorrectly sized (and probably terribly small) caches.  */
-
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER | DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN
-                                             | DB_PRIVATE),
-                          0666));
-  SVN_BDB_ERR (env->close (env, 0));
+  abort ();
 
   return SVN_NO_ERROR;
 }
@@ -819,41 +160,7 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
                                        svn_boolean_t only_unused,
                                        apr_pool_t *pool)
 {
-  DB_ENV *env;
-  const char *path_native;
-  char **filelist;
-  char **filename;
-  u_int32_t flags = only_unused ? 0 : DB_ARCH_LOG;
-
-  *logfiles = apr_array_make (pool, 4, sizeof (const char *));
-
-  SVN_BDB_ERR (db_env_create (&env, 0));
-
-  /* Needed on Windows in case Subversion and Berkeley DB are using
-     different C runtime libraries  */
-  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
-
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN),
-                          0666));
-  SVN_BDB_ERR (env->log_archive (env, &filelist, flags));
-
-  if (filelist == NULL)
-    {
-      SVN_BDB_ERR (env->close (env, 0));
-      return SVN_NO_ERROR;
-    }
-
-  for (filename = filelist; *filename != NULL; ++filename)
-    {
-      APR_ARRAY_PUSH (*logfiles, const char *) = apr_pstrdup (pool, *filename);
-    }
-
-  free (filelist);
-  
-  SVN_BDB_ERR (env->close (env, 0));
+  abort ();
 
   return SVN_NO_ERROR;
 }
@@ -868,17 +175,7 @@ svn_error_t *
 svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
-  DB_ENV *env;
-  const char *path_native;
-
-  /* First, use the Berkeley DB library function to remove any shared
-     memory segments.  */
-  SVN_BDB_ERR (db_env_create (&env, 0));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->remove (env, path_native, DB_FORCE));
-
-  /* Remove the environment directory. */
-  SVN_ERR (svn_io_remove_dir (path, pool));
+  abort ();
 
   return SVN_NO_ERROR;
 }
