@@ -322,6 +322,11 @@ complete_directory (struct edit_baton *eb,
   svn_wc_entry_t *current_entry;
   const char *name;
 
+  /* If this is the root directory and there is a target, we can't
+     mark this directory complete. */
+  if (is_root_dir && eb->target)
+    return SVN_NO_ERROR;
+
   /* All operations are on the in-memory entries hash. */
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, path, pool));
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
@@ -332,50 +337,6 @@ complete_directory (struct edit_baton *eb,
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "No '.' entry in: '%s'", path);
   entry->incomplete = FALSE;
-
-  /* If this is the root directory, and there was a target, we should
-     only be modifying that target!  */
-  if (is_root_dir && eb->target)
-    {
-      name = eb->target;
-      current_entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
-      if (! current_entry)
-        goto complete;
-
-      if (current_entry->deleted)
-        {
-          /* If the target of the update is 'deleted', we leave it be.
-             see r6748, issue #919.
-             
-             For those confused: name_deleted is a global state; it
-             turns out that if we're here, the deleted entry we're
-             seeing *was* the target of the update.  close_dir() is
-             being called on the anchor directory (originally opened
-             by open_root()), and thus we're looking here at the
-             deleted 'target' of the update. */
-          if (! eb->target_deleted)
-            svn_wc__entry_remove (entries, name);
-        }
-      else if (current_entry->kind == svn_node_dir)
-        {
-          const char *child_path = svn_path_join (path, name, pool);
-          
-          if ((svn_wc__adm_missing (adm_access, child_path))
-              && (current_entry->schedule != svn_wc_schedule_add))
-            {
-              svn_wc__entry_remove (entries, name);
-              if (eb->notify_func)
-                (* eb->notify_func) (eb->notify_baton, child_path, 
-                                     svn_wc_notify_update_delete,
-                                     current_entry->kind, NULL, 
-                                     svn_wc_notify_state_unknown,
-                                     svn_wc_notify_state_unknown,
-                                     SVN_INVALID_REVNUM);
-            }
-        }
-
-      goto complete;
-    }
 
   /* Remove any deleted or missing entries. */
   subpool = svn_pool_create (pool);
@@ -437,8 +398,6 @@ complete_directory (struct edit_baton *eb,
             }
         }
     }
-
- complete:
 
   /* An atomic write of the whole entries file. */
   SVN_ERR (svn_wc__entries_write (entries, adm_access, pool));
@@ -2377,20 +2336,17 @@ close_edit (void *edit_baton,
   const char *target_path = svn_path_join_many (pool, eb->anchor, 
                                                 eb->target, NULL);
 
+  /* If there is a target and that target is missing, then it
+     apparently wasn't re-added by the update process, so we'll
+     pretend that the editor deleted the entry.  The helper function
+     do_entry_deletion() will take care of the necessary steps.  */
+  if ((eb->target) && (svn_wc__adm_missing (eb->adm_access, target_path)))
+    SVN_ERR (do_entry_deletion (eb, eb->anchor, eb->target, pool));
+
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
   if (! eb->root_opened)
     {
-      /* If there is a target and that target is missing, then it
-         apparently wasn't re-added by the update process (since the
-         root directory wasn't even opened!), so we'll pretend that
-         the editor actually did what it used to do (before a server
-         bug was fixed): open_root, delete_entry, close_dir.  The
-         helper function do_entry_deletion() will take care of the
-         necessary steps.  */
-      if ((eb->target) && (svn_wc__adm_missing (eb->adm_access, target_path)))
-        SVN_ERR (do_entry_deletion (eb, eb->anchor, eb->target, pool));
-
       /* We need to "un-incomplete" the root directory. */
       SVN_ERR (complete_directory (eb, eb->anchor, TRUE, pool));
     }
