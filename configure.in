@@ -583,7 +583,7 @@ if test "$do_javahl_build" = "yes"; then
   os_arch=`uname`
   if test "$os_arch" = "Darwin"; then
     dnl On Darwin, JNI libs must be installed as .jnilib
-    INSTALL_EXTRA_JAVAHL_LIB='ln -s $(libdir)/libsvnjavahl-1.dylib $(libdir)/libsvnjavahl-1.jnilib'
+    INSTALL_EXTRA_JAVAHL_LIB='ln -sf $(libdir)/libsvnjavahl-1.dylib $(libdir)/libsvnjavahl-1.jnilib'
   fi
 fi
 AC_SUBST(INSTALL_EXTRA_JAVAHL_LIB)
