@@ -902,6 +902,46 @@ svn_fs_make_file (svn_fs_root_t *root,
 }
 
 
+/* Helper for svn_fs_apply_textdelta, a local baton type to give to
+   window_consumer. */
+typedef struct consumer_baton_t
+{
+  /* Data about a file being changed. */
+
+} consumer_baton_t;
+
+
+/* Helper for svn_fs_apply_textdelta, a func of type
+   svn_txdelta_window_handler_t. */
+static svn_error_t *
+window_consumer (svn_txdelta_window_t *window, void *baton)
+{
+  consumer_baton_t *cb = (consumer_baton_t *) baton;
+
+  /* Apply the window to the file represented in cb. */
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_apply_textdelta (svn_txdelta_window_handler_t **contents_p,
+                        void **contents_baton_p,
+                        svn_fs_root_t *root,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  consumer_baton_t *baton = apr_pcalloc (pool, sizeof(*baton));
+
+  /* Fill in baton with relevant data about root/path */
+
+  *contents_p = window_consumer;
+  *contents_baton_p = baton;
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* Creating transaction and revision root nodes.  */
 
