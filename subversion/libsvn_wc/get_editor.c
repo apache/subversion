@@ -1044,8 +1044,8 @@ close_file (void *file_baton)
   if (fb->text_changed)
     {
       enum svn_node_kind wfile_kind = svn_node_unknown;
-      svn_string_t *tmp_txtb  = svn_wc__text_base_path (fb->name, 1, fb->pool);
-      svn_string_t *txtb      = svn_wc__text_base_path (fb->name, 0, fb->pool);
+      svn_string_t *tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
+      svn_string_t *txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
       svn_string_t *received_diff_filename;
       
       err = svn_io_check_path (fb->path, &wfile_kind, fb->pool);
