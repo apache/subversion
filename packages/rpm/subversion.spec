@@ -1,4 +1,5 @@
 %define neon_version 0.18.2
+%define apr_version 0.2002.01.19
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -11,14 +12,14 @@ Patch0: expat.patch
 Patch1: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apr >= 0.2001.12.18
+Requires: apr >= %{apr_version}
 Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
 Requires: /sbin/install-info
 BuildPreReq: apache >= 2.0.16
 BuildPreReq: apache-devel >= 2.0.16
-BuildPreReq: apr-devel >= 0.2001.12.18
+BuildPreReq: apr-devel >= %{apr_version}
 BuildPreReq: autoconf >= 2.52
 BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
@@ -125,15 +126,24 @@ cp subversion/libsvn_ra/.libs/libsvn_ra.so.0.0.0? $RPM_BUILD_ROOT/usr/lib/libsvn
 %post server
 # Load subversion server into apache configuration.
 CONF=/etc/httpd/conf/httpd.conf
-perl -e '
-while ( <> )
-   {
-   $first = 1 if ( ! $first && /^LoadModule/ );
-   $found = 1, print "LoadModule dav_svn_module modules/libmod_dav_svn.so\n"
-      if ( $first && ! $found && ! /^LoadModule/ );
-   print;
-   }
-' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
+
+# Search for Subversion dav_svn_module and add it to config file if not found.
+
+if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
+   # Put in LoadModule dav_svn_module line at end of LoadModule section.
+   perl -e '
+   while ( <> )
+      {
+      $FirstLoadFound = 1 if ( ! $FirstLoadFound &&
+           (/^LoadModule/ || /^#LoadModule/ ||  /^# LoadModule/) );
+      $InsertPointFound = 1,
+         print "LoadModule dav_svn_module modules/libmod_dav_svn.so\n"
+         if ( $FirstLoadFound && ! $InsertPointFound &&
+              ! (/^LoadModule/ || /^#LoadModule/ || /^# LoadModule/ ) );
+      print;
+      }
+   ' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
+fi
 
 # Conditionally add subversion example configuration.
 if [ "`grep -i svnpath $CONF`"x = "x" ]; then
