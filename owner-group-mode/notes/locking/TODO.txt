@@ -1,0 +1,83 @@
+TODO for locking
+===============
+
+This is a summary of the current state of the locking implementation.
+
+* svn info URL (sussman)
+* svn update removes defunct locks svn status -u shows locking info from repo
+  - Rev reporter in libsvn_repos (lundblad)
+  - Rev svn_ra_reporter and RA APIs (lundblad)
+    + ra_dav
+    + ra_svn/svnserve
+    + ra_local
+  - Rev svn_wc_notify_func_t (!)
+  - WC stuff (lundblad)
+  - Client changes
+* client test cases (fitz) [broad cases done]
+* Fix svn_fs_access_t handling in svnserve
+* Fix svn_ra_unlock force==true for ra_dav.
+* Improve cmdline help messages
+* svn lock and unlock should continue with next target on certain errors
+* Decide what should happen when unlocking in commit operation if an error
+  happens.
+
+
+LIST DISCUSSIONS TO HAVE:
+
+  ### should we bump the format file, so a libsvn_fs 1.0 or 1.1
+      library isn't allowed to circumvent locks?
+
+  ### how do locks relate to 
+
+              - dumping/loading?
+              - backups?
+              - mirroring scripts?
+
+
+
+DAV bugs:
+
+ -- Make ra_dav error on non-xml-safe lock comments,
+    and make mod_dav_svn fuzzily-escape lock-comments coming out of repos.
+
+ -- BUG:  header length limits in MERGE request.
+          SOLUTION:
+              - pass locktoken hash in MERGE request body as new XML element.
+              - rev the provider API:  ap_lookup_provider()
+                 - fix get_locktoken_list()
+                 -  pass <D:merge> element to provider merge()                 
+                 -  new lock vtable with *one* function to add lock
+              - svn 1.2 will require httpd-2.0.53
+
+ -- BUG: 'svn commit' does a no-op commit if locks exist in wc, but
+          files have no edits.  creates a commit with no changed paths!
+
+
+
+
+Stuff to document in book:
+     
+       - 4 new hooks
+       - 'lock' and 'unlock' commands, svn:needs-lock property.
+       - svnadmin lslocks, rmlocks, lock
+       - svnlook lock
+       - two new bdb tables in BDB section.
+       - update the description of autoversioning in appendix C!
+
+         ### remember to update authz policy doc. 
+
+
+
+Autoversioning Compatibility Issues:
+
+ * propfind depth 1 on a collection should show lock-null resources.
+   currently not happening.  can this be done *compatibly* with svn
+   clients?
+
+ * finish autoversioning:  see bug in issue 2161.
+        --> autoversioning on win32 webfolders and MSWord ?
+        --> investigate XP workaround for webfolders:
+                http://www.winnetmag.com/Article/ArticleID/24478/24478.html
+                http://zettai.net/Members/billfergus/1103749117/view
+            IE->File->Open->URL, check 'open as webfolder'?
+

@@ -1,0 +1,115 @@
+#!/usr/bin/perl
+
+# svn-clean - Wipes out unversioned files from SVN working copy.
+# Copyright (C) 2004, 2005 Simon Perreault
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+use strict;
+use File::Path;
+use Getopt::Long;
+use Pod::Usage;
+
+my $force = 0;
+my $quiet = 0;
+my $print = 0;
+my $help  = 0;
+my $man   = 0;
+GetOptions(
+    "force"  => \$force,
+    "quiet"  => \$quiet,
+    "print"  => \$print,
+    "help|?" => \$help,
+    "man"    => \$man
+  )
+  or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
+
+# Default target is the current directory.
+@ARGV = (".") if not @ARGV;
+
+# Main file-wiping loop.
+foreach (@ARGV) {
+    open SVN, "-|", qw(svn status --no-ignore -v), $_
+      or die "Can't call program \"svn\": $!\n";
+    while (<SVN>) {
+        if (/^[\?I]\s+(.+)$/) {
+            if ($print) {
+                print "$1\n";
+            }
+            else {
+                rmtree( $1, !$quiet, !$force );
+            }
+        }
+    }
+}
+
+__END__
+
+=head1 NAME
+
+svn-clean - Wipes out unversioned files from Subversion working copy
+
+=head1 SYNOPSIS
+
+svn-clean [options] [directory or file ...]
+
+=head1 DESCRIPTION
+
+B<svn-clean> will scan the given files and directories recursively and find
+unversioned files and directories (files and directories that are not present in
+the Subversion repository). After the scan is done, these files and directories
+will be deleted.
+
+If no file or directory is given, B<svn-clean> defaults to the current directory
+(".").
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-f>, B<--force>
+
+Files to which you do not have delete access (if running under VMS) or write
+access (if running under another OS) will not be deleted unless you use this
+option.
+
+=item B<-q>, B<--quiet>
+
+Do not print progress info. In particular, do not print a message each time a
+file is examined, giving the name of the file, and indicating whether "rmdir" or
+"unlink" is used to remove it, or that it’s skipped.
+
+=item B<-p>, B<--print>
+
+Do not delete anything. Instead, print the name of every file and directory that
+would have been deleted.
+
+=item B<-?>, B<-h>, B<--help>
+
+Prints a brief help message and exits.
+
+=item B<--man>
+
+Prints the manual page and exits.
+
+=back
+
+=head1 AUTHOR
+
+Simon Perreault <nomis80@nomis80.org>
+
+=cut
