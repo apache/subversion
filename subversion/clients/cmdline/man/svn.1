@@ -17,7 +17,7 @@ at any time.
 
 This manpage provides a brief description of the \fBsvn\fP command.  Details as
 well as more about \fBSubversion\fP as a general version control system is
-documented in the \fBThe Subversion Handbook\fP.
+documented in the \fBThe Subversion Book\fP.
 
 .SH OPTIONS
 These options are understood by \fBsvn\fP commands.  Not all options are
@@ -29,9 +29,6 @@ Show help text.
 .TP
 \fB-v\fP, \fB--verbose\fP
 Print additional information.
-.TP
-\fB-D\fP, \fB--date\fP \fBDATESPEC\fP
-Specify which date to operate on.
 .TP
 \fB-r\fP, \fB--revision\fP \fBREV\fP
 Specify repository revision to operate on. Separate multiple revisons with `:'.
@@ -53,9 +50,6 @@ Specify log message.
 .TP
 \fB-F\fP, \fB--file ARG\fP
 Read data from file ARG.
-.TP
-\fB--xml-file ARG\fP
-Read/write xml to specified file ARG.
 .TP
 \fB--message-encoding ARG\fP
 Take log message in charset encoding ARG.
@@ -107,7 +101,7 @@ files to an already checked-out module.
 
 \fBexample:\fP svn add foo.c bar.h baz/ bat/*.m
 .TP
-\fBcheckout\fP \fIrepository\fP \fR[\fIrepository\|.\|.\|.\fR] [\fIdestination\fR] [\fI--username name\fR] [\fI--password arg\fR] [\fI--no-auth-cache\fR] [\fI--xml-file file\fR] [\fI-rDqN\fR]
+\fBcheckout\fP \fIrepository\fP \fR[\fIrepository\|.\|.\|.\fR] [\fIdestination\fR] [\fI--username name\fR] [\fI--password arg\fR] [\fI--no-auth-cache\fR] [\fI-rqN\fR]
 (Alias: co)
 A necessary preliminary for most \fBsvn\fP work: creates your private copy of
 the source for \fIrepository\fP (the repository must be identified with a valid
@@ -125,14 +119,14 @@ sub-directory being the basename of the URL.
 Recursively clean up the working copy, removing locks, resuming
 unfinished operations, etc.
 .TP
-\fBcommit\fP \fIfile\fP \fR[\fI--force\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--xml-file\fR] [\fI--message-encoding\fR] [\fI-mFqN\fR]
+\fBcommit\fP \fIfile\fP \fR[\fI--force\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFqN\fR]
 (Alias: ci)
 Use this command when you wish to ``post'' your changes to other
 developers, by incorporating them into the source repository.
 
 \fBexample:\fP svn commit foo.c bar.h baz/ bat/*.m
 .TP
-\fBcopy\fP \fIsource destination\fP \fR[\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFrDq\fR]
+\fBcopy\fP \fIsource destination\fP \fR[\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFrq\fR]
 (Alias: cp) Where \fBsource\fP and
 \fBdestination\fP can be directories or files, local ones in a repository or
 remote ones specified as URLs. `copy' is used where you want to make a copy of
@@ -161,14 +155,14 @@ have no revision history beyond the initial import that you just did.
   $ svn cp http://rep.com/repo/path/bar.c foo.c
   $ svn ci -m "copied that remote bar.c here"
 .TP
-\fBdelete\fP \fIfile|dir\fP \fR[\fI--force\fR] [\fI--targets file\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--xml-file\fR] [\fI--message-encoding\fR] [\fI-mFq\fR]\fI
+\fBdelete\fP \fIfile|dir\fP \fR[\fI--force\fR] [\fI--targets file\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI--message-encoding\fR] [\fI-mFq\fR]\fI
 (Alias: del, remove, rm) Mark the given files/directories for deletion upon
 commit. When you commit, the entries will be removed from the head revision in
 the repository, and deleted from your working copy.
 
 \fBexample:\fP svn delete foo.c bar.h
 .TP
-\fBdiff\fP [\fItarget...\fP] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rDxN\fR]\fI
+\fBdiff\fP [\fItarget...\fP] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rxN\fR]\fI
 (Alias: di)
 Display file changes as contextual diffs. The target can be a
 directory, in which it operates recursively. The target can be an URL,
@@ -202,7 +196,7 @@ Compares revisions 123 and 456 of the file in the repository.
 Compare revisions 123 and 456 of the file in the repository without
 the need for a working copy.
 .TP
-\fBexport\fP \fIsource \fR[\fIdestination\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rDq\fR]
+\fBexport\fP \fIsource \fR[\fIdestination\fR] [\fI--username name\fR] [\fI--password pass\fR] [\fI--no-auth-cache\fR] [\fI-rq\fR]
 If source is a URL exports a clean directory tree from the repository specified by
 URL, at revision REV if it is given, otherwise at HEAD, into
 destination.
@@ -218,21 +212,21 @@ Without a given command argument, this prints generic help. If a specific
 command is entered, a short description on how to use that command is
 presented.
 .TP
-\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--xml-file\fP] [\fI--message-encoding\fP] [\fI-FmqN\fP]
+\fBimport\fP \fIRepository-URL\fP [\fIPath\fP] [\fINew-Repository-Entry\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--message-encoding\fP] [\fI-FmqN\fP]
 Import a file or tree into the repository.
 .TP
 \fBinfo\fP \fItarget1\fP [\fItarget2\fP ...] [\fI--targets file\fP] [\fI-R\fP]
 Print info about a versioned resource.
 .TP
-\fBlist\fP \fIurl\fP [\fIurl\fP ...] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rDvR\fP]
+\fBlist\fP \fIurl\fP [\fIurl\fP ...] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rvR\fP]
 (Alias: ls)
 List directory entries of a URL.
 .TP
-\fBlog\fP [\fIurl\fP] [\fIfile|dir\fP] [\fINew-Repository-Entry\fP] [\fI--targets file\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--strict] [\fI--xml\fP] [\fI-rDv\fP]
+\fBlog\fP [\fIurl\fP] [\fIfile|dir\fP] [\fINew-Repository-Entry\fP] [\fI--targets file\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--strict] [\fI--xml\fP] [\fI-rv\fP]
 Show log messages (and affected entities) for commits in which any of the
 entities in question changed.  If none were specified, then recursive
 inclusion is the default.  The set of messages can be further restricted
-by a date or revision range specification (using -D or -r). A URL can also
+by a revision range specification (using -r). A URL can also
 be specific to retrieve logs from a remote repository. If the URL is
 passed alone, then only that entry will be searched. If paths are also
 supplied with the URL, then only those paths are searched, based at the
@@ -261,7 +255,7 @@ Retrieve logs for both files in the remote repository without the need for
 a local checkout of the repository.
 
 .TP
-\fBmerge\fP \fIPATH1\fP[\fI@N\fP] [\fIPATH2\fP[\fI@M\fP]] [\fIWCPATH\fP] [\fI--force\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rDNq\fP]
+\fBmerge\fP \fIPATH1\fP[\fI@N\fP] [\fIPATH2\fP[\fI@M\fP]] [\fIWCPATH\fP] [\fI--force\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--dry-run\fP] [\fI-rNq\fP]
 Apply the differences between two paths to a working copy path.
 PATH1 and PATH2 are either working-copy paths or URLs, specified at
 revisions N and M.  These are the two sources to be compared.
@@ -284,7 +278,7 @@ svn merge -r4:5 http://ex.com/repos/proj
 Create the directory(ies), if they do not already exist. The directories can
 be specified as a local directory name, or as a URL.
 .TP
-\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP]  [\fI--force\fP] [\fI--message-encoding\fP] [\fI-mFrDq\fP]
+\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP]  [\fI--force\fP] [\fI--message-encoding\fP] [\fI-mFrq\fP]
 (alias: mv, rename, ren)
 Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY. Both source and dest
 can be specified either as a local file name, or as a URL in a possibly remote
@@ -364,16 +358,16 @@ conflict-related artifact files and allows TARGET to be committed again.
 (Alias: stat, st)
 Print the status of working copy files and directories.
 .TP
-\fBswitch url\fP [\fItarget\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rDNq\fP]
+\fBswitch url\fP [\fItarget\fP] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rNq\fP]
 (Alias: sw)
 Update working copy to mirror a new URL. This is the way to move a working copy
 to a new branch.
 .TP
-\fBupdate\fP [\fIfile\fP\|.\|.\|.] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI--xml-file\fP] [\fI-rDNq\fP]
+\fBupdate\fP [\fIfile\fP\|.\|.\|.] [\fI--username name\fP] [\fI--password pass\fP] [\fI--no-auth-cache\fP] [\fI-rNq\fP]
 (Alias: up)
 Bring changes from the repository into the working copy.  If no revision given,
 bring working copy up-to-date with HEAD rev.  Else synchronize working copy to
-revision given by -r or -D.  For each updated item a line will start with a
+revision given by -r.  For each updated item a line will start with a
 character reporting the action taken.  These characters have the following
 meaning:
 .RS
