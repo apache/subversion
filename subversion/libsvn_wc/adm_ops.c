@@ -984,9 +984,9 @@ svn_wc_add (const char *path,
                                  modify_flags, TRUE, pool));
 
 
-  /* If this is a replacement, we need to reset the properties for
-     PATH. */
-  if (orig_entry)
+  /* If this is a replacement without history, we need to reset the
+     properties for PATH. */
+  if (orig_entry && (! copyfrom_url))
     {
       const char *prop_path;
       SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
