@@ -1497,12 +1497,12 @@ Deprecation:
 ------------
 
 When a new, improved version of an API is introduced, the old one
-remains for compatibility, at least until the next release.  However,
-we mark the old one as deprecated and point to the new one, so people
-know to write to the new API if at all possible.  When deprecating,
-mention the release after which the deprecation was introduced, and
-point to the new API.  If possible, replace the old API documentation
-with a diff to the new one.  For example:
+remains for compatibility, at least until the next major release.
+However, we mark the old one as deprecated and point to the new one,
+so people know to write to the new API if at all possible.  When
+deprecating, mention the release after which the deprecation was
+introduced, and point to the new API.  If possible, replace the old
+API documentation with a diff to the new one.  For example:
 
    /**
     * @deprecated Provided for backward compatibility with the 1.0.0 API.
