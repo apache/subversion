@@ -1045,21 +1045,23 @@ svn_error_t *svn_swig_py_repos_history_func(void *baton,
 {
   PyObject *function = baton;
   PyObject *result;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
   acquire_py_lock();
   if ((result = PyObject_CallFunction(function, 
-                                      (char *)"siO&", 
-                                      path, revision, pool)) != NULL)
+                                      (char *)"slO&", 
+                                      path, revision, 
+                                      make_ob_pool, pool)) != NULL)
     {
-      err = convert_python_error();
+      if (result != Py_None)
+        err = convert_python_error();
+      Py_DECREF(result);
       goto finished;
     }
-  Py_DECREF(result);
-
+  
  finished:
   release_py_lock();
   return err;
