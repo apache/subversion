@@ -470,6 +470,17 @@ class Dump:
     # This record is done.
     self.dumpfile.write('\n')
 
+  def delete_path(svn_path):
+    ### FIXME: After we reimplement the head tree mirror sanely, this
+    ### should check for empty directory in the head tree and move
+    ### the deletion up as far as it can go.  (It's okay to output a
+    ### bunch of deletes only to override them later in the same
+    ### revision by deleting their parent directory -- that's a
+    ### perfectly valid series of moves in a Subversion txn.)
+    self.dumpfile.write('Node-path: %s\n'
+                        'Node-action: delete\n'
+                        '\n' % svn_path)
+
   def close(self):
     self.dumpfile.close()
     ### os.removedirs() didn't work.  (What is it for, anyway?)
@@ -569,6 +580,13 @@ class Commit:
       svn_path = branch_path(ctx, br) + cvs_path
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
+
+    for rcs_file, cvs_rev, br, tags, branches in self.deletes:
+      # compute a repository path, dropping the ,v from the file name
+      cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
+      svn_path = branch_path(ctx, br) + cvs_path
+      print '    deleting %s : %s' % (cvs_rev, svn_path)
+      dump.delete_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
     previous_rev = dump.end_revision()
     print '    new revision:', previous_rev
