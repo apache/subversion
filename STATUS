@@ -129,13 +129,6 @@ Candidate changes:
     Votes:
       +1: pmayweg
 
-  * r13111
-    Fix improper UTF-8 conversion for wc-to-wc directory moves/copies.
-    Justification:
-      Regression from 1.0, move/copy can fail in some non-UTF-8 locales.
-    Votes:
-      +1: philip, lundblad
-
 Approved changes (further review is welcome, but not required):
 
   * r12489
@@ -156,4 +149,11 @@ Approved changes (further review is welcome, but not required):
       Better chance of client survival in the toxic environment of Win32.
     Votes:
       +1: brane, cmpilato, maxb
+
+  * r13111
+    Fix improper UTF-8 conversion for wc-to-wc directory moves/copies.
+    Justification:
+      Regression from 1.0, move/copy can fail in some non-UTF-8 locales.
+    Votes:
+      +1: philip, lundblad, maxb
 
