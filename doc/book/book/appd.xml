@@ -164,7 +164,7 @@
             <command>CHECKIN</command>, a new VR is created, and
             edited VCR's contents now <quote>point to</quote> the
             latest VR.  Each VCR has also has a <quote>history</quote>
-            resource xwhich tracks and orders its various VR
+            resource which tracks and orders its various VR
             states.</para>
           </listitem>
         </varlistentry>
@@ -181,11 +181,12 @@
             The client then performs a <command>CHECKOUT</command> on
             each VR it wishes to change, which creates a number of
             temporary <quote>working resources</quote> in the
-            activity, which can be modified using
-            <command>PUT</command> methods.  Finally, the client
-            performs a <command>CHECKIN</command> on each working
-            resource, which creates a new VR within each VCR, and the
-            entire activity is deleted.</para>
+            activity, that can be modified using
+            <command>PUT</command> and <command>PROPPATCH</command>
+            methods.  Finally, the client performs a
+            <command>CHECKIN</command> on each working resource, which
+            creates a new VR within each VCR, and the entire activity
+            is deleted.</para>
           </listitem>
         </varlistentry>
 
@@ -228,8 +229,8 @@
             of DeltaV.  If the DeltaV server supports this feature,
             then basic WebDAV clients (i.e. those unaware of
             versioning) can still write to the server, and the server
-            will silently perform versioning anyway.  In simplistic
-            terms, a ignorant <command>PUT</command> from a basic
+            will silently perform versioning anyway.  In the simplest
+            example, a ignorant <command>PUT</command> from a basic
             WebDAV client might be translated by the server as a
             <command>CHECKOUT</command>, <command>PUT</command>,
             <command>CHECKIN</command>.</para>
@@ -377,16 +378,86 @@
       <para>Is this fantasy real?  Not quite.  The main snag is that
         Subversion 1.0 has no support whatsoever for the WebDAV
         <command>LOCK</command> or <command>UNLOCK</command> methods.
-        <footnote><para>This is actually quite difficult to
-        implement, since Subversion uses the copy-modify-merge model.
-        Subversion may someday develop a reserved-checkout locking
-        model that can live peaceably with copy-modify-merge, but it
-        probably won't happen soon.</para></footnote>.  Most operating
-        system DAV clients attempt to <command>LOCK</command> a
-        resource opened directly from a DAV-mounted network share.
-        For now, users may have to copy a file from the DAV share to
-        local disk, edit the file, then copy it back again.  Not ideal
-        autoversioning, but still doable.</para>
+        Most operating system DAV clients attempt to
+        <command>LOCK</command> a resource opened directly from a
+        DAV-mounted network share.  For now, users may have to copy a
+        file from the DAV share to local disk, edit the file, then
+        copy it back again.  Not ideal autoversioning, but still
+        doable.</para>
+
+    </sect2>
+
+    <sect2 id="svn-app-d-sect2.3">
+      <title>The mod_dav_lock alternative</title>
+      
+      <para>The mod_dav Apache module is a complex beast:  it
+        understands and parses all of the WebDAV and DeltaV methods,
+        yet it depends on a back-end <quote>provider</quote> to
+        access the resources themselves.</para>
+
+      <para>In its simplest incarnation, a user can use mod_dav_fs as
+        a provider for mod_dav.  mod_dav_fs uses the ordinary
+        filesystem to store files and directories, and only
+        understands vanilla WebDAV methods, not DeltaV.</para>
+
+      <para>Subversion, on the other hand, uses mod_dav_svn as a
+        provider for mod_dav.  mod_dav_svn understands all WebDAV
+        methods except <command>LOCK</command>, and understands a
+        sizeable subset of DeltaV methods.  It accesses data in the
+        Subversion repository, rather than in the real filesystem.
+        Subversion 1.0 doesn't support locking, because it would
+        actually quite difficult to implement, since Subversion uses
+        the copy-modify-merge model.<footnote><para>Subversion may
+        someday develop a reserved-checkout locking model that can
+        live peaceably with copy-modify-merge, but it probably won't
+        happen soon.</para></footnote></para>
+
+      <para>In Apache httpd-2.0, mod_dav supports the
+        <command>LOCK</command> method by tracking locks in a private
+        database, assuming that the provider is willing to accept
+        them.  In Apache httpd-2.1 or later, however, this locking
+        support has been broken into an independent module,
+        mod_dav_lock.  It allows any mod_dav provider to take
+        advantage of the lock database, including mod_dav_svn, even
+        though mod_dav_svn doesn't actually understand locking.</para>
+
+      <para>Confused yet?</para>
+
+      <para>In a nutshell, you can use mod_dav_lock in Apache
+        httpd-2.1 (or later) to create the
+        <emphasis>illusion</emphasis> that mod_dav_svn is honoring
+        <command>LOCK</command> requests.  Make sure mod_dav_lock is
+        either compiled into httpd, or being loaded in your
+        <filename>httpd.conf</filename>.  Then simply add the
+        <literal>DAVGenericLockDB</literal> directive to your
+        <literal>Location</literal> like so:</para>
+
+              <screen>
+&lt;Location /repos&gt;
+  DAV svn
+  SVNPath /absolute/path/to/repository
+  SVNAutoversioning on
+  DavGenericLockDB /path/to/store/locks
+&lt;/Location&gt;
+</screen>
+
+      <para>This techique is a risky business; in some sense, the
+        mod_dav_svn is now lying to the WebDAV client.  It claims to
+        accept the <command>LOCK</command> request, but in reality the
+        lock isn't being enforced at all levels.  If a second WebDAV
+        client attempts to <command>LOCK</command> the same resource,
+        then mod_dav_lock will notice and correctly deny the request.
+        But there's absolutely nothing preventing an ordinary
+        Subversion client from changing the file via a normal
+        <command>svn commit</command>!  If you use this technique,
+        you're giving users the opportunity to stomp on each others'
+        changes.</para>
+
+      <para>On the other hand, if you set up your environment very
+        carefully, you may mitigate the risk.  For example, if
+        <emphasis>all</emphasis> of your users are working though
+        basic WebDAV clients (rather than svn clients), then things
+        should be fine.</para>
 
     </sect2>
     
@@ -395,9 +466,9 @@
   <sect1 id="svn-app-d-sect-3">
     <title>Autoversioning Interoperability</title> 
 
-      <para>In this section, we'll describe the various generic WebDAV
-        clients out in the world (at the time of writing), and how
-        well they operating against a mod_dav_svn server using the
+      <para>In this section, we'll describe the most common generic
+        WebDAV clients (at the time of writing), and how well they
+        operate against a mod_dav_svn server using the
         <literal>SVNAutoversioning</literal> directive.  RFC 2518 is a
         bit large, and perhaps a bit too flexible.  Every WebDAV
         client behaves slightly differently, and creates slightly
@@ -408,10 +479,87 @@
     <sect2 id="svn-app-d-sect-3.1">
       <title>Win32 WebFolders</title>
 
+      <para>Windows 98, 2000, and XP have an integrated WebDAV client
+        known as <quote>WebFolders</quote>.  On Windows 98, the
+        feature might need to be explicitly installed;  if present, a
+        <quote>WebFolders</quote> directory appears directly within My
+        Computer.  On Windows 2000 and XP, simply open My Network
+        Places, and run the Add Network Place icon.  When prompted,
+        enter the WebDAV URL.  The shared folder will appear within My
+        Network Places.</para>
+
+      <para>Most write operations work fine against an autoversioning
+        mod_dav_svn server, but there are few problems:</para>
+
+      <itemizedlist>
+
+        <listitem>
+          <para>If the computer is a member of an NT Domain, then it
+            seems to be unable to connect to the WebDAV share.  It
+            repeatedly asks for a name and password, even when the
+            Apache server isn't issuing an authentication challenge!
+            Some have speculated that this might happen because that
+            WebFolders is specifically designed to operate against
+            Microsoft's SharePoint DAV server.  If the machine isn't
+            part of an NT Domain, then the share is mounted without a
+            problem.</para>
+        </listitem>
+
+        <listitem>
+          <para>As expected, a file can't be opened for direct editing
+            from the share, due to mod_dav_svn's lack of
+            <command>LOCK</command> support.  Even the mod_dav_lock
+            technique doesn't seem to help.  When a file is
+            double-clicked, Internet Explorer is launched by default,
+            and it displays the file as read-only.  If you use an
+            application to open the file directly, it still treats the
+            file as read-only.  The previously mentioned <quote>copy,
+            edit, re-copy</quote> method does work, however.  The file
+            on the share can be successfully overwritten by a locally
+            edited copy.</para>
+        </listitem>
+
+      </itemizedlist>
+
     </sect2>
 
     <sect2 id="svn-app-d-sect-3.2">
       <title>Mac OS X</title>
+
+      <para>Apple's OS X operating system has an integrated WebDAV
+        client.  From the Finder, select the <quote>Connect to
+          Server</quote> item from the Go menu.  Enter a WebDAV URL,
+        and it appears as a disk on the desktop, just like any file
+        server.<footnote><para>Unix users can also run <command>mount
+        -t webdav URL /mountpoint</command>.</para></footnote></para>
+      
+      <para>Unfortunately, this client refuses to work against an
+        autoversioning mod_dav_svn because of its lack of
+        <command>LOCK</command> support.  Mac OS X discovers the
+        missing <command>LOCK</command> ability during the initial
+        HTTP <command>OPTIONS</command> feature exchange, and thus
+        decides to mount the Subversion repository as a read-only
+        share.  After that, no write operations are possible at all.
+        In order to mount the repository as a read-write share, you
+        <emphasis>must</emphasis> use the mod_dav_lock trick discussed
+        previously.  Once locking seems to work, the share behaves
+        very nicely: files can be opened directly in read/write mode,
+        although each save operation will cause the client to do a
+        <command>PUT</command> to a temporary location, a
+        <command>DELETE</command> of original file, and a
+        <command>MOVE</command> of the temporary resource to the
+        original file name.  That's three new Subversion
+        revisions per save!</para>
+
+      <para>One more word of warning: OS X's WebDAV client can be
+        overly sensitive to HTTP redirects.  If you're unable to mount
+        the repository at all, you may need to enable the
+        <literal>BrowserMatch</literal> directive in your
+        <filename>httpd.conf</filename>:</para>
+
+              <screen>
+BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
+</screen>
 
     </sect2>
 
@@ -430,18 +578,18 @@
       <itemizedlist>
 
         <listitem>
-          <para>As one would expect, a file cannot be opened for
-            editing directly from the share, because the
-            <command>LOCK</command> request fails.  The file comes up
-            as read-only.  The <quote>copy locally, edit, copy
-            back</quote> trick does work, however.  Unfortunately,
-            Nautilus overwrites the old file by issuing a
-            <command>DELETE</command> first, which creates an extra
+          <para>Any files opened directly from the share are treated
+            as read-only.  Even the mod_dav_lock trick seems to have
+            no effect.  It seems that Nautilus never issues the
+            <command>LOCK</command> method at all.  The <quote>copy
+            locally, edit, copy back</quote> trick does work, however.
+            Unfortunately, Nautilus overwrites the old file by issuing
+            a <command>DELETE</command> first, which creates an extra
             revision.</para>
         </listitem>
 
         <listitem>
-          <para>When creating a new file in the share, Nautilus first
+          <para>When overwriting or creating a file , Nautilus first
             does a <command>PUT</command> of an empty file, then
             overwrites it with a second <command>PUT</command>.  This
             creates two Subversion filesystem revisions, rather than
@@ -455,10 +603,7 @@
           new revisions.</para>
         </listitem>
 
-
-
       </itemizedlist>
-
 
     </sect2>
 
@@ -475,31 +620,12 @@
         work at all with mod_dav_svn's autoversioning.  Every single
         attempt to write to the server is preceded by a
         <command>LOCK</command> request, which mod_dav_svn doesn't
-        support.</para>
+        support.  At this time, there is no data indicating whether
+        the use of mod_dav_lock resolves this problem.</para>
 
     </sect2>
 
-
   </sect1>
-
-<!--
-      <para>For example, on recent versions of Windows, one of the
-        items that appears when you open <literal>My
-        Computer</literal> is <literal>Web Folders</literal>.
-        Opening that icon will show you list of registered WebDAV
-        locations that you can browse further into, as well as an icon
-        for adding a new Web Folder.  In fact, if you'd like to see
-        how this works, open the <literal>Add Web Folder</literal>
-        icon, and register the URL <systemitem
-        class="url">http://svn.collab.net/repos/svn/trunk</systemitem>.
-        When you've finished, you'll have an icon in your Web Folders
-        window that, if opened, will connect you directly to the head
-        of Subversion's own development tree.  Imagine
-        that&mdash;bleeding edge Subversion code that you can copy and
-        paste right off the server and onto your local drive!</para>
-
--->
-
 
 </appendix>
 
