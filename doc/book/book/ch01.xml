@@ -26,7 +26,7 @@
       <firstterm>repository</firstterm>.  The repository is much like
       an ordinary file server, except that it remembers every change
       ever made to your files and directories.  This allows you to
-      recover older versions of your tree, or examine the history of
+      recover older versions of your data, or examine the history of
       how your data changed.  In this regard, many people think of a
       version control system as a sort of ``time machine.''</para>
     
@@ -66,12 +66,12 @@
       developed openly under a free license, it quickly attracted a
       community of developers.</para>
 
-    <para>The original design team settled on two simple goals.
-      First, it was decided that Subversion should be a functional
-      replacement for CVS.  That is, it should match CVS's features,
-      preserve the same development model, but still fix the most
-      obvious flaws.  Second, Subversion should be written such that
-      any CVS user can start using it with little effort.</para>
+    <para>The original design team settled on some simple goals.  It
+      was decided that Subversion should be a functional replacement
+      for CVS; it should match CVS's features, preserve the same
+      development model, but still fix the most obvious flaws.  And
+      Subversion should be similar enough to CVS such that any CVS
+      user could start using it with little effort.</para>
 
     <para>After fourteen months of coding, Subversion became
       "self-hosting" on August 31, 2001.  That is, Subversion
@@ -139,16 +139,19 @@
       </varlistentry>
 
       <varlistentry>
-        <term>Advanced network layer</term>
+        <term>Choice of network layers</term>
         <listitem>
-          <para>The Subversion network server is the Apache web
-            server, and the Subversion client and server speak the
-            WebDAV protocol to one another, which is an extension of
-            HTTP.  This gives Subversion a big advantage in stability
-            and interoperability, and provides various key features
-            for free: authentication, authorization, wire compression,
-            and repository browsing, for example. <!-- mention
-            svnserve here someday -->
+          <para>Subversion has an abstracted notion of repository
+            access, making it easy for people to implement new network
+            mechanisms.  Subversion's <quote>advanced</quote> network
+            server is a module for the Apache web server, which speaks
+            a variant of HTTP called WebDAV/DeltaV.  This gives
+            Subversion a big advantage in stability and
+            interoperability, and provides various key features for
+            free: authentication, authorization, wire compression, and
+            repository browsing, for example.  A smaller, standalone
+            svn server process is also available.  This server speaks
+            a custom protocol which can be easily tunneled over ssh.
           </para>
         </listitem>
       </varlistentry>
@@ -168,10 +171,10 @@
         <term>Efficient branching and tagging</term>
         <listitem>
           <para>
-            There's no need for branching/tagging to proportional to
+            There's no need for branching/tagging to be proportional to
             project size.  Subversion creates branches and tags by
             simply copying the project, using a mechanism similar to a
-            hard-link.  Thus the operations take only a very small,
+            hard-link.  Thus these operations take only a very small,
             constant amount of time.
           </para>
         </listitem>
@@ -198,22 +201,110 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-4">
 
-    <title>Subversion's components</title>
+    <title>Installing Subversion</title>
 
-    
+    <para>Subversion is built on a portablility layer called APR (the
+      Apache Portable Runtime library).  This means Subversion should
+      work on any operating system that the Apache httpd server runs
+      on: Win32, Linux, *BSD, Mac OS X, Netware, and others. </para>
 
+    <para>By far, the easiest way to get Subversion is to find a
+      binary package of some sort for your operating system.
+      Subversion's website often has binaries available for download,
+      posted by volunteers.  The site usually contains graphical
+      installer packages for users for Microsoft operating systems.
+      If you run a Unix-like operating system, you're best off using
+      your system's native package-distribution system (RPM, apt-get,
+      ports tree) to get Subversion.</para>
+
+    <para>Alternately, you can build Subversion directly from source
+      code.  From the website, you can download the latest source-code
+      release.  After unpacking it, follow the instructions in INSTALL
+      to build it.  Note that released source package contains
+      everything you need to build a commandline-client capable of
+      talking to a remote repository (in particular, the apr,
+      apr-util, and neon libraries.)  But Subversion has many other
+      dependencies, such as Berkeley DB and possibly Apache httpd.
+      If you want to do a <quote>full</quote> build, make sure you
+      have all of packages documented in the INSTALL file.  If you
+      plan to work on Subversion itself, you can use your client
+      program to grab the latest, bleeding-edge source code.  This is
+      documented in <xref linkend="svn-ch-7-sect-6.2" />.</para>
 
   </sect1>
-
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-5">
 
-    <title>How to get Subversion</title>
+    <title>Subversion's components</title>
+    
+    <para>
+      Subversion, once installed, has a number of different pieces.
+      Here's a quick overview of what you get.
+    </para>
 
-    <para>### TODO Write this.  List URLs, RPMs, etc.</para>
+    <variablelist>
+
+      <varlistentry>
+        <term>svn</term>
+        <listitem>
+          <para>The command-line client program.  This is the main
+           tool used to manage data, and its use is covered in
+           Chapters 2, 3, 4, and 6.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnlook</term>
+        <listitem>
+          <para>A read-only tool for inspecting a Subversion
+          repository, discussed in Chapter 5.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnadmin</term>
+        <listitem>
+          <para>A tool for tweaking or repairing a Subversion
+            repository, used mainly by system administrators, also
+            discussed in Chapter 5.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>mod_dav_svn</term>
+        <listitem>
+          <para>A plug-in module for the Apache-2.X web server; used
+          to make your repository available to others over a
+          network.  Discussed in Chapter 5.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnserve</term>
+        <listitem>
+          <para>A standalone server program, runnable as a daemon
+            process; another way to make your repository available to
+            others over a network.  Discussed in Chapter 5.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>svnversion</term>
+        <listitem>
+          <para>A program for reporting the mixed-revision state of a
+          working copy.  (See Chapter 2 to understand mixed-revision
+          working copies.)</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+    <para>Assuming you have Subversion installed correctly, you should
+      be ready to start.  The next two chapters will walk you through
+      the usage of the command-line client program. </para>
 
   </sect1>
 

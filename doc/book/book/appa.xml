@@ -8,16 +8,14 @@
   <simplesect>
 
     <para>This document is meant to be a quick-start guide for CVS
-      users new to Subversion.  It's not a substitute for real
-      documentation and manuals; but it should give you a quick
-      conceptual <quote>diff</quote> when switching over.</para>
+      users new to Subversion.  It should give you a quick conceptual
+      <quote>diff</quote> when switching over.</para>
 
-    <para>The goal of Subversion is to take over the current and
-      future CVS user base.  Subversion not only includes new
-      features, but attempts to fix certain <quote>broken</quote>
-      behaviors that CVS had.  This means that you may be encouraged
-      to break certain habits&mdash;ones that you forgot were odd to
-      begin with.</para>
+    <para>Although the goal of Subversion is to take over the current
+      and future CVS user base, it does include some new features, and
+      attempts to fix certain <quote>broken</quote> behaviors that CVS
+      had.  This means that you may be encouraged to break certain
+      habits&mdash;ones that you forgot were odd to begin with.</para>
 
   </simplesect>
 
@@ -48,6 +46,9 @@
       <filename>foo.c</filename> are always different.  In Subversion,
       it's most likely that <filename>foo.c</filename> did *not*
       change between revisions 5 and 6.</para>
+
+    <para>For more details on this topic, see <xref
+    linkend="svn-ch-2-sect-3.2" />.</para>
 
   </sect1>
 
@@ -85,14 +86,6 @@
       </varlistentry>
 
       <varlistentry>
-        <term><command>svn ci</command></term>
-        <listitem>
-          <para>Sends differences to the repository (CVS only
-            sends fulltexts!)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><command>svn revert</command></term>
         <listitem>
           <para>Removes your modifications</para>
@@ -101,8 +94,19 @@
 
     </variablelist>
 
-    <para>This last subcommand is new; it will not only remove local
-      mods, but it will un-schedule operations such as adds and
+          <varlistentry>
+        <term><command>svn ci</command></term>
+        <listitem>
+          <para>Sends differences to the repository (CVS only
+            sends fulltexts!)</para>
+        </listitem>
+      </varlistentry>
+
+    <para>Also, the cached pristine files allow the Subversion client
+      to send diffs when committing, which CVS cannot do.</para>
+
+    <para>The last subcommand listed is new; it will not only remove
+      local mods, but it will un-schedule operations such as adds and
       deletes.  It's the preferred way to revert a file; running
       <command>rm file; svn up</command> will still work, but it blurs
       the purpose of updating.  And, while we're on this
@@ -339,11 +343,8 @@ C    Conflict
         commit garbaged files.</para>
 
     <para>Subversion solves this problem by making conflicts more
-      tangible.  See <xref linkend="svn-ch-3-sect-4"/> for more
-      details.  In particular, read the section about <quote>Merging
-      others' changes</quote>.</para><!-- ###TODO Is this xref still a
-      correct ref? -Fitz -->
-
+      tangible.  See <xref linkend="svn-ch-3-sect-4.4"/> for more
+      details.</para>
   </sect1>
 
 <!-- ###TODO Should this be eliminated? -Fitz -->
