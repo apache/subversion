@@ -790,6 +790,7 @@ set_fulltext (svn_stream_t **stream,
 
   return svn_fs_apply_text (stream,
                             rb->txn_root, nb->path,
+                            NULL,
                             nb->pool);
 }
 

@@ -3284,6 +3284,10 @@ struct text_baton_t
   /* The actual fs stream that the returned stream will write to. */
   svn_stream_t *file_stream;
 
+  /* Hex MD5 digest for the final fulltext written to the file.  May
+     be null, in which case ignored. */
+  const char *result_checksum;
+
   /* Pool used by db txns */
   apr_pool_t *pool;
 };
@@ -3303,16 +3307,9 @@ txn_body_fulltext_finalize_edits (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
 
-  /* ### When svn_fs_apply_text() takes a checksum argument (like
-   * svn_fs_apply_textdelta does now), it will need to be propagated
-   * through to here.
-   * 
-   * See http://subversion.tigris.org/issues/show_bug.cgi?id=1102
-   */ 
-
   SVN_ERR (svn_stream_close (tb->file_stream));
   return svn_fs__dag_finalize_edits (tb->node, 
-                                     NULL,
+                                     tb->result_checksum,
                                      svn_fs_txn_root_name (tb->root, 
                                                            trail->pool),
                                      trail);
@@ -3381,6 +3378,7 @@ svn_error_t *
 svn_fs_apply_text (svn_stream_t **contents_p,
                    svn_fs_root_t *root,
                    const char *path,
+                   const char *result_checksum,
                    apr_pool_t *pool)
 {
   struct text_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
@@ -3388,6 +3386,11 @@ svn_fs_apply_text (svn_stream_t **contents_p,
   tb->root = root;
   tb->path = path;
   tb->pool = pool;
+
+  if (result_checksum)
+    tb->result_checksum = apr_pstrdup (pool, result_checksum);
+  else
+    tb->result_checksum = NULL;
 
   SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
                               txn_body_apply_text, tb, pool));
