@@ -265,6 +265,7 @@ svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
 {
   svn_string_t *old_value;
   int readability = rev_readable;
+  char action;
 
   if (authz_read_func)
     SVN_ERR (get_readability (&readability, repos->fs, rev,
@@ -273,11 +274,17 @@ svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
     {
       SVN_ERR (validate_prop (name, pool));
       SVN_ERR (svn_fs_revision_prop (&old_value, repos->fs, rev, name, pool));
+      if (! new_value)
+        action = 'D';
+      else if (! old_value)
+        action = 'A';
+      else
+        action = 'M';
       SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
-                                                    new_value, pool));
+                                                    new_value, action, pool));
       SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, new_value, pool));
-      SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author, 
-                                                     name, old_value, pool));
+      SVN_ERR (svn_repos__hooks_post_revprop_change (repos, rev, author,  name,
+                                                     old_value, action, pool));
     }
   else  /* rev is either unreadable or only partially readable */
     {

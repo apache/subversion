@@ -473,13 +473,14 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# The pre-revprop-change hook is invoked before a revision property"
       APR_EOL_STR
-      "# is modified.  Subversion runs this hook by invoking a program"
+      "# is added, modified or deleted.  Subversion runs this hook by invoking"
       APR_EOL_STR
-      "# (script, executable, binary, etc.) named "
-      "'" 
-      SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' (for which"
+      "# a program (script, executable, binary, etc.) named '"
+      SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "'" 
       APR_EOL_STR
-      "# this file is a template), with the following ordered arguments:"
+      "# (for which this file is a template), with the following ordered"
+      APR_EOL_STR
+      "# arguments:"
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -491,9 +492,12 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#   [4] PROPNAME     (the property being set on the revision)"
       APR_EOL_STR
+      "#   [5] ACTION       (the property is being 'A'dded, 'M'odified, or "
+      "'D'eleted)"
+      APR_EOL_STR
       "#"
       APR_EOL_STR
-      "#   [STDIN] PROPVAL  ** the property value is passed via STDIN."
+      "#   [STDIN] PROPVAL  ** the new property value is passed via STDIN."
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -562,10 +566,14 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "PROPNAME=\"$4\""
       APR_EOL_STR
+      "ACTION=\"$5\""
       APR_EOL_STR
-      "if [ \"$PROPNAME\" = \"svn:log\" ]; then exit 0; fi"
       APR_EOL_STR
-      "    echo \"Changing revision properties other than svn:log is "
+      "if [ \"$ACTION\" = \"M\" -a \"$PROPNAME\" = \"svn:log\" ]; "
+      "then exit 0; fi"
+      APR_EOL_STR
+      APR_EOL_STR
+      "echo \"Changing revision properties other than svn:log is "
       "prohibited\" >&2"
       APR_EOL_STR
       "exit 1"
@@ -688,15 +696,14 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# The post-revprop-change hook is invoked after a revision property"
       APR_EOL_STR
-      "# has been changed. Subversion runs this hook by invoking a program"
+      "# has been added, modified or deleted.  Subversion runs this hook by"
       APR_EOL_STR
-      "# (script, executable, binary, etc.) named '"
-      SVN_REPOS__HOOK_POST_REVPROP_CHANGE 
-      "'"
+      "# invoking a program (script, executable, binary, etc.) named"
       APR_EOL_STR
-      "# (for which this file is a template), with the following ordered"
+      "# '" SVN_REPOS__HOOK_POST_REVPROP_CHANGE 
+      "' (for which this file is a template), with the"
       APR_EOL_STR
-      "# arguments:"
+      "# following ordered arguments:"
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -707,6 +714,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "#   [3] USER         (the username of the person tweaking the property)"
       APR_EOL_STR
       "#   [4] PROPNAME     (the property that was changed)"
+      APR_EOL_STR
+      "#   [5] ACTION       (the property was 'A'dded, 'M'odified, or "
+      "'D'eleted)"
       APR_EOL_STR
       "#"
       APR_EOL_STR
@@ -764,6 +774,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "USER=\"$3\""
       APR_EOL_STR
       "PROPNAME=\"$4\""
+      APR_EOL_STR
+      "ACTION=\"$5\""
       APR_EOL_STR
       APR_EOL_STR
       "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
