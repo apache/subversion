@@ -75,7 +75,7 @@ Following are some example instruction encodings.
 Following is a complete example of an svndiff between the source
 document "aaaabbbbcccc" and the target document "aaaaccccdddddddd":
 
-	01010110 01000011 01000100 00000000	Header ("VCD\0")
+	01010110 01000011 01000100 00000000	Header ("SVN\0")
 
 	00000000				Source view offset 0
 	00001100				Source view length 12
