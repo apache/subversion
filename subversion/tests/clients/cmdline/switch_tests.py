@@ -513,6 +513,52 @@ def log_switched_file(sbox):
   else:
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+
+def relocate_deleted_and_missing(sbox):
+  "switch --relocate with deleted and missing entries"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete A/mu to create a deleted entry for mu in A/.svn/entries
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/mu')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Remove A/B/F to create a missing entry
+  svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
+                                         
+  # Relocate
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2)
+  svntest.main.safe_rmtree(repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # Deleted and missing entries should be preserved, so update should
+  # show only A/B/F being reinstated
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/mu')
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)  
 
 #----------------------------------------------------------------------
 
@@ -531,6 +577,7 @@ test_list = [ None,
               update_switched_things,
               rev_update_switched_things,
               log_switched_file,
+              relocate_deleted_and_missing,
               ]
 
 if __name__ == '__main__':
