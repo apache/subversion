@@ -1644,7 +1644,6 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
           <para>With <option>--verbose</option>, the following fields show
             the status of the item:</para>
           <itemizedlist>
-            <listitem><para>'P' if the item has any Properties</para></listitem>
             <listitem><para>Revision number of the last commit</para></listitem>
             <listitem><para>Author of the last commit</para></listitem>
             <listitem><para>Size (in bytes)</para></listitem>
