@@ -36,7 +36,7 @@ static const char base64tab[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 struct encode_baton {
   svn_write_fn_t *output;
   void *output_baton;
-  unsigned char buf[3];         /* Bytes waiting to be encoded */
+  char buf[3];                  /* Bytes waiting to be encoded */
   int buflen;                   /* Number of bytes waiting */
   int linelen;                  /* Bytes output so far on this line */
   apr_pool_t *pool;
@@ -166,7 +166,7 @@ svn_string_t *
 svn_base64_encode_string (svn_string_t *str, apr_pool_t *pool)
 {
   svn_string_t *encoded = svn_string_create ("", pool);
-  unsigned char ingroup[3];
+  char ingroup[3];
   int ingrouplen = 0, linelen = 0;
 
   encode_bytes (encoded, str->data, str->len, ingroup, &ingrouplen, &linelen);
@@ -181,7 +181,7 @@ svn_base64_encode_string (svn_string_t *str, apr_pool_t *pool)
 struct decode_baton {
   svn_write_fn_t *output;
   void *output_baton;
-  char buf[4];                  /* Bytes waiting to be decoded */
+  unsigned char buf[4];         /* Bytes waiting to be decoded */
   int buflen;                   /* Number of bytes waiting */
   svn_boolean_t done;		/* True if we already saw an '=' */
   apr_pool_t *pool;
@@ -193,7 +193,7 @@ struct decode_baton {
    been decoded from base64tab into the range 0..63.  The four
    six-byte values are pasted together to form three eight-bit bytes.  */
 static APR_INLINE void
-decode_group (const unsigned char *in, unsigned char *out)
+decode_group (const unsigned char *in, char *out)
 {
   out[0] = (in[0] << 2) | (in[1] >> 4);
   out[1] = ((in[1] & 0xf) << 4) | (in[2] >> 2);
@@ -209,10 +209,10 @@ decode_group (const unsigned char *in, unsigned char *out)
    will be appended to STR.  */
 static void
 decode_bytes (svn_string_t *str, const char *data, apr_size_t len,
-              char *inbuf, int *inbuflen, svn_boolean_t *done)
+              unsigned char *inbuf, int *inbuflen, svn_boolean_t *done)
 {
   const char *p, *find;
-  unsigned char group[4];
+  char group[3];
 
   for (p = data; !*done && p < data + len; p++)
     {
@@ -295,7 +295,7 @@ svn_string_t *
 svn_base64_decode_string (svn_string_t *str, apr_pool_t *pool)
 {
   svn_string_t *decoded = svn_string_create ("", pool);
-  char ingroup[4];
+  unsigned char ingroup[4];
   int ingrouplen = 0;
   svn_boolean_t done = FALSE;
 

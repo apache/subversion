@@ -54,7 +54,7 @@ struct encoder_baton {
 */
 
 static char *
-encode_int (unsigned char *p, apr_off_t val)
+encode_int (char *p, apr_off_t val)
 {
   int n;
   apr_off_t v;
@@ -101,7 +101,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_string_t *instructions = svn_string_create ("", pool);
   svn_string_t *header = svn_string_create ("", pool);
-  unsigned char ibuf[128], *ip;
+  char ibuf[128], *ip;
   svn_txdelta_op_t *op;
   svn_error_t *err;
   apr_size_t len;
