@@ -45,13 +45,13 @@ RSC=rc.exe
 # ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "..\..\db3-win32\include" /I "..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
-# ADD RSC /l 0x424 /d "NDEBUG"
+# ADD RSC /l 0x424 /d "NDEBUG" /d SVN_FILE_NAME="\"svnadmin.exe\"" /d SVN_FILE_DESCRIPTION="\"Subversion Repository Administrator\""
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\libsvn_repos\Release\libsvn_repos.lib ..\libsvn_fs\Release\libsvn_fs.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_subr\Release\libsvn_subr.lib ..\libsvn_wc\Release\libsvn_wc.lib ..\..\apr\LibR\apr.lib ..\..\expat-lite\Release\libexpat.lib  ..\..\neon\libneon.lib ..\..\db3-win32\lib\libdb33.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386
+# ADD LINK32 ..\libsvn_repos\Release\libsvn_repos.lib ..\libsvn_fs\Release\libsvn_fs.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_subr\Release\libsvn_subr.lib ..\libsvn_wc\Release\libsvn_wc.lib ..\..\apr\LibR\apr.lib ..\..\expat-lite\Release\libexpat.lib ..\..\neon\libneon.lib ..\..\db3-win32\lib\libdb33.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386
 
 !ELSEIF  "$(CFG)" == "svnadmin - Win32 Debug"
 
@@ -70,7 +70,7 @@ LINK32=link.exe
 # ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\expat-lite" /I "..\..\db3-win32\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
-# ADD RSC /l 0x424 /d "_DEBUG"
+# ADD RSC /l 0x424 /d "_DEBUG" /d SVN_FILE_NAME="\"svnadmin.exe\"" /d SVN_FILE_DESCRIPTION="\"Subversion Repository Administrator\""
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -91,6 +91,10 @@ LINK32=link.exe
 # Begin Source File
 
 SOURCE=.\main.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\clients\win32\svn.rc
 # End Source File
 # End Group
 # Begin Group "Header Files"

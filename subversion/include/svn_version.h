@@ -1,4 +1,4 @@
-/* svn_config.h:  Functions for accessing SVN configuration files.
+/* svn_version.h:  Version information.
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -64,7 +64,7 @@ extern "C" {
 
 /* Complete version string */
 #ifdef SVN_VER_TAG
-#  define SVN_VERSION      SVN_VER_NUMBER" ("SVN_VER_TAG")"
+#  define SVN_VERSION      SVN_VER_NUMBER " (" SVN_VER_TAG ")"
 #else
 #  define SVN_VERSION      SVN_VER_NUMBER
 #endif /* SVN_VER_TAG */
@@ -72,8 +72,8 @@ extern "C" {
 /* Version number */
 #ifndef SVN_VER_NAME
 #  define SVN_VER_NUMBER   SVN_VER_STRINGIFY(SVN_VER_MAJOR) \
-                           "."SVN_VER_STRINGIFY(SVN_VER_MINOR) \
-                           "."SVN_VER_STRINGIFY(SVN_VER_MICRO)
+                           "." SVN_VER_STRINGIFY(SVN_VER_MINOR) \
+                           "." SVN_VER_STRINGIFY(SVN_VER_MICRO)
 #else
 #  define SVN_VER_NUMBER   SVN_VER_NAME
 #endif /* SVN_VER_NAME */
