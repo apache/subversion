@@ -584,28 +584,31 @@ U   my-write-branch/document.c
     <sect2 id="svn-ch4-sect-3.1">
       <title>The repeated merge problem</title>
 
-      <para>Merging changes from one branch to another sounds simple
-        enough, but in practice it can sometimes become a headache.
-        The problem is that if you repeatedly merge changes from
-        branch A to branch B, you may accidentally merge the same
-        change <emphasis>twice</emphasis>.  When this happens, you'll
-        often get a conflict:  Subversion will attempt to contextually
-        merge a change into a file that already contains the
-        change.</para>
+      <para>Merging changes sounds simple enough, but in practice it
+        can become a headache.  The problem is that if you repeatedly
+        merge changes from one branch to another, you may accidentally
+        merge the same change <emphasis>twice</emphasis>.  When this
+        happens, sometimes things will work fine.  When patching a
+        file, Subversion typically notices if the file already has the
+        change, and does nothing.  But if the already-existing change
+        has been modified in any way, you'll get a conflict.  Ideally,
+        Subversion would automatically prevent applying changes more
+        than once.</para>
 
       <para>This is a problem that plagues many version control
         systems, including both CVS and Subversion.  For now, the only
         way to avoid this problem in Subversion is to carefully keep
         track of which changes have been merged, and which haven't.
-        Specifically, when you create a branch directory, you need to
-        track what revision it was created in.  When you merge a
-        revision (or range of revisions) into your working copy,
-        you'll need to remember them as well.  If you forget any of
-        this information, you can rediscover it by examining the
-        output of <command>svn log --verbose branch-dir</command>.
-        But the point is that each subsequent merge needs to be
-        carefully constructed by hand, making sure that
-        previously-merged revisions aren't re-merged again.</para>
+        When you create a branch directory, you need to track what
+        revision it was created in &mdash; make a note somewhere to
+        yourself.  When you merge a revision (or range of revisions)
+        into your working copy, you'll need to remember them as well.
+        If you forget any of this information, you can rediscover it
+        by examining the output of <command>svn log -v
+        branch-dir</command>.  But the point is that each subsequent
+        merge needs to be carefully constructed by hand, making sure
+        that previously-merged revisions aren't re-merged
+        again.</para>
 
       <para>Of course, Subversion has plans to solve this problem
         sometime after release 1.0.  All of this merging information
@@ -935,15 +938,19 @@ Committed revision 352.
       underlying mechanism (directory copies), and because branches
       and tags appear in normal filesystem space, many people find
       Subversion intimidating.  It's almost <emphasis>too</emphasis>
-      flexible.</para>
+      flexible.  In this section, we'll offer some suggestions for
+      arranging and managing your data over time.</para>
 
-    <para>For this reason, there are some standard, recommended ways
-      to lay out a repository.  Most people create a
-      <filename>trunk</filename> directory to hold the "main line" of
-      development, a <filename>branches</filename> directory to
-      contain branch copies, and a <filename>tags</filename> directory
-      to contain tag copies.  If a repository holds only one project,
-      then often people create these top-level directories:</para>
+    <sect2 id="svn-ch4-sect7.1">
+      <title>Repository layout</title>
+      
+      <para>There are some standard, recommended ways to organize a
+        repository.  Most people create a <filename>trunk</filename>
+        directory to hold the "main line" of development, a
+        <filename>branches</filename> directory to contain branch
+        copies, and a <filename>tags</filename> directory to contain
+        tag copies.  If a repository holds only one project, then
+        often people create these top-level directories:</para>
 
 <screen>
 /trunk
@@ -951,8 +958,8 @@ Committed revision 352.
 /tags
 </screen>
 
-    <para>If a repository contains multiple projects, people often
-      index their layout by branch:</para>
+      <para>If a repository contains multiple projects, people often
+        index their layout by branch:</para>
 
 <screen>
 /trunk/paint
@@ -974,49 +981,71 @@ Committed revision 352.
 /write/tags
 </screen>
 
-    <para>Of course, you're free to ignore these common layouts.  You
-      can create any sort of variation, whatever works best for you or
-      your team.  Remember that whatever you choose, it's not a
-      permanent commitment.  You can reorganize your repository at any
-      time.  Because branches and tags are ordinary directories, the
-      <command>svn mv</command> command can move or rename them
-      however you wish.  Switching from one layout to another is just
-      a matter of issuing a series of server-side moves; if you don't
-      like the way things are organized in the repository, just juggle
-      the directories around.</para>
+      <para>Of course, you're free to ignore these common layouts.  You
+        can create any sort of variation, whatever works best for you or
+        your team.  Remember that whatever you choose, it's not a
+        permanent commitment.  You can reorganize your repository at any
+        time.  Because branches and tags are ordinary directories, the
+        <command>svn mv</command> command can move or rename them
+        however you wish.  Switching from one layout to another is just
+        a matter of issuing a series of server-side moves; if you don't
+        like the way things are organized in the repository, just juggle
+        the directories around.</para>
+      
+    </sect2>
+    
+    <sect2 id="svn-ch4-sect7.2">
+      <title>Data lifetimes</title>
 
-    <para>Another nice feature of Subversion's model is that branches
-      and tags can have finite lifetimes, just like any other
-      versioned item.  For example, suppose you eventually finish all
-      your work on your personal branch of the
-      <filename>write</filename> project.  After merging all of your
-      changes back into <filename>/trunk/write</filename>, there's no
-      need for your private branch to stick around anymore:</para>
+      <para>Another nice feature of Subversion's model is that
+        branches and tags can have finite lifetimes, just like any
+        other versioned item.  For example, suppose you eventually
+        finish all your work on your personal branch of the
+        <filename>write</filename> project.  After merging all of your
+        changes back into <filename>/trunk/write</filename>, there's
+        no need for your private branch directory to stick around
+        anymore:</para>
 
 <screen>
-$ svn rm http://svn.example.com/repos/branches/write/my-write-branch \
-         -m "Removing obsolete branch of write project."
+$ svn remove http://svn.example.com/repos/branches/write/my-write-branch \
+             -m "Removing obsolete branch of write project."
 
 Committed revision 375.
 </screen>
 
-    <para>And now your branch is gone.  Of course it's not really
-      gone:  the directory is simply missing from the HEAD revision, no
-      longer distracting anyone.  If you look at an earlier revision,
-      of course, you'll still be able to find your old branch.</para>
+      <para>And now your branch is gone.  Of course it's not really
+        gone: the directory is simply missing from the HEAD revision,
+        no longer distracting anyone.  If you look at an earlier
+        revision (by means of <command>svn checkout -r</command>,
+        <command>svn switch -r</command>, or <command>svn list
+        -r</command>), you'll still be able to see your old
+        branch.</para>
 
-    <para>In this case, your branch had a relatively short lifetime:
-      you may have created it to fix a bug or implement a new feature.
-      When your task is done, so is the branch.  In software
-      development, though, it's also common to have two "main"
-      branches running side-by-side for very long periods.  For
-      example, suppose it's time to release a stable
-      <filename>write</filename> project to the public, and you know
-      it's going to take a couple of months to shake bugs out of the
-      software.  You don't want people to add new features to the
-      project, but you don't want to tell all developers to stop
-      programming either.  So instead, you create a "stable" branch of
-      the software that won't change much:</para>
+      <para>If browsing your deleted directory isn't enough, you can
+        always bring it back.  Resurrecting data is very easy in
+        Subversion.  If there's a deleted directory (or file) that
+        you'd like to bring back into HEAD, simply use <command>svn
+        copy -r</command> to copy it from the old revision:</para>
+
+<screen>
+$ svn copy -r374 http://svn.example.com/repos/branches/write/my-write-branch \
+                 http://svn.example.com/repos/branches/write/my-write-branch
+
+Committed revision 376.
+</screen>
+
+      <para>In our example, your personal branch had a relatively
+        short lifetime: you may have created it to fix a bug or
+        implement a new feature.  When your task is done, so is the
+        branch.  In software development, though, it's also common to
+        have two "main" branches running side-by-side for very long
+        periods.  For example, suppose it's time to release a stable
+        <filename>write</filename> project to the public, and you know
+        it's going to take a couple of months to shake bugs out of the
+        software.  You don't want people to add new features to the
+        project, but you don't want to tell all developers to stop
+        programming either.  So instead, you create a "stable" branch
+        of the software that won't change much:</para>
 
 <screen>
 $ svn cp http://svn.example.com/repos/trunk/write \
@@ -1026,15 +1055,18 @@ $ svn cp http://svn.example.com/repos/trunk/write \
 Committed revision 377.
 </screen>
 
-    <para>And now developers are free to continue adding cutting-edge
-      (or experimental) features to <filename>/trunk/write</filename>,
-      and you can declare a project policy that only bugfixes are to
-      be committed to <filename>/branches/write/stable-1.0</filename>.
-      That is, as people continue to work on the trunk, a human
-      selectively ports bugfixes over to the stable branch.  Even
-      after the stable branch has shipped, you'll probably continue to
-      maintain the branch for a long time &mdash; that is, as long as
-      you continue to support that release for customers.</para>
+      <para>And now developers are free to continue adding
+        cutting-edge (or experimental) features to
+        <filename>/trunk/write</filename>, and you can declare a
+        project policy that only bugfixes are to be committed to
+        <filename>/branches/write/stable-1.0</filename>.  That is, as
+        people continue to work on the trunk, a human selectively
+        ports bugfixes over to the stable branch.  Even after the
+        stable branch has shipped, you'll probably continue to
+        maintain the branch for a long time &mdash; that is, as long
+        as you continue to support that release for customers.</para>
+
+    </sect2>
 
   </sect1>
 
