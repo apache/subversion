@@ -48,14 +48,6 @@ Candidate changes:
       +0: sussman (not yet reviewed)
       +1: breser
 
-  * r10185, r10192
-    Fix crash when deleting revprop over ra_svn.
-    Justification: Don't ever crash.
-    Notes: Makes earlier servers close the connection immediately, still
-           better than a crashing client.
-    Votes:
-      +1: lundblad, kfogel, breser
-
   * r10190
     Allow properties with colons in their name to be read with propget
     over DAV.

@@ -309,6 +309,8 @@ typedef struct svn_ra_plugin_t
 
   /** Set the property @a name to @a value on revision @a rev.
    *
+   * If @a value is @c NULL, delete the named revision property.
+   *
    * Please note that properties attached to revisions are **unversioned**.
    *
    * Use @a pool for memory allocation.

@@ -24,7 +24,7 @@ is possible to parse an item without knowing its type in advance.
 
 Lists are not constrained to contain items of the same type.  Lists
 can be used for tuples, optional tuples, or arrays.  A tuple is a list
-expected containing a fixed number of items, generally of differing
+expected to contain a fixed number of items, generally of differing
 types.  An optional value is a list containing either zero or a fixed
 number of items.  An array is a list containing zero or more items of
 the same type.
@@ -45,7 +45,12 @@ A type is "word", "number", "string", "list", or the name of another
 prototype.  Brackets denote an optional tuple.  Parentheses denote a
 tuple, unless the parentheses contain ellipses, in which case the
 parentheses denote an array containing zero or more elements matching
-the prototype preceding the ellipses.
+the prototype preceding the ellipses.  If a tuple has an optional part
+after the fixed part, a '?' marks places where the tuple is allowed to
+end.  The following tuple could contain one, three, or four or more
+items:
+
+  example: ( fixed:string ? opt1:number opt2:string ? opt3:number )
 
 For extensibility, implementations must treat a list as matching a
 prototype's tuple even if the list contains extra elements.  The extra
@@ -203,8 +208,12 @@ second place for auth-request point as noted below.
     response: ( rev:number )
 
   change-rev-prop
-    params:   ( rev:number name:string value:string )
+    params:   ( rev:number name:string ? value:string )
     response: ( )
+    If value is not specified, the rev-prop is removed.
+    (Originally the value was required; for minimum impact, it was
+     changed to be optional without creating an optional tuple for
+     that one parameter as we normally do.)
 
   rev-proplist
     params:   ( rev:number )

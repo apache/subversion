@@ -640,7 +640,7 @@ static svn_error_t *ra_svn_change_rev_prop(void *baton, svn_revnum_t rev,
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rcs",
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rc?s",
                                rev, name, value));
   SVN_ERR(handle_auth_request(sess, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
