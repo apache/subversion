@@ -400,7 +400,13 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
    Allocate the new transaction in POOL; when POOL is freed, the new
    transaction will be closed (neither committed nor aborted).  You
    can also close the transaction explicitly, using
-   `svn_fs_close_txn'.  */
+   `svn_fs_close_txn'.  
+
+     >> Note: if you're building a txn for committing, you probably <<
+     >> don't want to call this directly.  Instead, call            <<
+     >> svn_repos_fs_begin_txn_for_commit(), which honors the       <<
+     >> repository's hook configurations.                           <<
+*/
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                                svn_fs_t *fs,
                                svn_revnum_t rev,
@@ -527,6 +533,10 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
 /* Return the path to FS's configuration directory. */
 const char *svn_fs_conf_dir (svn_fs_t *fs);
+
+/* Return the path to FS's start-commit hook configuration file,
+   allocated in POOL. */
+const char *svn_fs_start_commit_conf (svn_fs_t *fs, apr_pool_t *pool);
 
 /* Return the path to FS's pre-commit hook configuration file,
    allocated in POOL. */
