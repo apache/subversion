@@ -93,14 +93,13 @@ def test_misc(sbox):
 
   expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
 
-  expect('author', [ 'jrandom\n' ], run_svnlook('author', repo_dir))
-
-  expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))
-
   expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
 
-  expect('propget svn:author', [ 'jrandom' ],
-      run_svnlook('propget', '--revprop', repo_dir, 'svn:author'))
+  # it would be nice to test the author too, but the current test framework
+  # does not pull a username when testing over ra_dav or ra_svn,
+  # so the commits have an empty author.
+
+  expect('log', [ 'log msg\n' ], run_svnlook('log', repo_dir))
 
   expect('propget svn:log', [ 'log msg' ],
       run_svnlook('propget', '--revprop', repo_dir, 'svn:log'))
