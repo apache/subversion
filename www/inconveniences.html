@@ -20,6 +20,21 @@ most likely to annoy new users.
       >Issue #730</a> for more details.</p>
    </li>
 
+   <p>
+
+   <li><b>Charset conversion failure mode too extreme</b><br>
+   <p>If Subversion cannot convert log data to your local charset
+      encoding, it will (currently) just show "[unconvertible data]"
+      for the entire unconverted log message.  This is lossier than
+      necessary.  There are even some revisions in the Subversion
+      repository itself that exhibit this behavior when the client
+      locale is ISO-8859-1 (Latin-1).</p>
+   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=807"
+      >Issue #807</a> for more details.</p>
+   </li>
+
+   <p>
+
    <li><b>Repository deadlocks</b><br>
    <p>If an svn client is directly accessing a repository via a
       file:/// url and is interrupted, or crashes, (or if httpd
