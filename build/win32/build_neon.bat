@@ -11,6 +11,9 @@
 @rem * NOTE: The paths should be relative to the Neon directory, ..\..\neon
 @rem **************************************************************************
 
+@rem Must set EXPAT_FLAGS, not EXPAT_SRC, to define HAVE_EXPAT_H
+set EXPAT_FLAGS="/I ../apr-util/xml/expat/lib /D HAVE_EXPAT_H"
+
 set exitcode=0
 
 if "%2" == "rebuild" goto clean
@@ -28,15 +31,15 @@ goto pIerr
 
 @rem **************************************************************************
 :release
-@echo nmake /f neon.mak %target% EXPAT_SRC=..\expat-lite
-nmake /nologo /f neon.mak %target% EXPAT_SRC=..\expat-lite
+@echo nmake /f neon.mak %target% EXPAT_FLAGS=%EXPAT_FLAGS%
+nmake /nologo /f neon.mak %target% EXPAT_FLAGS=%EXPAT_FLAGS%
 if not errorlevel 0 goto err
 goto end
 
 @rem **************************************************************************
 :debug
-@echo nmake /f neon.mak %target% EXPAT_SRC=..\expat-lite DEBUG_BUILD=Aye
-nmake /nologo /f neon.mak %target% EXPAT_SRC=..\expat-lite DEBUG_BUILD=Aye
+@echo nmake /f neon.mak %target% EXPAT_FLAGS=%EXPAT_FLAGS% DEBUG_BUILD=Aye
+nmake /nologo /f neon.mak %target% EXPAT_FLAGS=%EXPAT_FLAGS% DEBUG_BUILD=Aye
 if not errorlevel 0 goto err
 goto end
 

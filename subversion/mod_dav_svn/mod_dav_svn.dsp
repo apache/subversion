@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\expat-lite" /I "..\include" /I "..\.." /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\include" /I "..\.." /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ..\..\..\httpd-2.0\Release\libhttpd.lib ..\..\..\httpd-2.0\srclib\apr\Release\libapr.lib ..\..\..\httpd-2.0\srclib\apr-util\Release\libaprutil.lib ..\..\..\httpd-2.0\modules\dav\main\Release\mod_dav.lib ..\..\db4-win32\lib\libdb40.lib ..\..\expat-lite\Release\libexpat.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_fs\Release\libsvn_fs.lib ..\libsvn_repos\Release\libsvn_repos.lib /nologo /dll /machine:I386 /out:"Release/mod_dav_svn.so"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ..\..\..\httpd-2.0\Release\libhttpd.lib ..\..\..\httpd-2.0\srclib\apr\Release\libapr.lib ..\..\..\httpd-2.0\srclib\apr-util\Release\libaprutil.lib ..\..\..\httpd-2.0\modules\dav\main\Release\mod_dav.lib ..\..\db4-win32\lib\libdb40.lib ..\..\apr-util\xml\expat\lib\LibR\xml.lib ..\libsvn_delta\Release\libsvn_delta.lib ..\libsvn_fs\Release\libsvn_fs.lib ..\libsvn_repos\Release\libsvn_repos.lib /nologo /dll /machine:I386 /out:"Release/mod_dav_svn.so"
 
 !ELSEIF  "$(CFG)" == "mod_dav_svn - Win32 Debug"
 
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "MOD_DAV_SVN_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\expat-lite" /I "..\include" /I "..\.." /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\libsvn_subr" /I "..\..\..\httpd-2.0\include" /I "..\..\..\httpd-2.0\srclib\apr\include" /I "..\..\..\httpd-2.0\srclib\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\include" /I "..\.." /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
@@ -80,7 +80,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ..\..\..\httpd-2.0\Debug\libhttpd.lib ..\..\..\httpd-2.0\srclib\apr\Debug\libapr.lib ..\..\..\httpd-2.0\srclib\apr-util\Debug\libaprutil.lib ..\..\..\httpd-2.0\modules\dav\main\Debug\mod_dav.lib ..\..\db4-win32\lib\libdb40.lib ..\..\expat-lite\Debug\libexpat.lib ..\libsvn_delta\Debug\libsvn_delta.lib ..\libsvn_fs\Debug\libsvn_fs.lib ..\libsvn_repos\Debug\libsvn_repos.lib /nologo /dll /debug /machine:I386 /pdbtype:sept /out:"Debug/mod_dav_svn.so"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ..\..\..\httpd-2.0\Debug\libhttpd.lib ..\..\..\httpd-2.0\srclib\apr\Debug\libapr.lib ..\..\..\httpd-2.0\srclib\apr-util\Debug\libaprutil.lib ..\..\..\httpd-2.0\modules\dav\main\Debug\mod_dav.lib ..\..\db4-win32\lib\libdb40.lib ..\..\apr-util\xml\expat\lib\LibD\xml.lib ..\libsvn_delta\Debug\libsvn_delta.lib ..\libsvn_fs\Debug\libsvn_fs.lib ..\libsvn_repos\Debug\libsvn_repos.lib /nologo /dll /debug /machine:I386 /pdbtype:sept /out:"Debug/mod_dav_svn.so"
 
 !ENDIF 
 
