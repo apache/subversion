@@ -87,8 +87,6 @@ AC_SUBST(SVN_APR_LIBS)
 dnl Expat
 SVN_EXPAT_INCLUDES='-I$(top_srcdir)/expat-lite'
 AC_SUBST(SVN_EXPAT_INCLUDES)
-SVN_EXPAT_LIBS='$(top_builddir)/expat-lite/libexpat.la'
-AC_SUBST(SVN_EXPAT_LIBS)
 
 dnl Neon
 SVN_NEON_INCLUDES=-'I$(top_srcdir)/neon/src'
