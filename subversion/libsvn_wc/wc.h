@@ -472,13 +472,17 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * If TIMESTAMP is 0, the entry's timestamp will not be changed, else
  * it will be set to TIMESTAMP.
  * 
- * Any other attributes should be passed in ATTS, a hash whose keys
- * are (const char *) and whose values are (svn_string_t *).  They
- * will be set into the entry's attributes hash, overwriting where
- * they collide with existing attributes.
+ * ATTS is hash of attributes to be changed or added.  The keys are
+ * (const char *) and the values are (svn_string_t *).  These
+ * overwrite where they collide with existing attributes.
+ *
+ * Remaining (const char *) arguments are attributes to be removed
+ * from the entry, terminated by a final NULL.  These will be removed
+ * even if they also appear in ATTS.
  * 
- * NOTE: the entries file will be read, tweaked, and written back out.
- * This is your one-stop shopping for changing an entry.
+ * NOTE: when you call this function, the entries file will be read,
+ * tweaked, and written back out.  This is your one-stop shopping for
+ * changing an entry.
  */
 svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
@@ -488,7 +492,8 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        apr_time_t text_time,
                                        apr_time_t prop_time,
                                        apr_pool_t *pool,
-                                       apr_hash_t *atts);
+                                       apr_hash_t *atts,
+                                       ...);
 
 
 /* Remove entry NAME from ENTRIES, unconditionally. */

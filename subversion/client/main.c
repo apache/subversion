@@ -190,7 +190,7 @@ get_cmd_table_entry (const char *cmd_name)
 /*** Option parsing. ***/
 static int
 parse_command_options (int argc,
-                       char **argv,
+                       const char **argv,
                        apr_pool_t *pool,
                        svn_cl__opt_state_t *p_opt_st)
 {
@@ -199,7 +199,7 @@ parse_command_options (int argc,
   static const char invalid_opt[] =
     "svn %s error:  option `%s' invalid\n";
 
-  char *cmdname = argv[1];
+  const char *cmdname = argv[1];
   svn_cl__command_t cmd_code = p_opt_st->cmd_opts->cmd_code;
   int i;
 
@@ -447,7 +447,7 @@ print_generic_help (apr_pool_t *pool)
     option processing.  Of course, it does not accept any options :-),
     just command line args.  */
 svn_error_t *
-svn_cl__help (int argc, char **argv, apr_pool_t *pool,
+svn_cl__help (int argc, const char **argv, apr_pool_t *pool,
               svn_cl__opt_state_t *p_opt_state)
 {
   if (argc > 2)
@@ -469,7 +469,7 @@ svn_cl__help (int argc, char **argv, apr_pool_t *pool,
 /*** Main. ***/
 
 int
-main (int argc, char **argv)
+main (int argc, const char **argv)
 {
   const svn_cl__cmd_desc_t *p_cmd = get_cmd_table_entry (argv[1]);
   apr_pool_t *pool;

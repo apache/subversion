@@ -69,7 +69,7 @@ static const char *get_help[] = {
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__add( int argc, char** argv, apr_pool_t* pool,
+svn_cl__add( int argc, const char **argv, apr_pool_t* pool,
              svn_cl__opt_state_t *p_opt_state )
 {
   svn_error_t *err = NULL;
@@ -91,7 +91,7 @@ svn_cl__add( int argc, char** argv, apr_pool_t* pool,
   else
     {
       fputs ("svn add: object-to-add required\n", stderr);
-      err = svn_cl__help (3, (char **) get_help, pool, p_opt_state);
+      err = svn_cl__help (3, get_help, pool, p_opt_state);
     }
   return err;
 }

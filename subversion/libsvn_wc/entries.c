@@ -673,7 +673,8 @@ stuff_entry (apr_hash_t *entries,
              apr_time_t text_time,
              apr_time_t prop_time,
              apr_pool_t *pool,
-             apr_hash_t *atts)
+             apr_hash_t *atts,
+             va_list ap)
 {
   apr_hash_index_t *hi;
   struct svn_wc_entry_t *entry
@@ -732,6 +733,13 @@ stuff_entry (apr_hash_t *entries,
   /* Make attribute hash reflect the explicit attributes. */
   sync_entry (entry, pool);
 
+  /* Remove any attributes named for removal. */
+  {
+    const char *remove_me;
+    while ((remove_me = va_arg (ap, const char *)) != NULL)
+      apr_hash_set (entry->attributes, remove_me, APR_HASH_KEY_STRING, NULL);
+  }
+
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
      the heck. */
@@ -757,10 +765,12 @@ svn_wc__entry_merge_sync (svn_string_t *path,
                           apr_time_t text_time,
                           apr_time_t prop_time,
                           apr_pool_t *pool,
-                          apr_hash_t *atts)
+                          apr_hash_t *atts,
+                          ...)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
+  va_list ap;
 
   err = svn_wc__entries_read (&entries, path, pool);
   if (err)
@@ -769,8 +779,10 @@ svn_wc__entry_merge_sync (svn_string_t *path,
   if (name == NULL)
     name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
+  va_start (ap, atts);
   stuff_entry (entries, name, revision, kind, flags, text_time,
-               prop_time, pool, atts);
+               prop_time, pool, atts, ap);
+  va_end (ap);
   
   err = svn_wc__entries_write (entries, path, pool);
   if (err)

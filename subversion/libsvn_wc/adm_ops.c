@@ -161,6 +161,7 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
                                   0,
                                   0,
                                   pool,
+                                  NULL,
                                   NULL);
   if (err)
     return err;
@@ -185,6 +186,7 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
                                   0,
                                   0,
                                   pool,
+                                  NULL,
                                   NULL);
   if (err)
     return err;
