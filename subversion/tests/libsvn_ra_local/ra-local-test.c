@@ -267,31 +267,31 @@ split_url_test_1 (const char **msg)
    through svn_ra_local__split_URL to verify that it accurately
    separates the filesystem path and the repository path cruft. */
 static svn_error_t *
-check_split_url (const char *fs_path,
-                 const char *repos_path)
+check_split_url (const char *repos_path,
+                 const char *fs_path)
 {
   svn_fs_t *fs;
-  char fs_loc[PATH_MAX], url[PATH_MAX];
+  char repos_loc[PATH_MAX], url[PATH_MAX];
   svn_string_t *repos_part, *fs_part;
 
   /* Because the URLs are absolute paths, we have to figure out where
      this system.   */
-  getcwd (fs_loc, PATH_MAX - 1);
-  strcat (fs_loc, "/");
-  strcat (fs_loc, fs_path);
+  getcwd (repos_loc, PATH_MAX - 1);
+  strcat (repos_loc, "/");
+  strcat (repos_loc, repos_path);
 
   /* Create a filesystem and repository */
-  SVN_ERR (create_fs_and_repos (&fs, fs_loc));
+  SVN_ERR (create_fs_and_repos (&fs, repos_loc));
 
   /* Now, assemble the test URL */
-  sprintf (url, "file://%s%s", fs_loc, repos_path);
+  sprintf (url, "file://%s%s", repos_loc, fs_path);
 
   /* Run this URL through our splitter... */
   SVN_ERR (svn_ra_local__split_URL (&repos_part, &fs_part, 
                                     svn_string_create (url, pool),
                                     pool));
-  if ((strcmp (fs_part->data, fs_loc))
-      || (strcmp (repos_part->data, repos_path)))
+  if ((strcmp (repos_part->data, repos_loc))
+      || (strcmp (fs_part->data, fs_path)))
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, 0, NULL, pool,
        "svn_ra_local__split_URL failed to properly split the URL");
