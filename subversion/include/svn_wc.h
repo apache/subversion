@@ -1654,7 +1654,23 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
                                         svn_boolean_t expand,
                                         apr_pool_t *pool);
 
+/* Convenience routine: a variant of svn_wc_translate_stream which
+   operates on cstrings.  (See previous docstring for details.)
 
+   Return a new string in *DST, allocated in POOL, by copying the
+   contents of string SRC, possibly performing line ending and keyword
+   translations.
+
+   If EOL_STR and KEYWORDS are NULL, behavior is just a byte-for-byte
+   copy.
+ */
+svn_error_t *svn_wc_translate_cstring (const char *src,
+                                       const char **dst,
+                                       const char *eol_str,
+                                       svn_boolean_t repair,
+                                       const svn_wc_keywords_t *keywords,
+                                       svn_boolean_t expand,
+                                       apr_pool_t *pool);
 
 /* Set *XLATED_P to a path to a possibly translated copy of versioned
  * file VFILE, or to VFILE itself if no translation is necessary.
