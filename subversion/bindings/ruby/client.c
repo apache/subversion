@@ -187,6 +187,9 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   else
     xml_src = NULL;
 
+  /* ### This interface has changed.  It no longer takes before and
+     after editors; instead, it takes a notify_func/baton.  I'm not
+     sure how to adjust this, so I'm leaving it as is.  -kff */
   err = svn_client_checkout (before_editor, before_edit_baton,
                              after_editor, after_edit_baton,
                              auth_baton, URL, path, &revision,

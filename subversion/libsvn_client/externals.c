@@ -131,10 +131,8 @@ struct handle_external_item_change_baton
   const char *parent_dir;
 
   /* Passed through to svn_client_checkout(). */
-  const svn_delta_editor_t *before_editor;
-  void *before_edit_baton;
-  const svn_delta_editor_t *after_editor;
-  void *after_edit_baton;
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
   svn_client_auth_baton_t *auth_baton;
 
   apr_pool_t *pool;
@@ -221,10 +219,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          the external subdirectory. */
 
       SVN_ERR (svn_client_checkout
-               (ib->before_editor,
-                ib->before_edit_baton,
-                ib->after_editor,
-                ib->after_edit_baton,
+               (ib->notify_func, ib->notify_baton,
                 ib->auth_baton,
                 new_item->url,
                 checkout_path,
@@ -233,7 +228,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 NULL,
                 ib->pool));
     }
-  if (! new_item)
+  else if (! new_item)
     {
       /* ### todo: before removing an old subdir, see if it wants to
          just be renamed to a new one.  See above case. */
@@ -258,10 +253,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                                  ib->pool), ib->pool));
       
       SVN_ERR (svn_client_checkout
-               (ib->before_editor,
-                ib->before_edit_baton,
-                ib->after_editor,
-                ib->after_edit_baton,
+               (ib->notify_func, ib->notify_baton,
                 ib->auth_baton,
                 new_item->url,
                 svn_path_join (ib->parent_dir, new_item->target_dir, ib->pool),
@@ -283,10 +275,8 @@ struct handle_externals_desc_change_baton
   apr_hash_t *externals_old;
 
   /* Passed through to handle_external_item_change_baton. */
-  const svn_delta_editor_t *before_editor;
-  void *before_edit_baton;
-  const svn_delta_editor_t *after_editor;
-  void *after_edit_baton;
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
   svn_client_auth_baton_t *auth_baton;
 
   apr_pool_t *pool;
@@ -321,10 +311,8 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.old_desc          = old_desc;
   ib.new_desc          = new_desc;
   ib.parent_dir        = (const char *) key;
-  ib.before_editor     = cb->before_editor;
-  ib.before_edit_baton = cb->before_edit_baton;
-  ib.after_editor      = cb->after_editor;
-  ib.after_edit_baton  = cb->after_edit_baton;
+  ib.notify_func       = cb->notify_func;
+  ib.notify_baton      = cb->notify_baton;
   ib.auth_baton        = cb->auth_baton;
   ib.pool              = cb->pool;
 
@@ -337,10 +325,8 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
 
 svn_error_t *
 svn_client__handle_externals_changes (svn_wc_traversal_info_t *traversal_info,
-                                      const svn_delta_editor_t *before_editor,
-                                      void *before_edit_baton,
-                                      const svn_delta_editor_t *after_editor,
-                                      void *after_edit_baton,
+                                      svn_wc_notify_func_t notify_func,
+                                      void *notify_baton,
                                       svn_client_auth_baton_t *auth_baton,
                                       apr_pool_t *pool)
 {
@@ -351,10 +337,8 @@ svn_client__handle_externals_changes (svn_wc_traversal_info_t *traversal_info,
 
   cb.externals_new     = externals_new;
   cb.externals_old     = externals_old;
-  cb.before_editor     = before_editor;
-  cb.before_edit_baton = before_edit_baton;
-  cb.after_editor      = after_editor;
-  cb.after_edit_baton  = after_edit_baton;
+  cb.notify_func       = notify_func;
+  cb.notify_baton      = notify_baton;
   cb.auth_baton        = auth_baton;
   cb.pool              = pool;
 

@@ -40,10 +40,8 @@
 
 
 svn_error_t *
-svn_client_checkout (const svn_delta_editor_t *before_editor,
-                     void *before_edit_baton,
-                     const svn_delta_editor_t *after_editor,
-                     void *after_edit_baton,
+svn_client_checkout (svn_wc_notify_func_t notify_func,
+                     void *notify_baton,
                      svn_client_auth_baton_t *auth_baton,
                      const char *URL,
                      const char *path,
@@ -79,16 +77,12 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
                                        URL,
                                        revnum,
                                        recurse,
+                                       notify_func,
+                                       notify_baton,
                                        &checkout_editor,
                                        &checkout_edit_baton,
                                        &traversal_info,
                                        pool));
-
-  /* Wrap it up with outside editors. */
-  svn_delta_wrap_editor (&checkout_editor, &checkout_edit_baton,
-                         before_editor, before_edit_baton,
-                         checkout_editor, checkout_edit_baton,
-                         after_editor, after_edit_baton, pool);
 
   /* if using an RA layer */
   if (! xml_src)
@@ -174,8 +168,7 @@ svn_client_checkout (const svn_delta_editor_t *before_editor,
      delay the primary checkout.  */
   SVN_ERR (svn_client__handle_externals_changes
            (traversal_info,
-            before_editor, before_edit_baton,
-            after_editor, after_edit_baton,
+            notify_func, notify_baton,
             auth_baton,
             pool));
 

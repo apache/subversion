@@ -38,8 +38,6 @@ svn_cl__checkout (apr_getopt_t *os,
                   svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
-  const svn_delta_editor_t *trace_editor;
-  void *trace_edit_baton;
   int i;
   svn_client_auth_baton_t *auth_baton;
   
@@ -112,23 +110,23 @@ svn_cl__checkout (apr_getopt_t *os,
       else
         local_dir = opt_state->target;
       
-      SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
-                                                &trace_edit_baton,
-                                                local_dir,
-                                                TRUE, /* is checkout */
-                                                FALSE,
-                                                pool));
-  
-      SVN_ERR (svn_client_checkout (NULL, NULL,
-                                    opt_state->quiet ? NULL : trace_editor,
-                                    opt_state->quiet ? NULL : trace_edit_baton,
-                                    auth_baton,
-                                    repos_url,
-                                    local_dir,
-                                    &(opt_state->start_revision),
-                                    opt_state->nonrecursive ? FALSE : TRUE,
-                                    opt_state->xml_file,
-                                    pool));
+      {
+        svn_wc_notify_func_t notify_func;
+        void *notify_baton;
+
+        svn_cl__get_checkout_notifier (&notify_func, &notify_baton,
+                                       TRUE, FALSE, pool); 
+
+        SVN_ERR (svn_client_checkout (notify_func,
+                                      notify_baton,
+                                      auth_baton,
+                                      repos_url,
+                                      local_dir,
+                                      &(opt_state->start_revision),
+                                      opt_state->nonrecursive ? FALSE : TRUE,
+                                      opt_state->xml_file,
+                                      pool));
+      }
     }
 
   return SVN_NO_ERROR;

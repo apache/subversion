@@ -240,15 +240,19 @@ svn_client_switch (const svn_delta_editor_t *before_editor,
         }
 
       /* This the same code as the update-editor's close_file(). */
-      SVN_ERR (svn_wc_install_file (path, revnum,
+      SVN_ERR (svn_wc_install_file (NULL, NULL,
+                                    path, revnum,
                                     new_text_path,
                                     proparray, TRUE, /* is full proplist */
                                     switch_url, /* new url */
                                     pool));     
       if (notify_func != NULL)
-        (*notify_func) (notify_baton, svn_wc_notify_update, path);
-
-    }  
+        (*notify_func) (notify_baton, path, svn_wc_notify_update,
+                        svn_node_file,
+                        svn_wc_notify_state_unknown,
+                        svn_wc_notify_state_unknown,
+                        SVN_INVALID_REVNUM);
+    }
   
   /* Sleep for one second to ensure timestamp integrity. */
   apr_sleep (APR_USEC_PER_SEC * 1);

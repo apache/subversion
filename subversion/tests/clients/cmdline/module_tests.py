@@ -57,7 +57,7 @@ def externals_test_setup(sbox):
 
   wc_dir         = sbox.wc_dir + ".init"  # just for setting up props
   repo_dir       = sbox.repo_dir
-  repo_url       = svntest.main.current_repo_url
+  repo_url       = os.path.join(svntest.main.test_area_url, repo_dir)
   other_repo_dir = repo_dir + ".other"
   other_repo_url = repo_url + ".other"
   
@@ -126,9 +126,18 @@ def externals_test_setup(sbox):
 
 def externals_test_cleanup(sbox):
   """Clean up the 'other' repository for SBOX."""
-  shutil.rmtree(sbox.repo_dir + ".other")
-  shutil.rmtree(sbox.wc_dir + ".init")
-
+  # It appears that shutil.rmtree() ignores its `ignore_error'
+  # argument under certain circumstances, making it not quite as
+  # robust as "rm -rf".  I've already submitted a patch, see
+  #
+  # http://sourceforge.net/tracker/index.php?func=detail&aid=566517&group_id=5470&atid=305470
+  # 
+  # Meanwhile, we'll just catch any exceptions ourselves.
+  try:
+    shutil.rmtree(sbox.repo_dir + ".other", 1)
+    shutil.rmtree(sbox.wc_dir + ".init", 1)
+  except:
+    pass
 
 #----------------------------------------------------------------------
 

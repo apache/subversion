@@ -222,9 +222,8 @@ typedef svn_error_t *
    If REVISION does not meet these requirements, return the error
    SVN_ERR_CLIENT_BAD_REVISION.
 
-   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
-   are pre- and post-checkout hook editors.  They are optional; pass
-   four NULLs if you don't need them.
+   Invoke NOTIFY_FUNC with NOTIFY_BATON as the checkout progresses, if
+   NOTIFY_FUNC is non-null.
 
    If XML_SRC is non-NULL, it is an xml file to check out from; in
    this case, the working copy will record the URL as artificial
@@ -235,10 +234,8 @@ typedef svn_error_t *
 
    Use POOL for any temporary allocation. */
 svn_error_t *
-svn_client_checkout (const svn_delta_editor_t *before_editor,
-                     void *before_edit_baton,
-                     const svn_delta_editor_t *after_editor,
-                     void *after_edit_baton,
+svn_client_checkout (svn_wc_notify_func_t notify_func,
+                     void *notify_baton,
                      svn_client_auth_baton_t *auth_baton,
                      const char *URL,
                      const char *path,
