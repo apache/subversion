@@ -39,6 +39,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "entries.h"
 
 
 /*** File names in the adm area. ***/
