@@ -72,7 +72,23 @@ stream_to_string (svn_string_t **string,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+set_file_contents (svn_fs_root_t *root,
+                   const char *path,
+                   const char *contents,
+                   apr_pool_t *p00l)
+{
+  svn_txdelta_window_handler_t *consumer_func;
+  void *consumer_baton;
+  svn_string_t *wstring = svn_string_create (contents, p00l);
 
+  SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
+                                   root, path, p00l));
+  SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
+                                    consumer_baton, p00l));
+
+  return SVN_NO_ERROR;
+}
 
 /*-----------------------------------------------------------------*/
 
@@ -295,9 +311,9 @@ write_and_read_file (const char **msg)
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_stream_t *rstream;
-  svn_txdelta_window_handler_t *consumer_func;
-  void *consumer_baton;
-  svn_string_t *wstring, *rstring;
+  svn_string_t *rstring;
+  svn_string_t *wstring = svn_string_create ("Wicki wild, wicki wicki wild.",
+                                             pool);
 
   *msg = "write and read a file's contents";
 
@@ -309,11 +325,7 @@ write_and_read_file (const char **msg)
   SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
 
   /* And write some data into this file. */
-  wstring = svn_string_create ("Wicki wild, wicki wicki wild.", pool);
-  SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
-                                   txn_root, "beer.txt", pool));
-  SVN_ERR (svn_txdelta_send_string (wstring, consumer_func,
-                                    consumer_baton, pool));
+  SVN_ERR (set_file_contents (txn_root, "beer.txt", wstring->data, pool));
   
   /* Now let's read the data back from the file. */
   SVN_ERR (svn_fs_file_contents (&rstream, txn_root, "beer.txt", pool));  
