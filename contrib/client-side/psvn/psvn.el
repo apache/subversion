@@ -291,6 +291,7 @@ Else return TEXT unchanged."
 (if (not (fboundp 'puthash))
     (defalias 'puthash 'cl-puthash))
 
+(defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
 (defun svn-status (dir &optional arg)
   "Examine the status of Subversion working copy in directory DIR.
@@ -308,8 +309,10 @@ If ARG then pass the -u argument to `svn status'."
     (setq dir (file-name-as-directory dir))
     (setq svn-status-directory-history (delete dir svn-status-directory-history))
     (add-to-list 'svn-status-directory-history dir)
-    (unless (string= (buffer-name) "*svn-status*")
-      (message "psvn: Saving initial window configuration")
+    (if (string= (buffer-name) "*svn-status*")
+        (setq svn-status-display-new-status-buffer nil)
+      (setq svn-status-display-new-status-buffer t)
+      ;;(message "psvn: Saving initial window configuration")
       (setq svn-status-initial-window-configuration (current-window-configuration)))
     (let* ((status-buf (get-buffer-create "*svn-status*"))
            (proc-buf (get-buffer-create "*svn-process*")))
@@ -404,7 +407,10 @@ for  example: '(\"revert\" \"file1\"\)"
                     (insert "Output from svn command:\n")
                     (insert svn-status-update-previous-process-output)
                     (goto-char (point-min))
-                    (setq svn-status-update-previous-process-output nil)))
+                    (setq svn-status-update-previous-process-output nil))
+                  (when svn-status-display-new-status-buffer
+                    (set-window-configuration svn-status-initial-window-configuration)
+                    (switch-to-buffer "*svn-status*")))
                  ((eq svn-process-cmd 'log)
                   (svn-status-show-process-buffer-internal t)
                   (pop-to-buffer "*svn-process*")
