@@ -493,24 +493,41 @@ part appears after the tree delta is complete.  Here's an example:
 @node Serializing Deltas via the "Editor" Interface
 @section Serializing Deltas via the "Editor" Interface
 
-Static XML is a useful representation for import/export and
-visualization of deltas, but we also need a way to express deltas as a
-@emph{series of operations}, to be performed on the source tree,
-resulting in the target tree.  This is necessary for implementing tree
-diffing and patching, and also turns out to be useful as a
-protocol-independent network API.
+Static XML is a useful representation for import/export and for
+visualization of deltas, but we also need a standard way to express a
+delta as a @emph{series of operations}, to be performed on the source
+tree, resulting in the target tree.  This is useful for implementing
+tree diffing and patching, and as a protocol-independent communications
+API.
 
-KFF TODO: WORKING HERE
+In Subversion, deltas are serialized as calls into the vtable
+@code{svn_delta_edit_fns_t}.  This interface is the core of Subversion,
+and a thorough understanding of it will help make sense of the rest of
+Subversion's design.
 
-This section describes the mechanism by which client and server transmit
-tree-deltas to one another.  It is perhaps the most critical interface
-to understand for any prospective Subversion developer.
+Each function in an instance of @code{svn_delta_edit_fns_t}
+(colloquially known as an @dfn{editor}) implements some distinct subtask
+of editing a directory tree.  If you compare the editor functions to the
+XML elements described previously, you'll notice a fairly strict
+correspondence: there's one function for replacing a directory, another
+function for replacing a file, one for adding a directory, another for
+adding a file, a function for deleting, and so on.
+
+Whether the functions in a particular editor actually change a directory
+tree on disk depends on the implementation of that editor, of course.
+Some editors do directly manipulate trees, but others are used for
+communicating over the network, outputting XML, and so on.
+
+Nonetheless, @code{svn_delta_edit_fns_t} can best be understood by
+watching one work on a real directory tree.  For example:
+
+KFF TODO: FOOO WORKING HERE.
 
 Suppose that the user has made a number of local changes to her working
 copy and wants to commit them to the repository.  Let's represent her
-changes with the same tree-delta from a previous example.  Notice,
-however, that she has also made textual modifications to @file{file3};
-hence the in-line @code{<text-delta>}:
+changes with the same tree-delta from a previous example.  Notice that
+she has also made textual modifications to @file{file3}; hence the
+in-line @code{<text-delta>}:
 
 @example
 <tree-delta>
@@ -541,8 +558,6 @@ hence the in-line @code{<text-delta>}:
   </replace>
 </tree-delta>
 @end example
-
-fooo
 
 So how does the client send this information to the server?
 
