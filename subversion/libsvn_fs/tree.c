@@ -2369,11 +2369,10 @@ svn_fs_copy (svn_fs_root_t *from_root,
 
 
 svn_error_t *
-svn_fs_link (svn_fs_root_t *from_root,
-             const char *from_path,
-             svn_fs_root_t *to_root,
-             const char *to_path,
-             apr_pool_t *pool)
+svn_fs_revision_link (svn_fs_root_t *from_root,
+                      svn_fs_root_t *to_root,
+                      const char *path,
+                      apr_pool_t *pool)
 {
   struct copy_args args;
 
@@ -2381,9 +2380,9 @@ svn_fs_link (svn_fs_root_t *from_root,
     return not_txn (to_root);
 
   args.from_root         = from_root;
-  args.from_path         = from_path;
+  args.from_path         = path;
   args.to_root           = to_root;
-  args.to_path           = to_path;
+  args.to_path           = path;
   args.preserve_history  = 0;
 
   return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);

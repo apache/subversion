@@ -2729,6 +2729,9 @@ copy_test (const char **msg,
 }
 
 
+#if 0 /* ### todo: svn_fs_link() as we knew it no longer exists.  This
+         test should be rewritten as a test of svn_fs_revision_link()
+         or discarded. */
 static svn_error_t *
 link_test (const char **msg,
            svn_boolean_t msg_only,
@@ -2882,7 +2885,7 @@ link_test (const char **msg,
   SVN_ERR (svn_fs_close_fs (fs));
   return SVN_NO_ERROR;
 }
-
+#endif /* 0 */
 
 /* This tests deleting of mutable nodes.  We build a tree in a
  * transaction, then try to delete various items in the tree.  We
@@ -5446,7 +5449,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   fetch_youngest_rev,
   basic_commit,
   copy_test,
-  link_test,
+  /* link_test, */
   merging_commit,
   commit_date,
   check_old_revisions,

@@ -938,17 +938,17 @@ svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
                           apr_pool_t *pool);
 
 
-/* Like svn_fs_copy(), but doesn't record copy history.  I.e., you
-   cannot use svn_fs_copied_from() later to find out where this copy
-   came from.
+/* Like svn_fs_copy(), but doesn't record copy history, and preserves
+   the PATH.  You cannot use svn_fs_copied_from() later to find out
+   where this copy came from.
 
    Use svn_fs_link() in situations where you don't care about the copy
-   history, because it is slightly cheaper than svn_fs_copy().  */
-svn_error_t *svn_fs_link (svn_fs_root_t *from_root,
-                          const char *from_path,
-                          svn_fs_root_t *to_root,
-                          const char *to_path,
-                          apr_pool_t *pool);
+   history, and where TO_PATH and FROM_PATH are the same, because it
+   is cheaper than svn_fs_copy().  */
+svn_error_t *svn_fs_revision_link (svn_fs_root_t *from_root,
+                                   svn_fs_root_t *to_root,
+                                   const char *path,
+                                   apr_pool_t *pool);
 
 /* Files.  */
 

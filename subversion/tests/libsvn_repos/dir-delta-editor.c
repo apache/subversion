@@ -114,11 +114,10 @@ test_open_directory (svn_stringbuf_t *name,
                                  base_revision,
                                  pd->edit_baton->pool));
 
-  SVN_ERR (svn_fs_link (rev_root,
-                        d->path->data,
-                        pd->edit_baton->txn_root,
-                        d->path->data,
-                        pd->edit_baton->pool));
+  SVN_ERR (svn_fs_revision_link (rev_root,
+                                 pd->edit_baton->txn_root,
+                                 d->path->data,
+                                 pd->edit_baton->pool));
 
 
   return SVN_NO_ERROR;
@@ -192,11 +191,10 @@ test_open_file (svn_stringbuf_t *name,
                                  base_revision,
                                  pd->edit_baton->pool));
 
-  SVN_ERR (svn_fs_link (rev_root,
-                        fb->path->data,
-                        pd->edit_baton->txn_root,
-                        fb->path->data,
-                        pd->edit_baton->pool));
+  SVN_ERR (svn_fs_revision_link (rev_root,
+                                 pd->edit_baton->txn_root,
+                                 fb->path->data,
+                                 pd->edit_baton->pool));
 
 
   return SVN_NO_ERROR;

@@ -208,10 +208,14 @@ svn_repos_set_path (void *report_baton,
       SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                      revision, rbaton->pool));
 
-      /* Copy into our txn. */
-      SVN_ERR (svn_fs_link (from_root, link_path,
-                            rbaton->txn_root, from_path, rbaton->pool));
-      
+      /* Copy into our txn (use svn_fs_revision_link if we can). */
+      if (strcmp (link_path, from_path))
+        SVN_ERR (svn_fs_copy (from_root, link_path,
+                              rbaton->txn_root, from_path, rbaton->pool));
+      else
+        SVN_ERR (svn_fs_revision_link (from_root, rbaton->txn_root, 
+                                       from_path, rbaton->pool));
+
       /* Remember this path in our hashtable. */
       *rev_ptr = revision;
       apr_hash_set (rbaton->path_revs, from_path, APR_HASH_KEY_STRING,
@@ -264,7 +268,7 @@ svn_repos_link_path (void *report_baton,
   /* Copy into our txn. */
   SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                  revision, rbaton->pool));
-  SVN_ERR (svn_fs_link (from_root, link_path,
+  SVN_ERR (svn_fs_copy (from_root, link_path,
                         rbaton->txn_root, from_path, rbaton->pool));
 
   /* Copy into our second "goal" txn (re-use FROM_ROOT) if we're using
@@ -274,7 +278,7 @@ svn_repos_link_path (void *report_baton,
       SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                      rbaton->revnum_to_update_to, 
                                      rbaton->pool));
-      SVN_ERR (svn_fs_link (from_root, link_path,
+      SVN_ERR (svn_fs_copy (from_root, link_path,
                             rbaton->txn2_root, from_path, rbaton->pool));
     }
 
