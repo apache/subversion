@@ -17,15 +17,6 @@ folded in if some other change warrants a resoak, but will be moved to
 
 Candidate changes:
 
-  * r11030:
-    Fix --enable-maintainer-mode builds on OS X with new XCode.
-    Justification:
-      Tiny fix, avoids build breakage, affects --enable-maintainer-mode only.
-    Notes:
-     Not worth a resoak on its own.
-    Votes:
-      +1: maxb, mbk, ghudson, kfogel
-
   * r11054:
     Don't use -std=c89 anymore.
     Justification:
