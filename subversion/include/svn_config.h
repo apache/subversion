@@ -239,10 +239,17 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
 
 
 
+
+#define SVN_CONFIG_REALMSTRING_KEY  "svn:realmstring"
+
 /** Use @a cred_kind and @a realmstring to locate a file within the
  * ~/.subversion/auth/ area.  If the file exists, initialize @a *hash
  * and load the file contents into the hash, using @a pool.  If the
  * file doesn't exist, set @a *hash to NULL.
+ *
+ * Besides containing the original credential fields, the hash will
+ * also contain @c SVN_CONFIG_REALMSTRING_KEY.  The caller can examine
+ * this value as a sanity-check that the correct file was loaded.
  *
  * The hashtable will contain <tt>const char *</tt>keys and
  * <tt>svn_string_t *</tt> values.
@@ -254,7 +261,11 @@ svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
 
 /** Use @a cred_kind and @a realmstring to create or overwrite a file
  * within the ~/.subversion/auth/ area.  Write the contents of @a hash
- * into the file.
+ * into the file.  
+ *
+ * Also, add @a realmstring to the file, with key @c
+ * SVN_CONFIG_REALMSTRING_KEY.  This allows programs (or users) to
+ * verify exactly which set credentials live within the file.
  *
  * The hashtable must contain <tt>const char *</tt>keys and
  * <tt>svn_string_t *</tt> values.
