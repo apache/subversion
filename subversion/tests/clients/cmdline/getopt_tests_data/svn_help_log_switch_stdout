@@ -22,6 +22,7 @@ Valid options:
   --targets arg            : pass contents of file "ARG" as additional args
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
+  --no-auth-cache          : do not cache authentication tokens
   --strict                 : use strict semantics
   --xml                    : output in xml
 
@@ -37,4 +38,5 @@ Valid options:
   -q [--quiet]             : print as little as possible
   --username arg           : specify a username ARG
   --password arg           : specify a password ARG
+  --no-auth-cache          : do not cache authentication tokens
 

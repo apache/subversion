@@ -52,7 +52,8 @@ typedef enum {
   svn_cl__targets_opt,
   svn_cl__xml_opt,
   svn_cl__strict_opt,
-  svn_cl__no_ignore_opt
+  svn_cl__no_ignore_opt,
+  svn_cl__no_auth_cache_opt
 } svn_cl__longopt_t;
 
 
@@ -91,7 +92,7 @@ typedef struct svn_cl__opt_state_t
   apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
   svn_boolean_t no_ignore;       /* disregard default ignores & svn:ignore's */
-
+  svn_boolean_t no_auth_cache;   /* do not cache authentication information */
 } svn_cl__opt_state_t;
 
 
