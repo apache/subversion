@@ -189,7 +189,7 @@ test_replace_root (void *edit_baton,
   d->edit_baton = eb;
   *root_baton = d;
 
-  printf ("REPLACE_ROOT:  name '%s', version '%ld\n",
+  printf ("REPLACE_ROOT:  name '%s', version '%ld'\n",
           eb->root_path->data,
           eb->version);
 
@@ -458,8 +458,11 @@ svn_test_get_editor (svn_delta_edit_fns_t **editor,
 
   my_edit_baton = apr_pcalloc (pool, sizeof (struct edit_baton));
 
-  my_edit_baton->pool = pool;
+  my_edit_baton->indentation = 1;
   my_edit_baton->root_path = svn_string_dup (path, pool);
+  my_edit_baton->version = version;
+  my_edit_baton->pool = pool;
+
 
   *editor = my_editor;
   *edit_baton = my_edit_baton;
