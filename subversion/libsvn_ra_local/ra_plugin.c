@@ -512,10 +512,9 @@ svn_ra_local__do_switch (void *session_baton,
                          svn_boolean_t recurse,
                          const char *switch_url,
                          const svn_delta_editor_t *update_editor,
-                         void *update_baton)
+                         void *update_baton,
+                         apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -526,7 +525,7 @@ svn_ra_local__do_switch (void *session_baton,
                         recurse,
                         update_editor,
                         update_baton,
-                        sbaton->pool);
+                        pool);
 }
 
 

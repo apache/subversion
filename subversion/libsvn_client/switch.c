@@ -167,7 +167,7 @@ svn_client_switch (const char *path,
                                   target,
                                   recurse,
                                   switch_url,
-                                  switch_editor, switch_edit_baton));
+                                  switch_editor, switch_edit_baton, pool));
       
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
