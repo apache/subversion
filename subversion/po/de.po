@@ -48,7 +48,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "POT-Creation-Date: 2004-04-27 14:09+0200\n"
-"PO-Revision-Date: 2004-06-24 12:48+0100\n"
+"PO-Revision-Date: 2004-06-28 09:56+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -2261,7 +2261,7 @@ msgstr "Alle Authentifizierungsanbieter erschöpft"
 
 #: include/svn_error_codes.h:669
 msgid "Read access denied for root of edit"
-msgstr "Read access denied for root of edit"
+msgstr "Lesezugriff verweigert für Basis dieser Veränderung"
 
 #: include/svn_error_codes.h:675
 msgid "Svndiff data has invalid header"
@@ -2619,7 +2619,7 @@ msgstr "Übertragung abgebrochen: '%s' beibt im Konflikt"
 #: libsvn_client/commit_util.c:327
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
-msgstr ""
+msgstr "Erwartete nicht, daß '%s' Basis einer Arbeitskopie ist"
 
 #: libsvn_client/commit_util.c:344
 #, c-format
@@ -2671,11 +2671,15 @@ msgid ""
 "for addition.  Perhaps you're committing a target that is\n"
 "inside an unversioned (or not-yet-versioned) directory?"
 msgstr ""
+"Eintrag für '%s' ist als 'copied' markiert aber ist selbst nicht\n"
+"als Hinzufügung geplant.  Vielleicht übertragen Sie ein Ziel, das\n"
+"sich in einem nicht versionierten (oder noch-nicht-versionierten)\n"
+"Verzeichnis befindet?"
 
 #: libsvn_client/commit_util.c:685
 #, c-format
 msgid "'%s' is not under version control and is not part of the commit, yet its child '%s' is part of the commit"
-msgstr ""
+msgstr "'%s' ist weder unter Versionskontrolle noch Teil einer Übertragung, dennoch ist sein Kind '%s' Teil einer Übertragung"
 
 #: libsvn_client/commit_util.c:765
 #, c-format
@@ -3007,9 +3011,9 @@ msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' in Revision %ld hat keinen Bezug zur Arbeitskopie"
 
 #: libsvn_client/ra.c:757
-#, c-format
+#, fuzzy, c-format
 msgid "The location for '%s' for revision %ld does not exist in the repository or refers to an unrelated object"
-msgstr ""
+msgstr "'%s' für Revision %ld existiert nicht im Projektarchiv oder verweist auf ein nicht existierendes Objekt"
 
 #: libsvn_client/relocate.c:56
 #, c-format
@@ -3050,21 +3054,28 @@ msgstr "Verweis auf eine nicht existente Revision %ld im Dateisystem '%s'"
 msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
 msgstr "Datei ist nicht veränderlich: Dateisystem '%s', Revision %ld, Pfad '%s'"
 
-#: libsvn_fs_base/fs.c:926
+#: libsvn_fs_base/fs.c:1077
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
 "the problem persists, try deactivating this feature \n"
 "in DB_CONFIG."
 msgstr ""
+"Fehler beim Kopieren der Logdatei; die DB_LOG_AUTOREMOVE Funktion \n"
+"könnte den Hotcopy-Algorithmus stören.  Wenn das Problem weiterhin \n"
+"besteht, versuchen Sie diese Funktion in DB_Config abzuschalten."
 
-#: libsvn_fs_base/fs.c:945
+#: libsvn_fs_base/fs.c:1096
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
 "hotcopy algorithm.  If the problem persists, try deactivating \n"
 "this feature in DB_CONFIG."
 msgstr ""
+"Fehler beim Ausführen der Katastrophen-Wiederherstellung im \n"
+"laufenden Betrieb (hotcopy);  Die DB_LOG_AUTOREMOVE Funktion \n"
+"könnte den Hotcopy-Algorithmus stören. Wenn das Problem weiterhin \n"
+"besteht, versuchen Sie diese Funktion in DB_Config abzuschalten."
 
 #: libsvn_fs_base/tree.c:381
 #: libsvn_fs_fs/tree.c:301
@@ -3158,8 +3169,9 @@ msgstr "Fehlerhafter Kopf in Revisionsdatei gefunden"
 #: libsvn_fs_fs/fs_fs.c:508
 #: libsvn_fs_fs/fs_fs.c:516
 #: libsvn_fs_fs/fs_fs.c:524
+#, fuzzy
 msgid "Malformed text rep offset line in node-rev"
-msgstr ""
+msgstr "Fehlerhafte 'text rep offset' Zeile in Knoten-Rev"
 
 #: libsvn_fs_fs/fs_fs.c:593
 #, fuzzy
@@ -3173,17 +3185,19 @@ msgstr "Fehlender 'cpath' in Knoten-Rev"
 
 #: libsvn_fs_fs/fs_fs.c:651
 #: libsvn_fs_fs/fs_fs.c:657
+#, fuzzy
 msgid "Malformed copyroot line in node-rev"
-msgstr ""
+msgstr "Fehlerhafte 'copyroot' Zeile in Knoten-Rev"
 
 #: libsvn_fs_fs/fs_fs.c:675
 #: libsvn_fs_fs/fs_fs.c:681
+#, fuzzy
 msgid "Malformed copyfrom line in node-rev"
-msgstr ""
+msgstr "Fehlerhafte 'copyfrom' Zeile in Knoten-Rev"
 
 #: libsvn_fs_fs/fs_fs.c:779
 msgid "Attempted to write to non-transaction"
-msgstr ""
+msgstr "Versuchte in eine Nicht-Transaktion zu schreiben"
 
 #: libsvn_fs_fs/fs_fs.c:863
 msgid "Malformed representation header"
@@ -3199,15 +3213,15 @@ msgstr "Korrupte Knoten-Id in Knoten-Rev"
 
 #: libsvn_fs_fs/fs_fs.c:938
 msgid "Revision file lacks trailing newline"
-msgstr ""
+msgstr "Revisionsdatei hat keinen abschließenden Zeilenumbruch"
 
 #: libsvn_fs_fs/fs_fs.c:950
 msgid "Final line in revision file longer than 64 characters"
-msgstr ""
+msgstr "Letzte Zeile in der Revisionsdatei ist länger als 64 Zeichen"
 
 #: libsvn_fs_fs/fs_fs.c:963
 msgid "Final line in revision file missing space."
-msgstr ""
+msgstr "Letzte Zeile in der Revisionsdatei enthält kein Leerzeichen"
 
 #: libsvn_fs_fs/fs_fs.c:990
 #: libsvn_repos/log.c:163
@@ -3218,21 +3232,21 @@ msgstr "Keine Revision %ld"
 
 #: libsvn_fs_fs/fs_fs.c:1108
 msgid "Malformed svndiff data in representation."
-msgstr ""
+msgstr "Fehlerhafte svndiff Daten in Darstellung"
 
 #: libsvn_fs_fs/fs_fs.c:1210
 #: libsvn_fs_fs/fs_fs.c:1230
 #: libsvn_fs_fs/fs_fs.c:1243
 msgid "Reading one svndiff window read beyond the end of the representation."
-msgstr ""
+msgstr "Lesen eines svndiff Fensters las über Ende der Darstellung hinaus"
 
 #: libsvn_fs_fs/fs_fs.c:1334
 msgid "svndiff data requested non-existent source."
-msgstr ""
+msgstr "svndiff Daten verlangten nicht existente Quelle"
 
 #: libsvn_fs_fs/fs_fs.c:1340
 msgid "svndiff requested position beyond end of stream."
-msgstr ""
+msgstr "svndiff verlangte Positions ist jenseits des Datenstromendes"
 
 #: libsvn_fs_fs/fs_fs.c:1362
 msgid "svndiff window length is corrupt"
@@ -3250,11 +3264,11 @@ msgstr "Für den Knoten fehlt eine erforderliche Revisions ID"
 
 #: libsvn_fs_fs/fs_fs.c:1694
 msgid "Invalid change ordering: new node revision ID without delete"
-msgstr ""
+msgstr "Ungültige Reihenfolge bei Änderung: Neue Knoten Revisions ID ohne Löschen"
 
 #: libsvn_fs_fs/fs_fs.c:1705
 msgid "Invalid change ordering: non-add change on deleted path"
-msgstr ""
+msgstr "Ungültige Reihenfolge bei Änderung: Nicht hinzufügende Änderung auf gelöschtem Pfad"
 
 #: libsvn_fs_fs/fs_fs.c:1850
 #: libsvn_fs_fs/fs_fs.c:1858
@@ -3262,7 +3276,6 @@ msgstr ""
 #: libsvn_fs_fs/fs_fs.c:1910
 #: libsvn_fs_fs/fs_fs.c:1943
 #: libsvn_fs_fs/fs_fs.c:1948
-#, fuzzy
 msgid "Invalid changes line in rev-file"
 msgstr "Ungültige 'changes' Zeile in Rev Datei"
 
@@ -3271,12 +3284,14 @@ msgid "Invalid change kind in rev file"
 msgstr "Ungültiger Änderungstyp in Rev Datei"
 
 #: libsvn_fs_fs/fs_fs.c:1903
+#, fuzzy
 msgid "Invalid text-mod flag in rev-file"
-msgstr ""
+msgstr "Ungültiges 'text-mod' Flag in Rev Datei"
 
 #: libsvn_fs_fs/fs_fs.c:1923
+#, fuzzy
 msgid "Invalid prop-mod flag in rev-file"
-msgstr ""
+msgstr "Ungültiges 'prop-mod' Flag in Rev Datei"
 
 #: libsvn_fs_fs/fs_fs.c:2098
 msgid "Copying from transactions not allowed"
@@ -3286,7 +3301,7 @@ msgstr "Kopieren aus Transaktionen ist nicht erlaubt."
 #: libsvn_fs_fs/fs_fs.c:2347
 #, fuzzy
 msgid "next-id file corrupt"
-msgstr "'next-id' Datei ist beschädigt"
+msgstr "'next-id' Datei korrupt"
 
 #: libsvn_fs_fs/fs_fs.c:2573
 msgid "Invalid change type."
@@ -3294,7 +3309,7 @@ msgstr "Ungültiger Änderungstyp"
 
 #: libsvn_fs_fs/fs_fs.c:2865
 msgid "Attempted to write to non-transaction."
-msgstr ""
+msgstr "Versuchtes Schreiben in Nicht-Transaktion"
 
 #: libsvn_fs_fs/fs_fs.c:2884
 msgid "Can't set text contents of a directory"
@@ -3742,16 +3757,16 @@ msgstr ""
 "Der Eintrag '%s' ist nicht länger ein Verzeichnis; entfernen Sie den Eintrag\n"
 "vor dem Aktualisieren"
 
-#: libsvn_wc/adm_crawler.c:590
+#: libsvn_wc/adm_crawler.c:607
 msgid "Error aborting report"
 msgstr "Fehler beim Abbrechen des Berichts"
 
-#: libsvn_wc/adm_crawler.c:687
+#: libsvn_wc/adm_crawler.c:704
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
 msgstr "Prüfsummenfehler für '%s'; erwartet: '%s', tatsächlich: '%s'"
 
-#: libsvn_wc/adm_crawler.c:712
+#: libsvn_wc/adm_crawler.c:729
 msgid "Error opening local file"
 msgstr "Fehler beim Öffnen einer lokalen Datei"
 
@@ -4742,7 +4757,7 @@ msgid ""
 "Recovery completed.\n"
 msgstr ""
 "\n"
-"Recovery completed.\n"
+"Wiederherstellung vollständig abgeschlossen.\n"
 
 #: svnadmin/main.c:623
 #, c-format
@@ -5207,7 +5222,7 @@ msgstr "gib den anhängenden Zeilenumbruch nicht aus"
 
 #: svnversion/main.c:183
 msgid "last changed rather than current revisions"
-msgstr "eher letzte geänderte, als aktuelle Revision"
+msgstr "eher letzte geänderte, als aktuelle Revisionen"
 
 #: svnversion/main.c:260
 msgid "exported\n"
