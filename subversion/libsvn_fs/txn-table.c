@@ -50,6 +50,21 @@ svn_fs__open_transactions_table (DB **transactions_p,
 }
 
 
+static int
+is_valid_transaction (skel_t *skel)
+{
+  int len = svn_fs__list_length (skel);
+
+  if (len == 3
+      && svn_fs__is_atom (skel->children, "transaction")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom)
+    return 1;
+
+  return 0;
+}
+
+
 /* Store ROOT_ID and BASE_ROOT_ID as the roots of SVN_TXN in FS, as
    part of TRAIL.  */
 static svn_error_t *
@@ -74,6 +89,10 @@ put_txn (svn_fs_t *fs,
                                      pool),
                    txn_skel);
   svn_fs__prepend (svn_fs__str_atom ((char *) "transaction", pool), txn_skel);
+
+  /* Sanity check.  */
+  if (! is_valid_transaction (txn_skel))
+    abort ();
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify svn_txn, so the cast belongs here.  */
@@ -151,21 +170,6 @@ svn_fs__create_txn (char **txn_id_p,
   SVN_ERR (put_txn (fs, svn_txn, root_id, root_id, trail));
 
   *txn_id_p = svn_txn; 
-  return 0;
-}
-
-
-static int
-is_valid_transaction (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len == 3
-      && svn_fs__is_atom (skel->children, "transaction")
-      && skel->children->next->is_atom
-      && skel->children->next->next->is_atom)
-    return 1;
-
   return 0;
 }
 
