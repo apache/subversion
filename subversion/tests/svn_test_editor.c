@@ -442,7 +442,7 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   svn_delta_edit_fns_t *my_editor;
   struct edit_baton *my_edit_baton;
 
-  my_editor = apr_pcalloc (pool, sizeof(*my_editor));
+  my_editor = apr_pcalloc (pool, sizeof (*my_editor));
 
   my_editor->delete             = test_delete;
   my_editor->replace_root       = test_replace_root;
@@ -457,7 +457,7 @@ svn_test_get_editor (const svn_delta_edit_fns_t **editor,
   my_editor->change_dir_prop    = test_change_dir_prop;
   my_editor->close_edit         = test_close_edit;
 
-  my_edit_baton = apr_pcalloc (pool, sizeof (struct edit_baton));
+  my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
 
   my_edit_baton->root_path = svn_string_dup (path, pool);
   my_edit_baton->version = version;
