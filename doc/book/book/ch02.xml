@@ -78,10 +78,10 @@
         accidentally overwrite each other's changes in the
         repository.</para>
 
-      <para>Consider this hypothetical example.  Suppose we have two
-        co-workers, Jane and Joe.  They each decide to edit the same
-        repository file at the same time.  If Joe saves his changes to
-        the repository first, then it's possible that (a few moments
+      <para>Consider this scenario: suppose we have two co-workers,
+        Jane and Joe.  They each decide to edit the same repository
+        file at the same time.  If Joe saves his changes to the
+        repository first, then it's possible that (a few moments
         later) Jane could accidentally overwrite them with her own new
         version of the file.  While Joe's version of the file won't be
         lost forever (because the system remembers every change), any
@@ -104,17 +104,16 @@
       
       <para>Many version control systems use a
         <firstterm>lock-modify-unlock</firstterm> model to address
-        this problem, which is a very simple, traditional solution.
-        In such a system, the repository allows only one person to
-        change a file at a time.  Such a system requires Joe to first
-        "lock" the file before he can begin making changes to it.
-        Locking a file is a lot like borrowing a book from the
-        library; if Joe has locked a file, then Jane cannot make any
-        changes to it.  If she tries to lock the file, the repository
-        will deny the request.  All she can do is read the file, and
-        wait for Joe to finish his changes and release his lock.
-        After Joe unlocks the file, his turn is over, and now Jane can
-        take her turn by locking and editing.</para>
+        this problem, which is a very simple solution.  In such a
+        system, the repository allows only one person to change a file
+        at a time.  First Joe must "lock" the file before he can begin
+        making changes to it.  Locking a file is a lot like borrowing
+        a book from the library; if Joe has locked a file, then Jane
+        cannot make any changes to it.  If she tries to lock the file,
+        the repository will deny the request.  All she can do is read
+        the file, and wait for Joe to finish his changes and release
+        his lock.  After Joe unlocks the file, his turn is over, and
+        now Jane can take her turn by locking and editing.</para>
       
       <figure id="svn-ch2-dia3">
         <title>The lock-modify-unlock solution</title>
@@ -248,11 +247,12 @@
 
       <para>After you've made some changes to the files in your
         working copy and verified that they work properly, Subversion
-        provides commands to "publish" your changes to the other
-        people working with you on your project (by writing to the
-        repository).  If other people publish their own changes,
-        Subversion provides commands to merge those changes into your
-        working directory (by reading from the repository).</para>
+        provides you with commands to "publish" your changes to the
+        other people working with you on your project (by writing to
+        the repository).  If other people publish their own changes,
+        Subversion provides you with commands to merge those changes
+        into your working directory (by reading from the
+        repository).</para>
 
       <para>A working copy also contains some extra files, created and
         maintained by Subversion, to help it carry out these commands.
@@ -269,7 +269,7 @@
         subdirectory in the repository's filesystem tree.  In this
         arrangement, a user's working copy will usually correspond to
         a particular subtree of the repository.</para>
-
+      
       <para>For example, suppose you have a repository that contains
         two software projects.</para>
 
@@ -283,9 +283,12 @@
         <filename>write</filename>.</para>
 
       <para>To get a working copy, you must <firstterm>check
-          out</firstterm> some subtree of the repository.  If you
-          check out <filename>/write</filename>, you will get a
-          working copy like this: </para>
+        out</firstterm> some subtree of the repository.  (The term
+        "check out" may sound like it has something to do with locking
+        or reserving resources, but it doesn't; it simply creates a
+        private copy of the project for you.) For example, If you
+        check out <filename>/write</filename>, you will get a working
+        copy like this: </para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/write
@@ -304,15 +307,14 @@ Makefile  document.c  search.c  .svn/
         extra information needed by Subversion, as mentioned
         earlier.</para>
       
-      <para>Suppose you make changes to
-        <filename>search.c</filename>.  Since the
-        <filename>.svn</filename> directory remembers the file's
-        modification date and original contents, Subversion can tell
-        that you've changed the file.  However, Subversion does not
-        make your changes public until you explicitly tell it to.  The
-        act of publishing your changes is more commonly known as
-        <firstterm>committing</firstterm> changes to the
-        repository.</para>
+      <para>Suppose you make changes to <filename>search.c</filename>.
+        Since the <filename>.svn</filename> directory remembers the
+        file's modification date and original contents, Subversion can
+        tell that you've changed the file.  However, Subversion does
+        not make your changes public until you explicitly tell it to.
+        The act of publishing your changes is more commonly known as
+        <firstterm>committing</firstterm> or (<firstterm>checking
+        in</firstterm>) changes to the repository.</para>
 
       <para>To publish your changes to others, you can use
         Subversion's <command>commit</command> command:</para>
@@ -336,12 +338,12 @@ Committed revision 57.
         unchanged; Subversion only modifies working directories at the
         user's request.</para>
 
-      <para>To bring his work up to date, Felix can ask Subversion to
-        <firstterm>update</firstterm> his working copy, by using the
-        Subversion <command>update</command> command.  This will
-        incorporate your changes into his working copy, as well as any
-        others that have been committed since he checked it
-        out.</para>
+      <para>To bring his project up to date, Felix can ask
+        Subversion to <firstterm>update</firstterm> his working copy,
+        by using the Subversion <command>update</command> command.
+        This will incorporate your changes into his working copy, as
+        well as any others that have been committed since he checked
+        it out.</para>
 
 <screen>
 $ pwd
@@ -583,9 +585,8 @@ write/Makefile:6
     
     <para>At this point, you should have a good idea of how Subversion
     works in the most general sense.  Armed with this knowledge, you
-    should now be ready to jump into the next chapter, which is a more
-    detailed, guided tour of Subversion's commands and
-    features. </para>
+    should now be ready to jump into the next chapter, which is a
+    detailed tour of Subversion's commands and features. </para>
       
   </sect1>
 
