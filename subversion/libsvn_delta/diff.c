@@ -110,7 +110,6 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
   svn_diff__node_t **node_ref;
   svn_diff__node_t *parent;
   svn_diff__position_t *position;
-  svn_diff__position_t **position_ref;
   int rv;
 
   parent = NULL;
@@ -127,29 +126,15 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
           if (vtable->token_discard != NULL)
             vtable->token_discard(diff_baton, token);
 
-          /* Insert the correct position */
-          position_ref = &parent->position[idx];
-
-          while (*position_ref != NULL
-                 && (*position_ref)->offset > offset)
-            {
-              position_ref = &(*position_ref)->next_in_node;
-            }
-
-          if (*position_ref != NULL
-              && (*position_ref)->offset == offset)
-            {
-              return NULL;
-            }
-
           /* Create a new position */
           position = apr_palloc(tree->pool, sizeof(svn_diff__position_t));
           position->next = NULL;
-          position->next_in_node = *position_ref;
+          position->next_in_node = parent->position[idx];
           position->node = parent;
           position->offset = offset;
-
-          *position_ref = position;
+          
+          parent->position[idx] = position;
+          
           return position;
         }
       else if (rv > 0)
@@ -235,7 +220,7 @@ svn_diff__tree_largest_common_alphabet_user(svn_diff__tree_t *tree, int idx1, in
 
 
 /*
- * Support function to reverse a linked list; in this case, the the LCS.
+ * Support function to reverse a linked list; in this case, the LCS.
  */
 
 static
@@ -415,7 +400,7 @@ svn_diff__lcs(svn_diff__tree_t *tree,
   svn_diff__lcs_t *link;
   svn_diff__hat_t *hat;
   int idx;
-  apr_size_t k, t;
+  apr_size_t k, t, ktmp;
   apr_size_t middle, range, offset;
   svn_diff__lcs_t **ref, *freelist;
   svn_diff__lcs_t sentinel_link;
@@ -456,17 +441,20 @@ svn_diff__lcs(svn_diff__tree_t *tree,
           range = t;
           offset = 0;
           middle = range >> 1;
-          k = offset + middle;
-          while (range > 0)
+          ktmp = offset + middle;
+          k = t;
+          do
             {
-              link = svn_diff__hat_get(hat, k);
+              link = svn_diff__hat_get(hat, ktmp);
               if (link->position[1 - idx]->offset == position[1 - idx]->offset)
                 {
+                  k = ktmp;
                   break;
                 }
 
               if (link->position[1 - idx]->offset > position[1 - idx]->offset)
                 {
+                  k = ktmp;
                   range = middle;
                 }
               else
@@ -478,8 +466,10 @@ svn_diff__lcs(svn_diff__tree_t *tree,
 
               middle = range >> 1;
               k = offset + middle;
-              link = NULL;
             }
+          while (range > 0);
+
+          link = svn_diff__hat_get(hat, k);
 
           if (link == NULL
               || link->position[1 - idx]->offset < position[1 - idx]->offset)
