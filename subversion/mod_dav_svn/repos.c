@@ -1486,9 +1486,11 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       "                  rev     CDATA #IMPLIED>\n"
       "  <!ELEMENT updir EMPTY>\n"
       "  <!ELEMENT file  (prop)*>\n"
-      "  <!ATTLIST file  name    CDATA #REQUIRED>\n"
+      "  <!ATTLIST file  name    CDATA #REQUIRED\n"
+      "                  href    CDATA #REQUIRED>\n"
       "  <!ELEMENT dir   (prop)*>\n"
-      "  <!ATTLIST dir   name    CDATA #REQUIRED>\n"
+      "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
+      "                  href    CDATA #REQUIRED>\n"
       "  <!ELEMENT prop  (#PCDATA)>\n"
       "  <!ATTLIST prop  name    CDATA #REQUIRED>\n"
       "]>\n";
@@ -1579,6 +1581,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         /* unused: const svn_fs_dirent_t *entry = elem->value; */
         const char *entry_path;
         const char *name;
+        const char *href;
         int is_dir;
 
         /* for a REGULAR resource, the root is going to be a normal root,
@@ -1596,18 +1599,24 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
         if (is_dir)
-          name = apr_pstrcat(entry_pool, name, "/", NULL);
+          href = apr_pstrcat(entry_pool, name, "/", NULL);
+        else
+          href = name;
 
         if (gen_html)
           ap_fprintf(output, bb,
-                     "  <li><a href=\"%s\">%s</a></li>\n",
-                     name, name);
+                     "  <li><a href=\"%s%s\">%s%s</a></li>\n",
+                     href, href);
         else
-          /* ### This is where the we could search for props */
-          ap_fprintf(output, bb, "    <%s name=\"%s\"></%s>\n",
-                     (is_dir ? "dir" : "file"), name,
-                     (is_dir ? "dir" : "file"));
+          {
+            const char *const tag = (is_dir ? "dir" : "file");
 
+            /* ### This is where the we could search for props */
+
+            ap_fprintf(output, bb,
+                       "    <%s name=\"%s\" href=\"%s\"></%s>\n",
+                       tag, name, href, tag);
+          }
         svn_pool_clear(entry_pool);
       }
 
