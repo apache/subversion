@@ -26,7 +26,7 @@
  * permission. For written permission, please contact info@collab.net.
  * 
  * 5. Products derived from this software may not use the "Tigris" name
-* nor may "Tigris" appear in their names without prior written
+ * nor may "Tigris" appear in their names without prior written
  * permission of CollabNet.
  * 
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
