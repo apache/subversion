@@ -38,7 +38,7 @@ Candidate changes:
     Justification: 
       Fixes run-time error seen by Subclipse users with RedHat Fedora.
     Votes:
-      +1: jerenkrantz, maxb
+      +1: jerenkrantz, maxb, sussman
 
   * r12630
     Dataloss bug in svndumpfilter - copyfrom information lost for files
@@ -48,7 +48,7 @@ Candidate changes:
     Branch:
       1.1.x-svndumpfilter r12655:12656
     Votes:
-      +1: maxb
+      +1: maxb, sussman
 
   * r12636
     Dataloss bug in svndumpfilter - delete-all-properties-from-node operations
@@ -78,7 +78,7 @@ Candidate changes:
       1.1.x-svndumpfilter r12657:12659
       (Each merged revision committed to branch seperately)
     Votes:
-      +1: maxb
+      +1: maxb, sussman
 
   * r12499, r12542, plus branch-only modification in r12670
     Make mailer.py work on Windows.
@@ -101,7 +101,7 @@ Candidate changes:
       Assertions on the server lead to unclean BDB shutdowns, which lead
       to the amassing of locks, which lead (ultimately) to downtime.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, sussman
 
   * r12551, r12717, r12719, r12722
     SWIG 1.3.24 compatibility
