@@ -76,7 +76,7 @@ svn_cl__propget (apr_getopt_t *os,
       SVN_ERR (svn_client_propget (&props, propname, target,
                                    opt_state->recursive, pool));
 
-      for (hi = apr_hash_first(pool, props); hi; apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
         {
           const char * filename; 
           const svn_string_t *propval;
