@@ -194,7 +194,7 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  abort ();
+  SVN_ERR (svn_fs__fs_txn_proplist (table_p, txn, pool));
 
   return SVN_NO_ERROR;
 }
@@ -289,7 +289,7 @@ svn_fs_open_txn (svn_fs_txn_t **txn_p,
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  abort ();
+  SVN_ERR (svn_fs__fs_open_txn (&txn, fs, name, pool));
   
   *txn_p = txn;
   return SVN_NO_ERROR;
@@ -329,7 +329,7 @@ svn_fs_list_transactions (apr_array_header_t **names_p,
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  abort ();
+  SVN_ERR (svn_fs__fs_list_transactions (&names, fs, pool));
 
   *names_p = names;
   return SVN_NO_ERROR;

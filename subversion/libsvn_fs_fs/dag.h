@@ -209,26 +209,6 @@ svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
                                      apr_pool_t *pool);
 
 
-/* Commit the transaction TXN_ID in FS, allocating in POOL.  Store the
-   new revision number in *NEW_REV.  This entails:
-   - marking the tree of mutable nodes at TXN_ID's root as immutable,
-     and marking all their contents as stable
-   - creating a new revision, with TXN_ID's root as its root directory
-   - promoting TXN_ID to a "committed" transaction.
-
-   Beware!  This does not make sure that TXN_ID is based on the very
-   latest revision in FS.  If the caller doesn't take care of this,
-   you may lose people's work!
-
-   Do any necessary temporary allocation in a subpool of POOL.
-   Consume temporary space at most proportional to the maximum depth
-   of SVN_TXN's tree of mutable nodes.  */
-svn_error_t *svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
-                                     svn_fs_t *fs,
-                                     const char *txn_id,
-                                     apr_pool_t *pool);
-
-
 
 /* Directories.  */
 
@@ -450,24 +430,6 @@ svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
                                const char *from_path,
                                const char *txn_id, 
                                apr_pool_t *pool);
-
-
-
-/* Deltification */
-
-/* Change TARGET's representation to be a delta against SOURCE,
-   allocating from POOL.  If TARGET or SOURCE does not exist, do
-   nothing and return success.  If PROPS_ONLY is non-zero, only the
-   node property portion of TARGET will be deltified.
-
-   WARNING WARNING WARNING: Do *NOT* call this with a mutable SOURCE
-   node.  Things will go *very* sour if you deltify TARGET against a
-   node that might just disappear from the filesystem in the (near)
-   future.  */
-svn_error_t *svn_fs__dag_deltify (dag_node_t *target,
-                                  dag_node_t *source,
-                                  svn_boolean_t props_only,
-                                  apr_pool_t *pool);
 
 
 /* Comparison */
