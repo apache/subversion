@@ -886,97 +886,80 @@ def basic_delete(sbox):
     })
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_output):
-    print "Status check 1 failed"
     return 1
 
   # 'svn rm' that should fail
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', chi_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to text changes"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', chi_parent_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to child text changes"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', rho_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to file prop changes"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', rho_parent_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to child file prop changes"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', F_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to dir prop changes"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', F_parent_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to child dir prop changes"
     return 1
   
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', sigma_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to unversioned file"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm',
                                                     sigma_parent_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to unversioned child"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', X_path)
   if len (stderr_lines) == 0:
-    print "Delete should have failed due to added hierarchy"
     return 1
 
   # check status has not changed
   if svntest.actions.run_and_verify_status (wc_dir, expected_output):
-    print "Status check 2 failed"
     return 1
 
   # 'svn rm' that should work
   E_path =  os.path.join(wc_dir, 'A', 'B', 'E')
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', E_path)
   if len (stderr_lines) != 0:
-    print "Delete failed"
     return 1
   
   # 'svn rm --force' that should work
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     chi_parent_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 1 failed"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     rho_parent_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 2 failed"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     F_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 3 failed"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     sigma_parent_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 4 failed"
     return 1
 
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     X_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 5 failed"
     return 1
 
   # Deleting already removed from wc versioned item with --force
@@ -985,7 +968,6 @@ def basic_delete(sbox):
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     iota_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 6 failed"
     return 1
   # and without --force
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
@@ -993,9 +975,15 @@ def basic_delete(sbox):
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm',
                                                     gamma_path)
   if len (stderr_lines) != 0:
-    print "Unforced delete 1 failed"
     return 1
-  
+
+  # Deleting already scheduled for deletion doesn't require --force
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', gamma_path)
+  if len (stderr_lines) != 0:
+    return 1
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', E_path)
+  if len (stderr_lines) != 0:
+    return 1
 
   # check status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1019,20 +1007,17 @@ def basic_delete(sbox):
     })
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    print "Status check 3 failed"
     return 1
 
   # issue 687 delete directory with uncommitted directory child
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     Y_parent_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 6 failed"
     return 1
 
   expected_status.tweak('A/D', status='D ')
   expected_status.remove('A/D/Y')
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    print "Status check 4 failed"
     return 1
 
 
@@ -1069,7 +1054,6 @@ def basic_delete(sbox):
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     foo_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 7 failed"
     return 1
   if can_open_file(foo_path):
     print "Failed to remove unversioned file foo"
@@ -1079,7 +1063,6 @@ def basic_delete(sbox):
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', '--force',
                                                     foo_path)
   if len (stderr_lines) != 0:
-    print "Forced delete 8 failed"
     return 1
 
 #----------------------------------------------------------------------
