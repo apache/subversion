@@ -130,7 +130,7 @@ If the file is newly added, LOCAL is \"0\" and CHANGED is nil."
     (cond
      ((not state) nil)
      ;; A newly added file has no revision.
-     ((looking-at "....\\s-+\\(\\*\\s-+\\)?\\0\\s-+\\?")
+     ((looking-at "....\\s-+\\(\\*\\s-+\\)?[-0]\\s-+\\?")
       (list state "0" nil))
      ((looking-at "....\\s-+\\(\\*\\s-+\\)?\\([0-9]+\\)\\s-+\\([0-9]+\\)")
       (list state
