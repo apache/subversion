@@ -4410,4 +4410,8 @@ $ svnlook youngest /tmp/repos/
   </sect1>
 </chapter>
 
-
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->
