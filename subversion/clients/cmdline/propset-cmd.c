@@ -121,9 +121,6 @@ svn_cl__propset (apr_getopt_t *os,
                                        &rev, ctx, pool));
       if (! opt_state->quiet) 
         {
-          const char *target_native;
-          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
-                                              target, pool));
           printf ("property `%s' set on repository revision '%"
                   SVN_REVNUM_T_FMT"'\n",
                   pname, rev);
