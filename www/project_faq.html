@@ -597,11 +597,11 @@ understood it <em>before</em> actually hacking the code, right? :)
 <p>
 This happens when you diff utilities are not installed on the C: drive.
 <br>
-For example, your diff utilities are in D:/cygwin/bin. The workaround is:
+For example, your diff utilities are in D:\cygwin\bin. The workaround is:
 </p>
 <pre>
-mkdir -p C:/cygwin/bin
-cp D:/cygwin/bin/diff*.exe C:/cygwin/bin
+mkdir C:\cygwin\bin
+copy D:\cygwin\bin\diff*.exe C:\cygwin\bin
 </pre>
 <p>
 Despite the Registry and/or the config file showing the D: drive,
