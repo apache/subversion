@@ -306,6 +306,11 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
                                qname, qcopy, copyfrom_revision, chk_attr);
         }
 
+      /* Resist the temptation to pass 'elt' as the format string.
+         Because it contains URIs, it might have sequences that look
+         like format string insert placeholders.  For example,
+         "this%20dir" is a valid printf() format string that means
+         "this[insert an integer of width 20 here]ir". */
       send_xml(child->uc, "%s", elt);
     }
 
