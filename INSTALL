@@ -73,7 +73,7 @@ III.  INSTALLATION
           After compiling, you will have a large 'svn' binary sitting in
           the tree.  Use it to check out a real Subversion working copy:
 
-             $ subversion/clients/cmdline/svn checkout \
+             $ subversion-X.Y/subversion/clients/cmdline/svn checkout \
                   http://svn.collab.net/repos/svn/trunk -d svn
 
              A  svn/dist.sh
