@@ -168,7 +168,7 @@ def create_txn():
 #----------------------------------------------------------------------
 
 def remove_txn():
-  "test 'svnadmin rmtxn' subcommand"
+  "test 'svnadmin rmtxns' subcommand"
 
   # Bootstrap
   sbox = sandbox(remove_txn)
@@ -182,18 +182,20 @@ def remove_txn():
   svntest.main.run_svnadmin("createtxn", repo_dir, "1")
   svntest.main.run_svnadmin("createtxn", repo_dir, "1")
   svntest.main.run_svnadmin("createtxn", repo_dir, "1")
+  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
+  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
 
   # Look for them by running 'lstxn'.
   tree_list = get_trees(repo_dir)
-  if tree_list != ['1', '2', '3']:
+  if tree_list != ['1', '2', '3', '4', '5']:
     return 1
 
-  # Remove the 2nd transaction.
-  svntest.main.run_svnadmin("rmtxn", repo_dir, "2")
+  # Remove the 2nd and 4th transactions.
+  svntest.main.run_svnadmin("rmtxns", repo_dir, "2", "4")
 
   # Examine the list of transactions again.
   tree_list = get_trees(repo_dir)
-  if tree_list != ['1', '3']:
+  if tree_list != ['1', '3', '5']:
     return 1
 
   return 0
