@@ -784,8 +784,70 @@ log_do_committed (struct log_runner *loggy,
             SVN_ERR (svn_wc_remove_from_revision_control (loggy->path, sname,
                                                           FALSE, loggy->pool));
         }
-      else   /* entry not being deleted, so mark commited-to-date */
+               
+      else   /* entry not deleted, so mark commited-to-date */
         {
+          if ((entry && (entry->schedule == svn_wc_schedule_replace))
+              && is_this_dir)
+            {
+              apr_hash_t *entries;
+              apr_hash_index_t *hi;
+              
+              /* If THIS_DIR has been replaced, all its immmediate
+                 children *must* be either marked as {D, A, or R}.
+                 Children which are A or R will be reported as individual
+                 commit-targets, and thus will be re-visited by
+                 log_do_committed().  Children which are marked as D,
+                 however, need to be outright removed from revision
+                 control.  */
+              
+              /* Loop over all children entries, look for D markers. */
+              SVN_ERR (svn_wc_entries_read (&entries, loggy->path,
+                                            loggy->pool));
+              
+              for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+                {
+                  const void *key;
+                  const char *keystring;
+                  apr_size_t klen;
+                  void *val;
+                  svn_stringbuf_t *current_entry_name;
+                  svn_wc_entry_t *current_entry; 
+                  
+                  /* Get the next entry */
+                  apr_hash_this (hi, &key, &klen, &val);
+                  keystring = (const char *) key;
+                  current_entry = (svn_wc_entry_t *) val;
+                  
+                  /* Skip each entry that isn't scheduled for deletion. */
+                  if (current_entry->schedule != svn_wc_schedule_delete)
+                    continue;
+                  
+                  /* Get the name of entry, remove from revision control. */
+                  current_entry_name = svn_stringbuf_create (keystring,
+                                                             loggy->pool);
+                  
+                  if (current_entry->kind == svn_node_file)
+                    SVN_ERR (svn_wc_remove_from_revision_control 
+                             (loggy->path,
+                              current_entry_name,
+                              FALSE, loggy->pool));
+                  
+                  else if (current_entry->kind == svn_node_dir)
+                    {
+                      svn_stringbuf_t *parent = svn_stringbuf_dup
+                        (loggy->path, loggy->pool);
+                      svn_stringbuf_t *thisdir =
+                        svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, 
+                                              loggy->pool);
+                      svn_path_add_component (parent, current_entry_name,
+                                              svn_path_local_style);
+                      SVN_ERR (svn_wc_remove_from_revision_control
+                               (parent, thisdir, FALSE, loggy->pool));
+                    }
+                }
+            }
+
           if (! is_this_dir)
             {
               /* If we get here, `name' is a file's basename.
