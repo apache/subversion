@@ -108,19 +108,19 @@ Committed revision 3.
         specific revision numbers by Subversion:</para>
 
       <note>
-        <para>Each directory in your working copy contains a
-        <filename>.svn</filename> administrative area.  For every file
-        in a directory, Subversion keeps a copy of each file in the
-        administrative area.  This copy is an unmodified (no keyword
-        expansion, no end-of-line translation, no nothing) copy of the
-        file as it existed in the last revision (called the
-        <quote>BASE</quote> revision) that you updated it to in your
-        working copy.  We refer to this file as the
-        <firstterm>pristine copy</firstterm> or
-        <firstterm>text-base</firstterm> version of your file, and
-        it's always an exact byte-for-byte copy of the file as it
-        exists in the repository.</para>
-      </note>
+        <para>Each directory in your working copy contains an
+          administrative subdirectory called
+          <filename>.svn</filename>.  For every file in a directory,
+          Subversion keeps a copy of each file in the administrative
+          area.  This copy is an unmodified (no keyword expansion, no
+          end-of-line translation, no nothing) copy of the file as it
+          existed in the last revision (called the <quote>BASE</quote>
+          revision) that you updated it to in your working copy.  We
+          refer to this file as the <firstterm>pristine
+          copy</firstterm> or <firstterm>text-base</firstterm> version
+          of your file, and it's always an exact byte-for-byte copy of
+          the file as it exists in the repository.</para> 
+        </note>
       
       <variablelist>
         
@@ -668,7 +668,7 @@ Updated to revision 2.
               duplicate of <filename>foo</filename>.
               <filename>bar</filename> is automatically scheduled for
               addition.  When <filename>bar</filename> is added to the
-              repository on the next commit, its copy-history is
+              repository on the next commit, its copy history is
               recorded (as having originally come from
               <filename>foo</filename>).  <command>svn copy</command>
               does not create intermediate directories.</para>
@@ -1043,8 +1043,8 @@ Status against revision:   46
           <option>--extensions</option> switch.  For example, to see
           local differences in file <filename>foo.c</filename> in
           context output format while ignoring whitespace changes, you
-          might run <quote>svn diff --diff-cmd /usr/bin/diff
-          --extensions '-bc' foo.c</quote>.</para>
+          might run <command>svn diff --diff-cmd /usr/bin/diff
+          --extensions '-bc' foo.c</command>.</para>
           </footnote></para>
         
         <screen>

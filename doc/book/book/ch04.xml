@@ -46,10 +46,10 @@
       development that exists independently of another line, yet still
       shares a common history if you look far enough back in time.  A
       branch always begins life as a copy of something, and moves on
-      from there, generating its own history.</para>
+      from there, generating its own history (see Figure 4-1).</para>
 
       <figure id="svn-ch-4-dia1">
-        <title>Branches of Development</title>
+        <title>Branches of development</title>
         <graphic fileref="images/ch04dia1.png"/>
       </figure>
 
@@ -78,14 +78,14 @@
     <para>For this chapter, we'll go back to the same example from
       Chapter 2.  Remember that you and your collaborator, Sally, are
       sharing a repository that contains two projects,
-      <filename>paint</filename> and <filename>calc.</filename>
-      Notice, however, that each project directory now contains
-      subdirectories named <filename>trunk</filename> and
+      <filename>paint</filename> and <filename>calc</filename>.
+      Notice that in Figure 4-2, however, each project directory now
+      contains subdirectories named <filename>trunk</filename> and
       <filename>branches</filename>.  The reason for this will soon
       become clear.</para>
     
       <figure id="svn-ch-4-dia2">
-        <title>Starting Repository Layout</title>
+        <title>Starting repository layout</title>
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
 
@@ -220,13 +220,14 @@ Committed revision 341.
       <para>There's really no difference between these two methods.
         Both procedures create a new directory in revision 341, and
         the new directory is a copy of
-        <filename>/calc/trunk</filename>.  Notice that the second
-        method, however, performs an <emphasis>immediate</emphasis>
-        commit.
-        <footnote> <para>Subversion does not support
-        cross-repository copying.  When using URLs with <command>svn
-        copy</command> or <command>svn move</command>, you can only
-        copy items within the same repository.</para>
+        <filename>/calc/trunk</filename>.  This is shown in Figure
+        4-3.  Notice that the second method, however, performs an
+        <emphasis>immediate</emphasis> commit.
+        <footnote> 
+          <para>Subversion does not support
+            cross-repository copying.  When using URLs with <command>svn
+            copy</command> or <command>svn move</command>, you can only
+            copy items within the same repository.</para>
         </footnote>
         It's an easier procedure, because it doesn't require you to
         check out a large mirror of the repository.  In fact, this
@@ -234,7 +235,7 @@ Committed revision 341.
         all.</para>
       
       <figure id="svn-ch4-dia3">
-        <title>Repository With New Copy</title>
+        <title>Repository with new copy</title>
         <graphic fileref="images/ch04dia3.png"/>
       </figure>
       
@@ -320,11 +321,11 @@ Checked out revision 341.
         </listitem>
       </itemizedlist>
 
-      <para>There are now two independent lines of development
-        happening on <filename>integer.c</filename>:</para>
+      <para>There are now two independent lines of development, shown
+        in Figure 4-4, happening on <filename>integer.c</filename>.</para>
 
       <figure id="svn-ch4-dia4">
-        <title>The Branching of One File's History</title>
+        <title>The branching of one file's history</title>
         <graphic fileref="images/ch04dia4.png"/>
       </figure>
 
@@ -418,7 +419,7 @@ Changed paths:
     </sect2>
 
     <sect2 id="svn-ch-4-sect-2.3">
-      <title>The Moral of the Story</title> 
+      <title>The Key Concepts Behind Branches</title> 
 
       <para>There are two important lessons that you should remember
       from this section.</para>
@@ -1016,7 +1017,7 @@ Merged my-calc-branch changes r341:405 into the trunk.
       <para>Aha!  Since all branch-changes that happened between
         revisions 341 and 405 were previously merged to the trunk as
         revision 406, you now know that you want to merge only the
-        branch changes after that: by comparing revisions 406 and
+        branch changes after that&mdash;by comparing revisions 406 and
         <literal>HEAD</literal>.</para>
 
 <screen>

@@ -27,10 +27,11 @@
       <firstterm>clients</firstterm> connect to the repository, and
       then read or write to these files.  By writing data, a client
       makes the information available to others; by reading data, the
-      client receives information from others.</para>
+      client receives information from others.  Figure 2-1
+      illustrates this.</para>
 
     <figure id="svn-ch2-dia1">
-      <title>A Typical Client/Server System</title>
+      <title>A typical client/server system</title>
       <graphic fileref="images/ch02dia1.png"/>
     </figure>
     
@@ -70,22 +71,23 @@
         accidentally overwrite each other's changes in the
         repository.</para>
 
-      <para>Consider this scenario: suppose we have two co-workers,
-        Harry and Sally.  They each decide to edit the same repository
-        file at the same time.  If Harry saves his changes to the
-        repository first, then it's possible that (a few moments
-        later) Sally could accidentally overwrite them with her own
-        new version of the file.  While Harry's version of the file
-        won't be lost forever (because the system remembers every
-        change), any changes Harry made <emphasis>won't</emphasis> be
-        present in Sally's newer version of the file, because she
-        never saw Harry's changes to begin with.  Harry's work is
-        still effectively lost&mdash;or at least missing from the
-        latest version of the file&mdash;and probably by accident.
-        This is definitely a situation we want to avoid!</para>
+      <para>Consider the scenario shown in Figure 2-2.  Suppose we
+        have two co-workers, Harry and Sally.  They each decide to
+        edit the same repository file at the same time.  If Harry
+        saves his changes to the repository first, then it's possible
+        that (a few moments later) Sally could accidentally overwrite
+        them with her own new version of the file.  While Harry's
+        version of the file won't be lost forever (because the system
+        remembers every change), any changes Harry made
+        <emphasis>won't</emphasis> be present in Sally's newer version
+        of the file, because she never saw Harry's changes to begin
+        with.  Harry's work is still effectively lost&mdash;or at
+        least missing from the latest version of the file&mdash;and
+        probably by accident.  This is definitely a situation we want
+        to avoid!</para>
 
       <figure id="svn-ch2-dia2">
-        <title>The Problem to Avoid</title>
+        <title>The problem to avoid</title>
         <graphic fileref="images/ch02dia2.png"/>
       </figure>
 
@@ -96,20 +98,20 @@
       
       <para>Many version control systems use a
         <firstterm>lock-modify-unlock</firstterm> model to address
-        this problem, which is a very simple solution.  In such a
-        system, the repository allows only one person to change a file
-        at a time.  First Harry must <quote>lock</quote> the file
-        before he can begin making changes to it.  Locking a file is a
-        lot like borrowing a book from the library; if Harry has
-        locked a file, then Sally cannot make any changes to it.  If
-        she tries to lock the file, the repository will deny the
-        request.  All she can do is read the file, and wait for Harry
-        to finish his changes and release his lock.  After Harry
-        unlocks the file, his turn is over, and now Sally can take her
-        turn by locking and editing.</para>
+        this problem.  In such a system, the repository allows only
+        one person to change a file at a time.  First Harry must
+        <quote>lock</quote> the file before he can begin making
+        changes to it.  Locking a file is a lot like borrowing a book
+        from the library; if Harry has locked a file, then Sally
+        cannot make any changes to it.  If she tries to lock the file,
+        the repository will deny the request.  All she can do is read
+        the file, and wait for Harry to finish his changes and release
+        his lock.  After Harry unlocks the file, his turn is over, and
+        now Sally can take her turn by locking and editing.  Figure
+        2-3 demonstrates this simple solution.</para>
       
       <figure id="svn-ch2-dia3">
-        <title>The Lock-Modify-Unlock Solution</title>
+        <title>The lock-modify-unlock solution</title>
         <graphic fileref="images/ch02dia3.png"/>
       </figure>
       
@@ -184,15 +186,16 @@
         any new changes from the repository into his working copy of
         file A.  Chances are that Sally's changes don't overlap with
         his own; so once he has both sets of changes integrated, he
-        saves his working copy back to the repository.</para>
+        saves his working copy back to the repository.  Figures 2-4
+        and 2-5 show this process.</para>
 
       <figure id="svn-ch2-dia4">
-        <title>The Copy-Modify-Merge Solution</title>
+        <title>The copy-modify-merge solution</title>
         <graphic fileref="images/ch02dia4.png"/>
       </figure>
       
       <figure id="svn-ch2-dia5">
-        <title>&hellip;Copy-Modify-Merge Continued</title>
+        <title>The copy-modify-merge solution (continued)</title>
         <graphic fileref="images/ch02dia5.png"/>
       </figure>
 
@@ -277,17 +280,15 @@
         a particular subtree of the repository.</para>
       
       <para>For example, suppose you have a repository that contains
-        two software projects.</para>
+        two software projects, <literal>paint</literal> and
+        <literal>calc</literal>.  Each project lives in its own
+        top-level subdirectory, as shown in Figure 2-6.</para>
 
       <figure id="svn-ch2-dia6">
-        <title>The Repository's Filesystem</title>
+        <title>The repository's filesystem</title>
         <graphic fileref="images/ch02dia6.png"/>
       </figure>
       
-      <para>In other words, the repository's root directory has two
-        subdirectories: <filename>paint</filename> and
-        <filename>calc</filename>.</para>
-
       <para>To get a working copy, you must <firstterm>check
         out</firstterm> some subtree of the repository.  (The term
         <quote>check out</quote> may sound like it has something to do
@@ -321,8 +322,8 @@ Makefile  integer.c  button.c  .svn/
         <para>Subversion repositories can be accessed through many
           different methods&mdash;on local disk, or through various
           network protocols.  A repository location, however, is
-          always a URL.  The URL schema indicates the access
-          method:</para>
+          always a URL.  Table 2-1 describes how different URL
+          schemas map to the available access methods.</para>
 
         <table id="svn-ch-02-table-1">
           <title>Repository Access URLs</title>
@@ -486,18 +487,17 @@ U button.c
         repository is numbered zero, and consists of nothing but an
         empty root directory.</para>
       
-      <para>A nice way to visualize the repository is as a series of
-        trees.  Imagine an array of revision numbers, starting at 0,
-        stretching from left to right.  Each revision number has a
+      <para>Figure 2-7 illustrates a nice way to visualize the
+        repository.  Imagine an array of revision numbers, starting at
+        0, stretching from left to right.  Each revision number has a
         filesystem tree hanging below it, and each tree is a
         <quote>snapshot</quote> of the way the repository looked after
         each commit. </para>
       
       <figure id="svn-ch2-dia7">
-        <title>The Repository</title>
+        <title>The repository</title>
         <graphic fileref="images/ch02dia7.png"/>
       </figure>
-
 
       <sidebar>
         <title>Global Revision Numbers</title>

@@ -267,7 +267,7 @@
         a typical representation of a tree as exactly that.</para>
 
       <figure id="svn-ch8-sect1.1-dia1">
-        <title>Files and Directories in Two Dimensions</title>
+        <title>Files and directories in two dimensions</title>
         <graphic fileref="images/ch08dia1.png"/>
       </figure>
 
@@ -293,7 +293,7 @@
         added dimension to the Subversion filesystem universe.</para>
 
       <figure id="svn-ch8-sect1.1-dia2">
-        <title>Revisioning Time&mdash;the Third Dimension!</title>
+        <title>Revisioning time&mdash;the third dimension!</title>
         <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
@@ -932,13 +932,13 @@ The following repository access (RA) modules are available:
         flexible and easy to use than C or C++.  The sort of
         high-level datatypes and context-driven type checking provided
         by these languages are often better at handling information
-        that comes from users.  As you know, only a human can botch up
-        the input to a program as well as they do, and the
-        scripting-type language simply handles that misinformation more
-        gracefully.  Of course, often that flexibility comes at the
-        cost of performance.  That is why using a tightly-optimized,
-        C-based interface and library suite, combined with a powerful,
-        flexible binding language is so appealing.</para>
+        that comes from users.  As you know, humans are proficient at
+        botching up input to a program, and scripting languages tend
+        to handle that misinformation more gracefully.  Of course,
+        often that flexibility comes at the cost of performance.  That
+        is why using a tightly-optimized, C-based interface and
+        library suite, combined with a powerful, flexible binding
+        language is so appealing.</para>
 
       <para>Let's look at an example that uses Subversion's Python
         SWIG bindings.  Our example will do the same thing as our last
