@@ -106,8 +106,6 @@ BuildRequires:	autoconf2.5 >= 2.50
 %if %{create_javahl}
 BuildRequires:	%{automake_rpm} >= 1.7.2
 %endif
-BuildRequires:	bison
-BuildRequires:	flex
 BuildRequires:	libldap2-devel
 BuildRequires:	libsasl2-devel
 BuildRequires:  krb5-devel

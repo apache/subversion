@@ -29,6 +29,28 @@ Overall Book Comments
                 --- c   (revision 10)
                 +++ c   (working copy)
 
+Chapter 3
+
+        #1) ghudson (also affects ch 9 a little bit)
+
+            The new date parser requires a change to the doc formats.
+            A minimal patch can be found in issue #408.
+
+            The new date parser accepts three varieties kinds of
+	    formats.  The first is very nicely documented by the W3C
+	    in <http://www.w3.org/TR/NOTE-datetime>; we allow the time
+	    zone designator to be missing, in which case we use system
+	    local time.  The second variety is just like the first
+	    variety, except the punctuation characters '-' and ':' are
+	    omitted.  The third variety is what we use in the output
+	    of "svn log", and can look like:
+
+              YYYY-MM-DD hh:mm[:ss[.uuuuuu]][ +hh[:mm]]
+
+            There can be fewer than six digits in the microseconds
+	    designation, and of course the time zone designation may
+	    be "-hh[:mm]" instead of "+hh[:mm]".
+
 Chapter 5
 
     Section svn-ch-5-sect-2.1
