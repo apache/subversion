@@ -1317,10 +1317,8 @@ sandwich.txt.r2
 
       <screen>
 $ svn commit --message "Add a few more things"
-subversion/libsvn_client/commit.c:654: (apr_err=155015, src_err=0)
 svn: A conflict in the working copy obstructs the current operation
 svn: Commit failed (details follow):
-subversion/libsvn_client/commit_util.c:180: (apr_err=155015, src_err=0)
 svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
       </screen>
 
@@ -1581,10 +1579,8 @@ $
 <screen>
 $ svn commit --message "Add another rule"
 Sending        rules.txt
-subversion/libsvn_client/commit.c:655: (apr_err=160028, src_err=0)
 svn: Transaction is out of date
 svn: Commit failed (details follow):
-subversion/libsvn_repos/commit.c:112: (apr_err=160028, src_err=0)
 svn: out of date: `rules.txt' in txn `g'
 $
 </screen>
