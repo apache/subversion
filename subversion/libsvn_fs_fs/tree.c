@@ -1980,7 +1980,8 @@ svn_fs_fs__commit_txn (const char **conflict_p,
             *conflict_p = conflict->data;
           return err;
         }
-      
+      txn->base_rev = youngish_rev;
+
       /* Try to commit. */
       err = svn_fs_fs__commit (&new_rev, fs, txn, pool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
