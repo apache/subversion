@@ -39,10 +39,18 @@ svn_jni_item__create(JNIEnv *env, jobject jpath, jobject jstatus,
 
 /* svn_jni_string */
 svn_string_t *
-svn_jni_string__jstring_to_svn_string(JNIEnv *env, 
-				      jstring jstr, 
-				      jboolean *hasException,
-				      apr_pool_t *pool);
+svn_jni_string__j_to_svn(JNIEnv *env, 
+                         jstring jstr, 
+                         jboolean *hasException,
+                         apr_pool_t *pool);
+jstring
+svn_jni_string__c_to_j(JNIEnv *env, 
+                       char *string, 
+                       jboolean *hasException);
+jstring
+svn_jni_string__svn_to_j(JNIEnv *env, 
+                         svn_string_t *string, 
+                         jboolean *hasException);
 
 /* svn_jni_misc */
 void

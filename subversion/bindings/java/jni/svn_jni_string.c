@@ -20,21 +20,17 @@
 #include <jni.h>
 #include <svn_string.h>
 
-/*
- * utility function to convert a java string
- * to a subversion native string in UTF-8 encoding
- */   
 svn_string_t *
-svn_jni_string__jstring_to_svn_string(JNIEnv *env, 
-			       jstring jstr, 
-			       jboolean *hasException,
-			       apr_pool_t *pool)
+svn_jni_string__j_to_svn(JNIEnv *env, 
+                         jstring jstr, 
+                         jboolean *hasException,
+                         apr_pool_t *pool)
 {
   svn_string_t *result = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "svn_jni__jstring_to_svn_string\n");
+  fprintf(stderr, "svn_jni_string__j_to_svn\n");
 #endif
   
   /* make sure there is enough memory left for 
@@ -97,7 +93,45 @@ svn_jni_string__jstring_to_svn_string(JNIEnv *env,
   return result;
 }
 
+jstring
+svn_jni_string__c_to_j(JNIEnv *env, 
+                       char *string, 
+                       jboolean *hasException)
+{
+  jboolean _hasException = JNI_FALSE;
+  jstring result = NULL;
 
-/* local variables:
+  result = (*env)->NewStringUTF(env, string);
+
+  if( (*env)->ExceptionCheck(env) )
+    {
+      _hasException = JNI_TRUE;
+    }
+
+  if( hasException != NULL )
+    {
+      (*hasException) = _hasException;
+    }
+
+  return result;
+}
+
+jstring
+svn_jni_string__svn_to_j(JNIEnv *env, 
+                         svn_string_t *string, 
+                         jboolean *hasException)
+{
+  return svn_jni_string__c_to_j(env, (char*)string->data, 
+                                hasException);
+}
+
+/* 
+ * local variables:
  * eval: (load-file "../../../svn-dev.el")
- * end: */
+ * end: 
+ */
+
+
+
+
+
