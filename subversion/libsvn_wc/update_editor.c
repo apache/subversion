@@ -389,16 +389,32 @@ complete_directory (struct edit_baton *eb,
       name = key;
       current_entry = val;
       
-      /* Any entry still marked as deleted can now be removed -- if it
-         wasn't undeleted by the update, then it shouldn't stay in the
-         updated working set.  But an absent entry might have been
-         reconfirmed as absent, and the way we can tell is by looking
-         at its revision number: a revision number different from the
-         target revision of the update means the update never
-         mentioned the item, so the entry should be removed. */
-      if ((current_entry->deleted)
-          || (current_entry->absent
-              && (current_entry->revision != *(eb->target_revision))))
+      /* Any entry still marked as deleted (and not schedule add) can now
+         be removed -- if it wasn't undeleted by the update, then it
+         shouldn't stay in the updated working set.  Schedule add items
+         should remain.
+      */
+      if (current_entry->deleted)
+        {
+          if (current_entry->schedule != svn_wc_schedule_add)
+            svn_wc__entry_remove (entries, name);
+          else
+            {
+              svn_wc_entry_t tmpentry;
+              tmpentry.deleted = FALSE;
+              SVN_ERR (svn_wc__entry_modify (adm_access, current_entry->name,
+                                             &tmpentry,
+                                             SVN_WC__ENTRY_MODIFY_DELETED,
+                                             FALSE, subpool));
+            }
+        }
+      /* An absent entry might have been reconfirmed as absent, and the way
+         we can tell is by looking at its revision number: a revision
+         number different from the target revision of the update means the
+         update never mentioned the item, so the entry should be
+         removed. */
+      else if (current_entry->absent
+               && (current_entry->revision != *(eb->target_revision)))
         {
           svn_wc__entry_remove (entries, name);
         }
