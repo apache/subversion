@@ -5,7 +5,7 @@
 # set make_*_check to 0.
 %define make_ra_local_check 1
 %define make_ra_svn_check 1
-%define make_ra_dav_check 0
+%define make_ra_dav_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -13,8 +13,9 @@ Release: @RELEASE@
 Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
-Source0: subversion-%{version}-%{release}.tar.gz
-Source1: subversion.conf
+SOURCE0: subversion-%{version}-%{release}.tar.gz
+SOURCE1: subversion.conf
+SOURCE2: httpd.davcheck.conf
 Patch0: install.patch
 Patch1: hang.patch
 Vendor: Summersoft
@@ -24,9 +25,10 @@ Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
+BuildPreReq: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
 BuildPreReq: httpd-apr-devel >= %{apache_version}
-BuildPreReq: autoconf253 >= 2.53
+BuildPreReq: autoconf >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
@@ -90,6 +92,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Mar 01 2003 David Summers <david@summersoft.fay.ar.us> 0.18.1-5173
+- Enabled RA_DAV checking.
+  Now requires httpd package to build because of RA_DAV tests.
+
 * Sat Jan 18 2003 David Summers <david@summersoft.fay.ar.us> 0.16.1-4433
 - Created tools package to hold the tools.
 
@@ -289,7 +295,13 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 
 %if %{make_ra_dav_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-make davcheck
+killall httpd || true
+sleep 1
+sed -e "s;@SVNDIR@;`pwd`;" < %{SOURCE2} > httpd.conf
+/usr/sbin/httpd -f `pwd`/httpd.conf
+sleep 1
+make check BASE_URL='http://localhost:15835'
+killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 
