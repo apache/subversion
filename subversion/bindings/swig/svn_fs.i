@@ -75,6 +75,10 @@
     apr_array_header_t **names_p
 }
 
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
+
 /* -----------------------------------------------------------------------
    except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
 */

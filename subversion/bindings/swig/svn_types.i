@@ -330,8 +330,12 @@
   }
 
 /* -----------------------------------------------------------------------
-   svn_stream interpolability with io handle
+   svn_stream_t interoperability with language native io handles
 */
+
+%typemap(python, in) svn_stream_t *WRAPPED_STREAM {
+    $1 = svn_swig_py_make_stream ($input, _global_pool);
+}
 
 %typemap(perl5, in) svn_stream_t * {
     svn_swig_pl_make_stream (&$1, $input);
