@@ -2275,8 +2275,10 @@ svn_fs_commit_txn (const char **conflict_p,
   apr_pool_t *pool = svn_fs__txn_pool (txn);
   const char *txn_id;
 
-  /* Initialize returned revision number to an invalid value. */
+  /* Initialize output params. */
   *new_rev = SVN_INVALID_REVNUM;
+  if (conflict_p)
+    *conflict_p = NULL;
 
   /* Get the transaction's name.  We'll need it later. */
   SVN_ERR (svn_fs_txn_name (&txn_id, txn, pool));
