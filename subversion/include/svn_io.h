@@ -636,6 +636,11 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
                   apr_pool_t *pool);
 
 
+/** Wrapper for @c apr_file_close(), which see. */
+svn_error_t *
+svn_io_file_close (apr_file_t *file, apr_pool_t *pool);
+
+
 /** Wrapper for @c apr_stat(), which see.  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_stat (apr_finfo_t *finfo, const char *fname,
