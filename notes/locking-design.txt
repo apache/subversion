@@ -1,0 +1,46 @@
+
+                          A design for locking.
+                          ---------------------
+        (...in progress, based on ongoing discussions on dev@ list.  
+                           Please hack on this.)
+
+
+A "lock" means a (possibly shared) write-lock on a file or directory.
+When a file or directory is locked, only the lock-holder(s) may commit
+a change to it.
+
+   - In the case of files, "commit a change" means changing a file's
+     text or props, deleting it, or moving it.
+
+   - In the case of directories, "commit a change" means changing the
+     directory's props or entries-list, deleting it, or moving it.
+     This also applies recursively, to all child directories & files.
+
+
+
+Repository Implementation:
+--------------------------
+
+* Implement in libsvn_repos, not libsvn_fs.  Just like the hooks
+  feature, locking is an external system overlaid on top of a
+  versioning filesystem.
+
+     - Create new pre- and post- lock/unlock commit hooks.
+
+     - Wrap all of the "write" fs functions with new svn_repos.h
+       functions.  Make everything call these.
+
+          (*** It might be easier to wrap *all* fs functions -- both
+          read and write -- because then we'd open the door to
+          implementing 'read hooks'.)
+
+* Locks table
+
+   How should this be implemented?  As a separate BDB table managed by
+   libsvn_repos?  That would certainly scale, but then it might create
+   NFS problems, etc.  Another idea is to use an XML file (parsed once
+   and stored in the svn_repos_t), or even a human-editable INI file,
+   like our other configs.   This last option might be very friendly
+   for admins who want to peruse and/or hand-tweak locks.
+
+
