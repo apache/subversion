@@ -334,7 +334,7 @@ harvest_committables (apr_hash_t *committables,
           const char *name_uri = NULL;
           const char *full_path = NULL;
           const char *this_url = url;
-          const char *this_cf_url = NULL;
+          const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_wc_adm_access_t *dir_access = adm_access;
 
           /* Get the next entry.  Name is an entry name; value is an
@@ -411,38 +411,34 @@ svn_client__harvest_committables (apr_hash_t **committables,
 {
   int i = 0;
   svn_wc_adm_access_t *dir_access;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
 
-  /* ### Would be nice to use an iteration pool here, but need to
-     first look into lifetime issues w/ anything passed to
-     harvest_committables() and possibly stored by it. */ 
   do
     {
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
       const char *url;
-      const char *target = apr_pstrdup (pool,
-                                        svn_wc_adm_access_path (parent_dir));
+      const char *target;
 
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_DIR for a single
          iteration. */
-      if (targets->nelts)
-        {
-          target = svn_path_join (svn_wc_adm_access_path (parent_dir),  
-                                  (((const char **) targets->elts)[i]),
-                                  pool);
-        }
+      target = svn_path_join_many (subpool, 
+                                   svn_wc_adm_access_path (parent_dir),  
+                                   targets->nelts 
+                                     ? (((const char **) targets->elts)[i]) 
+                                     : NULL,
+                                   NULL);
 
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, parent_dir,
-                                          target, pool));
-      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, pool));
+                                          target, subpool));
+      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
       if (! entry)
-        return svn_error_create 
-          (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, target);
+        return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, target);
       
       if (! entry->url)
         {
@@ -461,7 +457,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                target);
 
           /* Check for WC-root-ness. */
-          SVN_ERR (svn_wc_is_wc_root (&wc_root, target, adm_access, pool));
+          SVN_ERR (svn_wc_is_wc_root (&wc_root, target, adm_access, subpool));
           if (wc_root)
             return svn_error_createf 
               (SVN_ERR_ILLEGAL_TARGET, 0, NULL, 
@@ -471,10 +467,11 @@ svn_client__harvest_committables (apr_hash_t **committables,
           /* See if the parent is under version control (corruption if it
              isn't) and possibly scheduled for addition (illegal target if
              it is). */
-          svn_path_split (target, &parent, &base_name, pool);
+          svn_path_split (target, &parent, &base_name, subpool);
           SVN_ERR (svn_wc_adm_retrieve (&parent_access, parent_dir, parent,
-                                        pool));
-          SVN_ERR (svn_wc_entry (&p_entry, parent, parent_access, FALSE, pool));
+                                        subpool));
+          SVN_ERR (svn_wc_entry (&p_entry, parent, parent_access, 
+                                 FALSE, subpool));
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, 0, NULL, 
@@ -489,7 +486,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                target);
           
           /* Manufacture a URL for this TARGET. */
-          url = svn_path_url_add_component (p_entry->url, base_name, pool);
+          url = svn_path_url_add_component (p_entry->url, base_name, subpool);
         }
       else
         url = entry->url;
@@ -508,16 +505,19 @@ svn_client__harvest_committables (apr_hash_t **committables,
       /* Handle our TARGET. */
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, parent_dir,
                                     (entry->kind == svn_node_dir
-                                     ? target
-                                     : svn_path_dirname (target, pool)),
-                                    pool));
+                                       ? target
+                                       : svn_path_dirname (target, subpool)),
+                                    subpool));
       SVN_ERR (harvest_committables (*committables, target, dir_access,
                                      url, NULL, entry, NULL, FALSE, FALSE, 
-                                     nonrecursive, pool));
+                                     nonrecursive, subpool));
 
       i++;
+      svn_pool_clear (subpool);
     }
   while (i < targets->nelts);
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
