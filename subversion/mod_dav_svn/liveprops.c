@@ -471,7 +471,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
           unsigned char digest[MD5_DIGESTSIZE];
-          unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
+          static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
 
           serr = svn_fs_file_md5_checksum(digest,
                                           resource->info->root.root,

@@ -987,6 +987,9 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       const char *hex_digest;
 
       /* Only request a checksum if we're getting the file contents. */
+      /* ### We should arrange for the checksum to be returned in the
+         svn_ra_dav__get_baseline_info() call above; that will prevent
+         the extra round trip, at least some of the time. */
       err = svn_ra_dav__get_one_prop(&expected_checksum,
                                      ras->sess,
                                      final_url,

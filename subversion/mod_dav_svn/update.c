@@ -283,7 +283,7 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
       if (! is_dir)
         {
           unsigned char digest[MD5_DIGESTSIZE];
-          unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
+          static const unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
           const char *real_path = get_real_fs_path(child, pool);
 
           SVN_ERR (svn_fs_file_md5_checksum
@@ -306,15 +306,6 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
         }
       else
         {
-          /* ### Notice that here, the add-foo xml tag is
-           * self-closing, but in the above (no copy history) case, it
-           * is not.  Wherefore is this thus?  We don't know.  We
-           * suspect it is a bug, and that the only reason it has
-           * never been stimulated is because we're not asking
-           * dir_delta to send copy history right now -- so the copy
-           * case has never been invoked :-).
-           */
-
           const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
           const char *prefix
             = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
@@ -325,7 +316,7 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
 
           const char *elt = insert_checksum_attributes(prefix,
                                                        NULL, hex_digest,
-                                                       "/>", pool);
+                                                       ">", pool);
           send_xml(child->uc, "%s" DEBUG_CR, elt);
         }
     }
