@@ -85,7 +85,7 @@ svn_cl__import (apr_getopt_t *os,
   /* Get a repository url. */
   if (targets->nelts < 1)
     return svn_error_create
-      (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "repository url required when importing");
   else
     url = ((svn_string_t **) (targets->elts))[0];
@@ -103,7 +103,7 @@ svn_cl__import (apr_getopt_t *os,
     new_entry = ((svn_string_t **) (targets->elts))[2];
   else
     return svn_error_create
-      (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "too many arguments to import command");
   
   SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
