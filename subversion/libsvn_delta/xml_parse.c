@@ -1485,9 +1485,7 @@ svn_delta_xml_auto_parse (svn_stream_t *source,
     if (err)
       return svn_error_quick_wrap (err, "svn_delta_parse: can't read source");
 
-    /* How many bytes were actually read into buf?  According to the
-       definition of an svn_read_fn_t, we should keep reading
-       until the reader function says that 0 bytes were read. */
+    /* We're done if the source stream returned zero bytes read. */
     done = (len == 0);
 
     /* Push these bytes at the parser */
