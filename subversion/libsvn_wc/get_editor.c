@@ -582,15 +582,31 @@ add_or_replace_file (svn_string_t *name,
                            parent_dir_baton->pool,
                            NULL);
 
-  if (err && (err->apr_err != SVN_ERR_WC_ENTRY_NOT_FOUND))
-    return err;
-  else if ((! adding) && err)
-    return svn_error_quick_wrap (err, "trying to replace non-versioned file");
-  else if (adding && !err)
-    return svn_error_create (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
-                             parent_dir_baton->pool,
-                             "trying to add versioned file");
-
+  if (adding)
+    {
+      /* When adding, the above operation should return an
+         SVN_ERR_WC_ENTRY_NOT_FOUND error, indicating that the file
+         isn't already under version control.  */
+      if (! err)
+        return svn_error_create (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
+                                 parent_dir_baton->pool,
+                                 "trying to add versioned file");
+      else if (err->apr_err != SVN_ERR_WC_ENTRY_NOT_FOUND)
+        return err;
+    }
+  else
+    {
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_ENTRY_NOT_FOUND)
+            return
+              svn_error_quick_wrap
+              (err, "trying to replace non-versioned file");
+          else
+            return err;
+        }
+    }
+        
   /* Make sure we've got a working copy to put the file in. */
   /* kff todo: need stricter logic here */
   err = svn_wc__check_wc (parent_dir_baton->path, parent_dir_baton->pool);
