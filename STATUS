@@ -108,3 +108,9 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r11701
+    Fix pool usage in svn_io_remove_dir.
+    Justification:
+      Saves at least 100 MB on large fsfs commits.
+    Votes:
+      +1: epg
