@@ -42,6 +42,10 @@
 apr_pool_t *pool;
 
 
+#define NOT_FIXED_YET
+
+#ifndef NOT_FIXED_YET
+
 /*-------------------------------------------------------------------*/
 
 /** Helper routines. **/
@@ -106,7 +110,6 @@ create_fs_and_repos (svn_fs_t **fs_p, const char *name)
 
 /* Utility:  return the vtable for ra_local.  */
 static svn_error_t *
-
 get_ra_local_plugin (svn_ra_plugin_t **plugin)
 {
   void *ra_baton;
@@ -119,7 +122,6 @@ get_ra_local_plugin (svn_ra_plugin_t **plugin)
 
   return SVN_NO_ERROR;
 }
-
 
 
 /*-------------------------------------------------------------------*/
@@ -150,8 +152,6 @@ open_ra_session (const char **msg)
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 /* Discover the youngest revision in a repository.  */
@@ -187,6 +187,8 @@ get_youngest_rev (const char **msg)
 
   return SVN_NO_ERROR;
 }
+
+#endif /* ! NOT_FIXED_YET */
 
 #ifdef ENABLE_SPLIT_URL_TESTS
 
@@ -329,14 +331,14 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   split_url_test_1,
   split_url_test_2,
 #endif /* ENABLE_SPLIT_URL_TESTS */
-#if 0
+#ifndef NOT_FIXED_YET
   open_ra_session,
   get_youngest_rev,
-#endif /* 0 */
+#endif /* NOT_FIXED_YET */
   0
 };
 
-
+#undef NOT_FIXED_YET
 
 
 
