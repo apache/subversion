@@ -111,9 +111,6 @@ AC_DEFUN(SVN_FIND_SWIG,
       dnl Newer versions of SWIG have deprecated the -c "do not
       dnl include SWIG runtime functions (used for creating multi-module
       dnl packages)" in favor of the -noruntime flag.
-      dnl ### I'm not positive when -noruntime became available.  A
-      dnl ### Google search indicates that 1.3.20 had it, but I don't
-      dnl ### have that installed to test with. (-dlr)
       if test "$SWIG_VERSION" -ge "103020"; then
           SWIG_NORUNTIME_FLAG='-noruntime'
       else
