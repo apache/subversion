@@ -45,3 +45,10 @@ Candidate changes:
     Justification: The old ones weren't portable and caused problems on Win32.
     Votes:
       +1: breser
+
+  * r9439
+    Update many references to neon 0.24.5.
+    Justification: 0.24.4 has a security issue.  See
+    http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
+    Votes:
+      +1: blair
