@@ -303,7 +303,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 {
   apr_bucket_brigade *bb;
   svn_fs_root_t *committed_root;
-  svn_fs_root_t *previous_root;
   svn_error_t *serr;
   const char *vcc;
   char revbuf[20];      /* long enough for SVN_REVNUM_T_FMT */
@@ -317,13 +316,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not open the FS root for the "
                                  "revision just committed.");
-    }
-  serr = svn_fs_revision_root(&previous_root, repos->fs, new_rev - 1, pool);
-  if (serr != NULL)
-    {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the FS root for the "
-                                 "previous revision.");
     }
 
   bb = apr_brigade_create(pool, output->c->bucket_alloc);
@@ -429,15 +421,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
       mrc.root = committed_root;
       mrc.repos = repos;
       
-      serr = svn_repos_dir_delta(previous_root, "/",
-                                 NULL,      /* ### should fix */
-                                 committed_root, "/",
-                                 editor, &mrc, 
-                                 FALSE, /* don't bother with text-deltas */
-                                 TRUE, /* Do recurse into subdirectories */
-                                 FALSE, /* Do not allow entry props */
-                                 FALSE, /* Do not ignore ancestry */
-                                 pool);
+      serr = svn_repos_replay(committed_root, editor, &mrc, pool);
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
