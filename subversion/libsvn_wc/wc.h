@@ -428,8 +428,9 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  *      entry's STATE, and unset bits in STATE will result in no
  *      change to the corresponding bit in entry's state. 
  * 
- * If TIMESTAMP is 0, the entry's timestamp will not be changed, else
- * it will be set to TIMESTAMP.
+ * If TEXT_TIME is 0, the entry's textual timestamp will not be
+ * changed, else it will be set to TEXT_TIME.  Analogous behavior for
+ * PROP_TIME for the property timestamp.
  * 
  * ATTS is hash of attributes to be changed or added.  The keys are
  * (const char *) and the values are (svn_string_t *).  These
@@ -440,8 +441,7 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
  * even if they also appear in ATTS.
  * 
  * NOTE: when you call this function, the entries file will be read,
- * tweaked, and written back out.
- */
+ * tweaked, and written back out.  */
 svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
                                        svn_revnum_t revision,
