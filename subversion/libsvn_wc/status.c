@@ -520,6 +520,7 @@ get_dir_status (apr_hash_t *statushash,
                 const char *path,
                 const svn_wc_entry_t *parent_entry,
                 svn_wc_adm_access_t *adm_access,
+                apr_array_header_t *ignores,
                 svn_boolean_t descend,
                 svn_boolean_t get_all,
                 svn_boolean_t no_ignore,
@@ -529,14 +530,10 @@ get_dir_status (apr_hash_t *statushash,
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  apr_array_header_t *ignores = NULL;
   const svn_wc_entry_t *dir_entry;
 
   /* Load entries file for the directory into the requested pool. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-
-  /* Read the default ignores from the config files. */
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
 
   /* Add the unversioned items to the status output. */
   SVN_ERR (add_unversioned_items (path, adm_access, entries, statushash,
@@ -619,8 +616,8 @@ get_dir_status (apr_hash_t *statushash,
                   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
                                                 fullpath, pool));
                   SVN_ERR (get_dir_status (statushash, fullpath, dir_entry,
-                                           dir_access, descend, get_all,
-                                           no_ignore, notify_func,
+                                           dir_access, ignores, descend,
+                                           get_all, no_ignore, notify_func,
                                            notify_baton, pool));
                 }
             }
@@ -686,6 +683,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       int wc_format_version;
       svn_boolean_t is_root;
       const svn_wc_entry_t *parent_entry;
+      apr_array_header_t *ignores;
 
       SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
 
@@ -709,8 +707,11 @@ svn_wc_statuses (apr_hash_t *statushash,
       else
         parent_entry = NULL;
 
+      /* Read the default ignores from the config files. */
+      SVN_ERR (svn_wc_get_default_ignores (&ignores, pool));
+
       SVN_ERR (get_dir_status(statushash, path, parent_entry, adm_access,
-                              descend, get_all, no_ignore,
+                              ignores, descend, get_all, no_ignore,
                               notify_func, notify_baton,
                               pool));
     }
