@@ -162,7 +162,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       const void *key;
       apr_ssize_t klen;
       void *val;
-      svn_wc_entry_t *current_entry; 
+      const svn_wc_entry_t *current_entry; 
       enum svn_node_kind *dirent_kind;
       svn_boolean_t missing = FALSE;
 
@@ -277,7 +277,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       else if (current_entry->kind == svn_node_dir && recurse)
         {
           svn_wc_adm_access_t *subdir_access;
-          svn_wc_entry_t *subdir_entry;
+          const svn_wc_entry_t *subdir_entry;
 
           if (missing)
             {
@@ -379,10 +379,10 @@ svn_wc_crawl_revisions (const char *path,
                         apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
-  svn_wc_entry_t *parent_entry = NULL;
+  const svn_wc_entry_t *parent_entry = NULL;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -572,7 +572,7 @@ svn_wc_transmit_text_deltas (const char *path,
 
       svn_stringbuf_t *checksum;
       const char *tb = svn_wc__text_base_path (path, FALSE, pool);
-      svn_wc_entry_t *ent;
+      const svn_wc_entry_t *ent;
       
       SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
       SVN_ERR (svn_io_file_checksum (&checksum, tb, pool));
@@ -640,7 +640,7 @@ svn_wc_transmit_text_deltas (const char *path,
 
 svn_error_t *
 svn_wc_transmit_prop_deltas (const char *path,
-                             svn_wc_entry_t *entry,
+                             const svn_wc_entry_t *entry,
                              const svn_delta_editor_t *editor,
                              void *baton,
                              const char **tempfile,

@@ -597,7 +597,7 @@ static svn_error_t *
 log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   svn_error_t *err = NULL;
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
@@ -656,6 +656,7 @@ log_do_committed (struct log_runner *loggy,
   const char *full_path;
   const char *pdir, *base_name;
   apr_hash_t *entries;
+  const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
   apr_time_t prop_time = 0; /* By default, don't override old stamp. */
@@ -682,11 +683,13 @@ log_do_committed (struct log_runner *loggy,
      creator was expecting.  */
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, loggy->adm_access, full_path,
                                       pool));
-  SVN_ERR (svn_wc_entry (&entry, full_path, adm_access, TRUE, pool));
-  if ((! entry) || ((! is_this_dir) && (entry->kind != svn_node_file)))
+  SVN_ERR (svn_wc_entry (&orig_entry, full_path, adm_access, TRUE, pool));
+  if ((! orig_entry)
+      || ((! is_this_dir) && (orig_entry->kind != svn_node_file)))
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, pool,
                               "log command for dir '%s' is mislocated", name);
 
+  entry = svn_wc_entry_dup (orig_entry, pool);
 
   /*** Handle the committed deletion case ***/
 
@@ -728,7 +731,8 @@ log_do_committed (struct log_runner *loggy,
          from revision control without screwing something else up. */
       else
         {         
-          svn_wc_entry_t *parentry, *tmpentry;
+          const svn_wc_entry_t *parentry;
+          svn_wc_entry_t tmp_entry;
 
           SVN_ERR (svn_wc_remove_from_revision_control (loggy->adm_access,
                                                         name, FALSE, pool));
@@ -744,12 +748,11 @@ log_do_committed (struct log_runner *loggy,
                  lie;  therefore, it must remember the file as being
                  'deleted' for a while.  Create a new, uninteresting
                  ghost entry:  */
-              tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
-              tmpentry->kind = svn_node_file;
-              tmpentry->deleted = TRUE;
-              tmpentry->revision = new_rev;
+              tmp_entry.kind = svn_node_file;
+              tmp_entry.deleted = TRUE;
+              tmp_entry.revision = new_rev;
               SVN_ERR (svn_wc__entry_modify
-                       (loggy->adm_access, name, tmpentry,
+                       (loggy->adm_access, name, &tmp_entry,
                         SVN_WC__ENTRY_MODIFY_REVISION
                         | SVN_WC__ENTRY_MODIFY_KIND
                         | SVN_WC__ENTRY_MODIFY_DELETED,
@@ -788,7 +791,7 @@ log_do_committed (struct log_runner *loggy,
           const void *key;
           apr_ssize_t klen;
           void *val;
-          svn_wc_entry_t *cur_entry; 
+          const svn_wc_entry_t *cur_entry; 
           svn_wc_adm_access_t *entry_access;
                   
           /* Get the next entry */
@@ -1241,7 +1244,8 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   if (svn_wc__adm_path_exists (svn_wc_adm_access_path (adm_access), 0, pool,
                                SVN_WC__ADM_KILLME, NULL))
     {
-      svn_wc_entry_t *thisdir_entry, *parent_entry, *tmpentry;
+      const svn_wc_entry_t *thisdir_entry, *parent_entry;
+      svn_wc_entry_t tmp_entry;
       SVN_ERR (svn_wc_entry (&thisdir_entry,
                              svn_wc_adm_access_path (adm_access), adm_access,
                              FALSE, pool));
@@ -1266,11 +1270,10 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
         
         if (thisdir_entry->revision > parent_entry->revision)
           {
-            tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
-            tmpentry->kind = svn_node_dir;
-            tmpentry->deleted = TRUE;
-            tmpentry->revision = thisdir_entry->revision;
-            SVN_ERR (svn_wc__entry_modify (parent_access, bname, tmpentry,
+            tmp_entry.kind = svn_node_dir;
+            tmp_entry.deleted = TRUE;
+            tmp_entry.revision = thisdir_entry->revision;
+            SVN_ERR (svn_wc__entry_modify (parent_access, bname, &tmp_entry,
                                            SVN_WC__ENTRY_MODIFY_REVISION
                                            | SVN_WC__ENTRY_MODIFY_KIND
                                            | SVN_WC__ENTRY_MODIFY_DELETED,
@@ -1323,7 +1326,7 @@ svn_wc_cleanup (const char *path,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       apr_hash_this (hi, &key, NULL, &val);
       entry = val;

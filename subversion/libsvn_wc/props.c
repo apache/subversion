@@ -336,7 +336,7 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
                                        apr_pool_t *pool)
 {
   apr_hash_t *entries;
-  svn_wc_entry_t *the_entry;
+  const svn_wc_entry_t *the_entry;
 
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   the_entry = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
@@ -368,7 +368,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 {
   apr_status_t apr_err;
   apr_hash_t *ignored_conflicts;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
   apr_file_t *log_fp = NULL;
@@ -1294,7 +1294,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   const char *prop_path;
   const char *prop_base_path;
   svn_boolean_t different_filesizes, equal_timestamps;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* First, get the paths of the working and 'base' prop files. */

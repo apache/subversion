@@ -128,7 +128,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   apr_time_t wfile_time, entrytime = 0;
   const char *entryname;
   apr_hash_t *entries = NULL;
-  struct svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   enum svn_node_kind kind;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -372,7 +372,7 @@ svn_error_t *
 svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
                      const char *dir_path,
-                     svn_wc_entry_t *entry,
+                     const svn_wc_entry_t *entry,
                      apr_pool_t *pool)
 {
   const char *path;

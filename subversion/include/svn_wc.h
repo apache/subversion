@@ -457,11 +457,14 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 
 
-/* Set *ENTRY to an entry for PATH, allocated in POOL.  If
- * SHOW_DELETED is true, return the entry even if it's in 'deleted'
+/* Set *ENTRY to an entry for PATH, allocated in the access baton pool.
+ * If SHOW_DELETED is true, return the entry even if it's in 'deleted'
  * state.  If PATH is not under revision control, or if entry is
  * 'deleted', not scheduled for re-addition, and SHOW_DELETED is
  * false, then set *ENTRY to NULL.
+ *
+ * *ENTRY should not be modified, since doing so modifies the entries cache
+ * in ADM_ACCESS without changing the entries file on disk.
  *
  * If PATH is not a directory then ADM_ACCESS must be an access baton for
  * the parent directory of PATH.  To avoid needing to know whether PATH is
@@ -473,7 +476,7 @@ typedef struct svn_wc_entry_t
  * under revision control; and conversely, it is possible for PATH to
  * be present, but not under revision control.
  */
-svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
+svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
                            const char *path,
                            svn_wc_adm_access_t *adm_access,
                            svn_boolean_t show_deleted,
@@ -486,6 +489,13 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    
    Entries that are in a 'deleted' state (and not scheduled for
    re-addition) are not returned in the hash, unless SHOW_DELETED is true.
+
+   Important note: the ENTRIES hash is the entries cache in ADM_ACCESS and
+   so usually the hash itself, the keys and the values should be treated as
+   read-only.  If any of these are modified then it is the callers
+   resposibility to ensure that the entries file on disk is updated.  Treat
+   the hash values as type (const svn_wc_entry_t *) if you wish to avoid
+   accidental modification.
 
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
@@ -501,7 +511,8 @@ svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
 
 /* Return a duplicate of ENTRY, allocated in POOL.  No part of the new
    entry will be shared with ENTRY. */
-svn_wc_entry_t *svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
+svn_wc_entry_t *svn_wc_entry_dup (const svn_wc_entry_t *entry,
+                                  apr_pool_t *pool);
 
 
 /* Given a DIR_PATH under version control, decide if one of its
@@ -513,7 +524,7 @@ svn_wc_entry_t *svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                                   svn_boolean_t *prop_conflicted_p,
                                   const char *dir_path,
-                                  svn_wc_entry_t *entry,
+                                  const svn_wc_entry_t *entry,
                                   apr_pool_t *pool);
 
 /* Set *URL and *REV to the ancestor url and revision for PATH,
@@ -528,11 +539,9 @@ svn_error_t *svn_wc_get_ancestry (char **url,
 /* A callback vtable invoked by the generic entry-walker function. */
 typedef struct svn_wc_entry_callbacks_t
 {
-  /* An ENTRY was found at PATH.  
-     [Note: the pool which contains the entry will likely be freed
-     when return controls to the walker.] */
+  /* An ENTRY was found at PATH.  */
   svn_error_t *(*found_entry) (const char *path,
-                               svn_wc_entry_t *entry,
+                               const svn_wc_entry_t *entry,
                                void *walk_baton);
 
   /* ### add more callbacks as new callers need them. */
@@ -1690,7 +1699,7 @@ svn_error_t *svn_wc_transmit_text_deltas (const char *path,
    path to that file is returned in *TEMPFILE (so the caller can clean
    this up if it wishes to do so).  */
 svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
-                                          svn_wc_entry_t *entry,
+                                          const svn_wc_entry_t *entry,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
                                           const char **tempfile,

@@ -355,7 +355,7 @@ make_file_baton (const char *name,
 static svn_error_t *
 file_diff (struct dir_baton *dir_baton,
            const char *path,
-           svn_wc_entry_t *entry,
+           const svn_wc_entry_t *entry,
            svn_boolean_t added,
            apr_pool_t *pool)
 {
@@ -545,7 +545,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
     {
       const void *key;
       void *val;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
       const char *path;
       struct dir_baton *subdir_baton;
       const char *name;
@@ -650,7 +650,7 @@ delete_entry (svn_stringbuf_t *name_s,
   const char *name = name_s->data;  /* ### shim for old editor interface */
   struct dir_baton *pb = parent_baton;
   apr_pool_t *pool = svn_pool_create (pb->pool);
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   struct dir_baton *b;
   const char *path = svn_path_join (pb->path, name, pool);
   svn_wc_adm_access_t *adm_access;
@@ -923,7 +923,7 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path
@@ -1131,7 +1131,7 @@ svn_wc_diff (svn_wc_adm_access_t *anchor,
 {
   struct edit_baton *eb;
   struct dir_baton *b;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   const char *target_path;
   svn_wc_adm_access_t *adm_access;
 

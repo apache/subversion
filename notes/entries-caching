@@ -71,6 +71,8 @@ retrieved, one entry is extracted and modified.  I can work around
 this case, but it shows that we really need a more robust interface.
 Perhaps svn_wc_entries_read in its current form should be removed, and
 replaced by some functions returning const svn_wc_entry_t pointers.
+PARTIAL SOLUTION: Auditted all uses of svn_wc_entries_read and changed
+them to use const svn_wc_entry_t* where possible.
 
 At present access batons have a fairly strict interface, they must be
 passed directory names, and the code always "knows" whether it is
@@ -89,7 +91,13 @@ this will write directly to the entries file, just as it currently
 does.  Later on, modifications may be cached until an explicit
 entries_flush call is made.  I haven't yet determined whether this
 would be a significant benefit in terms of speed, or whether it would
-risk losing changes if a process is interrupted.
+risk losing changes if a process is interrupted.  There is a definite
+speed advantage to be had here, operations like checkout are still
+writing the entries file repeatedly, even if they don't need to
+read/parse it.  However delayed writing is tricky, if a command is
+interrupted the cache would not get flushed to disk.  Perhaps the
+solution is write lots of little files, and combine them during
+cleanup processing.
 
 The function svn_wc__entry_modify is written in terms of entries_read
 and entries_write and has already been converted to take an access
@@ -130,8 +138,12 @@ be filled and the truncated hash cache to be cleared.
 PROBLEM: memory use is going to be a problem, if we simply repeatedly
 allocate from the access baton pool as happens at present.  As the
 entries get updated we need to find a way to reuse the cache memory,
-otherwise memory usage for checkout is going to be proportional to the
-number of entries in a directory.
+otherwise memory usage for checkout is going to increase with the
+number of items in the working copy.
+
+PARTIAL SOLUTION: ensure that the access baton pool is used for as
+little as possible.  Use a "normal" pool for all allocations that do
+not need to be part of the cache.
 
 
 4. Access Baton Conversion
@@ -182,6 +194,6 @@ identify those places that are failing to use the log file mechanism.
 6. Status
    ------
 
-The access baton is now in place in the majority of places required to
-implement caching.  There is also a partial caching implementation in
-place.
+Entries caching to avoid repeated reading and parsing of the entries
+file is now in place.  The problem of delaying and combining writing
+to the file has not been addressed.

@@ -109,7 +109,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
     }
   else
     {
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       /* Use local working copy.  */
 
