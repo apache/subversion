@@ -41,6 +41,7 @@
 #define path_svnserve "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_svnversion "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_svndumpfilter "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_locale "C:\work\Subversion\binaries_svn\svn-win32\share\locale"
 ; APR
 #define path_libapr_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_libaprutil_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
