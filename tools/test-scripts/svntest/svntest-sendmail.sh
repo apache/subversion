@@ -3,7 +3,8 @@
 EXEC_PATH="`dirname $0`"
 BUILD_TYPE="$1"
 RA_TYPE="$2"
-BUILD_STAT="$3"
+FS_TYPE="$3"
+BUILD_STAT="$4"
 
 # Source the configuration file.
 . "$EXEC_PATH/svntest-config.sh"
@@ -15,6 +16,10 @@ REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 test -z "$RA_TYPE" || {
     LOG_FILE="$LOG_FILE.$RA_TYPE"
     TEST="$TEST $RA_TYPE"
+}
+test -z "$FS_TYPE" || {
+    LOG_FILE="$LOG_FILE.$FS_TYPE"
+    TEST="$TEST $FS_TYPE"
 }
 
 # The log file must exist
@@ -56,33 +61,37 @@ To: $TO
 EOF
     $CAT "$LOG_FILE" >> "$MAILFILE"
 else
-    TESTS_LOG_FILE="$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.log.gz"
+    NEXT_PART="NextPart-$$"
+    TESTS_LOG_FILE="$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.$FS_TYPE.log.gz"
     $CAT <<EOF > "$MAILFILE"
 From: $FROM
 Subject: svn rev $REV: $BUILD_STAT ($TEST)
 Reply-To: $REPLY_TO
 To: $TO
-Content-Type: multipart/mixed; boundary="------------NextPart"
+Content-Type: multipart/mixed; boundary="$NEXT_PART"
 
 This is a multi-part message in MIME format.
---------------NextPart
+------------$NEXT_PART
 Content-Type: text/plain; charset=us-ascii
 Content-Transfer-Encoding: 8bit
 
 EOF
     $CAT "$LOG_FILE" >> "$MAILFILE"
-    $CAT <<EOF >> "$MAILFILE"
---------------NextPart
+    if [ -f "$TESTS_LOG_FILE" ]
+    then
+        $CAT <<EOF >> "$MAILFILE"
+------------$NEXT_PART
 Content-Type: application/x-gzip; name="tests.log.gz"
 Content-Transfer-Encoding: base64
 Content-Disposition: inline; filename="tests.log.gz"
 
 EOF
-    $BASE64_E < "$TESTS_LOG_FILE" >> "$MAILFILE"
-    $RM_F "$TESTS_LOG_FILE"
-    $CAT <<EOF >> "$MAILFILE"
---------------NextPart--
+        $BASE64_E < "$TESTS_LOG_FILE" >> "$MAILFILE"
+        $RM_F "$TESTS_LOG_FILE"
+        $CAT <<EOF >> "$MAILFILE"
+------------$NEXT_PART--
 EOF
+    fi
 fi
 $SENDMAIL -t < "$MAILFILE"
 $RM_F "$MAILFILE"
