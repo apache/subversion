@@ -1,5 +1,9 @@
 It would be nice to organize this file somehow.
 
+Add `public name' member to filesystem structure, to use to identify
+the filesystem in error messages.  When driven by DAV, this could be a
+URL.
+
 We must ensure that node numbers are never reused.  If we open a node,
 svn_fs_delete it, and then create new nodes, what happens when the
 original node structure suddenly comes to refer to an entirely
