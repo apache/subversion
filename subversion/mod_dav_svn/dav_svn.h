@@ -490,6 +490,12 @@ dav_error * dav_svn__file_revs_report(const dav_resource *resource,
 
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
+/* Output XML data to OUTPUT using BB.  Use FMT as format string for the.
+   output. */
+svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
+                                const char *fmt, ...);
+
+
 
 enum dav_svn_time_format {
   dav_svn_time_format_iso8601,
