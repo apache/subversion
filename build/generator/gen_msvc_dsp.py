@@ -47,7 +47,6 @@ class Generator(gen_win.WinGeneratorBase):
       targtype = "Win32 (x86) Dynamic-Link Library"
       targval = "0x0102"
       target.output_name = os.path.basename(target.fname)
-      target.desc = None
       target.is_apache_mod = 0
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
@@ -124,8 +123,9 @@ class Generator(gen_win.WinGeneratorBase):
                                                       None, None, self.cfg,
                                                       None)
 
-    install_targets = unique(self.graph.get_all_sources(gen_base.DT_INSTALL)
-                             + self.targets.values())
+    install_targets = self.targets.values() \
+                      + self.graph.get_all_sources(gen_base.DT_INSTALL)
+    install_targets = gen_base.unique(install_targets)
 
     # sort these for output stability, to watch out for regressions.
     install_targets.sort()
@@ -140,6 +140,8 @@ class Generator(gen_win.WinGeneratorBase):
       pos = string.find(name, '-test')
       if pos >= 0:
         dsp_name = 'test_' + string.replace(name[:pos], '-', '_')
+      elif isinstance(target, gen_base.SWIGLibrary):
+        dsp_name = 'swig_' + string.replace(name, '-', '_')
       else:
         dsp_name = string.replace(name, '-', '_')
       target.dsp_name = dsp_name
@@ -231,9 +233,3 @@ class Generator(gen_win.WinGeneratorBase):
 class _item:
   def __init__(self, **kw):
     vars(self).update(kw)
-
-def unique(seq):
-  d = {}
-  for i in seq:
-    d[i] = None
-  return d.keys()

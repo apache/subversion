@@ -38,7 +38,7 @@ RSC=rc.exe
 # PROP Target_File "[rootpath]\[target.path]\[is configs.name "Debug"][target.debug][else][target.release][end]"
 # PROP Target_Dir "[rootpath]\[target.path]"
 [else]# PROP Output_Dir "[rootpath]\[configs.name]\[target.path]"
-# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path]"
+# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.path][if-any target.shared_dir]\[target.name][end]"
 # PROP Target_Dir ""
 [if-any is_utility][else]LIB32=link.exe -lib
 # ADD LIB32 /out:"[rootpath]\[configs.name]\[target.path]\[target.output_name]"
