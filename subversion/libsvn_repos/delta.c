@@ -140,21 +140,162 @@ static svn_error_t *delta_dirs (struct context *c,
 
 
 /* Public interface to computing directory deltas.  */
+svn_error_t *
+svn_repos_update (svn_fs_root_t *target_root,
+                  svn_fs_root_t *source_root,
+                  svn_string_t *parent_dir,
+                  svn_string_t *entry,
+                  apr_hash_t *source_rev_diffs,
+                  const svn_delta_edit_fns_t *editor,
+                  void *edit_baton,
+                  apr_pool_t *pool)
+{
+  void *root_baton;
+  struct context c;
+  int source_parent_is_dir;
+  int target_parent_is_dir;
+  svn_string_t *full_path;
+  svn_fs_id_t *source_id;
+  svn_fs_id_t *target_id;
+  int distance;
+
+  /* The Supertrivial case: we have no SOURCE_ENTRY.  Just deltify,
+     anchored at parent (which is known to be a directory). */
+  if (! entry)
+    {
+      return (svn_repos_dir_delta 
+              (source_root,
+               parent_dir,
+               source_rev_diffs,
+               target_root,
+               parent_dir,
+               editor,
+               edit_baton,
+               pool));
+    }
+
+  /* Source parent must be valid. */
+  if (! parent_dir)
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FS_PATH_SYNTAX, 0, 0, pool,
+         "directory delta source parent path is invalid");
+    }
+    
+  /* Target root must be a revision. */
+  if (svn_fs_is_revision_root (target_root))
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FS_NOT_REVISION_ROOT, 0, 0, pool,
+         "directory delta target not a revision root");
+    }
+
+  /* Check the node types of the parents -- they had better both be
+     directories!  <voiceover fx="booming echo"> First thousand kids
+     get an existance check FREE!! </voiceover> */
+  SVN_ERR (svn_fs_is_dir (&source_parent_is_dir, source_root, 
+                          parent_dir->data, pool));
+  SVN_ERR (svn_fs_is_dir (&target_parent_is_dir, target_root, 
+                          parent_dir->data, pool));
+  if (! source_parent_is_dir)
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+         "directory delta source parent not a directory");
+    }
+  if (! target_parent_is_dir)
+    {
+      return
+        svn_error_create
+        (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+         "directory delta target parent not a directory");
+    }
+  
+  /* Setup our pseudo-global structure here.  We need these variables
+     throughout the deltafication process, so pass them around by
+     reference to all the helper functions. */
+  c.editor = editor;
+  c.source_root = source_root;
+  c.source_rev_diffs = source_rev_diffs;
+  c.target_root = target_root;
+
+  /* Set the global target revision. */
+  SVN_ERR (editor->set_target_revision 
+           (edit_baton, 
+            svn_fs_revision_root_revision (target_root)));
+
+  /* Call replace_root to get our root_baton... */
+  SVN_ERR (editor->replace_root 
+           (edit_baton, 
+            get_revision_from_hash (source_rev_diffs,
+                                    parent_dir,
+                                    pool),
+            &root_baton));
+
+      
+  /* Construct the full path of the update item. */
+  full_path = svn_string_dup (parent_dir, pool);
+  if (entry)
+    svn_path_add_component (full_path, entry, 
+                            svn_path_repos_style);
+  
+  /* Get the node ids for the source and target paths. */
+  SVN_ERR (svn_fs_node_id (&source_id, source_root, 
+                           full_path->data, pool));
+  SVN_ERR (svn_fs_node_id (&target_id, target_root, 
+                           full_path->data, pool));
+  
+  /* Use the distance between the node ids to determine the best
+     way to update. */
+  distance = svn_fs_id_distance (source_id, target_id);
+  if (distance == 0)
+    {
+      /* They're the same node!  No-op (you gotta love those). */
+    }
+  else if (distance == -1)
+    {
+      /* The nodes are not related at all.  Delete the one, and
+             add the other. */
+      SVN_ERR (delete (&c, root_baton, entry, pool));
+      SVN_ERR (add_file_or_dir 
+               (&c, root_baton, parent_dir, entry,
+                0, 0, pool));
+    }
+  else
+    {
+      /* The nodes are at least related.  Just replace the one
+         with the other. */
+      SVN_ERR (replace_file_or_dir (&c, root_baton,
+                                    parent_dir,
+                                    entry,
+                                    parent_dir,
+                                        entry,
+                                    pool));
+    }
+
+  /* Make sure we close the root directory we opened above. */
+  SVN_ERR (editor->close_directory (root_baton));
+
+  /* All's well that ends well. */
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_repos_dir_delta (svn_fs_root_t *source_root,
-                     const char *source_path,
+                     svn_string_t *source_path,
                      apr_hash_t *source_rev_diffs,
                      svn_fs_root_t *target_root,
-                     const char *target_path,
+                     svn_string_t *target_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      apr_pool_t *pool)
 {
   void *root_baton;
   struct context c;
-  svn_string_t *source_path_str;
-  svn_string_t *target_path_str;
 
   if (! source_path)
     {
@@ -175,14 +316,14 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
   {
     int is_dir;
 
-    SVN_ERR (svn_fs_is_dir (&is_dir, source_root, source_path, pool));
+    SVN_ERR (svn_fs_is_dir (&is_dir, source_root, source_path->data, pool));
     if (! is_dir)
       return
         svn_error_create
         (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
          "directory delta source path is not a directory");
 
-    SVN_ERR (svn_fs_is_dir (&is_dir, target_root, target_path, pool));
+    SVN_ERR (svn_fs_is_dir (&is_dir, target_root, target_path->data, pool));
     if (! is_dir)
       return
         svn_error_create
@@ -207,9 +348,6 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
          "directory delta target not a revision root");
     }      
 
-  source_path_str = svn_string_create (source_path, pool);
-  target_path_str = svn_string_create (target_path, pool);
-
   /* Setup our pseudo-global structure here.  We need these variables
      throughout the deltafication process, so pass them around by
      reference to all the helper functions. */
@@ -222,13 +360,13 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
   SVN_ERR (editor->replace_root 
            (edit_baton, 
             get_revision_from_hash (source_rev_diffs,
-                                    target_path_str,
+                                    target_path,
                                     pool),
             &root_baton));
 
   /* ...and then begin the recursive directory deltafying process!  */
-  SVN_ERR (delta_dirs (&c, root_baton, source_path_str, 
-                       target_path_str, pool));
+  SVN_ERR (delta_dirs (&c, root_baton, source_path,
+                       target_path, pool));
 
   /* Make sure we close the root directory we opened above. */
   SVN_ERR (editor->close_directory (root_baton));
