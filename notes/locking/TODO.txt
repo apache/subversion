@@ -13,7 +13,7 @@ MUST HAVE
 
 * fix svn_fs_access_t handling in svnserve (sussman)
 
-* ?? make post-lock and post-unlock take list of paths.
+* ?? make post-lock and post-unlock take list of paths.  (fitz)
    
        --> then possibly teach mailer.py to send lock/unlock mails.
 
@@ -27,6 +27,14 @@ MUST HAVE
 * fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad?)
 
 * remove auto-force behaviour for svn unlock URL.
+
+* ra_dav bugs;
+
+      - 'svn lock nonexistentURL' works fine, but then
+        'svn unlock nonexistentURL' fails, because ra_dav can't PROPFIND
+          on the imaginary path.  Yet the DAV spec says a locked,
+          nonexistent path ("lock-null") *should* respond to a PROPFIND.
+          At a minimum, it should have lock properties attached.
 
 * scan the whole patch for TODO items introduced on the branch. (all, please)
 
