@@ -13,14 +13,16 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 Source0: subversion-%{version}-%{release}.tar.gz
 Source1: subversion.conf
+Source2: rcsparse.py
 Patch0: install.patch
+Patch1: cvs2svn.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
 Requires: apache-libapr-utils >= %{apache_version}
 Requires: db >= 4.0.14
 Requires: expat
-Requires: neon = %{neon_version}
+Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
@@ -33,14 +35,23 @@ BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2
 BuildPreReq: neon-devel = %{neon_version}
 BuildPreReq: openssl-devel
-BuildPreReq: python
+BuildPreReq: python2
+BuildPreReq: python2-devel
+BuildPreReq: swig >= 1.3.15
 BuildPreReq: texinfo
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
-Subversion does the same thing CVS does (Concurrent Versioning System) but has
-major enhancements compared to CVS.
+Subversion is a concurrent version control system which enables one or more
+users to collaborate in developing and maintaining a hierarchy of files and
+directories while keeping a history of all changes.  Subversion only stores
+the differences between versions, instead of every complete file.  Subversion
+also keeps a log of who, when, and why changes occured.
+
+As such it basically does the same thing CVS does (Concurrent Versioning System)
+but has major enhancements compared to CVS and fixes a lot of the annoyances
+that CVS users face.
 
 *** Note: This is a relocatable package; it can be installed anywhere you like
 with the "rpm -Uvh --prefix /your/favorite/path" command. This is useful
@@ -67,7 +78,19 @@ BuildPreReq: apache-devel >= %{apache_version}
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
+%package cvs2svn
+Group: Utilities/System
+Summary: Converts CVS repositories to Subversion repositories.
+Requires: swig-runtime >= 1.3.15
+%description cvs2svn
+Converts CVS repositories to Subversion repositories.
+
+See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
+
 %changelog
+* Sat Sep 21 2002 David Summers <david@summersoft.fay.ar.us> 0.14.3-3205
+- Added SWIG dependencies to add cvs2svn capabilities.
+
 * Fri Aug 16 2002 David Summers <david@summersoft.fay.ar.us> 0.14.1-2984
 - Now requires neon-0.22.0.
 
@@ -165,10 +188,14 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	--prefix=/usr \
 	--with-apxs=%{apache_dir}/usr/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
+	--with-apr-util=%{apache_dir}/bin/apu-config \
+	--with-swig
 
 # Fix up mod_dav_svn installation.
 %patch0 -p1
+
+# Fix up cvs2svn python bindings
+%patch1 -p1
 
 %build
 make
@@ -176,6 +203,10 @@ make
 %if %{make_check}
 make check
 %endif
+
+# Build cvs2svn python bindings
+cd subversion/bindings/swig/python
+/usr/bin/python2 setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -191,6 +222,13 @@ make install \
 
 # Add subversion.conf configuration file into httpd.conf directory.
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_dir}/conf
+
+# Install cvs2svn and supporting files
+cd subversion/bindings/swig/python
+/usr/bin/python2 setup.py install --prefix $RPM_BUILD_ROOT/usr
+sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
+chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
+cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/svn
 
 %post
 # Only add to INFO directory if this is the only instance installed.
@@ -296,3 +334,8 @@ rm -rf $RPM_BUILD_ROOT
 %config %{apache_dir}/conf/subversion.conf
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so
+
+%files cvs2svn
+%defattr(-,root,root)
+/usr/bin/cvs2svn
+/usr/lib/python2.2/site-packages/svn
