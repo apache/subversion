@@ -193,7 +193,7 @@ static int end_err_element(void *userdata, const struct ne_xml_elm *elm,
     case ELEM_human_readable:
       {
         if (cdata && pc->err)
-          pc->err->message = apr_pstrdup(pc->pool, cdata);
+          pc->err->message = apr_pstrdup(pc->err->pool, cdata);
         break;
       }
 
@@ -220,7 +220,8 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         apr_pool_t *pool)
 {
   ne_request *req;
-  ne_xml_parser *success_parser, *error_parser;
+  ne_xml_parser *success_parser;
+  ne_xml_parser *error_parser;
   int rv;
   int code;
   const char *msg;

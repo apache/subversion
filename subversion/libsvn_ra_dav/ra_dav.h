@@ -341,7 +341,7 @@ enum {
   ELEM_name_creationdate,
   ELEM_name_creator_displayname,
   ELEM_svn_error,
-  ELEM_human_readable,
+  ELEM_human_readable
 };
 
 /* ### docco */
