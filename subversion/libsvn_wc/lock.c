@@ -126,9 +126,14 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 static svn_error_t *
 remove_lock (const char *path, apr_pool_t *pool)
 {
-  if (svn_wc__adm_path_exists (path, FALSE, pool, NULL))
-    SVN_ERR (svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOCK, NULL));
-
+  svn_error_t *err = svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOCK,
+                                              NULL);
+  if (err)
+    {
+      if (svn_wc__adm_path_exists (path, FALSE, pool, NULL))
+        return err;
+      svn_error_clear (err);
+    }
   return SVN_NO_ERROR;
 }
 
