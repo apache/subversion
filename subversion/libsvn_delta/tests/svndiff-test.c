@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <apr_general.h>
+#include "svn_base64.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 
@@ -42,8 +43,9 @@ main (int argc, char **argv)
   FILE *target_file;
   svn_txdelta_stream_t *stream;
   svn_txdelta_window_t *window;
-  svn_txdelta_window_handler_t *handler;
-  void *baton;
+  svn_txdelta_window_handler_t *svndiff_handler;
+  svn_write_fn_t *base64_handler;
+  void *svndiff_baton, *base64_baton;
 
   source_file = fopen (argv[1], "rb");
   target_file = fopen (argv[2], "rb");
@@ -52,10 +54,13 @@ main (int argc, char **argv)
   svn_txdelta (&stream, read_from_file, source_file,
 	       read_from_file, target_file, NULL);
 
-  svn_txdelta_to_svndiff (write_to_file, stdout, NULL, &handler, &baton);
+  svn_base64_encode (write_to_file, stdout, NULL,
+                     &base64_handler, &base64_baton);
+  svn_txdelta_to_svndiff (base64_handler, base64_baton, NULL,
+                          &svndiff_handler, &svndiff_baton);
   do {
     svn_txdelta_next_window (&window, stream);
-    handler (window, baton);
+    svndiff_handler (window, svndiff_baton);
     svn_txdelta_free_window (window);
   } while (window != NULL);
 
