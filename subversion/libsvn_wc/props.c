@@ -347,7 +347,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
   const char *access_path = svn_wc_adm_access_path (adm_access);
   int access_len = strlen (access_path);
-  int slash = 1;
+  int slash;
 
   const char *entryname;
   const char *full_path;
@@ -367,6 +367,8 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   /* Empty path and paths ending in / don't need an extra slash removed */
   if (access_len == 0 || access_path[access_len - 1] == '/')
     slash = 0;
+  else
+    slash = 1;
 
   if (name == NULL)
     {
