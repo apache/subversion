@@ -276,10 +276,7 @@ def run_tests(test_list):
       print "------     ----------------"
       n = 1
       for x in test_list[1:]:
-        prnt_n = `n`
-        if n < 10:
-          prnt_n = " " + prnt_n
-        print " ", prnt_n, "      ", x.__doc__
+        print " %2d      %s" % (n, x.__doc__)
         n = n+1
       return 0
 
