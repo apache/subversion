@@ -88,7 +88,6 @@ skip_to_eoln (FILE *fd)
 static svn_error_t *
 parse_value (int *pch, parse_context_t *ctx)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t end_of_val = FALSE;
   int ch;
 
@@ -169,7 +168,7 @@ parse_value (int *pch, parse_context_t *ctx)
     }
 
   *pch = ch;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
