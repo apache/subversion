@@ -62,6 +62,7 @@ static svn_opt_subcommand_t
   subcommand_info,
   subcommand_log,
   subcommand_tree,
+  subcommand_uuid,
   subcommand_youngest;
 
 /* Option codes and descriptions. */
@@ -151,6 +152,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "usage: svnlook tree REPOS_PATH\n\n"
      "Print the tree, optionally showing node revision ids.\n",
      {'r', 't', svnlook__show_ids} },
+
+    {"uuid", subcommand_uuid, {0},
+     "usage: svnlook uuid REPOS_PATH\n\n"
+     "Print the repository's UUID.\n",
+     {0} },
 
     {"youngest", subcommand_youngest, {0},
      "usage: svnlook youngest REPOS_PATH\n\n"
@@ -1120,6 +1126,21 @@ subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   printf ("%" SVN_REVNUM_T_FMT "\n", c->rev_id);
   return SVN_NO_ERROR;
 }
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_uuid (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+  const char *uuid;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (svn_fs_get_uuid (c->fs, &uuid, pool));
+  printf ("%s\n", uuid);
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Main. ***/
