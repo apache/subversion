@@ -674,10 +674,9 @@ def tolerate_corruption():
 def phoenix_branch():
   "convert a branch file rooted in a 'dead' revision"
   repos, wc, logs = ensure_conversion('phoenix')
-  if not ((logs[4].changed_paths.get('/branches/volsung_20010721 '
-                                     '(from /trunk:2)') == 'A')
+  if not ((logs[4].changed_paths.get('/branches/volsung_20010721') == 'A')
           and (logs[4].changed_paths.get('/branches/volsung_20010721/'
-                                         'phoenix') == 'M')
+                                         'phoenix') == 'A')
           and (len(logs[4].changed_paths) == 2)):
     print "Revision 4 not as expected."
     raise svntest.Failure
@@ -769,7 +768,7 @@ test_list = [ None,
               tolerate_corruption,
               phoenix_branch,
               ctrl_char_in_log,
-              XFail(overdead),
+              overdead,
               double_delete,
               split_branch,
               resync_misgroups,

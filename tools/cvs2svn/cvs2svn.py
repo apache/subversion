@@ -667,17 +667,17 @@ class RepositoryMirror:
 
     leaf_key = gen_key()
     deletions = []
-    actual_copy_rev = copyfrom_rev
     if copyfrom_path:
       new_val = self.probe_path(copyfrom_path, copyfrom_rev)
       if new_val is None:
         # Sometimes a branch is rooted in a revision that RCS has
-        # marked as 'dead'.  Since that path will have been deleted in
-        # the corresponding Subversion revision, we use the revision
-        # right before it as the copyfrom rev, and return that to the
-        # caller so it can emit the right dumpfile instructions.
-        actual_copy_rev = copyfrom_rev - 1
-        new_val = self.probe_path(copyfrom_path, actual_copy_rev)
+        # marked as 'dead'. There is no reason to assume that the
+        # current path shares any history with any older live parent
+        # of the dead revision, so we do nothing and return.
+        if expected_entries:
+          return Change(OP_NOOP, [], [], [])
+        else:
+          return Change(OP_NOOP, [], [])
     if expected_entries:
       approved_entries = new_val.get(self.approved_entries) or { }
       new_approved_entries = { }
@@ -697,9 +697,9 @@ class RepositoryMirror:
     self.nodes_db[leaf_key] = marshal.dumps(new_val)
 
     if expected_entries:
-      return Change(op, old_names[0], old_names[1], deletions, actual_copy_rev)
+      return Change(op, old_names[0], old_names[1], deletions, copyfrom_rev)
     else:
-      return Change(op, old_names[0], old_names[1], None, actual_copy_rev)
+      return Change(op, old_names[0], old_names[1], None, copyfrom_rev)
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
