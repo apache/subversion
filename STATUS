@@ -9,12 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10251
-    Fix FSFS bug loading dump files.
-    Justification: Small fix, allow people to convert to fsfs.
-    Votes:
-      +1: breser, brane, ghudson
-
   * 10258:
     Add version checks to, and deprecate ABI version in, the
     RA and FS loaders and plug-ins.
