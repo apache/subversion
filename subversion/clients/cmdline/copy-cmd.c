@@ -97,6 +97,8 @@ svn_cl__copy (apr_getopt_t *os,
     /* URL->URL : No notification needed. */
     ;
 
+  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
+                                       NULL, ctx->config, pool));
   SVN_ERR (svn_cl__cleanup_log_msg
            (ctx->log_msg_baton, svn_client_copy (&commit_info,
                                                  src_path, 
