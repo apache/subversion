@@ -1,4 +1,4 @@
-%define apache_version 2.0.46-0.1
+%define apache_version 2.0.47-0.1
 %define neon_version 0.23.9
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -97,6 +97,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu Jul 10 2003 David Summers <david@summersoft.fay.ar.us> 0.25.0-6434
+- Apache 2.0.47 now recommended because of security issues.
+
 * Tue Jun 24 2003 David Summers <david@summersoft.fay.ar.us> 0.24.2-6334
 - Now requires apache 2.0.46.
 
