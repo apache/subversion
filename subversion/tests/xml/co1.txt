@@ -40,16 +40,3 @@ and greek letter names are files.  There are no properties yet.
          /A/B/F                     /A/D/G/pi
                                     /A/D/G/rho
          /A/C/                      /A/D/G/tau
-                                  
-                                  
-                                  
-
-
-
-
-
-
-
-
-
-
