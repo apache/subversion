@@ -773,12 +773,19 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
         <literal>svn+joessh://</literal> URL would invoke the
         particular SSH binary with <option>-p 29934</option> as
         arguments&mdash;useful if you want the tunnel program to
-        connect to a non-standard port.  Second, it shows how to
-        define a custom environment variable that can override the
-        name of the tunneling program.  If we were to set the
+        connect to a non-standard port.</para>
+
+      <para>Second, it shows how to define a custom environment
+        variable that can override the name of the tunneling program.
+        Setting the <literal>SVN_SSH</literal> environment variable is
+        a convenient way to override the default SSH tunnel agent.
+        But if you need to have several different overrides for
+        different servers, each perhaps contacting a different port or
+        passing a different set of options, you can use the mechanism
+        demonstrated in this example.  Now if we were to set the
         <literal>JOESSH</literal> environment variable, its value
-        would override the entire value of the tunnel variable;
-        $JOESSH would be executed instead of
+        would override the entire value of the tunnel
+        variable&mdash;$JOESSH would be executed instead of
         <filename>/opt/alternate/ssh -p 29934</filename>.</para>
 
     </sect2>

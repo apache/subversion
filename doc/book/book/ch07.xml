@@ -79,9 +79,10 @@
         user's home directory.  On Win32 systems, Subversion creates a
         folder named <filename>Subversion</filename>, typically inside
         the <filename>Application Data</filename> area of the user's
-        profile directory.  However, on this platform the exact
-        location differs from system to system, and is dictated by the
-        Windows registry.
+        profile directory (which, by the way, is usually a hidden
+        directory).  However, on this platform the exact location
+        differs from system to system, and is dictated by the Windows
+        registry.
         <footnote>
           <para>The <literal>APPDATA</literal> environment variable
             points to the <filename>Application Data</filename> area,
