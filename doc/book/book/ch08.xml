@@ -4259,7 +4259,7 @@ trunk/vendors/deli/
           <title>Description</title>
 
           <para>Displays the help message for svnlook.  This
-            command, like it's brother <command>svn help</command>, is
+            command, like its brother <command>svn help</command>, is
             also your friend, even though you never call it anymore
             and forgot to invite it to your last party.</para>
         </refsect1>
