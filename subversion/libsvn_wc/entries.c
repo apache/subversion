@@ -362,30 +362,32 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
   
   /* State. */
   {
-    svn_boolean_t clearall = (entry->state & SVN_WC_ENTRY_CLEAR_ALL);
-    svn_string_t *val;
-    
-    /* Are we clearing or setting the affected bits? */
-    if (clearall || (entry->state & SVN_WC_ENTRY_CLEAR_NAMED))
-      val = NULL;
-    else
-      val = svn_string_create ("true", pool);
-    
-    if (clearall || (entry->state & SVN_WC_ENTRY_ADDED))
-      apr_hash_set (entry->attributes,
-                    SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING, val);
+    /* Just make the att hash *exactly* reflect the `state' flags.  
 
-    if (clearall || (entry->state & SVN_WC_ENTRY_DELETED))
-      apr_hash_set (entry->attributes,
-                    SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING, val);
+       By the time we get here, the CLEAR_NAMED and CLEAR_ALL flags
+       should *not* be set in the entry.  This would meaningless;
+       entry->state is a data-state, not a command.  The only routine
+       to interpret the "command" flag-style is fold_sync(). */
 
-    if (clearall || (entry->state & SVN_WC_ENTRY_MERGED))
-      apr_hash_set (entry->attributes,
-                    SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING, val);
+    apr_hash_set (entry->attributes,
+                  SVN_WC_ENTRY_ATTR_ADD, APR_HASH_KEY_STRING,
+                  (entry->state & SVN_WC_ENTRY_ADDED) ?
+                  svn_string_create ("true", pool) : NULL);
 
-    if (clearall || (entry->state & SVN_WC_ENTRY_CONFLICTED))
-      apr_hash_set (entry->attributes,
-                    SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING, val);
+    apr_hash_set (entry->attributes,
+                  SVN_WC_ENTRY_ATTR_DELETE, APR_HASH_KEY_STRING,
+                  (entry->state & SVN_WC_ENTRY_DELETED) ?
+                  svn_string_create ("true", pool) : NULL);
+
+    apr_hash_set (entry->attributes,
+                  SVN_WC_ENTRY_ATTR_MERGED, APR_HASH_KEY_STRING,
+                  (entry->state & SVN_WC_ENTRY_MERGED) ?
+                  svn_string_create ("true", pool) : NULL);
+
+    apr_hash_set (entry->attributes,
+                  SVN_WC_ENTRY_ATTR_CONFLICT, APR_HASH_KEY_STRING,
+                  (entry->state & SVN_WC_ENTRY_CONFLICTED) ?
+                  svn_string_create ("true", pool) : NULL);
   }
   
   /* Timestamps. */
@@ -655,7 +657,8 @@ fold_entry (apr_hash_t *entries,
   apr_hash_index_t *hi;
   struct svn_wc_entry_t *entry
     = apr_hash_get (entries, name->data, name->len);
-
+  int incoming_flags = state;
+  
   assert (name != NULL);
 
   if (! entry)
@@ -670,7 +673,22 @@ fold_entry (apr_hash_t *entries,
     entry->text_time = text_time;
   if (prop_time)
     entry->prop_time = prop_time;
-  entry->state |= state;
+
+  /* Merge the incoming_flags into the entry's flags, correctly
+     interpreting "clear" bits. */
+  if (incoming_flags)
+    {
+      if (incoming_flags & SVN_WC_ENTRY_CLEAR_ALL)
+        entry->state = 0;
+
+      else if (incoming_flags & SVN_WC_ENTRY_CLEAR_NAMED)
+        {
+          entry->state &= ~incoming_flags;
+        }
+
+      else
+        entry->state |= incoming_flags;
+    }
 
   /* Do any other attributes. */
   if (atts)
@@ -891,6 +909,8 @@ internal_fold_sync (svn_boolean_t be_intelligent,
                     va_list ap)
 {
   svn_error_t *err;
+  svn_wc_entry_t *entry_before, *entry_after;
+  svn_boolean_t entry_was_deleted_p = FALSE;
   apr_hash_t *entries = NULL;
 
   /* Load whole entries file */
@@ -903,15 +923,25 @@ internal_fold_sync (svn_boolean_t be_intelligent,
   /* Optional:  -interpret- the changes */
   if (be_intelligent)
     {
+      entry_before = apr_hash_get (entries, name->data, name->len);
+
       /* Right now, the intelligence module only (possibly) changes
-         the state flags.  */
+         the state flags, and (possibly) removes the whole entry.  */
       err = interpret_changes (entries, name, &state, pool);
       if (err) return err;
+
+      /* Special case:  interpret_changes() may have actually REMOVED
+         the entry in question!  If so, don't try to fold_entry, as
+         this will just recreate the entry again. */
+      entry_after = apr_hash_get (entries, name->data, name->len);
+      if (entry_before && (! entry_after))
+        entry_was_deleted_p = TRUE;
     }
 
-  /* Build the entry */
-  fold_entry (entries, name, revision, kind, state, text_time,
-              prop_time, pool, atts, ap);
+  /* Fold changes into (or create) the entry. */
+  if (! entry_was_deleted_p)
+    fold_entry (entries, name, revision, kind, state, text_time,
+                prop_time, pool, atts, ap);
   
   /* Write whole entries file */
   err = svn_wc__entries_write (entries, path, pool);
