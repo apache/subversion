@@ -874,9 +874,6 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
   apr_file_t *apr_file = NULL;
-  apr_status_t status;
-  FILE *file;
-  apr_os_file_t *osfile;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
@@ -891,6 +888,10 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
     }
   else if (PyFile_Check (py_file))
     {
+      apr_status_t status;
+      FILE *file;
+      apr_os_file_t *osfile;
+
       /* input is a file object -- convert to apr_file_t */
       file = PyFile_AsFile(py_file);
 #ifdef WIN32
