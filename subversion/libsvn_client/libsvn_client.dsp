@@ -131,6 +131,10 @@ SOURCE=.\prop_commands.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\ra.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\repos_diff.c
 # End Source File
 # Begin Source File

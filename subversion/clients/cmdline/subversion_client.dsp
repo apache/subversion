@@ -166,6 +166,10 @@ SOURCE=.\props.c
 # End Source File
 # Begin Source File
 
+SOURCE=".\propedit-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\propset-cmd.c"
 # End Source File
 # Begin Source File
