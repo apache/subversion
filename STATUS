@@ -95,7 +95,7 @@ section for approved changes.)
        +1: jszakmeister
 
 
-    * r8341
+    * r8341, r8352
       Fix some more 'access denied' errors on Windows.
       Votes:
 
