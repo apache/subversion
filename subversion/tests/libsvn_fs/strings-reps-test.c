@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "svn_error.h"
+#include "svn_test.h"
 #include "apr.h"
 #include "../fs-helpers.h"
 #include "../../libsvn_fs/util/skel.h"
@@ -729,20 +730,19 @@ copy_string (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
-  write_new_rep,
-  write_rep,
-  read_rep,
-  delete_rep,
-  test_strings,
-  write_null_string,
-  abort_string,
-  copy_string,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (write_new_rep),
+    SVN_TEST_PASS (write_rep),
+    SVN_TEST_PASS (read_rep),
+    SVN_TEST_PASS (delete_rep),
+    SVN_TEST_PASS (test_strings),
+    SVN_TEST_PASS (write_null_string),
+    SVN_TEST_PASS (abort_string),
+    SVN_TEST_PASS (copy_string),
+    SVN_TEST_NULL
+  };
 
 
 

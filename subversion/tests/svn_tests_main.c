@@ -29,13 +29,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_tests.h"
-
-/* All Subversion test programs include an array of function pointers
-   (all of our sub-tests) that begins and ends with a NULL entry. */
-extern svn_error_t *(*test_funcs[])(const char **msg, 
-                                    svn_boolean_t msg_only,
-                                    apr_pool_t *pool);
+#include "svn_test.h"
 
 
 /* Some Subversion test programs may want to parse options in the
@@ -64,7 +58,7 @@ get_array_size (void)
 {
   int i;
 
-  for (i = 1; test_funcs[i]; i++)
+  for (i = 1; test_funcs[i].func; i++)
     {
     }
 
@@ -81,6 +75,8 @@ do_test_num (const char *progname,
              svn_boolean_t msg_only,
              apr_pool_t *pool)
 {
+  svn_test_driver_t func;
+  int xfail;
   svn_error_t *err;
   int array_size = get_array_size();
   const char *msg = 0;  /* the message this individual test prints out */
@@ -91,9 +87,14 @@ do_test_num (const char *progname,
       printf ("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
       return 1;  /* BAIL, this test number doesn't exist. */
     }
+  else
+    {
+      func = test_funcs[test_num].func;
+      xfail = test_funcs[test_num].xfail;
+    }
 
   /* Do test */
-  err = test_funcs[test_num](&msg, msg_only, pool);
+  err = func(&msg, msg_only, pool);
 
   /* If we got an error, print it out.  */
   if (err)
@@ -101,21 +102,24 @@ do_test_num (const char *progname,
 
   if (msg_only)
     {
-      printf ("%s %2d: %s\n",
-              progname,
+      printf (" %2d     %5s  %s\n",
               test_num,
+              xfail ? "XFAIL" : "",
               msg ? msg : "(test did not provide name)");
     }
   else
     {
-      printf ("%s: %s %2d: %s\n", 
-              err ? "FAIL" : "PASS",
+      printf ("%s %s %d: %s\n", 
+              (err
+               ? (xfail ? "XFAIL:" : "FAIL: ")
+               : (xfail ? "XPASS:" : "PASS: ")),
               progname,
               test_num, 
               msg ? msg : "(test did not provide name)");
     }
 
-  return err != SVN_NO_ERROR;
+  /* Fail on unexpected result -- FAIL or XPASS. */
+  return (err != SVN_NO_ERROR) != (xfail != 0);
 }
 
 
@@ -171,6 +175,8 @@ main (int argc, char *argv[])
 
           /* run all tests with MSG_ONLY set to TRUE */
           test_pool = svn_pool_create (pool);
+          printf("Test #  Mode   Test Description\n"
+                 "------  -----  ----------------\n");
           for (i = 1; i <= array_size; i++)
             {
               if (do_test_num (prog_name, i, TRUE, test_pool))

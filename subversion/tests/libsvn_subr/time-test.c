@@ -144,16 +144,15 @@ test_time_invariant (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
-  test_time_to_nts,
-  test_time_from_nts,
-  test_time_from_nts_old,
-  test_time_invariant,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (test_time_to_nts),
+    SVN_TEST_PASS (test_time_from_nts),
+    SVN_TEST_PASS (test_time_from_nts_old),
+    SVN_TEST_PASS (test_time_invariant),
+    SVN_TEST_NULL
+  };
 
 
 

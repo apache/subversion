@@ -30,7 +30,7 @@
 #include "svn_test.h"   /* For svn_test_get_editor() */
 
 /* libsvn_test.la requires this symbol */ 
-svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *p) = { 0, 0 };
+struct svn_test_descriptor_t test_funcs[] = {SVN_TEST_NULL };
 
 #define BASE_PATH "/root"
 

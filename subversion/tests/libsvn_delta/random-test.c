@@ -25,7 +25,7 @@
 #include "svn_delta.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "../svn_tests.h"
+#include "svn_test.h"
 
 #include "../../libsvn_delta/delta.h"
 #include "delta-window-test.h"
@@ -444,17 +444,16 @@ random_combine_test (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
-  random_test,
-  random_combine_test,
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (random_test),
+    SVN_TEST_PASS (random_combine_test),
 #ifdef SVN_RANGE_INDEX_TEST_H
-  random_range_index_test,
+    SVN_TEST_PASS (random_range_index_test),
 #endif
-  0
-};
+    SVN_TEST_NULL
+  };
 
 
 

@@ -32,6 +32,34 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Prototype for test driver functions. */
+typedef svn_error_t* (*svn_test_driver_t) (const char **msg, 
+                                           svn_boolean_t msg_only,
+                                           apr_pool_t *pool);
+
+/* All Subversion test programs include an array of test descriptors
+   (all of our sub-tests) that begins and ends with a SVN_TEST_NULL entry. */
+struct svn_test_descriptor_t
+{
+  svn_test_driver_t func;       /* A pointer to the test driver function. */
+  int xfail;                    /* Is the test marked XFAIL? */
+};
+extern struct svn_test_descriptor_t test_funcs[];
+
+/* A null initializer for the test descriptor. */
+#define SVN_TEST_NULL  {NULL, 0}
+
+/* Initializers for PASS and XFAIL tests */
+#define SVN_TEST_PASS(func)  {func, 0}
+#define SVN_TEST_XFAIL(func) {func, 1}
+
+
+/* Return a pseudo-random number based on SEED, and modify SEED.  This
+   is a "good" pseudo-random number generator, intended to replace all
+   those "bad" rand() implementations out there. */
+apr_uint32_t svn_test_rand (apr_uint32_t *seed);
+
+
 /* Set *EDITOR and *EDIT_BATON to an editor that prints its arguments
  * to OUT_STREAM.  The edit starts at PATH, that is, PATH will be
  * prepended to the appropriate paths in the output.  Allocate the
