@@ -403,9 +403,10 @@ typedef struct svn_wc__entry_t
 } svn_wc__entry_t;
 
 
-/* (Bitmasks). */
-#define SVN_WC__ENTRY_ADD     1
-#define SVN_WC__ENTRY_DELETE  2
+/* Bitmasks, see svn_wc__entry_merge_sync(). */
+#define SVN_WC__ENTRY_CLEAR     1     /* special flag, means clear flags */
+#define SVN_WC__ENTRY_ADD       2     /* file added */
+#define SVN_WC__ENTRY_DELETE    4     /* file deleted */
 
 
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
@@ -438,14 +439,32 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
                                 apr_pool_t *pool,
                                 ...);
 
-/* For PATH's entries file, create or modify an entry NAME, using the
-   explicit fields and, secondarily, varargs.
-   Varargs are alternating pairs of key (char *), value (svn_string_t *).
-
-   An entry name of null means the dir's own entry, as usual.
-   
-   The entries file will be read, tweaked, and written back out.  This
-   is your one-stop shopping for changing the entries file. */
+/* For PATH's entries file, create or modify an entry NAME, using
+ * explicit fields and, secondarily, varargs.
+ * 
+ * If NAME is null, it means the dir's own entry, as usual.
+ * 
+ * If VERSION is SVN_INVALID_VERNUM, then the entry's version number
+ * will not be changed, else it will be set to VERSION.
+ * 
+ * If KIND is svn_invalid_kind, then the entry's kind will not be
+ * changed, else it will be set to KIND.
+ * 
+ * If flags has the SVN_WC__ENTRY_CLEAR bit set, then the entry's
+ * flags will be cleared.  If it has any other bits set, those bits
+ * will be OR'd onto the entry's flags.
+ * 
+ * If TIMESTAMP is 0, the entry's timestamp will not be changed, else
+ * it will be set to TIMESTAMP.
+ * 
+ * Any remaining (variadic) arguments are alternating pairs of key
+ * (char *) and value (svn_string_t *), and will be set into the
+ * entry's attributes hash, overwriting where they collide with what
+ * is already present in the attributes.
+ * 
+ * NOTE: the entries file will be read, tweaked, and written back out.
+ * This is your one-stop shopping for changing the entries file.
+ */
 svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        svn_string_t *name,
                                        svn_vernum_t version,
