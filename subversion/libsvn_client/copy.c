@@ -524,7 +524,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   const char *message,
                   apr_pool_t *pool)
 {
-  const char *anchor, *target, *parent, *base_name;
+  const char *anchor, *target, *base_name;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_delta_editor_t *editor;
@@ -549,8 +549,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
      paths everywhere. */
   SVN_ERR (svn_path_get_absolute (&base_path, src_path, pool));
 
-  svn_path_split (base_path, &parent, &base_name, pool);
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, FALSE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, base_path, FALSE, TRUE,
+                                  pool));
 
   /* Split the DST_URL into an anchor and target. */
   svn_path_split (dst_url, &anchor, &target, pool);
@@ -560,7 +560,8 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
 
   /* Open an RA session for the anchor URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor,
+                                        svn_wc_adm_access_path (adm_access),
                                         adm_access, NULL, TRUE, TRUE, 
                                         ctx, pool));
 
@@ -580,6 +581,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* DST_URL is an existing directory URL.  The URL we will be
          creating, then, is DST_URL+BASENAME. */
+      svn_path_split (base_path, NULL, &base_name, pool);
       base_url = svn_path_url_add_component (base_url, base_name, pool);
     }
   else
@@ -1000,7 +1002,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
   src_is_url = svn_path_is_url (src_path);
   dst_is_url = svn_path_is_url (dst_path);
 
-  if (svn_path_is_child (src_path, dst_path, pool))
+  if (!src_is_url && !dst_is_url
+      && svn_path_is_child (src_path, dst_path, pool))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        "cannot copy path '%s' into its own child '%s'",
