@@ -73,9 +73,6 @@ static svn_error_t * log_receiver(void *baton,
                                   svn_boolean_t last_call)
 {
   struct log_receiver_baton *lrb = baton;
-  svn_stringbuf_t *escaped_author = NULL;
-  svn_stringbuf_t *escaped_date = NULL;
-  svn_stringbuf_t *escaped_msg = NULL;
 
   /* ### todo: we ignore changed_paths for now; libsvn_repos isn't
      yet calculating them anyway. */
@@ -88,10 +85,6 @@ static svn_error_t * log_receiver(void *baton,
       lrb->first_call = 0;
     }
 
-  svn_xml_escape_nts(&escaped_author, author, lrb->pool);
-  svn_xml_escape_nts(&escaped_date, date, lrb->pool);
-  svn_xml_escape_nts(&escaped_msg, msg, lrb->pool);
-
   send_xml(lrb,
            "<S:log-item>" DEBUG_CR
            "<D:version-name>%lu</D:version-name>" DEBUG_CR
@@ -101,7 +94,15 @@ static svn_error_t * log_receiver(void *baton,
            "<S:date>%s</S:date>" DEBUG_CR
            "<D:comment>%s</D:comment>" DEBUG_CR
            "</S:log-item>" DEBUG_CR,
-           rev, escaped_author->data, escaped_date->data, escaped_msg->data);
+           rev,
+           /* ### The `1' in the calls below means replace `"' with
+              `&quot;'.  This seems safe to me, since the dequoter on
+              the other side will certainly handle it.  But is it
+              necessary?  I dunno. */
+           apr_xml_quote_string(lrb->pool, author, 1),
+           apr_xml_quote_string(lrb->pool, date, 1),
+           apr_xml_quote_string(lrb->pool, msg, 1));
+
 
   if (last_call)
     send_xml(lrb, "</S:log-report>" DEBUG_CR);
