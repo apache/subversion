@@ -59,7 +59,7 @@
 #include <stdio.h>
 
 
-#define RETURN_IF_ERROR(err) if ((err)) {return (err);}
+#define SVN_RETURN_IF_ERROR(err) if ((err)) return (err)
 
 #define SVN_SUCCESS 0
 
