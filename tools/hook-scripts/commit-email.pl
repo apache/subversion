@@ -523,7 +523,7 @@ sub safe_read_from_pipe
   my @output;
   while (<SAFE_READ>)
     {
-      chomp;
+      s/[\r\n]+$//;
       push(@output, $_);
     }
   close(SAFE_READ);
@@ -546,7 +546,7 @@ sub safe_read_from_pipe
 }
 
 # Use safe_read_from_pipe to start a child process safely and return
-# the output if it suceeded or an error message followed by the output
+# the output if it succeeded or an error message followed by the output
 # if it failed.
 sub read_from_process
 {
