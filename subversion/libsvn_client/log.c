@@ -64,7 +64,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   const char *auth_dir;
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
-  svn_error_t *err;
+  svn_error_t *err = NULL;  /* Because we might have no targets. */
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
