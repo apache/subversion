@@ -17,7 +17,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
        - 'svn status' does much less disk parsing (r11677, 11704)
        - 'svn st -u' no longer asks server to generate textdeltas (issue #2259)
        - 'svn revert -R' doing much less work (r13883)
-       - in all sorts of utf8 translation (issue #2016)
+       - utf8<->native conversions are faster now (issue #2016)
     * new switches added:
        - 'svn log --limit N'               - show only first N log messages
        - 'svn info --revision'             - show info on older object (r13265)
@@ -118,7 +118,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
      - new locking APIs in svn_client.h, svn_ra.h, svn_repos.h, svn_fs.h
      - new 'flattened' svn_ra.h API, which imitates svn_fs.h  (issue #1931)
      - new notification API in svn_client.h, svn_wc.h
-     - complete list of new/changed APIs at: <<insert URL here>>
+     - http://svn.haxx.se/dev/archive-2005-04/0319.shtml has all API changes
  * fs now has its own 'format' file, independent of repos 'format' (r13387)
  * improve efficiency of delta combining algorithm (r13016, r13063)
  * make all BDB apis take explicit pool parameters (r13198, r13205)
