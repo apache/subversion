@@ -909,7 +909,6 @@ svn_subst_translate_string (svn_string_t **new_value,
 {
   const char *val_utf8;
   const char *val_utf8_lf;
-  apr_xlate_t *xlator = NULL;
 
   if (value == NULL)
     {
@@ -919,14 +918,14 @@ svn_subst_translate_string (svn_string_t **new_value,
 
   if (encoding)
     {
-      apr_status_t apr_err =  
-        apr_xlate_open (&xlator, "UTF-8", encoding, pool);
-      if (apr_err != APR_SUCCESS)
-        return svn_error_create (apr_err, NULL,
-                                 "failed to create a converter to UTF-8");
+      SVN_ERR (svn_utf_cstring_to_utf8_ex (&val_utf8, value->data,
+                                           encoding, NULL, pool));
+    }
+  else
+    {
+      SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, pool));
     }
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, xlator, pool));
   SVN_ERR (svn_subst_translate_cstring (val_utf8,
                                         &val_utf8_lf,
                                         "\n",  /* translate to LF */

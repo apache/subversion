@@ -108,7 +108,7 @@ prompt (const char **result,
         return svn_error_create (status, NULL, "error from apr_password_get");
     }
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (result, strbuf->data, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (result, strbuf->data, pool));
 
   return SVN_NO_ERROR;
 }

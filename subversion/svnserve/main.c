@@ -183,7 +183,7 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'r':
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, NULL, pool));
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, pool));
           root = svn_path_internal_style(root, pool);
           SVN_INT_ERR(svn_path_get_absolute(&root, root, pool));
           break;

@@ -391,7 +391,7 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (svn_utf_cstring_to_utf8 (&path_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
-                                    NULL, pool));
+                                    pool));
   path_utf8 = svn_path_internal_style (path_utf8, pool);
   
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
@@ -532,7 +532,7 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       const char *txn_name_utf8;
       SVN_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, 
                                         APR_ARRAY_IDX (args, i, const char *),
-                                        NULL, subpool));
+                                        subpool));
       SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name_utf8, subpool));
       SVN_ERR (svn_fs_abort_txn (txn));
       svn_pool_clear (subpool);
@@ -569,7 +569,7 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
-                                    NULL, pool));
+                                    pool));
   filename_utf8 = svn_path_internal_style (filename_utf8, pool);
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
 
@@ -699,7 +699,7 @@ main (int argc, const char * const *argv)
                                       opt_arg, pool) != 0)
             {
               err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg,
-                                             NULL, pool);
+                                             pool);
 
               if (err)
                 svn_handle_error (err, stderr, FALSE);
@@ -739,7 +739,7 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__parent_dir:
         err = svn_utf_cstring_to_utf8 (&opt_state.parent_dir, opt_arg,
-                                       NULL, pool);
+                                       pool);
         if (err)
           {
             svn_handle_error (err, stderr, FALSE);
@@ -809,7 +809,7 @@ main (int argc, const char * const *argv)
           opt_state.repository_path = os->argv[os->ind++];
           SVN_INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
                                                 opt_state.repository_path,
-                                                NULL, pool));
+                                                pool));
           repos_path 
             = svn_path_internal_style (opt_state.repository_path, pool);
         }

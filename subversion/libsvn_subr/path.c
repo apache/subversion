@@ -1088,5 +1088,5 @@ svn_path_cstring_to_utf8 (const char **path_utf8,
       return SVN_NO_ERROR;
     }
   else
-    return svn_utf_cstring_to_utf8 (path_utf8, path_apr, NULL, pool);
+    return svn_utf_cstring_to_utf8 (path_utf8, path_apr, pool);
 }

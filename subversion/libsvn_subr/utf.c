@@ -36,41 +36,62 @@
 #define SVN_UTF_NTOU_XLATE_HANDLE "svn-utf-ntou-xlate-handle"
 #define SVN_UTF_UTON_XLATE_HANDLE "svn-utf-uton-xlate-handle"
 
-/* Return the apr_xlate handle for converting native characters to UTF-8.
-   Create one if it doesn't exist.  If unable to find a handle, or
-   unable to create one because apr_xlate_open returned APR_EINVAL, then
-   set *RET to null and return SVN_NO_ERROR; if fail for some other
-   reason, return error. */
+/* Return an apr_xlate handle for converting from FROMPAGE to
+   TOPAGE. Create one if it doesn't exist in USERDATA_KEY. If
+   unable to find a handle, or unable to create one because
+   apr_xlate_open returned APR_EINVAL, then set *RET to null and
+   return SVN_NO_ERROR; if fail for some other reason, return
+   error. */
 static svn_error_t *
-get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
+get_xlate_handle (apr_xlate_t **ret,
+                  const char *topage, const char *frompage,
+                  const char *userdata_key, apr_pool_t *pool)
 {
   void *old_handle = NULL;
   apr_status_t apr_err;
 
   /* If we already have a handle, just return it. */
-  apr_pool_userdata_get (&old_handle, SVN_UTF_NTOU_XLATE_HANDLE, pool);
-  if (old_handle != NULL) {
-    *ret = old_handle;
-    return SVN_NO_ERROR;
-  }
+  if (userdata_key)
+    {
+      apr_pool_userdata_get (&old_handle, userdata_key, pool);
+      if (old_handle != NULL)
+        {
+          *ret = old_handle;
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Try to create one. */
-  apr_err = apr_xlate_open (ret, "UTF-8", APR_LOCALE_CHARSET, pool);
+  apr_err = apr_xlate_open (ret, topage, frompage, pool);
 
   if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
     {
       *ret = NULL;
       return SVN_NO_ERROR;
     }
-  else if (apr_err != APR_SUCCESS)
-    return svn_error_create (apr_err, NULL,
-                             "failed to create a converter to UTF-8");
+  if (apr_err != APR_SUCCESS)
+    return svn_error_createf
+      (apr_err, NULL,
+       "failed to create a converter from %s to %s",
+       (topage == APR_LOCALE_CHARSET ? "native" : topage),
+       (frompage == APR_LOCALE_CHARSET ? "native" : frompage));
 
   /* Save it for later. */
-  apr_pool_userdata_set (*ret, SVN_UTF_NTOU_XLATE_HANDLE,
-                         apr_pool_cleanup_null, pool);
+  if (userdata_key)
+    {
+      apr_pool_userdata_set (*ret, userdata_key, apr_pool_cleanup_null, pool);
+    }
 
   return SVN_NO_ERROR;
+}
+
+
+/* Return the apr_xlate handle for converting native characters to UTF-8. */
+static svn_error_t *
+get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
+{
+  return get_xlate_handle(ret, "UTF-8", APR_LOCALE_CHARSET,
+                          SVN_UTF_NTOU_XLATE_HANDLE, pool);
 }
 
 
@@ -82,33 +103,8 @@ get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 static svn_error_t *
 get_uton_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 {
-  void *old_handle = NULL;
-  apr_status_t apr_err;
-
-  /* If we already have a handle, just return it. */
-  apr_pool_userdata_get (&old_handle, SVN_UTF_UTON_XLATE_HANDLE, pool);
-  if (old_handle != NULL) {
-    *ret = old_handle;
-    return SVN_NO_ERROR;
-  }
-
-  /* Try to create one. */
-  apr_err = apr_xlate_open (ret, APR_LOCALE_CHARSET, "UTF-8", pool);
-
-  if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
-    {
-      *ret = NULL;
-      return SVN_NO_ERROR;
-    }
-  if (apr_err != APR_SUCCESS)
-    return svn_error_create (apr_err, NULL,
-                             "failed to create a converter from UTF-8");
-
-  /* Save it for later. */
-  apr_pool_userdata_set (*ret, SVN_UTF_UTON_XLATE_HANDLE,
-                         apr_pool_cleanup_null, pool);
-
-  return SVN_NO_ERROR;
+  return get_xlate_handle(ret, APR_LOCALE_CHARSET, "UTF-8",
+                          SVN_UTF_UTON_XLATE_HANDLE, pool);
 }
 
 
@@ -280,40 +276,55 @@ svn_utf_string_to_utf8 (const svn_string_t **dest,
 }
 
 
-svn_error_t *
-svn_utf_cstring_to_utf8_stringbuf (svn_stringbuf_t **dest,
-                                   const char *src,
-                                   apr_xlate_t *xlator,
-                                   apr_pool_t *pool)
+/* FIXME: DOCSTRING! */
+static svn_error_t *
+convert_cstring (const char **dest,
+                 const char *src,
+                 apr_xlate_t *convset,
+                 apr_pool_t *pool)
 {
-  apr_xlate_t *convset;
-
-  if (! xlator)
-    SVN_ERR (get_ntou_xlate_handle (&convset, pool));
-  else
-    convset = xlator;
-
   if (convset)
-    return convert_to_stringbuf (convset, src, strlen (src), dest, pool);
+    {
+      svn_stringbuf_t *destbuf;
+      SVN_ERR (convert_to_stringbuf (convset, src, strlen (src),
+                                     &destbuf, pool));
+      *dest = destbuf->data;
+    }
   else
     {
-      SVN_ERR (check_non_ascii (src, strlen (src), pool));
-      *dest = svn_stringbuf_create (src, pool);
-      return SVN_NO_ERROR;
+      apr_size_t len = strlen (src);
+      SVN_ERR (check_non_ascii (src, len, pool));
+      *dest = apr_pstrmemdup (pool, src, len);
     }
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_utf_cstring_to_utf8 (const char **dest,
                          const char *src,
-                         apr_xlate_t *xlator,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *destbuf;
+  apr_xlate_t *convset;
 
-  SVN_ERR (svn_utf_cstring_to_utf8_stringbuf (&destbuf, src, xlator, pool));
-  *dest = destbuf->data;
+  SVN_ERR (get_ntou_xlate_handle (&convset, pool));
+  SVN_ERR (convert_cstring (dest, src, convset, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf_cstring_to_utf8_ex (const char **dest,
+                            const char *src,
+                            const char *frompage,
+                            const char *convset_key,
+                            apr_pool_t *pool)
+{
+  apr_xlate_t *convset;
+
+  SVN_ERR (get_xlate_handle (&convset, "UTF-8", frompage, convset_key, pool));
+  SVN_ERR (convert_cstring (dest, src, convset, pool));
 
   return SVN_NO_ERROR;
 }
@@ -370,23 +381,26 @@ svn_utf_cstring_from_utf8 (const char **dest,
                            const char *src,
                            apr_pool_t *pool)
 {
-  svn_stringbuf_t *destbuf;
   apr_xlate_t *convset;
 
   SVN_ERR (get_uton_xlate_handle (&convset, pool));
+  SVN_ERR (convert_cstring (dest, src, convset, pool));
 
-  if (convset)
-    {
-      SVN_ERR (convert_to_stringbuf (convset, src, strlen (src),
-                                     &destbuf, pool));
-      *dest = destbuf->data;
-    }
-  else
-    {
-      apr_size_t len = strlen (src);
-      SVN_ERR (check_non_ascii (src, len, pool));
-      *dest = apr_pstrmemdup (pool, src, len);
-    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf_cstring_ftom_utf8_ex (const char **dest,
+                              const char *src,
+                              const char *topage,
+                              const char *convset_key,
+                              apr_pool_t *pool)
+{
+  apr_xlate_t *convset;
+
+  SVN_ERR (get_xlate_handle (&convset, topage, "UTF-8", convset_key, pool));
+  SVN_ERR (convert_cstring (dest, src, convset, pool));
 
   return SVN_NO_ERROR;
 }

@@ -51,7 +51,7 @@ int main(int argc, char **argv)
   for (i = 1; i < argc; i++)
     {
       const char *path_utf8;
-      err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], NULL, pool);
+      err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], pool);
       if (err != SVN_NO_ERROR)
         svn_handle_error(err, stderr, 1);
       *((const char **)apr_array_push(targets)) = 

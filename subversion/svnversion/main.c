@@ -133,7 +133,7 @@ main(int argc, char *argv[])
 
   ctx.config = apr_hash_make (pool);
 
-  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], NULL, pool));
+  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, argv[1], pool));
   wc_path = svn_path_internal_style (wc_path, pool);
   SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
   if (! wc_format)
@@ -171,7 +171,7 @@ main(int argc, char *argv[])
          does not match the given trailing URL then the whole working
          copy is switched. */
       const char *trail_url;
-      SVN_INT_ERR (svn_utf_cstring_to_utf8 (&trail_url, argv[2], NULL, pool));
+      SVN_INT_ERR (svn_utf_cstring_to_utf8 (&trail_url, argv[2], pool));
       if (! sb.wc_url)
         {
           sb.switched = TRUE;

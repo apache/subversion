@@ -50,7 +50,7 @@ svn_cl__propdel (apr_getopt_t *os,
   /* Get the property's name (and a UTF-8 version of that name). */
   SVN_ERR (svn_opt_parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
 
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR (svn_opt_args_to_target_array (&targets, os,
