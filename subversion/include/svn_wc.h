@@ -543,6 +543,11 @@ svn_error_t *svn_wc_get_ancestry (char **url,
 /* A callback vtable invoked by the generic entry-walker function. */
 typedef struct svn_wc_entry_callbacks_t
 {
+  /* ### TODO: these callbacks should take pool args, so
+     svn_wc_walk_entries() itself can do pool management.  Think
+     editors.  (And then go adjust callers, such as
+     invalidate_wcprop_for_entry and friends in ra.c.) */
+
   /* An ENTRY was found at PATH.  */
   svn_error_t *(*found_entry) (const char *path,
                                const svn_wc_entry_t *entry,
