@@ -852,9 +852,6 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
   apr_size_t i, copied = 0;
   int c;
 
-  if (! path)
-    return NULL;
-
   retstr = svn_stringbuf_create ("", pool);
   for (i = 0; path[i]; i++)
     {
@@ -904,9 +901,6 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
   svn_stringbuf_t *retstr;
   apr_size_t i;
   svn_boolean_t query_start = FALSE;
-
-  if (! path)
-    return NULL;
 
   retstr = svn_stringbuf_create ("", pool);
 
