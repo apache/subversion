@@ -38,3 +38,18 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
+Status of 1.1.1:
+================
+
+Candidate changes:
+
+  * r10788, r10796, r10904
+    Fix performance regression in character encoding translations.  Most
+    noticable on Win32, but impacts other platforms as well.
+    Justification:
+      Slow "svn status" annoys people, especially TSVN users.
+    Notes:
+      Proposed during 1.1.0 preparation, but it is too late and complicated
+      to put in 1.1.0 at this stage.
+    Votes:
+      +1: lundblad
