@@ -125,6 +125,57 @@ test_path_split (const char **msg,
 }
 
 
+static svn_error_t *
+test_uri_encode (const char **msg,
+                 svn_boolean_t msg_only,
+                 apr_pool_t *pool)
+{
+  int i;
+
+  const char *paths[5][2] = { 
+    { "http://subversion.tigris.org", 
+         "http://subversion.tigris.org"},
+    { " special_at_beginning",
+         "%20special_at_beginning" },
+    { "special_at_end ",
+         "special_at_end%20" },
+    { "special in middle",
+         "special%20in%20middle" },
+    { "\"Ouch!\"  \"Did that hurt?\"", 
+         "%22Ouch!%22%20%20%22Did%20that%20hurt%3F%22" }
+  };
+  
+  *msg = "test svn_path_uri_[en/de]code";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < 5; i++)
+    {
+      svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
+      svn_stringbuf_t *en_path, *de_path;
+
+      en_path = svn_path_uri_encode (path, pool);
+      if (strcmp (en_path->data, paths[i][1]))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "svn_path_uri_encode returned '%s' instead of '%s'",
+             en_path->data, paths[i][1]);
+        }
+ 
+      de_path = svn_path_uri_decode (en_path, pool);
+      if (! svn_stringbuf_compare (de_path, path))
+        {
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+             "svn_path_uri_decode returned '%s' instead of '%s'",
+             de_path->data, path->data);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -134,6 +185,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   0,
   test_path_is_child,
   test_path_split,
+  test_uri_encode,
   0
 };
 
