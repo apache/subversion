@@ -309,7 +309,7 @@ def ensure_directories(path, root, dumpfile):
   of PATH's basename.  Leading slash(es) on PATH are optional."""
   path = path.lstrip('/')
   path_so_far = None
-  components = string.split(path, '/')
+  components = filter(None, string.split(path, '/'))
   last_idx = len(components) - 1
   this_node = root
 
@@ -319,7 +319,7 @@ def ensure_directories(path, root, dumpfile):
     component = components[i]
 
     if path_so_far:
-      path_so_far += '/' + component
+      path_so_far = path + '/' + component
     else:
       path_so_far = component
 
@@ -336,7 +336,7 @@ def ensure_directories(path, root, dumpfile):
       dumpfile.write("\n")
     this_node = this_node.children[component]
 
-    i += 1
+    i = i + 1
 
   return this_node
 
@@ -349,7 +349,6 @@ def get_md5(path):
   while buf:
     checksum.update(buf)
     buf = f.read(102400)
-  f.close()
   return checksum.hexdigest()
     
 
@@ -358,15 +357,10 @@ class Dump:
     'Open DUMPFILE_PATH, and initialize revision to REVISION.'
     self.dumpfile_path = dumpfile_path
     self.revision = revision
-    self.tmpdir = os.tempnam('.', 'cvs2svn-tmp-')
     self.dumpfile = open(dumpfile_path, 'w')
 
     # Keep track of what paths exist in the repository.
     self.root = Node()
-
-    # Make the dumper's temp directory for this run.  RCS working
-    # files get checked out into here.
-    os.mkdir(self.tmpdir)
 
     # Initialize the dumpfile with the standard headers:
     ### (The source cvs repository doesn't have a UUID, hmm, what to do?)
@@ -414,7 +408,7 @@ class Dump:
       klen_len = int(math.ceil(math.log10(klen))) + 1
       plen = len(props[pname]) + 1
       plen_len = int(math.ceil(math.log10(plen))) + 1
-      total_len += (klen + klen_len + plen + plen_len)
+      total_len = total_len + klen + klen_len + plen + plen_len
         
     # Print the revision header and props
     self.dumpfile.write('Revision-number: %d\n' % self.revision)
@@ -431,7 +425,7 @@ class Dump:
 
   def end_revision(self):
     old_rev = self.revision
-    self.revision += 1
+    self.revision = self.revision + 1
     return old_rev
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file):
@@ -444,19 +438,14 @@ class Dump:
       rcs_file = os.path.join(dirname, 'Attic', fname)
       f_st = os.stat(rcs_file)
 
+    if f_st[0] & stat.S_IXUSR:
+      is_executable = 1
+    else:
+      is_executable = 0
+
     basename = os.path.basename(rcs_file[:-2])
+    pipe = os.popen('co -q -p%s \'%s\'' % (cvs_rev, rcs_file), 'r', 102400)
 
-    save_cwd = os.getcwd()
-    abs_rcs_file = os.path.abspath(rcs_file)
-    try:
-      os.chdir(self.tmpdir)
-      os.system('co -f%s \'%s\'' % (cvs_rev, abs_rcs_file))
-    finally:
-      os.chdir(save_cwd)
-
-    working = os.path.join(self.tmpdir, basename)
-    # working_st = os.stat(working)
-    
     parent_node = ensure_directories(svn_path, self.root, self.dumpfile)
 
     # Anything ending in ".1" is a new file.
@@ -464,7 +453,7 @@ class Dump:
     # ### We could also use the parent_node to determine this.
     # ### Maybe we should, too, because ".1" is not perfectly
     # ### reliable, because of 'cvs commit -r'...
-    if re.match('.*\\.1$', cvs_rev):
+    if cvs_rev[-2:] == '.1':
       action = 'add'
     else:
       action = 'change'
@@ -473,52 +462,52 @@ class Dump:
     self.dumpfile.write('Node-kind: file\n')
     self.dumpfile.write('Node-action: %s\n' % action)
     self.dumpfile.write('Prop-content-length: %d\n' % 10)  ### svn:executable?
-    self.dumpfile.write('Text-content-length: %d\n' % os.path.getsize(working))
-    self.dumpfile.write('Text-content-md5: %s\n' % get_md5(working))
-    self.dumpfile.write('Content-length: %d\n' % 0) # todo
+    self.dumpfile.write('Text-content-length: ')
+    pos = self.dumpfile.tell()
+    self.dumpfile.write('0000000000000000\n')
+    self.dumpfile.write('Text-content-md5: 00000000000000000000000000000000\n')
+    self.dumpfile.write('Content-length: 0000000000000000\n')
     self.dumpfile.write('\n')
     self.dumpfile.write('PROPS-END\n')
 
-    ### This is a pity.  We already ran over all the file's bytes to
-    ### get the checksum, now we have to do it again to insert the
-    ### file's contents into the dumpstream?  What a lose.
-    ###
-    ### A solution: write '00000000000000000000000000000000' for the
-    ### initial checksums, then go back and patch them up after the
-    ### entire dumpfile has been written.  (We'd calculate the
-    ### checksum as we get each file's contents, record it somewhere,
-    ### and look it up during the patchup phase.) 
-    ###
-    ### We could also use the `md5sum' utility to get the checksum,
-    ### and the OS's file append capability to append the file.  But
-    ### then we'd have a dependency on `md5sum' (yuck); and how would
-    ### our open filehandle interact with data being inserted behind
-    ### its back?  Not very well, I imagine.
-
-    # Insert the file's contents.
-    f = open(working, 'r')
-    buf = f.read(102400)
+    # Insert the rev contents, calculating length and checksum as we go.
+    checksum = md5.new()
+    length = 0
+    buf = pipe.read()
     while buf:
+      checksum.update(buf)
+      length = length + len(buf)
       self.dumpfile.write(buf)
-      buf = f.read(102400)
-    f.close()
+      buf = pipe.read()
+    pipe.close()
 
+    # Go back to patch up the length and checksum headers:
+    self.dumpfile.seek(pos, 0)
+    # We left 16 zeros for the text length; replace them with the real
+    # length, padded on the left with spaces:
+    self.dumpfile.write(string.rjust(str(length), 16))
+    # 16... + 1 newline + len('Text-content-md5: ') == 35
+    self.dumpfile.seek(pos + 35, 0)
+    self.dumpfile.write(checksum.hexdigest())
+    # 35... + 32 bytes of checksum + 1 newline + len('Content-length: ') == 84
+    self.dumpfile.seek(pos + 84, 0)
+    # ### THIS IS WRONG.
+    # ### The content length should be the length of property data
+    # ### plus the text data plus all the decorations around them.
+    # ### (Calculating it may involve the svn:executable property.)
+    self.dumpfile.write(string.rjust(str(length), 16))
+    # Jump back to the end of the stream
+    self.dumpfile.seek(0, 2)
+
+    # This record is done.
     self.dumpfile.write('\n')
-
     parent_node.children[basename] = Node()
 
-    #  # if we just made the file, we can send it in one big hunk, rather
-    #  # than streaming it in.
-    #  ### we should watch out for file sizes here; we don't want to yank
-    #  ### in HUGE files...
-    #  if created_file:
-    #    delta.svn_txdelta_send_string(pipe.read(), handler, baton, f_pool)
-    #    if f_st[0] & stat.S_IXUSR:
-    #      fs.change_node_prop(root, svn_path, "svn:executable", "", f_pool)
-    #  else:
-    #    # open an SVN stream onto the pipe
-    #    stream2 = util.svn_stream_from_aprfile(pipe, f_pool)
-    #
+    # Some old code, left around for reference (I don't think we need
+    # to worry about this particular problem anymore, since dumpfiles
+    # do not depend on deltas, but want to poke around a little more
+    # to make sure I understand what this was for):
+    # 
     #    # Get the current file contents from the repo, or, if we have
     #    # multiple CVS revisions to the same file being done in this
     #    # single commit, then get the contents of the previous
@@ -530,12 +519,6 @@ class Dump:
     #      stream1 = util.svn_stream_from_aprfile(infile2, f_pool)
     #    else:
     #      stream1 = fs.file_contents(root, svn_path, f_pool)
-    #
-    #    txstream = delta.svn_txdelta(stream1, stream2, f_pool)
-    #    delta.svn_txdelta_send_txstream(txstream, handler, baton, f_pool)
-    #
-    #    # shut down the previous-rev pipe, if we opened it
-    #    infile2 = None
 
   def close(self):
     self.dumpfile.close()
