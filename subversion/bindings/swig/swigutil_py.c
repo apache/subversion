@@ -107,6 +107,64 @@ static PyObject *convert_svn_string_t(void *value, void *ctx)
   return PyBuffer_FromMemory((void *)s->data, s->len);
 }
 
+static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
+{
+  PyObject *list;
+  PyObject *path, *kind, *url, *rev, *cf_url, *state;
+  svn_client_commit_item_t *item = value;
+
+  /* ctx is unused */
+
+  list = PyList_New(6);
+
+  if (item->path)
+    path = PyString_FromString(item->path);
+  else
+    {
+      path = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  if (item->url)
+    url = PyString_FromString(item->url);
+  else
+    {
+      url = Py_None;
+      Py_INCREF(Py_None);
+    }
+        
+  if (item->copyfrom_url)
+    cf_url = PyString_FromString(item->copyfrom_url);
+  else
+    {
+      cf_url = Py_None;
+      Py_INCREF(Py_None);
+    }
+        
+  kind = PyInt_FromLong(item->kind);
+  rev = PyInt_FromLong(item->revision);
+  state = PyInt_FromLong(item->state_flags);
+
+  if (! (list && path && kind && url && rev && cf_url && state))
+    {
+      Py_XDECREF(list);
+      Py_XDECREF(path);
+      Py_XDECREF(kind);
+      Py_XDECREF(url);
+      Py_XDECREF(rev);
+      Py_XDECREF(cf_url);
+      Py_XDECREF(state);
+      return NULL;
+    }
+
+  PyList_SET_ITEM(list, 0, path);
+  PyList_SET_ITEM(list, 1, kind);
+  PyList_SET_ITEM(list, 2, url);
+  PyList_SET_ITEM(list, 3, rev);
+  PyList_SET_ITEM(list, 4, cf_url);
+  PyList_SET_ITEM(list, 5, state);
+  return list;
+}
 
 PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash)
 {
@@ -130,50 +188,6 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
             goto error;
         if (PyList_Append(list, ob) == -1)
             goto error;
-    }
-
-    return list;
-
-  error:
-    Py_DECREF(list);
-    return NULL;
-}
-
-PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings)
-{
-    PyObject *list = PyList_New(strings->nelts);
-    int i;
-
-    for (i = 0; i < strings->nelts; ++i)
-      {
-        PyObject *ob;
-
-        ob = PyString_FromString(APR_ARRAY_IDX(strings, i, const char *));
-        if (ob == NULL)
-            goto error;
-        PyList_SET_ITEM(list, i, ob);
-    }
-
-    return list;
-
-  error:
-    Py_DECREF(list);
-    return NULL;
-}
-
-PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs)
-{
-    PyObject *list = PyList_New(revs->nelts);
-    int i;
-
-    for (i = 0; i < revs->nelts; ++i)
-      {
-        PyObject *ob;
-
-        ob = PyInt_FromLong(APR_ARRAY_IDX(revs, i, svn_revnum_t));
-        if (ob == NULL)
-            goto error;
-        PyList_SET_ITEM(list, i, ob);
     }
 
     return list;
@@ -213,7 +227,70 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
     return temp;
 }
 
+
+/*** apr_array_header_t conversions.  To create a new type of
+     converter, simply copy-n-paste one of these function and tweak
+     the creation of the PyObject *ob.  ***/
 
+PyObject *svn_swig_py_array_to_list(const apr_array_header_t *array)
+{
+    PyObject *list = PyList_New(array->nelts);
+    int i;
+
+    for (i = 0; i < array->nelts; ++i) {
+        PyObject *ob = 
+          PyString_FromString(APR_ARRAY_IDX(array, i, const char *));
+        if (ob == NULL)
+          goto error;
+        PyList_SET_ITEM(list, i, ob);
+    }
+    return list;
+
+  error:
+    Py_DECREF(list);
+    return NULL;
+}
+
+PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
+{
+    PyObject *list = PyList_New(array->nelts);
+    int i;
+
+    for (i = 0; i < array->nelts; ++i) {
+        PyObject *ob 
+          = PyInt_FromLong(APR_ARRAY_IDX(array, i, svn_revnum_t));
+        if (ob == NULL)
+          goto error;
+        PyList_SET_ITEM(list, i, ob);
+    }
+    return list;
+
+  error:
+    Py_DECREF(list);
+    return NULL;
+}
+
+static PyObject *
+commit_item_array_to_list(const apr_array_header_t *array)
+{
+    PyObject *list = PyList_New(array->nelts);
+    int i;
+
+    for (i = 0; i < array->nelts; ++i) {
+        PyObject *ob = convert_svn_client_commit_item_t
+          (APR_ARRAY_IDX(array, i, svn_client_commit_item_t *), NULL);
+        if (ob == NULL)
+          goto error;
+        PyList_SET_ITEM(list, i, ob);
+    }
+    return list;
+
+  error:
+    Py_DECREF(list);
+    return NULL;
+}
+
+
 static svn_error_t * convert_python_error(apr_pool_t *pool)
 {
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, 0, NULL, pool,
@@ -687,7 +764,7 @@ svn_swig_py_get_commit_log_func (const char **log_msg,
 
   if (commit_items)
     {
-      cmt_items = svn_swig_py_array_to_list (commit_items);
+      cmt_items = commit_item_array_to_list(commit_items);
     }
   else
     {
@@ -698,7 +775,8 @@ svn_swig_py_get_commit_log_func (const char **log_msg,
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"OO&",
-                                      cmt_items, make_ob_pool, pool)) == NULL)
+                                      cmt_items,
+                                      make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(cmt_items);
       return convert_python_error(pool);
@@ -708,17 +786,19 @@ svn_swig_py_get_commit_log_func (const char **log_msg,
 
   if (result == Py_None)
     {
-      *log_msg = NULL;
-    }
-  else if (!PyString_Check(result)) 
-    {
       Py_DECREF(result);
-      PyErr_SetString(PyExc_TypeError, "not a string");
-      return convert_python_error(pool);
+      *log_msg = NULL;
+      return SVN_NO_ERROR;
     }
-
-  *log_msg = PyString_AS_STRING(result);
-  return SVN_NO_ERROR;
+  else if (PyString_Check(result)) 
+    {
+      *log_msg = PyString_AS_STRING(result);
+      return SVN_NO_ERROR;
+    }
+     
+  Py_DECREF(result);
+  PyErr_SetString(PyExc_TypeError, "not a string");
+  return convert_python_error(pool);
 }
 
 
