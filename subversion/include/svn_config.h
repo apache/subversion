@@ -315,7 +315,7 @@ svn_error_t *svn_config_ensure (const char *config_dir, apr_pool_t *pool);
  * also contain @c SVN_CONFIG_REALMSTRING_KEY.  The caller can examine
  * this value as a sanity-check that the correct file was loaded.
  *
- * The hashtable will contain <tt>const char *</tt>keys and
+ * The hashtable will contain <tt>const char *</tt> keys and
  * <tt>svn_string_t *</tt> values.
  */
 svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
@@ -333,7 +333,7 @@ svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
  * SVN_CONFIG_REALMSTRING_KEY.  This allows programs (or users) to
  * verify exactly which set credentials live within the file.
  *
- * The hashtable must contain <tt>const char *</tt>keys and
+ * The hashtable must contain <tt>const char *</tt> keys and
  * <tt>svn_string_t *</tt> values.
  */
 svn_error_t * svn_config_write_auth_data (apr_hash_t *hash,

@@ -246,7 +246,7 @@ typedef struct svn_auth_cred_ssl_client_cert_t
  */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
 
-/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW crentials. */
+/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW credentials. */
 typedef struct svn_auth_cred_ssl_client_cert_pw_t
 {
   /** Certificate password */

@@ -223,7 +223,7 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
                                       apr_pool_t *pool);
 
 
-/** Set @a *logfiles to array of <tt>const char *</tt> log file names
+/** Set @a *logfiles to an array of <tt>const char *</tt> log file names
  * of Berkeley DB-based Subversion filesystem.
  *
  * If @a only_unused is @c TRUE, set @a *logfiles to an array which
@@ -627,7 +627,7 @@ svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
                               apr_pool_t *pool);
 
 
-/** Set @a *names_p to an array of <tt>const char *</tt> @a ids which are the 
+/** Set @a *names_p to an array of <tt>const char *</tt> ids which are the
  * names of all the currently active transactions in the filesystem @a fs.
  * Allocate the array in @a pool.
  */

@@ -207,7 +207,7 @@ svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
  *
  * @a depth determines the depth used when opening @a path if @a path is a
  * versioned directory, @a depth is ignored otherwise.  If @a write_lock is
- * @a TRUE the access batons will hold write locks.
+ * @c TRUE the access batons will hold write locks.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
@@ -599,7 +599,7 @@ typedef enum svn_wc_notify_lock_state_t {
  * (i.e., not relative to an anchor).  @c action describes what happened
  * to @c path.
  *
- * @c kind, @c content_state @c prop_state and @c lock_state are from
+ * @c kind, @c content_state, @c prop_state and @c lock_state are from
  * after @c action, not before.  @c lock_state reflects the addition
  * or removal of a lock token in the working copy.
  *
@@ -631,7 +631,7 @@ typedef enum svn_wc_notify_lock_state_t {
  * and properties.  However, if the caller does not have this
  * information, it will simply pass the corresponding `*_unknown'
  * values, and it is up to the implementation how to handle that
- * (i.e., whether or not to attempt deduction, or just to punt and
+ * (i.e., whether to attempt deduction, or just to punt and
  * give a less informative notification).
  *
  * @note Callers of notification functions should use @c svn_wc_create_notify
@@ -1681,7 +1681,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
 /** @since New in 1.2.
  *
  * Associate @a locks, a hash table mapping <tt>const char*</tt>
- * absolute repository paths to <tt>svn_lock_t</tt> objects with an
+ * absolute repository paths to <tt>svn_lock_t</tt> objects, with a
  * @a set_locks_baton returned by an earlier call to
  * @c svn_wc_get_status_editor2.  @a repos_root is the repository root URL.
  * Perform all allocations in @a pool.
@@ -2089,7 +2089,7 @@ svn_wc_crawl_revisions2 (const char *path,
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
- * Simliar to @c svn_wc_crawl_revisions2, but takes an svn_wc_notify_func_t
+ * Similar to @c svn_wc_crawl_revisions2, but takes an svn_wc_notify_func_t
  * and a @c svn_reporter_t instead.
  */
 svn_error_t *

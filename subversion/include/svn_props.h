@@ -97,7 +97,7 @@ svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
 svn_boolean_t svn_prop_needs_translation (const char *propname);
 
 
-/** Given an @a proplist array of @c svn_prop_t structures, allocate
+/** Given a @a proplist array of @c svn_prop_t structures, allocate
  * three new arrays in @a pool.  Categorize each property and then
  * create new @c svn_prop_t structures in the proper lists.  Each new
  * @c svn_prop_t structure's fields will point to the same data within
@@ -105,7 +105,7 @@ svn_boolean_t svn_prop_needs_translation (const char *propname);
  *
  * Callers may pass NULL for each of the property lists in which they
  * are uninterested.  If no props exist in a certain category, and the
- * property list argment for that category is non-NULL, then that
+ * property list argument for that category is non-NULL, then that
  * array will come back with <tt>->nelts == 0</tt>.
  *
  * ### Hmmm, maybe a better future interface is to return an array of

@@ -241,7 +241,7 @@ svn_error_t *svn_io_set_file_read_only (const char *path,
 /** Make a file as writable as the operating system allows.
  * @a path is the utf8-encoded path to the file.  If @a ignore_enoent is
  * @c TRUE, don't fail if the target file doesn't exist.
- * @warning On Unix this function will do the equivlanet of chmod a+w path.
+ * @warning On Unix this function will do the equivalent of chmod a+w path.
  * If this is not what you want you should not use this function, but rather
  * use apr_file_perms_set().
  */
@@ -389,7 +389,7 @@ svn_error_t *svn_io_file_create (const char *file,
  *
  * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
- * Lock will be automaticaly released when @a pool is cleared or destroyed.
+ * Lock will be automatically released when @a pool is cleared or destroyed.
  * Use @a pool for memory allocations.
  */
 svn_error_t *svn_io_file_lock (const char *lock_file,
@@ -405,7 +405,7 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
  * If @a nonblocking is TRUE, do not wait for the lock if it
  * is not available: throw an error instead.
  *
- * Lock will be automaticaly released when @a pool is cleared or destroyed.
+ * Lock will be automatically released when @a pool is cleared or destroyed.
  * Use @a pool for memory allocations.
  */
 svn_error_t *svn_io_file_lock2 (const char *lock_file,
@@ -655,9 +655,9 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  * @a exitcode is not set and the exit code is non-zero, then an 
  * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
  *
- * @a args is a list of utf8-encoded (<tt>const char *</tt>)'s, terminated by
- * @c NULL.  @c ARGS[0] is the name of the program, though it need not be
- * the same as @a cmd.
+ * @a args is a list of utf8-encoded <tt>const char *</tt> arguments,
+ * terminated by @c NULL.  @a args[0] is the name of the program, though it
+ * need not be the same as @a cmd.
  *
  * @a inherit sets whether the invoked program shall inherit its environment or
  * run "clean".

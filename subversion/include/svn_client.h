@@ -1831,7 +1831,7 @@ svn_client_lock (const apr_array_header_t *targets,
  *
  * Unlock @a targets in the repository.  @a targets is an array of
  * <tt>const char *</tt> paths - either all working copy paths or all URLs.
- * All @a targets must be in the same reposotiry.
+ * All @a targets must be in the same repository.
  *
  * If the targets are WC paths, and @a break_lock is false, the working
  * copy must contain a locks for each target.
@@ -1947,7 +1947,7 @@ typedef svn_error_t *(*svn_info_receiver_t)
  *
  * If both revision arguments are either @c
  * svn_opt_revision_unspecified or NULL, then information will be
- * pulled soley from the working copy; no network connections will be
+ * pulled solely from the working copy; no network connections will be
  * made.
  *
  * Otherwise, information will be pulled from a repository.  The
