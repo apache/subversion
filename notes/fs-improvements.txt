@@ -1,17 +1,208 @@
 Last updated: $Date: 2001/07/02 21:46:52 $
 
-Two things that need to happen in the filesystem:
+Three things that need to happen in the filesystem:
 
-   a) We need to operate on file contents without holding the entire
+   a) Switch to a sane node key system (issue #654).
+
+   b) We need to operate on file contents without holding the entire
       contents in RAM.  Berkeley DB gives us tools to operate on
       regions within a value, we just need to use them.
 
-   b) We need to do reverse-delta storage in the filesystem (with
+   c) We need to do reverse-delta storage in the filesystem (with
       checksums).
 
 Some thoughts on them:
 
-a) Operate on portions of files efficiently.
+
+a) Switch to a sane node key system (issue #654)
+================================================
+
+For more background, read the archived dev list thread with subject
+"Maintaining NodeID sanity":
+
+   http://subversion.tigris.org/servlets/ReadMsg?msgId=72265&listName=dev
+
+Here's the plan, mostly by Bill Tutt and Branko, with assists from
+Karl and Mike:
+
+Note:
+
+   - This is described in terms of a BDB implementation.  Translate to
+     RDB-speak in your head as necessary :-).
+
+   - This proposal supports one copy (a.k.a. branch) operation.  You
+     can call it anything you want: "copy", "branch", "split",
+     "pumpkin", whatever.  We're calling it "copy" :-).  It is the SCM
+     branch operation.
+
+First, a node's key consists of three parts
+
+   nodeID.copyID.txnID
+
+The "txnID" is really just a unique identifier, but we happened to
+inherit it from the fs txn, and we needed a name for that portion,
+so... :-) Also, the copyID could theoretically live in the node's
+value instead of in its key, but it feels right to put it in the
+key.  (How's that for a powerful argument?)  For nodes that are not
+copies, the copyID is just "0" or some other special value.
+
+There are no more mutability flags -- mutability is determined by
+examining whether the node key's txnID matches the txn in question.
+Therefore, there is no stabilization walk at commit time.
+
+When we commit a change to a node, the nodeID and copyID stay the
+same, only the txnID changes (actually there is a circumstance where
+the copyID can change, but more on that later).  The new txnID is not
+necessarily greater than the old one -- sometimes txns get committed
+out of order! -- but anyway it's different from the old txnID, and the
+same new txnID is used for all other changes in that commit.  A txnID
+is just a unique string; in fact, we're going to use base64 probably.
+
+After a commit, the txn record in the transactions table does not go
+away; instead, it is updated so it now maps the txnID to the new
+revision.  This allows us to determine the revision a node was
+committed in, in constant time, given the node's key.
+
+Each new version of a node stores the node's predecessor (and does not
+store copyform history).  When node "5.0.fzb" is committed as a
+successor to "5.0.qnr", the new node's value stores a reference to
+"5.0.qnr".
+
+What about copies?
+
+As in the current fs, copies are shallow.  The top of the copied tree
+gets a new node, but the nodes below it are shared with the copy
+source.  The new node key keeps the same nodeID, but gets a new txnID,
+and gets the next unique copyID (replacing the current copyID, if
+any).
+
+In the example below, we copy `A' to `Y'.  Node keys for `A', `Y', and
+`bar' are given in parentheses:
+
+            BEFORE THE COPY               AFTER THE COPY
+               <root>                         <root>     
+              /  |                           /  |  \     
+            /    |                         /    |    \   
+          /      |                       /      |      \ 
+        A(3.0.m) B                     A(3.0.m) B       Y(3.jfb.p)
+        / \      |                     / \      |      / \
+     foo  bar   qux                 foo  bar   qux   foo  bar
+       (5.0.abc)                       (5.0.abc)        (5.0.abc)
+
+Let's flesh out the example with some commits under A and Y.  To save
+space, the colons represent time flow, not directory hierarchy --
+imagine they're the Z axis coming out of the screen or something :-).
+
+                         <root>     
+                        /  |  \     
+                      /    |    \   
+                    /      |      \ 
+                 A(3.0.m)  B       Y(3.jfb.p)
+                  / \      |      / \
+               foo  bar   qux   foo  bar
+                 (5.0.abc)         (5.0.abc)
+                     :                 :
+                     :                 :
+                 (5.0.ejk)         (5.jfb.mht)
+                     :                 :
+                     :                 :
+                 (5.0.xyz)         (5.jfb.uuu)
+                     :                 :
+                     :                 :
+                 (5.0.r2d2)        (5.jfb.2pz)
+                     :                 :
+                     :                 :
+                 (5.0.c3po)        (5.jfb.rdt)
+
+Let's see how easy it is to answer various questions in this system:
+
+Obviously, is_related() is simple -- just check that the nodeID
+portion is the same.  You may not know if the relationship is cousins
+vs ancestor/descendant, but you know whether or not they're related.
+
+Asking is_predecessor(A,B) is also easy.  Just fetch the predecessor
+pointer from B and see if it's A.
+
+Finding out what revisions a node changed in is proportional to the
+number of changes the node has undergone: start at the node, walk back
+through its predecessors, and for each txnID, look up the revision
+number via the transactions table (as described earlier).
+
+During this walk, you can always tell when you encounter a node that
+results from a copy, because the copyID portion will either change or
+disappear entirely.  When this happens, you know one of two things is
+true: either the previous node in the walk was the top of a copied
+tree, or *this* node (the one with the different copyID) was one of
+the unchanged nodes down inside a copied tree.
+
+One might think "Oh, we'll distinguish between these cases by walking
+up the parents of the node, and seeing if we eventually encounter the
+old copyID in one of the parents.  That would tell us that we're in
+the second case.  If we never encounter it, that tells us we're in the
+first."
+
+Not so fast, Spidey.  We don't have parent pointers -- this is a
+predecessor walk by node keys; we can't just walk up the parent path
+like that.  Fortunately, copyIDs are generated from a new `copies'
+table, which maps unique copyIDs onto (REV COPY_DST_PATH
+COPY_DST_NODEKEY).  We look up the the rev/path for the old copyID,
+convert it to a node key, and compare it to the node key we're
+currently on.  Voilà!  Actually, we're not sure we'll store all of
+those in the copies table, it may boil down to just the DST_NODEKEY or
+just the other two, we'll see.
+
+Writing those predecessor walk loops well is left as an exercise for
+the reader (umm, more likely for the writers, heh), but you can see
+that the necessary questions can be answered efficiently.
+
+Note that, like txnIDs, copyIDs are just unique numbers.  They may be
+increasing monotonically in the `copies' table, but (due to the fact
+that txn A may be started before txn B yet be committed afterwards)
+it's quite possible that a higher copyID will become visible in the
+revision history before a lower one.
+
+The one thing we can know is that a lower copyID can never be a
+branchwise descendent of a lower copyID, since the lower one must have
+been committed before any of its descendants txns were started, of
+course.  I'm not sure this minimal inference will ever be useful, but
+anyway it's all we've got.  Anyway, right now, we only ever need ask
+if two copyIDs are equal -- we don't order them.
+
+Okay, now what if A already had copied trees underneath it when we
+copied it to Y?  Suppose `bar' is down in one of those subdirectories?
+
+Then when we're committing on /Y/.../bar, we watch for copyIDs as we
+walk down from root, like usual, and if we're in a copy underneath a
+copy, we bubble down a _new_ copyID, distinct from both Y's and B's,
+starting from that point.  Justification: a branch of a branch is
+still a branch, so it gets its own copyID.
+
+At this point, I'm going to hand-wave on describing the
+copy-under-copy behavior any further.  I think the above is enough to
+see that there are no insurmountable problems here, and that the
+filesystem will now have node keys that [lazily] reflect actual
+branching patterns.
+
+A few more notes:
+
+The is_ancestor(X,Y) question is really only asked during merge(),
+that is, during commits.  If entry "somedir/blah" has NodeID Y in the
+txn being committed, and NodeID X in head tree being merged into that
+txn, then we need to make sure X is an ancestor of Y, so that when the
+commit replaces X with Y, we know we're not losing any history.
+
+Therefore, we think we can get away with storing the ancestors in a
+distributed fashion, as a chain: each node knows its immediate
+predecessor (or "precessors", in the future), and you walk back until
+you have your answer.  In real life, we won't usually be walking back
+too far, and the search can be further bounded by the revision range
+implied by the two nodes.  If profiling proves these walks to be a
+bottleneck, we can start caching the results of such walks in a new
+table whose keys are node keys, and values are _full_ ancestor lists.
+
+
+
+b) Operate on portions of files efficiently.
 ============================================
 
    [still pondering this section]
@@ -43,7 +234,8 @@ itself, and just return the data in a void pointer passed to
 svn_fs__get_node_rev_contents().  Still pondering.
 
 
-b) Reverse-delta storage.
+
+c) Reverse-delta storage.
 =========================
 
 The naive way to recover an old text is:
