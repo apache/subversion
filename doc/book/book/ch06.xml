@@ -45,12 +45,13 @@
       officially endorse any server as "primary" or "official".
       Neither network implementation is treated as a second-class
       citizen; each server has distinct advantages and disadvantages.
-      In fact, these servers can run in parallel, each accessing your
-      repositories in its own way, and each without hindering the
-      other.  Here's a brief overview and comparsion of of the two
-      available Subversion servers&mdash; as an administrator, it's up
-      to you to choose whatever works best for you and your
-      users.</para>
+      In fact, it's possible for different servers to run in parallel,
+      each accessing your repositories in its own way, and each
+      without hindering the other (see <xref
+      linkend="svn-ch-6-sect-5"/>).  Here's a brief overview and
+      comparsion of of the two available Subversion servers&mdash; as
+      an administrator, it's up to you to choose whatever works best
+      for you and your users.</para>
       
 
     <table id="svn-ch-06-table-1">
@@ -147,28 +148,215 @@
 
     <para>This section is a general discussion of how a Subversion
       client and server interact with one another, regardless of the
-      network implementation you're using.  After reading,
-      you'll have a good understanding of how a server can behave, and
-      the different ways in which a client can be configured to
+      network implementation you're using.  After reading, you'll have
+      a good understanding of how a server can behave and the
+      different ways in which a client can be configured to
       respond.</para>
 
     <sect2 id="svn-ch-6-sect-2.1">
       <title>Requests and Responses</title>
 
+      <para>The Subversion client spends most of its time managing
+        working copies.  When it needs information from a repository,
+        however, it makes a network request, and the server responds
+        with an appropriate answer.  The details of the network
+        protocol are hidden from the user; the client attempts to
+        access a URL, and depending on the URL schema, a particular
+        protocol is used to contact the server (see <xref
+        linkend="svn-ch-02-sidebar-1"/>).  Users can run <command>svn
+        --version</command> to see which URL schemas and protocols the
+        client knows how to use.</para>
 
+      <para>When the server process receives a client request, it
+        typically demands that the client identify itself.  It issues
+        an authentication challenge to the client, and the client
+        responds by providing <firstterm>credentials</firstterm> back
+        to the server.  Once authentication is complete, the server
+        responds with the original information the client asked for.
+        Notice that this system is different from systems like CVS,
+        where the client pre-emptively offers credentials ("logs in")
+        to the server before ever making a request.  In Subversion,
+        the server "pulls" credentials by challenging the client at
+        the appropriate moment, rather than the client "pushing" them.
+        This makes certain operations more elegant.  For example, if a
+        server is configured to allow anyone in the world to read a
+        repository, then the server will never issue an authentication
+        challenge when a client attempts to <command>svn
+        checkout</command>.</para>
 
-
-      <para>request/response model;  authentication "pulled" by
-        server;  for commits, authn stored as a revprop (ch05 xref);
-        empty svn:author meaning.</para>
+      <para>If the client's network request writes new data to the
+        repository (e.g. <command>svn commit</command>), then a new
+        revision tree is created.  If the client's request was
+        authenticated, then the authenticated user's name is stored as
+        the value of the <literal>svn:author</literal> property on the
+        new revision (see <xref linkend="svn-ch-5-sect-1.2"/>).  If
+        the client was not authenticated (in other words, the server
+        never issued an authentication challenge), then the revision's
+        <literal>svn:author</literal> property is empty.
+        <footnote><para>This problem is actually a FAQ, resulting from
+        a misconfigured server setup.</para></footnote></para>
 
     </sect2>
 
     <sect2 id="svn-ch-6-sect-2.2">
       <title>Client Credentials Caching</title>
 
-      <para>the itch;  where and when creds are cached;  how to turn
-        off caching;  how to invalidate a cache;  how --username works.</para>
+      <para>Many servers are configured to require authenication on
+        every request.  This can become a big annoyance to users, who
+        are forced to type their passwords over and over again.</para>
+
+      <para>Happily, the Subversion client has a remedy for this: a
+        built-in system for caching authentication credentials on
+        disk.  By default, whenever the commandline client
+        successfully authenticates itself to a server, it saves the
+        credentials in the user's private runtime configuration
+        area&mdash; in <literal>~/.subversion/auth/</literal> on
+        Unix-like systems or
+        <literal>%APPDATA%/Subversion/auth/</literal> on Windows.
+        (The runtime area is covered in more detail in <xref
+        linkend="svn-ch-7-sect-1"/>.)</para>
+
+      <para>When the client receives an authentication challenge, it
+        first looks for the appropriae credentials in the disk cache;
+        if not present, or if the cached credenials fail to
+        authenticate, then the client simply prompts the user for the
+        information.</para>
+
+      <para>The security-paranoid people may be thinking to
+        themselves, "caching passwords on disk?  That's terrible!  You
+        should never do that!"  But please remain calm.  First, the
+        <literal>auth/</literal> caching area is permission-protected
+        so that only the user (owner) can read data from it, not the
+        world at large.  If that's still not safe enough for you, you
+        can disable credential caching.  To disable caching for a
+        single command, pass the <literal>--no-auth-cache</literal>
+        option:</para>
+
+<screen>
+$ svn commit -F log_msg.txt --no-auth-cache
+Username:  joe
+Password for 'joe':
+
+Adding         newfile
+Transmitting file data .
+Committed revision 2324.
+
+# password was not cached, so a second commit still prompts us
+
+$ svn rm newfile
+$ svn commit -F new_msg.txt
+Username:  joe
+[...]
+</screen>
+
+      <para>Or, if you want to disable credential caching permanently,
+        you can edit your runtime <literal>config</literal> file
+        (located next to the <literal>auth/</literal> directory).
+        Simply set </para>
+
+<screen>
+[auth]
+store-auth-creds = no
+</screen>
+
+      <para>... and no credentials will be cached on disk, ever.</para>
+
+      <para>Sometimes users will want to remove specific credentials
+        from the disk cache.  To do this, you need to navigate into
+        the <literal>auth/</literal> area and manually delete the
+        appropriate cache file.  Credentials are cached in individual
+        files;  if you look inside each file, you will see keys and
+        values.  The <literal>svn:realmstring</literal> key describes
+        the particular server realm that the file is associated
+        with:</para>
+
+<screen>
+$ ls ~/.subversion/auth/svn.simple/
+5671adf2865e267db74f09ba6f872c28        
+3893ed123b39500bca8a0b382839198e
+5c3c22968347b390f349ff340196ed39
+
+$ cat ~/.subversion/auth/svn.simple/5671adf2865e267db74f09ba6f872c28
+
+K 8
+username
+V 3
+joe
+K 8
+password
+V 4
+blah
+K 15
+svn:realmstring
+V 45
+&lt;https://svn.domain.com:443&gt; Joe's repository
+END
+</screen>
+
+      <para>Once you have located the proper cache file, just delete
+      it.</para>
+
+      <para>One last word about client authenication behavior: a bit
+        of explanation about the <literal>--username</literal> and
+        <literal>--password</literal> options is needed.  Many client
+        subcommands accept these options; however it is important to
+        understand using these opions <emphasis>does not</emphasis>
+        automatically send credentials to the server.  As discussed
+        earlier, the server "pulls" credentials from the client when
+        it deems necessary; the client cannot "push" them at will.  If
+        a username and/or password are passed as options, they will
+        <emphasis>only</emphasis> be presented to the server if the
+        server requests them.  
+
+          <footnote><para>Again, a common mistake is to misconfigure a
+           server so that it never issues an authentication challenge.
+           When users pass <literal>--username</literal> and
+           <literal>--password</literal> options to the client,
+           they're surprised to see that they're never used, i.e. new
+           revisions still appear to have been committed
+           anonymously!</para></footnote>
+        
+        Typically, these options are used when:
+      </para>
+
+      <itemizedlist>
+        <listitem><para>the user wants to authenticate as a
+            different user than her system login name, or</para>
+        </listitem>
+        <listitem><para>a script wants to authenticate without
+            using cached credentials.</para>
+        </listitem>
+      </itemizedlist>
+          
+
+      <para>Here is a final summary that describes how a Subversion
+        client behaves when it receives an authenication
+        challenge:</para>
+
+      <orderedlist>
+        <listitem>
+          <para>Check wheher the user specified any credentials as
+            commandline options, via <literal>--username</literal>
+            and/or <literal>--password</literal>.  If not, or if these
+            options fail to authenticate successfully, then</para>
+        </listitem>
+
+        <listitem>
+          <para>Look up the server's realm in the runtime
+            <literal>auth/</literal> area, to see if the user already
+            has the appropriate credentials cached.  If not, or if the
+            cached credentials fail to authenticate, then</para>
+        </listitem>
+
+        <listitem>
+          <para>Resort to prompting the user.</para>
+        </listitem>
+      </orderedlist>
+
+      <para>If the client successfully authenicates by any of the
+        methods listed above, it will attempt to cache the credentials
+        on disk (unless the user has disabled this behavior, as
+        mentioned earlier.)</para>
 
     </sect2>
 
@@ -225,7 +413,8 @@
     
     <title>httpd, the Apache HTTP server</title>
 
-    <para>blah</para>
+    <para>in this intro, explain why apache2, not apache1.  also
+      explain why it's not a big deal to require apache2.</para>
 
     <sect2 id="svn-ch-6-sect-4.1">
       <title>SVNPath and SVNParentPath directives</title>
