@@ -29,8 +29,9 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
-#include "wc.h"
 
+#include "wc.h"
+#include "log.h"
 
 
 /*** Userdata for the callbacks. ***/

@@ -35,7 +35,9 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_wc.h"
+
 #include "wc.h"
+#include "log.h"
 
 
 

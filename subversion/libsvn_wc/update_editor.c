@@ -43,6 +43,7 @@
 #include "svn_time.h"
 
 #include "wc.h"
+#include "log.h"
 
 
 
