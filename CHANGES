@@ -1,10 +1,31 @@
-Version 0.18.0 (released ?? Feb 2003, branches/0.18.0 @ revision ????)
+Version 0.18.0 (released 19 Feb 2003, revision 4959)
 
  User-visible changes:
- * renamed the [default] section to [global] in the servers config file.
+ * renamed the [default] section to [global] in the servers config file
+ * compression option is now http-compression and lives in servers file
+ * use internal diff by default rather than external program (#405 in progress)
+ * symlinked hook scripts now run
+ * read-only access flag (-R) for svnserve
+ * quiet flag (--quiet) for svnadmin dump
+ * miscellaneous performance improvements
+ * more work on the Book
 
  Developer-visible changes:
-
+ * new authentication library libsvn_auth (#724)
+ * client context object in libsvn_client
+ * more work on java and other language bindings
+ * test framework now has a quiet option (-q)
+ * miscellaneous small code cleanups
+ * bug fixes: more valgrind memory bugs, apr xlate i18n mess (#872),
+   non-existent URL checkout (#946), props on to-be-deleted files (#1066),
+   ra_svn move/copy (#1084), eol translation (#1085), ra_svn
+   checksumming (#1099), cat command corrupt output (#1104), cvs2svn
+   memory consumption (#1107), merge of property add (#1109),
+   '..' relative path (#1111), commit/cleanup/diff3 (#1119),
+   .svn/entries checksum (#1120), svn commit in / (#1122),
+   status on uncontrolled directory (#1124), commit message eol
+   characters (#1126), cat -r PREV (#1134), ra_dav wcprops (#1136)
+   split XML cdata/attribute encoding (#1118)
 
 Version 0.17.1 (released 22 Jan 2003, revision 4503)
 
