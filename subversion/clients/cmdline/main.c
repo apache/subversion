@@ -382,8 +382,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "lock", svn_cl__lock, {0},
-    N_("Lock working copy path(s) in the repository, so that no other user\n"
-       "can commit changes to them.\n"
+    N_("Lock working copy paths or URLs in the repository, so that\n"
+       "no other user can commit changes to them.\n"
        "usage: lock PATH...\n"
        "\n"
        "  Use --force to steal the lock from another user or working copy.\n"),
@@ -632,6 +632,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "    Fifth column: Whether the item is switched relative to its parent\n"
      "      ' ' normal\n"
      "      'S' switched\n"
+     "    Sixth column: Whether token representing repos lock is present\n"
+     "      ' ' normal\n"
+     "      'K' lock-token is present\n"
      "\n"
      "  The out-of-date information appears in the eighth column (with -u):\n"
      "      '*' a newer revision exists on the server\n"
@@ -685,7 +688,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
   { "unlock", svn_cl__unlock, {0},
-    N_("Unlock working copy path(s)\n"
+    N_("Unlock working copy paths or URLs.\n"
        "usage: unlock PATH...\n"
        "\n"
        "  Use --force to break the lock.\n"),
