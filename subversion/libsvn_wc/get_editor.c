@@ -904,7 +904,7 @@ change_file_prop (void *file_baton,
      correct behavior of our <set> and <delete> tags : if the name
      doesn't yet exist, now it does.  If it already exists, it will be
      overwritten.  If value is NULL, the key is removed altogether.
-     How fortuituous that these behaviors align so perfectly.  ;) */
+     What a coincidence that these behaviors align so perfectly.  ;) */
   apr_hash_set (fb->baseprops, my_name->data, my_name->len, my_value);
   
   /* With our `local' properties, we want to signal conflicts on a
