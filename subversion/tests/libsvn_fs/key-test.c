@@ -73,22 +73,6 @@ key_test (const char **msg,
              "    actual: %s",
              orig_key, next_key, gen_key ? gen_key : "(null)");
         }
-
-      len = strlen (next_key);
-      olen = len;
-
-      svn_fs__prev_key (next_key, &len, gen_key);
-      if (! (((len == olen) || (len == (olen - 1)))
-             && (strlen (orig_key) == len)
-             && (strcmp (orig_key, gen_key) == 0)))
-        {
-          return svn_error_createf 
-            (SVN_ERR_FS_GENERAL, NULL,
-             "failed to decrement key \"%s\" correctly\n"
-             "  expected: %s\n"
-             "    actual: %s",
-             next_key, orig_key, gen_key ? gen_key : "(null)");
-        }
     }
 
   return SVN_NO_ERROR;

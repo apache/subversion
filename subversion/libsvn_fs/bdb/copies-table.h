@@ -34,12 +34,6 @@ int svn_fs__bdb_open_copies_table (DB **copies_p,
                                    DB_ENV *env,
                                    int create);
 
-/* Fetch the id that the copies table in FS will use for its next copy
-   slot.  Return the id in *COPY_ID_P, allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__bdb_next_copy_id (const char **copy_id_p,
-                                       svn_fs_t *fs,
-                                       trail_t *trail);
-
 /* Reserve a slot in the `copies' table in FS for a new copy operation
    as part of TRAIL.  Return the slot's id in *COPY_ID_P, allocated in
    TRAIL->pool.  */
