@@ -329,9 +329,9 @@ log_do_run_cmd (struct log_runner *loggy,
   args[9] = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_9, atts);
   
   /* Grab the input and output, if any. */
-  infile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_INFILE, atts);;
-  outfile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_OUTFILE, atts);;
-  errfile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ERRFILE, atts);;
+  infile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_INFILE, atts);
+  outfile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_OUTFILE, atts);
+  errfile_name = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ERRFILE, atts);
   
   if (infile_name)
     {

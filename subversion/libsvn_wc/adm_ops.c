@@ -820,7 +820,7 @@ svn_wc_add (const char *path,
        path);
 
   /* Init the modify flags. */
-  modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;;
+  modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_KIND;
   if (! (is_replace || copyfrom_url))
     modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
 
