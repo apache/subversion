@@ -67,39 +67,6 @@
 
 
 
-/*** adm area guarantees ***/
-
-/* Make sure that PATH (a directory) contains a complete adm area,
- * based at REPOSITORY.
- *
- * Creates the adm area if none, in which case PATH starts out at
- * version 0.
- *
- * Note: The adm area's lock-state is not changed by this function,
- * and if the adm area is created, it is left in an unlocked state.
- */
-svn_error_t *
-svn_wc__ensure_wc (svn_string_t *path,
-                   svn_string_t *repository,
-                   svn_string_t *ancestor_path,
-                   svn_vernum_t ancestor_version,
-                   apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  err = svn_wc__ensure_adm (path,
-                            repository,
-                            ancestor_path,
-                            ancestor_version,
-                            pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** Closing commits. ***/
 
 svn_error_t *
