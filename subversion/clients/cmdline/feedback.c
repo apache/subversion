@@ -101,8 +101,8 @@ notify (void *baton,
 
     case svn_wc_notify_add:
       /* We *should* only get the MIME_TYPE if PATH is a file.  If we
-         do get it, and the mime-type is not in the "text/" grouping,
-         note that this is a binary addition.  */
+         do get it, and the mime-type is not textual, note that this
+         is a binary addition. */
       if (mime_type && (svn_mime_type_is_binary (mime_type)))
         printf ("A  (bin)  %s\n", path_native);
       else
