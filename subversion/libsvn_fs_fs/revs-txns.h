@@ -30,7 +30,7 @@ extern "C" {
 /*** Revisions ***/
 
 /* Set property NAME to VALUE on REV in FS, allocation from POOL.  */
-svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
+svn_error_t *svn_fs_fs__set_rev_prop (svn_fs_t *fs,
                                    svn_revnum_t rev,
                                    const char *name,
                                    const svn_string_t *value,
@@ -43,7 +43,7 @@ svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
 /* Set *REVISION to the revision which was created when FS transaction
    TXN_NAME was committed, or to SVN_INVALID_REVNUM if the transaction
    has not been committed.  Do all allocations in POOL.  */
-svn_error_t *svn_fs__txn_get_revision (svn_revnum_t *revision,
+svn_error_t *svn_fs_fs__txn_get_revision (svn_revnum_t *revision,
                                        svn_fs_t *fs,
                                        const char *txn_name,
                                        apr_pool_t *pool);
@@ -62,7 +62,7 @@ svn_error_t *svn_fs__txn_get_revision (svn_revnum_t *revision,
    transaction that has already been committed.
 
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in POOL.  */
-svn_error_t *svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
+svn_error_t *svn_fs_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
                                   const svn_fs_id_t **base_root_id_p,
                                   svn_fs_t *fs,
                                   const char *txn_name,

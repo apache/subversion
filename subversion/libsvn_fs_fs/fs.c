@@ -33,7 +33,6 @@
 #include "dag.h"
 #include "fs_fs.h"
 #include "revs-txns.h"
-#include "uuid.h"
 #include "tree.h"
 #include "svn_private_config.h"
 
@@ -81,9 +80,9 @@ svn_fs_fs__new (apr_hash_t *fs_config, apr_pool_t *parent_pool)
   new_fs->config = fs_config;
 
   /*
-  apr_pool_cleanup_register (new_fs->pool, new_fs,
-                             cleanup_fs_apr,
-                             apr_pool_cleanup_null);
+    apr_pool_cleanup_register (new_fs->pool, new_fs,
+    cleanup_fs_apr,
+    apr_pool_cleanup_null);
   */
   return new_fs;
 }
@@ -122,7 +121,7 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   fs->vtable = &fs_vtable;
   fs->fsap_data = NULL;
 
-  SVN_ERR (svn_fs__fs_create (fs, path, pool));
+  SVN_ERR (svn_fs_fs__create (fs, path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -135,7 +134,7 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 svn_error_t *
 fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__fs_open (fs, path, fs->pool));
+  SVN_ERR (svn_fs_fs__open (fs, path, fs->pool));
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = NULL;
@@ -152,7 +151,7 @@ fs_hotcopy (const char *src_path,
             svn_boolean_t clean_logs, 
             apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__fs_hotcopy (src_path, dest_path, pool));
+  SVN_ERR (svn_fs_fs__hotcopy (src_path, dest_path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -195,7 +194,7 @@ fs_logfiles (apr_array_header_t **logfiles,
 
 svn_error_t *
 fs_delete_fs (const char *path,
-                        apr_pool_t *pool)
+              apr_pool_t *pool)
 {
   /* Remove everything. */
   SVN_ERR (svn_io_remove_dir (path, pool));
