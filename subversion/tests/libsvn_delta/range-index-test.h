@@ -135,14 +135,16 @@ random_range_index_test (const char **msg,
 {
   static char msg_buff[256];
 
-  unsigned long seed;
-  int i, maxlen, iterations;
+  unsigned long seed, bytes_range;
+  int i, maxlen, iterations, dump_files, print_windows;
+  const char *random_bytes;
   range_index_t *ndx;
   int tgt_cp = 0, src_cp = 0;
 
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
-  init_params(&seed, &maxlen, &iterations, pool);
+  init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
+              &random_bytes, &bytes_range, pool);
   sprintf(msg_buff, "random range index test, seed = %lu", seed);
   *msg = msg_buff;
 
