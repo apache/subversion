@@ -47,7 +47,7 @@ Candidate changes:
     Justification:
       Simple fix that shows 60% speed up of "svn st" on my box
     Votes:
-      +1: brane, philip
+      +1: brane, philip, lundblad
 
   * r11439, r11669
     Fix slow "svn st" where the targets are files by not locking the whole
