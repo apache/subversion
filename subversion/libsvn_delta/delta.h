@@ -77,6 +77,7 @@ void svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
+                              /*FIXME:*/apr_off_t *sview_offset,
                               apr_pool_t *pool);
 
 

@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#include <stdio.h>
-#include <string.h>
+#define APR_WANT_STDIO
+#include <apr_want.h>
 
 #include <apr_general.h>
 #include <apr_lib.h>
@@ -26,72 +26,16 @@
 #include "svn_pools.h"
 
 #include "../../libsvn_delta/delta.h"
+#include "delta-window-test.h"
 
 static apr_off_t
-print_delta_window (const char *tag,
-                    int quiet, svn_txdelta_window_t *window, FILE *stream)
+print_delta_window (const svn_txdelta_window_t *window,
+                    const char *tag, int quiet, FILE *stream)
 {
-  int i;
-  apr_off_t len = 0, tmp;
-
-  /* Try to estimate the size of the delta. */
-  for (i = 0; i < window->num_ops; ++i)
-    {
-      apr_size_t const offset = window->ops[i].offset;
-      apr_size_t const length = window->ops[i].length;
-      if (window->ops[i].action_code == svn_txdelta_new)
-        {
-          len += 1;             /* opcode */
-          len += (length > 255 ? 2 : 1);
-          len += length;
-        }
-      else
-        {
-          len += 1;             /* opcode */
-          len += (offset > 255 ? 2 : 1);
-          len += (length > 255 ? 2 : 1);
-        }
-    }
-
   if (quiet)
-    return len;
-  
-  fprintf (stream, "%s: (WINDOW %" APR_OFF_T_FMT, tag, len);
-  for (i = 0; i < window->num_ops; ++i)
-    {
-      apr_size_t const offset = window->ops[i].offset;
-      apr_size_t const length = window->ops[i].length;
-      switch (window->ops[i].action_code)
-        {
-        case svn_txdelta_source:
-          fprintf (stream, "\n%s:   (SOURCE %" APR_SIZE_T_FMT
-                   " %" APR_SIZE_T_FMT ")", tag, offset, length);
-          break;
-        case svn_txdelta_target:
-          fprintf (stream, "\n%s:   (TARGET %" APR_SIZE_T_FMT
-                   " %" APR_SIZE_T_FMT ")", tag, offset, length);
-          break;
-        case svn_txdelta_new:
-          fprintf (stream, "\n%s:   (INSERT %" APR_SIZE_T_FMT " \"",
-                   tag, length);
-          for (tmp = offset; tmp < offset + length; ++tmp)
-            {
-              int const dat = window->new_data->data[tmp];
-              if (apr_iscntrl (dat) || !apr_isascii(dat))
-                fprintf (stream, "\\%3.3o", dat & 0xff);
-              else if (dat == '\\')
-                fputs ("\\\\", stream);
-              else
-                putc (dat, stream);
-            }
-          fputs ("\")", stream);
-          break;
-        default:
-          fprintf (stream, "\n%s:   (BAD-OP)", tag);
-        }
-    }
-  fputs (")\n", stream);
-  return len;
+    return delta_window_size_estimate (window);
+  else
+    return delta_window_print (window, tag, stream);
 }
 
 
@@ -116,7 +60,7 @@ do_one_diff (FILE *source_file, FILE *target_file,
     svn_txdelta_next_window (&delta_window, delta_stream, wpool);
     if (delta_window != NULL)
       {
-        *len += print_delta_window (tag, quiet, delta_window, stream);
+        *len += print_delta_window (delta_window, tag, quiet, stream);
         svn_pool_clear (wpool);
         ++*count;
       }
@@ -192,6 +136,7 @@ main (int argc, char **argv)
       svn_txdelta_window_t *window_AB = NULL;
       int count_AB = 0;
       apr_off_t len_AB = 0;
+      apr_off_t sview_offset = 0;
 
       putc('\n', stdout);
       do_one_diff (source_file_B, target_file_B,
@@ -221,10 +166,11 @@ main (int argc, char **argv)
              counted the number of windows in the second delta. */
           if (window_A)
             window_AB =
-              svn_txdelta__compose_windows (window_A, window_B, wpool);
+              svn_txdelta__compose_windows (window_A, window_B, &sview_offset,
+                                            wpool);
           if (window_AB == NULL)
             window_AB = window_B;
-          len_AB += print_delta_window ("AB", quiet, window_AB, stdout);
+          len_AB += print_delta_window (window_AB, "AB", quiet, stdout);
           svn_pool_clear (wpool);
         }
 

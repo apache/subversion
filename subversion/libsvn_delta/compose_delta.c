@@ -425,6 +425,7 @@ insert_range (apr_off_t offset, apr_off_t limit, apr_off_t target_offset,
           && limit > ndx->tree->limit)
         {
           ndx->tree->limit = limit;
+          ndx->tree->target_offset = target_offset;
           clean_tree(ndx, limit);
         }
       else if (offset > ndx->tree->offset
@@ -680,17 +681,47 @@ trivial_composition_p (const svn_txdelta_window_t *window)
 svn_txdelta_window_t *
 svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               const svn_txdelta_window_t *window_B,
+                              apr_off_t *next_sview_offset,
                               apr_pool_t *pool)
 {
-  if (trivial_composition_p(window_B))
+  svn_txdelta__ops_baton_t build_baton = { 0 };
+  svn_txdelta_window_t *composite;
+  apr_off_t sview_offset;
+  apr_size_t sview_len;
+
+  if (!window_B)
     return NULL;
+
+  if (window_A)
+    {
+      assert(window_A->sview_len == 0
+             || window_A->sview_offset == window_B->sview_offset);
+      assert(window_A->tview_len == window_B->sview_len);
+
+      sview_offset = window_A->sview_offset;
+      sview_len = window_A->sview_len;
+    }
+
+  if (!window_A || trivial_composition_p(window_B))
+    {
+      /* Copy the second window, because the source view offset and length
+         will have to be adjusted anyway. */
+      const apr_size_t ops_alloc_size = (window_B->num_ops
+                                         * sizeof(*build_baton.ops));
+      build_baton.num_ops = build_baton.ops_size = window_B->num_ops;
+      build_baton.ops = apr_palloc(pool, ops_alloc_size);
+      memcpy(build_baton.ops, window_B->ops, ops_alloc_size);
+      build_baton.new_data = svn_stringbuf_ncreate(window_B->new_data->data,
+                                                   window_B->new_data->len,
+                                                   pool);
+      sview_offset = *next_sview_offset;
+      sview_len = 0;
+    }
   else
     {
       apr_pool_t *subpool = svn_pool_create(pool);
       offset_index_t *offset_index = create_offset_index(window_A, subpool);
       range_index_t *range_index = create_range_index(subpool);
-      svn_txdelta__ops_baton_t build_baton = { 0 };
-      svn_txdelta_window_t *composite = NULL;
       apr_size_t target_offset = 0;
       int i;
 
@@ -711,7 +742,7 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                  : NULL);
               svn_txdelta__insert_op(&build_baton, op->action_code,
                                      op->offset, op->length,
-                                     new_data + op->offset, pool);
+                                     new_data, pool);
             }
           else
             {
@@ -747,12 +778,15 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
         }
 
       svn_pool_destroy(subpool);
-      composite = svn_txdelta__make_window(&build_baton, pool);
-      composite->sview_offset = window_A->sview_offset;
-      composite->sview_len = window_A->sview_len;
-      composite->tview_len = window_B->tview_len;
-      return composite;
     }
+
+  *next_sview_offset = sview_offset + sview_len;
+
+  composite = svn_txdelta__make_window(&build_baton, pool);
+  composite->sview_offset = sview_offset;
+  composite->sview_len = sview_len;
+  composite->tview_len = window_B->tview_len;
+  return composite;
 }
 
 
