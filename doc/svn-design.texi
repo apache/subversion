@@ -78,7 +78,7 @@
 Copyright @copyright{} 2000 Collab.Net, Inc. 
 See @xref{License} for details.
 
-This is version $Revision: 1.1 $ of this document.
+This is version $Revision: 1.2 $ of this document.
 
 @end titlepage
 @c -----------------------------------------------------------------
@@ -89,9 +89,16 @@ This is version $Revision: 1.1 $ of this document.
 This manual describes the design of the Subversion version control
 system.
 
-This is version $Revision: 1.1 $ of this document.
+This is version $Revision: 1.2 $ of this document.
 
 @end ifinfo
+
+@c Division of labor:
+@c
+@c    jimb ==> model (including repository), protocol (such as it is)
+@c    ben  ==> architecture, server
+@c    karl ==> goals, client, future
+@c
 
 @menu
 * Goals::                        The goals of the Subversion project.
