@@ -1376,57 +1376,101 @@ See notes/releases.txt.
 
 
 
-Release numbering
-=================
+Release numbering and compatibility
+===================================
 
-Please see http://apr.apache.org/versioning.html -- Subversion uses
-the same guidelines.
+Subversion uses the same release numbering guidelines as APR (see
+http://apr.apache.org/versioning.html), with a few extensions.  The
+extensions are:
 
+ 1. A patch or minor number release of a server (or client) never
+    breaks compatibility with a client (or server) in the same major
+    line.  However, new features offered by the release might be
+    unsupported without a corresponding upgrade to the other side of
+    the connection.  For updating ra_svn code specifically, please
+    observe these principles:
 
-
-Compatibility
-=============
-
-Before 1.0, we require only that each interim release be compatible
-with the one before it.  For example, a 0.20 server must work with
-both 0.19 and 0.21 clients (and, obviously, a 0.20 client as well),
-but may be incompatible with a 0.18 client (though gratuitous
-incompatibility should be avoided whenever possible, of course).
-Patch levels don't count: 0.20.1, 0.20.2, etc, must be compatible with
-0.19.*.
-
-The purpose of this policy is to help early adopters make good
-decisions about when to upgrade, without impeding development too
-much.  After 1.0 is released, we will probably adopt a more
-conservative policy.
-
-Changes to the ra_lib, editor, or reporter API may result in
-incompatibilities in ra_dav or ra_svn.  Observe these principles when
-updating the ra_svn code:
-
- (1) Fields can be added to any tuple; old clients will simply ignore
-     them.  (Right now, the marshalling implementation does not let
-     you put number or boolean values in the optional part of a tuple,
-     but changing that will not affect the protocol.)
+    (a) Fields can be added to any tuple; old clients will simply
+        ignore them.  (Right now, the marshalling implementation does
+        not let you put number or boolean values in the optional part
+        of a tuple, but changing that will not affect the protocol.)
    
-     We can use this mechanism when information is added to an API
-     call.
+        We can use this mechanism when information is added to an API
+        call.
    
- (2) At connection establishment time, clients and servers exchange a
-     list of capability keywords.
+    (b) At connection establishment time, clients and servers exchange
+        a list of capability keywords.
    
-     We can use this mechanism for more complicated changes, like
-     introducing pipelining or removing information from API calls.
+        We can use this mechanism for more complicated changes, like
+        introducing pipelining or removing information from API calls.
    
- (3) New commands can be added; trying to use an unsupported command
-     will result in an error which can be checked and dealt with.
+    (c) New commands can be added; trying to use an unsupported
+        command will result in an error which can be checked and dealt
+        with.
    
- (4) The protocol version number can be bumped to allow graceful
-     refusal of old clients or servers, or to allow a client or
-     server to detect when it has to do things the old way.
+    (d) The protocol version number can be bumped to allow graceful
+        refusal of old clients or servers, or to allow a client or
+        server to detect when it has to do things the old way.
  
-     This mechanism is a last resort, to be used when capability
-     keywords would be too hard to manage.
+        This mechanism is a last resort, to be used when capability
+        keywords would be too hard to manage.
+
+ 2. Working copy and repository formats are backward- and
+    forward-compatible for all patch releases in the same minor
+    series.  They are backward-compatible for all minor releases in
+    the same major series; however, a minor release is allowed to make
+    a working copy or repository that doesn't work with previous minor
+    releases, where "make" could mean "upgrade" as well as "create".
+
+Any unqualified triplet indicates a stable release:
+
+   1.0.1  -->  first stable patch release of 1.0
+   1.1.0  -->  next stable minor release of 1.x after 1.0.x
+   1.1.1  -->  first stable patch release of 1.1.x
+   1.1.2  -->  second stable patch release of 1.1.x
+   1.2.0  -->  next stable minor release after that
+
+The order of releases is semi-nonlinear -- a 1.0.3 *might* come out
+after a 1.1.0.  But it's only "semi"-nonlinear because eventually we
+declare a patch line defunct and tell people to upgrade to the next
+minor release, so over the long run the numbering is basically linear.
+
+Non-stable releases are qualified with "alphaN" or "betaN" suffixes;
+generally we use "beta" unless there's some reason to think the code
+is especially risky.  For example, the prereleases leading to 1.3.7
+might look like this:
+
+   subversion-1.3.7-beta1.tar.gz
+   subversion-1.3.7-beta2.tar.gz
+   subversion-1.3.7-beta3.tar.gz
+   subversion-1.3.7.tar.gz
+
+The output of 'svn --version' corresponds in the obvious way:
+
+   version 1.3.7 (beta 1)
+   version 1.3.7 (beta 2)
+   version 1.3.7 (beta 3)
+   version 1.3.7
+
+When you 'make install' subvesion-1.3.7-beta1, it still installs as
+though it were "1.3.7", of course.  The beta modifier is metadata on
+the release; we want each subsequent beta release to overwrite the
+previous one, and the stable release to overwrite the last beta.
+
+For working copy builds, there is no tarball name to worry about, but
+'svn --version' still produces special output:
+
+   version 1.3.7 (dev build, rXXXX)
+
+The "rXXXX" is not important (if it proves difficult to implement, we
+may omit it).  The important thing is to say "dev build".  This
+indicates that the build came from a working copy, which is useful in
+bug reports.
+
+We have no mechanism for releasing dated snapshots.  If we want code
+to get wider distribution than just those who build from working
+copies, we put out a prerelease.
+
 
 
 Stabilizing and maintaining releases
@@ -1448,13 +1492,11 @@ non-edge-case crash, a data corruption problem, a major security hole,
 or something equally serious.  In the unlikely event that the full
 committers cannot agree on whether a bug is showstopper, they vote.
 
-After the first release, subsequent releases usually do not require a
-four week soak, because only conservative changes go into the line.
-
-[TBD: We may want some sort of pretest tarball arrangement, however,
-and may also want to say more about API stabilization and setting
-release dates.  Those should be dev list threads first; I'm just
-mentioning them here so they're not conspicuous by their absence.]
+A major or minor release soak starts with A.B.0-beta1; A.B.0-beta2 and
+higher are only released if necessary, as each such release restarts
+the soak period.  Once A.B.0 is out, subsequent releases in that line
+do not require a four week soak, because only conservative changes go
+into the line.
 
 Certain kinds of commits can into A.B.0 without restarting the soak
 period, or into a later release without affecting the testing schedule
