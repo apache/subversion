@@ -1257,7 +1257,8 @@ svn_wc_revert (const char *path,
     {
       svn_node_kind_t disk_kind;
       SVN_ERR (svn_io_check_path (path, &disk_kind, pool));
-      if (disk_kind != svn_node_dir)
+      if ((disk_kind != svn_node_dir)
+          && (entry->schedule != svn_wc_schedule_add))
         {
           /* When the directory itself is missing, we can't revert
              without hitting the network.  Someday a '--force' option
