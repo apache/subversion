@@ -1015,25 +1015,17 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       else
         exp_date = _("never");
 
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   "%s\n", path));
-      /* xgettext: The colons in the following four messages should be aligned
-       */
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("     UUID Token: %s\n"), lock->token));
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("          Owner: %s\n"), lock->owner));
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("        Created: %s\n"), cr_date));
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("        Expires: %s\n"), exp_date));
-
       comment_lines = svn_cstring_count_newlines (lock->comment);
-      SVN_ERR (svn_cmdline_printf (pool,
-                                   _("        Comment: (%i %s)\n%s\n"),
+
+      SVN_ERR (svn_cmdline_printf (pool, _("Path: %s\n"), path));
+      SVN_ERR (svn_cmdline_printf (pool, _("UUID Token: %s\n"), lock->token));
+      SVN_ERR (svn_cmdline_printf (pool, _("Owner: %s\n"), lock->owner));
+      SVN_ERR (svn_cmdline_printf (pool, _("Created: %s\n"), cr_date));
+      SVN_ERR (svn_cmdline_printf (pool, _("Expires: %s\n"), exp_date));
+      SVN_ERR (svn_cmdline_printf (pool, _("Comment (%i line%s):\n%s\n\n"),
                                    comment_lines, 
-                                   (comment_lines > 1) ? "lines" : "line",
-                                   lock->comment ? lock->comment : "none"));
+                                   (comment_lines > 1) ? "s" : "",
+                                   lock->comment ? lock->comment : ""));
     }
   
   return SVN_NO_ERROR;
