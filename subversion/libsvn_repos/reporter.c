@@ -116,6 +116,32 @@ svn_repos_set_path (void *report_baton,
 
 
 
+svn_error_t *
+svn_repos_delete_path (void *report_baton,
+                       svn_string_t *path)
+{
+  svn_string_t *delete_path;
+  svn_repos_report_baton_t *rbaton = report_baton;
+  
+  /* The path we are dealing with is the anchor (where the
+     reporter is rooted) + target (the top-level thing being
+     reported) + path (stuff relative to the target...this is the
+     empty string in the file case since the target is the file
+     itself, not a directory containing the file). */
+  delete_path = svn_string_dup (rbaton->base_path, rbaton->pool);
+  svn_path_add_component (delete_path, rbaton->target, 
+                          svn_path_repos_style);
+  svn_path_add_component (delete_path, path, svn_path_repos_style);
+  
+
+  /* Remove the file or directory (recursively) from the txn. */
+  SVN_ERR (svn_fs_delete_tree (rbaton->txn_root, delete_path, rbaton->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 svn_error_t *
 svn_repos_finish_report (void *report_baton)

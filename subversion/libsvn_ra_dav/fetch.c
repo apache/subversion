@@ -1037,6 +1037,14 @@ static svn_error_t * reporter_set_path(void *report_baton,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t * reporter_delete_path(void *report_baton,
+                                          svn_string_t *path)
+{
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
@@ -1088,6 +1096,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
 
 static const svn_ra_reporter_t ra_dav_reporter = {
   reporter_set_path,
+  reporter_delete_path,
   reporter_finish_report
 };
 

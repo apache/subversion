@@ -68,6 +68,10 @@ typedef struct svn_ra_reporter_t
   svn_error_t *(*set_path) (void *report_baton,
                             svn_string_t *path,
                             svn_revnum_t revision);
+
+  /* Describing a working copy PATH as missing. */
+  svn_error_t *(*delete_path) (void *report_baton,
+                               svn_string_t *path);
     
   /* WC calls this when the state report is finished; any directories
      or files not explicitly `set' above are assumed to be at the
