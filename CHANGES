@@ -1,3 +1,113 @@
+Version 1.1.0-beta1
+(?? July 2004, from /branches/1.1.x)
+http://svn.collab.net/repos/svn/tags/??
+
+ User-visible-changes:
+ * new non-database repository back-end (libsvn_fs_fs)
+ * symlinks can now be placed under version control (unix systems only)
+ * fixed: working copies now shareable by multiple users (issue #1509)
+ * fixed: diff and other subcommands correctly follow renames (issue #1093)
+     - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
+ * new framework for localized error messages, with initial translations:
+     - German, Spanish, Polish, Swedish, Norwegian Bokmål
+ * speed improvements:
+     - faster 'svn up' on complex working copies -- no more repos txns (r8840)
+     - faster 'svn status' -- fewer stat() calls (r9182)
+     - faster 'svn checkout' -- fewer sleep() calls (r9123)
+     - faster 'svn blame' -- new RA->get_file_revs() func (issue #1715)
+ * new switches added:
+     - 'svn blame --verbose'            - show extra annotation info
+     - 'svn export --native-eol TYPE'   - export using TYPE line-endings
+     - 'svn add --force'                - recurse into version-controlled dirs
+     - 'svnadmin dump --deltas'         - include binary diffs in dumpfile
+     - 'svnadmin create --fs-type fsfs' - create fs_fs repos (default is bdb)
+     - 'svnserve --tunnel-user=NAME'    - assume authenticated NAME over tunnel
+     - 'svndumpfilter [cmd] --quiet'    - less chatty dumpfiltering
+     - 'svnserve --version'             - show program's version
+       'svnversion --version'
+       'svndumpfilter --version'
+ * svnadmin dump/deltify now understand -r{DATE} (r9805)
+ * allow update of non-existent target entry (partial issue #1902 fix)
+ * assume XML svn:mime-type is text, not binary (issue #1920)
+ * 'svnadmin create' now sets sgid bit on repos/db/
+ * increase default neon (ra_dav) timeout from 120 to 3600 seconds (r9568)
+ * fixed: don't bail when 'svn up' refuses to delete local mods (issue #1806)
+ * fixed: process svn:externals in defined order (issue #1788)
+ * fixed: pass new propval to stdin of pre-revprop-change hook (issue #952)
+ * fixed: svndumpfilter logic/memory/display bugs (r8691, 8831, 9061)
+ * fixed: 'svnadmin hotcopy PATH .' (r8659)
+ * fixed: copy crash bug (r8863)
+ * fixed: allow cleanup on .svn/ dirs containing KILLME file (r8891)
+ * fixed: 'svn revert' detects corrupted text-base (r8897)
+ * fixed: 'svn status -N' no longer locks entire tree (r8906)
+ * fixed: several different 'svn switch' bugs (r9192, 9203, 9238, 9698)
+ * fixed: some 'svn copy' bugs (r9193, 9274)
+ * fixed: obscure update-deletion bug (r8976)
+ * fixed: utf8 conversion 'hang' (r9233)
+ * fixed: 'svn blame' now defaults to  rev (r9440)
+ * fixed: 'svn diff' shows truncated paths (r9693)
+ * fixed: 'svn diff --notice-ancestry' bug (r9699)
+ * fixed: 'svn subcommand -r{DATE} URL' works if URL not in HEAD (issue #1840) 
+ * fixed: 'svn blame' on non-ascii path truncation (issue #1770)
+ * fixed: svn:external 'wc not locked' bug (issue #1897)
+ * fixed: proper mod_dav_svn html/xml escaping (issue #1209)
+ * fixed: memleak in 'svn propset -R URL' (issue #1928)
+ * fixed: stop 'svn up' from deleting schedule-add target dir (issue #1793)
+ * fixed: 'svn merge' adding a directory already 'deleted' (issue #1769)
+ * fixed: excessive memory use when fs deltifies revision 2^N (r10070)
+ * fixed: disallow non-recursive directory commit (issue #1797)
+ * fixed: allow propget of props with colon in name (issue #1807)
+ * fixed: 'svnadmin load' computation of copyfrom-rev (issue #1795)
+ * general improvement and normalization of error messages
+ * many improvements to contributed tools:  mailer.py, psvn.el, etc.
+
+ Developer-visible changes:
+ * libsvn_fs now loads either bdb (libsvn_fs_base) or fsfs (libsvn_fs_fs)
+ * new console-printing API:  svn_cmdline_printf() family of functions.
+ * new library-version querying API:
+     - new svn_[libname]_version() in each library
+     - svn_ver_*() family of functions
+ * 2nd generation APIs, from svn_foo() --> svn_foo2().  old APIs deprecated.
+     - svn_wc_adm_open2() & friends, svn_wc_export2(), svn_client_add2()
+       svn_wc_parse_externals_description2(), svn_hash_read/write2(),
+       svn_repos_dump/load_fs2() & friends, svn_wc_diff2(),
+       svn_subst_copy_and_translate2()
+ * other new APIs:
+     - svn_stream_copy(), svn_txdelta_target_push(), svn_opt_parse_path(),
+       svn_io_file_flush_to_disk, svn_repos_trace_node_locations(),
+       svn_repos_get_file_revs(), RA->get_locations(), RA->get_file_revs,
+       RA->get_version()
+ * SVN_REVNUM_FMT_T deprecated;  now just use %ld (r9691)
+ * neon 0.24.7 now required (fixes wire compression bugs) (r10159)
+ * cache mod_authz_svn authz file per connection (r8867)
+ * validate hex digits in % escape (issue #1947)
+ * hashes now written to disk in sorted order (r9910)
+ * do cancellation checks before loops, not after (r8918)
+ * fixed: bug in svn_repos_dir_delta replacement logic (r8078)
+ * fixed: tiny memory access bugs (r8229, 8230, 8313)
+ * fixed: several commit buglets (r8955, 9658, 9757, 9855)
+ * fixed: don't recursively lock all prop commands (r9172)
+ * fixed: svnserve memory usage on many-file commits (r9185)
+ * fixed: close svnserve child's listen-socket after forking (r10050)
+ * fixed: 'svnadmin hotcopy' integrity improvements (issues #1817, #1818)
+ * fixed: only verify media type of svn:mime-type, not encoding (r10126)
+ * fixed: handle '//'  and '..' in svn_path_canonicalize (issue #1779)
+ * fixed: double URI escaping (issue #1814)
+ * huge improvements to python, perl, java bindings
+ * huge changes to win32 build system
+
+
+Version 1.0.6
+(?? July 2004, from /branches/?)
+http://svn.collab.net/repos/svn/tags/??
+
+ User-visible-changes:
+ * ??
+
+ Developer-visible changes:
+ * ??
+
+
 Version 1.0.5
 (10 Jun 2004, from /branches/1.0.5)
 http://svn.collab.net/repos/svn/tags/1.0.5
