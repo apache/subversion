@@ -81,11 +81,13 @@ call ..\ms\test
 cd ..\..
 
 rem ====== Build Apache 2
+cd src-%DIR%
+python gen-make.py -t dsp --with-httpd=..\httpd-2.0.50 --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
+cd ..
 msdev httpd-2.0.50\apache.dsw /MAKE "BuildBin - Win32 Release"
 
 rem ====== Subversion
 cd src-%DIR%
-python gen-make.py -t dsp --with-httpd=..\httpd-2.0.50 --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
 msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
 mkdir Release\subversion\tests\clients
 xcopy /S /Y subversion\tests\clients Release\subversion\tests\clients
