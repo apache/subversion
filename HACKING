@@ -369,8 +369,8 @@ and immediately after the page break comes the title of the section.
 
 This helps out people who use the Emacs page commands, such as
 `pages-directory' and `narrow-to-page'.  Such people are not as scarce
-as you might think, and if you'd like to become one of them, then type
-C-x C-p C-h in Emacs sometime.
+as you might think, and if you'd like to become one of them, then add
+(require 'page-ext) to your .emacs and type C-x C-p C-h sometime.
 
 
 
@@ -458,16 +458,19 @@ In addition to the GNU standards, Subversion uses these conventions:
       so you get svn-dev.el and svnbook.el when needed:
 
          ;;; Begin Subversion development section
-         (defun my-find-file-hook ()
-           (if (string-match "projects/svn/" buffer-file-name)
-               (load "~/projects/svn/tools/dev/svn-dev"))
-           (if (string-match "projects/svn/doc/book" buffer-file-name)
-               (load "~/projects/svn/doc/book/tools/svnbook")))
+         (setq svntree-path "~/projects/subversion/")
 
+         (defun my-find-file-hook ()
+           (setq svntree-path (expand-file-name svntree-path))
+           (if (string-match (concat svntree-path "doc/book") buffer-file-name)
+               (load (concat svntree-path "doc/book/tools/svnbook"))
+             (if (string-match svntree-path buffer-file-name)
+	         (load (concat svntree-path "tools/dev/svn-dev")))))
+  
          (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
 
-      You'll need to customize the paths for your setup, of course.
+      You'll need to customize the path for your setup, of course.
       You can also make the regexp to string-match more selective; for
       example, one developer says:
 
@@ -1448,7 +1451,7 @@ as well as in the upcoming release; but also, it gives the developers
 something concrete to vote on for inclusion in the release line.
 
 A change needs three +1 votes from full committers, and no vetoes, to
-go into the 1.0-stablization branch.  We use the STATUS file in the
+go into the 1.0-stabilization branch.  We use the STATUS file in the
 top level of the release branch for recording votes.  Each item is a
 short identifying string (a revision number, an issue number, etc), a
 brief description of the change, an at-most-one-line justification of
