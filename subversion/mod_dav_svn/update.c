@@ -28,6 +28,7 @@
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_md5.h"
+#include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
@@ -261,6 +262,45 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
   baton->path3 = svn_path_join(parent->path3, baton->name, pool);
 
   return baton;
+}
+
+
+struct brigade_write_baton
+{
+  apr_bucket_brigade *bb;
+  ap_filter_t *output;
+};
+
+
+/* This implements 'svn_write_fn_t'. */
+static svn_error_t * brigade_write_fn(void *baton,
+                                      const char *data,
+                                      apr_size_t *len)
+{
+  struct brigade_write_baton *wb = baton;
+  apr_status_t apr_err;
+
+  apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
+
+  if (apr_err != APR_SUCCESS)
+    return svn_error_create(apr_err, NULL, "Error writing base64 data.");
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_stream_t * make_base64_output_stream(apr_bucket_brigade *bb,
+                                                ap_filter_t *output,
+                                                apr_pool_t *pool)
+{
+  struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
+  svn_stream_t *stream = svn_stream_create(wb, pool);
+
+  wb->bb = bb;
+  wb->output = output;
+  svn_stream_set_write(stream, brigade_write_fn);
+
+  return svn_base64_encode(stream, pool);
 }
 
 
@@ -708,6 +748,44 @@ static svn_error_t * upd_open_file(const char *path,
 }
 
 
+/* We have our own window handler and baton as a simple wrapper around
+   the real handler (which converts vdelta windows to base64-encoded
+   svndiff data).  The wrapper is responsible for sending the opening
+   and closing XML tags around the svndiff data. */
+struct window_handler_baton
+{
+  svn_boolean_t seen_first_window;  /* False until first window seen. */
+  update_ctx_t *uc;
+
+  /* The _real_ window handler and baton. */
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+};
+
+
+/* This implements 'svn_txdelta_window_handler_t'. */
+static svn_error_t * window_handler(svn_txdelta_window_t *window, void *baton)
+{
+  struct window_handler_baton *wb = baton;
+
+  if (! wb->seen_first_window)
+    {
+      if (window == NULL)
+        return SVN_NO_ERROR;
+
+      wb->seen_first_window = TRUE;
+      send_xml(wb->uc, "<S:txdelta>");
+    }
+
+  SVN_ERR( wb->handler(window, wb->handler_baton) );
+
+  if (window == NULL)
+    send_xml(wb->uc, "</S:txdelta>");
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * upd_apply_textdelta(void *file_baton, 
                                          const char *base_checksum,
                                          apr_pool_t *pool,
@@ -715,10 +793,22 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
                                          void **handler_baton)
 {
   item_baton_t *file = file_baton;
+  struct window_handler_baton *wb = apr_palloc(file->pool, sizeof(*wb));
+  svn_stream_t *base64_stream;
 
   file->base_checksum = apr_pstrdup(file->pool, base_checksum);
   file->text_changed = TRUE;
-  *handler = svn_delta_noop_window_handler;
+
+  wb->seen_first_window = FALSE;
+  wb->uc = file->uc;
+  base64_stream = make_base64_output_stream(wb->uc->bb, wb->uc->output,
+                                            file->pool);
+
+  svn_txdelta_to_svndiff(base64_stream, file->pool,
+                         &(wb->handler), &(wb->handler_baton));
+
+  *handler = window_handler;
+  *handler_baton = wb;
 
   return SVN_NO_ERROR;
 }
@@ -784,6 +874,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
+  svn_boolean_t send_all = FALSE; /* Send all data to client in one report? */
   struct authz_read_baton arb;
 
   /* Construct the authz read check baton. */
@@ -806,6 +897,23 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                            "is required.");
     }
   
+  /* Look to see if client wants a report with props and textdeltas
+     inline, rather than placeholder tags that tell the client to do
+     further fetches.  Modern clients prefer inline. */
+  {
+    apr_xml_attr *this_attr;
+
+    for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
+      {
+        if ((strcmp(this_attr->name, "send-all") == 0)
+            && (strcmp(this_attr->value, "true") == 0))
+          {
+            send_all = TRUE;
+            break;
+          }
+      }
+  }
+
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
       /* Note that child->name might not match any of the cases below.
@@ -999,7 +1107,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      repos->repos, 
                                      src_path, target,
                                      dst_path,
-                                     FALSE, /* don't send text-deltas */
+                                     send_all,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,

@@ -592,6 +592,7 @@ enum {
   ELEM_delete_entry,
   ELEM_fetch_file,
   ELEM_fetch_props,
+  ELEM_txdelta,
   ELEM_log_date,
   ELEM_log_item,
   ELEM_log_report,

@@ -42,6 +42,7 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_md5.h"
+#include "svn_base64.h"
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_xml.h"
@@ -171,9 +172,9 @@ typedef struct {
 
 } report_baton_t;
 
-static const char report_head[] = "<S:update-report xmlns:S=\""
-                                   SVN_XML_NAMESPACE
-                                   "\">" DEBUG_CR;
+static const char report_head[]
+   = "<S:update-report send-all=\"true\" xmlns:S=\""
+      SVN_XML_NAMESPACE "\">" DEBUG_CR;
 static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 
 static const svn_ra_dav__xml_elm_t report_elements[] =
@@ -187,6 +188,7 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
   { SVN_XML_NAMESPACE, "absent-directory", ELEM_absent_directory, 0 },
   { SVN_XML_NAMESPACE, "open-file", ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
+  { SVN_XML_NAMESPACE, "txdelta", ELEM_txdelta, 0 },
   { SVN_XML_NAMESPACE, "absent-file", ELEM_absent_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
@@ -1304,6 +1306,7 @@ static int validate_element(void *userdata,
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
           || child == ELEM_SVN_prop
+          || child == ELEM_txdelta
           || child == ELEM_fetch_props
           || child == ELEM_remove_prop)
         return SVN_RA_DAV__XML_VALID;
@@ -1312,6 +1315,7 @@ static int validate_element(void *userdata,
 
     case ELEM_add_file:
       if (child == ELEM_checked_in
+          || child == ELEM_txdelta
           || child == ELEM_SVN_prop)
         return SVN_RA_DAV__XML_VALID;
       else
@@ -1510,10 +1514,11 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       push_dir(rb, new_dir_baton, pathbuf, subpool);
 
       /* Property fetching is implied in addition. */
+      /* ### kff speeeeeed: this too will go away soon */
       TOP_DIR(rb).fetch_props = TRUE;
 
       bc_url = get_attr(atts, "bc-url");
-      if (bc_url)
+      if (0 && bc_url)  /* ### kff speeeeeed */
         {
           /* Cool, we can do a pre-emptive depth-1 propfind on the
              directory; this prevents us from doing individual
@@ -1616,6 +1621,7 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                                       &rb->file_baton) );
 
       /* Property fetching is implied in addition. */
+      /* ### kff speeeeeed: this will go away soon. */
       rb->fetch_props = TRUE;
 
       break;
@@ -1794,8 +1800,10 @@ static int end_element(void *userdata,
 
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
+#if 0  /* ### kff speeeeeed */
       if (! ((rb->dirs->nelts == 1) && rb->target))
         CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
+#endif /* 0 */
 
       /* Close the directory on top of the stack, and pop it.  Also,
          destroy the subpool used exclusive by this directory and its
@@ -1811,6 +1819,7 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
+#if 0 /* ### kff speeeeeed: hack. */
       CHKERR( simple_fetch_file(rb->ras->sess2,
                                 rb->href->data,
                                 TOP_DIR(rb).pathbuf->data,
@@ -1824,6 +1833,7 @@ static int end_element(void *userdata,
 
       /* fetch node props as necessary. */
       CHKERR( add_node_props(rb, rb->file_pool) );
+#endif /* 0 */
 
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton,
@@ -1835,6 +1845,31 @@ static int end_element(void *userdata,
       svn_path_remove_component(TOP_DIR(rb).pathbuf);
       svn_pool_destroy(rb->file_pool);
       rb->file_pool = NULL;
+      break;
+
+      /* ### kff speeeeeed: accept the shim for now */
+    case ELEM_txdelta:
+      {
+        svn_txdelta_window_handler_t handler;
+        void *handler_baton;
+        svn_stream_t *svndiff_decoder;
+        svn_stream_t *base64_decoder;
+        apr_size_t len = strlen(cdata); /* ### shim must die */
+
+        CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
+                                               NULL, /* ### base_checksum */
+                                               rb->file_pool,
+                                               &handler,
+                                               &handler_baton) );
+
+        svndiff_decoder = svn_txdelta_parse_svndiff(handler, handler_baton,
+                                                    TRUE, rb->file_pool);
+
+        base64_decoder = svn_base64_decode(svndiff_decoder, rb->file_pool);
+
+        CHKERR( svn_stream_write(base64_decoder, cdata, &len) );
+        CHKERR( svn_stream_close(base64_decoder) );
+      }
       break;
 
     case ELEM_open_file:
