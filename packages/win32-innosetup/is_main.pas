@@ -1,4 +1,4 @@
-(* isx_main.pas: Pascal Scripts routines for Inno Setup Windows installer.
+(* is_main.pas: Pascal Scripts routines for Inno Setup Windows installer.
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
@@ -11,7 +11,8 @@
  * This software consists of voluntary contributions made by many
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
- * =================================================================== *)
+ * ====================================================================
+ *)
 
 // ****************************************************************************
 // Global variables
