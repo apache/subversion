@@ -107,7 +107,7 @@ svn_cl__copy (apr_getopt_t *os,
            (ctx->log_msg_baton, svn_client_copy (&commit_info,
                                                  src_path, 
                                                  &(opt_state->start_revision), 
-                                                 dst_path, NULL, 
+                                                 dst_path,
                                                  ctx, pool)));
 
   if (commit_info && ! opt_state->quiet)

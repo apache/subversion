@@ -60,15 +60,10 @@
 /* Copy SRC_PATH into DST_PATH as DST_BASENAME, deleting SRC_PATH
    afterwards if IS_MOVE is TRUE.  Use POOL for all necessary
    allocations.
-
-   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
-   ### parent of DST_PATH. This parameter should be removed when issue 838
-   ### stops using svn_client_copy.
 */
 static svn_error_t *
 wc_to_wc_copy (const char *src_path,
                const char *dst_path,
-               svn_wc_adm_access_t *optional_adm_access,
                svn_boolean_t is_move,
                svn_boolean_t force,
                svn_client_ctx_t *ctx,
@@ -105,10 +100,7 @@ wc_to_wc_copy (const char *src_path,
 
   if (is_move)
     {
-      /* We don't handle optional_adm_access here.  The merge code that
-         sets it calls svn_client_copy rather than svn_client_move */
       const char *src_parent;
-      assert (! optional_adm_access);
 
       svn_path_split (src_path, &src_parent, NULL, pool);
 
@@ -147,11 +139,11 @@ wc_to_wc_copy (const char *src_path,
         SVN_ERR_W (svn_client__can_delete (src_path, src_access, ctx, pool),
                    "Pass --force to override this restriction");
     }
-  else if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
-                              pool));
-  else
-    adm_access = optional_adm_access;
+  else 
+    {
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_parent, TRUE, FALSE,
+                                pool));
+    }
                               
   /* Perform the copy and (optionally) delete. */
 
@@ -174,8 +166,10 @@ wc_to_wc_copy (const char *src_path,
         SVN_ERR (svn_wc_adm_close (adm_access));
       SVN_ERR (svn_wc_adm_close (src_access));
     }
-  else if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
+  else
+    {
+      SVN_ERR (svn_wc_adm_close (adm_access));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -727,16 +721,11 @@ add_repos_file_helper (svn_stream_t *fstream,
   return SVN_NO_ERROR;
 }
 
-/*
-   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
-   ### parent of DST_PATH. This parameter should be removed when issue 838
-   ### stops using svn_client_copy.
-*/
+
 static svn_error_t *
 repos_to_wc_copy (const char *src_url,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path, 
-                  svn_wc_adm_access_t *optional_adm_access,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -835,11 +824,8 @@ repos_to_wc_copy (const char *src_url,
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                               "`%s' is in the way", dst_path);
 
-  if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, dst_path, TRUE, FALSE,
-                                    pool));
-  else
-    adm_access = optional_adm_access;
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, dst_path, TRUE, FALSE,
+                                  pool));
 
   /* Decide whether the two repositories are the same or not. */
   { 
@@ -963,23 +949,17 @@ repos_to_wc_copy (const char *src_url,
                                 adm_access, ctx, pool));
     }
 
-  if (! optional_adm_access)
-    SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
 
-/*
-   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
-   ### parent of DST_PATH. This parameter should be removed when issue 838
-   ### stops using svn_client_copy.
-*/
+
 static svn_error_t *
 setup_copy (svn_client_commit_info_t **commit_info,
             const char *src_path,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
-            svn_wc_adm_access_t *optional_adm_access,
             svn_boolean_t is_move,
             svn_boolean_t force,
             svn_client_ctx_t *ctx,
@@ -1078,7 +1058,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
-    SVN_ERR (wc_to_wc_copy (src_path, dst_path, optional_adm_access,
+    SVN_ERR (wc_to_wc_copy (src_path, dst_path,
                             is_move, force,
                             ctx,
                             pool));
@@ -1092,7 +1072,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
   else if ((src_is_url) && (! dst_is_url))
     {
       SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
-                                 dst_path, optional_adm_access, ctx,
+                                 dst_path, ctx,
                                  pool));
     }
   else
@@ -1109,22 +1089,16 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
 /* Public Interfaces */
 
-/*
-   ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
-   ### parent of DST_PATH. This parameter should be removed when issue 838
-   ### stops using svn_client_copy.
-*/
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
-                 svn_wc_adm_access_t *optional_adm_access,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
-                     src_path, src_revision, dst_path, optional_adm_access,
+                     src_path, src_revision, dst_path,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
                      ctx,
@@ -1142,7 +1116,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
-                     src_path, src_revision, dst_path, NULL,
+                     src_path, src_revision, dst_path,
                      TRUE /* is_move */,
                      force,
                      ctx,
