@@ -371,8 +371,9 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                                       apr_pool_t *pool);
 
 
-/* Given an apache request R and a ROOT_PATH to the svn location
-   block, process R->URI and return many things, allocated in r->pool:
+/* Given an apache request R, a URI, and a ROOT_PATH to the svn
+   location block, process URI and return many things, allocated in
+   r->pool:
 
    * CLEANED_URI:  the uri with duplicate and trailing slashes removed.
 
@@ -406,6 +407,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
      * TRAILING_SLASH: FALSE
 */
 dav_error * dav_svn_split_uri (request_rec *r,
+                               const char *uri,
                                const char *root_path,
                                const char **cleaned_uri,
                                int *trailing_slash,

@@ -827,6 +827,7 @@ static void log_warning(apr_pool_t *pool, void *baton, const char *fmt, ...)
 
 
 dav_error * dav_svn_split_uri (request_rec *r,
+                               const char *uri_to_split,
                                const char *root_path,
                                const char **cleaned_uri,
                                int *trailing_slash,
@@ -857,7 +858,7 @@ dav_error * dav_svn_split_uri (request_rec *r,
     }
 
   /* make a copy so that we can do some work on it */
-  uri = apr_pstrdup(r->pool, r->uri);
+  uri = apr_pstrdup(r->pool, uri_to_split);
 
   /* remove duplicate slashes, and make sure URI has no trailing '/' */
   ap_no2slash(uri);
@@ -1107,7 +1108,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   xslt_uri = dav_svn_get_xslt_uri(r);
 
   /* This does all the work of interpreting/splitting the request uri. */
-  err = dav_svn_split_uri (r, root_path,
+  err = dav_svn_split_uri (r, r->uri, root_path,
                            &cleaned_uri, &had_slash, 
                            &repos_name, &relative, &repos_path);
   if (err)
