@@ -188,7 +188,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   apr_pool_t *subpool = svn_pool_create (pool, NULL);
   assert (subpool != NULL);
 
-  *stream = apr_palloc (pool, sizeof (**stream));
+  *stream = apr_palloc (subpool, sizeof (**stream));
   (*stream)->source_fn = source_fn; 
   (*stream)->source_baton = source_baton;
   (*stream)->target_fn = target_fn;
