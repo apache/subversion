@@ -22,7 +22,7 @@ use URI          1.17;
 $Text::Wrap::columns = 72;
 
 # Specify the location of the svn command.
-my $svn = '/opt/i386-linux/subversion/bin/svn';
+my $svn = '@prefix@/bin/svn';
 
 # Process the command line options.
 

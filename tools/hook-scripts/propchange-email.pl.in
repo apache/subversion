@@ -38,10 +38,10 @@ use Cwd 'abs_path';
 my $sendmail = "/usr/sbin/sendmail";
 
 # Svnlook path.
-my $svnlook = "/usr/local/bin/svnlook";
+my $svnlook = "@prefix@/bin/svnlook";
 
 # Svn path.
-my $svn = "/usr/local/bin/svn";
+my $svn = "@prefix@/bin/svn";
 
 # Since the path to svn depends upon the local installation
 # preferences, check that the required programs exist to insure that
