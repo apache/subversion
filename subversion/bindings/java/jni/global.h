@@ -21,10 +21,29 @@
 
 /*** Defines ***/
 #define SVN_JNI__SUBVERSION_EXCEPTION \
-"/org/tigris/subversion/SubversionException"
+"org/tigris/subversion/SubversionException"
 #define SVN_JNI__VERBOSE
 #define SVN_JNI__ERROR_CREATE_STRINGBUF "error while creating stringbuf_t"
 #define SVN_JNI__ERROR_CLIENT_STATUS "error in svn_client_status()"
+
+#define SVN_JNI__DEBUG_PTR(ptr) \
+{ \
+fprintf(stderr, #ptr "="); \
+if( ptr==NULL ) { fprintf(stderr, "NULL;"); } \
+else { fprintf(stderr, "%x;", ptr); } \
+}
+#define SVN_JNI__DEBUG_BOOL(bool) \
+{ fprintf(stderr, #bool "="); \
+if(bool) { fprintf(stderr, "TRUE;"); } \
+else { fprintf(stderr, "FALSE;"); } \
+}
+#define SVN_JNI__DEBUG_STR(str) \
+{ fprintf(stderr, #str "="); \
+if(str==NULL) { fprintf(stderr, "NULL;"); } \
+else { fprintf(stderr, "'%s';", (char*)str); } \
+}
+#define SVN_JNI__DEBUG_DEC(dec) \
+{ fprintf(stderr, #dec "=%d;", dec); }
 
 #endif
 

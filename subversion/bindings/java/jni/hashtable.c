@@ -16,11 +16,20 @@
  * ====================================================================
  */
 
+/*** Includes ***/
 #include <jni.h>
+#include "global.h"
+#include "j.h"
 
-#define SVN_JNI__HASHTABLE_PUT \
+/*** Defines ***/
+#define SVN_JNI_HASHTABLE__CLASS "java/util/Hashtable"
+#define SVN_JNI_HASHTABLE__CONSTRUCTOR "<init>"
+#define SVN_JNI_HASHTABLE__CONSTRUCTOR_SIG "()V"
+#define SVN_JNI_HASHTABLE__PUT "put"
+#define SVN_JNI_HASHTABLE__PUT_SIG \
 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"
 
+/*** Code ***/
 jobject
 hashtable__create(JNIEnv *env, jboolean *hasException)
 {
@@ -28,7 +37,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "svn_jni__create_hashtable\n");
+  fprintf(stderr, ">>>hashtable__create\n");
 #endif
   
   /* is there enough memory to have twoadditional
@@ -36,28 +45,28 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
    * - class reference
    * - constructor method id
    */
-  if( (*env)->PushLocalFrame(env, 3) >= 0 )
+  if( (*env)->PushLocalFrame(env, 3) < 0 )
     {
-      jclass hashtableClass = (*env)->FindClass(env,
-						"java/util/Hashtable");
+      _hasException = JNI_TRUE;
+    }
+  else
+    {
+      jclass hashtableClass = NULL;
       jmethodID hashtableConstructor = NULL;
-      
-      if( hashtableClass == NULL )
-	{
-	  _hasException = JNI_TRUE;
-	}
-      else
+
+      hashtableClass = j__get_class(env, &_hasException,
+                                    SVN_JNI_HASHTABLE__CLASS);
+
+      if( !_hasException )
 	{
 	  hashtableConstructor = 
-	    (*env)->GetMethodID(env, hashtableClass,
-				"<init>", "()V");
+            j__get_method(env, &_hasException, 
+                          hashtableClass,
+                          SVN_JNI_HASHTABLE__CONSTRUCTOR,
+                          SVN_JNI_HASHTABLE__CONSTRUCTOR_SIG);
 	}
 
-      if( hashtableConstructor == NULL )
-	{
-	  _hasException = JNI_TRUE;
-	}
-      else
+      if( !_hasException )
 	{
 	  hashtable = (*env)->NewObject(env, hashtableClass,
 					hashtableConstructor);
@@ -68,10 +77,22 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
 	  _hasException = JNI_TRUE;
 	}
 
+#ifdef SVN_JNI__VERBOSE
+      SVN_JNI__DEBUG_PTR(hashtableClass);
+      SVN_JNI__DEBUG_PTR(hashtableConstructor);
+      SVN_JNI__DEBUG_PTR(hashtable);
+#endif
+
       /* pop local frame but preserve the newly create hashtable */
       (*env)->PopLocalFrame(env, hashtable);
     }
 
+
+#ifdef SVN_JNI__VERBOSE
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  fprintf(stderr, "\n<<<hashtable__create\n");
+#endif
+              
   /* return wether an exception has occured */
   if( hasException != NULL )
     {
@@ -81,14 +102,18 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
   return hashtable;
 }
 
-void
+jobject
 hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
                jobject value, jboolean *hasException)
 {
   jboolean _hasException = JNI_FALSE;
+  jobject result = NULL;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "svn_jni__hashtable_put\n");
+  fprintf(stderr, ">>>hashtable__put(");
+  SVN_JNI__DEBUG_PTR(hashtable);
+  SVN_JNI__DEBUG_PTR(key);
+  SVN_JNI__DEBUG_PTR(value);
 #endif
 
   /* enough space for two local references?
@@ -100,44 +125,48 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
       jclass hashtableClass = NULL;
       jmethodID hashtablePut = NULL;
 
-      hashtableClass = (*env)->FindClass(env, "java/util/Hashtable");
+      hashtableClass = j__get_class(env, &_hasException, 
+                                    SVN_JNI_HASHTABLE__CLASS);
 
-      if( hashtableClass == NULL )
-	{
-	  _hasException = JNI_TRUE;
-	}
-      else
-	{
-	  hashtablePut = 
-	    (*env)->GetMethodID(env, hashtableClass, 
-				"put", SVN_JNI__HASHTABLE_PUT);
-	  if( hashtablePut == NULL )
-	    {
-	      _hasException = JNI_TRUE;
-	    }
-	}
+      if( !_hasException )
+        {
+          hashtablePut = j__get_method(env, &_hasException,
+                                       hashtableClass,
+                                       SVN_JNI_HASHTABLE__PUT,
+                                       SVN_JNI_HASHTABLE__PUT_SIG);
+        }
 
-      if( hashtablePut != NULL )
-	{
-	  /* the put method usually returns an object
-	   * but we dont care about this so we dont have
-	   * to take care for the otherweise created
-	   * local reference 
-	   */
-	  (*env)->CallVoidMethod(env, hashtable, hashtablePut,
-				   key, value);
+      if( !_hasException )
+        {
+#ifdef SVN_JNI__VERBOSE
+          fprintf(stderr, "CallObjectMethod(");
+          SVN_JNI__DEBUG_PTR(hashtable);
+          SVN_JNI__DEBUG_PTR(hashtablePut);
+          SVN_JNI__DEBUG_PTR(key);
+          SVN_JNI__DEBUG_PTR(value);
+          fprintf(stderr, ")\n");
+#endif
+
+	  result = (*env)->CallObjectMethod(env, hashtable, hashtablePut,
+                                            key, value);
 	  _hasException = (*env)->ExceptionCheck(env);
 	}
 
       /* pop local references */
-      (*env)->PopLocalFrame(env, 0);
+      (*env)->PopLocalFrame(env, result);
     }
+
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<hashtable__put\n");
+#endif
 
   /* check wether an exception has occured */
   if( hasException != NULL )
     {
       (*hasException) = _hasException;
     }
+
+  return result;
 } 
 
 /* 
@@ -145,4 +174,3 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-

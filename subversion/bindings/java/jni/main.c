@@ -40,11 +40,6 @@
 
 /*** Defines. ***/
 
-/*
- * some local variables
- */
-static apr_pool_t *main__pool;
-
 
 
 /*** Code. ***/
@@ -57,14 +52,15 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "JNI_OnLoad\n");
+  fprintf(stderr, ">>>JNI_OnLoad\n");
 #endif
   apr_initialize();
-  main__pool = NULL;
-  main__pool = svn_pool_create(NULL);
+
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<JNI_OnLoad\n");
+#endif
 
   return JNI_VERSION_1_2;
-  
 }
 
 /*
@@ -73,9 +69,12 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 JNIEXPORT OnUnload(JavaVM *jvm, void *reserved)
 {
 #ifdef SVN_JNI__VERBOSE
-    fprintf(stderr, "JNI_OnUnload\n");
+  fprintf(stderr, ">>>JNI_OnUnload\n");
 #endif
   apr_terminate();
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<JNI_OnUnload\n");
+#endif
 
 }
 
@@ -123,132 +122,6 @@ Java_org_tigris_subversion_lib_ClientImpl_commit
 {
 }
 
-JNIEXPORT jobject JNICALL 
-Java_org_tigris_subversion_lib_ClientImpl_status
-  (JNIEnv *env, jobject jobj, jstring jtarget, jboolean jdescend,
-   jboolean jget_all, jboolean jupdate)
-{
-  jobject hashtable = NULL;
-  jboolean hasException = JNI_FALSE;
-  svn_string_t *target_string = NULL;
-  svn_stringbuf_t *target_stringbuf = NULL;
-  svn_boolean_t descend = jdescend == JNI_TRUE;
-  svn_boolean_t get_all = jget_all == JNI_TRUE;
-  svn_boolean_t update = jupdate == JNI_TRUE;
-  apr_hash_t *statushash;
-  svn_client_auth_baton_t *auth_baton = NULL;
-
-#ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, 
-	  "Java_org_tigris_subversion_lib_ClientImpl_status\n");
-#endif
-
-  /* do all the type conversion stuff */
-  target_string = string__j_to_svn_string(env, 
-                                   jtarget, &hasException,
-                                   main__pool);
-
-  if( !hasException )
-    {
-      target_stringbuf = 
-	svn_stringbuf_create_from_string(target_string, 
-					 main__pool);
-
-      if( target_stringbuf == NULL )
-	{
-	  /* seems like the conversion didnt succeed */
-	  hasException = JNI_TRUE;
-	  misc__throw_exception_by_name(env, 
-                                        SVN_JNI__SUBVERSION_EXCEPTION,
-                                        SVN_JNI__ERROR_CREATE_STRINGBUF);
-	}
-
-    }
-
-  if( !hasException )
-    {
-      auth_baton = misc__make_auth_baton(env, jobj);
-
-      if( svn_client_status(&statushash, target_stringbuf, auth_baton,
-			    descend, get_all, update, 
-			    main__pool) < 0 
-	  )
-	{
-	  /* in the case of an error, throw a java exception */
-	  hasException = JNI_TRUE;
-	  misc__throw_exception_by_name(env, 
-                                        SVN_JNI__SUBVERSION_EXCEPTION,
-                                        SVN_JNI__ERROR_CLIENT_STATUS);
-	}
-    }
-
-  if( !hasException )
-    {
-      if( (*env)->PushLocalFrame(env, 1) >= 0 )
-	{
-	  jboolean hasException = JNI_FALSE;
-	  jobject hashtable = hashtable__create(env, &hasException);
-
-	  /* now we do have a fresh new hashtable */
-	  if( !hasException )
-	    {
-	      /* iterate through apr hashtable and
-	       * insert each item into java hashtable */
-	      apr_hash_index_t *index = apr_hash_first(main__pool, 
-						       statushash);
-	      while( (index != NULL) && (!hasException ) )
-		{
-		  svn_item_t *item;
-		  char *path;
-		  svn_wc_status_t *status;
-		  jobject jitem = NULL;
-		  jstring jpath = NULL;
-		  jobject jstatus = NULL;
-
-		  apr_hash_this(index, NULL, NULL, (void*)&item);
-		  path = item->key;
-		  status = item->data;
-
-		  /* convert native string to java string */
-		  jpath = string__c_to_j(env, path, &hasException);
-
-		  /* convert svn_wc_status_t to java class Status */
-		  if( !hasException )
-		    {
-		      jstatus = status__create(env, status, 
-                                               &hasException);
-		    }
-
-		  /* now create the java class Item */
-		  if( !hasException )
-		    {
-		      jitem = item__create(env,
-                                           jpath,
-                                           jstatus,
-                                           &hasException);
-		    }
-
-		  /* put entry into java hashtable */
-		  if( !hasException )
-		    {
-		      hashtable__put(env, hashtable, jpath, jitem, 
-                                     &hasException);
-		    }
-		  
-		  if( !hasException )
-		    {
-		      /* proceed to the next iteration */
-		      apr_hash_next(index);
-		    }
-		} /* while( ... ) */
-	    } /* if( !_hasException ) */
-
-	  (*env)->PopLocalFrame(env, hashtable);
-	} /* if( ... Push ... ) */
-    }
-
-  return hashtable;
-}
 
 JNIEXPORT jstring JNICALL 
 Java_org_tigris_subversion_lib_ClientImpl_fileDiff
@@ -270,25 +143,3 @@ Java_org_tigris_subversion_lib_ClientImpl_cleanup
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

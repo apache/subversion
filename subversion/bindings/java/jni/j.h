@@ -61,7 +61,7 @@ void j__set_long(JNIEnv *env, jboolean *hasException,
                  char *className, char *methodName,
                  jobject obj, jlong value);
 
-oid j__set_object(JNIEnv *env, jboolean *hasException,
+void j__set_object(JNIEnv *env, jboolean *hasException,
                    char *className, char *methodName,
                    char *methodSig,
                    jobject obj, jobject value);

@@ -25,6 +25,12 @@
 #include "misc.h"
 #include "global.h"
 
+/*** Defines ***/
+
+// DO YOU WANT TO DEBUG THIS CODE? 
+// SO JUST UNCOMMENT THE FOLLOWING LINE
+//#define SVN_JNI_STRING__DEBUG
+
 /*** Code ***/
 svn_string_t *
 string__j_to_svn_string(JNIEnv *env, 
@@ -35,10 +41,10 @@ string__j_to_svn_string(JNIEnv *env,
   svn_string_t *result = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "string__j_to_svn_string\n");
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, ">>>string__j_to_svn_string\n");
 #endif
-  
+ 
   /* make sure there is enough memory left for 
    * the operation, also push the stack frame
    * we will need 2 local references:
@@ -96,6 +102,17 @@ string__j_to_svn_string(JNIEnv *env,
       (*hasException) = _hasException;
     }
 
+#ifdef SVN_JNI_STRING__DEBUG
+  SVN_JNI__DEBUG_PTR(pool);
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  SVN_JNI__DEBUG_PTR(result);
+  if( result != NULL )
+    {
+      SVN_JNI__DEBUG_STR(result->data);
+    }
+  fprintf(stderr, "\n<<<string__j_to_svn_string\n");
+#endif 
+
   return result;
 }
 
@@ -108,6 +125,10 @@ string__c_to_stringbuf(JNIEnv *env,
   svn_stringbuf_t *result = NULL;
   svn_string_t *string = NULL;
   jboolean _hasException = JNI_FALSE;
+
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, ">>>string__c_to_stringbuf\n");
+#endif
 
   string = string__j_to_svn_string(env, jstr, &_hasException, pool);
 
@@ -130,6 +151,10 @@ string__c_to_stringbuf(JNIEnv *env,
       *hasException = _hasException;
     }
 
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, "\n<<<string__c_to_stringbuf\n");
+#endif
+
   return result;
 }
 
@@ -140,6 +165,12 @@ string__c_to_j(JNIEnv *env,
 {
   jboolean _hasException = JNI_FALSE;
   jstring result = NULL;
+
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, ">>>string__c_to_j(");
+  SVN_JNI__DEBUG_STR(string);
+  fprintf(stderr, ")\n", string);
+#endif
 
   result = (*env)->NewStringUTF(env, string);
 
@@ -153,6 +184,10 @@ string__c_to_j(JNIEnv *env,
       (*hasException) = _hasException;
     }
 
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, "\n<<<string__c_to_j\n");
+#endif
+
   return result;
 }
 
@@ -161,8 +196,20 @@ string__svn_string_to_j(JNIEnv *env,
                         svn_string_t *string, 
                         jboolean *hasException)
 {
-  return string__c_to_j(env, (char*)string->data, 
-                        hasException);
+  jstring result = NULL;
+
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, ">>>string__svn_string_to_j(...)\n");
+#endif
+
+  result= string__c_to_j(env, (char*)string->data, 
+                         hasException);
+
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, "\n<<<string_svn_string_to_j\n");
+#endif
+
+  return result;
 }
 
 jstring
@@ -170,8 +217,20 @@ string__svn_stringbuf_to_j(JNIEnv *env,
                            svn_stringbuf_t *stringbuf,
                            jboolean *hasException)
 {
-  return string__c_to_j(env, (char*)stringbuf->data,
-                        hasException);
+  jstring result = NULL;
+
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, ">>>string__svn_stringbuf_to_j(...)\n");
+#endif
+
+  result= string__c_to_j(env, (char*)stringbuf->data,
+                         hasException);
+
+#ifdef SVN_JNI_STRING__DEBUG
+  fprintf(stderr, "\n<<<string__svn_stringbuf_to_j\n");
+#endif
+
+  return result;
 }
 
 /* 
@@ -179,6 +238,9 @@ string__svn_stringbuf_to_j(JNIEnv *env,
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
+
+
+
 
 
 

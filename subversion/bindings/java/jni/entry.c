@@ -23,11 +23,25 @@
 #include "j.h"
 #include "string.h"
 #include "date.h"
+#include "global.h"
+#include "hashtable.h"
+#include "entry.h"
 
 /*** Defines ***/
 #define SVN_JNI_ENTRY__CLASS "org/tigris/subversion/lib/Entry"
-#define SVN_JNI_ENTRY__SIG "(JLjava/lang/String;" \
-"IIILjava/util/Date;Ljava/util/Date;Ljava/util/Hashtable;)V"
+#define SVN_JNI_ENTRY__SIG "()V"
+#define SVN_JNI_ENTRY__SET_URL "setUrl"
+#define SVN_JNI_ENTRY__SET_URL_SIG "(Ljava/lang/String;)V"
+#define SVN_JNI_ENTRY__SET_REVISION "setRevision"
+#define SVN_JNI_ENTRY__SET_NODEKIND "setNodekind"
+#define SVN_JNI_ENTRY__SET_SCHEDULE "setSchedule"
+#define SVN_JNI_ENTRY__SET_EXISTENCE "setExistence"
+#define SVN_JNI_ENTRY__SET_TEXTTIME "setTexttime"
+#define SVN_JNI_ENTRY__SET_TEXTTIME_SIG "(Ljava/util/Date;)V"
+#define SVN_JNI_ENTRY__SET_PROPTIME "setProptime"
+#define SVN_JNI_ENTRY__SET_PROPTIME_SIG "(Ljava/util/Date;)V"
+#define SVN_JNI_ENTRY__SET_ATTRIBUTES "setAttributes"
+#define SVN_JNI_ENTRY__SET_ATTRIBUTES_SIG "(Ljava/util/Hashtable;)V"
 
 /*** Code ***/
 jobject
@@ -36,6 +50,16 @@ entry__create(JNIEnv *env, jboolean *hasException,
 {
   jobject result = NULL;
   jboolean _hasException = JNI_FALSE;
+
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__create(");
+  SVN_JNI__DEBUG_PTR(entry);
+  if( entry != NULL )
+    {
+      SVN_JNI__DEBUG_STR(entry->url);
+    }
+  fprintf(stderr, ")\n");
+#endif
 
   /*
    * needed references:
@@ -58,36 +82,22 @@ entry__create(JNIEnv *env, jboolean *hasException,
       jclass entryClass = NULL;
       jmethodID entryConstructor = NULL;
       jstring jurl = NULL;
-      jobject jtext_time = NULL;
-      jobject jprop_time = NULL;
-      jobject jattrobutes = NULL;
+      jobject jtexttime = NULL;
+      jobject jproptime = NULL;
+      jobject jattributes = NULL;
       
-      entryClass = j__get_class(env, &_hasException,
-                                SVN_JNI_ENTRY__CLASS);
-      
+      jurl = string__c_to_j(env, (char*)entry->url->data, 
+                            &_hasException);
+            
       if( !_hasException )
         {
-          entryConstructor = j__get_method(env, &_hasException,
-                                           entryClass,
-                                           "<init>",
-                                           SVN_JNI_ENTRY__SIG);
-        }
-      
-      if( !_hasException )
-        {
-          jurl = string_c_to_j(env, (char*)entry->url.data, 
-                               &_hasException);
-        }
-      
-      if( !_hasException )
-        {
-          jtext_time = date_apr_to_j(env, &_hasException, 
+          jtexttime = date__apr_to_j(env, &_hasException, 
                                      entry->text_time);
         }
       
       if( !_hasException )
         {
-          jprop_time = date_apr_to_j(env, &_hasException,
+          jproptime = date__apr_to_j(env, &_hasException,
                                      entry->prop_time);
         }
       
@@ -104,25 +114,87 @@ entry__create(JNIEnv *env, jboolean *hasException,
       
       if( !_hasException )
         {
-          result = (*env)->NewObject(env, entryClass,
-                                     entryConstructor,
-                                     entry->revision,
-                                     jurl,
-                                     entry->nodekind,
-                                     entry->schedule,
-                                     entry->existence,
-                                     jtext_time,
-                                     jprop_time,
-                                     jattributes);
-          
+          entryClass = j__get_class(env, &_hasException,
+                                    SVN_JNI_ENTRY__CLASS);
+        }
+      
+      if( !_hasException )
+        {
+          entryConstructor = j__get_method(env, &_hasException,
+                                           entryClass,
+                                           "<init>",
+                                           SVN_JNI_ENTRY__SIG);
+        }
+      if( !_hasException )
+        {
+          result = (*env)->NewObject(env, entryClass, 
+                                     entryConstructor);
           if( result == NULL )
             {
               _hasException = JNI_TRUE;
             }
+
+        }
+
+#ifdef SVN_JNI__VERBOSE
+      SVN_JNI__DEBUG_PTR(result);
+#endif
+      
+      if( !_hasException )
+        {
+          entry__set_revision(env, &_hasException,
+                              result, entry->revision);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_url(env, &_hasException, 
+                         result, jurl);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_nodekind(env, &_hasException,
+                              result, entry->kind);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_schedule(env, &_hasException,
+                              result, entry->schedule);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_existence(env, &_hasException,
+                               result, entry->existence);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_texttime(env, &_hasException,
+                              result, jtexttime);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_proptime(env, &_hasException,
+                              result, jproptime);
+        }
+
+      if( !_hasException )
+        {
+          entry__set_attributes(env, &_hasException,
+                                result, jattributes);
         }
       
       (*env)->PopLocalFrame(env, result);
     }
+#ifdef SVN_JNI__VERBOSE
+  SVN_JNI__DEBUG_BOOL(_hasException);
+  if( _hasException )
+  fprintf(stderr, "\n<<<entry__create\n");
+#endif
  
   if( hasException != NULL )
     {
@@ -131,17 +203,155 @@ entry__create(JNIEnv *env, jboolean *hasException,
             
   return result;
 }
-            
-	
 
+void
+entry__set_url(JNIEnv *env, jboolean *hasException,
+               jobject jentry, jstring jurl)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_url(...)\n");
+#endif
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_URL,
+                SVN_JNI_ENTRY__SET_URL_SIG,
+                jentry, jurl);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_url\n");
+#endif
+}
+
+void
+entry__set_revision(JNIEnv *env, jboolean *hasException,
+                    jobject jentry, jlong jrevision)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_revision(...)\n");
+#endif
+  j__set_long(env, hasException, 
+              SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_REVISION,
+              jentry, jrevision);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_revision\n");
+#endif
+}
+
+void
+entry__set_nodekind(JNIEnv *env, jboolean *hasException,
+                    jobject jentry, jint jnodekind)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_nodekind(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_DEC(jnodekind);
+  fprintf(stderr, ")\n");
+#endif
+  j__set_int(env, hasException, 
+             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_NODEKIND,
+             jentry, jnodekind);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_nodekind\n");
+#endif
+}
+
+void
+entry__set_schedule(JNIEnv *env, jboolean *hasException,
+                    jobject jentry, jint jschedule)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_schedule(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_DEC(jschedule);
+  fprintf(stderr, ")\n");
+#endif
+  j__set_int(env, hasException,
+             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_SCHEDULE,
+             jentry, jschedule);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_schedule\n");
+#endif
+}
+
+void 
+entry__set_existence(JNIEnv *env, jboolean *hasException,
+                     jobject jentry, jint jexistence)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_existence(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_DEC(jexistence);
+  fprintf(stderr, ");");
+#endif
+  j__set_int(env, hasException,
+             SVN_JNI_ENTRY__CLASS, SVN_JNI_ENTRY__SET_EXISTENCE,
+             jentry, jexistence);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_existence\n");
+#endif
+}
+
+void 
+entry__set_texttime(JNIEnv *env, jboolean *hasException,
+                     jobject jentry, jobject jtexttime)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_texttime(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_PTR(jtexttime);
+  fprintf(stderr, ")\n");
+#endif
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_TEXTTIME,
+                SVN_JNI_ENTRY__SET_TEXTTIME_SIG,
+                jentry, jtexttime);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_texttime\n");
+#endif
+}
+
+void 
+entry__set_proptime(JNIEnv *env, jboolean *hasException,
+                     jobject jentry, jobject jproptime)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_proptime(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_PTR(jproptime);
+  fprintf(stderr, ")\n");
+#endif
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_PROPTIME,
+                SVN_JNI_ENTRY__SET_PROPTIME_SIG,
+                jentry, jproptime);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry_set_proptime\n");
+#endif
+}
+
+void 
+entry__set_attributes(JNIEnv *env, jboolean *hasException,
+                      jobject jentry, jobject jattributes)
+{
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, ">>>entry__set_attributes(");
+  SVN_JNI__DEBUG_PTR(jentry);
+  SVN_JNI__DEBUG_PTR(jattributes);
+  fprintf(stderr, ")\n");
+#endif
+  j__set_object(env, hasException,
+                SVN_JNI_ENTRY__CLASS,
+                SVN_JNI_ENTRY__SET_ATTRIBUTES,
+                SVN_JNI_ENTRY__SET_ATTRIBUTES_SIG,
+                jentry, jattributes);
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<entry__set_attributes\n");
+#endif
+}
 
 /* 
  * local variables:
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
