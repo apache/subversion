@@ -119,6 +119,12 @@ Candidate changes:
     Votes:
       +1: breser
 
+  * r11438
+    Fix a bug that caused 'svnversion --version .' to crash.
+    Justification:
+      Segfaults bad!
+    Votes:
+      +1: maxb
 
 
 Approved changes (further review is welcome, but not required):
