@@ -587,10 +587,10 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
         cgc->err = svn_error_createf(SVN_ERR_INCOMPLETE_DATA, 0, NULL,
                                      frc->pool,
                                      "unable to completely write the svndiff "
-                                     "data to the parser stream (wrote %lu "
-                                     "of %lu bytes)",
-                                     (unsigned long)written,
-                                     (unsigned long)len);
+                                     "data to the parser stream "
+                                     "(wrote " APR_SIZE_T_FMT " "
+                                     "of " APR_SIZE_T_FMT " bytes)",
+                                     written, len);
 #endif
     }
 }

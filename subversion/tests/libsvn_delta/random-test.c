@@ -166,7 +166,7 @@ random_test (const char **msg,
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
   init_params(&seed, &maxlen, &iterations, pool);
-  sprintf(msg_buff, "random delta test, seed = %lu", seed);
+  sprintf(msg_buff, "random delta test, seed = %" SVN_REVNUM_T_FMT, seed);
   *msg = msg_buff;
 
   if (msg_only)

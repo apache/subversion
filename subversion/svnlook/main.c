@@ -665,7 +665,7 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
     {
       if (print_size)
         {
-          printf ("%lu\n", (unsigned long)prop_value->len);
+          printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
         }
 
       printf ("%s", prop_value->data);

@@ -1821,7 +1821,9 @@ unexpected_node_id (svn_fs_root_t *root,
   svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
   return svn_error_createf 
     (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-     "Path '%s' in revision '%lu' has unexpected node id '%s'.\n",
+     "Path '%s' in revision '%"
+     SVN_REVNUM_T_FMT
+     "' has unexpected node id '%s'.\n",
      path, svn_fs_revision_root_revision (root), id_str->data);
 }
 
@@ -4391,8 +4393,9 @@ validate_revisions (svn_fs_t *fs,
       if (err)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, err, pool, 
-           "Error validating revision %lu (youngest is %lu)",
-           (long unsigned int) i, (long unsigned int) (num_revs - 1));
+           "Error validating revision %" SVN_REVNUM_T_FMT
+           " (youngest is %" SVN_REVNUM_T_FMT ")",
+           i, (num_revs - 1));
       
       svn_pool_clear (subpool);
     }
@@ -4845,7 +4848,7 @@ file_integrity_helper (apr_size_t filesize, apr_pool_t *pool)
       if (memcmp (digest, digest_list[j], MD5_DIGESTSIZE))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "MD5 checksum failure, revision %lu", (long unsigned int)j);
+           "MD5 checksum failure, revision %" SVN_REVNUM_T_FMT, j);
     }
 
   svn_pool_destroy (subpool);
@@ -4942,7 +4945,8 @@ check_root_revision (const char **msg,
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-       "Root node in revision %lu has unexpected stored revision %lu",
+       "Root node in revision %" SVN_REVNUM_T_FMT
+       " has unexpected stored revision %" SVN_REVNUM_T_FMT,
        youngest_rev, test_rev);
 
   for (i = 0; i < 10; i++)
@@ -4967,7 +4971,8 @@ check_root_revision (const char **msg,
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "Root node in revision %lu has unexpected stored revision %lu",
+           "Root node in revision %" SVN_REVNUM_T_FMT
+           " has unexpected stored revision %" SVN_REVNUM_T_FMT,
            youngest_rev, test_rev);
     }
   return SVN_NO_ERROR;

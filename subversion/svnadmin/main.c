@@ -363,8 +363,8 @@ main (int argc, const char * const *argv)
                 printf ("Txn %s:\n", txn_name);
                 printf ("Created: %s\n", datestamp->data);
                 printf ("Author: %s\n", author->data);
-                printf ("Log (%lu bytes):\n%s\n",
-                        (unsigned long int) log->len, log->data);
+                printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
+                        log->len, log->data);
                 printf ("==========================================\n");
                 print_tree (this_root, "", 1, this_pool);
                 printf ("\n");
@@ -429,8 +429,8 @@ main (int argc, const char * const *argv)
             printf ("Revision %ld\n", (long int) this);
             printf ("Created: %s\n", datestamp->data);
             printf ("Author: %s\n", author->data);
-            printf ("Log (%lu bytes):\n%s\n",
-                    (unsigned long int) log->len, log->data);
+            printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
+                    log->len, log->data);
             printf ("==========================================\n");
             print_tree (this_root, "", 1, this_pool);
             printf ("\n");

@@ -82,6 +82,8 @@ typedef long int svn_revnum_t;
 /* Convert null-terminated C string STR to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
 
+/* In printf()-style functions, format revision numbers using this. */
+#define SVN_REVNUM_T_FMT "lu"
 
 /* YABT:  Yet Another Boolean Type */
 typedef int svn_boolean_t;

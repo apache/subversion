@@ -96,8 +96,8 @@ struct file_baton
 
 
 /* Convenience macro. */
-#define STR_BUF_LU(p,lu) svn_stringbuf_createf (p, "%lu", (unsigned long) lu)
-
+#define STR_BUF_REV(p,rev) \
+   (svn_stringbuf_createf ((p), "%" SVN_REVNUM_T_FMT, (rev)))
 
 
 static struct dir_baton *
@@ -269,7 +269,7 @@ output_addopen (struct edit_baton *eb,
 
   if (SVN_IS_VALID_REVNUM (base_revision))
     {
-      svn_stringbuf_t *buf = STR_BUF_LU (pool, base_revision);
+      svn_stringbuf_t *buf = STR_BUF_REV (pool, base_revision);
       if (addopen == elem_add)
         apr_hash_set (att, SVN_DELTA__XML_ATTR_COPYFROM_REV, 
                       strlen (SVN_DELTA__XML_ATTR_COPYFROM_REV), buf);
@@ -353,11 +353,11 @@ open_root (void *edit_baton,
   if (SVN_IS_VALID_REVNUM (base_revision))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
                   strlen (SVN_DELTA__XML_ATTR_BASE_REV), 
-                  STR_BUF_LU (pool, base_revision));
+                  STR_BUF_REV (pool, base_revision));
   if (SVN_IS_VALID_REVNUM (eb->target_revision))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_TARGET_REV, 
                   strlen (SVN_DELTA__XML_ATTR_TARGET_REV), 
-                  STR_BUF_LU (pool, eb->target_revision));
+                  STR_BUF_REV (pool, eb->target_revision));
 
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_normal, 
                               SVN_DELTA__XML_TAG_DELTA_PKG, att);
@@ -392,7 +392,7 @@ delete_entry (const char *path,
   if (SVN_IS_VALID_REVNUM (revision))
     apr_hash_set (att, SVN_DELTA__XML_ATTR_BASE_REV, 
                   strlen (SVN_DELTA__XML_ATTR_BASE_REV), 
-                  STR_BUF_LU (pool, revision));
+                  STR_BUF_REV (pool, revision));
 
   svn_xml_make_open_tag_hash (&str, pool, svn_xml_self_closing, 
                               SVN_DELTA__XML_TAG_DELETE, att);
