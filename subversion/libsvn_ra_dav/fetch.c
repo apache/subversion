@@ -1069,7 +1069,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
         {
           const void *kkey;
           void *vval;
-          apr_hash_this (hi, &kkey, NULL, &vval);
+          apr_hash_this (h, &kkey, NULL, &vval);
 
           if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
                       sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
