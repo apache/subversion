@@ -662,8 +662,8 @@ main (int argc, const char * const *argv)
         }
         break;
       case svn_cl__targets_opt:
-	{
- 	  svn_stringbuf_t *buffer, *buffer_utf8;
+        {
+          svn_stringbuf_t *buffer, *buffer_utf8;
 
           /* We need to convert to UTF-8 now, even before we divide
              the targets into an array, because otherwise we wouldn't
@@ -675,15 +675,15 @@ main (int argc, const char * const *argv)
             err = svn_stringbuf_from_file (&buffer, utf8_opt_arg, pool);
           if (! err)
             err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
-  	  if (err)
-  	    {
-  	      svn_handle_error (err, stdout, FALSE);
-  	      svn_pool_destroy (pool);
-  	      return EXIT_FAILURE;
-  	    }
-	  opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
+          if (err)
+            {
+              svn_handle_error (err, stdout, FALSE);
+              svn_pool_destroy (pool);
+              return EXIT_FAILURE;
+            }
+          opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
                                                  TRUE, pool);
-	}
+        }
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;
@@ -756,10 +756,10 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__diff_cmd_opt:
         opt_state.diff_cmd = apr_pstrdup (pool, opt_arg);
-	break;
+        break;
       case svn_cl__merge_cmd_opt:
         opt_state.merge_cmd = apr_pstrdup (pool, opt_arg);
-	break;
+        break;
       case svn_cl__editor_cmd_opt:
         opt_state.editor_cmd = apr_pstrdup (pool, opt_arg);
 	break;
@@ -931,14 +931,26 @@ main (int argc, const char * const *argv)
     apr_array_header_t *providers
       = apr_array_make (pool, 1, sizeof (svn_auth_provider_object_t *));
 
-    /* The main disk-caching auth providers, for both
-       'username/password' creds and 'username' creds.  */
+    /* Allocate all the provider objects. */
     svn_auth_provider_object_t *simple_wc_provider 
       = apr_pcalloc (pool, sizeof(*simple_wc_provider));
-
     svn_auth_provider_object_t *username_wc_provider 
       = apr_pcalloc (pool, sizeof(*username_wc_provider));
+    svn_auth_provider_object_t *ssl_server_file_provider
+      = apr_pcalloc (pool, sizeof(*ssl_server_file_provider));
+    svn_auth_provider_object_t *ssl_client_cred_file_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_cred_file_provider));
+    svn_auth_provider_object_t *ssl_client_pw_file_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_pw_file_provider));
+    svn_auth_provider_object_t *ssl_server_prompt_provider
+      = apr_pcalloc (pool, sizeof(*ssl_server_prompt_provider));
+    svn_auth_provider_object_t *ssl_client_prompt_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_prompt_provider));
+    svn_auth_provider_object_t *ssl_client_pw_prompt_provider
+      = apr_pcalloc (pool, sizeof(*ssl_client_pw_prompt_provider));
 
+    /* The main disk-caching auth providers, for both
+       'username/password' creds and 'username' creds.  */
     svn_wc_get_simple_provider (&(simple_wc_provider->vtable),
                                 &(simple_wc_provider->provider_baton), pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers) 
@@ -949,6 +961,28 @@ main (int argc, const char * const *argv)
        &(username_wc_provider->provider_baton), pool);
     *(svn_auth_provider_object_t **)apr_array_push (providers) 
       = username_wc_provider;
+
+    /* The server-cert, client-cert, and client-cert-password  providers. */
+    svn_client_get_ssl_server_file_provider
+      (&ssl_server_file_provider->vtable,
+       &ssl_server_file_provider->provider_baton,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_server_file_provider;
+
+    svn_client_get_ssl_client_file_provider
+      (&ssl_client_cred_file_provider->vtable,
+       &ssl_client_cred_file_provider->provider_baton,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_client_cred_file_provider;
+
+    svn_client_get_ssl_pw_file_provider
+      (&ssl_client_pw_file_provider->vtable,
+       &ssl_client_pw_file_provider->provider_baton,
+       pool);
+    *(svn_auth_provider_object_t **)apr_array_push (providers)
+      = ssl_client_pw_file_provider;
 
     if (opt_state.non_interactive == FALSE)
       {
@@ -972,11 +1006,43 @@ main (int argc, const char * const *argv)
            svn_cl__prompt_user, NULL,
            2, /* retry limit */ pool);
 
+        /* Three prompting providers for server-certs, client-certs,
+           and client-cert-passphrases.  */
+        svn_client_get_ssl_server_prompt_provider
+          (&ssl_server_prompt_provider->vtable,
+           &ssl_server_prompt_provider->provider_baton,
+           svn_cl__prompt_user,
+           NULL,
+           pool);
+
+        svn_client_get_ssl_client_prompt_provider
+          (&ssl_client_prompt_provider->vtable,
+           &ssl_client_prompt_provider->provider_baton,
+           svn_cl__prompt_user,
+           NULL,
+           pool);
+
+        svn_client_get_ssl_pw_prompt_provider
+          (&ssl_client_pw_prompt_provider->vtable,
+           &ssl_client_pw_prompt_provider->provider_baton,
+           svn_cl__prompt_user,
+           NULL,
+           pool);
+
         *(svn_auth_provider_object_t **)apr_array_push (providers) 
           = simple_prompt_provider;
 
         *(svn_auth_provider_object_t **)apr_array_push (providers) 
-          = username_prompt_provider;       
+          = username_prompt_provider;      
+
+        *(svn_auth_provider_object_t **)apr_array_push (providers)
+          = ssl_server_prompt_provider;
+ 
+        *(svn_auth_provider_object_t **)apr_array_push (providers)
+          = ssl_client_prompt_provider;
+
+        *(svn_auth_provider_object_t **)apr_array_push (providers)
+          = ssl_client_pw_prompt_provider;
       }
 
     /* Build an authentication baton to give to libsvn_client. */
