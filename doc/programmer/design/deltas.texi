@@ -30,15 +30,16 @@ properties (@pxref{Properties}).
 The term @dfn{delta} without qualification generally means a tree delta,
 unless some other meaning is clear from context.
 
-In the examples below, deltas will be described in XML, which happens to
-be Subversion's import/export format.  However, note that deltas are an
-abstract data structure, of which the XML format is merely one
-representation.  Later, we will describe other representations: for
-example, there is a serialized representation (useful for streaming
-protocols, among other things), and a db-style representation, used for
-repository storage.  The various representations of a given delta are
-(in theory, anyway) perfectly isomorphic to one another, since they
-describe the same underlying structure.
+In the examples below, deltas will be described in XML, which happens
+to be Subversion's (now mostly defunct) import/export patch format.
+However, note that deltas are an abstract data structure, of which the
+XML format is merely one representation.  Later, we will describe
+other representations: for example, there is a serialized
+representation (useful for streaming protocols, among other things),
+and a db-style representation, used for repository storage.  The
+various representations of a given delta are (in theory, anyway)
+perfectly isomorphic to one another, since they describe the same
+underlying structure.
 
 @menu
 * Text Deltas::                 
@@ -195,7 +196,7 @@ which describe how to edit the contents of @var{source-dir} to yield
 @var{source-dir}; @var{content} describes the file or directory to which
 the new directory entry refers.
 
-@item <replace name='@var{name}'>@var{content}</replace>
+@item <open name='@var{name}'>@var{content}</open>
 Both @var{source-dir} and @var{target-dir} have an entry named
 @var{name}, which has changed; @var{content} describes the new file or
 directory.
@@ -256,7 +257,7 @@ directory identical to its ancestor.
 
 @end table
 
-The @var{content} of a @code{add} or @code{replace} tag may also contain
+The @var{content} of a @code{add} or @code{open} tag may also contain
 a property delta, describing changes to the properties of that
 @emph{directory entry}.
 
@@ -312,15 +313,15 @@ effect on the tree with the following tree delta, to be applied to the
 root:
 @example
 <tree-delta>
-  <replace name='dir1'>
+  <open name='dir1'>
     <directory>
       <tree-delta>
-        <replace name='file1'>
+        <open name='file1'>
           <file>@var{text-delta}</file>
-        </replace>
+        </open>
       </tree-delta>
     </directory>
-  </replace>
+  </open>
 </tree-delta>
 @end example
 The outer @code{tree-delta} element describes the changes made to the root
@@ -329,14 +330,14 @@ described by the nested @code{tree-delta}.  Within @file{/dir1}, there are
 changes in @file{file1}, described by the @var{text-delta}.
 
 If we had edited both @file{/dir1/file1} and @file{/dir1/file2}, then
-there would simply be two @code{replace} elements in the inner
+there would simply be two @code{open} elements in the inner
 @code{tree-delta}.
 
 As another example, starting from the same source tree, suppose we
 rename @file{/dir1/file1} to @file{/dir1/file8}:
 @example
 <tree-delta>
-  <replace name='dir1'>
+  <open name='dir1'>
     <directory>
       <tree-delta>
         <delete name='file1'/>
@@ -345,7 +346,7 @@ rename @file{/dir1/file1} to @file{/dir1/file8}:
         </add>
       </tree-delta>
     </directory>
-  </replace>
+  </open>
 </tree-delta>
 @end example
 As above, the inner @code{tdelta} describes how @file{/dir1} has
@@ -367,18 +368,18 @@ renaming @file{/dir1/tmp} to @file{/dir1/file2}
 (in other words, exchanging @file{file1} and @file{file2}):
 @example
 <tree-delta>
-  <replace name='dir1'>
+  <open name='dir1'>
     <directory>
       <tree-delta>
-        <replace name='file1'>
+        <open name='file1'>
           <file ancestor='/dir1/file2'/>
-        </replace>
-        <replace name='file2'>
+        </open>
+        <open name='file2'>
           <file ancestor='/dir1/file1'/>
-        </replace>
+        </open>
       </tree-delta>
     </directory>
-  </replace>
+  </open>
 </tree-delta>
 @end example
 The indirectness allows the tree delta to capture an arbitrary
@@ -397,10 +398,10 @@ Note that @file{file3}'s path has remained the same, even though the
 directories around it have changed.  Here is the tree delta:
 @example
 <tree-delta>
-  <replace name='dir1'>
+  <open name='dir1'>
     <directory>
       <tree-delta>
-        <replace name='dir2'>
+        <open name='dir2'>
           <directory ancestor='/dir1/dir3'>
             <tree-delta>
               <add name='file3'>
@@ -408,7 +409,7 @@ directories around it have changed.  Here is the tree delta:
               </add>
             </tree-delta>
           </directory>
-        </replace>
+        </open>
         <delete name='dir3'/>
         <add name='dir4'>
           <directory ancestor='/dir1/dir2'>
@@ -419,7 +420,7 @@ directories around it have changed.  Here is the tree delta:
         </add>
       </tree-delta>
     </directory>
-  </replace>
+  </open>
 </tree-delta>
 @end example
 In other words:
@@ -473,11 +474,11 @@ part appears after the tree delta is complete.  Here's an example:
 
 @example
  <tree-delta>
-   <replace name="foo.c">
+   <open name="foo.c">
       <file>
         <text-delta-ref id="123">
       </file>
-   </replace>
+   </open>
    <add name="bar.c">
       <file>
         <text-delta-ref id="456">
@@ -500,7 +501,7 @@ patching.  Subversion defines a standard set of such operations in the
 vtable @code{svn_delta_edit_fns_t}, a set of function prototypes which
 anyone may implement (see @file{svn_delta.h}).
 
-Each function in an instance of @code{svn_delta_edit_fns_t}
+Each function in an instance of @code{svn_delta_editor_t}
 (colloquially known as an @dfn{editor}) implements some distinct subtask
 of editing a directory tree.  In fact, if you compare the editor
 function prototypes to the XML elements described previously, you'll
@@ -594,6 +595,13 @@ tree-delta to the repository.  (The description below is slightly
 simplified.  For exact interface details, see
 @file{subversion/include/svn_delta.h}.)
 
+[Note:  in the examples below, and throughout Subversion's code base,
+you'll see references to 'baton' objects.  This is simply a project
+convention, a name given to structures that define contexts for
+functions.  Many APIs call these structures 'userdata'.  In
+Subversion, we like the term 'baton', because it reminds us of one
+function ``handing off'' context to another function.]
+
 @enumerate
 
 @item 
@@ -621,7 +629,7 @@ client now has a new opaque data structure that can be used to change
 @item
 @code{dir2_baton = editor->open_dir("dir2", "/dir1/dir3", dir1_baton);}
 
-The @emph{dir1_baton} is now used to replace @file{dir2} with a
+The @emph{dir1_baton} is now used to open @file{dir2} with a
 directory whose ancestor is @file{/dir1/dir3}.
 
 @item

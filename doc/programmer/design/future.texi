@@ -17,13 +17,13 @@ These are things that @emph{should} be released in Subversion 1.0, if we
 really want to achieve the goal of creating a compelling replacement for
 CVS.
 
-The lists below are a bit dated;  a more recent wishlist can be found in
-@file{IDEAS} in the source-tree.
+The lists below are a bit dated; the best list of items can be seen by
+examining the 'post-1.0' items in the project issue-databose.
+
 
 @menu
 * Annotation::                  
 * Repository Conversion::       
-* User Interface for Branches and Tags::  
 @end menu
 
 @node Annotation
@@ -46,39 +46,9 @@ We need to write a tool which will convert a CVS repository into an SVN
 repository, preserving all history.  This is absolutely critical in
 persuading people to switch to SVN.
 
-Bob Miller <@email{kbob@@jogger-egg.com}> has already started work on
-this tool, which can be found in @file{tools/cvs2svn/}.
+This tool exists, but doesn't yet recognize CVS branches and tags.  It
+can be found in @file{tools/cvs2svn/}.
 
-
-@node User Interface for Branches and Tags
-@subsection User Interface for Branches and Tags
-
-This is a tricky issue.
-
-The Subversion Filesystem implements branches and tags by using
-``clones'';  both branches and tags appear as ordinary directories in
-the filesystem.
-
-We have been told that this implementation is quite confusing for
-end-users.  (The closed-source version-control system @emph{Perforce}
-uses this method.)  It's apparently confusing, when browsing the
-filesystem, to know which subdirectories represents the main-lines of a
-project, and which represent branches or tags.  This problem is made
-worse by users accidentally (or carelessly) creating clone directories
-in bad places, such as inside the trees they're cloning.
-
-There are a number of proposed solutions being discussed.  They all
-center on two principles:
-
-@itemize @bullet
-@item
-Recommending a repository filesystem structure that cleanly divides
-trunks, branches, and tags;
-@item
-Implementing client behavior that ``hides'' this repository structure
-from the end user, and allows them to continue using intuitive branch
-and tag commands.
-@end itemize
 
 
 @c -----------------------------------------------------------------------
@@ -87,7 +57,8 @@ and tag commands.
 
 
 These are features we'd like to see in Subversion someday, but aren't
-critical for a 1.0 release.
+critical for a 1.0 release.  Again, a much more recent list of
+brainstorms can be seen in the issuetracker as 'post-1.0' items.
 
 
 @menu
@@ -98,7 +69,6 @@ critical for a 1.0 release.
 * Inter-Repository Communication::  
 * SQL Back-End::                
 * Digital Signatures::          
-* Import/Export format::        
 * SMTP access::                 
 @end menu
 
@@ -200,16 +170,6 @@ to speak SQL, in addition to the default Berkeley DB support.
 A few people have mentioned cryptographic signing of deltas.  It's a
 cool idea, and we should leave the door open for it.
 
-
-@node Import/Export format
-@subsection Import/Export format
-
-Suggested by Jason Robbins; he mentioned this as a nice thing to have
-someday.  It makes repositories easy to transport.
-
-Subversion already has an XML DTD that it uses for testing updates and
-commits;  this DTD may be 80% of the "exchange" format we're looking
-for. 
 
 @node SMTP access
 @subsection SMTP access

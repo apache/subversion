@@ -11,11 +11,11 @@ implements @dfn{repositories} and makes them available to other
 programs.  No networking is required.
 
 There are two main libraries: the @dfn{Subversion Filesystem} library,
-and the @dfn{Subversion Server} library.
+and the @dfn{Subversion Repository} library.
 
 @menu
 * Filesystem::                  The Subversion Filesystem.
-* Server Library::              The Subversion Server interface.
+* Repository Library::          The Subversion Repository interface.
 @end menu
 
 
@@ -51,7 +51,7 @@ a repository for storing files
   @item
 concurrent client transactions
   @item
-enforcement of user & group permissions
+enforcement of user & group permissions [someday, not yet]
   @end itemize
 @end itemize
 
@@ -541,7 +541,8 @@ For our last example, we'll demonstrate the way ``tags'' and
 In a nutshell, they're one and the same thing.  Because nodes are so
 easily shared, we simply create a @emph{new} directory entry that points
 to an existing directory node.  It's an extremely cheap way of copying a
-tree; we call this new entry a @dfn{clone}.
+tree; we call this new entry a @dfn{clone}, or more colloquially, a
+``cheap copy''.
 
 Let's go back to our original tree, assuming that we're at revision 6 to
 begin with:
@@ -628,14 +629,19 @@ Let's ``tag'' directory A.  To make the clone, we create a new dir_entry
 @end example
 
 Now we're all set.  In the future, the contents of directories A and B
-may change quite a lot.  However, assuming we never make any changes to
-directory T, it will @emph{always} point to a particular pristine revision
-of directory A.  (We can use permissions to prevent anyone from writing
-to directory T.)  Thus, T is a tag.
+may change quite a lot.  However, assuming we never make any changes
+to directory T, it will @emph{always} point to a particular pristine
+revision of directory A at some point in time.  Thus, T is a tag.
 
-However, if we @emph{do} decide to allow commits in directory T, and now
-our repository tree increments to revision 8, then T becomes a branch.
-Specifically, it's a branch of directory A which ``broke off'' from the
+(In theory, we can use some kind of authorization system to prevent
+anyone from writing to directory T.  In practice, a well-laid out
+repository should encourage ``tag directories'' to live in one place,
+so that it's clear to all users that they're not meant to change.)
+
+However, if we @emph{do} decide to allow commits in directory T, and
+now our repository tree increments to revision 8, then T becomes a
+branch.  Specifically, it's a branch of directory A which shares
+history with A up to a certain point, and then ``broke off'' from the
 main line at revision 8.
 
 @node Diffy Storage
@@ -673,147 +679,39 @@ operate with more powerful SQL database.}  (For more information, see
 
 @c ----------------------------------------------------------------
 
-@node Server Library
-@section Server Library
+@node Repository Library
+@section Repository Library
 
-@menu
-* Security::
-@end menu
 
 @c Jimb, Karl:  Maybe we should turn this into a discussion about how
 @c the filesystem will use non-historical properties for internal ACLs,
 @c and how people can add "external" ACL systems via historical
 @c properties...?
 
-
-
-This library no longer exists in the current Subversion design; all
-functionality that it would have provided will come from Apache and
-mod_DAV_SVN.
-
-Only a small part of the spec has been left behind -- mainly to provide
-ideas for the future.
-
-
-@node Security
-@subsection Security
-
-Subversion has two levels of security, both abstracted.
-
-@menu
-* Username Authentication::     
-* Authorization::               
-@end menu
-
-@node Username Authentication
-@subsubsection Username Authentication
-
-First of all, the Subversion filesystem does @emph{not} authenticate
-users -- it never asks a client user to prove his/her identity.
-Instead, authentication is solely the responsibility of the network
-layer.  Every Subversion user @emph{must} have an account in an external
-database that is understood by some network layer.  (@xref{Network
-Layer}.)
-
-For example, for a vanilla Apache network layer, each client user could
-authenticate against a standard Apache access control file.  More
-complex network layers could authenticate against @file{/etc/passwd} or
-a SQL database.
-
-Once the network layer has authenticated the user, it passes three
-arguments to the Subversion server:
+A subversion @dfn{repository} is a directory that contains a number of
+components:
 
 @itemize @bullet
-@item
-@b{auth_username} -- the authenticated username
-@item
-@b{auth_method} -- the method in which this user was authenticated
-@item
-@b{auth_domain} -- the domain the user is coming from
+@item a versioned filesystem (typically a collection of .db files)
+@item some hook scripts (for executing before or after commits)
+@item a locking area (used by Berkeley DB or other processes)
+@item a configuration area (for changing global behaviors)
 @end itemize
 
-This information is then used to ``authorize'' a client's actions.
+The Subversion filesystem is just that: a filesystem.  But it's also
+useful to provide an API that acts at the level of the repository.
+The repository library (@file{libsvn_repos}) does this.
 
+In particular, it wraps a few @file{libsvn_fs} routines, such as those
+for beginning and ending commits, so that hook-scripts can run.  A
+pre-commit-hook script might check for a valid log message, and a
+post-commit-hook script might send an email to a mailing list.
 
-@node Authorization
-@subsubsection Authorization
+Additionally, the repository library provides convenience routines for
+examining and manipulating the filesystem.  For example, a routine to
+generate a tree-delta by comparing two revisions, routines for
+constructing new transactions, routines for querying log messages, and
+routines for exporting and importing filesystem data.
 
-By @dfn{authorization}, we mean answering the question:
-
-@quotation
-
-``Is user X allowed to perform action Y on data Z?''
-
-@end quotation
-
-The Subversion filesystem provides a single interface for answering this
-question.
-
-@table @code
-@item str_t svn_authorize (auth_user, auth_method, auth_domain, action, path);
-@end table
-
-@*
-
-This interface is implemented by a server-side plug-in library which is
-free to define any sort of security scheme it wishes.  The return value
-of this function is either NULL (meaning that authorization was denied),
-or @var{username}, where @var{username} is the specific username to use
-when performing the action against the Subversion filesystem.
-
-The first release of Subversion will ship with a plug-in that manages
-this information in a file called `svn_security'; each repository has
-its own copy this file.  It's worth mentioning how this file works.
-
-The `svn_security' file does three things:
-
-@enumerate
-
-@item
-@b{Map authorized usernames to filesystem usernames.}  For example,
-suppose Jim Blandy is able to contact the Subversion server in many
-different ways, using different network layers.  It's important that the
-@emph{same} username be used when talking to the filesystem.  We call
-this username the @dfn{Subversion username} or @dfn{canonical} username.
-Here's an example of this mapping:
-
-@example
-jimb : Jim Blandy :   jim/unix/localhost,  \
-                      jimb/smtp/jimb@@red-bean.com, \
-                      jimb/kerberos/redhat.com, \
-                      jblandy/DAV/red-bean.com 
-@end example
-
-@item
-@b{Define Roles.}  A @dfn{role} is a set of performable actions.  Here
-are some examples of roles:
-
-@example
-visitor : checkout update
-hacker : checkout update commit
-core-programmer : checkout update commit add rm mv
-nitpicker : checkout update annotate
-admin : checkout update commit add rm mv import
-god : all
-offlimits: none
-@end example
-
-@item
-@b{Map roles to users.}  For each canonical username, specify specific
-roles this person has for particular filesystem paths:
-
-@example
-joe : visitor /trunk/gnome : nitpicker /trunk/foo
-kfogel : admin /trunk/subversion : offlimits /trunk/subversion/foo.c
-zeke : hacker /trunk/comp-tools : visitor /trunk/comp-tools/gdb
-@end example
-
-@end enumerate
-
-
-Remember, this is only one example of a back-end implementation of
-@code{svn_authorize ()}.  Programmers are free to write new server-side
-plug-ins that implement different security schemas (for example,
-authorizing against a SQL database.)
 
 
