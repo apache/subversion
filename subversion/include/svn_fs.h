@@ -298,6 +298,10 @@ int svn_fs_node_is_dir (svn_fs_node_t *node);
 int svn_fs_node_is_file (svn_fs_node_t *node);
 
 
+/* Return the filesystem to which NODE belongs.  */
+svn_fs_t *svn_fs_get_node_fs (svn_fs_node_t *node);
+
+
 /* Return a copy of NODE's ID, allocated in POOL.
 
    Note that NODE's ID may change over time.  If NODE is an immutable
@@ -365,6 +369,9 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_node_t *node,
    TARGET must have been reached via the root directory of some
    transaction, not of a revision.
 
+   SOURCE and TARGET may be directories; in that case, this function
+   recursively merges the directories' contents.
+
    If there are differences between ANCESTOR and SOURCE that conflict
    with changes between ANCESTOR and TARGET, this function returns an
    SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
@@ -393,16 +400,16 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
    A directory entry name is a Unicode string encoded in UTF-8, and
    may not contain the null character (U+0000).  The name should be in
    Unicode canonical decomposition and ordering.  No directory entry
-   may be named '.' or '..'.  Given a directory entry name which fails
-   to meet these requirements, a filesystem function returns an
-   SVN_ERR_FS_PATH_SYNTAX error.
+   may be named '.', '..', or the empty string.  Given a directory
+   entry name which fails to meet these requirements, a filesystem
+   function returns an SVN_ERR_FS_PATH_SYNTAX error.
 
    A directory path is a sequence of one or more directory entry
    names, separated by slash characters (U+002f).  Sequences of two or
-   more consecutive slash characters are treated like a single slash.
-   If a path ends with a slash, it refers to the same node it would
-   without the slash, but that node must be a directory, or else the
-   function returns an SVN_ERR_FS_NOT_DIRECTORY error.
+   more consecutive slash characters are treated as if they were a
+   single slash.  If a path ends with a slash, it refers to the same
+   node it would without the slash, but that node must be a directory,
+   or else the function returns an SVN_ERR_FS_NOT_DIRECTORY error.
 
    Paths may not start with a slash.  All directory paths in
    Subversion are relative; all functions that expect a path as an
