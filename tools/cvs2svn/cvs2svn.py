@@ -15,6 +15,7 @@ import fileinput
 import string
 import getopt
 import stat
+import string
 import md5
 import anydbm
 import marshal
@@ -67,11 +68,13 @@ OP_CHANGE = 'C'
 DIGEST_END_IDX = 9 + (sha.digestsize * 2)
 
 # Officially, CVS symbolic names must use a fairly restricted set of
-# characters.  Unofficially, we don't care if some repositories out
-# there don't abide by this, as long as their tags start with a letter
-# and don't include '/' or '\' (both of which are prohibited by
-# official restrictions anyway).
-symbolic_name_re = re.compile('^[a-zA-Z][^/\\\\]*$')
+# characters.  Unofficially, CVS 1.10 allows any character but [$,.:;@]
+# We don't care if some repositories out there use characters outside the
+# official set, as long as their tags start with a letter.
+# Since the unofficial set also includes [/\] we need to translate those
+# into ones that don't conflict with Subversion limitations.
+symbolic_name_re = re.compile('^[a-zA-Z].*$')
+symbolic_name_transtbl = string.maketrans('/\\',',;')
 
 class CollectData(rcsparse.Sink):
   def __init__(self, cvsroot, log_fname_base):
@@ -105,7 +108,7 @@ class CollectData(rcsparse.Sink):
 
   def get_branch_name(self, revision):
     """Return the name of the branch on which REVISION lies.
-    REVISION is a non-branch evision number with an even number of,
+    REVISION is a non-branch revision number with an even number of,
     components, for example '1.7.2.1' (never '1.7.2' nor '1.7.0.2')."""
     return self.branch_names.get(revision[:revision.rindex(".")])
 
@@ -292,11 +295,13 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
     sys.exit(1)
 
   if branch_name:
+    branch_name = branch_name.translate(symbolic_name_transtbl)
     if path:
       return ctx.branches_base + '/' + branch_name + '/' + path
     else:
       return ctx.branches_base + '/' + branch_name
   elif tag_name:
+    tag_name = tag_name.translate(symbolic_name_transtbl)
     if path:
       return ctx.tags_base + '/' + tag_name + '/' + path
     else:

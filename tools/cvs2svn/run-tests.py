@@ -350,11 +350,8 @@ def show_usage():
 
 
 def bogus_tag():
-  "fail on encountering an invalid symbolic name"
-  ret, ign, ign = ensure_conversion('bogus-tag',
-                                    '.*is not a valid tag or branch name')
-  if ret:
-    raise svntest.Failure
+  "conversion of invalid symbolic names"
+  ret, ign, ign = ensure_conversion('bogus-tag')
 
 
 def overlapping_branch():
