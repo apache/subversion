@@ -2,9 +2,6 @@ Do transactions need an open_count field too?
 
 We don't store older node versions as deltas yet.
 
-svn_fs_open_node leaves `dir' open if an error occurs while traversing
-the path.
-
 Get rid of proplists; just give the user an APR hash table instead.
 
 Produce helpful error messages when filename paths contain null
