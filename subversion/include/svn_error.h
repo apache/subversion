@@ -84,6 +84,9 @@ typedef enum svn_errno_t {
   /* Can't do this update or checkout, because something was in the way. */
   SVN_ERR_OBSTRUCTED_UPDATE,
 
+  /* A general filesystem error.  */
+  SVN_ERR_FS_GENERAL,
+
   /* The error is a Berkeley DB error.  `src_err' is the Berkeley DB
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
