@@ -21,6 +21,7 @@
 #include "err.h"
 #include "dbt.h"
 #include "skel.h"
+#include "fs_skels.h"
 #include "proplist.h"
 #include "validate.h"
 #include "rev-table.h"
@@ -48,30 +49,8 @@ int svn_fs__open_revisions_table (DB **revisions_p,
 /* Storing and retrieving filesystem revisions.  */
 
 
-static int
-is_valid_filesystem_revision (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len == 3)
-    {
-      if (svn_fs__matches_atom (skel->children, "revision")
-          && skel->children->next != NULL
-          && svn_fs__is_valid_proplist (skel->children->next->next))
-        {
-          skel_t *id = skel->children->next;
-          if (id->is_atom
-              && 0 == (1 & svn_fs__count_id_components (id->data, id->len)))
-            return 1;
-        }
-    }
-
-  return 0;
-}
-
-
 svn_error_t *
-svn_fs__get_rev (skel_t **skel_p,
+svn_fs__get_rev (svn_fs__revision_t **revision_p,
                  svn_fs_t *fs,
                  svn_revnum_t rev,
                  trail_t *trail)
@@ -79,6 +58,7 @@ svn_fs__get_rev (skel_t **skel_p,
   int db_err;
   DBT key, value;
   skel_t *skel;
+  svn_fs__revision_t *revision;
 
   /* Turn the revision number into a Berkeley DB record number.
      Revisions are numbered starting with zero; Berkeley DB record
@@ -98,31 +78,50 @@ svn_fs__get_rev (skel_t **skel_p,
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading filesystem revision", db_err));
 
-  /* Parse and check the REVISION skel.  */
+  /* Unparse REVISION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
-  if (! skel
-      || ! is_valid_filesystem_revision (skel))
+  if (! skel)
     return svn_fs__err_corrupt_fs_revision (fs, rev);
+    
+  /* Convert skel to native type. */
+  SVN_ERR (svn_fs__parse_revision_skel (&revision, skel, trail->pool));
 
-  *skel_p = skel;
+  *revision_p = revision;
   return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_fs__put_rev (svn_revnum_t *rev,
-                 svn_fs_t *fs,
-                 skel_t *skel,
-                 trail_t *trail)
+/* Write REVISION to FS as part of TRAIL.  If *REV is a valid revision
+   number, write this revision as one that corresponds to *REV, else
+   write a new revision and return its newly created revision number
+   in *REV.  */
+static svn_error_t *
+put_rev (svn_revnum_t *rev,
+         svn_fs_t *fs,
+         svn_fs__revision_t *revision,
+         trail_t *trail)
 {
   int db_err;
-  DBT key, value;
   db_recno_t recno = 0;
+  skel_t *skel;
+  DBT key, value;
 
-  /* xbc FIXME: Need a useful revision number here. */
-  if (! is_valid_filesystem_revision (skel))
-    return svn_fs__err_corrupt_fs_revision (fs, -1);
+  /* Convert native type to skel. */
+  SVN_ERR (svn_fs__unparse_revision_skel (&skel, revision, trail->pool));
 
+  if (SVN_IS_VALID_REVNUM (*rev))
+    {
+      DBT query, result;
+      
+      /* Update the filesystem revision with the new skel. */
+      recno = *rev + 1;
+      db_err = fs->revisions->put 
+        (fs->revisions, trail->db_txn,
+         svn_fs__set_dbt (&query, &recno, sizeof (recno)),
+         svn_fs__skel_to_dbt (&result, skel, trail->pool), 0);
+      return DB_WRAP (fs, "updating filesystem revision", db_err);
+    }
+      
   db_err = fs->revisions->put (fs->revisions, trail->db_txn,
                                svn_fs__recno_dbt(&key, &recno),
                                svn_fs__skel_to_dbt (&value, skel, trail->pool),
@@ -138,25 +137,31 @@ svn_fs__put_rev (svn_revnum_t *rev,
 
 
 svn_error_t *
+svn_fs__put_rev (svn_revnum_t *rev,
+                 svn_fs_t *fs,
+                 svn_fs__revision_t *revision,
+                 trail_t *trail)
+{
+  *rev = SVN_INVALID_REVNUM;
+  return put_rev (rev, fs, revision, trail);
+}
+
+
+svn_error_t *
 svn_fs__rev_get_root (svn_fs_id_t **root_id_p,
                       svn_fs_t *fs,
                       svn_revnum_t rev,
                       trail_t *trail)
 {
-  skel_t *skel;
-  svn_fs_id_t *id;
+  svn_fs__revision_t *revision;
 
-  SVN_ERR (svn_fs__get_rev (&skel, fs, rev, trail));
-
-  id = svn_fs_parse_id (skel->children->next->data,
-                        skel->children->next->len,
-                        trail->pool);
+  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
 
   /* The skel validator doesn't check the ID format. */
-  if (id == NULL)
+  if (revision->id == NULL)
     return svn_fs__err_corrupt_fs_revision (fs, -1);
 
-  *root_id_p = id;
+  *root_id_p = revision->id;
   return SVN_NO_ERROR;
 }
 
@@ -274,14 +279,13 @@ txn_body_revision_prop (void *baton,
                         trail_t *trail)
 {
   struct revision_prop_args *args = baton;
-
-  skel_t *skel;
+  svn_fs__revision_t *revision;
   skel_t *proplist;
 
-  SVN_ERR (svn_fs__get_rev (&skel, args->fs, args->rev, trail));
-
-  /* PROPLIST is the third element of revision skel.  */
-  proplist = skel->children->next->next;
+  SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
+  SVN_ERR (svn_fs__unparse_proplist_skel (&proplist,
+                                          revision->proplist,
+                                          trail->pool));
 
   /* Return the results of the generic property getting function. */
   return svn_fs__get_prop (args->value_p,
@@ -325,18 +329,11 @@ static svn_error_t *
 txn_body_revision_proplist (void *baton, trail_t *trail)
 {
   struct revision_proplist_args *args = baton;
-  skel_t *skel;
-  skel_t *proplist;
+  svn_fs__revision_t *revision;
 
-  SVN_ERR (svn_fs__get_rev (&skel, args->fs, args->rev, trail));
-
-  /* PROPLIST is the third element of revision skel.  */
-  proplist = skel->children->next->next;
-
-  /* Return the results of the generic property hash getting function. */
-  return svn_fs__make_prop_hash (args->table_p,
-                                 proplist,
-                                 trail->pool);
+  SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
+  *(args->table_p) = revision->proplist;
+  return SVN_NO_ERROR;
 }
 
 
@@ -368,31 +365,25 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
                       const svn_string_t *value,
                       trail_t *trail)
 {
-  skel_t *skel;
-  skel_t *proplist;
+  svn_fs__revision_t *revision;
+  svn_revnum_t rev_copy = rev;
 
-  SVN_ERR (svn_fs__get_rev (&skel, fs, rev, trail));
+  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
 
-  /* PROPLIST is the third element of revision skel.  */
-  proplist = skel->children->next->next;
+  /* If there's no proplist, but we're just deleting a property, exit
+     now. */
+  if ((! revision->proplist) && (! value))
+    return SVN_NO_ERROR;
 
-  /* Call the generic property setting function. */
-  SVN_ERR (svn_fs__set_prop (proplist, name, value, trail->pool));
-  {
-    int db_err;
-    DBT query, result;
-    db_recno_t recno = rev + 1;
+  /* Now, if there's no proplist, we know we need to make one. */
+  if (! revision->proplist)
+    revision->proplist = apr_hash_make (trail->pool);
 
-    /* Update the filesystem revision with the new skel that reflects
-       our property edits. */
-    db_err = fs->revisions->put 
-      (fs->revisions, trail->db_txn,
-       svn_fs__set_dbt (&query, &recno, sizeof (recno)),
-       svn_fs__skel_to_dbt (&result, skel, trail->pool), 0);
-    SVN_ERR (DB_WRAP (fs, "updating filesystem revision", db_err));
-  }
+  /* Set the property. */
+  apr_hash_set (revision->proplist, name, APR_HASH_KEY_STRING, value);
 
-  return SVN_NO_ERROR;
+  /* Overwrite the revision. */
+  return put_rev (&rev_copy, fs, revision, trail);
 }
 
 

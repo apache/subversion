@@ -700,16 +700,19 @@ Node revisions:
 Representations:
 
          REPRESENTATION ::= FULLTEXT | DELTA ;
-               FULLTEXT ::= (("fulltext" FLAG ...) STRING-KEY) ;
-                  DELTA ::= (("delta" FLAG ...) (OFFSET WINDOW) ...) ;
-                   FLAG ::= "mutable" | ;
-                 WINDOW ::= (DIFF SIZE CHECKSUM [REP-KEY [REP-OFFSET]]) ;
+               FULLTEXT ::= (HEADER STRING-KEY) ;
+                  DELTA ::= (HEADER (OFFSET WINDOW) ...) ;
+                 WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
                    DIFF ::= ("svndiff" STRING-KEY) ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
                  OFFSET ::= number ;
              REP-OFFSET ::= number ;
 
+                 HEADER ::= (KIND FLAG ...)
+                   KIND ::= "fulltext" | "delta" ;
+                   FLAG ::= "mutable" | ;
+             
                    SIZE ::= number ;
                CHECKSUM ::= ("md5" BYTES) ;
                   BYTES ::= atom ;

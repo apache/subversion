@@ -21,7 +21,7 @@
 #include "db.h"
 #include "svn_io.h"
 #include "svn_fs.h"
-#include "skel.h"
+#include "fs.h"
 #include "trail.h"
 
 #ifdef __cplusplus
@@ -40,31 +40,30 @@ int svn_fs__open_reps_table (DB **reps_p, DB_ENV *env, int create);
 
 /*** Storing and retrieving reps.  ***/
 
-/* Set *SKEL_P to point to the REPRESENTATION skel for the key KEY in
-   FS, as part of TRAIL.  Allocate the skel and the data it points
-   into in TRAIL->pool.
+/* Set *REP_P to point to the representation for the key KEY in
+   FS, as part of TRAIL.  Perform all allocations in TRAIL->pool.
 
    If KEY is not a representation in FS, the error
    SVN_ERR_FS_NO_SUCH_REPRESENTATION is returned.  */
-svn_error_t *svn_fs__read_rep (skel_t **skel_p,
+svn_error_t *svn_fs__read_rep (svn_fs__representation_t **rep_p,
                                svn_fs_t *fs,
                                const char *key,
                                trail_t *trail);
 
 
-/* Store SKEL as the representation for KEY in FS, as part of
+/* Store REP as the representation for KEY in FS, as part of
    TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
                                 const char *key,
-                                skel_t *skel,
+                                svn_fs__representation_t *rep,
                                 trail_t *trail);
 
 
-/* Store SKEL as a new representation in FS, and the new rep's key in
+/* Store REP as a new representation in FS, and the new rep's key in
    *KEY, as part of trail.  The new key is allocated in TRAIL->pool.  */
 svn_error_t *svn_fs__write_new_rep (const char **key,
                                     svn_fs_t *fs,
-                                    skel_t *skel,
+                                    svn_fs__representation_t *rep,
                                     trail_t *trail);
 
 /* Delete representation KEY from FS, as part of TRAIL.

@@ -23,6 +23,7 @@
 #include "apr.h"
 #include "../fs-helpers.h"
 #include "../../libsvn_fs/skel.h"
+#include "../../libsvn_fs/fs_skels.h"
 #include "../../libsvn_fs/strings-table.h"
 #include "../../libsvn_fs/reps-table.h"
 
@@ -42,7 +43,9 @@ static svn_error_t *
 txn_body_write_new_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
-  return svn_fs__write_new_rep (&(b->key), b->fs, b->skel, trail);
+  svn_fs__representation_t *rep;
+  SVN_ERR (svn_fs__parse_representation_skel (&rep, b->skel, trail->pool));
+  return svn_fs__write_new_rep (&(b->key), b->fs, rep, trail);
 }
 
 
@@ -50,7 +53,9 @@ static svn_error_t *
 txn_body_write_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
-  return svn_fs__write_rep (b->fs, b->key, b->skel, trail);
+  svn_fs__representation_t *rep;
+  SVN_ERR (svn_fs__parse_representation_skel (&rep, b->skel, trail->pool));
+  return svn_fs__write_rep (b->fs, b->key, rep, trail);
 }
 
 
@@ -58,7 +63,9 @@ static svn_error_t *
 txn_body_read_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
-  return svn_fs__read_rep (&(b->skel), b->fs, b->key, trail);
+  svn_fs__representation_t *rep;
+  SVN_ERR (svn_fs__read_rep (&rep, b->fs, b->key, trail));
+  return svn_fs__unparse_representation_skel (&(b->skel), rep, trail->pool);
 }
 
 
@@ -79,7 +86,7 @@ write_new_rep (const char **msg,
                apr_pool_t *pool)
 {
   struct rep_args args;
-  const char *rep = "(fulltext a83t2Z0q)";
+  const char *rep = "((fulltext) a83t2Z0q)";
   svn_fs_t *fs;
 
   *msg = "Write a new rep, get a new key back.";
@@ -117,8 +124,8 @@ write_rep (const char **msg,
 {
   struct rep_args new_args;
   struct rep_args args;
-  const char *new_rep = "(fulltext a83t2Z0q)";
-  const char *rep = "(fulltext kfogel31337)";
+  const char *new_rep = "((fulltext) a83t2Z0q)";
+  const char *rep = "((fulltext muggly mutable) kfogel31337)";
   svn_fs_t *fs;
 
   *msg = "Write a new rep, then overwrite it.";
@@ -168,8 +175,8 @@ read_rep (const char **msg,
   struct rep_args new_args;
   struct rep_args args;
   struct rep_args read_args;
-  const char *new_rep = "(fulltext a83t2Z0q)";
-  const char *rep = "(fulltext kfogel31337)";
+  const char *new_rep = "((fulltext mutable) a83t2Z0)";
+  const char *rep = "((fulltext) kfogel31337)";
   svn_stringbuf_t *skel_data;
   svn_fs_t *fs;
 
@@ -256,7 +263,7 @@ delete_rep (const char **msg,
   struct rep_args new_args;
   struct rep_args delete_args;
   struct rep_args read_args;
-  const char *new_rep = "(fulltext a83t2Z0q)";
+  const char *new_rep = "((fulltext) a83t2Z0q)";
   svn_fs_t *fs;
   svn_error_t *err;
 

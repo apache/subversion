@@ -18,6 +18,7 @@
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"
+#include "fs_skels.h"
 #include "err.h"
 #include "dbt.h"
 #include "trail.h"
@@ -62,7 +63,7 @@ svn_fs__open_reps_table (DB **reps_p,
 /*** Storing and retrieving reps.  ***/
 
 svn_error_t *
-svn_fs__read_rep (skel_t **skel_p,
+svn_fs__read_rep (svn_fs__representation_t **rep_p,
                   svn_fs_t *fs,
                   const char *key,
                   trail_t *trail)
@@ -70,6 +71,7 @@ svn_fs__read_rep (skel_t **skel_p,
   skel_t *skel;
   int db_err;
   DBT query, result;
+  svn_fs__representation_t *rep;
 
   db_err = fs->representations->get
     (fs->representations,
@@ -90,8 +92,10 @@ svn_fs__read_rep (skel_t **skel_p,
 
   /* Parse the REPRESENTATION skel.  */
   skel = svn_fs__parse_skel (result.data, result.size, trail->pool);
-  *skel_p = skel;
 
+  /* Convert to a native type.  */
+  SVN_ERR (svn_fs__parse_representation_skel (&rep, skel, trail->pool));
+  *rep_p = rep;
   return SVN_NO_ERROR;
 }
 
@@ -99,11 +103,16 @@ svn_fs__read_rep (skel_t **skel_p,
 svn_error_t *
 svn_fs__write_rep (svn_fs_t *fs,
                    const char *key,
-                   skel_t *skel,
+                   svn_fs__representation_t *rep,
                    trail_t *trail)
 {
   DBT query, result;
+  skel_t *skel;
 
+  /* Convert from native type to skel. */
+  SVN_ERR (svn_fs__unparse_representation_skel (&skel, rep, trail->pool));
+
+  /* Now write the record. */
   SVN_ERR (DB_WRAP (fs, "storing representation",
                     fs->representations->put
                     (fs->representations, trail->db_txn,
@@ -117,7 +126,7 @@ svn_fs__write_rep (svn_fs_t *fs,
 svn_error_t *
 svn_fs__write_new_rep (const char **key,
                        svn_fs_t *fs,
-                       skel_t *skel,
+                       svn_fs__representation_t *rep,
                        trail_t *trail)
 {
   DBT query, result;
@@ -149,9 +158,9 @@ svn_fs__write_new_rep (const char **key,
 
   svn_fs__track_dbt (&result, trail->pool);
 
-  /* Store the new rep skel. */
+  /* Store the new rep. */
   *key = apr_pstrndup (trail->pool, result.data, result.size);
-  SVN_ERR (svn_fs__write_rep (fs, *key, skel, trail));
+  SVN_ERR (svn_fs__write_rep (fs, *key, rep, trail));
 
   /* Bump to future key. */
   len = result.size;

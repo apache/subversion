@@ -458,13 +458,17 @@ svn_fs__string_copy (svn_fs_t *fs,
   DBC *cursor;
   int db_err;
 
+  /* Copy off the old key in case the caller is sharing storage
+     between the old and new keys. */
+  const char *old_key = apr_pstrdup (trail->pool, key);
+  
   SVN_ERR (get_key_and_bump (fs, new_key, trail));
 
   SVN_ERR (DB_WRAP (fs, "creating cursor for reading a string",
                     fs->strings->cursor (fs->strings, trail->db_txn,
                                          &cursor, 0)));
 
-  svn_fs__str_to_dbt (&query, (char *) key);
+  svn_fs__str_to_dbt (&query, (char *) old_key);
   svn_fs__str_to_dbt (&copykey, (char *) *new_key);
 
   svn_fs__clear_dbt (&result);
