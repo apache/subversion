@@ -35,7 +35,7 @@ my $gReposPath = '/usr/www/repositories/svn';
 my $gActionURL = './tweak-log.cgi';
 my $gTempfilePrefix = '/tmp/tweak-cgi';
 my $gHistoryFile = './TWEAKLOG';
-my $gNumRecentCommits = 10;  # number of recent commits to show on init form
+my $gNumRecentCommits = 20;  # number of recent commits to show on init form
 ###############################################################################
 
 my %gCGIValues = &doCGI( );
