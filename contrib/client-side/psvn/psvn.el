@@ -847,12 +847,14 @@ See `svn-status-marked-files' for what counts as selected."
 (defun svn-status-find-file-other-window ()
   "Open the file in the other window for editing."
   (interactive)
+  (svn-status-ensure-cursor-on-file)
   (find-file-other-window (svn-status-line-info->filename
                            (svn-status-get-line-information))))
 
 (defun svn-status-view-file-other-window ()
   "Open the file in the other window for viewing."
   (interactive)
+  (svn-status-ensure-cursor-on-file)
   (view-file-other-window (svn-status-line-info->filename
                            (svn-status-get-line-information))))
 
@@ -860,6 +862,7 @@ See `svn-status-marked-files' for what counts as selected."
   "If point is on a directory, run `svn-status' on that directory.
 Otherwise run `find-file'."
   (interactive)
+  (svn-status-ensure-cursor-on-file)
   (let ((line-info (svn-status-get-line-information)))
     (if (svn-status-line-info->directory-p line-info)
         (svn-status (svn-status-line-info->full-path line-info))
@@ -1172,6 +1175,10 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
                                  (svn-status-line-info->hide-because-unmodified info))
       (message "No file on this line"))))
 
+(defun svn-status-ensure-cursor-on-file ()
+  (unless (svn-status-get-line-information)
+    (error "No file on the current line")))
+
 (defun svn-status-directory-containing-point (allow-self)
   "Find the (full path of) directory containing the file under point.
 
@@ -1433,6 +1440,7 @@ If there is a newer revision in the repository, the diff is done against HEAD, o
 compare the working copy with BASE.
 If ARG then prompt for revision to diff against."
   (interactive "P")
+  (svn-status-ensure-cursor-on-file)
   (svn-status-show-svn-diff-internal arg nil))
 
 (defun svn-status-show-svn-diff-for-marked-files (arg)
