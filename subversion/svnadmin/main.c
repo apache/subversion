@@ -304,6 +304,7 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create (NULL);
 
   INT_ERR (svn_utf_cstring_to_utf8 (&path, argv[2], NULL, pool));
+  path = svn_path_canonicalize_nts (path, pool);
 
   command = parse_command (argv[1]);
   switch (command)
