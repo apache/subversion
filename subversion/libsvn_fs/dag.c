@@ -329,10 +329,23 @@ svn_fs__dag_revision_root (dag_node_t **node_p,
                            svn_revnum_t rev,
                            trail_t *trail)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  svn_fs_id_t *root_id;
+  skel_t *root_contents;
+  dag_node_t *root_node;
+
+  SVN_ERR (svn_fs__rev_get_root (&root_id, fs, rev, trail));
+  SVN_ERR (svn_fs__get_node_revision (&root_contents, fs, root_id, trail));
+
+  root_node = apr_pcalloc (trail->pool, sizeof (*root_node));
+  root_node->fs = fs;
+  root_node->id = root_id;
+  root_node->contents = root_contents;
+  root_node->pool = trail->pool;
+
+  *node_p = root_node;
+  return SVN_NO_ERROR;
 }
+
 
 
 svn_error_t *
