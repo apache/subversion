@@ -26,6 +26,7 @@
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 
 
 /* File parsing context */
@@ -749,10 +750,17 @@ svn_config_ensure (apr_pool_t *pool)
         "### Set diff3_cmd to the absolute path of your `diff3' program.\n"
         "###   This will override the compile-time default path to `diff3'\n"
         "###   that Subversion default to.\n"
+        "### Set diff3_has_program_arg to `true' or `yes' if your `diff3'\n"
+        "###   program accepts the `--diff-program' option.\n"
         "# [helpers]\n"
         "# editor_cmd = editor (vi, emacs, notepad, etc.)\n"
-        "# diff_cmd = /path/to/diff\n"
-        "# diff3_cmd = /path/to/diff3\n"
+        "# diff_cmd = " SVN_CLIENT_DIFF "\n"
+        "# diff3_cmd = " SVN_CLIENT_DIFF3 "\n"
+#ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
+        "# diff3_has_program_arg = true\n"
+#else
+        "# diff3_has_program_arg = false\n"
+#endif
         "\n"
         "### Section for configuring miscelleneous Subversion options.\n"
         "### Set global_ignores to a set of whitespace-delimited globs\n"
