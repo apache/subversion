@@ -33,22 +33,26 @@ Revision file format
 
 A revision file contains a concatenation of various kinds of data:
 
-  * Text representations
-  * Property lists
+  * Text and property representations
   * Node-revisions
   * At the end, the changed-path data
   * Two offsets at the very end
 
-A text rep begins with a line containing either "PLAIN\n" or "DELTA\n"
-or "DELTA <rev> <offset> <length>\n", where <rev>, <offset>, and
-<length> give the location of the delta base of the representation and
-the amount of data it contains (not counting the header or trailer).
-If no base location is given for a delta, the base is the empty
-stream.  After the initial line comes raw svndiff data, followed by a
-cosmetic trailer "END\n".
+A representation begins with a line containing either "PLAIN\n" or
+"DELTA\n" or "DELTA <rev> <offset> <length>\n", where <rev>, <offset>,
+and <length> give the location of the delta base of the representation
+and the amount of data it contains (not counting the header or
+trailer).  If no base location is given for a delta, the base is the
+empty stream.  After the initial line comes raw svndiff data, followed
+by a cosmetic trailer "ENDREP\n".
 
-The representation of a property list is the hash dump format used by
-svn_hash_read and svn_hash_write.
+If the a representation is for the text contents of a directory node,
+the expanded contents are in the form of a dumped hash map (a la
+svn_hash_write) mapping entry names to node IDs.
+
+If a representation is for a property list, the expanded contents are
+in the form of a dumped hash map mapping property names to property
+values.
 
 The marshalling syntax for node-revs is a series of fields terminated
 by a blank line.  Fields have either the syntax "<name>: <value>\n" or
@@ -63,11 +67,11 @@ extensibility.  The following fields are defined:
   type      "file" or "dir"
   pred      The ID of the predecessor node-rev
   count     Count of node-revs since the base of the node
-  rep       "<rev> <offset> <length> <size>"
+  text      "<rev> <offset> <length> <size>" for text rep
+  props     "<rev> <offset> <length> <size>" for property rep
             <rev> and <offset> give location of rep
             <length> gives length of rep, sans header and trailer
             <size> gives size of expanded rep
-  props     "<rev> <offset>" giving location of property list
   cpath     FS pathname node was created at
   copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
   copyroot  The ID of the root node-revision of the copy
@@ -92,16 +96,6 @@ and <cp-offset> is the offset of the changed-path data.
 
 All numbers in the rev file format are unsigned and are represented as
 ASCII decimal.
-
-Directory format
-----------------
-
-The text representation of a directory node is structured data in the
-form of a dumped hash map (a la svn_hash_write).  The value of each
-key is a string "<kind> <id> <rev> <offset>", where <kind> is "file"
-or "dir", <id> is the ID of the node-rev pointed to by the directory
-entry, and <rev> and <offset> give the location of the node-rev
-pointed to by the directory.
 
 Transaction layout
 ------------------
