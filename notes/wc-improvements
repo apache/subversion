@@ -144,6 +144,12 @@ implement, some of them may not work at all.
     mean that svn_wc_props_modified_p usually avoids all disk IO then
     svn_wc__get_special could become a major bottleneck.
 
+  * Look at calls to svn_wc__get_keywords, svn_wc__get_eol_style and
+    svn_wc__get_special, each of those reads the properties file.  If
+    they occur together then consider replacing them with a single call
+    to svn_wc_prop_list, and perhaps write some functions that accept
+    the properties hash as an argument.
+
 - Optimise update/incomplete handling to reduce the number of times
   the entry file gets written.
   http://svn.haxx.se/dev/archive-2005-03/0060.shtml
