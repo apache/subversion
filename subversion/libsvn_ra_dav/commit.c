@@ -134,6 +134,7 @@ static const ne_propname log_message_prop = { SVN_DAV_PROP_NS_SVN, "log" };
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     const char *url, int *code,
+                                    apr_hash_t *extra_headers,
                                     int okay_1, int okay_2)
 {
   ne_request *req;
@@ -145,6 +146,20 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                "Could not create a request (%s %s)",
                                method, url);
+    }
+
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first (ras->pool, extra_headers);
+           hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this (hi, &key, NULL, &val);
+          ne_add_request_header(req, (const char *) key, (const char *) val); 
+        }
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
@@ -307,7 +322,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE) );
   url = svn_path_url_add_component(activity_collection->data, 
                                    uuid_buf, cc->ras->pool);
-  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
+  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, NULL,
                           201 /* Created */,
                           404 /* Not Found */) );
 
@@ -319,7 +334,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
       SVN_ERR( get_activity_collection(cc, &activity_collection, TRUE) );
       url = svn_path_url_add_component(activity_collection->data, 
                                        uuid_buf, cc->ras->pool);
-      SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, 201, 0) );
+      SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
+                              NULL, 201, 0) );
     }
 
   cc->activity_url = url;
@@ -648,8 +664,17 @@ static svn_error_t * commit_delete_entry(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   const char *name = svn_path_basename(path, pool);
+  apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      const char *revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, revision);
+      extra_headers = apr_hash_make(pool);
+      apr_hash_set(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
+                   APR_HASH_KEY_STRING, revstr);
+    }
 
   /* get the URL to the working collection */
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE) );
@@ -668,6 +693,7 @@ static svn_error_t * commit_delete_entry(const char *path,
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
   SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code,
+                          extra_headers,
                           204 /* Created */, 404 /* Not Found */) );
 
   /* Add this path to the valid targets hash. */
@@ -704,7 +730,7 @@ static svn_error_t * commit_add_dir(const char *path,
       /* This a new directory with no history, so just create a new,
          empty collection */
       SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
-                              &code, 201 /* Created */, 0) );
+                              &code, NULL, 201 /* Created */, 0) );
     }
   else
     {
