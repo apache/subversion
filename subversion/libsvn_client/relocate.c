@@ -34,32 +34,37 @@
 
 /*** Code. ***/
 
-typedef struct {
+struct validator_baton_t
+{
   void *ra_baton;
   svn_client_ctx_t *ctx;
   const char *path;
   apr_hash_t *url_uuids;
   apr_pool_t *pool;
-} baton_t;
+
+};
 
 
 static svn_error_t *
-error(const char *url,
-      const char *actual_uuid,
-      const char *expected_uuid)
+relocate_error (const char *url,
+                const char *actual_uuid,
+                const char *expected_uuid)
 {
-  return svn_error_createf(SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
-                           "The repository at %s has uuid '%s', but the WC has '%s'",
-                           url, actual_uuid, expected_uuid);
+  return svn_error_createf 
+    (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
+     "The repository at %s has uuid '%s', but the WC has '%s'",
+     url, actual_uuid, expected_uuid);
 }
 
 
 static svn_error_t *
-validator(void *baton, const char *uuid, const char *url)
+validator_func (void *baton, 
+                const char *uuid, 
+                const char *url)
 {
   svn_ra_plugin_t *ra_lib;
   void *sess;
-  baton_t *b = baton;
+  struct validator_baton_t *b = baton;
   const char *ra_uuid;
   const char *auth_dir;
 
@@ -67,46 +72,49 @@ validator(void *baton, const char *uuid, const char *url)
   apr_pool_t *pool = b->pool;
   apr_pool_t *subpool;
 
-  if (apr_hash_count(uuids) != 0)
+  if (apr_hash_count (uuids) != 0)
     {
-      apr_hash_index_t *hi = apr_hash_first(pool, uuids);
-      for (; hi; hi = apr_hash_next(hi))
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first (pool, uuids); hi; hi = apr_hash_next (hi))
         {
           const void *key;
           void *val;
-
           const char *item_url;
           const char *item_uuid;
 
-          apr_hash_this(hi, &key, NULL, &val);
+          apr_hash_this (hi, &key, NULL, &val);
           item_url = key;
           item_uuid = val;
 
-          if (strncmp(item_url, url, strlen(item_url)) != 0)
+          if (strncmp (item_url, url, strlen (item_url)) != 0)
             continue;
 
-          if (strcmp(uuid, item_uuid) == 0)
+          if (strcmp (uuid, item_uuid) == 0)
             return SVN_NO_ERROR;
 
-          return error(item_url, item_uuid, uuid);
+          return relocate_error (item_url, item_uuid, uuid);
         }
     }
 
 
-  subpool = svn_pool_create(pool); 
+  /* We use an RA session in a subpool to get the UUID of the
+     repository at the new URL so we can force the RA session to close
+     by destroying the subpool. */
+  subpool = svn_pool_create (pool); 
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, b->ra_baton, url, subpool));
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, b->path, subpool));
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, url, auth_dir,
                                         NULL, NULL, FALSE, TRUE,
                                         b->ctx, subpool));
-  SVN_ERR (ra_lib->get_uuid(sess, &ra_uuid, subpool));
-  ra_uuid = apr_pstrdup(pool, ra_uuid);
-  svn_pool_destroy(subpool);
+  SVN_ERR (ra_lib->get_uuid (sess, &ra_uuid, subpool));
+  ra_uuid = apr_pstrdup (pool, ra_uuid);
+  svn_pool_destroy (subpool);
 
-  if (strcmp(uuid, ra_uuid))
-    return error(url, ra_uuid, uuid);
+  /* Make sure the UUIDs match. */
+  if (strcmp (uuid, ra_uuid))
+    return relocate_error (url, ra_uuid, uuid);
 
-  apr_hash_set(uuids, url, APR_HASH_KEY_STRING, ra_uuid);
+  apr_hash_set (uuids, url, APR_HASH_KEY_STRING, ra_uuid);
 
   return SVN_NO_ERROR;
 }
@@ -120,21 +128,22 @@ svn_client_relocate (const char *path,
                      apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  baton_t baton;
+  struct validator_baton_t vb;
 
-  SVN_ERR (svn_wc_adm_probe_open(&adm_access, NULL, path,
-                                 TRUE, recurse, pool));
+  /* Get an access baton for PATH. */
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path,
+                                  TRUE, recurse, pool));
 
-  baton.ctx = ctx;
-  baton.path = path;
-  baton.url_uuids = apr_hash_make(pool);
-  baton.pool = pool;
+  /* Now, populate our validator callback baton, and call the relocate code. */
+  SVN_ERR (svn_ra_init_ra_libs (&(vb.ra_baton), pool));
+  vb.ctx = ctx;
+  vb.path = path;
+  vb.url_uuids = apr_hash_make (pool);
+  vb.pool = pool;
+  SVN_ERR (svn_wc_relocate (path, adm_access, from, to,
+                            recurse, validator_func, &vb, pool));
 
-  SVN_ERR (svn_ra_init_ra_libs (&baton.ra_baton, pool));
-  SVN_ERR(svn_wc_relocate(path, adm_access, from, to,
-                          recurse, validator, &baton, pool));
-
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
+  /* All done.  Clean up, and move on out. */
+  SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
 }
