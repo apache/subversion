@@ -167,7 +167,7 @@ svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
                           const svn_stringbuf_t *string,
                           apr_pool_t *pool)
 {
-  return xml_escape (outstr, string->data, string->len, pool);
+  xml_escape (outstr, string->data, string->len, pool);
 }
 
 
@@ -176,7 +176,7 @@ svn_xml_escape_string (svn_stringbuf_t **outstr,
                        const svn_string_t *string,
                        apr_pool_t *pool)
 {
-  return xml_escape (outstr, string->data, string->len, pool);
+  xml_escape (outstr, string->data, string->len, pool);
 }
 
 
@@ -185,7 +185,7 @@ svn_xml_escape_nts (svn_stringbuf_t **outstr,
                     const char *string,
                     apr_pool_t *pool)
 {
-  return xml_escape (outstr, string, (apr_size_t) strlen (string), pool);
+  xml_escape (outstr, string, (apr_size_t) strlen (string), pool);
 }
 
 
@@ -194,7 +194,7 @@ svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
                             const svn_stringbuf_t *string,
                             apr_pool_t *pool)
 {
-  return xml_unescape (outstr, string->data, string->len, pool);
+  xml_unescape (outstr, string->data, string->len, pool);
 }
 
 
@@ -203,7 +203,7 @@ svn_xml_unescape_string (svn_stringbuf_t **outstr,
                          const svn_string_t *string,
                          apr_pool_t *pool)
 {
-  return xml_unescape (outstr, string->data, string->len, pool);
+  xml_unescape (outstr, string->data, string->len, pool);
 }
 
 
@@ -212,7 +212,7 @@ svn_xml_unescape_nts (svn_stringbuf_t **outstr,
                       const char *string,
                       apr_pool_t *pool)
 {
-  return xml_unescape (outstr, string, (apr_size_t) strlen (string), pool);
+  xml_unescape (outstr, string, (apr_size_t) strlen (string), pool);
 }
 
 
