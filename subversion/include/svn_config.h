@@ -239,7 +239,11 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
 
 
 
+/** Accessing cached authentication data in the user config area  */
 
+
+/* A hash-key pointing to a realmstring.  Every file containing
+   authentication data should have this key.  */
 #define SVN_CONFIG_REALMSTRING_KEY  "svn:realmstring"
 
 /** Use @a cred_kind and @a realmstring to locate a file within the
