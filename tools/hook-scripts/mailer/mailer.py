@@ -351,11 +351,14 @@ class Commit(Messenger):
 
     subpool = svn.core.svn_pool_create(self.pool)
 
+    # build a renderer, tied to our output stream
+    renderer = TextCommitRenderer(self.output)
+
     for (group, param_tuple), (params, paths) in self.groups.items():
       self.output.start(group, params)
 
       # generate the content for this group and set of params
-      generate_content(self.output, self.cfg, self.repos, self.changelist,
+      generate_content(renderer, self.cfg, self.repos, self.changelist,
                        group, params, paths, subpool)
 
       self.output.finish()
@@ -467,7 +470,7 @@ class DiffSelections:
         self.add = False
 
 
-def generate_content(output, cfg, repos, changelist, group, params, paths,
+def generate_content(renderer, cfg, repos, changelist, group, params, paths,
                      pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
@@ -476,178 +479,331 @@ def generate_content(output, cfg, repos, changelist, group, params, paths,
 
   diffsels = DiffSelections(cfg, group, params)
 
-  output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
-               % (repos.author, date, repos.rev))
-
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
 
-  # print summary sections
-  # first, those changes within the selected path-space
-  generate_list(output, 'A', changelist, paths, True)
-  generate_list(output, 'R', changelist, paths, True)
-  generate_list(output, 'M', changelist, paths, True)
-
-  # second, those outside, if any
-  if len(paths) != len(changelist):
-    if show_nonmatching_paths == 'no':
-      output.write('and changes in other areas\n')
-    else:
-      output.write('\nChanges in other areas also in this revision:\n')
-      generate_list(output, 'A', changelist, paths, False)
-      generate_list(output, 'R', changelist, paths, False)
-      generate_list(output, 'M', changelist, paths, False)
-
-  output.write('\nLog:\n%s\n'
-               % (repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''))
-
-  # these are sorted by path already
-  for path, change in changelist:
-    if paths.has_key(path):
-      generate_diff(output, cfg, repos, date, change, group, params,
-                    diffsels, pool)
+  # figure out the lists of changes outside the selected path-space
+  other_added_data = other_removed_data = other_modified_data = [ ]
+  if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
+    other_added_data = generate_list('A', changelist, paths, False)
+    other_removed_data = generate_list('R', changelist, paths, False)
+    other_modified_data = generate_list('M', changelist, paths, False)
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
-    output.write('\nDiffs of changes in other areas also in this revision:\n')
-    for path, change in changelist:
-      if not paths.has_key(path):
-        generate_diff(output, cfg, repos, date, change, group, params,
-                      diffsels, pool)
+    other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
+                                group, params, diffsels, pool),
+  else:
+    other_diffs = [ ]
+
+  data = _data(
+    author=repos.author,
+    date=date,
+    rev=repos.rev,
+    log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
+    added_data=generate_list('A', changelist, paths, True),
+    removed_data=generate_list('R', changelist, paths, True),
+    modified_data=generate_list('M', changelist, paths, True),
+    other_added_data=other_added_data,
+    other_removed_data=other_removed_data,
+    other_modified_data=other_modified_data,
+    diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
+                        params, diffsels, pool),
+    other_diffs=other_diffs,
+    )
+  renderer.render(data)
 
 
-def generate_list(output, changekind, changelist, paths, in_paths):
-  items = [ ]
+def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
-    header = 'Added'
     selection = lambda change: change.added
   elif changekind == 'R':
-    header = 'Removed'
     selection = lambda change: change.path is None
   elif changekind == 'M':
-    header = 'Modified'
     selection = lambda change: not change.added and change.path is not None
 
+  items = [ ]
   for path, change in changelist:
-    if selection(change) and (paths.has_key(path) == in_paths):
-      items.append((path, change))
-  if items:
-    output.write('%s:\n' % header)
-    for fname, change in items:
+    if selection(change) and paths.has_key(path) == in_paths:
+      item = _data(
+        path=path,
+        is_dir=change.item_kind == svn.core.svn_node_dir,
+        props_changed=change.prop_changes,
+        text_changed=change.text_changed,
+        copied=change.added and change.base_path,
+        base_path=change.base_path,
+        base_rev=change.base_rev,
+        )
+      items.append(item)
+
+  return items
+
+
+class DiffGenerator:
+  "This is a generator-like object returning DiffContent objects."
+
+  def __init__(self, changelist, paths, in_paths, cfg, repos, date, group,
+               params, diffsels, pool):
+    self.changelist = changelist
+    self.paths = paths
+    self.in_paths = in_paths
+    self.cfg = cfg
+    self.repos = repos
+    self.date = date
+    self.group = group
+    self.params = params
+    self.diffsels = diffsels
+    self.pool = pool
+
+    self.idx = 0
+
+  def __nonzero__(self):
+    # we always have some items
+    return True
+
+  def __getitem__(self, idx):
+    while 1:
+      if self.idx == len(self.changelist):
+        raise IndexError
+
+      path, change = self.changelist[self.idx]
+      self.idx = self.idx + 1
+
+      # just skip directories. they have no diffs.
       if change.item_kind == svn.core.svn_node_dir:
+        continue
+
+      # is this change in (or out of) the set of matched paths?
+      if self.paths.has_key(path) != self.in_paths:
+        continue
+
+      # figure out if/how to generate a diff
+
+      if not change.path:
+        # it was deleted. should we show deletion diffs?
+        if not self.diffsels.delete:
+          continue
+
+        kind = 'R'
+        diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                               change.base_path, None, None, self.pool)
+
+        label1 = '%s\t%s' % (change.base_path, self.date)
+        label2 = '(empty file)'
+        singular = True
+      elif change.added:
+        if change.base_path and (change.base_rev != -1):
+          # this file was copied. any diff to show? should we?
+          if not change.text_changed or not self.diffsels.copy:
+            continue
+
+          kind = 'C'
+          diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                                 change.base_path,
+                                 self.repos.root_this, change.path,
+                                 self.pool)
+          label1 = change.base_path + '\t(original)'
+          label2 = '%s\t%s' % (change.path, self.date)
+          singular = False
+        else:
+          # the file was added. should we show it?
+          if not self.diffsels.add:
+            continue
+
+          kind = 'A'
+          diff = svn.fs.FileDiff(None, None, self.repos.root_this,
+                                 change.path, self.pool)
+          label1 = '(empty file)'
+          label2 = '%s\t%s' % (change.path, self.date)
+          singular = True
+
+      elif not change.text_changed:
+        # the text didn't change, so nothing to show.
+        continue
+      else:
+        # a simple modification. show the diff?
+        if not self.diffsels.modify:
+          continue
+
+        kind = 'M'
+        diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                               change.base_path,
+                               self.repos.root_this, change.path,
+                               self.pool)
+        label1 = change.base_path + '\t(original)'
+        label2 = '%s\t%s' % (change.path, self.date)
+        singular = False
+
+      binary = diff.either_binary()
+      if binary:
+        content = src_fname = dst_fname = None
+      else:
+        src_fname, dst_fname = diff.get_files()
+        content = DiffContent(self.cfg.get_diff_cmd(self.group, {
+          'label_from' : label1,
+          'label_to' : label2,
+          'from' : src_fname,
+          'to' : dst_fname,
+          }))
+
+      # return a data item for this diff
+      return _data(
+        kind=kind,
+        path=change.path,
+        base_path=change.base_path,
+        base_rev=change.base_rev,
+        label_from=label1,
+        label_to=label2,
+        from_fname=src_fname,
+        to_fname=dst_fname,
+        binary=binary,
+        singular=singular,
+        content=content,
+        diff=diff,
+        )
+
+
+class DiffContent:
+  "This is a generator-like object returning annotated lines of a diff."
+
+  def __init__(self, cmd):
+    self.seen_change = False
+
+    # By default we choose to incorporate child stderr into the output
+    self.pipe = Popen4(cmd)
+
+  def __nonzero__(self):
+    # we always have some items
+    return True
+
+  def __getitem__(self, idx):
+    if self.pipe is None:
+      raise IndexError
+
+    line = self.pipe.fromchild.readline()
+    if not line:
+      # wait on the child so we don't end up with a billion zombies
+      self.pipe.wait()
+      self.pipe = None
+      raise IndexError
+
+    # classify the type of line.
+    first = line[:1]
+    if first == '@':
+      self.seen_change = True
+      ltype = 'H'
+    elif first == '-':
+      if self.seen_change:
+        ltype = 'D'
+      else:
+        ltype = 'F'
+    elif first == '+':
+      if self.seen_change:
+        ltype = 'A'
+      else:
+        ltype = 'T'
+    elif first == ' ':
+      ltype = 'C'
+    else:
+      ltype = 'U'
+
+    return _data(
+      raw=line,
+      text=line[1:-1],  # remove indicator and newline
+      type=ltype,
+      )
+
+
+class TextCommitRenderer:
+  "This class will render the commit mail in plain text."
+
+  def __init__(self, output):
+    self.output = output
+
+  def render(self, data):
+    "Render the commit defined by 'data'."
+
+    w = self.output.write
+
+    w('Author: %s\nDate: %s\nNew Revision: %s\n\n'
+      % (data.author, data.date, data.rev))
+
+    # print summary sections
+    self._render_list('Added', data.added_data)
+    self._render_list('Removed', data.removed_data)
+    self._render_list('Modified', data.modified_data)
+
+    if data.other_added_data or data.other_removed_data \
+           or data.other_modified_data:
+      if data.show_nonmatching_paths:
+        w('\nChanges in other areas also in this revision:\n')
+        self._render_list('Added', data.other_added_data)
+        self._render_list('Removed', data.other_removed_data)
+        self._render_list('Modified', data.other_modified_data)
+      else:
+        w('and changes in other areas\n')
+
+    w('\nLog:\n%s\n' % data.log)
+
+    self._render_diffs(data.diffs)
+    if data.other_diffs:
+      w('\nDiffs of changes in other areas also in this revision:\n')
+      self._render_diffs(data.other_diffs)
+
+  def _render_list(self, header, data_list):
+    if not data_list:
+      return
+
+    w = self.output.write
+    w(header + ':\n')
+    for d in data_list:
+      if d.is_dir:
         is_dir = '/'
       else:
         is_dir = ''
-      if change.prop_changes:
-        if change.text_changed:
+      if d.props_changed:
+        if d.text_changed:
           props = '   (contents, props changed)'
         else:
           props = '   (props changed)'
       else:
         props = ''
-      output.write('   %s%s%s\n' % (fname, is_dir, props))
-      if change.added and change.base_path:
+      w('   %s%s%s\n' % (d.path, is_dir, props))
+      if d.copied:
         if is_dir:
           text = ''
-        elif change.text_changed:
+        elif d.text_changed:
           text = ', changed'
         else:
           text = ' unchanged'
-        output.write('      - copied%s from r%d, %s%s\n'
-                     % (text, change.base_rev, change.base_path, is_dir))
+        w('      - copied%s from r%d, %s%s\n'
+          % (text, d.base_rev, d.base_path, is_dir))
 
+  def _render_diffs(self, diffs):
+    w = self.output.write
 
-def generate_diff(output, cfg, repos, date, change, group, params,
-                  diffsels, pool):
-  if change.item_kind == svn.core.svn_node_dir:
-    # all changes were printed in the summary. nothing to do.
-    return
+    for diff in diffs:
+      if diff.kind == 'D':
+        w('\nDeleted: %s\n' % diff.base_path)
+      elif diff.kind == 'C':
+        w('\nCopied: %s (from r%d, %s)\n'
+          % (diff.path, diff.base_rev, diff.base_path))
+      elif diff.kind == 'A':
+        w('\nAdded: %s\n' % diff.path)
+      else:
+        # kind == 'M'
+        w('\nModified: %s\n' % diff.path)
 
-  if not change.path:
-    ### params is a bit silly here
-    if not diffsels.delete:
-      # a record of the deletion is in the summary. no need to write
-      # anything further here.
-      return
+      w(SEPARATOR + '\n')
 
-    output.write('\nDeleted: %s\n' % change.base_path)
-    diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
-                           change.base_path, None, None, pool)
+      if diff.binary:
+        if diff.singular:
+          w('Binary file. No diff available.\n')
+        else:
+          w('Binary files. No diff available.\n')
+        continue
 
-    label1 = '%s\t%s' % (change.base_path, date)
-    label2 = '(empty file)'
-    singular = True
-  elif change.added:
-    if change.base_path and (change.base_rev != -1):
-      # this file was copied.
-
-      if not change.text_changed:
-        # copies with no changes are reported in the header, so we can just
-        # skip them here.
-        return
-
-      if not diffsels.copy:
-        # a record of the copy is in the summary, no need to write
-        # anything further here.
-	return
-
-      # note that we strip the leading slash from the base (copyfrom) path
-      output.write('\nCopied: %s (from r%d, %s)\n'
-                   % (change.path, change.base_rev, change.base_path))
-      diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
-                             change.base_path,
-                             repos.root_this, change.path,
-                             pool)
-      label1 = change.base_path + '\t(original)'
-      label2 = '%s\t%s' % (change.path, date)
-      singular = False
-    else:
-      if not diffsels.add:
-        # a record of the addition is in the summary. no need to write
-        # anything further here.
-        return
-
-      output.write('\nAdded: %s\n' % change.path)
-      diff = svn.fs.FileDiff(None, None, repos.root_this, change.path, pool)
-      label1 = '(empty file)'
-      label2 = '%s\t%s' % (change.path, date)
-      singular = True
-  elif not change.text_changed:
-    # don't bother to show an empty diff. prolly just a prop change.
-    return
-  else:
-    if not diffsels.modify:
-      # a record of the modification is in the summary, no need to write
-      # anything further here.
-      return
-
-    output.write('\nModified: %s\n' % change.path)
-    diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
-                           change.base_path,
-                           repos.root_this, change.path,
-                           pool)
-    label1 = change.base_path + '\t(original)'
-    label2 = '%s\t%s' % (change.path, date)
-    singular = False
-
-  output.write(SEPARATOR + '\n')
-
-  if diff.either_binary():
-    if singular:
-      output.write('Binary file. No diff available.\n')
-    else:
-      output.write('Binary files. No diff available.\n')
-    return
-
-  ### do something with change.prop_changes
-
-  src_fname, dst_fname = diff.get_files()
-
-  output.run(cfg.get_diff_cmd(group, {
-    'label_from' : label1,
-    'label_to' : label2,
-    'from' : src_fname,
-    'to' : dst_fname,
-    }))
+      for line in diff.content:
+        w(line.raw)
 
 
 class Repository:
@@ -859,6 +1015,10 @@ class Config:
 class _sub_section:
   pass
 
+class _data:
+  "Helper class to define an attribute-based hunk o' data."
+  def __init__(self, **kw):
+    vars(self).update(kw)
 
 class MissingConfig(Exception):
   pass
