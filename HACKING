@@ -25,7 +25,7 @@ TABLE OF CONTENTS
    * Automated tests
    * Writing test cases before code
    * Debugging the server
-   * Writing log entries
+   * Writing log messages
    * Patch submission guidelines
    * Commit access
    * The Configuration/Build System Under Unix
@@ -583,33 +583,33 @@ breakpoints.
 
 
 
-Writing log entries
-===================
+Writing log messages
+====================
 
 Certain guidelines should be adhered to when writing log messages:
 
-Make a log entry for every change.  The value of the log becomes much
-less if developers cannot rely on its completeness.  Even if you've
-only changed comments, write an entry that says, "Doc fix."  The only
-changes you needn't log are small changes that have no effect on the
-source, like formatting tweaks.
+Make a log message for every change.  The value of the log becomes
+much less if developers cannot rely on its completeness.  Even if
+you've only changed comments, write a log that says "Doc fix." or
+something.
 
-Log entries should be full sentences, not sentence fragments.
-Fragments are more often ambiguous, and it takes only a few more
-seconds to write out what you mean.  Fragments like `New file' or `New
-function' are acceptable, because they are standard idioms, and all
-further details should appear in the source code.
+Use full sentences, not sentence fragments.  Fragments are more often
+ambiguous, and it takes only a few more seconds to write out what you
+mean.  Fragments like "Doc fix", "New file", or "New function" are
+acceptable because they are standard idioms, and all further details
+should appear in the source code.
 
-The log entry should name every affected function, variable, macro,
+The log message should name every affected function, variable, macro,
 makefile target, grammar rule, etc, including the names of symbols
-that are being removed in this commit.  This helps people do automated
-searches through the logs later.  Don't hide names in wildcards,
-because the globbed portion may be what someone searches for later.
-For example, this is bad:
+that are being removed in this commit.  This helps people searching
+through the logs later.  Don't hide names in wildcards, because the
+globbed portion may be what someone searches for later.  For example,
+this is bad:
 
-   * twirl.c (twirling_baton_*): removed these obsolete structures.
-   (handle_parser_warning): pass data directly to callees, instead of
-   storing in twirling_baton_*.
+   * twirl.c
+     (twirling_baton_*): Removed these obsolete structures.
+     (handle_parser_warning): Pass data directly to callees, instead
+     of storing in twirling_baton_*.
 
    * twirl.h: Fix indentation.
 
@@ -617,10 +617,11 @@ Later on, when someone is trying to figure out what happened to
 `twirling_baton_fast', they may not find it if they just search for
 "_fast".  A better entry would be:
 
-   * twirl.c (twirling_baton_fast, twirling_baton_slow): removed these
-   obsolete structures.
-   (handle_parser_warning): pass data directly to callees, instead of
-   storing in twirling_baton_*.
+   * twirl.c 
+     (twirling_baton_fast, twirling_baton_slow): Removed these
+     obsolete structures. 
+     (handle_parser_warning): Pass data directly to callees, instead
+     of storing in twirling_baton_*. 
 
    * twirl.h: Fix indentation.
 
@@ -628,11 +629,11 @@ The wildcard is okay in the description for `handle_parser_warning',
 but only because the two structures were mentioned by full name
 elsewhere in the log entry.
 
-Note how each file is its own group, with the symbols listed in
-parentheses, followed by a colon, followed by text describing the
-change.  Please adhere to this format -- not only does consistency
-greatly aid readability, it also allows software to colorize log
-entries automatically.
+Note how each file gets its own entry, and the changes within a file
+are grouped by symbol, with the symbols are listed in parentheses
+followed by a colon, followed by text describing the change.  Please
+adhere to this format -- not only does consistency aid readability, it
+also allows software to colorize log entries automatically.
 
 If your change is related to a specific issue in the issue tracker,
 then include a string like "issue #N" in the log message.  For
@@ -641,7 +642,8 @@ be:
 
    Fix issue #1729:
 
-   * get_editor.c (frobnicate_file): Check that file exists first.
+   * get_editor.c
+     (frobnicate_file): Check that file exists first.
 
 For large changes or change groups, group the log entry into
 paragraphs separated by blank lines.  Each paragraph should be a set
@@ -682,7 +684,8 @@ that was changed:
 
    *  If you have made a change which requires trivial changes
       throughout the rest of the program (e.g., renaming a variable),
-      you needn't name all the functions affected.
+      you needn't name all the functions affected, you can just say
+      "All callers changed".
 
    *  If you have rewritten a file completely, the reader understands
       that everything in it has changed, so your log entry may simply
@@ -692,9 +695,9 @@ that was changed:
       multiple files, then there's no need to list their paths in the
       log message (because "svn log" can show the changed paths for
       that revision anyway).  Only when you need to describe how the
-      change affected different paths in different ways is it
-      necessary to organize the log message by path, as in the
-      examples above.
+      change affected different areas in different ways is it
+      necessary to organize the log message by paths and symbols, as
+      in the examples above.
 
 In general, there is a tension between making entries easy to find by
 searching for identifiers, and wasting time or producing unreadable
