@@ -100,7 +100,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 	/* Create our top-level pool. */
 	g_pool = svn_pool_create (NULL);
 
-	svn_error *err = svn_config_ensure (NULL, g_pool); // we use the default directory for config files
+	svn_error_t *err = svn_config_ensure (NULL, g_pool); // we use the default directory for config files
 	if (err)
 	{
 		svn_pool_destroy (g_pool);
@@ -159,7 +159,7 @@ void JNIUtil::throwError(const char *message)
 	env->DeleteLocalRef(clazz);
 }
 
-void JNIUtil::handleSVNError(svn_error *err)
+void JNIUtil::handleSVNError(svn_error_t *err)
 {
 	JNIEnv *env = getEnv();
 	jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException");
@@ -426,7 +426,7 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 	return ret;
 }
 
-void JNIUtil::assembleErrorMessage(svn_error *err, int depth, apr_status_t parent_apr_err, std::string &buffer)
+void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth, apr_status_t parent_apr_err, std::string &buffer)
 {
     char errbuf[256];
 //  char utfbuf[2048];
