@@ -30,6 +30,14 @@
 %import svn_delta.i
 %import svn_fs.i
 
+#ifdef SWIGJAVA
+/* Redefine this function pointer type because its swig string representation
+   approaches the maximum path length on windows, causing swig to crash when
+   it outputs a java wrapper class for it. */
+typedef void * svn_repos_file_rev_handler_t;
+%ignore svn_repos_file_rev_handler_t;
+#endif
+
 /* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
 */
