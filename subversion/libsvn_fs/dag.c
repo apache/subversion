@@ -973,7 +973,7 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
 typedef struct file_content_baton_t
 {
   /* Yum, the entre contents of the file in RAM.  This is all
-     allocated in trail->pool (the trail passed to */
+     allocated in trail->pool (the trail passed to __dag_get_contents). */
   skel_t *text;
   
   /* How many bytes have been read already. */
