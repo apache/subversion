@@ -13,10 +13,14 @@ SUBDIRS = apr expat-lite neon subversion doc
 ACLOCAL = @ACLOCAL@ -I ac-helpers
 
 ## Note, we have to add these in so that they get included in the distribution
-EXTRA_DIST = ac-helpers/berkeley-db.m4 ac-helpers/config.guess \
-            ac-helpers/config.sub ac-helpers/install-sh ac-helpers/ltconfig \
-            ac-helpers/ltmain.sh ac-helpers/missing ac-helpers/mkinstalldirs \
-            ac-helpers/svn-apache.m4 ac-helpers/svn-macros.m4
+EXTRA_DIST = config.hw \
+             ac-helpers/config.guess \
+             ac-helpers/config.sub \
+             ac-helpers/install-sh \
+             ac-helpers/ltconfig \
+             ac-helpers/ltmain.sh \
+             ac-helpers/missing \
+             ac-helpers/mkinstalldirs
 
 ## Use Karl's script to create a Changelog from CVS.
 
