@@ -207,158 +207,6 @@ svn_error_init_pool (apr_pool_t *top_pool)
 }
 
 
-#ifdef SVN_POOL_DEBUG
-/* Find the oldest living ancestor of pool P (which could very well be
-   P itself) */
-static apr_pool_t *
-find_oldest_pool_ancestor (apr_pool_t *p)
-{
-  while (1)
-    {
-      apr_pool_t *parent = apr_pool_get_parent (p);
-
-      if (parent == NULL)       /* too far? */
-        return p;
-      p = parent;
-    }
-  /* NOTREACHED */
-}
-#endif /* SVN_POOL_DEBUG */
-
-
-
-#ifndef SVN_POOL_DEBUG
-apr_pool_t *
-svn_pool_create (apr_pool_t *parent_pool)
-#else /* SVN_POOL_DEBUG */
-apr_pool_t *
-svn_pool_create_debug (apr_pool_t *parent_pool,
-                       const char *file,
-                       int line)
-#endif /* SVN_POOL_DEBUG */
-{
-  apr_pool_t *ret_pool;
-
-  apr_pool_create_ex (&ret_pool, parent_pool, abort_on_pool_failure,
-                      APR_POOL_FDEFAULT);
-
-  /* If there is no parent, then initialize ret_pool as the "top". */
-  if (parent_pool == NULL)
-    {
-      apr_status_t apr_err = svn_error_init_pool (ret_pool);
-      if (apr_err)
-        abort_on_pool_failure (apr_err);
-    }
-  else
-    {
-      /* Inherit the error pool from the parent. */
-      svn_pool__inherit_error_pool (ret_pool);
-    }
-
-  /* Sanity check:  do we actually have an error pool? */
-  {
-    svn_boolean_t subpool_of_p_p;
-    apr_pool_t *error_pool;
-    svn_error__get_error_pool (ret_pool, &error_pool,
-                               &subpool_of_p_p);
-    if (! error_pool)
-      abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
-  }
-
-#ifdef SVN_POOL_DEBUG
-  {
-    fprintf (stderr, 
-             "PDEBUG: + "
-             "                     " /* 10/10 here */
-             " 0x%08X (%s:%d) parent=0x%08X\n", 
-             (unsigned int)ret_pool, file, line, (unsigned int)parent_pool);
-  }
-#endif /* SVN_POOL_DEBUG */
-
-  return ret_pool;
-}
-
-
-#ifndef SVN_POOL_DEBUG
-void 
-svn_pool_clear (apr_pool_t *p)
-#else /* SVN_POOL_DEBUG */
-void 
-svn_pool_clear_debug (apr_pool_t *p,
-                      const char *file,
-                      int line)
-#endif /* SVN_POOL_DEBUG */
-{
-  apr_pool_t *error_pool;
-  svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
-    
-#ifdef SVN_POOL_DEBUG
-  {
-    apr_size_t num_bytes = apr_pool_num_bytes (p, 1);
-    apr_size_t global_num_bytes = 
-      apr_pool_num_bytes (find_oldest_pool_ancestor (p), 1);
-    
-    fprintf (stderr, "PDEBUG: 0 %10lu %10lu 0x%08X (%s:%d)\n", 
-             (unsigned long)num_bytes, (unsigned long)global_num_bytes,
-             (unsigned int)p, file, line);
-  }
-#endif /* SVN_POOL_DEBUG */
-
-  /* Get the error_pool from this pool.  If it's rooted in this pool, we'll
-     need to re-create it after we clear the pool. */
-  svn_error__get_error_pool (p, &error_pool, &subpool_of_p_p);
-
-  /* Clear the pool.  All userdata of this pool is now invalid. */
-  apr_pool_clear (p);
-
-  if (subpool_of_p_p)
-    {
-      /* Here we have a problematic situation.  We cleared the pool P,
-         which invalidated all its userdata.  The problem is that as
-         far as we can tell, the error pool on this pool isn't a copy
-         of the original, it *is* the original.  We need to re-create
-         it in this pool, since it has been cleared.
-
-         This turns out to be not that big of a deal.  We don't
-         actually need to keep *the* original error pool -- we can
-         just initialize a new error pool to stuff into P here after
-         it's been cleared. */
-
-      /* Make new error pool. */
-      svn_error__make_error_pool (p, &error_pool);
-    }
-
-  /* Now, reset the error pool on P. */
-  svn_error__set_error_pool (p, error_pool, subpool_of_p_p);
-}
-
-
-#ifndef SVN_POOL_DEBUG
-void
-svn_pool_destroy (apr_pool_t *p)
-#else /* SVN_POOL_DEBUG */
-void
-svn_pool_destroy_debug (apr_pool_t *p,
-                        const char *file,
-                        int line)
-#endif /* SVN_POOL_DEBUG */
-{
-#ifdef SVN_POOL_DEBUG
-  {
-    apr_size_t num_bytes = apr_pool_num_bytes (p, 1);
-    apr_size_t global_num_bytes = 
-      apr_pool_num_bytes (find_oldest_pool_ancestor (p), 1);
-    
-    fprintf (stderr, "PDEBUG: - %10lu %10lu 0x%08X (%s:%d)\n", 
-             (unsigned long)num_bytes, (unsigned long)global_num_bytes,
-             (unsigned int)p, file, line);
-  }
-#endif /* SVN_POOL_DEBUG */
-
-  apr_pool_destroy (p);
-}
-
-
 
 /*** Creating and destroying errors. ***/
 
@@ -509,7 +357,120 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
 
 
-/* 
+/*
+   Macros to make the preprocessor logic less confusing.
+   We need to always have svn_pool_xxx aswell as
+   svn_pool_xxx_debug, where one of the two is a simple
+   wrapper calling the other.
+ */
+#if !APR_POOL_DEBUG
+#define SVN_POOL_FUNC_DEFINE(rettype, name) \
+  rettype name(apr_pool_t *pool)
+
+#define SVN_POOL_WRAPPER_DEFINE(rettype, name) \
+  rettype name##_debug(apr_pool_t *pool, const char *file_line) \
+  { \
+    return name(pool); \
+  }
+
+#else /* APR_POOL_DEBUG */
+#undef svn_pool_create
+#undef svn_pool_clear
+
+#define SVN_POOL_FUNC_DEFINE(rettype, name) \
+  rettype name##_debug(apr_pool_t *pool, const char *file_line)
+
+#define SVN_POOL_WRAPPER_DEFINE(rettype, name) \
+  rettype name(apr_pool_t *pool) \
+  { \
+    return name##_debug(pool, "svn:<undefined>"); \
+  }
+#endif /* APR_POOL_DEBUG */
+
+
+SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
+{
+  apr_pool_t *ret_pool;
+
+#if !APR_POOL_DEBUG
+  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure,
+                      APR_POOL_FDEFAULT);
+#else /* APR_POOL_DEBUG */
+  apr_pool_create_ex_debug (&ret_pool, pool, abort_on_pool_failure,
+                            APR_POOL_FDEFAULT, file_line);
+#endif /* APR_POOL_DEBUG */
+
+  /* If there is no parent, then initialize ret_pool as the "top". */
+  if (pool == NULL)
+    {
+      apr_status_t apr_err = svn_error_init_pool (ret_pool);
+      if (apr_err)
+        abort_on_pool_failure (apr_err);
+    }
+  else
+    {
+      /* Inherit the error pool from the parent. */
+      svn_pool__inherit_error_pool (ret_pool);
+    }
+
+  /* Sanity check:  do we actually have an error pool? */
+  {
+    svn_boolean_t subpool_of_p_p;
+    apr_pool_t *error_pool;
+    svn_error__get_error_pool (ret_pool, &error_pool,
+                               &subpool_of_p_p);
+    if (! error_pool)
+      abort_on_pool_failure (SVN_ERR_BAD_CONTAINING_POOL);
+  }
+
+  return ret_pool;
+}
+
+
+SVN_POOL_FUNC_DEFINE(void, svn_pool_clear)
+{
+  apr_pool_t *error_pool;
+  svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
+
+  /* Get the error_pool from this pool.  If it's rooted in this pool, we'll
+     need to re-create it after we clear the pool. */
+  svn_error__get_error_pool (pool, &error_pool, &subpool_of_p_p);
+
+  /* Clear the pool.  All userdata of this pool is now invalid. */
+#if !APR_POOL_DEBUG
+  apr_pool_clear (pool);
+#else /* APR_POOL_DEBUG */
+  apr_pool_clear_debug (pool, file_line);
+#endif /* APR_POOL_DEBUG */
+
+  if (subpool_of_p_p)
+    {
+      /* Here we have a problematic situation.  We cleared the pool P,
+         which invalidated all its userdata.  The problem is that as
+         far as we can tell, the error pool on this pool isn't a copy
+         of the original, it *is* the original.  We need to re-create
+         it in this pool, since it has been cleared.
+
+         This turns out to be not that big of a deal.  We don't
+         actually need to keep *the* original error pool -- we can
+         just initialize a new error pool to stuff into P here after
+         it's been cleared. */
+
+      /* Make new error pool. */
+      svn_error__make_error_pool (pool, &error_pool);
+    }
+
+  /* Now, reset the error pool on P. */
+  svn_error__set_error_pool (pool, error_pool, subpool_of_p_p);
+}
+
+
+SVN_POOL_WRAPPER_DEFINE(apr_pool_t *, svn_pool_create)
+SVN_POOL_WRAPPER_DEFINE(void, svn_pool_clear)
+
+
+
+/*
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: 

@@ -25,11 +25,7 @@
 #include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
 
-#define APR_WANT_STDIO
-#include <apr_want.h>
-
 #include <svn_types.h>
-#include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,31 +34,6 @@ extern "C" {
 
 
 /*** Wrappers around APR pools, so we get error pools. ***/
-
-/* If you want pool usage debug info dumped to stderr (in environments
- * that support that kind of thing), #define SVN_POOL_DEBUG here.
- *
- * Output looks like one of these three:
- *
- *    PDEBUG: +                       0xHHHHHHHH (FILE:LINE) parent=0xPPPPPPPP
- *    PDEBUG: 0 SSSSSSSSSS TTTTTTTTTT 0xHHHHHHHH (FILE:LINE) 
- *    PDEBUG: - SSSSSSSSSS TTTTTTTTTT 0xHHHHHHHH (FILE:LINE) 
- *
- * where:
- *
- *    '+' signifies the creation of a pool
- *    '0' signifies the clearing of a pool
- *    '-' signifies the destruction of a pool
- *    SSSSSSSSSS is the decimal size in bytes of the pool
- *    TTTTTTTTTT is the total allocation of that pool tree at the time
- *    0xHHHHHHHH is the address of the pool
- *    0xPPPPPPPP is the address of the pool's parent pool
- *    FILE and LINE are the source code path/line number
- */
-/*
-#define SVN_POOL_DEBUG 
-*/
-
 
 
 /* THE ERROR POOL
@@ -117,7 +88,6 @@ extern "C" {
 apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
 
 
-#ifndef SVN_POOL_DEBUG
 /* Return a new pool.  If PARENT_POOL is non-null, then the new
  * pool will be a subpool of it, and will inherit the containing
  * pool's dedicated error subpool.
@@ -131,16 +101,14 @@ apr_status_t svn_error_init_pool (apr_pool_t *top_pool);
  * terminating the program.  */
 apr_pool_t *svn_pool_create (apr_pool_t *parent_pool);
 
-#else /* SVN_POOL_DEBUG */
 apr_pool_t *svn_pool_create_debug (apr_pool_t *parent_pool,
-                                   const char *file,
-                                   int line);
-#define svn_pool_create(p) svn_pool_create_debug(p, __FILE__, __LINE__)
-#endif /* SVN_POOL_DEBUG */
+                                   const char *file_line);
+
+#if APR_POOL_DEBUG
+#define svn_pool_create(p) svn_pool_create_debug(p, APR_POOL__FILE_LINE__)
+#endif /* APR_POOL_DEBUG */
 
 
-
-#ifndef SVN_POOL_DEBUG
 /* Clear the passed in pool.
  *
  * The reason we need this wrapper to apr_pool_clear, is because
@@ -151,30 +119,21 @@ apr_pool_t *svn_pool_create_debug (apr_pool_t *parent_pool,
  * If anything goes wrong, an abort function will be called.  */
 void svn_pool_clear (apr_pool_t *p);
 
-#else /* SVN_POOL_DEBUG */
 void svn_pool_clear_debug (apr_pool_t *p,
-                           const char *file,
-                           int line);
-#define svn_pool_clear(p) svn_pool_clear_debug(p, __FILE__, __LINE__)
-#endif /* SVN_POOL_DEBUG */
+                           const char *file_line);
 
+#if APR_POOL_DEBUG
+#define svn_pool_clear(p) svn_pool_clear_debug(p, APR_POOL__FILE_LINE__)
+#endif /* APR_POOL_DEBUG */
 
-#ifndef SVN_POOL_DEBUG
 
 /* Destroy a POOL and all of its children. 
  *
- * This wrapper to apr_pool_destroy exists for symmatry (the
+ * This define for svn_pool_destroy exists for symmatry (the
  * not-so-grand reason) and for the existence of a great memory usage
  * debugging hook (the grand reason).
  */
-void svn_pool_destroy (apr_pool_t *p);
-
-#else /* SVN_POOL_DEBUG */
-void svn_pool_destroy_debug (apr_pool_t *p,
-                             const char *file,
-                             int line);
-#define svn_pool_destroy(p) svn_pool_destroy_debug(p, __FILE__, __LINE__)
-#endif /* SVN_POOL_DEBUG */
+#define svn_pool_destroy apr_pool_destroy
 
 
 #ifdef __cplusplus
