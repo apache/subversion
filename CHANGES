@@ -1,10 +1,23 @@
-Version 0.14.2 [Alpha Interim 2] (released ?? ?????? 2002, revision ????)
+Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision >3016)
 
  User-visible changes:
+ * fs schema change, see issue #842. **NOTE: repos dump/load cycle required!**
  * new 'svn ls -R' option
+ * new status code `~', for type changes
+ * add --username and --password options to 'svn ls'
+ * new script tools/client-side/svn_all_diffs.pl
+ * new script tools/examples/blame.py (draft)
 
  Developer-visible changes:
+ * test suite now does XFAIL and XPASS
+ * test suite over DAV now uses SVNParentPath, no longer depends on symlinks
  * upgrade to neon 0.22.0
+ * server sends new prop namespaces, client understands old & new, issue #840
+ * error code space reorganized, see issue #702
+ * many cleanups to path handling
+ * more use of access batons in libsvn_wc, see issue #749
+ * working props now stored with ".svn-work" extension, see issue #618
+ * the usual round of bug fixes, new regression tests, etc
 
 Version 0.14.1 [Alpha Interim 1] (released 9 August 2002, revision 2927)
 
