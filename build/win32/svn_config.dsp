@@ -1,10 +1,10 @@
-# Microsoft Developer Studio Project File - Name="__config__" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="__CONFIG__" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Generic Project" 0x010a
 
-CFG=__config__ - Win32 Debug
+CFG=__CONFIG__ - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
@@ -13,12 +13,12 @@ CFG=__config__ - Win32 Debug
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "svn_config.mak" CFG="__config__ - Win32 Debug"
+!MESSAGE NMAKE /f "svn_config.mak" CFG="__CONFIG__ - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "__config__ - Win32 Release" (based on "Win32 (x86) Generic Project")
-!MESSAGE "__config__ - Win32 Debug" (based on "Win32 (x86) Generic Project")
+!MESSAGE "__CONFIG__ - Win32 Release" (based on "Win32 (x86) Generic Project")
+!MESSAGE "__CONFIG__ - Win32 Debug" (based on "Win32 (x86) Generic Project")
 !MESSAGE 
 
 # Begin Project
@@ -27,7 +27,7 @@ CFG=__config__ - Win32 Debug
 # PROP Scc_LocalPath ""
 MTL=midl.exe
 
-!IF  "$(CFG)" == "__config__ - Win32 Release"
+!IF  "$(CFG)" == "__CONFIG__ - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -40,7 +40,7 @@ MTL=midl.exe
 # PROP Intermediate_Dir ""
 # PROP Target_Dir ""
 
-!ELSEIF  "$(CFG)" == "__config__ - Win32 Debug"
+!ELSEIF  "$(CFG)" == "__CONFIG__ - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -57,13 +57,13 @@ MTL=midl.exe
 
 # Begin Target
 
-# Name "__config__ - Win32 Release"
-# Name "__config__ - Win32 Debug"
+# Name "__CONFIG__ - Win32 Release"
+# Name "__CONFIG__ - Win32 Debug"
 # Begin Source File
 
 SOURCE=..\..\subversion\libsvn_subr\getdate.cw
 
-!IF  "$(CFG)" == "__config__ - Win32 Release"
+!IF  "$(CFG)" == "__CONFIG__ - Win32 Release"
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build - Creating subversion\libsvn_subr\getdate.c from subversion\libsvn_subr\getdate.cw.
@@ -74,7 +74,7 @@ InputPath=..\..\subversion\libsvn_subr\getdate.cw
 
 # End Custom Build
 
-!ELSEIF  "$(CFG)" == "__config__ - Win32 Debug"
+!ELSEIF  "$(CFG)" == "__CONFIG__ - Win32 Debug"
 
 # Begin Custom Build - Creating getdate.c from getdate.cw.
 InputPath=..\..\subversion\libsvn_subr\getdate.cw
@@ -96,7 +96,7 @@ SOURCE=..\..\svn_private_config.h
 
 SOURCE=..\..\svn_private_config.hw
 
-!IF  "$(CFG)" == "__config__ - Win32 Release"
+!IF  "$(CFG)" == "__CONFIG__ - Win32 Release"
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build - Creating svn_private_config.h from svn_private_config.hw.
@@ -107,7 +107,7 @@ InputPath=..\..\svn_private_config.hw
 
 # End Custom Build
 
-!ELSEIF  "$(CFG)" == "__config__ - Win32 Debug"
+!ELSEIF  "$(CFG)" == "__CONFIG__ - Win32 Debug"
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build - Creating svn_private_config.h from svn_private_config.hw.

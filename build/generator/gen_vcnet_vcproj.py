@@ -14,8 +14,9 @@ import ezt
 class Generator(gen_win.WinGeneratorBase):
   "Generate a Visual C++.NET project"
 
-  def __init__(self, fname, verfname):
-    gen_win.WinGeneratorBase.__init__(self, fname, verfname, 'vcnet-vcproj')
+  def __init__(self, fname, verfname, options):
+    gen_win.WinGeneratorBase.__init__(self, fname, verfname, options,
+                                      'vcnet-vcproj')
 
   def default_output(self, oname):
     return 'subversion_vcnet.sln'
@@ -140,6 +141,7 @@ class Generator(gen_win.WinGeneratorBase):
     ### GJS: these aren't in the DT_INSTALL graph, so they didn't get GUIDs
     guids['apr'] = self.makeguid('apr')
     guids['aprutil'] = self.makeguid('aprutil')
+    guids['apriconv'] = self.makeguid('apriconv')
     guids['neon'] = self.makeguid('neon')
 
     for target_ob in install_targets:
