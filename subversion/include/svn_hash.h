@@ -60,7 +60,7 @@
  *
  */
 
-apr_status_t svn_hash_read (apr_hash_t **hash, 
+apr_status_t svn_hash_read (apr_hash_t *hash, 
                             void *(*pack_func) (size_t len, const char *val,
                                                 apr_pool_t *pool),
                             apr_file_t *srcfile,

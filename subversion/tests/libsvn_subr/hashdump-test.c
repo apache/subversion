@@ -136,7 +136,7 @@ test2 (const char **msg)
 
   apr_open (&f, "hashdump.out", APR_READ, APR_OS_DEFAULT, pool);
 
-  result = svn_hash_read (&new_proplist, svn_pack_bytestring, f, pool);
+  result = svn_hash_read (new_proplist, svn_pack_bytestring, f, pool);
 
   apr_close (f);
 
