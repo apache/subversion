@@ -92,7 +92,7 @@ $ svn status -v myfile
               should pass to an external diff command when providing
               differences between files.  If you wish to pass multiple
               arguments, you must enclose all of them in quotes (for
-              example, <command>svn diff --diff-cmd /usr/bin/diff "-x
+              example, <command>svn diff --diff-cmd /usr/bin/diff -x
               "-b -E"</command>).  This switch can
               <emphasis>only</emphasis> be used if you also pass the
               <option>--diff-cmd</option> switch.</para>
