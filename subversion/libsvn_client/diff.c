@@ -1043,8 +1043,11 @@ do_diff (const apr_array_header_t *options,
                                             NULL, NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));      
 
-      /* Set up the repos_diff editor on path2's anchor.  */
-      SVN_ERR (svn_client__get_diff_editor (anchor2,
+      /* Set up the repos_diff editor on path2's anchor, assuming
+         path2 is a wc_dir.  if path2 is a URL, then we want to anchor
+         the diff editor on "", because we don't want to see any url's
+         in the diff headers. */
+      SVN_ERR (svn_client__get_diff_editor (path2_is_url ? "" : anchor2,
                                             callbacks,
                                             callback_baton,
                                             recurse,
@@ -1176,15 +1179,12 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
                   const svn_client_revision_t *revision1,
                   const char *path2,
                   const svn_client_revision_t *revision2,
+                  const char *target_wcpath,
                   svn_boolean_t recurse,
                   svn_boolean_t force,
                   apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
-
-  /* ### NOTE: see issue #748.  This used to be an input argument, but
-     now it's just a fixed variable.  This is only temporary. */
-  const char *target_wcpath = ".";
   
   SVN_ERR (svn_wc_entry (&entry, target_wcpath, FALSE, pool));
   if (entry == NULL)

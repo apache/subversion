@@ -71,31 +71,37 @@ svn_cl__merge (apr_getopt_t *os,
   
   if (using_alternate_syntax)
     {
-      if (targets->nelts < 1)
+      if ((targets->nelts < 1) || (targets->nelts > 2))
         {
           svn_cl__subcommand_help ("merge", pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
-                                   "Need at least one path.");
+                                   "Wrong number of paths given.");
         }
 
+      /* the first path becomes both of the 'sources' */
       sourcepath1 = sourcepath2 = ((const char **) (targets->elts))[0];
-      if (targets->nelts >= 2)
+      
+      /* decide where to apply the diffs, defaulting to '.' */
+      if (targets->nelts == 2)
         targetpath = ((const char **) (targets->elts))[1];
       else
         targetpath = ".";
     }
   else /* using @rev syntax, revs already extracted. */
     {
-      if (targets->nelts < 2)
+      if ((targets->nelts < 2) || (targets->nelts > 3))
         {
           svn_cl__subcommand_help ("merge", pool);
           return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, 0, pool,
-                                   "Need at least two paths.");
+                                   "Wrong number of paths given.");
         }
 
+      /* the first two paths become the 'sources' */
       sourcepath1 = ((const char **) (targets->elts))[0];
       sourcepath2 = ((const char **) (targets->elts))[1];
-      if (targets->nelts >= 3)
+      
+      /* decide where to apply the diffs, defaulting to '.' */
+      if (targets->nelts == 3)
         targetpath = ((const char **) (targets->elts))[2];
       else
         targetpath = ".";
@@ -118,20 +124,16 @@ svn_cl__merge (apr_getopt_t *os,
           fflush (stdout);
   */
 
-  SVN_ERR (svn_wc_get_actual_target (targetpath, &parent_dir, &entry, pool));
-
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
-  /* ### NOTE:  see issue #748.  We used to pass TARGETPATH into this
-     function, but that argument has been temporarily removed.  All
-     merging action happens in "." now.  */
   err = svn_client_merge (notify_func, notify_baton,
                           auth_baton,
                           sourcepath1,
                           &(opt_state->start_revision),
                           sourcepath2,
                           &(opt_state->end_revision),
+                          targetpath,
                           opt_state->nonrecursive ? FALSE : TRUE,
                           opt_state->force,
                           pool); 
