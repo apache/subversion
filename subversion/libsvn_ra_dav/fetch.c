@@ -480,7 +480,10 @@ static svn_error_t *custom_get_request(ne_session *sess,
   cgc.subctx = subctx;
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, sess, "GET", url, pool);
+  err = svn_ra_dav__request_dispatch(&code, req, sess, "GET", url,
+                                     200 /* OK */,
+                                     226 /* IM Used */,
+                                     pool);
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
@@ -493,12 +496,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
 
   if (err)
     return err;
-
-  if (code != 200 && code != 226)
-    {
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                               "GET request failed for %s", url);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -680,7 +677,7 @@ static svn_error_t *fetch_file(ne_session *sess,
 
 static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                     svn_revnum_t revision,
-                                    const svn_string_t **activity_url,
+                                    const svn_string_t **activity_coll,
                                     svn_revnum_t *target_rev,
                                     const char **bc_root)
 {
@@ -688,17 +685,14 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   svn_boolean_t is_dir;
   svn_string_t bc_url;
   svn_string_t bc_relative;
-#ifdef BUSTED_CRAP
-  svn_stringbuf_t *path;
-#endif
 
   /* ### if REVISION means "get latest", then we can use an expand-property
      ### REPORT rather than two PROPFINDs to reach the baseline-collection */
 
   /* Fetch the activity-collection-set from the server. */
   /* ### also need to fetch/validate the DAV capabilities */
-  SVN_ERR( svn_ra_dav__get_activity_url(activity_url, ras, ras->root.path,
-                                        pool) );
+  SVN_ERR( svn_ra_dav__get_activity_collection(activity_coll, ras,
+                                               ras->root.path, pool) );
 
   SVN_ERR( svn_ra_dav__get_baseline_info(&is_dir, &bc_url, &bc_relative,
                                          target_rev, ras->sess,
@@ -714,16 +708,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 
   /* The root for the checkout is the Baseline Collection root, plus the
      relative location of the public URL to its repository root. */
-
-#ifdef BUSTED_CRAP
-  path = svn_stringbuf_create_from_string(&bc_url, pool);
-  svn_path_add_component_nts(path, bc_relative.data);
-
-  *bc_root = path->data;
-#else
-  /* ### this is broken cuz it assumes bc_url has a trailing slash. */
-  *bc_root = apr_pstrcat(pool, bc_url.data, bc_relative.data, NULL);
-#endif
+  *bc_root = svn_path_join(bc_url.data, bc_relative.data, pool);
 
   return NULL;
 }
@@ -880,10 +865,10 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
   svn_error_t *err;
   void *root_baton;
-  svn_stringbuf_t *act_url_name;
-  svn_stringbuf_t *act_url_value;
+  svn_stringbuf_t *act_coll_name;
+  svn_stringbuf_t *act_coll_value;
   vsn_url_helper vuh;
-  const svn_string_t *activity_url;
+  const svn_string_t *activity_coll;
   svn_revnum_t target_rev;
   const char *bc_root;
   subdir_t *subdir;
@@ -898,7 +883,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   subpool = svn_pool_create(ras->pool);
 
   /* begin the checkout process by fetching some basic information */
-  SVN_ERR( begin_checkout(ras, revision, &activity_url, &target_rev,
+  SVN_ERR( begin_checkout(ras, revision, &activity_coll, &target_rev,
                           &bc_root) );
 
   /* all the files we checkout will have TARGET_REV for the revision */
@@ -924,8 +909,9 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   PUSH_SUBDIR(subdirs, subdir);
 
   /* ### damn. gotta build a string. */
-  act_url_name = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_URL, ras->pool);
-  act_url_value = svn_stringbuf_create_from_string(activity_url, ras->pool);
+  act_coll_name = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_COLL,
+                                       ras->pool);
+  act_coll_value = svn_stringbuf_create_from_string(activity_coll, ras->pool);
 
   /* prep the helper */
   vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
@@ -1012,8 +998,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       /* store the activity URL as a property */
       /* ### should we close the dir batons before returning?? */
-      SVN_ERR_W( (*editor->change_dir_prop)(this_baton, act_url_name,
-                                            act_url_value),
+      SVN_ERR_W( (*editor->change_dir_prop)(this_baton, act_coll_name,
+                                            act_coll_value),
                  "could not save the URL to indicate "
                  "where to create activities");
 

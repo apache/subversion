@@ -148,7 +148,6 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
                                   const char *path,
                                   char *vsn_url)
 {
-  svn_stringbuf_t *path_str;
   svn_string_t vsn_url_str;
 
   /* no sense in doing any more work if there's no property setting
@@ -163,9 +162,7 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
   if (! okay_to_bump_path (path, mc->valid_targets, mc->pool))
     return SVN_NO_ERROR;
 
-  /* set up two string values around the path and vsn_url. */
-  path_str = svn_stringbuf_create (path, mc->pool);
-
+  /* the property setter wants an svn_string_t */
   vsn_url_str.data = vsn_url;
   vsn_url_str.len = strlen(vsn_url);
  
@@ -249,7 +246,8 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
   return bump_resource(mc, relative, mc->vsn_url->data);
 }
 
-static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
+static int validate_element(void *userdata, ne_xml_elmid parent,
+                            ne_xml_elmid child)
 {
   if ((child == ELEM_collection || child == ELEM_baseline)
       && parent != ELEM_resourcetype) {

@@ -155,7 +155,8 @@ svn_error_t *svn_ra_dav__do_check_path(
 #define SVN_RA_DAV__LP_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
 
 /* store the URL where Activities can be created */
-#define SVN_RA_DAV__LP_ACTIVITY_URL     SVN_RA_DAV__LP_NAMESPACE "activity-url"
+/* ### should fix the name to be "activity-coll" at some point */
+#define SVN_RA_DAV__LP_ACTIVITY_COLL SVN_RA_DAV__LP_NAMESPACE "activity-url"
 
 /* store the URL of the version resource (from the DAV:checked-in property) */
 #define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
@@ -273,10 +274,11 @@ extern const ne_propname svn_ra_dav__checked_in_prop;
 
 
 /* send an OPTIONS request to fetch the activity-collection-set */
-svn_error_t * svn_ra_dav__get_activity_url(const svn_string_t **activity_url,
-                                           svn_ra_session_t *ras,
-                                           const char *url,
-                                           apr_pool_t *pool);
+svn_error_t * svn_ra_dav__get_activity_collection(
+  const svn_string_t **activity_coll,
+  svn_ra_session_t *ras,
+  const char *url,
+  apr_pool_t *pool);
 
 
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
@@ -396,6 +398,17 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
 
    SESSION, METHOD, and URL are required as well, as they are used to
    describe the possible error.  The error will be allocated in POOL.
+
+   OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
+   than one of these will generate an error. OKAY_1 should always be
+   specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
+   not allowed.
+
+   ### not super sure on this "okay" stuff, but it means that the request
+   ### dispatching code can generate much better errors than the callers
+   ### when something goes wrong. if we need more than two, then we could
+   ### add another param, switch to an array, or do something entirely
+   ### different...
  */
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code,
@@ -403,6 +416,8 @@ svn_ra_dav__request_dispatch(int *code,
                              ne_session *session,
                              const char *method,
                              const char *url,
+                             int okay_1,
+                             int okay_2,
                              apr_pool_t *pool);
 
 

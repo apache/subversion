@@ -346,12 +346,6 @@ SVN_ERROR_START
     SVN_ERRDEF (SVN_ERR_RA_REQUEST_FAILED,
                 "RA layer request failed")
 
-    SVN_ERRDEF (SVN_ERR_RA_MKACTIVITY_FAILED,
-                "RA layer failed to make an activity for commit")
-
-    SVN_ERRDEF (SVN_ERR_RA_DELETE_FAILED,
-                "RA layer failed to delete server resource")
-
     SVN_ERRDEF (SVN_ERR_RA_OPTIONS_REQUEST_FAILED,
                 "RA layer didn't receive requested OPTIONS info")
     

@@ -50,6 +50,9 @@
 /*
 ** resource_t: identify the relevant pieces of a resource on the server
 **
+** REVISION is the resource's revision, or SVN_INVALID_REVNUM if it is
+** new or is the HEAD.
+**
 ** URL refers to the public/viewable/original resource.
 ** VSN_URL refers to the version resource that we stored locally
 ** WR_URL refers to a working resource for this resource
@@ -62,6 +65,7 @@
 */
 typedef struct
 {
+  svn_revnum_t revision;
   const char *url;
   const char *vsn_url;
   const char *wr_url;
@@ -78,9 +82,10 @@ typedef struct
   apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
 
   apr_hash_t *valid_targets;
+
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
-  void *close_baton;
+  void *cb_baton;
 
   /* The (potential) author of this commit. */
   const char *user;
@@ -147,7 +152,8 @@ static svn_stringbuf_t *escape_url(const char *url, apr_pool_t *pool)
   
 
 static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
-                                    const char *url, int *code)
+                                    const char *url, int *code,
+                                    int okay_1, int okay_2)
 {
   ne_request *req;
   svn_stringbuf_t *url_str = escape_url(url, ras->pool);
@@ -164,24 +170,25 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
 
   /* run the request and get the resulting status code (and svn_error_t) */
   SVN_ERR( svn_ra_dav__request_dispatch(code, req, ras->sess,
-                                        method, url, ras->pool) );
+                                        method, url, okay_1, okay_2,
+                                        ras->pool) );
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * get_version_url(commit_ctx_t *cc,
                                      resource_t *rsrc,
-                                     svn_revnum_t revision,
+                                     svn_boolean_t force,
                                      apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *propres;
   const char *url;
 
-  if (cc->get_func != NULL)
+  if (!force && cc->get_func != NULL)
     {
       const svn_string_t *vsn_url_value;
 
-      SVN_ERR( (*cc->get_func)(cc->close_baton,
+      SVN_ERR( (*cc->get_func)(cc->cb_baton,
                                rsrc->local_path,
                                SVN_RA_DAV__LP_VSN_URL,
                                &vsn_url_value,
@@ -195,22 +202,30 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
       /* whoops. it wasn't there. go grab it from the server. */
     }
 
-  if (revision == SVN_INVALID_REVNUM)
-    url = rsrc->url;
+  if (rsrc->revision == SVN_INVALID_REVNUM)
+    {
+      /* We aren't trying to get a specific version -- use the HEAD. We
+         fetch the version URL from the public URL. */
+      url = rsrc->url;
+    }
   else
     {
-      svn_string_t bc_url, bc_relative;
+      svn_string_t bc_url;
+      svn_string_t bc_relative;
 
+      /* The version URL comes from a resource in the Baseline Collection. */
       SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              cc->ras->sess,
                                              rsrc->url,
-                                             revision,
+                                             rsrc->revision,
                                              pool));
 
       url = svn_path_join(bc_url.data, bc_relative.data, pool);
     }
 
+  /* Get the DAV:checked-in property, which contains the URL of the
+     Version Resource */
   SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
                                           NULL, fetch_props, pool) );
   url = apr_hash_get(propres->propset,
@@ -229,75 +244,104 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
      a resource object. */
   rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url);
 
-  return NULL;
+  if (cc->set_func != NULL)
+    {
+      /* save the (new) version resource URL into the item */
+
+      svn_string_t value;
+
+      value.data = url;
+      value.len = strlen(url);
+      SVN_ERR( (*cc->set_func)(cc->cb_baton,
+                               rsrc->local_path,
+                               SVN_RA_DAV__LP_VSN_URL,
+                               &value,
+                               pool) );
+    }
+
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t * get_activity_url(commit_ctx_t *cc,
-                                      const svn_string_t **activity_url)
+/* When FORCE is true, then we force a query to the server, ignoring any
+   cached property. */
+static svn_error_t * get_activity_collection(
+  commit_ctx_t *cc,
+  const svn_string_t **activity_coll,
+  svn_boolean_t force)
 {
-
-  if (cc->get_func != NULL)
+  if (!force && cc->get_func != NULL)
     {
       /* with a get_func, we can just ask for the activity URL from the
          property store. */
 
       /* get the URL where we should create activities */
-      SVN_ERR( (*cc->get_func)(cc->close_baton,
+      SVN_ERR( (*cc->get_func)(cc->cb_baton,
                                ".",
-                               SVN_RA_DAV__LP_ACTIVITY_URL,
-                               activity_url,
+                               SVN_RA_DAV__LP_ACTIVITY_COLL,
+                               activity_coll,
                                cc->ras->pool) );
 
-      if (*activity_url != NULL)
+      if (*activity_coll != NULL)
         {
           /* the property was there. return it. */
-
-          /* ### urk. copy the thing to get a proper pool in there */
-          *activity_url = svn_string_dup(*activity_url, cc->ras->pool);
-
-          return NULL;
+          return SVN_NO_ERROR;
         }
 
       /* property not found for some reason. get it from the server. */
     }
 
   /* use our utility function to fetch the activity URL */
-  return svn_ra_dav__get_activity_url(activity_url, cc->ras,
-                                      cc->ras->root.path, cc->ras->pool);
+  SVN_ERR( svn_ra_dav__get_activity_collection(activity_coll,
+                                               cc->ras,
+                                               cc->ras->root.path,
+                                               cc->ras->pool) );
+
+  if (cc->set_func != NULL)
+    {
+      /* save the (new) activity collection URL into the directory */
+      SVN_ERR( (*cc->set_func)(cc->cb_baton,
+                               ".",
+                               SVN_RA_DAV__LP_ACTIVITY_COLL,
+                               *activity_coll,
+                               cc->ras->pool) );
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * create_activity(commit_ctx_t *cc)
 {
-  const svn_string_t * activity_url;
+  const svn_string_t * activity_collection;
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
   int code;
-  svn_stringbuf_t *urlbuf;
+  const char *url;
 
-  /* get the URL where we'll create activities */
-  SVN_ERR( get_activity_url(cc, &activity_url) );
-
-  /* the URL for our activity will be ACTIVITY_URL/UUID */
+  /* the URL for our activity will be ACTIVITY_COLL/UUID */
   apr_uuid_get(&uuid);
   apr_uuid_format(uuid_buf, &uuid);
 
-  urlbuf = svn_stringbuf_create_from_string(activity_url, cc->ras->pool);
-  /* ### grumble. this doesn't watch out for trailing "/" */
-  svn_path_add_component_nts(urlbuf, uuid_buf);
+  /* get the URL where we'll create activities, construct the URL
+     for the activity, and create the activity. */
+  SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE) );
+  url = svn_path_join(activity_collection->data, uuid_buf, cc->ras->pool);
+  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
+                          201 /* Created */,
+                          404 /* Not Found */) );
 
-  cc->activity_url = urlbuf->data;
-
-  /* do a MKACTIVITY request and get the resulting status code. */
-  SVN_ERR( simple_request(cc->ras, "MKACTIVITY", cc->activity_url, &code) );
-  if (code != 201)
+  /* if we get a 404, then it generally means that the cached activity
+     collection no longer exists. Retry the sequence, but force a query
+     to the server for the activity collection. */
+  if (code == 404)
     {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_create(SVN_ERR_RA_MKACTIVITY_FAILED, 0, NULL,
-                              cc->ras->pool,
-                              "The MKACTIVITY request failed.");
+      SVN_ERR( get_activity_collection(cc, &activity_collection, TRUE) );
+      url = svn_path_join(activity_collection->data, uuid_buf, cc->ras->pool);
+      SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, 201, 0) );
     }
 
-  return NULL;
+  cc->activity_url = url;
+
+  return SVN_NO_ERROR;
 }
 
 /* add a child resource. TEMP_POOL should be as "temporary" as possible,
@@ -322,6 +366,7 @@ static svn_error_t * add_child(resource_t **child,
   */
 
   rsrc = apr_pcalloc(pool, sizeof(*rsrc));
+  rsrc->revision = revision;
   rsrc->url = svn_path_join(parent->url, name, pool);
   rsrc->local_path = svn_path_join(parent->local_path, name, pool);
 
@@ -339,35 +384,28 @@ static svn_error_t * add_child(resource_t **child,
      This means it has a VR URL already, and the WR URL won't exist
      until it's "checked out". */
   else
-    SVN_ERR( get_version_url(cc, rsrc, revision, temp_pool) );
+    SVN_ERR( get_version_url(cc, rsrc, FALSE, temp_pool) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
   *child = rsrc;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
-/* check out the specified resource (if it hasn't been checked out yet) */
-static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
+static svn_error_t * do_checkout(commit_ctx_t *cc,
+                                 const char *vsn_url,
+                                 svn_boolean_t allow_404,
+                                 int *code,
+                                 const char **locn)
 {
   ne_request *req;
-  int code;
   const char *body;
-  const char *locn = NULL;
-  struct uri parse;
   svn_stringbuf_t *url_str;
-  svn_error_t *err;
 
-  if (res->wr_url != NULL)
-    {
-      /* already checked out! */
-      return NULL;
-    }
+  /* assert: vsn_url != NULL */
+  url_str = escape_url(vsn_url, cc->ras->pool);
 
-  /* assert: res->vsn_url != NULL */
-  url_str = escape_url(res->vsn_url, cc->ras->pool);
-
-  /* ### send a CHECKOUT resource on res->vsn_url; include cc->activity_url;
+  /* ### send a CHECKOUT resource on vsn_url; include cc->activity_url;
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
@@ -390,26 +428,60 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   ne_set_request_body_buffer(req, body, strlen(body));
 
   /* 
-   * We have different const qualifiers here. locn is const char *,
+   * We have different const qualifiers here. locn is const char **,
    * but the prototype is void * (as opposed to const void *).
    */
   ne_add_response_header_handler(req, "location",
-                                 ne_duplicate_header, (void *)&locn);
+                                 ne_duplicate_header, (void *)locn);
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                     "CHECKOUT", url_str->data, 
-                                     cc->ras->pool);
+  return svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
+                                      "CHECKOUT", url_str->data,
+                                      201 /* Created */,
+                                      allow_404 ? 404 /* Not Found */ : 0,
+                                      cc->ras->pool);
+}
+
+/* check out the specified resource (if it hasn't been checked out yet) */
+static svn_error_t * checkout_resource(commit_ctx_t *cc,
+                                       resource_t *res,
+                                       svn_boolean_t allow_404)
+{
+  int code;
+  const char *locn = NULL;
+  struct uri parse;
+  svn_error_t *err;
+
+  if (res->wr_url != NULL)
+    {
+      /* already checked out! */
+      return NULL;
+    }
+
+  /* check out the Version Resource */
+  err = do_checkout(cc, res->vsn_url, allow_404, &code, &locn);
+
+  /* possibly run the request again, with a re-fetched Version Resource */
+  if (err == NULL && allow_404 && code == 404)
+    {
+      /* re-fetch, forcing a query to the server */
+      SVN_ERR( get_version_url(cc, res, TRUE, cc->ras->pool) );
+
+      /* do it again, but don't allow a 404 this time */
+      err = do_checkout(cc, res->vsn_url, FALSE, &code, &locn);
+    }
+
+  /* special-case when conflicts occur */
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf(err->apr_err, err->src_err, err, NULL,
                                  "Your file '%s' is probably out-of-date.",
                                  res->local_path);
-      else
-        return err;
+      return err;
     }
 
+  /* we got the header, right? */
   if (locn == NULL)
     {
       return svn_error_create(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
@@ -426,7 +498,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   uri_free(&parse);
   free((void *)locn);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static void record_prop_change(apr_pool_t *pool,
@@ -538,17 +610,12 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
 
   /* run the request and get the resulting status code (and svn_error_t) */
   SVN_ERR( svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                        url_str->data, ras->pool) );
+                                        url_str->data,
+                                        207 /* Multistatus */,
+                                        0 /* nothing else allowed */,
+                                        ras->pool) );
 
-  if (code != 207)
-    {
-      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
-                               ras->pool,
-                               "The PROPPATCH request failed for %s",
-                               url_str->data);
-    }
-
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -574,10 +641,15 @@ static svn_error_t * commit_open_root(void *edit_baton,
   /* create the root resource. no wr_url (yet). use ras->pool for the
      proper lifetime of the resource. */
   rsrc = apr_pcalloc(cc->ras->pool, sizeof(*rsrc));
+
+  /* ### should this be 'base_revision' here? we might not always be
+     ### working against the head! (think "properties"). */
+  rsrc->revision = SVN_INVALID_REVNUM;
+
   rsrc->url = cc->ras->root.path;
   rsrc->local_path = "";
 
-  SVN_ERR( get_version_url(cc, rsrc, SVN_INVALID_REVNUM, dir_pool) );
+  SVN_ERR( get_version_url(cc, rsrc, FALSE, dir_pool) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -588,7 +660,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
 
   *root_baton = root;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_delete_entry(const char *path,
@@ -602,7 +674,7 @@ static svn_error_t * commit_delete_entry(const char *path,
   int code;
 
   /* get the URL to the working collection */
-  SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE) );
 
   /* create the URL for the child resource */
   child = svn_path_join(parent->rsrc->wr_url, name, pool);
@@ -613,23 +685,17 @@ static svn_error_t * commit_delete_entry(const char *path,
      corollary, we know the child hasn't been checked out. */
 
   /* delete the child resource */
-  SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code) );
-
-  /* ## 404 is ignored, because mod_dav_svn is effectively merging
+  /* ### 404 is ignored, because mod_dav_svn is effectively merging
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
-     is an omnipotent merge operation. */
-  if ((code != 204) && (code != 404))
-    {
-      /* ### need to be more sophisticated with reporting the failure */
-      return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL, pool,
-                               "Could not DELETE %s", child);
-    }
+     is an idempotent merge operation. */
+  SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code,
+                          204 /* Created */, 404 /* Not Found */) );
 
   /* Add this path to the valid targets hash. */
   add_valid_target (parent->cc, path, svn_nonrecursive);
   
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_add_dir(const char *path,
@@ -646,7 +712,7 @@ static svn_error_t * commit_add_dir(const char *path,
 
   /* check out the parent resource so that we can create the new collection
      as one of its children. */
-  SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE) );
 
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(dir_pool, sizeof(*child));
@@ -660,15 +726,7 @@ static svn_error_t * commit_add_dir(const char *path,
       /* This a new directory with no history, so just create a new,
          empty collection */
       SVN_ERR( simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
-                              &code) );
-
-      if (code != 201) /* "created" */
-        {
-          /* ### need to be more sophisticated with reporting the failure */
-          return 
-            svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, dir_pool,
-                              "MKCOL request failed for '%s'", path);
-        }
+                              &code, 201 /* Created */, 0) );
     }
   else
     {
@@ -715,7 +773,7 @@ static svn_error_t * commit_add_dir(const char *path,
                     copyfrom_path ? svn_recursive : svn_nonrecursive);
 
   *child_baton = child;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_open_dir(const char *path,
@@ -744,7 +802,7 @@ static svn_error_t * commit_open_dir(const char *path,
   */
 
   *child_baton = child;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_change_dir_prop(void *dir_baton,
@@ -759,12 +817,12 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
   record_prop_change(dir->cc->ras->pool, dir, name, value);
 
   /* do the CHECKOUT sooner rather than later */
-  SVN_ERR( checkout_resource(dir->cc, dir->rsrc) );
+  SVN_ERR( checkout_resource(dir->cc, dir->rsrc, TRUE) );
 
   /* Add this path to the valid targets hash. */
   add_valid_target (dir->cc, dir->rsrc->local_path, svn_nonrecursive);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_close_dir(void *dir_baton)
@@ -775,7 +833,7 @@ static svn_error_t * commit_close_dir(void *dir_baton)
      checked out the directory when the first prop change was noted. */
   SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir) );
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_add_file(const char *path,
@@ -799,7 +857,7 @@ static svn_error_t * commit_add_file(const char *path,
   */
 
   /* Do the parent CHECKOUT first */
-  SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
+  SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE) );
 
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(file_pool, sizeof(*file));
@@ -902,7 +960,7 @@ static svn_error_t * commit_add_file(const char *path,
 
   /* return the file_baton */
   *file_baton = file;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_open_file(const char *path,
@@ -922,7 +980,7 @@ static svn_error_t * commit_open_file(const char *path,
                      name, 0, base_revision, file_pool) );
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
-  SVN_ERR( checkout_resource(parent->cc, file->rsrc) );
+  SVN_ERR( checkout_resource(parent->cc, file->rsrc, TRUE) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
      ### "long time" from now. certainly after many other operations, so
@@ -931,7 +989,7 @@ static svn_error_t * commit_open_file(const char *path,
   */
 
   *file_baton = file;
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_stream_write(void *baton,
@@ -946,7 +1004,7 @@ static svn_error_t * commit_stream_write(void *baton,
     return svn_error_create(status, 0, NULL, pb->pool,
                             "Could not write svndiff to temp file.");
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_stream_close(void *baton)
@@ -997,7 +1055,10 @@ static svn_error_t * commit_stream_close(void *baton)
 
   /* run the request and get the resulting status code (and svn_error_t) */
   err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                     "PUT", url_str->data, cc->ras->pool);
+                                     "PUT", url_str->data,
+                                     201 /* Created */,
+                                     204 /* No Content */,
+                                     cc->ras->pool);
 
   /* we're done with the file.  this should delete it. */
   (void) apr_file_close(pb->tmpfile);
@@ -1008,7 +1069,7 @@ static svn_error_t * commit_stream_close(void *baton)
   if (err)
     return err;
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * 
@@ -1050,7 +1111,7 @@ commit_apply_txdelta(void *file_baton,
   /* Add this path to the valid targets hash. */
   add_valid_target (file->cc, file->rsrc->local_path, svn_nonrecursive);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_change_file_prop(void *file_baton,
@@ -1065,12 +1126,12 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
   record_prop_change(file->cc->ras->pool, file, name, value);
 
   /* do the CHECKOUT sooner rather than later */
-  SVN_ERR( checkout_resource(file->cc, file->rsrc) );
+  SVN_ERR( checkout_resource(file->cc, file->rsrc, TRUE) );
 
   /* Add this path to the valid targets hash. */
   add_valid_target (file->cc, file->rsrc->local_path, svn_nonrecursive);
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * commit_close_file(void *file_baton)
@@ -1081,7 +1142,7 @@ static svn_error_t * commit_close_file(void *file_baton)
      checked out the file when the first prop change was noted. */
   SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file) );
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1101,7 +1162,7 @@ static svn_error_t * commit_close_edit(void *edit_baton)
 
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
 
-  return NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t * apply_log_message(commit_ctx_t *cc,
@@ -1110,7 +1171,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   apr_pool_t *pool = cc->ras->pool;
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
-  resource_t baseline_rsrc = { 0 };
+  resource_t baseline_rsrc = { SVN_INVALID_REVNUM };
   ne_proppatch_operation po[2] = { { 0 } };
   int rv;
   svn_stringbuf_t *xml_data;
@@ -1130,7 +1191,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
                                     NULL, &svn_ra_dav__checked_in_prop, pool));
 
   baseline_rsrc.vsn_url = baseline_url->data;
-  SVN_ERR( checkout_resource(cc, &baseline_rsrc) );
+  SVN_ERR( checkout_resource(cc, &baseline_rsrc, FALSE) );
 
   /* XML-Escape the log message. */
   xml_data = NULL;              /* Required by svn_xml_escape_stringbuf. */
@@ -1172,7 +1233,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->valid_targets = apr_hash_make(ras->pool);
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->set_func = ras->callbacks->set_wc_prop;
-  cc->close_baton = ras->callback_baton;
+  cc->cb_baton = ras->callback_baton;
   cc->log_msg = log_msg;
   cc->new_rev = new_rev;
   cc->committed_date = committed_date;
@@ -1219,9 +1280,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   *edit_baton = cc;
   return SVN_NO_ERROR;
 }
-
-
-
 
 
 
