@@ -727,8 +727,10 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   if (curp == endp)
     return NULL;
 
-  eol = strchr(curp, '\n');
-  if (eol != endp)
+  eol = memchr(curp, '\n', endp - curp);
+  if (!eol)
+    eol = endp;
+  else
     eol++;
 
   if (type != svn_diff3__file_output_skip)
@@ -906,10 +908,13 @@ svn_diff3_file_output(apr_file_t *output_file,
                       apr_pool_t *pool)
 {
   svn_diff3__file_output_baton_t baton;
-  apr_file_t *file;
+  apr_file_t *file[3];
   apr_finfo_t finfo;
   apr_status_t rv;
   int idx;
+#if APR_HAS_MMAP
+  apr_mmap_t *mm[3] = { 0 };
+#endif
 
   memset(&baton, 0, sizeof(baton));
   baton.output_file = output_file;
@@ -932,38 +937,86 @@ svn_diff3_file_output(apr_file_t *output_file,
 
   for (idx = 0; idx < 3; idx++)
     {
-      SVN_ERR(svn_io_file_open(&file, baton.path[idx],
+      SVN_ERR(svn_io_file_open(&file[idx], baton.path[idx],
                                APR_READ, APR_OS_DEFAULT, baton.pool));
 
-      rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, file);
+      rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, file[idx]);
       if (rv != APR_SUCCESS)
         {
           return svn_error_createf(rv, NULL, "Failed to get file info '%s'.",
                                    baton.path[idx]);
         }
 
-      baton.buffer[idx] = apr_palloc(baton.pool, finfo.size + 1);
-      rv = apr_file_read_full(file, baton.buffer[idx], finfo.size, NULL);
-      if (rv != APR_SUCCESS)
+      if (finfo.size == 0)
         {
-          return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
-                                   baton.path[idx]);
-        }
+	  baton.buffer[idx] = NULL;
+	}
 
-      rv = apr_file_close(file);
+#if APR_HAS_MMAP
+      else
+        {
+          rv = apr_mmap_create(&mm[idx], file[idx],
+                           0, finfo.size, APR_MMAP_READ,
+                           baton.pool);
+          if (rv != APR_SUCCESS)
+            {
+              return svn_error_createf(rv, NULL, "Failed to mmap file '%s'.",
+                                       baton.path[idx]);
+            }
+
+          baton.buffer[idx] = mm[idx]->mm;
+	}
+
+#else
+      else
+        {
+          baton.buffer[idx] = apr_palloc(baton.pool, finfo.size);
+
+          rv = apr_file_read_full(file[idx], baton.buffer[idx], finfo.size,
+                                  NULL);
+          if (rv != APR_SUCCESS)
+            {
+              return svn_error_createf(rv, NULL, "Failed to read file '%s'.",
+                                       baton.path[idx]);
+            }
+	}
+
+      rv = apr_file_close(file[idx]);
       if (rv != APR_SUCCESS)
         {
           return svn_error_createf(rv, NULL, "failed to close file '%s'.",
                                    baton.path[idx]);
         }
+#endif
 
       baton.curp[idx] = baton.buffer[idx];
       baton.endp[idx] = baton.buffer[idx] + finfo.size;
-      *baton.endp[idx] = '\n';
     }
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));
+
+#if APR_HAS_MMAP
+  for (idx = 0; idx < 3; idx++)
+    {
+      if (mm[idx])
+        {
+          rv = apr_mmap_delete(mm[idx]);
+          if (rv != APR_SUCCESS)
+            {
+              return svn_error_createf(rv, NULL, "failed to delete mmap '%s'.",
+                                       baton.path[idx]);
+            }
+        }
+
+      rv = apr_file_close(file[idx]);
+      if (rv != APR_SUCCESS)
+        {
+          return svn_error_createf(rv, NULL, "failed to close file '%s'.",
+                                   baton.path[idx]);
+        }
+    }
+#endif
 
   return NULL;
 }
