@@ -1427,7 +1427,9 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
    be taken over and then cleared by this function.  WARNING: there is no
    mechanism that will protect locks that are still being used. */
 svn_error_t *
-svn_wc_cleanup (const char *path, apr_pool_t *pool);
+svn_wc_cleanup (const char *path,
+                svn_wc_adm_access_t *optional_adm_access,
+                apr_pool_t *pool);
 
 
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform

@@ -127,8 +127,14 @@ svn_error_t *svn_wc__ensure_directory (const char *path, apr_pool_t *pool);
    and creating a lock. The cleanup code uses this function, but stealing
    locks is not a good idea because the code cannot determine whether a
    lock is still in use. Try not to write any more code that requires this
-   feature. */
+   feature. 
+
+   PATH is the directory to lock, and the lock is returned in
+   *ADM_ACCESS.  ASSOCIATED can be another lock in which case the locks
+   will be in the same set, or it can be NULL.
+*/
 svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
+                                           svn_wc_adm_access_t *associated,
                                            const char *path, apr_pool_t *pool);
 
 

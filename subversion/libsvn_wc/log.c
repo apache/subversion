@@ -1282,9 +1282,9 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
 svn_error_t *
 svn_wc_cleanup (const char *path,
+                svn_wc_adm_access_t *optional_adm_access,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
   const char *log_path = svn_wc__adm_path (path, 0, pool,
@@ -1299,64 +1299,44 @@ svn_wc_cleanup (const char *path,
       (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
        "svn_wc_cleanup: %s is not a working copy directory", path);
 
+  /* Lock this working copy directory, or steal an existing lock */
+  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 
+                                         path, pool));
+
   /* Recurse on versioned subdirs first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *entry;
-      svn_boolean_t is_this_dir;
 
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       entry = val;
 
-#define KLEN (sizeof(SVN_WC_ENTRY_THIS_DIR) - 1)
-
-      is_this_dir = keylen == KLEN
-                    && memcmp(key, SVN_WC_ENTRY_THIS_DIR, KLEN) == 0;
-
-#undef KLEN
-
-      if ((entry->kind == svn_node_dir) && (! is_this_dir))
+      if ((entry->kind == svn_node_dir)
+          && (strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0))
         {
           /* Recurse */
           const char *subdir = svn_path_join (path, key, pool);
-          SVN_ERR (svn_wc_cleanup (subdir, pool));
+          SVN_ERR (svn_wc_cleanup (subdir, adm_access, pool));
         }
     }
 
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, path, pool));
-
   /* Is there a log?  If so, run it. */
-  err = svn_io_check_path (log_path, &kind, pool);
-  if (err)
-    {
-      if (! APR_STATUS_IS_ENOENT(err->apr_err))
-        return err;
-      else
-        svn_error_clear_all (err);
-    }
-  else if (kind == svn_node_file)
+  SVN_ERR (svn_io_check_path (log_path, &kind, pool));
+  if (kind == svn_node_file)
     SVN_ERR (svn_wc__run_log (adm_access, pool));
 
-  /* Cleanup the tmp area of the admin subdir.  The logs have been
-     run, so anything left here has no hope of being useful. */
-  SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
-
-  /* Remove the lock here, making sure that the administrative
-     directory still exists after running the log! */
+  /* Cleanup the tmp area of the admin subdir, if running the log has not
+     removed it!  The logs have been run, so anything left here has no hope
+     of being useful. */
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
-    {
-      err = svn_wc_adm_close (adm_access);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        svn_error_clear_all (err);
-      else if (err)
-        return err;
-    }
+    SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
+
+  if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }
