@@ -66,7 +66,7 @@ svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
   char statuschar;
   svn_revnum_t entry_rev;
 
-  switch (status->flag)
+  switch (status->text_status)
     {
     case svn_wc_status_none:
       statuschar = '-';

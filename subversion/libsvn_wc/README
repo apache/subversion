@@ -419,3 +419,20 @@ punting can become a rare event.  We should start out with a _simple_
 conflict-folding algorithm initially, though.
 
 
+Text and Property Components
+----------------------------
+
+A Subversion working copy keeps track of *two* forks per file, much
+like the way MacOS files have "data" forks and "resource" forks.  Each
+file under revision control has its "text" and "properties" tracked
+with different timestamps and different conflict (reject) files.  In
+this vein, each file's status-line has two columns which describe the
+file's state.
+
+Examples:
+
+  --  glub.c      --> glub.c is completely up-to-date.
+  U-  foo.c       --> foo.c's textual component was updated.
+  -M  bar.c       --> bar.c's properties have been locally modified
+  UC  baz.c       --> baz.c has had both components patched, but a
+                      local property change is creating a conflict.

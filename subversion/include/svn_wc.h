@@ -159,6 +159,16 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
 
 /*** Status. ***/
 
+enum svn_wc_status_kind
+{
+    svn_wc_status_none = 1,  /* Among other things, indicates not under vc. */
+    svn_wc_status_added,
+    svn_wc_status_deleted,
+    svn_wc_status_modified,
+    svn_wc_status_merged,
+    svn_wc_status_conflicted
+};
+
 /* Structure for holding the "status" of a working copy item. 
    The item's entry data is in ENTRY, augmented and possibly shadowed
    by the other fields.  ENTRY is null if this item is not under
@@ -168,15 +178,11 @@ typedef struct svn_wc_status_t
   svn_wc_entry_t *entry;     /* Can be NULL if not under vc. */
   svn_revnum_t repos_rev;    /* Likewise, can be SVN_INVALID_REVNUM */
   
-  /* Mutually exclusive states. One of these will always be set. */
-  enum {
-    svn_wc_status_none = 1,  /* Among other things, indicates not under vc. */
-    svn_wc_status_added,
-    svn_wc_status_deleted,
-    svn_wc_status_modified,
-    svn_wc_status_merged,
-    svn_wc_status_conflicted
-  } flag;
+  /* Mutually exclusive states. One of these will always be set for
+     the "textual" component and one will be set for the "property"
+     component.  */
+  enum svn_wc_status_kind text_status;
+  enum svn_wc_status_kind prop_status;
 
 } svn_wc_status_t;
 
