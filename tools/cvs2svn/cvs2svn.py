@@ -136,7 +136,11 @@ class CollectData(rcsparse.Sink):
   def get_branch_name(self, revision):
     """Return the name of the branch on which REVISION lies.
     REVISION is a non-branch revision number with an even number of,
-    components, for example '1.7.2.1' (never '1.7.2' nor '1.7.0.2')."""
+    components, for example '1.7.2.1' (never '1.7.2' nor '1.7.0.2').
+    For the convenience of callers, REVISION can also be a trunk
+    revision such as '1.2', in which case just return None."""
+    if trunk_rev.match(revision):
+      return None
     return self.branch_names.get(revision[:revision.rindex(".")])
 
   def add_branch_point(self, revision, branch_name):
@@ -266,7 +270,7 @@ class CollectData(rcsparse.Sink):
     branch_name = self.get_branch_name(revision)
 
     if self.default_branch:
-      default_branch_name = self.get_branch_name(self.default_branch)
+      # default_branch_name = self.get_branch_name(self.default_branch)
       # Name might be None, if it's an unlabeled branch.
       # todo: kff fooo: issue #1510 working here
 
