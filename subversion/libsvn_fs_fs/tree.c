@@ -2894,8 +2894,6 @@ fs_paths_changed (apr_hash_t **changed_paths_p,
   else
     return svn_fs_fs__paths_changed (changed_paths_p, root->fs, root->rev,
                                      frd->copyfrom_cache, pool);
-  
-  return SVN_NO_ERROR;
 }
 
 
