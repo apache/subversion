@@ -420,14 +420,9 @@ static svn_error_t *ra_svn_rev_prop(void *sess, svn_revnum_t rev,
 {
   svn_ra_svn_conn_t *conn = sess;
   apr_pool_t *pool = conn->pool;
-  apr_array_header_t *opt;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "rev-prop", "rc", rev, name));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "s", value));
-  else
-    *value = NULL;
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "[s]", value));
   return SVN_NO_ERROR;
 }
 
@@ -482,9 +477,8 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
   svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c[r][w][w]", path,
-                               rev, (props) ? "want-props" : NULL,
-                               (stream) ? "want-contents" : NULL));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c[r]bb", path,
+                               rev, (props != NULL), (stream != NULL)));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rl", &rev, &proplist));
 
   if (!SVN_IS_VALID_REVNUM(rev) && fetched_rev)
@@ -524,14 +518,13 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
   apr_array_header_t *proplist, *dirlist;
   int i;
   svn_ra_svn_item_t *elt;
-  const char *name, *kind, *has_props = NULL, *cdate = NULL, *cauthor = NULL;
-  apr_array_header_t *opt_has_props, *opt_cdate, *opt_cauthor;
+  const char *name, *kind, *cdate, *cauthor;
+  svn_boolean_t has_props;
   apr_uint64_t size;
   svn_dirent_t *dirent;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-dir", "c[r][w][w]", path,
-                               rev, (props) ? "want-props" : NULL,
-                               (dirents) ? "want-contents" : NULL));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-dir", "c[r]bb", path,
+                               rev, (props != NULL), (dirents != NULL)));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
                                        &dirlist));
 
@@ -552,19 +545,13 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
       if (elt->kind != LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Dirlist element not a list");
-      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnlrll",
-                                     &name, &kind, &size, &opt_has_props,
-                                     &crev, &opt_cdate, &opt_cauthor));
-      if (opt_has_props->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt_has_props, pool, "w", &has_props));
-      if (opt_cdate->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt_cdate, pool, "c", &cdate));
-      if (opt_cauthor->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt_cauthor, pool, "c", &cauthor));
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr[c][c]",
+                                     &name, &kind, &size, &has_props,
+                                     &crev, &cdate, &cauthor));
       dirent = apr_palloc(pool, sizeof(*dirent));
       SVN_ERR(interpret_kind(kind, pool, &dirent->kind));
       dirent->size = size;
-      dirent->has_props = (has_props && strcmp(has_props, "has-props") == 0);
+      dirent->has_props = has_props;
       dirent->created_rev = crev;
       SVN_ERR(svn_time_from_cstring(&dirent->time, cdate, pool));
       dirent->last_author = cauthor;
@@ -583,8 +570,7 @@ static svn_error_t *ra_svn_checkout(void *sess, svn_revnum_t rev,
   apr_pool_t *pool = conn->pool;
 
   /* Tell the server to start a checkout. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "checkout", "[r][w]", rev,
-                               (recurse) ? "recurse" : NULL));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "checkout", "[r]b", rev, recurse));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Let the server drive the checkout editor. */
@@ -606,8 +592,8 @@ static svn_error_t *ra_svn_update(void *sess,
     target = "";
 
   /* Tell the server we want to start an update. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "[r]c[w]", rev, target,
-                               (recurse) ? "recurse" : NULL));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "[r]cb", rev, target,
+                               recurse));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -632,8 +618,8 @@ static svn_error_t *ra_svn_switch(void *sess,
     target = "";
 
   /* Tell the server we want to start a switch. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "[r]c[w]c", rev, target,
-                               (recurse) ? "recurse" : NULL, switch_url));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "[r]cbc", rev, target,
+                               recurse, switch_url));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -657,8 +643,7 @@ static svn_error_t *ra_svn_status(void *sess,
     target = "";
 
   /* Tell the server we want to start a status operation. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "c[w]", target,
-                               (recurse) ? "recurse" : NULL));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb", target, recurse));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -683,9 +668,8 @@ static svn_error_t *ra_svn_diff(void *sess,
     target = "";
 
   /* Tell the server we want to start a diff. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "[r]c[w]c", rev, target,
-                               (recurse) ? "recurse" : NULL,
-                               versus_url));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "[r]cbc", rev, target,
+                               recurse, versus_url));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -707,7 +691,7 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   int i;
   const char *path, *author, *date, *message, *cpath, *action, *copy_path;
   svn_ra_svn_item_t *item, *elt;
-  apr_array_header_t *cplist, *opt, *opt_author, *opt_date, *opt_message;
+  apr_array_header_t *cplist;
   apr_hash_t *cphash;
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
@@ -737,16 +721,12 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   if (SVN_IS_VALID_REVNUM(start))
     SVN_ERR(svn_ra_svn_write_number(conn, pool, end));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  /* Parameter 4: "changed-paths" (optional) */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (discover_changed_paths)
-    SVN_ERR(svn_ra_svn_write_word(conn, pool, "changed-paths"));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
-  /* Parameter 5: "strict-node" (optional) */
-  SVN_ERR(svn_ra_svn_start_list(conn, pool));
-  if (strict_node_history)
-    SVN_ERR(svn_ra_svn_write_word(conn, pool, "strict-node"));
-  SVN_ERR(svn_ra_svn_end_list(conn, pool));
+  /* Parameter 4: changed-paths */
+  SVN_ERR(svn_ra_svn_write_word(conn, pool,
+                                discover_changed_paths ? "true" : "false"));
+  /* Parameter 5: strict-node */
+  SVN_ERR(svn_ra_svn_write_word(conn, pool,
+                                strict_node_history ? "true" : "false"));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
 
@@ -763,21 +743,9 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
       if (item->kind != LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Log entry not a list");
-      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lrlll", &cplist,
-                                     &rev, &opt_author, &opt_date,
-                                     &opt_message));
-      if (opt_author->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt_author, subpool, "c", &author));
-      else
-        author = NULL;
-      if (opt_date->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt_date, subpool, "c", &date));
-      else
-        date = NULL;
-      if (opt_message->nelts > 0)
-        SVN_ERR(svn_ra_svn_parse_tuple(opt_message, subpool, "c", &message));
-      else
-        message = NULL;
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr[c][c][c]",
+                                     &cplist, &rev, &author, &date,
+                                     &message));
       if (cplist->nelts > 0)
         {
           /* Interpret the changed-paths list. */
@@ -788,16 +756,9 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
               if (elt->kind != LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                         "Changed-path entry not a list");
-              SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "cwl",
-                                             &cpath, &action, &opt));
-              if (opt->nelts > 0)
-                SVN_ERR(svn_ra_svn_parse_tuple(opt, subpool, "cr", &copy_path,
-                                               &copy_rev));
-              else
-                {
-                  copy_path = NULL;
-                  copy_rev = SVN_INVALID_REVNUM;
-                }
+              SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "cw[cr]",
+                                             &cpath, &action, &copy_path,
+                                             &copy_rev));
               change = apr_palloc(subpool, sizeof(*change));
               change->action = *action;
               change->copyfrom_path = copy_path;

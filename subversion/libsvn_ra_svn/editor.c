@@ -371,15 +371,12 @@ static svn_error_t *ra_svn_handle_open_root(svn_ra_svn_conn_t *conn,
                                             void *baton)
 {
   ra_svn_driver_state_t *ds = baton;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
-  apr_array_header_t *opt;
+  svn_revnum_t rev;
   apr_pool_t *subpool;
   const char *token;
   void *root_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l", &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "[r]", &rev));
   subpool = svn_pool_create(conn->pool);
   CMD_ERR(ds->editor->open_root(ds->edit_baton, rev, subpool, &root_baton));
   token = make_token(ds, root_baton, 'd', subpool);
@@ -394,13 +391,10 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
 {
   ra_svn_driver_state_t *ds = baton;
   const char *path, *token;
-  apr_array_header_t *opt;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clc", &path, &opt, &token));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c[r]c", &path, &rev, &token));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
   CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -413,16 +407,14 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                           void *baton)
 {
   ra_svn_driver_state_t *ds = baton;
-  const char *path, *token, *child_token, *copy_path = NULL;
-  svn_revnum_t copy_rev = SVN_INVALID_REVNUM;
-  apr_array_header_t *opt;
+  const char *path, *token, *child_token, *copy_path;
+  svn_revnum_t copy_rev;
   ra_svn_token_entry_t *entry;
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccl", &path, &token, &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "cr", &copy_path, &copy_rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[cr]", &path, &token,
+                                 &copy_path, &copy_rev));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
   CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path, copy_rev,
@@ -439,15 +431,12 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
 {
   ra_svn_driver_state_t *ds = baton;
   const char *path, *token, *child_token;
-  apr_array_header_t *opt;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
   apr_pool_t *subpool;
   void *child_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccl", &path, &token, &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[r]", &path, &token, &rev));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
   CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
@@ -498,16 +487,14 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                            void *baton)
 {
   ra_svn_driver_state_t *ds = baton;
-  const char *path, *token, *file_token, *copy_path = NULL;
-  svn_revnum_t copy_rev = SVN_INVALID_REVNUM;
-  apr_array_header_t *opt;
+  const char *path, *token, *file_token, *copy_path;
+  svn_revnum_t copy_rev;
   ra_svn_token_entry_t *entry;
   apr_pool_t *subpool;
   void *file_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccl", &path, &token, &opt));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "cr", &copy_path, &copy_rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[cr]", &path, &token,
+                                 &copy_path, &copy_rev));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
 
   /* File may outlive parent directory, so use ds->pool here. */
@@ -526,15 +513,12 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
 {
   ra_svn_driver_state_t *ds = baton;
   const char *path, *token, *file_token;
-  apr_array_header_t *opt;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  svn_revnum_t rev;
   ra_svn_token_entry_t *entry;
   apr_pool_t *subpool;
   void *file_baton;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccl", &path, &token, &rev));
-  if (opt->nelts > 0)
-    SVN_ERR(svn_ra_svn_parse_tuple(opt, pool, "r", &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc[r]", &path, &token, &rev));
   CMD_ERR(lookup_token(ds, token, &entry, pool));
 
   /* File may outlive parent directory, so use ds->pool here. */
