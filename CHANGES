@@ -1,4 +1,4 @@
-Version 0.23.0 (released 16 May 2003, revision 5960, branches/release-0.23.0)
+Version 0.23.0 (released 16 May 2003, revision 5962, branches/release-0.23.0)
 
  User-visible changes:
  * 'svn cat' now performs keyword expansion (#399)
@@ -11,15 +11,15 @@ Version 0.23.0 (released 16 May 2003, revision 5960, branches/release-0.23.0)
  * updates now receive checksums like checkouts (#1101)
  * 'svn revert dir' now resets property timestamp (#1163)
  * fix instances of client showing help instead of error message (#1265)
- * fix incorrect path in 'now a working copy' error messages (#1291)
+ * fix incorrect path in 'not a working copy' error messages (#1291)
  * fix cvs2svn.py file added on branch problem (#1302)
- * fix misc vc-svn.el problems (#1257, #1268)
- * fix misc psvn problems (#1270)
- * misc Win32 build fixes
+ * fix various vc-svn.el problems (#1257, #1268)
+ * fix various psvn problems (#1270)
+ * various Win32 build fixes
 
  Developer-visible changes:
- * fix misc gcc 3.3 warnings (#1031)
- * misc memory errors/leaks
+ * fix various gcc 3.3 warnings (#1031)
+ * fix various memory errors/leaks
  * remove java/jni bindings
 
 
