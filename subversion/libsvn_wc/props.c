@@ -1069,7 +1069,7 @@ svn_wc_prop_set2 (const char *name,
                   const svn_string_t *value,
                   const char *path,
                   svn_wc_adm_access_t *adm_access,
-                  svn_boolean_t force,
+                  svn_boolean_t skip_checks,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1092,20 +1092,20 @@ svn_wc_prop_set2 (const char *name,
   /* Else, handle a regular property: */
 
   /* Setting an inappropriate property is not allowed (unless
-     overridden by 'force', in some circumstances).  Deleting an
+     overridden by 'skip_checks', in some circumstances).  Deleting an
      inappropriate property is allowed, however, since older clients
      allowed (and other clients possibly still allow) setting it in
      the first place. */
   if (value)
     {
       SVN_ERR (validate_prop_against_node_kind (name, path, kind, pool));
-      if (!force && (strcmp (name, SVN_PROP_EOL_STYLE) == 0))
+      if (!skip_checks && (strcmp (name, SVN_PROP_EOL_STYLE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
           SVN_ERR (validate_eol_prop_against_file (path, adm_access, pool));
         }
-      else if (!force && (strcmp (name, SVN_PROP_MIME_TYPE) == 0))
+      else if (!skip_checks && (strcmp (name, SVN_PROP_MIME_TYPE) == 0))
         {
           new_value = svn_stringbuf_create_from_string (value, pool);
           svn_stringbuf_strip_whitespace (new_value);
@@ -1122,7 +1122,7 @@ svn_wc_prop_set2 (const char *name,
             }
 
           /* Make sure this is a valid externals property.  Do not
-             allow 'force' to override, as there is no circumstance in
+             allow 'skip_checks' to override, as there is no circumstance in
              which this is proper (because there is no circumstance in
              which Subversion can handle it). */
           if (strcmp (name, SVN_PROP_EXTERNALS) == 0)

@@ -996,8 +996,9 @@ svn_client_blame (const char *path_or_url,
  * If @a no_diff_deleted is true, then no diff output will be
  * generated on deleted files.
  *
- * Diff output will not be generated for binary files, unless @a force is true,
- * in which case diffs will be shown regardless of the content types.
+ * Diff output will not be generated for binary files, unless @a
+ * ignore_content_type is true, in which case diffs will be shown
+ * regardless of the content types.
  * 
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass 
  * additional command line options to the diff processes invoked to compare
@@ -1014,7 +1015,7 @@ svn_error_t *svn_client_diff2 (const apr_array_header_t *diff_options,
                                svn_boolean_t recurse,
                                svn_boolean_t ignore_ancestry,
                                svn_boolean_t no_diff_deleted,
-                               svn_boolean_t force,
+                               svn_boolean_t ignore_content_type,
                                apr_file_t *outfile,
                                apr_file_t *errfile,
                                svn_client_ctx_t *ctx,
@@ -1057,7 +1058,7 @@ svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
                                    svn_boolean_t recurse,
                                    svn_boolean_t ignore_ancestry,
                                    svn_boolean_t no_diff_deleted,
-                                   svn_boolean_t force,
+                                   svn_boolean_t ignore_content_type,
                                    apr_file_t *outfile,
                                    apr_file_t *errfile,
                                    svn_client_ctx_t *ctx,
@@ -1368,12 +1369,12 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value is UTF8-encoded and uses LF line-endings.
  *
- * If @a force is true, do no validity checking.  But if @a force is
- * false, and @a propname is not a valid property for @a target,
- * return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the property
- * is not appropriate for @a target), or @c SVN_ERR_BAD_MIME_TYPE (if
- * @a propname is "svn:mime-type", but @a propval is not a valid
- * mime-type).
+ * If @a skip_checks is true, do no validity checking.  But if @a
+ * skip_checks is false, and @a propname is not a valid property for @a
+ * target, return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the
+ * property is not appropriate for @a target), or @c
+ * SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
+ * propval is not a valid mime-type).
  *
  * If @a ctx->cancel_func is non-null, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
@@ -1385,7 +1386,7 @@ svn_client_propset2 (const char *propname,
                      const svn_string_t *propval,
                      const char *target,
                      svn_boolean_t recurse,
-                     svn_boolean_t force,
+                     svn_boolean_t skip_checks,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
@@ -1610,7 +1611,7 @@ svn_client_revprop_list (apr_hash_t **props,
  *
  * @a ctx is a context used for authentication in the repository case.
  *
- * @a force if true will cause the export to overwrite files or directories.
+ * @a overwrite if true will cause the export to overwrite files or directories.
  *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
@@ -1634,7 +1635,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const char *to,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
-                    svn_boolean_t force, 
+                    svn_boolean_t overwrite, 
                     svn_boolean_t ignore_externals,
                     svn_boolean_t recurse,
                     const char *native_eol,
@@ -1783,10 +1784,10 @@ svn_client_cat (svn_stream_t *out,
  * @a targets must be in the same repository.
  *
  * If a target is already locked in the repository, no lock will be
- * acquired unless @a force is TRUE, in which case the locks are stolen.
- * @a comment, if non-null, is an xml-escapable description stored with each
- * lock in the repository.  Each acquired lock will be stored in the working
- * copy if the targets are WC paths.
+ * acquired unless @a steal_lock is TRUE, in which case the locks are
+ * stolen.  @a comment, if non-null, is an xml-escapable description
+ * stored with each lock in the repository.  Each acquired lock will
+ * be stored in the working copy if the targets are WC paths.
  *
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
  * whether it was locked.  An action of @c svn_wc_notify_state_locked
@@ -1801,7 +1802,7 @@ svn_client_cat (svn_stream_t *out,
 svn_error_t *
 svn_client_lock (const apr_array_header_t *targets,
                  const char *comment,
-                 svn_boolean_t force,
+                 svn_boolean_t steal_lock,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
@@ -1811,18 +1812,18 @@ svn_client_lock (const apr_array_header_t *targets,
  * <tt>const char *</tt> paths - either all working copy paths or all URLs.
  * All @a targets must be in the same reposotiry.
  *
- * If the targets are WC paths, and @a force is false, the working
+ * If the targets are WC paths, and @a break_lock is false, the working
  * copy must contain a locks for each target.
  * If this is not the case, or the working copy lock doesn't match the
  * lock token in the repository, an error will be signaled.
  *
- * If the targets are URLs, the locks may be broken even if @a force
+ * If the targets are URLs, the locks may be broken even if @a break_lock
  * is false, but only if the lock owner is the same as the
  * authenticated user.
  *
- * If @a force is true, the locks will be broken in the repository.  In
- * both cases, the locks, if any, will be removed from the working
- * copy if the targets are WC paths.
+ * If @a break_lock is true, the locks will be broken in the
+ * repository.  In both cases, the locks, if any, will be removed from
+ * the working copy if the targets are WC paths.
  *
  * The notification functions in @a ctx will be called for each
  * target.  If the target was successfully unlocked, @c
@@ -1835,7 +1836,7 @@ svn_client_lock (const apr_array_header_t *targets,
  */
 svn_error_t *
 svn_client_unlock (const apr_array_header_t *targets,
-                   svn_boolean_t force,
+                   svn_boolean_t break_lock,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 

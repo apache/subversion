@@ -749,7 +749,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const char *to,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
-                    svn_boolean_t force, 
+                    svn_boolean_t overwrite, 
                     svn_boolean_t ignore_externals,
                     svn_boolean_t recurse,
                     const char *native_eol,
@@ -777,7 +777,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
       eb->root_path = to;
       eb->root_url = url;
-      eb->force = force;
+      eb->force = overwrite;
       eb->target_revision = &edit_revision;
       eb->notify_func = ctx->notify_func2;
       eb->notify_baton = ctx->notify_baton2;
@@ -881,7 +881,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
           SVN_ERR (svn_io_check_path (to, &kind, pool));
           if (kind == svn_node_none)
             SVN_ERR (open_root_internal
-                     (to, force, ctx->notify_func2, ctx->notify_baton2, pool));
+                     (to, overwrite, ctx->notify_func2, 
+                      ctx->notify_baton2, pool));
 
           if (! ignore_externals && recurse)
             SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
@@ -900,7 +901,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
         }
       
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, &working_revision, force, 
+      SVN_ERR (copy_versioned_files (from, to, &working_revision, overwrite, 
                                      recurse, native_eol, ctx, pool));
     }
   

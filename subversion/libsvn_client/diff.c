@@ -2266,7 +2266,7 @@ svn_client_diff2 (const apr_array_header_t *options,
                   svn_boolean_t recurse,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t no_diff_deleted,
-                  svn_boolean_t force,
+                  svn_boolean_t ignore_content_type,
                   apr_file_t *outfile,
                   apr_file_t *errfile,
                   svn_client_ctx_t *ctx,
@@ -2295,7 +2295,7 @@ svn_client_diff2 (const apr_array_header_t *options,
 
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
-  diff_cmd_baton.force_binary = force;
+  diff_cmd_baton.force_binary = ignore_content_type;
 
   return do_diff (options,
                   path1, revision1,
@@ -2335,7 +2335,7 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
                       svn_boolean_t recurse,
                       svn_boolean_t ignore_ancestry,
                       svn_boolean_t no_diff_deleted,
-                      svn_boolean_t force,
+                      svn_boolean_t ignore_content_type,
                       apr_file_t *outfile,
                       apr_file_t *errfile,
                       svn_client_ctx_t *ctx,
@@ -2364,7 +2364,7 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
 
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
-  diff_cmd_baton.force_binary = force;
+  diff_cmd_baton.force_binary = ignore_content_type;
 
   return do_diff_peg (options,
                       path, peg_revision,
