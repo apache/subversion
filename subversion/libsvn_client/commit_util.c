@@ -136,7 +136,8 @@ harvest_committables (apr_hash_t *committables,
     return svn_error_create 
       (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool, path);
 
-  /* If this is a directory ... */
+  /* Get a fully populated entry for PATH if we can, and check for
+     conflicts. If this is a directory ... */
   if (entry->kind == svn_node_dir)
     { 
       /* ... then try to read its own entries file so we have a full
@@ -149,13 +150,24 @@ harvest_committables (apr_hash_t *committables,
       if ((entries) 
           && ((e = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
                                  APR_HASH_KEY_STRING))))
-        entry = e;
+        {
+          entry = e;
+          SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, path, 
+                                        entry, subpool));
+        }
+      else
+        {
+          SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, p_path, 
+                                        entry, subpool));
+        }
+    }
+  else
+    {
+      /* If not a directory, use the parent path. */
+      SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, p_path, 
+                                    entry, subpool));
     }
 
-  /* Test for a state of conflict, returning an error if an unresolved
-     conflict exists for this item. */
-  SVN_ERR (svn_wc_conflicted_p (&tconflict, &pconflict, p_path, 
-                                entry, subpool));
   if (tconflict || pconflict)
     return svn_error_createf (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
                               "Aborting commit: '%s' remains in conflict.",
