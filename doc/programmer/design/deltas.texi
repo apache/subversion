@@ -538,10 +538,10 @@ in-line @code{<text-delta>}:
 
 @example
 <tree-delta>
-  <replace name='dir1'>
+  <open name='dir1'>
     <directory>
       <tree-delta>
-        <replace name='dir2'>
+        <open name='dir2'>
           <directory ancestor='/dir1/dir3'>
             <tree-delta>
               <add name='file3'>
@@ -551,7 +551,7 @@ in-line @code{<text-delta>}:
               </add>
             </tree-delta>
           </directory>
-        </replace>
+        </open>
         <delete name='dir3'/>
         <add name='dir4'>
           <directory ancestor='/dir1/dir2'>
@@ -562,7 +562,7 @@ in-line @code{<text-delta>}:
         </add>
       </tree-delta>
     </directory>
-  </replace>
+  </open>
 </tree-delta>
 @end example
 
@@ -602,13 +602,13 @@ The repository hands an "editor" to the client.
 @item
 The client begins by calling
 
-    @code{root_baton = editor->replace_root();}
+    @code{root_baton = editor->open_root();}
 
 The client now has an opaque object, @dfn{root_baton}, which represents
 the root of the repository's filesystem.
 
 @item
-   @code{dir1_baton = editor->replace_dir("dir1", root_baton);}
+   @code{dir1_baton = editor->open_dir("dir1", root_baton);}
 
 Notice that @emph{root_baton} gives the client free license to make any
 changes it wants in the repository's root directory -- until, of course,
@@ -619,7 +619,7 @@ client now has a new opaque data structure that can be used to change
 @file{dir1}.
 
 @item
-  @code{dir2_baton = editor->replace_dir("dir2", "/dir1/dir3", dir1_baton);}
+  @code{dir2_baton = editor->open_dir("dir2", "/dir1/dir3", dir1_baton);}
 
 The @emph{dir1_baton} is now used to replace @file{dir2} with a
 directory whose ancestor is @file{/dir1/dir3}.

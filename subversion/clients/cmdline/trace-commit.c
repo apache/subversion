@@ -66,7 +66,7 @@ struct file_baton
 
 
 static svn_error_t *
-replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
+open_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *rb = apr_pcalloc (eb->pool, sizeof (*rb));
@@ -121,10 +121,10 @@ add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   struct dir_baton *parent_d = parent_baton;
   struct dir_baton *child_d
@@ -138,7 +138,7 @@ replace_directory (svn_stringbuf_t *name,
 
   *child_baton = child_d;
 
-  /* Don't print anything for a directory replace -- this event is
+  /* Don't print anything for a directory open -- this event is
      implied by printing events beneath it. */
 
   return SVN_NO_ERROR;
@@ -227,10 +227,10 @@ add_file (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (svn_stringbuf_t *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
   struct dir_baton *parent_d = parent_baton;
   struct file_baton *child_fb
@@ -298,14 +298,14 @@ svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
   eb->initial_path = svn_stringbuf_dup (initial_path, eb->pool);
 
   /* Set up the editor. */
-  trace_editor->replace_root = replace_root;
+  trace_editor->open_root = open_root;
   trace_editor->delete_entry = delete_entry;
   trace_editor->add_directory = add_directory;
-  trace_editor->replace_directory = replace_directory;
+  trace_editor->open_directory = open_directory;
   trace_editor->change_dir_prop = change_dir_prop;
   trace_editor->close_directory = close_directory;
   trace_editor->add_file = add_file;
-  trace_editor->replace_file = replace_file;
+  trace_editor->open_file = open_file;
   trace_editor->apply_textdelta = apply_textdelta;
   trace_editor->change_file_prop = change_file_prop;
   trace_editor->close_file = close_file;

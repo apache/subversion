@@ -50,7 +50,7 @@
 enum elemtype {
   elem_delta_pkg,
   elem_add,
-  elem_replace,
+  elem_open,
   elem_dir,
   elem_dir_prop_delta,
   elem_tree_delta,
@@ -76,9 +76,9 @@ struct edit_baton
 struct dir_baton
 {
   struct edit_baton *edit_baton;
-  enum elemtype addreplace;     /* elem_add or elem_replace, or
-                                   elem_delta_pkg for the root
-                                   directory.  */
+  enum elemtype addopen;     /* elem_add or elem_open, or
+                                elem_delta_pkg for the root
+                                directory.  */
   apr_pool_t *pool;
 };
 
@@ -86,7 +86,7 @@ struct dir_baton
 struct file_baton
 {
   struct edit_baton *edit_baton;
-  enum elemtype addreplace;
+  enum elemtype addopen;
   int txdelta_id;               /* ID of deferred text delta;
                                    0 means we're still working on the file,
                                    -1 means we already saw a text delta.  */
@@ -96,26 +96,26 @@ struct file_baton
 
 
 static struct dir_baton *
-make_dir_baton (struct edit_baton *eb, enum elemtype addreplace)
+make_dir_baton (struct edit_baton *eb, enum elemtype addopen)
 {
   apr_pool_t *subpool = svn_pool_create (eb->pool);
   struct dir_baton *db = apr_palloc (subpool, sizeof (*db));
 
   db->edit_baton = eb;
-  db->addreplace = addreplace;
+  db->addopen = addopen;
   db->pool = subpool;
   return db;
 }
 
 
 static struct file_baton *
-make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
+make_file_baton (struct edit_baton *eb, enum elemtype addopen)
 {
   apr_pool_t *subpool = svn_pool_create (eb->pool);
   struct file_baton *fb = apr_palloc (subpool, sizeof (*fb));
 
   fb->edit_baton = eb;
-  fb->addreplace = addreplace;
+  fb->addopen = addopen;
   fb->txdelta_id = 0;
   fb->closed = 0;
   fb->pool = subpool;
@@ -134,18 +134,18 @@ make_file_baton (struct edit_baton *eb, enum elemtype addreplace)
    elements we care about looks like:
   
         dir -> prop_delta
-            -> tree_delta -> add/replace -> file -> prop_delta
+            -> tree_delta -> add/open -> file -> prop_delta
 
-   We cannot be in an add/replace element at the end of a call, so
-   add/replace and file are treated as a unit by this function.  Note
-   that although there is no replace or dir element corresponding to
+   We cannot be in an add/open element at the end of a call, so
+   add/open and file are treated as a unit by this function.  Note
+   that although there is no open or dir element corresponding to
    the root directory (the root directory's tree-delta and/or
    prop-delta elements live directly inside the delta-pkg element), we
    pretend that there is for the sake of regularity.
 
    This function will "unwind" arbitrarily within that little tree,
    but will only "wind" from dir to tree_delta or prop_delta or from
-   file to prop_delta.  Winding through add/replace/file would require
+   file to prop_delta.  Winding through add/open/file would require
    extra information.
 
    ELEM specifies the element type we want to get to, with prop_delta
@@ -186,8 +186,8 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
                                  SVN_DELTA__XML_ATTR_ID, idstr, NULL);
         }
       svn_xml_make_close_tag (&str, pool, SVN_DELTA__XML_TAG_FILE);
-      outertag = (fb->addreplace == elem_add) ? 
-        SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_REPLACE;
+      outertag = (fb->addopen == elem_add) ? 
+        SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_OPEN;
       svn_xml_make_close_tag (&str, pool, outertag);
       fb->closed = 1;
       eb->curfile = NULL;
@@ -232,17 +232,17 @@ get_to_elem (struct edit_baton *eb, enum elemtype elem, apr_pool_t *pool)
 /* Output XML for adding or replacing a file or directory.  Also set
    EB->elem to the value of DIRFILE for consistency.  */
 static svn_error_t *
-output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
-                   enum elemtype dirfile, svn_stringbuf_t *name,
-                   svn_stringbuf_t *base_path, svn_revnum_t base_revision)
+output_addopen (struct edit_baton *eb, enum elemtype addopen,
+                enum elemtype dirfile, svn_stringbuf_t *name,
+                svn_stringbuf_t *base_path, svn_revnum_t base_revision)
 {
   svn_stringbuf_t *str;
   apr_pool_t *pool = svn_pool_create (eb->pool);
   svn_error_t *err;
   apr_size_t len;
   apr_hash_t *att;
-  const char *outertag = (addreplace == elem_add) ? 
-    SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_REPLACE;
+  const char *outertag = (addopen == elem_add) ? 
+    SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_OPEN;
   const char *innertag = (dirfile == elem_dir) ? 
     SVN_DELTA__XML_TAG_DIR : SVN_DELTA__XML_TAG_FILE;
 
@@ -251,7 +251,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
                          SVN_DELTA__XML_ATTR_NAME, name, NULL);
 
   att = apr_hash_make (pool);
-  if ((addreplace == elem_add) && (base_path != NULL))
+  if ((addopen == elem_add) && (base_path != NULL))
   {
     apr_hash_set (att, SVN_DELTA__XML_ATTR_COPYFROM_PATH, 
                   strlen(SVN_DELTA__XML_ATTR_COPYFROM_PATH), base_path);
@@ -260,7 +260,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
   {
     svn_stringbuf_t *buf = svn_stringbuf_createf (pool, "%lu", 
                                            (unsigned long) base_revision);
-    if (addreplace == elem_add)
+    if (addopen == elem_add)
       {
         apr_hash_set (att, SVN_DELTA__XML_ATTR_COPYFROM_REV, 
                       strlen(SVN_DELTA__XML_ATTR_COPYFROM_REV), buf);
@@ -321,14 +321,14 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
 
   /* Stick that target revision in the edit baton to be used when
-     we call replace_root() */
+     we call open_root() */
   eb->target_revision = target_revision;
   return SVN_NO_ERROR;
 }
  
 
 static svn_error_t *
-replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
+open_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
   apr_pool_t *pool = svn_pool_create (eb->pool);
@@ -405,23 +405,23 @@ add_directory (svn_stringbuf_t *name,
   struct edit_baton *eb = db->edit_baton;
 
   *child_baton = make_dir_baton (eb, elem_add);
-  return output_addreplace (eb, elem_add, elem_dir, name,
-                            copyfrom_path, copyfrom_revision);
+  return output_addopen (eb, elem_add, elem_dir, name,
+                         copyfrom_path, copyfrom_revision);
 }
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
-  *child_baton = make_dir_baton (eb, elem_replace);
-  return output_addreplace (eb, elem_replace, elem_dir, name,
-                            NULL, base_revision);
+  *child_baton = make_dir_baton (eb, elem_open);
+  return output_addopen (eb, elem_open, elem_dir, name,
+                         NULL, base_revision);
 }
 
 
@@ -447,11 +447,11 @@ close_directory (void *dir_baton)
   apr_size_t len;
 
   str = get_to_elem (eb, elem_dir, db->pool);
-  if (db->addreplace != elem_delta_pkg)
+  if (db->addopen != elem_delta_pkg)
     {
       /* Not the root directory.  */
-      const char *outertag = (db->addreplace == elem_add) ? 
-        SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_REPLACE;
+      const char *outertag = (db->addopen == elem_add) ? 
+        SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_OPEN;
       svn_xml_make_close_tag (&str, db->pool, SVN_DELTA__XML_TAG_DIR);
       svn_xml_make_close_tag (&str, db->pool, outertag);
       eb->elem = elem_tree_delta;
@@ -476,8 +476,8 @@ add_file (svn_stringbuf_t *name,
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
-  SVN_ERR(output_addreplace (eb, elem_add, elem_file, name,
-                             copyfrom_path, copyfrom_revision));
+  SVN_ERR(output_addopen (eb, elem_add, elem_file, name,
+                          copyfrom_path, copyfrom_revision));
   *file_baton = make_file_baton (eb, elem_add);
   eb->curfile = *file_baton;
   return SVN_NO_ERROR;
@@ -485,17 +485,17 @@ add_file (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (svn_stringbuf_t *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
-  SVN_ERR(output_addreplace (eb, elem_replace, elem_file, name,
-                             NULL, base_revision));
-  *file_baton = make_file_baton (eb, elem_replace);
+  SVN_ERR(output_addopen (eb, elem_open, elem_file, name,
+                          NULL, base_revision));
+  *file_baton = make_file_baton (eb, elem_open);
   eb->curfile = *file_baton;
   return SVN_NO_ERROR;
 }
@@ -615,8 +615,8 @@ close_file (void *file_baton)
   /* Close the file element if we are still working on it.  */
   if (!fb->closed)
     {
-      const char *outertag = (fb->addreplace == elem_add) ? 
-        SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_REPLACE;
+      const char *outertag = (fb->addopen == elem_add) ? 
+        SVN_DELTA__XML_TAG_ADD : SVN_DELTA__XML_TAG_OPEN;
       str = get_to_elem (eb, elem_file, fb->pool);
       svn_xml_make_close_tag (&str, fb->pool, SVN_DELTA__XML_TAG_FILE);
       svn_xml_make_close_tag (&str, fb->pool, outertag);
@@ -669,14 +669,14 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
-  tree_editor->replace_root = replace_root;
+  tree_editor->open_root = open_root;
   tree_editor->delete_entry = delete_entry;
   tree_editor->add_directory = add_directory;
-  tree_editor->replace_directory = replace_directory;
+  tree_editor->open_directory = open_directory;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_directory = close_directory;
   tree_editor->add_file = add_file;
-  tree_editor->replace_file = replace_file;
+  tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;

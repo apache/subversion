@@ -95,9 +95,9 @@ set_target_revision (void *edit_baton,
 }
 
 static svn_error_t *
-replace_root (void *edit_baton,
-              svn_revnum_t base_revision,
-              void **root_baton)
+open_root (void *edit_baton,
+           svn_revnum_t base_revision,
+           void **root_baton)
 {
   VALUE self = (VALUE) edit_baton;
   int error;
@@ -106,7 +106,7 @@ replace_root (void *edit_baton,
   *root_baton = edit_baton;
 
   args[0] = self;
-  args[1] = (VALUE) "replaceRoot";
+  args[1] = (VALUE) "openRoot";
   args[2] = LONG2NUM (base_revision);
   
   rb_protect (svn_ruby_protect_call1, (VALUE) args, &error);
@@ -116,7 +116,7 @@ replace_root (void *edit_baton,
       svn_ruby_delta_edit_t *editor;
 
       Data_Get_Struct (self, svn_ruby_delta_edit_t, editor);
-      return svn_ruby_error ("replaceRoot", editor->pool);
+      return svn_ruby_error ("openRoot", editor->pool);
     }
   return SVN_NO_ERROR;
 }
@@ -185,10 +185,10 @@ add_directory (svn_stringbuf_t *name,
 }
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   VALUE self = (VALUE) parent_baton;
   int error;
@@ -197,7 +197,7 @@ replace_directory (svn_stringbuf_t *name,
   *child_baton = parent_baton;
 
   args[0] = self;
-  args[1] = (VALUE) "replaceDirectory";
+  args[1] = (VALUE) "openDirectory";
   args[2] = rb_str_new (name->data, name->len);
   args[3] = LONG2NUM (base_revision);
   
@@ -208,7 +208,7 @@ replace_directory (svn_stringbuf_t *name,
       svn_ruby_delta_edit_t *editor;
 
       Data_Get_Struct (self, svn_ruby_delta_edit_t, editor);
-      return svn_ruby_error ("replaceDirectory", editor->pool);
+      return svn_ruby_error ("openDirectory", editor->pool);
     }
 
   return SVN_NO_ERROR;
@@ -303,10 +303,10 @@ add_file (svn_stringbuf_t *name,
 }
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (svn_stringbuf_t *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
   VALUE self = (VALUE) parent_baton;
   int error;
@@ -315,7 +315,7 @@ replace_file (svn_stringbuf_t *name,
   *file_baton = parent_baton;
 
   args[0] = self;
-  args[1] = (VALUE) "replaceFile";
+  args[1] = (VALUE) "openFile";
   args[2] = rb_str_new (name->data, name->len);
   args[3] = LONG2NUM (base_revision);
   
@@ -326,7 +326,7 @@ replace_file (svn_stringbuf_t *name,
       svn_ruby_delta_edit_t *editor;
 
       Data_Get_Struct (self, svn_ruby_delta_edit_t, editor);
-      return svn_ruby_error ("replaceFile", editor->pool);
+      return svn_ruby_error ("openFile", editor->pool);
     }
 
   return SVN_NO_ERROR;
@@ -470,14 +470,14 @@ abort_edit (void *edit_baton)
 static const svn_delta_edit_fns_t rb_editor =
 {
   set_target_revision,
-  replace_root,
+  open_root,
   delete_entry,
   add_directory,
-  replace_directory,
+  open_directory,
   change_dir_prop,
   close_directory,
   add_file,
-  replace_file,
+  open_file,
   apply_textdelta,
   change_file_prop,
   close_file,
@@ -520,7 +520,7 @@ em_set_target_revision (VALUE self, VALUE aRevision)
 }
 
 static VALUE
-em_replace_root (VALUE self, VALUE aRevision)
+em_open_root (VALUE self, VALUE aRevision)
 {
   rb_notimplement ();
   return Qnil;
@@ -542,7 +542,7 @@ em_add_directory (VALUE self, VALUE copyfromPath, VALUE copyfromRevision)
 }
 
 static VALUE
-em_replace_directory (VALUE self, VALUE aName, VALUE aRevision)
+em_open_directory (VALUE self, VALUE aName, VALUE aRevision)
 {
   rb_notimplement ();
   return Qnil;
@@ -570,7 +570,7 @@ em_add_file (VALUE self, VALUE copyfromPath, VALUE coypfromRevision)
 }
 
 static VALUE
-em_replace_file (VALUE self, VALUE aName, VALUE aRevision)
+em_open_file (VALUE self, VALUE aName, VALUE aRevision)
 {
   rb_notimplement ();
   return Qnil;
@@ -662,7 +662,7 @@ ce_set_target_revision (VALUE self, VALUE aRevision)
 }
 
 static VALUE
-ce_replace_root (VALUE self, VALUE aRevision)
+ce_open_root (VALUE self, VALUE aRevision)
 {
   svn_ruby_commit_editor_t *ce;
   baton_list *dir_baton;
@@ -674,7 +674,7 @@ ce_replace_root (VALUE self, VALUE aRevision)
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
   dir_baton = apr_pcalloc (ce->pool, sizeof (*dir_baton));
 
-  err = ce->editor->replace_root (ce->edit_baton, revision, &dir_baton->baton);
+  err = ce->editor->open_root (ce->edit_baton, revision, &dir_baton->baton);
   if (err)
     svn_ruby_raise (err);
   ce->dir_baton = dir_baton;
@@ -729,7 +729,8 @@ ce_add_directory (int argc, VALUE *argv, VALUE self)
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
   if (ce->dir_baton == NULL)
     rb_raise (rb_eRuntimeError,
-              "replaceRoot, replaceDirectory or addDirectory must be called beforehand");
+              "openRoot, openDirectory or addDirectory "
+              "must be called beforehand");
   Check_Type (aName, T_STRING);
   if (aPath != Qnil)
     Check_Type (aPath, T_STRING);
@@ -756,7 +757,7 @@ ce_add_directory (int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
-ce_replace_directory (VALUE self, VALUE aName, VALUE aRevision)
+ce_open_directory (VALUE self, VALUE aName, VALUE aRevision)
 {
   svn_ruby_commit_editor_t *ce;
   svn_error_t *err;
@@ -774,7 +775,7 @@ ce_replace_directory (VALUE self, VALUE aName, VALUE aRevision)
   name = svn_stringbuf_create (StringValuePtr (aName), pool);
 
   dir_baton = apr_pcalloc (ce->pool, sizeof (*dir_baton));
-  err = ce->editor->replace_directory (name, ce->dir_baton->baton,
+  err = ce->editor->open_directory (name, ce->dir_baton->baton,
                                        base_revision,
                                        &dir_baton->baton);
   if (err)
@@ -801,7 +802,8 @@ ce_change_dir_prop (VALUE self, VALUE aName, VALUE aValue)
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
   if (ce->dir_baton == NULL)
     rb_raise (rb_eRuntimeError,
-              "replaceRoot, replaceDirectory or addDirectory must be called beforehand");
+              "openRoot, openDirectory or addDirectory "
+              "must be called beforehand");
 
   Check_Type (aName, T_STRING);
   Check_Type (aValue, T_STRING);
@@ -864,7 +866,8 @@ ce_add_file (int argc, VALUE *argv, VALUE self)
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
   if (ce->dir_baton == NULL)
     rb_raise (rb_eRuntimeError,
-              "replaceRoot, replaceDirectory or addDirectory must be called beforehand");
+              "openRoot, openDirectory or addDirectory "
+              "must be called beforehand");
   Check_Type (aName, T_STRING);
   if (aPath != Qnil)
     Check_Type (aPath, T_STRING);
@@ -891,7 +894,7 @@ ce_add_file (int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
-ce_replace_file (VALUE self, VALUE aName, VALUE aRevision)
+ce_open_file (VALUE self, VALUE aName, VALUE aRevision)
 {
   svn_ruby_commit_editor_t *ce;
   svn_error_t *err;
@@ -909,9 +912,9 @@ ce_replace_file (VALUE self, VALUE aName, VALUE aRevision)
   name = svn_stringbuf_create (StringValuePtr (aName), pool);
 
   file_baton = apr_pcalloc (ce->pool, sizeof (*file_baton));
-  err = ce->editor->replace_file (name, ce->dir_baton->baton,
-                                  base_revision,
-                                  &file_baton->baton);
+  err = ce->editor->open_file (name, ce->dir_baton->baton,
+                               base_revision,
+                               &file_baton->baton);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -936,14 +939,15 @@ ce_apply_textdelta (VALUE self)
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
   if (ce->file_baton == NULL)
     rb_raise (rb_eRuntimeError,
-              "replaceFile or addFile must be called beforehand");
+              "openFile or addFile must be called beforehand");
   err = ce->editor->apply_textdelta (ce->file_baton->baton,
                                      &handler, &handler_baton);
   if (err)
     svn_ruby_raise (err);
 
   /* #### Fix unused pool creation. */
-  return svn_ruby_txdelta_new (handler, handler_baton, svn_pool_create (ce->pool));
+  return svn_ruby_txdelta_new (handler, handler_baton,
+                               svn_pool_create (ce->pool));
 }
 
 static VALUE
@@ -958,7 +962,7 @@ ce_change_file_prop (VALUE self, VALUE aName, VALUE aValue)
   Data_Get_Struct (self, svn_ruby_commit_editor_t, ce);
   if (ce->file_baton == NULL)
     rb_raise (rb_eRuntimeError,
-              "replaceFile or addFile must be called beforehand");
+              "openFile or addFile must be called beforehand");
 
   Check_Type (aName, T_STRING);
   Check_Type (aValue, T_STRING);
@@ -1046,15 +1050,15 @@ svn_ruby_init_delta_editor (void)
   rb_define_singleton_method (cSvnRubyEditor, "new", delta_new, -1);
   rb_define_method (cSvnRubyEditor, "setTargetRevision",
                     em_set_target_revision, 1);
-  rb_define_method (cSvnRubyEditor, "replaceRoot", em_replace_root, 1);
+  rb_define_method (cSvnRubyEditor, "openRoot", em_open_root, 1);
   rb_define_method (cSvnRubyEditor, "deleteEntry", em_delete_entry, 1);
   rb_define_method (cSvnRubyEditor, "addDirectory", em_add_directory, 3);
-  rb_define_method (cSvnRubyEditor, "replaceDirectory",
-                    em_replace_directory, 2);
+  rb_define_method (cSvnRubyEditor, "openDirectory",
+                    em_open_directory, 2);
   rb_define_method (cSvnRubyEditor, "changeDirProp", em_change_dir_prop, 2);
   rb_define_method (cSvnRubyEditor, "closeDirectory", em_close_directory, 0);
   rb_define_method (cSvnRubyEditor, "addFile", em_add_file, 3);
-  rb_define_method (cSvnRubyEditor, "replaceFile", em_replace_file, 2);
+  rb_define_method (cSvnRubyEditor, "openFile", em_open_file, 2);
   rb_define_method (cSvnRubyEditor, "applyTextDelta", em_apply_textdelta, 0);
   rb_define_method (cSvnRubyEditor, "changeFileProp", em_change_file_prop, 2);
   rb_define_method (cSvnRubyEditor, "closeFile", em_close_file, 0);
@@ -1064,15 +1068,15 @@ svn_ruby_init_delta_editor (void)
                                             "CommitEditor", cSvnDeltaEditor);
   rb_define_method (cSvnCommitEditor, "setTargetRevision",
                     ce_set_target_revision, 1);
-  rb_define_method (cSvnCommitEditor, "replaceRoot", ce_replace_root, 1);
+  rb_define_method (cSvnCommitEditor, "openRoot", ce_open_root, 1);
   rb_define_method (cSvnCommitEditor, "deleteEntry", ce_delete_entry, 1);
   rb_define_method (cSvnCommitEditor, "addDirectory", ce_add_directory, -1);
-  rb_define_method (cSvnCommitEditor, "replaceDirectory",
-                    ce_replace_directory, 2);
+  rb_define_method (cSvnCommitEditor, "openDirectory",
+                    ce_open_directory, 2);
   rb_define_method (cSvnCommitEditor, "changeDirProp", ce_change_dir_prop, 2);
   rb_define_method (cSvnCommitEditor, "closeDirectory", ce_close_directory, 0);
   rb_define_method (cSvnCommitEditor, "addFile", ce_add_file, -1);
-  rb_define_method (cSvnCommitEditor, "replaceFile", ce_replace_file, 2);
+  rb_define_method (cSvnCommitEditor, "openFile", ce_open_file, 2);
   rb_define_method (cSvnCommitEditor, "applyTextDelta", ce_apply_textdelta, 0);
   rb_define_method (cSvnCommitEditor, "changeFileProp", ce_change_file_prop, 2);
   rb_define_method (cSvnCommitEditor, "closeFile", ce_close_file, 0);

@@ -35,7 +35,7 @@
  * or deleted.  
  *
  * The key is allocated in POOL; the value is (void *) 'A', 'D', or
- * 'R', for added, deleted, or replaced, respectively.
+ * 'R', for added, deleted, or opened, respectively.
  * 
  * The paths are constructed by adding components to PATH in
  * repository style.

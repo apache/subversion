@@ -68,14 +68,14 @@ int main(int argc, char **argv)
   svn_delta_get_xml_editor (svn_stream_from_stdio (stdout, pool),
 			    &editor, &edit_baton, pool);
   editor->set_target_revision (edit_baton, 3);
-  editor->replace_root (edit_baton, 2, &root_baton);
-  editor->replace_directory (foo_string, root_baton, 2, &dir_baton);
-  editor->replace_file (bar_string, dir_baton, 0, &file_baton);
+  editor->open_root (edit_baton, 2, &root_baton);
+  editor->open_directory (foo_string, root_baton, 2, &dir_baton);
+  editor->open_file (bar_string, dir_baton, 0, &file_baton);
   editor->apply_textdelta (file_baton, &handler, &handler_baton);
   handler (&window, handler_baton);
   handler (NULL, handler_baton);
   editor->close_file (file_baton);
-  editor->replace_file (baz_string, dir_baton, 0, &file_baton);
+  editor->open_file (baz_string, dir_baton, 0, &file_baton);
   editor->change_file_prop (file_baton, bbb_string, ccc_string);
   editor->change_file_prop (file_baton, aaa_string, NULL);
   editor->change_dir_prop (dir_baton, ccc_string, bbb_string);

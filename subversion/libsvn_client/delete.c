@@ -78,8 +78,8 @@ svn_client_delete (svn_stringbuf_t *path,
                 log_msg ? log_msg : svn_stringbuf_create ("", pool),
                 NULL, NULL, NULL, NULL));
 
-      SVN_ERR (editor->replace_root (edit_baton, SVN_INVALID_REVNUM, 
-                                     &root_baton));
+      SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM,
+                                  &root_baton));
       SVN_ERR (editor->delete_entry (target, root_baton));
       SVN_ERR (editor->close_edit (edit_baton));
 

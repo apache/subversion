@@ -61,7 +61,7 @@ struct edit_baton
 
   /* Created during the edit: */
 
-  /* svn transaction associated with this edit (created in replace_root). */
+  /* svn transaction associated with this edit (created in open_root). */
   svn_fs_txn_t *txn;
 
   /* The object representing the root directory of the svn txn. */
@@ -129,9 +129,9 @@ decrement_dir_ref_count (struct dir_baton *db)
 /*** Editor functions ***/
 
 static svn_error_t *
-replace_root (void *edit_baton,
-              svn_revnum_t base_revision,
-              void **root_baton)
+open_root (void *edit_baton,
+           svn_revnum_t base_revision,
+           void **root_baton)
 {
   apr_pool_t *subpool;
   struct dir_baton *dirb;
@@ -276,10 +276,10 @@ add_directory (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_directory (svn_stringbuf_t *name,
-                   void *parent_baton,
-                   svn_revnum_t base_revision,
-                   void **child_baton)
+open_directory (svn_stringbuf_t *name,
+                void *parent_baton,
+                svn_revnum_t base_revision,
+                void **child_baton)
 {
   apr_pool_t *subpool;
   struct dir_baton *new_dirb;
@@ -442,10 +442,10 @@ add_file (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-replace_file (svn_stringbuf_t *name,
-              void *parent_baton,
-              svn_revnum_t base_revision,
-              void **file_baton)
+open_file (svn_stringbuf_t *name,
+           void *parent_baton,
+           svn_revnum_t base_revision,
+           void **file_baton)
 {
   apr_pool_t *subpool;
   struct file_baton *new_fb;
@@ -589,14 +589,14 @@ svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
   struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
 
   /* Set up the editor. */
-  e->replace_root      = replace_root;
+  e->open_root         = open_root;
   e->delete_entry      = delete_entry;
   e->add_directory     = add_directory;
-  e->replace_directory = replace_directory;
+  e->open_directory    = open_directory;
   e->change_dir_prop   = change_dir_prop;
   e->close_directory   = close_directory;
   e->add_file          = add_file;
-  e->replace_file      = replace_file;
+  e->open_file         = open_file;
   e->apply_textdelta   = apply_textdelta;
   e->change_file_prop  = change_file_prop;
   e->close_file        = close_file;

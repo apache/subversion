@@ -242,8 +242,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
     SVN_ERR (editor->set_target_revision 
              (edit_baton, svn_fs_revision_root_revision (tgt_root)));
 
-  /* Call replace_root to get our root_baton... */
-  SVN_ERR (editor->replace_root 
+  /* Call open_root to get our root_baton... */
+  SVN_ERR (editor->open_root 
            (edit_baton, 
             get_revision_from_hash (src_revs, src_parent_dir, pool),
             &root_baton));
@@ -294,7 +294,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
         }
       else
         {
-          /* The nodes are at least related.  Just replace the one
+          /* The nodes are at least related.  Just open the one
              with the other. */
           SVN_ERR (replace_file_or_dir (&c, root_baton,
                                         src_parent_dir,
@@ -466,7 +466,7 @@ delta_proplists (struct context *c,
                                                   subpool);
 
       /* See if this property existed in the source.  If so, and if
-         the values in source and target differ, replace the value in
+         the values in source and target differ, open the value in
          target with the one in source. */
       if (s_props 
           && ((s_value = apr_hash_get (s_props, key, klen)) != 0))
@@ -750,7 +750,7 @@ replace_file_or_dir (struct context *c,
     {
       void *subdir_baton;
 
-      SVN_ERR (c->editor->replace_directory 
+      SVN_ERR (c->editor->open_directory 
                (target_entry, dir_baton, base_revision, &subdir_baton));
       SVN_ERR (delta_dirs 
                (c, subdir_baton, source_full_path, target_full_path, pool));
@@ -760,7 +760,7 @@ replace_file_or_dir (struct context *c,
     {
       void *file_baton;
 
-      SVN_ERR (c->editor->replace_file 
+      SVN_ERR (c->editor->open_file 
                (target_entry, dir_baton, base_revision, &file_baton));
       SVN_ERR (delta_files 
                (c, file_baton, source_full_path, target_full_path, pool));

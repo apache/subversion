@@ -62,7 +62,7 @@ static const char * const svn_delta__tagmap[] =
   SVN_DELTA__XML_TAG_TREE_DELTA,
   SVN_DELTA__XML_TAG_ADD,
   SVN_DELTA__XML_TAG_DELETE,
-  SVN_DELTA__XML_TAG_REPLACE,
+  SVN_DELTA__XML_TAG_OPEN,
   SVN_DELTA__XML_TAG_FILE,
   SVN_DELTA__XML_TAG_DIR,
   SVN_DELTA__XML_TAG_TEXT_DELTA,
@@ -224,7 +224,7 @@ outermost_tree_delta_close_p (svn_xml__digger_t *digger)
 */
 
 
-/* If FRAME represents an <add> or <replace> command, check if the
+/* If FRAME represents an <add> or <open> command, check if the
    "name" attribute conflicts with an preexisting dirent name in the
    parent (tree-delta) frame.  If so, return error.  If not, store the
    dirent name in parent's "namespace" hash. 
@@ -241,7 +241,7 @@ check_dirent_namespace (svn_xml__digger_t *digger,
   /* Sanity: check frame's type.  If we're not looking at directory
      entries, just leave. */
   if ((frame->tag != svn_delta__XML_add)
-       && (frame->tag != svn_delta__XML_replace))
+       && (frame->tag != svn_delta__XML_open))
     return SVN_NO_ERROR;
 
   namespace= digger->stack->namespace;
@@ -257,7 +257,7 @@ check_dirent_namespace (svn_xml__digger_t *digger,
       svn_error_create
       (SVN_ERR_MALFORMED_XML, 0,
        NULL, digger->pool,
-       "check_dirent_namespace: <add> or <replace> has no `name' attribute.");
+       "check_dirent_namespace: <add> or <open> has no `name' attribute.");
   
   /* Is "name" in the namespace already? */
   dirent_exists = apr_hash_get (namespace,
@@ -311,9 +311,9 @@ do_stack_append (svn_xml__digger_t *digger,
                && (youngest_frame->tag != svn_delta__XML_deltapkg)))
     return xml_validation_error (pool, tagname, FALSE);
   
-  /* <add>, <replace> must follow <tree-delta> */
+  /* <add>, <open> must follow <tree-delta> */
   else if ( ((new_frame->tag == svn_delta__XML_add)
-             || (new_frame->tag == svn_delta__XML_replace))
+             || (new_frame->tag == svn_delta__XML_open))
             && (youngest_frame->tag != svn_delta__XML_treedelta) )
     return xml_validation_error (pool, tagname, FALSE);
   
@@ -323,12 +323,12 @@ do_stack_append (svn_xml__digger_t *digger,
             && (youngest_frame->tag != svn_delta__XML_propdelta) )
     return xml_validation_error (pool, tagname, FALSE);
   
-  /* <file>, <dir> must follow either <add> or <replace> */
+  /* <file>, <dir> must follow either <add> or <open> */
   else if ((new_frame->tag == svn_delta__XML_file)
            || (new_frame->tag == svn_delta__XML_dir))
     {
       if ((youngest_frame->tag != svn_delta__XML_add)
-              && (youngest_frame->tag != svn_delta__XML_replace))
+              && (youngest_frame->tag != svn_delta__XML_open))
         return xml_validation_error (digger->pool, tagname, FALSE);
     }
   
@@ -356,7 +356,7 @@ do_stack_append (svn_xml__digger_t *digger,
            && (new_frame->tag != svn_delta__XML_dir))
     return xml_validation_error (pool, tagname, FALSE);
   
-  /* Final check: if this is an <add> or <replace>, make sure the
+  /* Final check: if this is an <add> or <open>, make sure the
      "name" attribute is unique within the parent <tree-delta>. */
   
   err = check_dirent_namespace (digger, new_frame);
@@ -428,19 +428,19 @@ set_tag_type (svn_xml__stackframe_t *frame,
 
 
 /* Called when we get a <dir> tag preceeded by either a <new> or
-   <replace> tag; calls the appropriate callback inside
-   DIGGER->EDITOR, depending on the value of REPLACE_P. */
+   <open> tag; calls the appropriate callback inside
+   DIGGER->EDITOR, depending on the value of OPEN_P. */
 static svn_error_t *
 do_directory_callback (svn_xml__digger_t *digger, 
                        svn_xml__stackframe_t *youngest_frame,
                        const char **atts,
-                       svn_boolean_t replace_p)
+                       svn_boolean_t open_p)
 {
   svn_error_t *err;
   const char *ancestor, *ver;
   svn_stringbuf_t *dir_name = NULL;
 
-  /* Retrieve the "name" field from the previous <new> or <replace> tag */
+  /* Retrieve the "name" field from the previous <new> or <open> tag */
   dir_name = youngest_frame->previous->name;
   if (dir_name == NULL)
     return
@@ -459,8 +459,8 @@ do_directory_callback (svn_xml__digger_t *digger,
     youngest_frame->ancestor_revision = atoi (ver);
 
   /* Call our editor's callback. */
-  if (replace_p)
-    err = digger->editor->replace_directory
+  if (open_p)
+    err = digger->editor->open_directory
       (dir_name,
        youngest_frame->baton,
        youngest_frame->ancestor_revision,
@@ -515,18 +515,18 @@ do_delete_dirent (svn_xml__digger_t *digger,
 
 
 
-/* Called when we get <file> after a <new> or <replace>. */
+/* Called when we get <file> after a <new> or <open>. */
 static svn_error_t *
 do_file_callback (svn_xml__digger_t *digger,
                   svn_xml__stackframe_t *youngest_frame,
                   const char **atts,
-                  svn_boolean_t replace_p)
+                  svn_boolean_t open_p)
 {
   svn_error_t *err;
   const char *ancestor, *ver;
   svn_stringbuf_t *filename = NULL;
 
-  /* Retrieve the "name" field from the previous <new> or <replace> tag */
+  /* Retrieve the "name" field from the previous <new> or <open> tag */
   filename = youngest_frame->previous->name;
   if (filename == NULL)
     return 
@@ -545,8 +545,8 @@ do_file_callback (svn_xml__digger_t *digger,
     youngest_frame->ancestor_revision = atoi (ver);
 
   /* Call our editor's callback, and get back a window handler & baton. */
-  if (replace_p)
-    err = digger->editor->replace_file
+  if (open_p)
+    err = digger->editor->open_file
       (filename,
        youngest_frame->baton,
        youngest_frame->ancestor_revision,
@@ -1056,7 +1056,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
           /* Fetch the rootdir_baton by calling into the editor */
           void *rootdir_baton;
 
-          err = my_digger->editor->replace_root
+          err = my_digger->editor->open_root
             (my_digger->edit_baton, new_frame->ancestor_revision, 
              &rootdir_baton);
           if (err)
@@ -1101,7 +1101,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we replacing a directory?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_delta__XML_replace) 
+    if ((new_frame->previous->tag == svn_delta__XML_open) 
         && (new_frame->tag == svn_delta__XML_dir))
       {
         err = do_directory_callback (my_digger, new_frame, atts, TRUE);
@@ -1134,7 +1134,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
 
   /* EVENT:  Are we replacing a file?  */
   if (new_frame->previous)
-    if ((new_frame->previous->tag == svn_delta__XML_replace) 
+    if ((new_frame->previous->tag == svn_delta__XML_open) 
         && (new_frame->tag == svn_delta__XML_file))
       {
         err = do_file_callback (my_digger, new_frame, atts, TRUE);

@@ -311,7 +311,7 @@ typedef struct svn_delta_edit_fns_t
      producers will work differently.  If there is a target revision
      that needs to be set for this operation, the producer should
      called the 'set_target_revision' function at this point.  Next,
-     the producer should pass this EDIT_BATON to the `replace_root'
+     the producer should pass this EDIT_BATON to the `open_root'
      function, to get a baton representing root of the tree being
      edited.
 
@@ -319,7 +319,7 @@ typedef struct svn_delta_edit_fns_t
 
          delete_entry
          add_file           add_directory    
-         replace_file       replace_directory
+         open_file          open_directory
 
      Each of these takes a directory baton, indicating the directory
      in which the change takes place, and a NAME argument, giving the
@@ -328,57 +328,56 @@ typedef struct svn_delta_edit_fns_t
      path.)
 
      Since every call requires a parent directory baton, including
-     add_directory and replace_directory, where do we ever get our
-     initial directory baton, to get things started?  The `replace_root'
+     add_directory and open_directory, where do we ever get our
+     initial directory baton, to get things started?  The `open_root'
      function returns a baton for the top directory of the change.  In
-     general, the producer needs to invoke the editor's `replace_root'
+     general, the producer needs to invoke the editor's `open_root'
      function before it can get anything of interest done.
 
-     While `replace_root' provides a directory baton for the root of
-     the tree being changed, the `add_directory' and
-     `replace_directory' callbacks provide batons for other
-     directories.  Like the callbacks above, they take a PARENT_BATON
-     and a single path component NAME, and then return a new baton for
-     the subdirectory being created / modified --- CHILD_BATON.  The
-     producer can then use CHILD_BATON to make further changes in that
-     subdirectory.
+     While `open_root' provides a directory baton for the root of
+     the tree being changed, the `add_directory' and `open_directory'
+     callbacks provide batons for other directories.  Like the
+     callbacks above, they take a PARENT_BATON and a single path
+     component NAME, and then return a new baton for the subdirectory
+     being created / modified --- CHILD_BATON.  The producer can then
+     use CHILD_BATON to make further changes in that subdirectory.
 
      So, if we already have subdirectories named `foo' and `foo/bar',
      then the producer can create a new file named `foo/bar/baz.c' by
      calling:
-        replace_root () --- yielding a baton ROOT for the top directory
-        replace_directory (ROOT, "foo") --- yielding a baton F for `foo'
-        replace_directory (F, "bar") --- yielding a baton B for `foo/bar'
+        open_root () --- yielding a baton ROOT for the top directory
+        open_directory (ROOT, "foo") --- yielding a baton F for `foo'
+        open_directory (F, "bar") --- yielding a baton B for `foo/bar'
         add_file (B, "baz.c")
      
      When the producer is finished making changes to a directory, it
      should call `close_directory'.  This lets the consumer do any
      necessary cleanup, and free the baton's storage.
 
-     The `add_file' and `replace_file' callbacks each return a baton
+     The `add_file' and `open_file' callbacks each return a baton
      for the file being created or changed.  This baton can then be
      passed to `apply_textdelta' to change the file's contents, or
      `change_file_prop' to change the file's properties.  When the
      producer is finished making changes to a file, it should call
      `close_file', to let the consumer clean up and free the baton.
 
-     The `add_file', `add_directory', `replace_file', and
-     `replace_directory' functions all take arguments ANCESTOR_PATH
-     and ANCESTOR_REVISION.  If ANCESTOR_PATH is non-zero, then
+     The `add_file', `add_directory', `open_file', and
+     `open_directory' functions all take arguments ANCESTOR_PATH and
+     ANCESTOR_REVISION.  If ANCESTOR_PATH is non-zero, then
      ANCESTOR_PATH and ANCESTOR_REVISION indicate the ancestor of the
      resulting object.
 
      There are six restrictions on the order in which the producer
      may use the batons:
 
-     1. The producer may call `replace_directory', `add_directory',
-        `replace_file', `add_file', or `delete_entry' at most once on
+     1. The producer may call `open_directory', `add_directory',
+        `open_file', `add_file', or `delete_entry' at most once on
         any given directory entry.
 
      2. The producer may not close a directory baton until it has
         closed all batons for its subdirectories.
 
-     3. When a producer calls `replace_directory' or `add_directory',
+     3. When a producer calls `open_directory' or `add_directory',
         it must specify the most recently opened of the currently open
         directory batons.  Put another way, the producer cannot have
         two sibling directory batons open at the same time.
@@ -387,7 +386,7 @@ typedef struct svn_delta_edit_fns_t
         before opening any of the directory's subdirs or after closing
         them, but not in the middle.
 
-     5. When the producer calls `replace_file' or `add_file', either:
+     5. When the producer calls `open_file' or `add_file', either:
 
         (a) The producer must follow with the changes to the file
         (`change_file_prop' and/or `apply_textdelta', as applicable)
@@ -424,12 +423,12 @@ typedef struct svn_delta_edit_fns_t
      (This is the top of the subtree being changed, not necessarily
      the root of the filesystem.)  Like any other directory baton, the
      producer should call `close_directory' on ROOT_BATON when they're
-     done.  And like other replace_* calls, the BASE_REVISION here is
+     done.  And like other open_* calls, the BASE_REVISION here is
      the current revision of the directory (before getting bumped up
      to the new target revision set with set_target_revision). */
-  svn_error_t *(*replace_root) (void *edit_baton,
-                                svn_revnum_t base_revision,
-                                void **root_baton);
+  svn_error_t *(*open_root) (void *edit_baton,
+                             svn_revnum_t base_revision,
+                             void **root_baton);
 
 
   /* Deleting things.  */
@@ -459,10 +458,10 @@ typedef struct svn_delta_edit_fns_t
      that should be used as the PARENT_BATON for subsequent changes in
      this subdirectory.  BASE_REVISION is the current revision of the
      subdirectory. */
-  svn_error_t *(*replace_directory) (svn_stringbuf_t *name,
-                                     void *parent_baton,
-                                     svn_revnum_t base_revision,
-                                     void **child_baton);
+  svn_error_t *(*open_directory) (svn_stringbuf_t *name,
+                                  void *parent_baton,
+                                  svn_revnum_t base_revision,
+                                  void **child_baton);
 
   /* Change the value of a directory's property.
      - DIR_BATON specifies the directory whose property should change.
@@ -477,7 +476,7 @@ typedef struct svn_delta_edit_fns_t
                                    svn_stringbuf_t *value);
 
   /* We are done processing a subdirectory, whose baton is DIR_BATON
-     (set by add_directory or replace_directory).  We won't be using
+     (set by add_directory or open_directory).  We won't be using
      the baton any more, so whatever resources it refers to may now be
      freed.  */
   svn_error_t *(*close_directory) (void *dir_baton);
@@ -504,16 +503,16 @@ typedef struct svn_delta_edit_fns_t
      whatever value it stores there should be passed through to
      apply_textdelta and/or apply_propdelta.  This file has a current
      revision of BASE_REVISION.  */
-  svn_error_t *(*replace_file) (svn_stringbuf_t *name,
-                                void *parent_baton,
-                                svn_revnum_t base_revision,
-                                void **file_baton);
+  svn_error_t *(*open_file) (svn_stringbuf_t *name,
+                             void *parent_baton,
+                             svn_revnum_t base_revision,
+                             void **file_baton);
 
   /* Apply a text delta, yielding the new revision of a file.
 
      FILE_BATON indicates the file we're creating or updating, and the
      ancestor file on which it is based; it is the baton set by some
-     prior `add_file' or `replace_file' callback.
+     prior `add_file' or `open_file' callback.
 
      The callback should set *HANDLER to a text delta window
      handler; we will then call *HANDLER on successive text
@@ -537,7 +536,7 @@ typedef struct svn_delta_edit_fns_t
                                     svn_stringbuf_t *value);
 
   /* We are done processing a file, whose baton is FILE_BATON (set by
-     `add_file' or `replace_file').  We won't be using the baton any
+     `add_file' or `open_file').  We won't be using the baton any
      more, so whatever resources it refers to may now be freed.  */
   svn_error_t *(*close_file) (void *file_baton);
 

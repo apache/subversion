@@ -308,8 +308,8 @@ enum {
   ELEM_log_date,
   ELEM_log_item,
   ELEM_log_report,
-  ELEM_replace_directory,
-  ELEM_replace_file,
+  ELEM_open_directory,
+  ELEM_open_file,
   ELEM_target_revision,
   ELEM_update_report
 };

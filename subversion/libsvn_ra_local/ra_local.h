@@ -139,7 +139,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
 
 /* Return an EDITOR and EDIT_BATON to commit changes to SESSION->fs,
  * beginning at location `rev:SESSION->base_path', where "rev" is the
- * argument given to replace_root().  Store SESSION->user as the
+ * argument given to open_root().  Store SESSION->user as the
  * author of the commit and LOG_MSG as the commit message.
  *
  * FS is a previously opened file system.

@@ -250,7 +250,7 @@ import_dir (const svn_delta_edit_fns_t *editor,
  * Use POOL for any temporary allocation.
  *
  * Note: the repository directory receiving the import was specified
- * when the editor was fetched.  (I.e, when EDITOR->replace_root() is
+ * when the editor was fetched.  (I.e, when EDITOR->open_root() is
  * called, it returns a directory baton for that directory, which is
  * not necessarily the root.)
  */
@@ -277,10 +277,10 @@ import (svn_stringbuf_t *path,
        "the name \"%s\" is reserved and cannot be imported",
        SVN_WC_ADM_DIR_NAME);
 
-  /* Get a root dir baton.  We pass an invalid revnum to replace_root
+  /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
      SVN_YOUNGEST_REVNUM defined for these purposes? */
-  SVN_ERR (editor->replace_root (edit_baton, SVN_INVALID_REVNUM, &root_baton));
+  SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM, &root_baton));
 
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));

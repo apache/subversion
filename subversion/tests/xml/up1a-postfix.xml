@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <delta-pkg>
   <tree-delta>
-    <replace name="iota">
+    <open name="iota">
       <file>
         <text-delta-ref id="iota"/>
       </file>
-    </replace>
+    </open>
   </tree-delta>
 <text-delta id="iota">This is an updated version of 'iota'.</text-delta>
 </delta-pkg>

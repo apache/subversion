@@ -160,11 +160,11 @@ static void add_helper(svn_boolean_t is_dir,
   *child_baton = child;
 }
 
-static void replace_helper(svn_boolean_t is_dir,
-			   const char *name,
-			   item_baton_t *parent,
-			   svn_revnum_t base_revision,
-			   void **child_baton)
+static void open_helper(svn_boolean_t is_dir,
+                        const char *name,
+                        item_baton_t *parent,
+                        svn_revnum_t base_revision,
+                        void **child_baton)
 {
   item_baton_t *child;
   const char *qname;
@@ -172,6 +172,8 @@ static void replace_helper(svn_boolean_t is_dir,
   child = make_child_baton(parent, name, is_dir);
 
   qname = apr_xml_quote_string(child->pool, name, 1);
+  /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
+     upgraded.  Will change to "open-" soon.  -kff */
   send_xml(child->uc, "<S:replace-%s name=\"%s\" rev=\"%ld\">" DEBUG_CR,
 	   DIR_OR_FILE(is_dir), qname, base_revision);
 
@@ -207,6 +209,8 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
   else
+    /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
+       upgraded.  Will change to "open-" soon.  -kff */
     send_xml(baton->uc, "</S:replace-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
 }
 
@@ -223,9 +227,9 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   return NULL;
 }
 
-static svn_error_t * upd_replace_root(void *edit_baton,
-				      svn_revnum_t base_revision,
-				      void **root_baton)
+static svn_error_t * upd_open_root(void *edit_baton,
+                                   svn_revnum_t base_revision,
+                                   void **root_baton)
 {
   update_ctx_t *uc = edit_baton;
   apr_pool_t *pool = svn_pool_create(uc->resource->pool);
@@ -240,6 +244,8 @@ static svn_error_t * upd_replace_root(void *edit_baton,
 
   *root_baton = b;
 
+  /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
+     upgraded.  Will change to "open-" soon.  -kff */
   send_xml(uc, "<S:replace-directory rev=\"%ld\">" DEBUG_CR, base_revision);
   send_vsn_url(b);
 
@@ -270,13 +276,13 @@ static svn_error_t * upd_add_directory(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t * upd_replace_directory(svn_stringbuf_t *name,
-					   void *parent_baton,
-					   svn_revnum_t base_revision,
-					   void **child_baton)
+static svn_error_t * upd_open_directory(svn_stringbuf_t *name,
+                                        void *parent_baton,
+                                        svn_revnum_t base_revision,
+                                        void **child_baton)
 {
-  replace_helper(TRUE /* is_dir */,
-		 name->data, parent_baton, base_revision, child_baton);
+  open_helper(TRUE /* is_dir */,
+              name->data, parent_baton, base_revision, child_baton);
   return NULL;
 }
 
@@ -328,13 +334,13 @@ static svn_error_t * upd_add_file(svn_stringbuf_t *name,
   return NULL;
 }
 
-static svn_error_t * upd_replace_file(svn_stringbuf_t *name,
-				      void *parent_baton,
-				      svn_revnum_t base_revision,
-				      void **file_baton)
+static svn_error_t * upd_open_file(svn_stringbuf_t *name,
+                                   void *parent_baton,
+                                   svn_revnum_t base_revision,
+                                   void **file_baton)
 {
-  replace_helper(FALSE /* is_dir */,
-		 name->data, parent_baton, base_revision, file_baton);
+  open_helper(FALSE /* is_dir */,
+              name->data, parent_baton, base_revision, file_baton);
   return NULL;
 }
 
@@ -441,14 +447,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   editor = svn_delta_default_editor(resource->pool);
   editor->set_target_revision = upd_set_target_revision;
-  editor->replace_root = upd_replace_root;
+  editor->open_root = upd_open_root;
   editor->delete_entry = upd_delete_entry;
   editor->add_directory = upd_add_directory;
-  editor->replace_directory = upd_replace_directory;
+  editor->open_directory = upd_open_directory;
   editor->change_dir_prop = upd_change_xxx_prop;
   editor->close_directory = upd_close_directory;
   editor->add_file = upd_add_file;
-  editor->replace_file = upd_replace_file;
+  editor->open_file = upd_open_file;
   editor->apply_textdelta = upd_apply_textdelta;
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
