@@ -40,41 +40,41 @@ class MakefileGenerator(gen_base.GeneratorBase):
         continue
 
       if isinstance(target_ob, gen_base.SWIGLibrary):
-        ### nothing defined yet
-        continue
+        sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.fname)
+      else:
+        sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
 
       target = target_ob.name
       path = target_ob.path
 
+      retreat = gen_base._retreat_dots(path)
+
       # get the source items (.o and .la) for the link unit
       objects = [ ]
       deps = [ ]
-      for source in self.graph.get_sources(gen_base.DT_LINK, target):
-        if isinstance(source, gen_base.Target):
+      libs = [ ]
+
+      for source in sources:
+        if isinstance(source, gen_base.TargetLib):
           # append the output of the target to our stated dependencies
           deps.append(source.output)
-        else:
-          # assume an object file
-          objects.append(source)
 
-      retreat = gen_base._retreat_dots(path)
-      libs = [ ]
-      for lib in string.split(self.parser.get(target, 'libs')):
-        if self.targets.has_key(lib):
-          tlib = self.targets[lib]
-
-          # link in the library with a relative link to the output file
-          libs.append(os.path.join(retreat, tlib.output))
+          # link against the library
+          libs.append(os.path.join(retreat, source.output))
+        elif isinstance(source, gen_base.ObjectFile):
+          # link in the object file
+          objects.append(source.fname)
+        elif isinstance(source, gen_base.ExternalLibrary):
+          # link against the library
+          libs.append(source.fname)
         else:
-          # something we don't know, so just include it directly
-          libs.append(lib)
+          ### we don't know what this is, so we don't know what to do with it
+          raise UnknownDependency
 
       targ_varname = string.replace(target, '-', '_')
-      ldflags = self.parser.get(target, 'link-flags')
-      add_deps = self.parser.get(target, 'add-deps')
       objnames = string.join(gen_base._strip_path(path, objects))
-      custom = self.parser.get(target, 'custom')
-      if custom == 'apache-mod':
+
+      if target_ob.custom == 'apache-mod':
         linkcmd = '$(LINK_APACHE_MOD)'
       else:
         linkcmd = '$(LINK)'
@@ -84,17 +84,17 @@ class MakefileGenerator(gen_base.GeneratorBase):
         '%s_OBJECTS = %s\n'
         '%s: $(%s_DEPS)\n'
         '\tcd %s && %s -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-        % (targ_varname, string.join(objects + deps), add_deps,
+        % (targ_varname, string.join(objects + deps), target_ob.add_deps,
 
            targ_varname, objnames,
 
            target_ob.output, targ_varname,
 
-           path, linkcmd, os.path.basename(target_ob.output), ldflags,
-           targ_varname, string.join(libs))
+           path, linkcmd, os.path.basename(target_ob.output),
+           target_ob.ldflags, targ_varname, string.join(libs))
         )
 
-      if custom == 'swig-py':
+      if target_ob.custom == 'swig-py':
         self.ofile.write('# build this with -DSWIGPYTHON\n')
         for obj in objects:
           ### we probably shouldn't take only the first source, but do
@@ -102,7 +102,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
           src = self.graph.get_sources(gen_base.DT_OBJECT, obj)[0]
           self.ofile.write('%s: %s\n\t$(COMPILE_SWIG_PY)\n' % (obj, src))
         self.ofile.write('\n')
-      elif custom == 'swig-java':
+      elif target_ob.custom == 'swig-java':
         self.ofile.write('# build this with -DSWIGJAVA and -I$(JDK)/include\n')
         for obj in objects:
           ### FIXME: We have no back-compat requirements, so use all sources
@@ -206,9 +206,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
 
     self.ofile.write('\n# handy shortcut targets\n')
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      ### come up with a shortcut name for the SWIG libraries
-      if not isinstance(target, gen_base.TargetScript) \
-         and not isinstance(target, gen_base.SWIGLibrary):
+      if not isinstance(target, gen_base.TargetScript):
         self.ofile.write('%s: %s\n' % (target.name, target.output))
     self.ofile.write('\n')
 
@@ -278,5 +276,9 @@ class MakefileGenerator(gen_base.GeneratorBase):
                          % (string.upper(gen_base.lang_abbrev[lang]),
                             string.join(map(str, libs), ' ')))
 
+
+class UnknownDependency(Exception):
+  "We don't know how to deal with the dependent to link it in."
+  pass
 
 ### End of file.
