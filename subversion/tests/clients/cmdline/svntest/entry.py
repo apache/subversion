@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  svn_entry.py:  module to parse 'SVN/entries' file
+#  entry.py:  module to parse '.svn/entries' file
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.

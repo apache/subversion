@@ -113,8 +113,8 @@ def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
   # todo: One day this sucker will try to intelligently discern what
-  # the admin dir is.  For now, 'SVN' will suffice.
-  return 'SVN'
+  # the admin dir is.  For now, '.svn' will suffice.
+  return '.svn'
 
 
 
