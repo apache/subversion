@@ -70,7 +70,7 @@
             <entry>HTTP basic auth, X.509 certificates, LDAP, NTLM, or
               any other mechanism available to Apache httpd</entry>
             
-            <entry>CRAM5 or SSH</entry>
+            <entry>CRAM-MD5 or SSH</entry>
           </row>
           
           <row>
@@ -145,10 +145,18 @@
 
     <title>Network Model</title>
 
-    <para>blah</para>
+    <para>This section is a general discussion of how a Subversion
+      client and server interact with one another, regardless of the
+      network implementation you're using.  After reading,
+      you'll have a good understanding of how a server can behave, and
+      the different ways in which a client can be configured to
+      respond.</para>
 
     <sect2 id="svn-ch-6-sect-2.1">
       <title>Requests and Responses</title>
+
+
+
 
       <para>request/response model;  authentication "pulled" by
         server;  for commits, authn stored as a revprop (ch05 xref);
@@ -189,6 +197,12 @@
       <title>Built-in authentication and authorization</title>
 
       <para>creating the users file;  document the svnserve.conf file.</para>
+
+      <para>Explanation of CRAM-MD5 authentication:  server sends a
+      bit of data to the client, client uses its password to encrypt
+      the data with the MD5 hash algorithm and sends it back;  server
+      performs same computation with stored password, and verifies
+      that the result is identical.  Footnote:  see RFC 2195.</para>
 
     </sect2>
     

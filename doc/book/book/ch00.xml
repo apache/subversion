@@ -71,26 +71,59 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-2">
-    <title>How This Book is Organized</title>
+    <title>How to Read this Book</title>
 
-    <para>The first three chapters of this book form a general
-      introduction to Subversion.  We begin with a discussion of
-      Subversion's features, discuss its design and user model, and
-      then lead into a guided tour.  All readers, regardless of
-      experience, should read these chapters.  They form the backbone
-      of the rest of the book.</para>
+    <para>This book aims to be useful to people of widely different
+      backgrounds: from people with no experience in version control,
+      all the way up to experienced sysadmins.  Depending on your own
+      background, certain chapters may be more or less important to
+      you.</para>
 
-    <para>Chapters four, five, and six discuss the more complex topics
-      of branching, repository administration, and advanced features
-      such as properties, externals, and access control.  Sysadmins
-      and power-users will definitely want to read these
-      chapters.</para>
+    <para>What kind of reader are you?</para>
 
-    <para>Chapter seven is specially written for programmers who want
-      to use Subversion's APIs in their own software, or want to work
-      on Subversion itself.</para>
+    <itemizedlist>
+      <listitem><para>
+          <emphasis>The experienced sysadmin or computer geek.</emphasis>
 
-    <para>The book ends with reference material: chapter eight is a
+          The assumption here is that you've probably used CVS before,
+          and are dying to get a Subversion server up and running
+          ASAP.  Chapters 5 and 6 will show you how to create your
+          first repository and make it available over the network.
+          After that's done, chapter 3 and appendix A are the fastest
+          routes to learning the Subversion client while drawing on
+          your CVS experience.</para></listitem>
+
+      <listitem><para>
+          <emphasis>The new user.</emphasis>
+
+          Your administrator has probably set up Subversion already,
+          and you need to learn how to use the client.  If you've
+          never used CVS (or have never used a version control
+          system), then chapters 2 and 3 are a vital introduction.  If
+          you're already an old hand at CVS, chapter 3 and appendix A 
+          are the best place to start.</para></listitem>
+
+      <listitem><para>
+          <emphasis>The advanced user.</emphasis>
+
+          Whether you're a user or administrator, eventually your
+          project will grow larger.  You're going to want to learn how
+          to do more advanced things with Subversion, such as
+          branching and merging (chapter 4), set metadata properties
+          and configure runtime options (chapter 7), and other things.
+          Chapters 4 and 7 aren't vital at first, but be sure to read
+          them once you're comfortable with the
+          basics.</para></listitem>
+
+      <listitem><para>
+          <emphasis>The developer.</emphasis>
+
+          Presumably, you're already familiar with Subversion, and now
+          want to either extend it, or build new software on top of
+          its many APIs.  Chapter 8 is just for you.</para></listitem>
+      </itemizedlist>
+
+    <para>The book ends with reference material: chapter 9 is a
       reference guide for all Subversion commands, and the appendices
       cover a number of useful topics.  These are the chapters you're
       mostly likely to come back to after you've finished the
