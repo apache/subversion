@@ -1002,9 +1002,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# *.jpg = svn:mime-type=image/jpeg\n"
         "# Makefile = svn:eol-style=native\n"
         "\n"
-        "\n"
-        "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
-        "### for what else will soon be customized in this file.\n";
+        "\n";
         
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
