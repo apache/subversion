@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-02 14:28+0200\n"
-"PO-Revision-Date: 2005-04-02 15:28+0200\n"
+"PO-Revision-Date: 2005-04-02 16:04+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -263,20 +263,20 @@ msgstr "Plik z opisem konfliktu atrybutów: %s\n"
 #: clients/cmdline/info-cmd.c:184
 #, c-format
 msgid "Lock Token: %s\n"
-msgstr ""
+msgstr "Żeton blokady: %s\n"
 
 #: clients/cmdline/info-cmd.c:188
 #, c-format
 msgid "Lock Owner: %s\n"
-msgstr ""
+msgstr "Właściciel blokady: %s\n"
 
 #: clients/cmdline/info-cmd.c:193
 msgid "Lock Created"
-msgstr ""
+msgstr "Blokada została utworzona"
 
 #: clients/cmdline/info-cmd.c:197
 msgid "Lock Expires"
-msgstr ""
+msgstr "Blokada wygasła"
 
 #: clients/cmdline/info-cmd.c:206
 #, c-format
@@ -2406,7 +2406,7 @@ msgstr "Ścieżka nie jest zablokowana"
 
 #: include/svn_error_codes.h:537
 msgid "Lock token is incorrect"
-msgstr ""
+msgstr "Żeton blokady jest niepoprawny"
 
 #: include/svn_error_codes.h:542
 #, fuzzy
@@ -2415,12 +2415,11 @@ msgstr "Zbyt mało parametrów"
 
 #: include/svn_error_codes.h:547
 msgid "Username does not match lock owner"
-msgstr ""
+msgstr "Nazwa użytkownika nie zgadza się z nazwą właściciela blokady"
 
 #: include/svn_error_codes.h:552
-#, fuzzy
 msgid "Filesystem has no such lock"
-msgstr "System plików nie zawiera takiej kopii"
+msgstr "System plików nie zawiera takiej blokady"
 
 #: include/svn_error_codes.h:557
 msgid "Lock has expired"
@@ -2432,9 +2431,8 @@ msgid "Item is out of date"
 msgstr "Nieaktualna wartość"
 
 #: include/svn_error_codes.h:574
-#, fuzzy
 msgid "Unsupported FS format"
-msgstr "Nieznany format kopii roboczej"
+msgstr "Nieznany format systemu plików"
 
 #: include/svn_error_codes.h:580
 msgid "The repository is locked, perhaps for db recovery"
@@ -3280,7 +3278,7 @@ msgstr "'%s' nie jest kopią roboczą"
 #: libsvn_client/locking_commands.c:311
 #, fuzzy, c-format
 msgid "'%s' is not locked"
-msgstr "'%s' nie jest obsługiwane"
+msgstr "'%s' nie jest zablokowane"
 
 #: libsvn_client/locking_commands.c:344 libsvn_fs/fs-loader.c:815
 #: libsvn_ra/ra_loader.c:506
@@ -3518,7 +3516,7 @@ msgstr "Błąd ustalania wielkości liter dla '%s'"
 #: libsvn_fs_base/bdb/changes-table.c:342
 #: libsvn_fs_base/bdb/changes-table.c:425
 msgid "fetching changes"
-msgstr ""
+msgstr "pobieranie zmian"
 
 #: libsvn_fs_base/bdb/changes-table.c:355
 #: libsvn_fs_base/bdb/changes-table.c:438
@@ -3878,22 +3876,21 @@ msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
 #: libsvn_fs_base/fs.c:79
 #, c-format
 msgid "Bad database version: got %d.%d.%d, should be at least %d.%d.%d"
-msgstr ""
+msgstr "Zła wersja bazy danych: posiadana %d.%d.%d, a powinna być co najmniej w wersji %d.%d.%d"
 
 #: libsvn_fs_base/fs.c:90
 #, c-format
 msgid "Bad database version: compiled with %d.%d.%d, running against %d.%d.%d"
-msgstr ""
+msgstr "Zła wersja bazy danych: skompilowane z %d.%d.%d, działa z %d.%d.%d"
 
 #: libsvn_fs_base/fs.c:108 libsvn_fs_fs/fs.c:50
-#, fuzzy
 msgid "Filesystem object already open"
 msgstr "System plików jest już otwarty"
 
 #: libsvn_fs_base/fs.c:665 libsvn_fs_fs/fs_fs.c:250
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
-msgstr ""
+msgstr "Oczekiwany format systemu plików '%d'; znaleziony format '%d'"
 
 #: libsvn_fs_base/fs.c:1054
 #, fuzzy, c-format
@@ -3906,14 +3903,14 @@ msgid "Can't open file '%s' for writing"
 msgstr "Nie można otworzyć pliku '%s'"
 
 #: libsvn_fs_base/fs.c:1083
-#, fuzzy, c-format
+#, c-format
 msgid "Error reading file '%s'"
-msgstr "Błąd w trakcie zapisu do pliku logu dla '%s'"
+msgstr "Błąd podczas czytania pliku '%s'"
 
 #: libsvn_fs_base/fs.c:1094
-#, fuzzy, c-format
+#, c-format
 msgid "Error writing file '%s'"
-msgstr "Błąd zapisu do '%s'"
+msgstr "Błąd podczas zapisu pliku '%s'"
 
 #: libsvn_fs_base/fs.c:1102 libsvn_fs_base/fs.c:1106 libsvn_subr/io.c:2144
 #, c-format
@@ -4065,12 +4062,11 @@ msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
 msgstr "Plik już istnieje: system plików '%s', wersja %ld, ścieżka '%s'"
 
 #: libsvn_fs_base/tree.c:428 libsvn_fs_fs/tree.c:346
-#, fuzzy
 msgid "Root object must be a transaction root"
-msgstr "Obiekt nie wskazuje na korzeń transakcji"
+msgstr "Obiekt główny nie wskazuje na korzeń transakcji"
 
 #: libsvn_fs_base/tree.c:837 libsvn_fs_fs/tree.c:755
-#, fuzzy, c-format
+#, c-format
 msgid "Failure opening '%s'"
 msgstr "Nie mozna otworzyć '%s'"
 
@@ -4144,7 +4140,7 @@ msgstr ""
 #: libsvn_repos/rev_hunt.c:540
 #, fuzzy, c-format
 msgid "'%s' is not a file"
-msgstr "Ścieżka '%s' nie jest plikiem"
+msgstr "'%s' nie jest plikiem"
 
 #: libsvn_fs_fs/dag.c:436
 #, fuzzy
@@ -5258,9 +5254,8 @@ msgid "Unrecognized node-action on node '%s'"
 msgstr "Nieznany typ node-action dla obiektu '%s'"
 
 #: libsvn_repos/load.c:1165
-#, fuzzy
 msgid " done.\n"
-msgstr "zrobione.\n"
+msgstr " zrobione.\n"
 
 #: libsvn_repos/load.c:1240
 #, c-format
@@ -7908,48 +7903,3 @@ msgstr "wyeksportowano%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
-
-#~ msgid "repository argument required\n"
-#~ msgstr "wymagane jest podanie repozytorium\n"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "Nieznane polecenie: '%s'\n"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "Kopia robocza nie została zablokowana"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "Nie można oczyścić '%s': nie jest katalogiem"
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "Brak zatwierdzeń dla wersji 0.\n"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "Schemat URL nie obsługuje get_dir()"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_dav."
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_svn."
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr ""
-#~ "'svn info' działa tylko na ścieżkach kopii roboczej, \n"
-#~ "a nie na URLach"
-
-#~ msgid ""
-#~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
-#~ "%s"
-#~ msgstr ""
-#~ "Niewłaściwa wersja wtyczki RA dla '%s': znaleziona %d.%d.%d%s, oczekiwana "
-#~ "%d.%d.%d%s"
-
-#~ msgid "native"
-#~ msgstr "natywny"
-
-#~ msgid "Can't recode string"
-#~ msgstr "Nie można zdekodować napisu"
