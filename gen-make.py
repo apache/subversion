@@ -108,19 +108,9 @@ def main(fname, oname=None, skip_depends=0):
         target_ob.deps.append(tlib)
         deps.append(tlib.output)
 
-        dep_path = tlib.path
-        if bldtype == 'lib':
-          # we need to hack around a libtool problem: it cannot record a
-          # dependency of one shared lib on another shared lib.
-          ### fix this by upgrading to the new libtool 1.4 release...
-          # strip "lib" from the front so we have -lsvn_foo
-          if lib[:3] == 'lib':
-            lib = lib[3:]
-          libs.append('-L%s -l%s'
-                      % (retreat + os.path.join(dep_path, '.libs'), lib))
-        else:
-          # linking executables can refer to .la files
-          libs.append(retreat + os.path.join(dep_path, lib + '.la'))
+        # link in the library by simply referring to the .la file
+        ### hmm. use join() for retreat + ... ?
+        libs.append(retreat + os.path.join(tlib.path, lib + '.la'))
       else:
         # something we don't know, so just include it directly
         libs.append(lib)
@@ -174,9 +164,12 @@ def main(fname, oname=None, skip_depends=0):
       ofile.write('install-mods-shared: %s\n' % (string.join(files),))
       la_tweaked = { }
       for file in files:
-        base, ext = os.path.splitext(os.path.basename(file))
+        # cd to dirname before install to work around libtool 1.4.2 bug.
+        dirname, fname = os.path.split(file)
+        base, ext = os.path.splitext(fname)
         name = string.replace(base, 'libmod_', '')
-        ofile.write('\t$(INSTALL_MOD_SHARED) -n %s %s\n' % (name, file))
+        ofile.write('\tcd %s ; $(INSTALL_MOD_SHARED) -n %s %s\n'
+                    % (dirname, name, fname))
         if ext == '.la':
           la_tweaked[file + '-a'] = None
 
@@ -190,6 +183,8 @@ def main(fname, oname=None, skip_depends=0):
       s_files, s_errors = _collect_paths(parser.get('static-apache', 'paths'))
       errors = errors or s_errors
 
+      # Construct a .libs directory within the Apache area and populate it
+      # with the appropriate files. Also drop the .la file in the target dir.
       ofile.write('\ninstall-mods-static: %s\n'
                   '\t$(MKDIR) %s\n'
                   % (string.join(la_tweaked + s_files),
@@ -203,6 +198,8 @@ def main(fname, oname=None, skip_depends=0):
                        os.path.join('$(APACHE_TARGET)', '.libs', base + '.a'),
                        file,
                        os.path.join('$(APACHE_TARGET)', base + '.la')))
+
+      # copy the other files to the target dir
       for file in s_files:
         ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
                     % (file, os.path.join('$(APACHE_TARGET)',
@@ -215,10 +212,13 @@ def main(fname, oname=None, skip_depends=0):
                   '\t$(MKDIR) $(%sdir)\n'
                   % (area, string.join(files), area_var))
       for file in files:
-        ofile.write('\t$(INSTALL_%s) %s %s\n'
-                    % (string.upper(area_var), file,
-		       os.path.join('$(%sdir)' % area_var,
-		                    os.path.basename(file))))
+        # cd to dirname before install to work around libtool 1.4.2 bug.
+        dirname, fname = os.path.split(file)
+        ofile.write('\tcd %s ; $(INSTALL_%s) %s %s\n'
+                    % (dirname,
+                       string.upper(area_var),
+                       fname,
+		       os.path.join('$(%sdir)' % area_var, fname)))
       ofile.write('\n')
 
   includes, i_errors = _collect_paths(parser.get('includes', 'paths'))

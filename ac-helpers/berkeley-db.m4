@@ -97,10 +97,10 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     dbdir=`cd db/dist ; pwd`
     SVN_DB_INCLUDES="-I$dbdir"
     svn_lib_berkeley_db=yes
+    # Linking directly to the .la is broken with --disable-shared
+    # because Berkeley db does not seem to generate a .la library.
     if test "$enable_shared" = "yes"; then
-        # Once we upgrade to libtool 1.4 we should change this to 
-        # "$dbdir/libdb-3.3.la"
-        SVN_DB_LIBS="-L$dbdir/.libs -ldb-3.3"
+        SVN_DB_LIBS="$dbdir/libdb-3.3.la"
     else
         SVN_DB_LIBS="-L$dbdir -ldb"
     fi
@@ -167,7 +167,8 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	  SVN_LIB_BERKELEY_DB_TRY($1, $2, $3)
           eval "$cache_id=$svn_have_berkeley_db"
         ])
-      AC_MSG_RESULT(`eval echo '$'$cache_id`)
+      result="`eval echo '$'$cache_id`"
+      AC_MSG_RESULT($result)
 
       # If we found it, no need to search any more.
       if test "`eval echo '$'$cache_id`" = "yes"; then
@@ -197,11 +198,13 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
 	header="`echo $found | sed -e 's/:.*$//'`"
 	lib="`echo $found | sed -e 's/^.*://'`"
         SVN_DB_INCLUDES="-I$header"
+dnl ### should look for a .la file
         SVN_DB_LIBS="-L$lib -ldb"
         svn_lib_berkeley_db=yes
       ;;
       * )
         SVN_DB_INCLUDES="-I$found/include"
+dnl ### should look for a .la file
         SVN_DB_LIBS="-L$found/lib -ldb"
 	svn_lib_berkeley_db=yes
       ;;
