@@ -264,7 +264,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
   more details.
   Return 0 on success."""
 
-  output, errput = main.run_svn (None, 'status', '-v', wc_dir_name)
+  output, errput = main.run_svn (None, 'status', '-v', '-u', wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 
