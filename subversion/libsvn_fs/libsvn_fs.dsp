@@ -87,10 +87,6 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=".\convert-size.c"
-# End Source File
-# Begin Source File
-
 SOURCE=.\dag.c
 # End Source File
 # Begin Source File
@@ -111,6 +107,10 @@ SOURCE=.\id.c
 # End Source File
 # Begin Source File
 
+SOURCE=".\key-gen.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\node-rev.c"
 # End Source File
 # Begin Source File
@@ -120,6 +120,10 @@ SOURCE=".\nodes-table.c"
 # Begin Source File
 
 SOURCE=.\proplist.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\reps-table.c"
 # End Source File
 # Begin Source File
 
@@ -187,6 +191,10 @@ SOURCE=.\id.h
 # End Source File
 # Begin Source File
 
+SOURCE=".\key-gen.h"
+# End Source File
+# Begin Source File
+
 SOURCE=".\node-rev.h"
 # End Source File
 # Begin Source File
@@ -196,6 +204,10 @@ SOURCE=".\nodes-table.h"
 # Begin Source File
 
 SOURCE=.\proplist.h
+# End Source File
+# Begin Source File
+
+SOURCE=".\reps-table.h"
 # End Source File
 # Begin Source File
 
