@@ -241,8 +241,6 @@ svn_client__open_ra_session (void **session_baton,
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
-  svn_client_prompt_t prompt_func;
-  void *prompt_baton;
   const svn_auth_provider_t *provider;
   void *provider_baton;
   
