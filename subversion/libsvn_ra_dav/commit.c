@@ -695,6 +695,41 @@ static svn_error_t * commit_open_root(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+ 
+/* Helper func for commit_delete_entry.  Find all keys in LOCK_TOKENS
+   which are children of DIR.  Returns the keys (and their vals) in
+   CHILD_TOKENS.   No keys or values are reallocated or dup'd.  If no
+   keys are children, then return an empty hash.  Use POOL to allocate
+   new hash. */
+static svn_error_t *get_child_tokens(apr_hash_t **child_tokens,
+                                     apr_hash_t *lock_tokens,
+                                     const char *dir,
+                                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *tokens = apr_hash_make(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, &klen, &val);
+
+      if (svn_path_is_child(dir, key, subpool))
+        apr_hash_set(tokens, key, klen, val);
+    }
+
+  svn_pool_destroy(subpool);
+
+  *child_tokens = tokens;
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * commit_delete_entry(const char *path,
                                          svn_revnum_t revision,
                                          void *parent_baton,
@@ -705,6 +740,7 @@ static svn_error_t * commit_delete_entry(const char *path,
   apr_hash_t *extra_headers = NULL;
   const char *child;
   int code;
+  svn_error_t *serr;
 
   if (SVN_IS_VALID_REVNUM(revision))
     {
@@ -723,7 +759,9 @@ static svn_error_t * commit_delete_entry(const char *path,
   /* create the URL for the child resource */
   child = svn_path_url_add_component(parent->rsrc->wr_url, name, pool);
 
-  /* possibly send a lock-token in the DELETE request. */
+  /* Start out assuming that we're deleting a file;  try to lookup the
+     path itself in the token-hash, and if found, attach it to the If:
+     header. */
   if (parent->cc->tokens)
     {
       const char *token = 
@@ -755,13 +793,57 @@ static svn_error_t * commit_delete_entry(const char *path,
                    APR_HASH_KEY_STRING, SVN_DAV_OPTION_KEEP_LOCKS);
     }
 
-  /* ### 404 is ignored, because mod_dav_svn is effectively merging
+  /* 404 is ignored, because mod_dav_svn is effectively merging
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
-  SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code,
-                          extra_headers,
-                          204 /* Created */, 404 /* Not Found */, pool) );
+  serr =  simple_request(parent->cc->ras, "DELETE", child, &code,
+                         extra_headers,
+                         204 /* Created */, 404 /* Not Found */, pool);
+
+  /* A locking-related error most likely means we were deleting a
+     directory rather than a file, and didn't send all of the
+     necessary lock-tokens within the directory. */
+  if (serr && ((serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
+               || (serr->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN)
+               || (serr->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH)
+               || (serr->apr_err == SVN_ERR_FS_PATH_LOCKED)))
+  {
+    /* Re-attempt the DELETE request as if the path were a directory.
+       Discover all lock-tokens within the directory, and send them in
+       the body of the request (which is normally empty).  
+
+       Note that we're not sending the locks in the If: header, for
+       the same reasn we're not sending in MERGE's headers: httpd has
+       limits on the amount of data it's willing to receive in headers. */
+
+    apr_hash_t *child_tokens;
+    ne_request *req;
+    const char *body;
+    svn_stringbuf_t *locks_list;
+
+    SVN_ERR (get_child_tokens(&child_tokens, parent->cc->tokens,
+                              path, pool));
+    SVN_ERR (svn_ra_dav__assemble_locktoken_body(&locks_list,
+                                                 child_tokens, pool));
+
+    req = ne_request_create(parent->cc->ras->sess, "DELETE", child);
+    if (req == NULL)
+      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                               _("Could not create a DELETE request (%s)"),
+                               child);
+    
+    body = apr_psprintf(pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
+                        locks_list->data);
+    ne_set_request_body_buffer(req, body, strlen(body));
+
+    SVN_ERR (svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
+                                          "DELETE", child,
+                                          204 /* Created */,
+                                          404 /* Not Found */, pool));
+  }
+  else if (serr)
+    return serr;
 
   /* Add this path to the valid targets hash. */
   add_valid_target (parent->cc, path, svn_nonrecursive);

@@ -292,8 +292,9 @@ svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
 
 static void merge_xml_filter_insert(request_rec *r)
 {
-    /* We only care about MERGE requests. */
-    if (r->method_number == M_MERGE) {
+    /* We only care about MERGE and DELETE requests. */
+    if ((r->method_number == M_MERGE)
+        || (r->method_number == M_DELETE)) {
         dav_svn_dir_conf *conf;
         conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
@@ -322,8 +323,9 @@ static apr_status_t merge_xml_in_filter(ap_filter_t *f,
     apr_bucket *bucket;
     int seen_eos = 0;
 
-    /* We shouldn't be added if we're not a MERGE, but double check. */
-    if (r->method_number != M_MERGE) {
+    /* We shouldn't be added if we're not a MERGE/DELETE, but double check. */
+    if ((r->method_number != M_MERGE)
+        && (r->method_number != M_DELETE)) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
@@ -386,7 +388,8 @@ static apr_status_t merge_xml_in_filter(ap_filter_t *f,
           apr_xml_parser_convert_doc(r->pool, pdoc, ap_hdrs_from_ascii);
 #endif
           /* stash the doc away for mod_dav_svn's later use. */
-          rv = apr_pool_userdata_set(pdoc, "svn-merge-body", NULL, r->pool);
+          rv = apr_pool_userdata_set(pdoc, "svn-request-body",
+                                     NULL, r->pool);
           if (rv != APR_SUCCESS) {
             return rv;
           }

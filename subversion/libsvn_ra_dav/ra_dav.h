@@ -810,6 +810,29 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
                      apr_pool_t *pool);
 
 
+/* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
+   values into a stringbuf allocated in POOL.  The string will be of
+   the form
+
+    <S:lock-token-list xmlns:S="svn:">
+      <S:lock>
+        <S:lock-path>path</S:lock-path>
+        <S:lock-token>token</S:lock-token>
+      </S:lock>
+      [...]
+    </S:lock-token-list>
+
+   Callers can then send this in the request bodies, as a way of
+   reliably marshalling potentially unbounded lists of locks.  (We do
+   this because httpd has limits on how much data can be sent in 'If:'
+   headers.)
+ */
+svn_error_t *
+svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
+                                    apr_hash_t *lock_tokens,
+                                    apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

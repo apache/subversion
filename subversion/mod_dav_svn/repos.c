@@ -2638,6 +2638,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
 {
   svn_error_t *serr;
   dav_error *err;
+  apr_hash_t *locks;
 
   /* Only activities, and working or regular resources can be deleted... */
   if (resource->type != DAV_RESOURCE_TYPE_WORKING
@@ -2707,6 +2708,25 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
                                      "Can't DELETE out-of-date resource",
                                      resource->pool);
         }
+    }
+
+  /* Before attempting the filesystem delete, we need to push any
+     incoming lock-tokens into the filesystem's access_t.  Normally
+     they come in via 'If:' header, and dav_svn_get_resource()
+     automatically notices them and does this work for us.  In the
+     case of a directory deletion, however, svn clients are sending
+     'child' lock-tokens in the DELETE request body. */
+
+  err = dav_svn__build_lock_hash(&locks, resource->info->r,
+                                 resource->info->repos_path, resource->pool);
+  if (err != NULL)
+    return err;
+
+  if (apr_hash_count(locks))
+    {
+      err = dav_svn__push_locks(resource, locks, resource->pool);
+      if (err != NULL)
+        return err;
     }
 
   if ((serr = svn_fs_delete(resource->info->root.root,

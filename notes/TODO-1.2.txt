@@ -20,9 +20,6 @@ CODING TASKS:
 
 BUGS:
 
-   - ra_dav: fix DELETE to send multiple tokens for a directory.
-     (lock_tests.py #11)   (sussman)
-
    - another issuetracker sweep of 1.2 things?
 
 
