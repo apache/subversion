@@ -171,7 +171,13 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 
 
-/* Get the ENTRY structure for PATH, allocating from POOL. */
+/* Set *ENTRY to an entry for PATH, allocated in POOL.
+ * If PATH is not under revision control, set *ENTRY to NULL.  
+ *
+ * Note that it is possible for PATH to be absent from disk but still
+ * under revision control; and conversely, it is possible for PATH to
+ * be present, but not under revision control.
+ */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_stringbuf_t *path,
                            apr_pool_t *pool);

@@ -138,13 +138,21 @@ copy_file_administratively (svn_stringbuf_t *src_path,
      in the repository.  See comment at the bottom of this file for an
      explanation. */
   SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
-  if ((src_entry->schedule == svn_wc_schedule_add)
-      || (! src_entry->url))
-    return svn_error_createf 
-      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-       "Not allowed to copy or move '%s' -- it's not in the repository yet.\n"
-       "Try committing first.",
-       src_path->data);
+  if (! src_entry)
+    {
+      return svn_error_createf 
+        (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
+         "Cannot copy or move '%s' -- it's not under revision control",
+         src_path->data);
+    }
+  else if ((src_entry->schedule == svn_wc_schedule_add) || (! src_entry->url))
+    {
+      return svn_error_createf 
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+         "Cannot copy or move '%s' -- it's not in the repository yet.\n"
+         "Try committing first.",
+         src_path->data);
+    }
 
   /* Now, make an actual copy of the working file. */
   SVN_ERR (svn_io_copy_file (src_path->data, dst_path->data, pool));
