@@ -558,8 +558,8 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
   assert (eol_str || keywords);
   interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
 
-  readlen = sizeof (buf);
-  while (readlen == sizeof (buf))
+  readlen = sizeof (buf) - 1;
+  while (readlen == sizeof (buf) - 1)
     {
       SVN_ERR (svn_stream_read (s, buf, &readlen));
       buf[readlen] = '\0';

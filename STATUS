@@ -105,11 +105,7 @@ Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
 
-    * r8301 (issue 1701)
-      Fix a buffer overflow in svn_subst_translate_stream
-      Justification: obvious bug, breaks AIX client
-      Votes:
-       +1: philip, cmpilato, mbk
+   [none pending right now]
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
