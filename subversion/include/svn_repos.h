@@ -823,7 +823,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 /* The RFC822-style headers in our dumpfile format. */
 #define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
-#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           2
+#define SVN_REPOS_DUMPFILE_FORMAT_VERSION           3
 #define SVN_REPOS_DUMPFILE_UUID                      "UUID"
 #define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
@@ -839,6 +839,8 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 #define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
 #define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
+#define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action
@@ -871,9 +873,34 @@ enum svn_repos_load_uuid
  * against the previous revision (usually it looks like a full dump of
  * the tree).
  *
+ * If @a use_deltas is @c TRUE, output only node properties which have
+ * changed relative to the previous contents, and output text contents
+ * as svndiff data against the previous contents.  Regardless of how
+ * this flag is set, the first revision of a non-incremental dump will
+ * be done with full plain text.  A dump with @a use_deltas set cannot
+ * be loaded by Subversion 1.0.x.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
+ */
+svn_error_t *svn_repos_dump_fs2 (svn_repos_t *repos,
+                                 svn_stream_t *dumpstream,
+                                 svn_stream_t *feedback_stream,
+                                 svn_revnum_t start_rev,
+                                 svn_revnum_t end_rev,
+                                 svn_boolean_t incremental,
+                                 svn_boolean_t use_deltas,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
+ * parameter always set to @c FALSE.
  */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
@@ -924,8 +951,8 @@ svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/** A vtable that is driven by @c svn_repos_parse_dumpstream. */
-typedef struct svn_repos_parse_fns_t
+/** A vtable that is driven by @c svn_repos_parse_dumpstream2. */
+typedef struct svn_repos_parse_fns2_t
 {
   /** The parser has discovered a new revision record within the
    * parsing session represented by @a parse_baton.  All the headers are
@@ -968,6 +995,9 @@ typedef struct svn_repos_parse_fns_t
                                      const char *name,
                                      const svn_string_t *value);
 
+  /** For a given @a node_baton, delete property @a name. */
+  svn_error_t *(*delete_node_property) (void *node_baton, const char *name);
+
   /** For a given @a node_baton, remove all properties. */
   svn_error_t *(*remove_node_props) (void *node_baton);
 
@@ -982,6 +1012,19 @@ typedef struct svn_repos_parse_fns_t
   svn_error_t *(*set_fulltext) (svn_stream_t **stream,
                                 void *node_baton);
 
+  /** For a given @a node_baton, set @a handler and @a handler_baton
+   * to a window handler and baton capable of receiving a delta
+   * against the node's previous contents.  A NULL window will be
+   * sent to the handler after all the windows are sent.
+   *
+   * If a @c NULL is returned instead of a handler, the vtable is
+   * indicating that no delta is desired, and the parser will not
+   * attempt to send it.
+   */
+  svn_error_t *(*apply_textdelta) (svn_txdelta_window_handler_t *handler,
+                                   void **handler_baton,
+                                   void *node_baton);
+
   /** The parser has reached the end of the current node represented by
    * @a node_baton, it can be freed.
    */
@@ -993,7 +1036,7 @@ typedef struct svn_repos_parse_fns_t
    */
   svn_error_t *(*close_revision) (void *revision_baton);
 
-} svn_repos_parser_fns_t;
+} svn_repos_parser_fns2_t;
 
 
 
@@ -1020,12 +1063,12 @@ typedef struct svn_repos_parse_fns_t
  * but still allow expansion of the format:  most headers are ignored.
  */
 svn_error_t *
-svn_repos_parse_dumpstream (svn_stream_t *stream,
-                            const svn_repos_parser_fns_t *parse_fns,
-                            void *parse_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *pool);
+svn_repos_parse_dumpstream2 (svn_stream_t *stream,
+                             const svn_repos_parser_fns2_t *parse_fns,
+                             void *parse_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool);
 
 
 /** Set @a *parser and @a *parse_baton to a vtable parser which commits new
@@ -1045,6 +1088,71 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
  *
  */
 svn_error_t *
+svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
+                                void **parse_baton,
+                                svn_repos_t *repos,
+                                svn_boolean_t use_history,
+                                enum svn_repos_load_uuid uuid_action,
+                                svn_stream_t *outstream,
+                                const char *parent_dir,
+                                apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * A vtable that is driven by @c svn_repos_parse_dumpstream.  Lacks
+ * the delete_node_property and apply_textdelta callbacks.
+ */
+typedef struct svn_repos_parse_fns_t
+{
+  svn_error_t *(*new_revision_record) (void **revision_baton,
+                                       apr_hash_t *headers,
+                                       void *parse_baton,
+                                       apr_pool_t *pool);
+  svn_error_t *(*uuid_record) (const char *uuid,
+                               void *parse_baton,
+                               apr_pool_t *pool);
+  svn_error_t *(*new_node_record) (void **node_baton,
+                                   apr_hash_t *headers,
+                                   void *revision_baton,
+                                   apr_pool_t *pool);
+  svn_error_t *(*set_revision_property) (void *revision_baton,
+                                         const char *name,
+                                         const svn_string_t *value);
+  svn_error_t *(*set_node_property) (void *node_baton,
+                                     const char *name,
+                                     const svn_string_t *value);
+  svn_error_t *(*remove_node_props) (void *node_baton);
+  svn_error_t *(*set_fulltext) (svn_stream_t **stream,
+                                void *node_baton);
+  svn_error_t *(*close_node) (void *node_baton);
+  svn_error_t *(*close_revision) (void *revision_baton);
+} svn_repos_parser_fns_t;
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_parse_dumpstream2, but uses the more limited
+ * svn_repos_parser_fns_t vtable type.
+ */
+svn_error_t *
+svn_repos_parse_dumpstream (svn_stream_t *stream,
+                            const svn_repos_parser_fns_t *parse_fns,
+                            void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_get_fs_build_parser2, but yields the more
+ * limited svn_repos_parser_fns_t vtable type.
+ */
+svn_error_t *
 svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
@@ -1053,6 +1161,8 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
                                svn_stream_t *outstream,
                                const char *parent_dir,
                                apr_pool_t *pool);
+
+
 /** @} */
 
 #ifdef __cplusplus

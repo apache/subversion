@@ -33,10 +33,14 @@
 
 /** A variant of our hash-writing routine in libsvn_subr;  this one
     writes to a stringbuf instead of a file, and outputs PROPS-END
-    instead of END. **/
+    instead of END.  If OLDHASH is not NULL, then only properties
+    which vary from OLDHASH will be written, and properties which
+    exist only in OLDHASH will be written out with "D" entries
+    (like "K" entries but with no corresponding value). **/
 
 static void
-write_hash_to_stringbuf (apr_hash_t *hash, 
+write_hash_to_stringbuf (apr_hash_t *hash,
+                         apr_hash_t *oldhash,
                          svn_stringbuf_t **strbuf,
                          apr_pool_t *pool)
 {
@@ -55,6 +59,16 @@ write_hash_to_stringbuf (apr_hash_t *hash,
 
       /* Get this key and val. */
       apr_hash_this (this, &key, &keylen, &val);
+      value = val;
+
+      /* Don't output properties equal to the ones in oldhash, if present. */
+      if (oldhash)
+        {
+          svn_string_t *oldvalue = apr_hash_get (oldhash, key, keylen);
+
+          if (oldvalue && svn_string_compare (value, oldvalue))
+            continue;
+        }
 
       /* Output name length, then name. */
 
@@ -68,7 +82,6 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
       /* Output value length, then value. */
-      value = val;
 
       svn_stringbuf_appendbytes (*strbuf, "V ", 2);
 
@@ -80,7 +93,77 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
     }
 
+  if (oldhash)
+    {
+      /* Output a "D " entry for each property in oldhash but not hash. */
+      for (this = apr_hash_first (pool, oldhash); this;
+           this = apr_hash_next (this))
+        {
+          const void *key;
+          void *val;
+          apr_ssize_t keylen;
+          int bytes_used;
+
+          /* Get this key and val. */
+          apr_hash_this (this, &key, &keylen, &val);
+
+          /* Only output values deleted in hash. */
+          if (apr_hash_get (hash, key, keylen))
+            continue;
+
+          /* Output name length, then name. */
+
+          svn_stringbuf_appendbytes (*strbuf, "D ", 2);
+
+          sprintf (buf, "%" APR_SSIZE_T_FMT "%n", keylen, &bytes_used);
+          svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
+          svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+
+          svn_stringbuf_appendbytes (*strbuf, (const char *) key, keylen);
+          svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+        }
+    }
   svn_stringbuf_appendbytes (*strbuf, "PROPS-END\n", 10);
+}
+
+
+/* Compute the delta between OLDROOT/OLDPATH and NEWROOT/NEWPATH and
+   store it into a new temporary file *TEMPFILE.  OLDROOT may be NULL,
+   in which case the delta will be computed against an empty file, as
+   per the svn_fs_get_file_delta_stream docstring.  Record the length
+   of the temporary file in *LEN, and rewind the file before
+   returning. */
+static svn_error_t *
+store_delta (apr_file_t **tempfile, svn_filesize_t *len,
+             svn_fs_root_t *oldroot, const char *oldpath,
+             svn_fs_root_t *newroot, const char *newpath, apr_pool_t *pool)
+{
+  const char *tempdir, *name;
+  svn_stream_t *temp_stream;
+  apr_off_t offset = 0;
+  svn_txdelta_stream_t *delta_stream;
+  svn_txdelta_window_handler_t wh;
+  void *whb;
+
+  /* Create a temporary file and open a stream to it. */
+  SVN_ERR (svn_io_temp_dir (&tempdir, pool));
+  SVN_ERR (svn_io_open_unique_file (tempfile, &name,
+                                    apr_psprintf (pool, "%s/dump", tempdir),
+                                    ".tmp", TRUE, pool));
+  temp_stream = svn_stream_from_aprfile (*tempfile, pool);
+
+  /* Compute the delta and send it to the temporary file. */
+  SVN_ERR (svn_fs_get_file_delta_stream (&delta_stream, oldroot, oldpath,
+                                         newroot, newpath, pool));
+  svn_txdelta_to_svndiff (temp_stream, pool, &wh, &whb);
+  SVN_ERR (svn_txdelta_send_txstream (delta_stream, wh, whb, pool));
+
+  /* Get the length of the temporary file and rewind it. */
+  SVN_ERR (svn_io_file_seek (*tempfile, APR_CUR, &offset, pool));
+  *len = offset;
+  offset = 0;
+  SVN_ERR (svn_io_file_seek (*tempfile, APR_SET, &offset, pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -105,6 +188,9 @@ struct edit_baton
   /* The fs revision root, so we can read the contents of paths. */
   svn_fs_root_t *fs_root;
   svn_revnum_t current_rev;
+
+  /* True if dumped nodes should output deltas instead of full text. */
+  svn_boolean_t use_deltas;
 
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
@@ -223,12 +309,13 @@ dump_node (struct edit_baton *eb,
            apr_pool_t *pool)
 {
   svn_stringbuf_t *propstring;
-  apr_hash_t *prophash;
-  svn_filesize_t textlen = 0, content_length = 0;
-  apr_size_t proplen = 0, len;
+  svn_filesize_t content_length = 0;
+  apr_size_t len;
   svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
   const char *compare_path = path;
   svn_revnum_t compare_rev = eb->current_rev - 1;
+  svn_fs_root_t *compare_root = NULL;
+  apr_file_t *delta_file = NULL;
 
   /* Write out metadata headers for this file node. */
   if (eb->stream)
@@ -257,9 +344,6 @@ dump_node (struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
-      svn_fs_root_t *compare_root;
-      svn_boolean_t text_changed = FALSE, props_changed = FALSE;
-
       if (eb->stream)
         SVN_ERR (svn_stream_printf (eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_NODE_ACTION
@@ -270,17 +354,13 @@ dump_node (struct edit_baton *eb,
                                      svn_fs_root_fs (eb->fs_root),
                                      compare_rev, pool));
       
-      SVN_ERR (svn_fs_props_changed (&props_changed,
+      SVN_ERR (svn_fs_props_changed (&must_dump_props,
                                      compare_root, compare_path,
                                      eb->fs_root, path, pool));
       if (kind == svn_node_file)
-        SVN_ERR (svn_fs_contents_changed (&text_changed,
+        SVN_ERR (svn_fs_contents_changed (&must_dump_text,
                                           compare_root, compare_path,
                                           eb->fs_root, path, pool));
-      if (props_changed)
-        must_dump_props = TRUE;
-      if (text_changed)
-        must_dump_text = TRUE;        
     }
   else if (action == svn_node_action_replace)
     {
@@ -345,9 +425,6 @@ dump_node (struct edit_baton *eb,
         }
       else
         {
-          svn_fs_root_t *src_root;
-          svn_boolean_t text_changed = FALSE, props_changed = FALSE;
-
           if ((cmp_rev < eb->oldest_dumped_rev)
               && eb->feedback_stream)
             svn_stream_printf 
@@ -366,23 +443,19 @@ dump_node (struct edit_baton *eb,
                                         ": %s\n",
                                         cmp_rev, cmp_path));
 
-          SVN_ERR (svn_fs_revision_root (&src_root, 
+          SVN_ERR (svn_fs_revision_root (&compare_root, 
                                          svn_fs_root_fs (eb->fs_root),
                                          compare_rev, pool));
 
           /* Need to decide if the copied node had any extra textual or
              property mods as well.  */
-          SVN_ERR (svn_fs_props_changed (&props_changed,
-                                         src_root, compare_path,
+          SVN_ERR (svn_fs_props_changed (&must_dump_props,
+                                         compare_root, compare_path,
                                          eb->fs_root, path, pool));
           if (kind == svn_node_file)
-            SVN_ERR (svn_fs_contents_changed (&text_changed,
-                                              src_root, compare_path,
+            SVN_ERR (svn_fs_contents_changed (&must_dump_text,
+                                              compare_root, compare_path,
                                               eb->fs_root, path, pool));
-          if (props_changed)
-            must_dump_props = TRUE;
-          if (text_changed)
-            must_dump_text = TRUE;
           
           /* ### someday write a node-copyfrom-source-checksum. */
         }
@@ -410,8 +483,21 @@ dump_node (struct edit_baton *eb,
      property values here. */
   if (must_dump_props)
     {
+      apr_hash_t *prophash, *oldhash = NULL;
+      apr_size_t proplen;
+
       SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
-      write_hash_to_stringbuf (prophash, &propstring, pool);
+      if (eb->use_deltas && compare_root)
+        {
+          /* Fetch the old property hash to diff against and output a header
+             saying that our property contents are a delta. */
+          SVN_ERR (svn_fs_node_proplist (&oldhash, compare_root, compare_path,
+                                         pool));
+          if (eb->stream)
+            SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                        SVN_REPOS_DUMPFILE_PROP_DELTA ": true\n"));
+        }
+      write_hash_to_stringbuf (prophash, oldhash, &propstring, pool);
       proplen = propstring->len;
       content_length += proplen;
       if (eb->stream)
@@ -426,15 +512,34 @@ dump_node (struct edit_baton *eb,
     {
       unsigned char md5_digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
+      svn_filesize_t textlen;
 
-      SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
+      if (eb->use_deltas)
+        {
+          /* Compute the text delta now and write it into a temporary
+             file, so that we can find its length.  Output a header
+             saying our text contents are a delta. */
+          SVN_ERR (store_delta (&delta_file, &textlen, compare_root,
+                                compare_path, eb->fs_root, path, pool));
+          if (eb->stream)
+            SVN_ERR (svn_stream_printf (eb->stream, pool,
+                                        SVN_REPOS_DUMPFILE_TEXT_DELTA
+                                        ": true\n"));
+        }
+      else
+        {
+          /* Just fetch the length of the file. */
+          SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
+        }
+
       content_length += textlen;
-      SVN_ERR (svn_fs_file_md5_checksum (md5_digest, eb->fs_root, path, pool));
-      hex_digest = svn_md5_digest_to_cstring (md5_digest, pool);
       if (eb->stream)
         SVN_ERR (svn_stream_printf (eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH 
                                     ": %" SVN_FILESIZE_T_FMT "\n", textlen));
+
+      SVN_ERR (svn_fs_file_md5_checksum (md5_digest, eb->fs_root, path, pool));
+      hex_digest = svn_md5_digest_to_cstring (md5_digest, pool);
       if (hex_digest && eb->stream)
         SVN_ERR (svn_stream_printf (eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM 
@@ -463,7 +568,11 @@ dump_node (struct edit_baton *eb,
     {
       svn_stream_t *contents;
 
-      SVN_ERR (svn_fs_file_contents (&contents, eb->fs_root, path, pool));
+      if (delta_file)
+        contents = svn_stream_from_aprfile (delta_file, pool);
+      else
+        SVN_ERR (svn_fs_file_contents (&contents, eb->fs_root, path, pool));
+
       SVN_ERR (svn_stream_copy (contents, eb->stream, pool));
     }
   
@@ -707,6 +816,7 @@ get_dump_editor (const svn_delta_editor_t **editor,
                  svn_stream_t *stream,
                  svn_stream_t *feedback_stream,
                  svn_revnum_t oldest_dumped_rev,
+                 svn_boolean_t use_deltas,
                  apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -723,6 +833,7 @@ get_dump_editor (const svn_delta_editor_t **editor,
   eb->path = apr_pstrdup (pool, root_path);
   SVN_ERR (svn_fs_revision_root (&(eb->fs_root), fs, to_rev, pool));
   eb->current_rev = to_rev;
+  eb->use_deltas = use_deltas;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
@@ -784,7 +895,7 @@ write_revision_record (svn_stream_t *stream,
                     datevalue);
     }
 
-  write_hash_to_stringbuf (props, &encoded_prophash, pool);
+  write_hash_to_stringbuf (props, NULL, &encoded_prophash, pool);
 
   /* ### someday write a revision-content-checksum */
 
@@ -816,15 +927,16 @@ write_revision_record (svn_stream_t *stream,
 
 /* The main dumper. */
 svn_error_t *
-svn_repos_dump_fs (svn_repos_t *repos,
-                   svn_stream_t *stream,
-                   svn_stream_t *feedback_stream,
-                   svn_revnum_t start_rev,
-                   svn_revnum_t end_rev,
-                   svn_boolean_t incremental,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *pool)
+svn_repos_dump_fs2 (svn_repos_t *repos,
+                    svn_stream_t *stream,
+                    svn_stream_t *feedback_stream,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    svn_boolean_t incremental,
+                    svn_boolean_t use_deltas,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
   void *dump_edit_baton;
@@ -867,9 +979,15 @@ svn_repos_dump_fs (svn_repos_t *repos,
      magic header followed by a dumpfile format version. */
   if (stream)
     {
+      int version = SVN_REPOS_DUMPFILE_FORMAT_VERSION;
+
+      /* If we're not using deltas, use the previous version, for
+         compatibility with svn 1.0.x. */
+      if (!use_deltas)
+        version--;
       SVN_ERR (svn_stream_printf (stream, pool, 
                                   SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n", 
-                                  SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+                                  version));
       SVN_ERR (svn_stream_printf (stream, pool, SVN_REPOS_DUMPFILE_UUID
                                   ": %s\n\n", uuid));
     }
@@ -879,6 +997,7 @@ svn_repos_dump_fs (svn_repos_t *repos,
     {
       svn_revnum_t from_rev, to_rev;
       svn_fs_root_t *to_root;
+      svn_boolean_t use_deltas_for_rev;
 
       /* Check for cancellation. */
       if (cancel_func)
@@ -914,10 +1033,13 @@ svn_repos_dump_fs (svn_repos_t *repos,
       /* Write the revision record. */
       SVN_ERR (write_revision_record (stream, fs, to_rev, subpool));
 
-      /* The editor which dumps nodes to a file. */
-      SVN_ERR (get_dump_editor (&dump_editor, &dump_edit_baton, 
-                                fs, to_rev, "/", stream, feedback_stream,
-                                start_rev, subpool));
+      /* Fetch the editor which dumps nodes to a file.  Regardless of
+         what we've been told, don't use deltas for the first rev of a
+         non-incremental dump. */
+      use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
+      SVN_ERR (get_dump_editor (&dump_editor, &dump_edit_baton, fs, to_rev,
+                                "/", stream, feedback_stream, start_rev,
+                                use_deltas_for_rev, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR (svn_fs_revision_root (&to_root, fs, to_rev, subpool));
@@ -958,4 +1080,20 @@ svn_repos_dump_fs (svn_repos_t *repos,
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_dump_fs (svn_repos_t *repos,
+                   svn_stream_t *stream,
+                   svn_stream_t *feedback_stream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_dump_fs2 (repos, stream, feedback_stream, start_rev,
+                             end_rev, incremental, FALSE, cancel_func,
+                             cancel_baton, pool);
 }
