@@ -1476,5 +1476,9 @@ about whether that change should go into the release line as well --
 which is why the STATUS file for a release lives on its branch, not on
 the trunk.
 
+Changes that are a normal part of release bookkeeping (for example,
+the steps listed in notes/releases.txt) don't need to be listed in
+STATUS nor voted on, of course.
+
 The STATUS file is not the place for discussion; use the dev mailing
 list for that, and have the file point to the thread.
