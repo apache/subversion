@@ -57,9 +57,10 @@ svn_error_t *svn_fs_fs__get_lock_from_path (svn_lock_t **lock,
                                             const char *path,
                                             apr_pool_t *pool);
 
-svn_error_t *svn_fs_fs__get_locks (apr_hash_t **locks,
-                                   svn_fs_t *fs,
+svn_error_t *svn_fs_fs__get_locks (svn_fs_t *fs,
                                    const char *path,
+                                   svn_fs_get_locks_callback_t get_locks_func,
+                                   void *get_locks_baton,
                                    apr_pool_t *pool);
 
 

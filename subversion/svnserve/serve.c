@@ -1428,7 +1428,8 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   
-  SVN_CMD_ERR(svn_fs_get_locks(&locks, b->fs, full_path, pool));
+  SVN_CMD_ERR(svn_repos_fs_get_locks(&locks, b->repos, full_path, 
+                                     NULL, NULL, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))

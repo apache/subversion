@@ -994,7 +994,7 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   fs = svn_repos_fs (repos);
 
   /* Fetch all locks on or below the root directory. */
-  SVN_ERR (svn_fs_get_locks (&locks, fs, "/", pool));
+  SVN_ERR (svn_repos_fs_get_locks (&locks, repos, "/", NULL, NULL, pool));
 
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
   

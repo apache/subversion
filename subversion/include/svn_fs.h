@@ -1600,19 +1600,29 @@ svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
                                         apr_pool_t *pool);
 
 
-/** Set @a *locks to a hashtable which represents all locks on or
- * below @a path in @a fs.
- *
- * The hashtable maps (const char *) absolute fs paths to (const
- * svn_lock_t *) structures.  The hashtable -- and all keys and
- * values -- are allocated in @a pool.
- *
- * If there are no locks on or below @a path, still set @a *locks to a
- * hashtable, just one with zero items.
+/** The type of a lock discovery callback function.  @a baton is the
+ * value specified in the call to @c svn_fs_get_locks; the filesystem
+ * passes it through to the callback.  @a lock is a lock structure.
+ * @a pool is a temporary subpool for use by the callback
+ * implementation -- it is cleared after invocation of the callback.
  */
-svn_error_t *svn_fs_get_locks (apr_hash_t **locks,
-                               svn_fs_t *fs,
+typedef svn_error_t *(*svn_fs_get_locks_callback_t) (void *baton, 
+                                                     svn_lock_t *lock, 
+                                                     apr_pool_t *pool);
+
+
+/** Report locks on or below @a path in @a fs using the @a
+ * get_locks_func / @a get_locks_baton.  Use @a pool for necessary
+ * allocations.
+ *
+ * If the @a get_locks_func callback implementation returns an error,
+ * lock iteration will terminate and that error will be returned by
+ * this function.
+ */
+svn_error_t *svn_fs_get_locks (svn_fs_t *fs,
                                const char *path,
+                               svn_fs_get_locks_callback_t get_locks_func,
+                               void *get_locks_baton,
                                apr_pool_t *pool);
 
 

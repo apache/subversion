@@ -516,6 +516,40 @@ svn_repos_fs_unlock (svn_repos_t *repos,
 }
 
 
+struct get_locks_baton_t
+{
+  svn_fs_t *fs;
+  svn_fs_root_t *head_root;
+  svn_repos_authz_func_t authz_read_func;
+  void *authz_read_baton;
+  apr_hash_t *locks;
+};
+
+
+/* This implements the svn_fs_get_locks_callback_t interface. */
+static svn_error_t *
+get_locks_callback (void *baton, 
+                    svn_lock_t *lock, 
+                    apr_pool_t *pool)
+{
+  struct get_locks_baton_t *b = baton;
+  svn_boolean_t readable = TRUE;
+
+  /* If there's auth to deal with, deal with it. */
+  if (b->authz_read_func)
+    {
+      SVN_ERR (b->authz_read_func (&readable, b->head_root, lock->path,
+                                   b->authz_read_baton, pool));
+    }
+
+  /* If we can read this lock path, add the lock to the return hash. */
+  if (readable)
+    apr_hash_set (b->locks, lock->path, APR_HASH_KEY_STRING, 
+                  svn_lock_dup (lock, apr_hash_pool_get (b->locks)));
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_repos_fs_get_locks (apr_hash_t **locks,
@@ -525,47 +559,27 @@ svn_repos_fs_get_locks (apr_hash_t **locks,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
-  apr_hash_t *all_locks;
-  apr_hash_index_t *hi;
+  apr_hash_t *all_locks = apr_hash_make (pool);
   svn_revnum_t head_rev;
-  svn_fs_root_t *head_root;
+  struct get_locks_baton_t baton;
 
-  /* We'll use a subpool to authorize each path. */
-  apr_pool_t *subpool = svn_pool_create (pool);
-
-  /* Get all the locks. */
-  SVN_ERR (svn_fs_get_locks (&all_locks, repos->fs, path, pool));
-  
   /* Locks are always said to apply to HEAD revision, so we'll check
      to see if locked-paths are readable in HEAD as well. */
   SVN_ERR (svn_fs_youngest_rev (&head_rev, repos->fs, pool));
-  SVN_ERR (svn_fs_revision_root (&head_root, repos->fs, head_rev, pool));
 
-  /* But then remove the ones attached to unreadable paths. */
-  if (authz_read_func)
-    {
-      for (hi = apr_hash_first (pool, all_locks); hi; hi = apr_hash_next (hi))
-        {
-          const void *key;
-          void *val;
-          apr_ssize_t keylen;
-          svn_boolean_t readable;
-          
-          svn_pool_clear (subpool);
-          
-          apr_hash_this (hi, &key, &keylen, &val);
-          
-          SVN_ERR (authz_read_func (&readable, head_root, key,
-                                    authz_read_baton, subpool));
-          if (! readable)
-            apr_hash_set (all_locks, key, keylen, NULL);
-        }
-    }
+  /* Populate our callback baton. */
+  baton.fs = repos->fs;
+  baton.locks = all_locks;
+  baton.authz_read_func = authz_read_func;
+  baton.authz_read_baton = authz_read_baton;
+  SVN_ERR (svn_fs_revision_root (&(baton.head_root), repos->fs, 
+                                 head_rev, pool));
 
-  svn_pool_destroy (subpool);
+  /* Get all the locks. */
+  SVN_ERR (svn_fs_get_locks (repos->fs, path, get_locks_callback,
+                             &baton, pool));
 
-  *locks = all_locks;
-
+  *locks = baton.locks;
   return SVN_NO_ERROR;
 }
 

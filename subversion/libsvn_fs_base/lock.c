@@ -481,8 +481,9 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
 
 struct locks_get_args
 {
-  apr_hash_t **locks_p;
   const char *path;
+  svn_fs_get_locks_callback_t get_locks_func;
+  void *get_locks_baton;
 };
 
 
@@ -490,23 +491,25 @@ static svn_error_t *
 txn_body_get_locks (void *baton, trail_t *trail)
 {
   struct locks_get_args *args = baton;
-  return svn_fs_bdb__locks_get (args->locks_p, trail->fs, args->path,
+  return svn_fs_bdb__locks_get (trail->fs, args->path,
+                                args->get_locks_func, args->get_locks_baton,
                                 trail, trail->pool);
 }
 
 
 svn_error_t *
-svn_fs_base__get_locks (apr_hash_t **locks,
-                        svn_fs_t *fs,
+svn_fs_base__get_locks (svn_fs_t *fs,
                         const char *path,
+                        svn_fs_get_locks_callback_t get_locks_func,
+                        void *get_locks_baton,
                         apr_pool_t *pool)
 {
   struct locks_get_args args;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
-  
-  args.locks_p = locks;
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
+  args.get_locks_func = get_locks_func;
+  args.get_locks_baton = get_locks_baton;
   return svn_fs_base__retry_txn (fs, txn_body_get_locks, &args, pool);
 }
 
@@ -552,31 +555,15 @@ verify_lock (svn_fs_t *fs,
 }
 
 
-
-/* Utility function: verify that an entire hash of LOCKS can all be used.
-
-   Loop over hash, call svn_fs__verify_lock() on each lock, throw any
-   of the three specific errors when an usuable lock is encountered.
-   If all locks are usable, return SVN_NO_ERROR.
- */
+/* This implements the svn_fs_get_locks_callback_t interface, where
+   BATON is just an svn_fs_t object. */
 static svn_error_t *
-verify_locks (svn_fs_t *fs,
-              apr_hash_t *locks,
-              apr_pool_t *pool)
+get_locks_callback (void *baton, 
+                    svn_lock_t *lock, 
+                    apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
-    {
-      void *lock;
-
-      apr_hash_this (hi, NULL, NULL, &lock);
-      SVN_ERR (verify_lock (fs, lock, pool));
-    }
-
-  return SVN_NO_ERROR;
+  return verify_lock (baton, lock, pool);
 }
-
 
 
 /* The main routine for lock enforcement, used throughout libsvn_fs_base. */
@@ -588,12 +575,9 @@ svn_fs_base__allow_locked_operation (const char *path,
 {
   if (recurse)
     {
-      apr_hash_t *locks;
-      
       /* Discover all locks at or below the path. */
-      SVN_ERR (svn_fs_bdb__locks_get (&locks, trail->fs, path, trail, pool));
-      if (apr_hash_count (locks))
-        SVN_ERR (verify_locks (trail->fs, locks, pool));
+      SVN_ERR (svn_fs_bdb__locks_get (trail->fs, path, get_locks_callback, 
+                                      trail->fs, trail, pool));
     }
   else
     {

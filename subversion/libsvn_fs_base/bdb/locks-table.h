@@ -89,9 +89,10 @@ svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
    while building the hash.  That means that the caller can trust that
    each returned lock hasn't yet expired.
 */
-svn_error_t *svn_fs_bdb__locks_get (apr_hash_t **locks_p,
-                                    svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__locks_get (svn_fs_t *fs,
                                     const char *path,
+                                    svn_fs_get_locks_callback_t get_locks_func,
+                                    void *get_locks_baton,
                                     trail_t *trail,
                                     apr_pool_t *pool);
 

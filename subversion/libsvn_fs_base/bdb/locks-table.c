@@ -186,9 +186,10 @@ get_lock (svn_lock_t **lock_p,
 
 
 svn_error_t *
-svn_fs_bdb__locks_get (apr_hash_t **locks_p,
-                       svn_fs_t *fs,
+svn_fs_bdb__locks_get (svn_fs_t *fs,
                        const char *path,
+                       svn_fs_get_locks_callback_t get_locks_func,
+                       void *get_locks_baton,
                        trail_t *trail,
                        apr_pool_t *pool)
 {
@@ -197,7 +198,6 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
   DBT key, value;
   int db_err;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *locks = apr_hash_make (pool);
   const char *lock_token;
   svn_lock_t *lock;
   svn_error_t *err;
@@ -218,8 +218,8 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
   else
     {
       SVN_ERR (get_lock (&lock, fs, path, lock_token, trail, pool));
-      apr_hash_set (locks, apr_pstrdup (pool, path), 
-                    APR_HASH_KEY_STRING, lock);
+      if (get_locks_func)
+        SVN_ERR (get_locks_func (get_locks_baton, lock, pool));
     }
 
   /* Now go hunt for possible children of PATH. */
@@ -258,7 +258,7 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
       lock_token = apr_pstrmemdup (subpool, value.data, value.size);
 
       /* Get the lock for CHILD_PATH.  */
-      err = get_lock (&lock, fs, child_path, lock_token, trail, pool);
+      err = get_lock (&lock, fs, child_path, lock_token, trail, subpool);
       if (err)
         {
           cursor->c_close (cursor);
@@ -266,8 +266,15 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
         }
 
       /* Lock is verified, return it in the hash. */
-      apr_hash_set (locks, apr_pstrdup (pool, child_path), 
-                    APR_HASH_KEY_STRING, lock);
+      if (get_locks_func)
+        {
+          err = get_locks_func (get_locks_baton, lock, subpool);
+          if (err)
+            {
+              cursor->c_close (cursor);
+              return err;
+            }
+        }
 
       svn_fs_base__result_dbt (&key);
       svn_fs_base__result_dbt (&value);
@@ -280,7 +287,6 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
   if (db_err && (db_err != DB_NOTFOUND)) 
     SVN_ERR (BDB_WRAP (fs, "fetching lock tokens", db_err));
 
-  *locks_p = locks;
   return SVN_NO_ERROR;
 }
 

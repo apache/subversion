@@ -210,6 +210,17 @@ attach_lock (const char **msg,
 }
 
 
+/* This implements the svn_fs_get_locks_callback_t interface, where
+   BATON is just a pointer to an integer. */
+static svn_error_t *
+get_locks_counter_callback (void *baton, 
+                            svn_lock_t *lock, 
+                            apr_pool_t *pool)
+{
+  int *lock_count = baton;
+  (*lock_count)++;
+  return SVN_NO_ERROR;
+}
 
 /* Test that we can get all locks under a directory. */
 static svn_error_t *
@@ -225,8 +236,8 @@ get_locks (const char **msg,
   svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock;
-  apr_hash_t *hash = apr_hash_make (pool);
-  
+  int num_locks = 0;
+
   *msg = "get locks";
 
   if (msg_only)
@@ -256,11 +267,11 @@ get_locks (const char **msg,
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/tau", "", 0, 0,
                         SVN_INVALID_REVNUM, pool));
 
-  svn_fs_get_locks(&hash, fs, "/A/D/G", pool);
-
-  if (apr_hash_count(hash) != 3)
+  SVN_ERR (svn_fs_get_locks (fs, "/A/D/G", get_locks_counter_callback, 
+                             &num_locks, pool));
+  if (num_locks != 3)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                             "Failed to retrieve all 3 locks under '/A/D/G/'");
+                             "Failed to retrieve all 3 locks under '/A/D/G'");
 
   return SVN_NO_ERROR;
 }

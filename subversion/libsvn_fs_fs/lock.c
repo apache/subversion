@@ -712,20 +712,23 @@ get_lock_from_path_helper (svn_fs_t *fs,
 }
 
 
-/* A recursive function that puts all locks under PATH in FS into
-   LOCKS.  FD, if non-NULL, will be read from by read_entries_file
-   instead of read_entries_file opening PATH. */
+/* A recursive function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
+   all locks in and under PATH in FS.  FD, if non-NULL, will be read
+   from by read_entries_file instead of read_entries_file opening
+   PATH. */
 static svn_error_t *
-get_locks_under_path (apr_hash_t *locks, 
-                      svn_fs_t *fs, 
+get_locks_under_path (svn_fs_t *fs, 
                       const char *path,
                       apr_file_t *fd,
+                      svn_fs_get_locks_callback_t get_locks_func,
+                      void *get_locks_baton,
                       apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const char *child, *abs_path;
   apr_off_t offset = 0;
+  apr_pool_t *subpool = svn_pool_create (pool);
   
   SVN_ERR (read_entries_file (&entries, path, fd, pool));
   if (fd)
@@ -735,28 +738,38 @@ get_locks_under_path (apr_hash_t *locks,
     {
       apr_size_t nbytes = 2;
       const void *key;
-      char *buf = apr_palloc (pool, nbytes);
+      char *buf;
+      
+      svn_pool_clear (subpool);
+
+      buf = apr_palloc (subpool, nbytes);
       apr_hash_this(hi, &key, NULL, NULL);
       child = key;
 
-      SVN_ERR (abs_path_to_lock_digest_file (&abs_path, fs, child, pool));
+      SVN_ERR (abs_path_to_lock_digest_file (&abs_path, fs, child, subpool));
 
       SVN_ERR (svn_io_file_open (&fd, abs_path, 
-                                 APR_READ, APR_OS_DEFAULT, pool));
-      SVN_ERR (svn_io_file_read_full (fd, buf, nbytes, &nbytes, pool));
-      SVN_ERR (svn_io_file_seek (fd, APR_SET, &offset, pool));
+                                 APR_READ, APR_OS_DEFAULT, subpool));
+      SVN_ERR (svn_io_file_read_full (fd, buf, nbytes, &nbytes, subpool));
+      SVN_ERR (svn_io_file_seek (fd, APR_SET, &offset, subpool));
 
       if (strncmp (buf, "K ", 2) == 0) /* We have a lock file. */
         {
           svn_lock_t *lock;
-          SVN_ERR (read_lock_from_hash_name (&lock, fs, child, fd, pool));
-          SVN_ERR (svn_io_file_close (fd, pool));
+          SVN_ERR (read_lock_from_hash_name (&lock, fs, child, fd, subpool));
+          SVN_ERR (svn_io_file_close (fd, subpool));
 
-          apr_hash_set (locks, lock->path, APR_HASH_KEY_STRING, lock);
+          /* Call the callback function with our lock. */
+          if (get_locks_func)
+            SVN_ERR (get_locks_func (get_locks_baton, lock, subpool));
         }
       else /* It's another entries file.  Recurse. */ 
-        SVN_ERR (get_locks_under_path (locks, fs, abs_path, fd, pool));
+        SVN_ERR (get_locks_under_path (fs, abs_path, fd, 
+                                       get_locks_func, get_locks_baton, 
+                                       subpool));
     }
+
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
@@ -978,7 +991,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or
      SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (get_lock_from_path(&existing_lock, fs, path, pool));
+  SVN_ERR (get_lock_from_path (&existing_lock, fs, path, pool));
   
   /* Unless breaking the lock, we do some checks. */
   if (!force)
@@ -1009,7 +1022,6 @@ svn_fs_fs__unlock (svn_fs_t *fs,
 }
 
 
-
 svn_error_t *
 svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
                                svn_fs_t *fs,
@@ -1021,21 +1033,16 @@ svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
 }
 
 
-
-
-
 svn_error_t *
-svn_fs_fs__get_locks (apr_hash_t **locks,
-                      svn_fs_t *fs,
+svn_fs_fs__get_locks (svn_fs_t *fs,
                       const char *path,
+                      svn_fs_get_locks_callback_t get_locks_func,
+                      void *get_locks_baton,
                       apr_pool_t *pool)
 {
   apr_finfo_t finfo;
   svn_error_t *err;
   const char *digest_str, *abs_path;
-
-  /* Make the hash that we'll return. */
-  *locks = apr_hash_make(pool);
 
   /* Compose the absolute/rel path to PATH */
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
@@ -1064,7 +1071,8 @@ svn_fs_fs__get_locks (apr_hash_t **locks,
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
   
   /* Recursively walk lock "tree" */
-  SVN_ERR (get_locks_under_path (*locks, fs, abs_path, NULL, pool));
+  SVN_ERR (get_locks_under_path (fs, abs_path, NULL, 
+                                 get_locks_func, get_locks_baton, pool));
   
   return SVN_NO_ERROR;
 }
@@ -1112,28 +1120,14 @@ verify_lock (svn_fs_t *fs,
 }
 
 
-/* Utility function: verify that an entire hash of LOCKS can all be used.
-
-   Loop over hash, call svn_fs__verify_lock() on each lock, throw any
-   of the three specific errors when an usuable lock is encountered.
-   If all locks are usable, return SVN_NO_ERROR.
- */
+/* This implements the svn_fs_get_locks_callback_t interface, where
+   BATON is just an svn_fs_t object. */
 static svn_error_t *
-verify_locks (svn_fs_t *fs,
-              apr_hash_t *locks,
-              apr_pool_t *pool)
+get_locks_callback (void *baton, 
+                    svn_lock_t *lock, 
+                    apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
-    {
-      void *lock;
-
-      apr_hash_this (hi, NULL, NULL, &lock);
-      SVN_ERR (verify_lock (fs, lock, pool));
-    }
-
-  return SVN_NO_ERROR;
+  return verify_lock (baton, lock, pool);
 }
 
 
@@ -1149,21 +1143,13 @@ svn_fs_fs__allow_locked_operation (const char *path,
     {
       if (recurse)
         {
-          apr_hash_t *locks;
-          
           /* Discover all locks at or below the path. */
-          SVN_ERR (svn_fs_fs__get_locks (&locks, fs, path, pool));
-          
-          /* Easy out. */
-          if (apr_hash_count (locks) == 0)
-            return SVN_NO_ERROR;
-          
-          /* Some number of locks exist below path; are we allowed to
-             change them? */
-          return verify_locks (fs, locks, pool); 
+          SVN_ERR (svn_fs_fs__get_locks (fs, path, get_locks_callback,
+                                         fs, pool));
         }
+
       /* If this function is called on a directory non-recursively,
-         then just return--directory locking isn't supported, so a
+         then just return -- directory locking isn't supported, so a
          directory can't be locked. */
       return SVN_NO_ERROR;
     }
