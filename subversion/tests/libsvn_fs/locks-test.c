@@ -112,7 +112,7 @@ lookup_lock_by_token (const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock, *somelock;
   
-  *msg = "basic locking";
+  *msg = "lookup lock by lock token";
 
   if (msg_only)
     return SVN_NO_ERROR;
