@@ -4044,126 +4044,6 @@ assemble_history (svn_fs_t *fs,
 }
 
 
-/* A qsort-capable method for sorting by our funky base-36 ids. */
-static int 
-sort_keys (const void *a, const void *b)
-{
-  const char *item1 = *((const char * const *) a);
-  const char *item2 = *((const char * const *) b);
-  return svn_fs__key_compare (item1, item2);
-}
-
-
-/* Derive the oldest of a set of copies which took place in filesystem
-   FS -- bounded by the revisions START_REV and END_REV, and by the
-   copy id START_COPY_ID -- which resulted in the creation of
-   DST_PATH.  Return the previous location of the DST_PATH as
-   *SRC_REV/SRC_PATH, and the revision in which the copy occured as
-   *DST_REV.  Do all of this as part of TRAIL. */
-static svn_error_t *
-find_youngest_copy (svn_revnum_t *src_rev, /* return */
-                    const char **src_path, /* return */
-                    svn_revnum_t *dst_rev, /* return */
-                    const char *dst_path,
-                    svn_fs_t *fs,
-                    svn_revnum_t start_rev,
-                    const char *start_copy_id,
-                    svn_revnum_t end_rev,
-                    trail_t *trail)
-{
-  svn_revnum_t cur_rev = end_rev;
-  const char *cur_copy_id = NULL;
-
-  *src_path = NULL;
-  *src_rev = SVN_INVALID_REVNUM;
-  *dst_rev = SVN_INVALID_REVNUM;
-
-  /* Loop while the current revision and copy IDs are greater than our
-     starting bounds.  We'll be going backwards through transaction
-     (youngest to oldest).  */
-  while ((cur_rev >= start_rev)
-         && ((! cur_copy_id)
-             || (svn_fs__key_compare (cur_copy_id, start_copy_id) != -1)))
-    {
-      svn_fs__transaction_t *txn;
-      const char *cur_txn_id;
-      int i;
-
-      /* Fetch our current transaction. */
-      SVN_ERR (svn_fs__rev_get_txn_id (&cur_txn_id, fs, cur_rev, trail));
-      SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, cur_txn_id, trail));
-
-      /* If no copies were made in this transaction, it's
-         uninteresting to us. */
-      if (! (txn->copies && txn->copies->nelts))
-        goto next_iter;
-
-      /* Otherwise, copies were made in this transaction, and we need
-         to search them, in reverse order of creation, looking for
-         relevance. */
-      qsort (txn->copies->elts, txn->copies->nelts, 
-             txn->copies->elt_size, sort_keys);
-      
-      for (i = txn->copies->nelts - 1; i >= 0; i--)
-        {
-          dag_node_t *node;
-          const char *copy_dst;
-          const char *remainder;
-          svn_fs__copy_t *copy;
-
-          /* Note the current copy id. */
-          cur_copy_id = APR_ARRAY_IDX (txn->copies, i, const char *);
-
-          /* If the COPY_ID is older than our START_COPY_ID, we've
-             nothing left to look for. */
-          if (svn_fs__key_compare (cur_copy_id, start_copy_id) == -1)
-            break;
-
-          /* Get the current COPY record. */
-          SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, cur_copy_id, trail));
-
-          /* Figure out the destination path of the copy operation. */
-          SVN_ERR (svn_fs__dag_get_node (&node, fs, copy->dst_noderev_id, 
-                                         trail));
-          copy_dst = svn_fs__dag_get_created_path (node);
-
-          /* If our current path was the very destination of the copy,
-             then our new current path will be the copy source.  If
-             our current path was instead the *child* of the
-             destination of the copy, then figure out its previous
-             location by taking its path relative to the copy
-             destination and appending that to the copy source.
-             Finally, if our current path doesn't meet one of these
-             other criteria, just ignore this copy operation
-             altogether. */
-          if (strcmp (dst_path, copy_dst) == 0)
-            remainder = "";
-          else
-            remainder = svn_path_is_child (copy_dst, dst_path, trail->pool);
-
-          if (remainder)
-            {
-              /* If we get here, then our current path is the destination 
-                 of, or the child of the destination of, a copy.  Fill
-                 in the return values and get outta here.  */
-              SVN_ERR (svn_fs__txn_get_revision (src_rev, fs, 
-                                                 copy->src_txn_id, trail));
-              *src_path = svn_path_join (copy->src_path, remainder, 
-                                         trail->pool);
-              *dst_rev = cur_rev;
-              return SVN_NO_ERROR;
-            }
-        } /* for() */
-      
-    next_iter:
-      cur_rev--;
-      
-    } /* while() */
-
-  return SVN_NO_ERROR;
-}
-
-  
 svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
                                   svn_fs_root_t *root,
                                   const char *path,
@@ -4331,7 +4211,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
       /* Figure out the destination path of the copy operation. */
       SVN_ERR (svn_fs__dag_get_node (&dst_node, fs, 
                                      copy->dst_noderev_id, trail));
-      copy_dst = svn_fs__dag_get_created_path (node);
+      copy_dst = svn_fs__dag_get_created_path (dst_node);
 
       /* If our current path was the very destination of the copy,
          then our new current path will be the copy source.  If our
@@ -4361,12 +4241,10 @@ txn_body_history_prev (void *baton, trail_t *trail)
         }
       else
         {
-          /* See if any copies took place between our path/revision
-             and the location of the node's last commit. */
-          SVN_ERR (find_youngest_copy (&src_rev, &src_path, &dst_rev, path,
-                                       fs, commit_rev, 
-                                       svn_fs__id_copy_id (node_id),
-                                       revision, trail));
+          /* Something bad has happened.  We expected to find a
+             relevant copy at END_COPY_ID, and we didn't.  Either this
+             repository is goofed up, or cmpilato is.  */
+          abort();
         }
     }
 
