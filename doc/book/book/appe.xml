@@ -14,7 +14,7 @@
         developing additional Subversion clients, Subversion is
         implemented as a series of libraries.  These libraries are
         accessible via C API, as well as other languages (see <xref
-        linkend="svn-ch-7-sect-2.3"/>).</para>
+        linkend="svn-ch-8-sect-2.3"/>).</para>
 
       <para>This component design means that it's easy (well, at least
         <emphasis>easier</emphasis>) to write clients and utilities

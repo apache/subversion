@@ -18,7 +18,7 @@
       encounter.  This chapter assumes that you've read and understood
       <xref linkend="svn-ch-2"/> and are familiar with the general
       model of Subversion.  For a complete reference of all commands,
-      see <xref linkend="svn-ch-8"/>.</para>
+      see <xref linkend="svn-ch-9"/>.</para>
 
   </simplesect>
 
@@ -841,7 +841,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
               <para>The directory <filename>dir</filename> is
                 unversioned, but is related to a Subversion externals
                 definition.  To find out more about externals
-                definitions, see <xref linkend="svn-ch-6-sect-3"/>.</para>
+                definitions, see <xref linkend="svn-ch-7-sect-3"/>.</para>
             </listitem>
           </varlistentry>
 
@@ -856,7 +856,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
                 status</command>, or by setting the
                 <literal>svn:ignore</literal> property on the parent
                 directory.  For more information on ignored files, see
-                <xref linkend="svn-ch-6-sect-2.3.3" />.</para>
+                <xref linkend="svn-ch-7-sect-2.3.3" />.</para>
 
             </listitem>
           </varlistentry>
@@ -907,7 +907,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
 
         <para>The second column tells the status of a file or
           directory's properties (see <xref
-          linkend="svn-ch-6-sect-2"></xref> for more information on
+          linkend="svn-ch-7-sect-2"></xref> for more information on
           properties).  If an <computeroutput>M</computeroutput>
           appears in the second column, then the properties have been
           modified, otherwise a whitespace will be printed.</para>
@@ -2080,9 +2080,9 @@ Committed revision 1.
       <para>Now we've covered most of the Subversion client
           commands.  Notable exceptions are those dealing with
           branching and merging (see <xref linkend="svn-ch-4"/>) and
-          properties (see <xref linkend="svn-ch-6-sect-2"/>).
+          properties (see <xref linkend="svn-ch-7-sect-2"/>).
           However, you may want to take a moment to skim through <xref
-          linkend="svn-ch-8"/> to get an idea of all the many
+          linkend="svn-ch-9"/> to get an idea of all the many
           different commands that Subversion has&mdash;and how you can
           use them to make your work easier.</para>
 

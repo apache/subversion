@@ -12,6 +12,7 @@
 <!ENTITY ch06     SYSTEM "ch06.xml">
 <!ENTITY ch07     SYSTEM "ch07.xml">
 <!ENTITY ch08     SYSTEM "ch08.xml">
+<!ENTITY ch09     SYSTEM "ch09.xml">
 <!ENTITY appa     SYSTEM "appa.xml">
 <!ENTITY appb     SYSTEM "appb.xml">
 <!ENTITY appc     SYSTEM "appc.xml">
@@ -74,6 +75,7 @@
   &ch06;
   &ch07;
   &ch08;
+  &ch09;
   &appa;
   &appb;
   &appc;
