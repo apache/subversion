@@ -343,8 +343,8 @@ svn_diff_file_output_unified(apr_file_t *output_file,
  * @a latest_path in merged format to @a output_file.  Optionally supply
  * @a conflict_modified, @a conflict_original, @a conflict_seperator and/or
  * @a conflict_latest to be displayed as conflict markers in the output.
- * If @a conflict_modified, @a conflict_original, @a conflict_seperator and/or
- * @a conflict_end is @c NULL, a default marker will be displayed.
+ * If @a conflict_original, @a conflict_modified, @a conflict_latest and/or
+ * @a conflict_seperator is @c NULL, a default marker will be displayed.
  * Set @a display_original_in_conflict and @a display_resolved_conflicts
  * as desired.  Note that these options are mutually exclusive.
  */
@@ -354,10 +354,10 @@ svn_diff3_file_output(apr_file_t *output_file,
                       const char *original_path,
                       const char *modified_path,
                       const char *latest_path,
-                      const char *conflict_modified,
                       const char *conflict_original,
-                      const char *conflict_seperator,
+                      const char *conflict_modified,
                       const char *conflict_latest,
+                      const char *conflict_seperator,
                       svn_boolean_t display_original_in_conflict,
                       svn_boolean_t display_resolved_conflicts,
                       apr_pool_t *pool);
