@@ -97,9 +97,11 @@ typedef struct svn_client_auth_baton_t
   /* for misc. allocation */
   apr_pool_t *pool;
 
-  /* client fills these fields later;  application should ignore. */
-  svn_stringbuf_t *path;
-  svn_boolean_t do_store;
+  /* --- client fills these fields later;  application should ignore. */
+
+  svn_stringbuf_t *path;    /* where to get/set auth info in wc */
+  svn_boolean_t do_store;   /* if auth storage should happen or not */
+  svn_boolean_t overwrite;  /* if it's ok to overwrite wc auth info */
 
 } svn_client_auth_baton_t;
 
