@@ -2,45 +2,21 @@
                          The Road to Milestone 3
                          =======================
 
-Milestone 3 is scheduled for August 15th, and is defined as
-self-hosting with a command line client.  It doesn't mean that every
-bit of CVS functionality is covered yet, just the ones we need to
-self-host.  We will have tests for everything we do support,
-including: add, checkout, commit, copy, delete, local diff, import,
-propget, propset, status, update, help.
+Tasks:
 
-What's left to do:
+- post instructions for downloading tarball, building
+- especially, put dav_setup.txt up!
+- basic subversion checkout instructions
+- update status page
+- Put the old CVS ChangeLog up
 
-* World of DAV (gstein)
+- make a backup system
 
-     Greg is going to bring the DAV layer back up to speed.  This
-     includes:
+- don't forget to increment VERSION in configure.in :-)
 
-       * using the new authentication system to get user/password
-       * passing this info to Apache, and then into the new write-hooks
-       * making properties work -- without leaving RA-specific ones
-                                   in the repository.
-
-             (This is the semi-large project.  It may require some
-              large changes to mod_dav itself, not just mod_dav_svn.
-              
-       * modifying python tests to run over RA_DAV (sussman will do.)
+- when importing the new repository, don't forget to remove APR and
+  neon first. :-)
 
 
-* New material on Web site (tbd)
-    - post instructions for downloading tarball, building
-    - especially, put dav_setup.txt up!
-    - basic subversion checkout instructions
-    - update status page
-    - Put the old CVS ChangeLog up
-
-
-* Backup system for commits in the new svn repository.  (kfogel)
-
-  Commit diffs should be backed up, so we don't lose data if there's
-  an fs bug.  Set up a system.
-
-
-Immediate Post-M3 stuff:
-   - write up release procedure, lucas@collab.net has volunteered to
-     review it.
+- immediately post-M3, write up release procedure, lucas@collab.net
+  has volunteered to review it, among others.
