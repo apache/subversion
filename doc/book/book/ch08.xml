@@ -257,9 +257,9 @@
         downward motion.  Figure 7-2 shows a typical representation of
         a tree as exactly that.</para>
 
-      <figure id="svn-ch7-sect1.1-dia1">
+      <figure id="svn-ch8-sect1.1-dia1">
         <title>Files and Directories in Two Dimensions</title>
-        <graphic fileref="images/ch07dia2.png"/>
+        <graphic fileref="images/ch08dia1.png"/>
       </figure>
 
       <para>Of course, the Subversion filesystem has a nifty third
@@ -283,9 +283,9 @@
         revision history as an added dimension to the Subversion
         filesystem universe.</para>
 
-      <figure id="svn-ch7-sect1.1-dia2">
+      <figure id="svn-ch8-sect1.1-dia2">
         <title>Revisioning Time&mdash;the Third Dimension!</title>
-        <graphic fileref="images/ch07dia3.png"/>
+        <graphic fileref="images/ch08dia2.png"/>
       </figure>
 
       <!-- Perhaps dig into the DAG/tree layers a bit here, talking
