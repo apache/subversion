@@ -1345,13 +1345,16 @@ static dav_error * dav_svn_set_headers(request_rec *r,
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
 
-  /* For a directory, we will generate text/html. If we have a delta
+  /* For a directory, we will send text/html or text/xml. If we have a delta
      base, then we will always be generating an svndiff.  Otherwise,
      we need to fetch the appropriate MIME type from the resource's
      properties (and use text/plain if it isn't there). */
   if (resource->collection)
     {
-      mimetype = "text/html";
+      if (resource->info->repos->xslt_uri)
+        mimetype = "text/xml";
+      else
+        mimetype = "text/html";
     }
   else if (resource->info->delta_base != NULL)
     {
@@ -1478,9 +1481,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       "  <!ATTLIST svn   version CDATA #REQUIRED\n"
       "                  href    CDATA #REQUIRED>\n"
       "  <!ELEMENT index (updir?, (file | dir)*)>\n"
-      "  <!ATTLIST index name    CDATA #OPTIONAL\n"
-      "                  path    CDATA #OPTIONAL\n"
-      "                  rev     CDATA #OPTIONAL>\n"
+      "  <!ATTLIST index name    CDATA #IMPLIED\n"
+      "                  path    CDATA #IMPLIED\n"
+      "                  rev     CDATA #IMPLIED>\n"
       "  <!ELEMENT updir EMPTY>\n"
       "  <!ELEMENT file  (prop)*>\n"
       "  <!ATTLIST file  name    CDATA #REQUIRED>\n"
