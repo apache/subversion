@@ -23,14 +23,23 @@
 
 /* (This is a routine of type svn_fs_commit_hook_t) */
 static svn_error_t *
-cleanup_commit (svn_revnum_t new_revision, void *baton)
+cleanup_commit (svn_revnum_t new_rev, void *baton)
 {
-  /* Recover our hook baton: */
-  /*  svn_ra_local__commit_closer_t *closer =
-      (svn_ra_local__commit_closer_t *) baton; */
+  int i;
 
-  /* Call closer->close_func() on each committed target! */
-  /* TODO */
+  /* Recover our hook baton: */
+  svn_ra_local__commit_closer_t *closer = 
+    (svn_ra_local__commit_closer_t *) baton;
+
+  /* Loop over the closer->targets array, and bump the revision number
+     for each. */
+  for (i = 0; i < closer->target_array->nelts; i++)
+    {
+      svn_string_t *target;
+      target = (((svn_string_t **)(closer->target_array)->elts)[i]);
+
+      SVN_ERR (closer->close_func (closer->close_baton, target, new_rev));
+    }    
 
   return SVN_NO_ERROR;
 }
@@ -184,8 +193,9 @@ get_commit_editor (void *session_baton,
   closer->close_func = close_func;
   closer->set_func = set_func;
   closer->close_baton = close_baton;
-  closer->target_array = apr_pcalloc (closer->pool,
-                                          sizeof(*(closer->target_array)));
+  closer->target_array = apr_array_make (sess_baton->pool, 1,
+                                         sizeof(svn_string_t *));
+                                         
 
   /* Get the filesystem commit-editor */     
   SVN_ERR (svn_fs_get_editor (&commit_editor, &commit_editor_baton,
