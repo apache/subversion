@@ -83,3 +83,10 @@ Candidate changes:
             installer for 1.0.1 had to be set up manually.
     Votes:
       +1: josander
+
+  * r9254
+    Fix for updates to svn:executable files in shared working copies.
+    Justification: Hard to use svn:executable in shared working copies
+                   without it.
+    Votes:
+      +1: philip
