@@ -119,6 +119,20 @@ dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
 AC_PROG_LIBTOOL
 
+dnl Before configuring libtool check for --enable-all-static option
+AC_ARG_ENABLE(all-static,
+  AC_HELP_STRING([--enable-all-static],
+                 [Build completely static (standalone) binaries.]),
+  [
+    if test "$enableval" = "yes" ; then
+      LT_LDFLAGS="-all-static $LT_LDFLAGS"
+    fi
+])
+
+AC_SUBST(LT_LDFLAGS)
+
+
+
 NEON_WANTED_REGEX="`sed -n '/NEON_WANTED_REGEX=/s/.*=//p' $srcdir/build/buildcheck.sh`"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
