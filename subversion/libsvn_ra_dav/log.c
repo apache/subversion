@@ -409,20 +409,20 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                             ras->pool);
 
 
-  SVN_ERR( svn_ra_dav__parsed_request(ras->sess,
-                                      "REPORT",
-                                      final_bc_url,
-                                      request_body->data,
-                                      0,  /* ignored */
-                                      NULL,
-                                      log_report_elements, 
-                                      log_validate,
-                                      log_start_element,
-                                      log_end_element,
-                                      &lb,
-                                      NULL, 
-                                      NULL,
-                                      ras->pool) );
+  SVN_ERR( svn_ra_dav__parsed_request_compat(ras->sess,
+                                             "REPORT",
+                                             final_bc_url,
+                                             request_body->data,
+                                             0,  /* ignored */
+                                             NULL,
+                                             log_report_elements, 
+                                             log_validate,
+                                             log_start_element,
+                                             log_end_element,
+                                             &lb,
+                                             NULL, 
+                                             NULL,
+                                             ras->pool) );
 
   if (lb.err)
     return lb.err;

@@ -587,10 +587,11 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:prop>"
                       "</D:merge>", activity_url);
 
-  SVN_ERR( svn_ra_dav__parsed_request(ras->sess, "MERGE", repos_url, body, 0,
-                                      NULL, merge_elements, validate_element,
-                                      start_element, end_element, &mc,
-                                      extra_headers, NULL, pool) );
+  SVN_ERR( svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
+                                             body, 0, NULL, merge_elements,
+                                             validate_element, start_element,
+                                             end_element, &mc, extra_headers,
+                                             NULL, pool) );
   
   /* is there an error stashed away in our context? */
   if (mc.err != NULL)

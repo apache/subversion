@@ -522,11 +522,12 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.props = apr_hash_make(pool);
 
   /* Create and dispatch the request! */
-  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url, body->data, 0, 
-                                   set_parser, propfind_elements, 
-                                   validate_element, 
-                                   start_element, end_element, 
-                                   &pc, extra_headers, NULL, pool);
+  err = svn_ra_dav__parsed_request_compat(sess, "PROPFIND", url,
+                                          body->data, 0, 
+                                          set_parser, propfind_elements, 
+                                          validate_element, 
+                                          start_element, end_element, 
+                                          &pc, extra_headers, NULL, pool);
 
   ne_buffer_destroy(body);
   *results = pc.props;
