@@ -53,6 +53,16 @@ Candidate changes:
     Votes:
       +1: jerenkrantz, maxb
 
+  * r12026, r12027, r12044
+    Allow apr and apr-util 1.1 to compile.
+    Justification:
+      APR's compatibility rules means that Subversion will always compile
+      against any 1.x version of APR.
+    Votes:
+      +1: jerenkrantz
+
+Approved changes (further review is welcome, but not required):
+
   * r12006, r12136, r12146
     Fix issue 2124 - bugs in svn switch over ra-dav.
     Justification:
@@ -68,6 +78,4 @@ Candidate changes:
       svn merge -r12390:HEAD $rs/branches/1.1.x-dav-switch
     Votes:
       +1: cmpilato, kfogel, jerenkrantz
-
-Approved changes (further review is welcome, but not required):
 
