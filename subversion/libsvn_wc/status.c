@@ -44,7 +44,7 @@ get_default_ignores (apr_array_header_t **patterns,
   const char *val;
 
   SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &val, "miscellany", "global_ignores", 
+  svn_config_get (cfg, &val, "miscellany", "global-ignores", 
                   "*.o *.lo *.la #*# *.rej *~ .#*");
   *patterns = apr_array_make (pool, 4, sizeof (const char *));
   svn_cstring_split_append (*patterns, val, "\n\r\t\v ", FALSE, pool);

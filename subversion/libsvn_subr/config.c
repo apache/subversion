@@ -489,3 +489,48 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
 
   return count;
 }
+
+
+
+/* Baton for search_groups() */
+struct search_groups_baton
+{
+  const char *key;          /* Provided by caller of svn_config_find_group */
+  const char *match;        /* Filled in by search_groups */
+  apr_pool_t *pool;
+};
+
+
+/* This is an `svn_config_enumerator_t' function, and BATON is a
+ * `struct search_groups_baton *'.
+ */
+static svn_boolean_t search_groups (const char *name,
+                                    const char *value,
+                                    void *baton)
+{
+  struct search_groups_baton *b = baton;
+
+  if (svn_cstring_match_glob_list (b->key, value, b->pool))
+    {
+      /* Fill in the match and return false, to stop enumerating. */
+      b->match = apr_pstrdup (b->pool, name);
+      return FALSE;
+    }
+  else
+    return TRUE;
+}
+
+
+const char *svn_config_find_group (svn_config_t *cfg, const char *key,
+                                   const char *master_section,
+                                   apr_pool_t *pool)
+{
+  const char *exception_list;
+  struct search_groups_baton gb;
+
+  gb.key = key;
+  gb.match = NULL;
+  gb.pool = pool;
+  svn_config_enumerate (cfg, master_section, search_groups, &gb);
+  return gb.match;
+}

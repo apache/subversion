@@ -22,6 +22,7 @@
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
+#include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
 
@@ -578,4 +579,23 @@ svn_cstring_split (const char *input,
   apr_array_header_t *a = apr_array_make (pool, 5, sizeof (input));
   svn_cstring_split_append (a, input, sep_chars, chop_whitespace, pool);
   return a;
+}
+
+
+svn_boolean_t svn_cstring_match_glob_list (const char *str,
+                                           const char *list,
+                                           apr_pool_t *pool)
+{
+  apr_array_header_t *subvals = svn_cstring_split (list, ",", TRUE, pool);
+  int i;
+
+  for (i = 0; i < subvals->nelts; i++)
+    {
+      const char *this_pattern = APR_ARRAY_IDX (subvals, i, char *);
+
+      if (apr_fnmatch (this_pattern, str, 0) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
 }

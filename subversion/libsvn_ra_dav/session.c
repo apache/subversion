@@ -19,7 +19,6 @@
 
 
 #include <apr_pools.h>
-#include <apr_fnmatch.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -126,76 +125,6 @@ static int ssl_set_verify_callback(void *userdata, int failures,
 }
 
 
-/* Baton for search_groups(). */
-struct search_groups_baton
-{
-  const char *requested_host;  /* the host in the original uri */
-
-  const char *proxy_group;     /* NULL unless/until we find a host
-                                  match, in which case this is set to
-                                  the name of the config file section
-                                  where we can find proxy information
-                                  for this host. */
-  apr_pool_t *pool;
-};
-
-
-/* Return true iff STR matches any of the elements of LIST, a
- * comma-separated list of one or more hostname-style strings,
- * possibly using wildcards; else return false.
- *
- * Use POOL for temporary allocation.
- *
- * The following are all valid LISTs
- *
- *   "svn.collab.net"
- *   "svn.collab.net, *.tigris.org"
- *   "*.tigris.org, *.collab.net, sp.red-bean.com"
- *
- * and the STR "svn.collab.net" would match all of them.
- */
-static svn_boolean_t match_in_list(const char *str,
-                                   const char *list,
-                                   apr_pool_t *pool)
-{
-  apr_array_header_t *subvals = svn_cstring_split(list, ",", TRUE, pool);
-  int i;
-
-  for (i = 0; i < subvals->nelts; i++)
-    {
-      const char *this_pattern = APR_ARRAY_IDX(subvals, i, char *);
-      if (apr_fnmatch(this_pattern, str, 0) == APR_SUCCESS)
-        return TRUE;
-    }
-
-  return FALSE;
-}
-
-/* This is an `svn_config_enumerator_t' function, and BATON is a
- * `struct search_groups_baton *'.
- *
- * VALUE is in the same format as the LIST param of match_in_list().
- * If an element of VALUE matches BATON->requested_host, then set
- * BATON->proxy_group to a copy of NAME allocated in BATON->pool, and
- * return false, to end the enumeration.
- *
- * If no match, return true, to continue enumerating.
- */
-static svn_boolean_t search_groups(const char *name,
-                                   const char *value,
-                                   void *baton)
-{
-  struct search_groups_baton *b = baton;
-
-  if (match_in_list(b->requested_host, value, b->pool))
-    {
-      b->proxy_group = apr_pstrdup(b->pool, name);
-      return FALSE;
-    }
-  else
-    return TRUE;
-}
-
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD and
  * *TIMEOUT_SECONDS to the proxy information for REQUESTED_HOST, allocated
  * in POOL, if there is any applicable information.  If there is no
@@ -211,10 +140,9 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
-  struct search_groups_baton gb;
   svn_config_t *cfg;
   const char *exceptions;
-  const char *port_str, *timeout_str;
+  const char *port_str, *timeout_str, *server_group;
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -228,31 +156,32 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
-  svn_config_get(cfg, &exceptions, "default", "no_proxy", NULL);
-  if ((! exceptions) || (! match_in_list(requested_host, exceptions, pool)))
+  svn_config_get(cfg, &exceptions, "default", "no-http-proxy", NULL);
+  if ((! exceptions) || (! svn_cstring_match_glob_list(requested_host,
+                                                       exceptions, pool)))
     {
-      svn_config_get(cfg, proxy_host, "default", "host", NULL);
-      svn_config_get(cfg, &port_str, "default", "port", NULL);
-      svn_config_get(cfg, proxy_username, "default", "username", NULL);
-      svn_config_get(cfg, proxy_password, "default", "password", NULL);
-      svn_config_get(cfg, &timeout_str, "default", "timeout", NULL);
+      svn_config_get(cfg, proxy_host, "default", "http-proxy-host", NULL);
+      svn_config_get(cfg, &port_str, "default", "http-proxy-port", NULL);
+      svn_config_get(cfg, proxy_username, "default", "http-proxy-username",
+                     NULL);
+      svn_config_get(cfg, proxy_password, "default", "http-proxy-password",
+                     NULL);
+      svn_config_get(cfg, &timeout_str, "default", "http-timeout", NULL);
     }
 
-  /* Search for a proxy pattern specific to this host. */
-  gb.requested_host = requested_host;
-  gb.proxy_group = NULL;
-  gb.pool = pool;
-  (void) svn_config_enumerate(cfg, "groups", search_groups, &gb);
-
-  if (gb.proxy_group)
+  server_group = svn_config_find_group(cfg, requested_host, "groups", pool);
+  if (server_group)
     {
-      svn_config_get(cfg, proxy_host, gb.proxy_group, "host", *proxy_host);
-      svn_config_get(cfg, &port_str, gb.proxy_group, "port", port_str);
-      svn_config_get(cfg, proxy_username, gb.proxy_group, "username",
+      svn_config_get(cfg, proxy_host, server_group, "http-proxy-host",
+                     *proxy_host);
+      svn_config_get(cfg, &port_str, server_group, "http-proxy-port",
+                     port_str);
+      svn_config_get(cfg, proxy_username, server_group, "http-proxy-username",
                      *proxy_username);
-      svn_config_get(cfg, proxy_password, gb.proxy_group, "password",
+      svn_config_get(cfg, proxy_password, server_group, "http-proxy-password",
                      *proxy_password);
-      svn_config_get(cfg, &timeout_str, gb.proxy_group, "timeout", timeout_str);
+      svn_config_get(cfg, &timeout_str, server_group, "http-timeout",
+                     timeout_str);
     }
 
   /* Special case: convert the port value, if any. */

@@ -1494,7 +1494,7 @@ svn_io_run_diff (const char *dir,
   svn_config_t *cfg;
   const char *diff_cmd;
   SVN_ERR (svn_config_read_config (&cfg, subpool));
-  svn_config_get (cfg, &diff_cmd, "helpers", "diff_cmd", SVN_CLIENT_DIFF);
+  svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", SVN_CLIENT_DIFF);
 
   if (pexitcode == NULL)
     pexitcode = &exitcode;
@@ -1585,7 +1585,7 @@ svn_io_run_diff3 (const char *dir,
   svn_config_t *cfg;
   const char *diff3_cmd;
   SVN_ERR (svn_config_read_config (&cfg, pool));
-  svn_config_get (cfg, &diff3_cmd, "helpers", "diff3_cmd", SVN_CLIENT_DIFF3);
+  svn_config_get (cfg, &diff3_cmd, "helpers", "diff3-cmd", SVN_CLIENT_DIFF3);
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -1612,7 +1612,7 @@ svn_io_run_diff3 (const char *dir,
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   {
     const char *has_arg;
-    svn_config_get (cfg, &has_arg, "helpers", "diff3_has_program_arg", "yes");
+    svn_config_get (cfg, &has_arg, "helpers", "diff3-has-program-arg", "yes");
     if (0 == strcasecmp(has_arg, "yes")
         || 0 == strcasecmp(has_arg, "true"))
       {
