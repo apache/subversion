@@ -2394,30 +2394,33 @@ dependencies.</p>
     They're supposed to invoke external programs, but the invocations
     never seem to happen.
 
-<p>When invoking other programs from repository hook scripts, try
-using absolute paths.  The environment the hooks get when Subversion
-calls them is just the default environment of whatever user the
-Subversion server runs as, which might be different from the
-environment the hooks get when you test them by hand.  In particular,
-$PATH on Unix, or %PATH% on Windows, may not have all the directories
-you expect.</p>
+<p>Before Subversion calls a hook script, it removes <em>all</em>
+            variables -- including $PATH on Unix, and %PATH% on Windows
+            -- from the environment.  Therefore, your script can only
+            run another program if you
+spell out that program's absolute name.</p>
 </li>
-      <li>General tips</li>
+      <li>Debugging tips</li>
 <p>
-If you're using Linux or Unix, try running the script "by hand", after
-          doing the following preparation:
+If you're using Linux or Unix, try running the script "by hand", by
+          following these steps:
           <ol>
-            <li>Use "sudo" or similar to become the user who normally
+            <li>Use "su", "sudo", or something similar, to become the user who normally
               would run the script.  This might be <tt>httpd</tt> or
               <tt>www-data</tt>, for example, if you're using Apache;
               it might be a user like <tt>svn</tt> if you're running
-              svnserve and have created a special user.</li>
+              svnserve and a special Subversion user exists.</li>  This
+              will make clear any permissions problems that the script
+              might have.
             <li>
-              Invoke the script with the "env" program.  Here's an
+              Invoke the script with an empty environment by using the
+              the "env" program.  Here's an
               example for the post-commit hook:
 <blockquote><pre>
                   $ env - ./post-commit /var/lib/svn-repos 1234
 </pre></blockquote>
+              Note the first argument to "env" is a dash; that's what
+              ensures the environment is empty.
             </li>
             <li>
               Check your console for errors.
