@@ -260,10 +260,24 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 txn_body_replace_directory (void *rargs, trail_t *trail)
 {
-#if 0
+  svn_error_t *err;
   struct add_repl_args *repl_args = rargs;
-  /* fooo: Fill in &(repl_args.new_node). */
-#endif /* 0 */
+
+  err = svn_fs__dag_clone_child (&(repl_args->new_node),
+                                 repl_args->parent->node,
+                                 repl_args->name->data,
+                                 trail);
+  if (err)
+    return err;
+
+  if (! svn_fs__dag_is_directory (repl_args->new_node))
+    return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY,
+                              0,
+                              NULL,
+                              trail->pool,
+                              "trying to replace directory, but %s "
+                              "is not a directory",
+                              repl_args->name->data);
 
   return SVN_NO_ERROR;
 }
