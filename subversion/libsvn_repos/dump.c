@@ -127,6 +127,15 @@ struct dir_baton
   svn_stringbuf_t *path;        /* the absolute path to this directory */
   svn_boolean_t added;
   svn_boolean_t written_out;
+
+  /* hash of paths that need to be deleted, though some -might- be
+     replaced.  maps const char * paths to this dir_baton.  (they're
+     full paths, because that's what the editor driver gives us.  but
+     really, they're all within this directory.) */
+  apr_hash_t *deleted_entries;
+
+  /* pool to be used for deleting the hash items */
+  apr_pool_t *pool;
 };
 
 
@@ -155,7 +164,9 @@ make_dir_baton (const char *path,
   new_db->path = full_path;
   new_db->added = added;
   new_db->written_out = FALSE;
-
+  new_db->deleted_entries = apr_hash_make (pool);
+  new_db->pool = pool;
+  
   return new_db;
 }
 
@@ -320,14 +331,10 @@ delete_entry (const char *path,
               apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
+  const char *mypath = apr_pstrdup (pb->pool, path);
 
-  /* By sending 'svn_node_unknown', the Node-kind: header simply won't
-     be written out.  No big deal at all, really.  The loader
-     shouldn't care.  */
-  SVN_ERR (dump_node (eb->fs_root, path,
-                      svn_node_unknown, node_action_delete,
-                      eb->file, eb->buffer, eb->bufsize, pool));
+  /* remember this path needs to be deleted. */
+  apr_hash_set (pb->deleted_entries, mypath, APR_HASH_KEY_STRING, pb);
 
   return SVN_NO_ERROR;
 }
@@ -344,10 +351,20 @@ add_directory (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *new_db = make_dir_baton (path, eb, pb, TRUE, pool);
+  void *val;
+
+  /* This might be a replacement -- is the path already deleted? */
+  val = apr_hash_get (pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
   SVN_ERR (dump_node (eb->fs_root, path, 
-                      svn_node_dir, node_action_add, 
+                      svn_node_dir,
+                      val ? node_action_replace : node_action_add,
                       eb->file, eb->buffer, eb->bufsize, pool));
+
+  if (val)
+    /* delete the path, it's now been dumped. */
+    apr_hash_set (pb->deleted_entries, path, APR_HASH_KEY_STRING, NULL);
+  
   new_db->written_out = TRUE;
 
   *child_baton = new_db;
@@ -371,6 +388,36 @@ open_directory (const char *path,
 }
 
 
+static svn_error_t *
+close_directory (void *dir_baton)
+{
+  struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;
+  apr_hash_index_t *hi;
+  apr_pool_t *pool = db->pool;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  for (hi = apr_hash_first (pool, db->deleted_entries);
+       hi;
+       hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *path;
+      apr_hash_this (hi, &key, NULL, NULL);
+      path = key;
+
+      /* By sending 'svn_node_unknown', the Node-kind: header simply won't
+         be written out.  No big deal at all, really.  The loader
+         shouldn't care.  */
+      SVN_ERR (dump_node (eb->fs_root, path,
+                          svn_node_unknown, node_action_delete,
+                          eb->file, eb->buffer, eb->bufsize, subpool));     
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 add_file (const char *path,
@@ -382,10 +429,19 @@ add_file (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  void *val;
+
+  /* This might be a replacement -- is the path already deleted? */
+  val = apr_hash_get (pb->deleted_entries, path, APR_HASH_KEY_STRING);
 
   SVN_ERR (dump_node (eb->fs_root, path, 
-                      svn_node_file, node_action_add,
+                      svn_node_file,
+                      val ? node_action_replace : node_action_add,
                       eb->file, eb->buffer, eb->bufsize, pool));
+
+  if (val)
+    /* delete the path, it's now been dumped. */
+    apr_hash_set (pb->deleted_entries, path, APR_HASH_KEY_STRING, NULL);
 
   *file_baton = NULL;  /* muhahahaha */
   return SVN_NO_ERROR;
@@ -462,6 +518,7 @@ get_dump_editor (const svn_delta_editor_t **editor,
   dump_editor->delete_entry = delete_entry;
   dump_editor->add_directory = add_directory;
   dump_editor->open_directory = open_directory;
+  dump_editor->close_directory = close_directory;
   dump_editor->change_dir_prop = change_dir_prop;
   dump_editor->add_file = add_file;
   dump_editor->open_file = open_file;
