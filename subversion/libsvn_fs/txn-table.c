@@ -519,25 +519,35 @@ struct change_txn_prop_args {
 };
 
 
-static svn_error_t *
-txn_body_change_txn_prop (void *baton, trail_t *trail)
+svn_error_t *
+svn_fs__set_txn_prop (svn_fs_t *fs,
+                      const char *txn_name,
+                      const char *name,
+                      const svn_string_t *value,
+                      trail_t *trail)
 {
-  struct change_txn_prop_args *args = baton;
-
-  svn_fs_id_t *root_id, *base_root_id;
   skel_t *skel;
   skel_t *proplist;
+  svn_fs_id_t *root_id, *base_root_id;
 
-  SVN_ERR (svn_fs__get_txn (&skel, args->fs, args->id, trail));
+  SVN_ERR (svn_fs__get_txn (&skel, fs, txn_name, trail));
   SVN_ERR (get_ids_from_txn_skel (&root_id, &base_root_id, skel, trail->pool));
   proplist = get_proplist_from_txn_skel (skel);
 
   /* Call the generic property setting function. */
-  SVN_ERR (svn_fs__set_prop (proplist, args->name, args->value, trail->pool));
-  SVN_ERR (put_txn (args->fs, args->id, root_id, base_root_id, 
-                    proplist, trail));
+  SVN_ERR (svn_fs__set_prop (proplist, name, value, trail->pool));
+  SVN_ERR (put_txn (fs, txn_name, root_id, base_root_id, proplist, trail));
 
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+txn_body_change_txn_prop (void *baton, trail_t *trail)
+{
+  struct change_txn_prop_args *args = baton;
+  return svn_fs__set_txn_prop (args->fs, args->id, args->name, 
+                               args->value, trail);
 }
 
 
