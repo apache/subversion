@@ -3,7 +3,7 @@
 % Based on a CVS quickref card by Jim Blandy <jimb@red-bean.com>
 
 \documentclass{report}
-\topmargin -0.5in
+\topmargin -0.8in
 \pagestyle{empty}
 
 \textheight=10in
@@ -13,130 +13,128 @@
 \begin{document}
 
 \hspace{-0.7in}
-\begin{tabular}{lp{2.8in}p{2.0in}}
-\vspace{0.1in} \hspace{-0.1in}{\bf\LARGE SVN Quick Reference}   &
-						& \\
-
-						&
-						&
-\multicolumn{1}{c}{\bf\Large Notes}              \\ \cline{3-3}
+\begin{tabular}{ll}
+\vspace{0.1in} \hspace{-0.1in}{\bf\LARGE SVN Quick Reference}
+						& \\ \\
 
 %-------------------------------------------------------------------------
-\vspace{0.1in} \hspace{-0.1in}{\bf\Large Getting Help}   &
+\vspace{0.1in} \hspace{-0.1in}{\bf\Large Getting Help}
                                                 &  \\
 
 {\tt svn help}	                      		&
-get list of subcommands                         &  \\
+get list of subcommands                          \\
 
 {\tt svn help} {\sl subcommand}  		&
-get help on {\sl subcommand}			&  \\
+get help on {\sl subcommand}		          \\
 
 
 %-------------------------------------------------------------------------
 \\
 \\
 \vspace{0.1in} \hspace{-0.1in}{\bf\Large Working Copies}   &
-(If {\sl [targets\dots]} are omitted, SVN assumes `{\tt .}') &  \\
+(If {\sl [targets\dots]} are omitted, SVN assumes `{\tt .}')  \\
 
 {\tt svn checkout} {\sl [flags]} {\sl URL}\dots &
-create a new working directory			&  \\
+create a new working directory			 \\
 
 \hspace{0.5in}{\tt -r} {\sl N}		&
-check out revision {\sl N} of {\sl URL}	&  \\
+check out revision {\sl N} of {\sl URL}	  \\
 \hspace{0.5in}{\tt -d} {\sl dest}		&
-place working copy in new directory {\sl dest}	&  \\
+place working copy in new directory {\sl dest}	 \\
 
 \\
 {\tt svn update} {\sl [flags]} {\sl [targets\dots]}	&
-merge repository changes into working {\sl targets}	&  \\
+merge repository changes into working {\sl targets}	  \\
 
 \hspace{0.5in}{\tt -r} {\sl N}		&
-update to revision {\sl N}		&  \\
+update to revision {\sl N}		  \\
 
 \\
 {\tt svn commit} {\sl [flags]} {\sl [targets\dots]}	&
-check local changes into the repository		&  \\
+check local changes into the repository		  \\
 
 \hspace{0.5in}{\tt -m} {\sl message}		&
-Use {\sl message} as change's log entry		& \\
+Use {\sl message} as change's log entry		 \\
 
 \hspace{0.5in}{\tt -F} {\sl logfile}		&
-Use contents of {\sl logfile} as change's log entry		& \\
+Use contents of {\sl logfile} as change's log entry		 \\
 
 \\
 {\tt svn add} {\sl [flags]} {\sl targets\dots}    &
-schedule {\sl targets} for addition		        & \\
+schedule {\sl targets} for addition		         \\
 
 \hspace{0.5in}{\tt --recursive}		&
-add a target directory recursively	& \\
+add a target directory recursively	 \\
 
 \\
-{\tt svn rm} {\sl [flags]} {\sl paths | URLs\dots}	&
+{\tt svn rm} {\sl [flags]} {\sl paths} \verb!|! {\sl URLs\dots}	&
 schedule working-copy {\sl paths} for removal,
-or immediately delete {\sl URLs} from repository.	& \\
+or immediately delete {\sl URLs}	 \\
 
 \\
 {\tt svn import} {\sl URL} {\sl path} {\sl new-entry}	&
-recursively commit {\sl path} to {\sl new-entry} within {\sl URL} &\\
+recursively commit {\sl path} to {\sl new-entry} within {\sl URL} \\
 
 %-------------------------------------------------------------------------
+\\
 \\
 \vspace{0.1in} \hspace{-0.1in}{\bf\Large Working Copy Maintenance} \\
 
 {\tt svn status} {\sl [flags]} {\sl [targets\dots]}	&
-recursively show local changes in {\sl targets} &  \\
+recursively show local changes in {\sl targets}  \\
 
 \hspace{0.5in}{\tt -v}		&
-show verbose information		&  \\
+show verbose information		  \\
 
 \hspace{0.5in}{\tt -u}		&
-show out-of-dateness information from repository		&  \\
+show out-of-dateness information from repository		  \\
 
 \\
 {\tt svn info} {\sl [targets\dots]}	&
-show tracked information on {\sl targets} &  \\
+show tracked information on {\sl targets}   \\
 
 \\
 {\tt svn revert} {\sl [targets\dots]}	&
-revert {\sl targets} to ``pristine'' state &  \\
+revert {\sl targets} to ``pristine'' state   \\
 
 \\
 {\tt svn resolve} {\sl [targets\dots]}	&
-removes conflict files associated with conflicted {\sl targets} &  \\
+removes conflict files associated with conflicted {\sl targets}   \\
 
 \\
 {\tt svn cleanup} {\sl [targets\dots]}	&
-unlock and resume unfinished operations on {\sl targets} &  \\
+unlock and resume unfinished operations on {\sl targets}   \\
 
 
 %-------------------------------------------------------------------------
 \\
-\vspace{0.1in} \hspace{-0.1in}{\bf\Large Metadata} & \\
+\\
+\vspace{0.1in} \hspace{-0.1in}{\bf\Large Metadata}  \\
 
 {\tt svn proplist} {\sl [flags]} {\sl targets\dots}    &
-view property names attached to {\sl targets}    & \\
+view property names attached to {\sl targets}     \\
 
 \hspace{0.5in}{\tt -v}		&
-show property values as well	& \\
+show property values as well	 \\
 
 \\
 {\tt svn propget} {\sl propname} {\sl targets\dots}    &
-print value of {\sl propname} attached to {\sl targets}    & \\
+print value of {\sl propname} attached to {\sl targets}     \\
 
 \\
 {\tt svn propset} {\sl propname} {\sl propval} {\sl targets\dots}    &
-set {\sl propname} to {\sl propval} on {\sl targets}    & \\
+set {\sl propname} to {\sl propval} on {\sl targets}     \\
 
 \hspace{0.5in}{\tt -F} {\sl file}		&
-take property value from {\sl file}	& \\
+take property value from {\sl file}	 \\
 
 \\
 {\tt svn propdel} {\sl propname} {\sl targets\dots}    &
-remove {\sl propname} from {\sl targets}    & \\
+remove {\sl propname} from {\sl targets}     \\
 
 \\
 {\tt svn propedit} {\sl propname} {\sl targets\dots}    &
-edit value of {\sl propname} attached to {\sl targets}    & \\
+edit value of {\sl propname} attached to {\sl targets}     \\
 
 %-------------------------------------------------------------------------
 
@@ -148,9 +146,7 @@ edit value of {\sl propname} attached to {\sl targets}    & \\
 
 \newpage
 \hspace{-0.7in}
-\begin{tabular}{lp{3in}p{2in}}
-
-& & \multicolumn{1}{c}{\bf\Large Notes}             \\ \cline{3-3}
+\begin{tabular}{ll}
 
 %-------------------------------------------------------------------------
 \\
@@ -158,24 +154,24 @@ edit value of {\sl propname} attached to {\sl targets}    & \\
 \vspace{0.1in} \hspace{-0.1in}{\bf\Large Examining History} & \\
 
 {\tt svn diff} {\sl [flags]} {\sl [target\dots]}  &
-show local changes made in {\sl target}		&  \\
+show local changes made in {\sl target}		  \\
 
 \hspace{0.5in}{\tt -r} {\sl N}		&
-compare with revision {\sl N} of {\sl target} 	& \\
+compare with revision {\sl N} of {\sl target} 	 \\
 
 \hspace{0.5in}{\tt -r} {\sl N:M}		&
-compare revisions {\sl N} and {\sl M} of {\sl target} 	& \\
+compare revisions {\sl N} and {\sl M} of {\sl target} 	 \\
 
 \\
 {\tt svn diff} {\sl URL1@N} {\sl URL2@M}  &
-compare two server paths at revisions {\sl N} and {\sl M}	&  \\
+compare two server paths at revisions {\sl N} and {\sl M}	  \\
 
 \\
 {\tt svn log} {\sl [flags]} {\sl targets}		&
-show log entries for {\sl targets}			& \\
+show log entries for {\sl targets}			 \\
 
 \hspace{0.5in}{\tt -r} {\sl N[:M]}		&
-show log entry for revision {\sl N} or range {\sl N:M} & \\
+show log entry for revision {\sl N} or range {\sl N:M}  \\
 
 %-------------------------------------------------------------------------
 \\
@@ -183,64 +179,64 @@ show log entry for revision {\sl N} or range {\sl N:M} & \\
 \vspace{0.1in} \hspace{-0.1in}{\bf\Large Branches and Tags} & \\
 
 {\tt svn cp} {\sl SRC} {\sl DST}		&
-copy a working-copy path (or URL) to another working-copy path (or URL) & \\
+copy a working-copy path (or URL) to another working-copy path (or URL)  \\
 
 \hspace{0.5in}{\tt WC => WC}		&
-copy and schedule for addition (with history) & \\
+copy and schedule for addition (with history)  \\
 
 \hspace{0.5in}{\tt WC => URL}		&
-immediately commit a copy of WC to URL & \\
+immediately commit a copy of WC to URL  \\
 
 \hspace{0.5in}{\tt URL => WC}		&
-check out URL into WC, schedule for addition & \\
+check out URL into WC, schedule for addition  \\
 
 \hspace{0.5in}{\tt URL => URL}		&
-complete server-side copy;  used to branch and tag & \\
+complete server-side copy;  used to branch and tag  \\
 
 \\
 {\tt svn mv} {\sl SRC} {\sl DST}		&
-move a path within a working-copy or repository. & \\
+move a path within a working-copy or repository.  \\
 
 \hspace{0.5in}{\tt WC => WC}		&
-move and schedule for addition (with history) & \\
+move and schedule for addition (with history)  \\
 
 \hspace{0.5in}{\tt URL => URL}		&
-complete server-side rename. & \\
+complete server-side rename.  \\
 
 \\
 {\tt svn switch} {\sl target} {\sl URL}		&
 transform working copy {\sl target} into {\sl URL}; used to 'move' to
-a tag or branch location  & \\
+a tag or branch location   \\
 
 \\
 {\tt svn merge} {\sl path1@N} {\sl path2@M} {\sl wcpath}	&
 compare wcpaths (or URLs) {\sl path1} and {\sl path2}, and merge differences
-into {\sl wcpath}& \\
+into {\sl wcpath} \\
 
 \\
 {\tt svn mkdir} {\sl target}		&
-immediately create working-copy or URL directory {\sl target}  & \\
-						& \\
+immediately create working-copy or URL directory {\sl target}   \\
+						 \\
 %-------------------------------------------------------------------------
 \\
 \\
 \vspace{0.1in} \hspace{-0.1in}{\bf\Large File Status Flags} &
-(as printed by {\tt svn update/switch/merge})		& \\
+(as printed by {\tt svn update/switch/merge})		 \\
 
 {\tt U} {\sl filename}				&
-item (U)pdated to repository version	 	& \\
+item (U)pdated to repository version	 	 \\
 
 {\tt G} {\sl filename}				&
-item's local changes were mer(G)ed with repository changes &\\
+item's local changes were mer(G)ed with repository changes \\
 
 {\tt C} {\sl filename}				&
-item's local changes (C)onflicted with repository changes &\\
+item's local changes (C)onflicted with repository changes \\
 
 {\tt D} {\sl filename}				&
-item (D)eleted from working copy                &\\
+item (D)eleted from working copy                \\
 
 {\tt A} {\sl filename}				&
-item (A)dded to working copy			& \\
+item (A)dded to working copy			 \\
 
 \end{tabular}
 
