@@ -97,3 +97,8 @@ List of 1.1 features/changes
   * In the section on "Supporting Multiple Repository Access Methods",
     the chmod g+s command is no longer necessary for repositories
     created with svn 1.1, since we take care of that now.
+
+  * document svn:special property, and how symlinks can be put under
+    version control.   and what (doesn't) happen on win32.
+
+

@@ -1767,8 +1767,8 @@ $ svn log -r 8 -v
 ------------------------------------------------------------------------
 r8 | sally | 2002-07-14 08:15:29 -0500 | 1 line
 Changed paths:
-U /trunk/code/foo.c
-U /trunk/code/bar.h
+M /trunk/code/foo.c
+M /trunk/code/bar.h
 A /trunk/code/doc/README
 
 Frozzled the sub-space winch.
