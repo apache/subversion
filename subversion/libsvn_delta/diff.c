@@ -993,10 +993,9 @@ svn_diff3(svn_diff_t **diff,
 
 static APR_INLINE
 void
-svn_diff__adjust_hunk_modified(svn_diff_t *hunk,
-                               apr_off_t range_start,
-                               apr_off_t range_end,
-                               apr_off_t adjustment)
+svn_diff__adjust_hunk(svn_diff_t *hunk,
+                      apr_off_t range_start, apr_off_t range_end,
+                      apr_off_t adjustment)
 {
   apr_off_t hunk_start = hunk->modified_start;
   apr_off_t hunk_end;
@@ -1018,35 +1017,11 @@ svn_diff__adjust_hunk_modified(svn_diff_t *hunk,
   if (adjustment == 0)
     return;
 
-  hunk->modified_length += adjustment;
-}
-
-static APR_INLINE
-void
-svn_diff__adjust_hunk_latest_or_conflict(svn_diff_t *hunk,
-                                         apr_off_t range_start,
-                                         apr_off_t range_end,
-                                         apr_off_t adjustment)
-{
-  apr_off_t hunk_start = hunk->modified_start;
-  apr_off_t hunk_end;
-
-  /* Out of range change [1, 2, 3] */
-  if (hunk_start >= range_end)
+  if (hunk->type == svn_diff__type_diff_modified)
     {
-      hunk->modified_start += adjustment;
+      hunk->modified_length += adjustment;
       return;
     }
-
-  hunk_end = hunk_start + hunk->modified_length;
-
-  /* Out of range change [1, 2, 3] */
-  if (hunk_end <= range_start)
-    return;
-
-  /* Edit in range [7] */
-  if (adjustment == 0)
-    return;
 
   /* In reverse case, added line in range, in forward case, deleted line
    * in range [5]
@@ -1059,37 +1034,25 @@ svn_diff__adjust_hunk_latest_or_conflict(svn_diff_t *hunk,
 
 static APR_INLINE
 void
-svn_diff__adjust(svn_diff_t *hunk, svn_diff_t *diff)
+svn_diff__adjust(svn_diff_t *diff, svn_diff_t *adjust)
 {
+  svn_diff_t *hunk;
   apr_off_t range_start;
   apr_off_t range_end;
   apr_off_t adjustment;
 
-  while (diff)
+  while (adjust)
     {
-      range_start = diff->modified_start;
-      range_end = range_start + diff->modified_length;
-      adjustment = diff->original_length - diff->modified_length;
+      range_start = adjust->modified_start;
+      range_end = range_start + adjust->modified_length;
+      adjustment = adjust->original_length - adjust->modified_length;
 
-      while (hunk)
+      for (hunk = diff; hunk; hunk = hunk->next)
         {
-          if (hunk->type == svn_diff__type_diff_modified)
-            {
-              svn_diff__adjust_hunk_modified(hunk,
-                                             range_start, range_end,
-                                             adjustment);
-            }
-          else
-            {
-              svn_diff__adjust_hunk_latest_or_conflict(hunk,
-                                                       range_start, range_end,
-                                                       adjustment);
-            }
-
-          hunk = hunk->next;
+          svn_diff__adjust_hunk(hunk, range_start, range_end, adjustment);
         }
 
-      diff = diff->next;
+      adjust = adjust->next;
     }
 }
 
