@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.16 $ of this document.)
+              ($Revision: 1.17 $ of this document.)
 
 * Introduction
 
@@ -795,9 +795,10 @@ working, since they probably don't affect the rest of the design much.
 
 * Jason's comments
 
-I'll be responding to these here (or by adjusting parts of the
-document above).  For now I'm just storing them here so we don't lose
-them. :-)
+     *Please note that these comments are based on an older*
+     *incarnation of the design.  I haven't gone over them yet*
+     *to see which ones still apply.  -kff*
+
 
 --------------------8-<-------cut-here---------8-<-----------------------
 
