@@ -554,12 +554,12 @@ simple_prompt_next_creds (void **credentials,
 
 /* Public API */
 void
-svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
-                                        void **provider_baton,
-                                        svn_client_prompt_t prompt_func,
-                                        void *prompt_baton,
+svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
+                                       void **provider_baton,
+                                       svn_client_prompt_t prompt_func,
+                                       void *prompt_baton,
                                         int retry_limit,
-                                        apr_pool_t *pool)
+                                       apr_pool_t *pool)
 {
   simple_prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
   svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
