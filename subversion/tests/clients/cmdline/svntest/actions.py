@@ -361,7 +361,7 @@ def run_and_verify_switch(wc_dir_name,
     status_tree = status_tree.old_tree()
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn (None, 'switch', wc_target, switch_url)
+  output, errput = main.run_svn (None, 'switch', switch_url, wc_target)
   mytree = tree.build_tree_from_checkout (output)
 
   return verify_update (mytree, wc_dir_name,

@@ -729,14 +729,8 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
   if (path)
     url = svn_path_url_add_component(url, path, ras->pool);
 
-  err = svn_ra_dav__get_baseline_info(&is_dir,
-                                      NULL,
-                                      NULL,
-                                      NULL,
-                                      ras->sess,
-                                      url,
-                                      revision,
-                                      ras->pool);
+  err = svn_ra_dav__get_baseline_info(&is_dir, NULL, NULL, NULL,
+                                      ras->sess, url, revision, ras->pool);
 
   if (err == SVN_NO_ERROR)
     {

@@ -264,7 +264,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
                                              rsrc->revision,
                                              pool));
 
-      url = svn_path_join(bc_url.data, bc_relative.data, pool);
+      url = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
     }
 
   /* Get the DAV:checked-in property, which contains the URL of the
@@ -805,7 +805,9 @@ static svn_error_t * commit_add_dir(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the child object. */
-      copy_src = svn_path_join(bc_url.data, bc_relative.data, dir_pool);
+      copy_src = svn_path_url_add_component(bc_url.data,
+                                            bc_relative.data, 
+                                            dir_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
@@ -992,7 +994,9 @@ static svn_error_t * commit_add_file(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
-      copy_src = svn_path_join(bc_url.data, bc_relative.data, file_pool);
+      copy_src = svn_path_url_add_component(bc_url.data, 
+                                            bc_relative.data, 
+                                            file_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
