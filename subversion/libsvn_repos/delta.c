@@ -745,7 +745,7 @@ delta_dirs (struct context *c, void *dir_baton,
 
   /* Compare the property lists.  */
   SVN_ERR (delta_proplists (c, source_path, target_path,
-                            dir_baton, change_dir_prop));
+                            change_dir_prop, dir_baton));
 
   /* Get the list of entries in each of source and target.  */
   if (target_path)
