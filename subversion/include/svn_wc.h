@@ -209,9 +209,9 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
  * @defgroup svn_wc_notifications notification callback handling
  * @{
  *
- * In many cases, the WC library will scan a working copy and making
+ * In many cases, the WC library will scan a working copy and make
  * changes. The caller usually wants to know when each of these changes
- * have been made, so that it can display some kind of notification to
+ * has been made, so that it can display some kind of notification to
  * the user.
  *
  * These notifications have a standard callback function type, which
