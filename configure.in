@@ -157,12 +157,29 @@ dnl Check for programs ---------------------
 dnl Look for a C compiler
 AC_PROG_CC
 
+dnl Look for a C pre-processor
+AC_PROG_CPP
+
+dnl Look for an extended grep
+AC_PROG_EGREP
+
 dnl See if 'ln -s' works
 AC_PROG_LN_S
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
+AC_ARG_ENABLE(experimental-libtool,
+  AC_HELP_STRING([--experimental-libtool],[Use APR's libtool]),
+  [experimental_libtool=$enableval],[experimental_libtool=no])
+
+if test "$experimental_libtool" = "yes"; then
+  echo "using APR's libtool"
+  LIBTOOL="`$apr_config --apr-libtool`"
+  AC_SUBST(LIBTOOL)
+else
+  dnl libtoolize requires that the following not be indented
 AC_PROG_LIBTOOL
+fi
 
 dnl Before configuring libtool check for --enable-all-static option
 AC_ARG_ENABLE(all-static,

@@ -80,7 +80,7 @@ DVIPDF = dvipdf
 CC = @CC@
 
 SHELL = @SHELL@
-LIBTOOL = $(SHELL) $(abs_builddir)/libtool
+LIBTOOL = @LIBTOOL@
 LTFLAGS = --silent
 LT_LDFLAGS = @LT_LDFLAGS@
 
