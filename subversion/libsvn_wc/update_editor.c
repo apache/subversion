@@ -627,6 +627,7 @@ add_directory (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct dir_baton *db = make_dir_baton (path, pb->edit_baton, pb, TRUE, pool);
+  char *basename;
   svn_node_kind_t kind;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
@@ -644,6 +645,13 @@ add_directory (const char *path,
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        "failed to add directory '%s': object of the same name already exists",
        db->path);
+
+  /* It may not be named the same as the administrative directory. */
+  if (strcmp (svn_path_basename (path, pool), SVN_WC_ADM_DIR_NAME) == 0)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       "failed to add directory '%s': \nobject of the same name as the "
+       "administrative directory", db->path);
 
   /* Either we got real copyfrom args... */
   if (copyfrom_path || SVN_IS_VALID_REVNUM (copyfrom_revision))
