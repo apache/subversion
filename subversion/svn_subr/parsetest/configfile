@@ -22,6 +22,9 @@ Chocolate : $1.59 a dozen
   elephant:   green
 
     # Yummy section
+[unfinished section
+
+
 
  [barsection   ]
   3.14159  :pi
@@ -29,6 +32,8 @@ Chocolate : $1.59 a dozen
         ghoti   :       phish
 
 # Really important section!
+
+syntaxerror
 
    [    bazsection ]
 airplane:    bahamas   

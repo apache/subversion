@@ -270,7 +270,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 svn_string_appendstr (msg, currentline, pool);
                 
                 svn_handle_error (svn_create_error 
-                                  (result, FALSE, msg, pool));
+                                  (SVN_ERR_MALFORMED_LINE, FALSE, 
+                                   msg, pool));
                 break;
               }
                                         
@@ -313,7 +314,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 svn_string_appendstr (msg, currentline, pool);
                 
                 svn_handle_error (svn_create_error 
-                                  (result, FALSE, msg, pool));
+                                  (SVN_ERR_MALFORMED_LINE, FALSE, 
+                                   msg, pool));
                 break;
               }
 

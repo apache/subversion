@@ -67,6 +67,14 @@ main ()
   msg = svn_string_2cstring (b, pglobal);
   printf ("The C string returned is: %s\n", msg);
 
+  /* Compare the C string to the original bytestring */
+  printf ("comparison of b and msg is: %d\n", 
+          svn_string_compare_2cstring (b, msg));
+  printf ("comparison of b and `foogle' is: %d\n", 
+          svn_string_compare_2cstring (b, "foogle"));
+  printf ("comparison of b and `a longish phrase' is: %d\n", 
+          svn_string_compare_2cstring (b, "a longish phrase"));
+
   /* Free our entire memory pool when done. */
   ap_destroy_pool (pglobal);
   ap_terminate();

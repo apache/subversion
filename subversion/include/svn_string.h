@@ -95,6 +95,11 @@ svn_string_t * svn_string_dup (const svn_string_t *original_string,
 svn_boolean_t svn_string_compare (const svn_string_t *str1, 
                                   const svn_string_t *str2);
 
+/* comprare a bytestring to a traditional C string */
+
+svn_boolean_t svn_string_compare_2cstring (const svn_string_t *str, 
+                                           const char *cstr);
+
 /* return a traditional C string from a bytestring */
 
 char * svn_string_2cstring (const svn_string_t *str, ap_pool_t *pool);

@@ -66,8 +66,9 @@
    APR_OS_START_USEERR and APR_OS_START_SYSERR (see apr_errno.h)
 */
 
-#define SVN_ERR_NOT_AUTHORIZED      (APR_START_USEERR + 1)
-
+#define SVN_ERR_NOT_AUTHORIZED                   (APR_OS_START_USEERR + 1)
+#define SVN_ERR_UNRECOGNIZED_SECTION             (APR_OS_START_USEERR + 2)
+#define SVN_ERR_MALFORMED_LINE                   (APR_OS_START_USEERR + 3)
 
 
 typedef struct svn_error_t
