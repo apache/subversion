@@ -9,6 +9,9 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * new non-database repository back-end (libsvn_fs_fs)
  * symlinks can now be placed under version control (unix systems only)
  * cmdline client now supports psuedo-IRIs and autoescapes chars (issue #1910)
+ * 'svnadmin recover' no longer waits forever for a lock (new '--wait' option)
+ * new $Revision$ synonym for $Rev$ and $LastChangedRevision$
+ * new runtime option 'store-passwords = ' gives finer control (r10794)x
  * fixed: working copies now shareable by multiple users (issue #1509)
  * fixed: diff and other subcommands correctly follow renames (issue #1093)
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
@@ -42,6 +45,8 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: svndumpfilter logic/memory/display bugs (r8691, 8831, 9061)
  * fixed: 'svnadmin hotcopy PATH .' (r8659)
  * fixed: copy crash bug (r8863)
+ * fixed: 'svn st -u' crash bug (r10841)
+ * fixed: 'svn commit' segfault (r10676)
  * fixed: allow cleanup on .svn/ dirs containing KILLME file (r8891)
  * fixed: 'svn revert' detects corrupted text-base (r8897)
  * fixed: 'svn status -N' no longer locks entire tree (r8906)
@@ -49,6 +54,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: some 'svn copy' bugs (r9193, 9274)
  * fixed: obscure update-deletion bug (r8976)
  * fixed: utf8 conversion 'hang' (r9233)
+ * fixed: missing UTF8->native recoding in 'svn log' output (r10652, 10673)
  * fixed: 'svn blame' now defaults to  rev (r9440)
  * fixed: 'svn blame' closing files before deleting them (issue #1969)
  * fixed: 'svn diff' shows truncated paths (r9693)
@@ -58,6 +64,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: svn:external 'wc not locked' bug (issue #1897)
  * fixed: proper mod_dav_svn html/xml escaping (issue #1209)
  * fixed: memleak in 'svn propset -R URL' (issue #1928)
+ * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
  * fixed: stop 'svn up' from deleting schedule-add target dir (issue #1793)
  * fixed: 'svn merge' adding a directory already 'deleted' (issue #1769)
  * fixed: excessive memory use when fs deltifies revision 2^N (r10070)
@@ -70,6 +77,8 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: segfault when history-following hits 'empty' revision (r10368)
  * fixed: overzealous out-of-dateness checks in 'svn cp wc URL' (issue 1994)
  * fixed: don't URI-encode path in mod_dav_svn XML listings (r10461)
+ * fixed: 'svn info' should refuse URL targets (r10760)
+ * fixed: allow cancellation between files during recursive dir add (r10894)
  * general improvement and normalization of error messages
  * many improvements to contributed tools:  mailer.py, psvn.el, etc.
 
@@ -88,7 +97,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
      - svn_stream_copy(), svn_txdelta_target_push(), svn_opt_parse_path(),
        svn_io_file_flush_to_disk, svn_repos_trace_node_locations(),
        svn_repos_get_file_revs(), RA->get_locations(), RA->get_file_revs,
-       RA->get_version()
+       RA->get_version(), svn_sort_compare_paths(), svn_utf_initialize()
  * SVN_REVNUM_FMT_T usage replaced with %ld (r9691)
  * cache mod_authz_svn authz file per connection (r8867)
  * validate hex digits in % escape (issue #1947)
@@ -104,6 +113,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: only verify media type of svn:mime-type, not encoding (r10126)
  * fixed: handle '//'  and '..' in svn_path_canonicalize (issue #1779)
  * fixed: double URI escaping (issue #1814)
+ * fixed: editor-driver bug (don't delete before every copy) (r10851)
  * fixed: potential mod_dav_svn crashes/memleaks (r10478)
  * fixed: better 'svnadmin verify  verification (r10508, r10509)
  * fixed: encoding of get_repos_url_result (r10353, 10375)
