@@ -242,5 +242,18 @@ bookdiff:
 	vimdiff $(BDTMP)/norw.txt $(BDTMP)/eng.txt
 	@echo The temporary files are still in $(BDTMP)/ for you to play with.
 
+sync:
+	mkdir sync.LOCK
+	svn update
+	@echo ======= START svn status =======
+	@svn status -q
+	@echo ======== END svn status ========
+	@echo If there are no local changes, press ENTER...
+	@read
+	svnversion . >HEADREV
+	svn merge -r$$(cat LAST_UPDATED):$$(cat HEADREV) $(COLLAB)/trunk/doc/book .
+	mv HEADREV LAST_UPDATED
+	rmdir sync.LOCK
+
 # $Id$
 # vim: set ts=4 sw=4 sts=4 noet :
