@@ -1,0 +1,26 @@
+Index: doc/book/Makefile
+===================================================================
+--- ./doc/book/Makefile	(revision 6461)
++++ ./doc/book/Makefile	(working copy)
+@@ -4,7 +4,7 @@
+ 
+ ## You shouldn't normally need to edit anything below here.
+ SHELL = /bin/sh
+-SVNVERSION = svnversion
++#SVNVERSION = svnversion
+ 
+ BOOK_TOP = .
+ BOOK_HTML_CHUNK_DIR = $(BOOK_DIR)/html-chunk
+@@ -64,11 +64,7 @@
+ clean: book-clean misc-docs-clean
+ 
+ $(BOOK_VERSION_SOURCE):
+-	@if $(SVNVERSION) .; then \
+- 	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE); \
+-	else \
+-	echo '<!ENTITY svn.version "Draft">' > $(BOOK_VERSION_SOURCE); \
+-	fi
++	echo '<!ENTITY svn.version "Draft Revision $(SVNVERSION)">' > $(BOOK_VERSION_SOURCE);
+ 
+ book-html: $(BOOK_HTML_TARGET)
+ 
