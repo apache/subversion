@@ -416,6 +416,12 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
+ *
+ * ### TODO: This ought to take an svn_repos_authz_read_func_t too.
+ * The only reason it doesn't yet is the difficulty of implementing
+ * that correctly, plus lack of strong present need -- it's currently
+ * only used in creating a DAV MERGE response, in 'svnadmin dump', and
+ * in svnlook.
  */
 svn_error_t *
 svn_repos_replay (svn_fs_root_t *root,
