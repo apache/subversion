@@ -50,7 +50,7 @@ run_hook_cmd (const char *name,
               svn_boolean_t check_exitcode,
               apr_pool_t *pool)
 {
-  apr_file_t *read_errhandle, *write_errhandle;
+  apr_file_t *read_errhandle, *write_errhandle, *null_handle;
   apr_status_t apr_err;
   svn_error_t *err;
   int exitcode;
@@ -62,12 +62,20 @@ run_hook_cmd (const char *name,
     return svn_error_createf
       (apr_err, NULL, "can't create pipe for '%s' hook", cmd);
 
+  /* Redirect stdout to the null device */
+  apr_err = apr_file_open (&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
+                           APR_OS_DEFAULT, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, NULL, "can't create null stdout for '%s' hook", cmd);
+
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
-                        NULL, NULL, write_errhandle, pool);
+                        NULL, null_handle, write_errhandle, pool);
 
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
-     not support those parameters. */
+     not support those parameters. We need to close the write end of the
+     pipe so we don't hang on the read end later, if we need to read it. */
   apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
     return svn_error_create
@@ -98,11 +106,17 @@ run_hook_cmd (const char *name,
     }
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
-     times.  When such a failure happens we still want to close the pipe */
+     times.  When such a failure happens we still want to close the pipe
+     and null file */
   apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
     return svn_error_create
-      (apr_err, NULL, "can't close read end of stdout pipe");
+      (apr_err, NULL, "can't close read end of stderr pipe");
+
+  apr_err = apr_file_close (null_handle);
+  if (!err && apr_err)
+    return svn_error_create
+      (apr_err, NULL, "can't close null file");
 
   return err;
 }
