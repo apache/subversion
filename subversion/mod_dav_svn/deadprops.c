@@ -112,7 +112,7 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch a property",
-                               db->p);
+                               db->resource->pool);
 
   return NULL;
 }
@@ -158,9 +158,8 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                                          propname, value, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               serr->message ? 
-                                serr->message : "could not change a property",
-                               db->p);
+                               NULL,
+                               db->resource->pool);
 
   /* a change to the props was made; make sure our cached copy is gone */
   db->props = NULL;
@@ -376,7 +375,7 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property",
-                               db->p);
+                               db->resource->pool);
 
   /* a change to the props was made; make sure our cached copy is gone */
   db->props = NULL;
@@ -474,7 +473,7 @@ static dav_error *dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not begin sequencing through "
                                    "properties",
-                                   db->p);
+                                   db->resource->pool);
     }
 
   /* begin the iteration over the hash */
