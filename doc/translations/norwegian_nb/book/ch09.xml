@@ -1799,14 +1799,14 @@ Transmitting file data .........
 Committed revision 16.
 </screen>
 
-          <para>This imports the local directory <filename>myproj</filename> into
-            <filename>trunk/vendors</filename> in your repository.  The directory
-            <filename>trunk/vendors</filename> need not exist before you import into
-            it&mdash;<command>svn import</command> will
+          <para>This imports the local directory <filename>myproj</filename>
+            into <filename>trunk/misc</filename> in your repository.  The
+            directory <filename>trunk/misc</filename> need not exist before
+            you import into it&mdash;<command>svn import</command> will
             recursively create directories for you:</para>
           <screen>
 $ svn import -m "New import" myproj \
-    http://svn.red-bean.com/repos/test/trunk/vendors/myproj
+    http://svn.red-bean.com/repos/test/trunk/misc/myproj
 Adding         myproj/sample.txt
 &hellip;
 Transmitting file data .........
@@ -1951,6 +1951,12 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
             bytes)</para></listitem> <listitem><para>Date and time of
             the last commit</para></listitem>
           </itemizedlist>
+
+          <para>With <option>--xml</option>, output is in XML format (with
+            a header and an enclosing document element unless
+            <option>--incremental</option> is also specified).  All of the
+            information is present; the <option>--verbose</option> option
+            is not accepted.</para>
         </refsect1>
 
         <refsect1>
@@ -1975,6 +1981,8 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
 --revision (-r) REV
 --verbose (-v)
 --recursive (-R)
+--incremental
+--xml
 --username USER
 --password PASS
 --no-auth-cache
@@ -1998,9 +2006,9 @@ examples/
 &hellip;
 </screen>
 
-          <para>Like UNIX <command>ls</command>, you can also pass
-            the <option>--verbose</option> switch for additional
-            information:</para>
+          <para>You can pass the <option>--verbose</option> switch for
+            additional information, rather like the UNIX command
+            <command>ls -l</command>:</para>
 
           <screen>
 $ svn list --verbose file:///tmp/repos
@@ -3222,6 +3230,13 @@ $ svn status
               <term>'M'</term>
               <listitem>
                 <para>Item has been modified.</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>'R'</term>
+              <listitem>
+                <para>Item has been replaced in your working copy.</para>
               </listitem>
             </varlistentry>
 

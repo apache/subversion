@@ -2330,11 +2330,12 @@ Updated to revision 46.
         egne, og n&#229; m&#229; du velge mellom dem manuelt.</para>
            
       <!-- @ENGLISH {{{
-      <para>Whenever a conflict occurs, three things occur to assist
-        you in noticing and resolving that conflict:</para>
+      <para>Whenever a conflict occurs, three things typically occur
+        to assist you in noticing and resolving that conflict:</para>
       @ENGLISH }}} -->
-      <para>N&#229;r en konflikt oppst&#229;r, har du tre ting til &#229; assistere deg 
-        med &#229; legge merke til og l&#248;se denne konflikten:</para>
+      <para>N&#229;r en konflikt oppst&#229;r, skjer vanligvis tre ting som 
+        hjelper deg med &#229; legge merke til og l&#248;se denne 
+        konflikten:</para>
            
       <itemizedlist>
 
@@ -2351,26 +2352,36 @@ Updated to revision 46.
 
         <listitem>
           <!-- @ENGLISH {{{
-          <para>Subversion places <firstterm>conflict
+          <para>If Subversion considers the file to be of a mergable
+            type, it places <firstterm>conflict
             markers</firstterm>&mdash;special strings of text which
             delimit the <quote>sides</quote> of the
             conflict&mdash;into the file to visibly demonstrate the
-            overlapping areas.</para>
+            overlapping areas.  (Subversion uses the
+            <literal>svn:mime-type</literal> property to decide if a
+            file is capable of contextual, line-based merging.  See
+            <xref linkend="svn-ch-7-sect-2.3.2"/> to learn more.)</para>
           @ENGLISH }}} -->
-          <para>Subversion plasserer 
+          <para>Hvis Subversion anser filen &#229; v&#230;re av en flettbar type, 
+            plasserer den
             <firstterm>konfliktmerker</firstterm> &#8212; spesielle strenger 
             med tekst som skiller <quote>sidene</quote> av konflikten &#8212; 
-            inn i filen for &#229; vise de overlappende omr&#229;dene 
-            visuelt.</para>
+            inn i filen for &#229; vise de overlappende omr&#229;dene visuelt.
+            (Subversion bruker 
+            <literal>svn:mime-type</literal>-egenskapen for &#229; bestemme 
+            om en fil er <!-- &#164; Halvslapp setning -->mulig &#229; flette ved 
+            hjelp av kontekst- og linjebaserert fletting.
+            Se <xref linkend="svn-ch-7-sect-2.3.2"/> for &#229; l&#230;re 
+            mer.)</para>
         </listitem>
 
         <listitem>
           <!-- @ENGLISH {{{
-          <para>For every conflicted file, Subversion places three
-            extra files in your working copy:</para>
+          <para>For every conflicted file, Subversion places up to
+            three extra unversioned files in your working copy:</para>
           @ENGLISH }}} -->
           <para>For hver fil som har en konflikt plasserer Subversion 
-            tre ekstra filer i arbeidskopien din:</para>
+            opp til tre ekstra filer i arbeidskopien din:</para>
 
           <variablelist>
             
@@ -2381,7 +2392,11 @@ Updated to revision 46.
                 <para>This is your file as it existed in your working
                   copy before you updated your working copy&mdash;that
                   is, without conflict markers.  This file has your
-                  latest changes in it and nothing else.</para>
+                  latest changes in it and nothing else.  (If
+                  Subversion considers the file to be unmergeable,
+                  then the <filename>.mine</filename> file isn't
+                  created, since it would be identical to the working
+                  file.)</para>
               </listitem>
               @ENGLISH }}} -->
               <term><filename>filnavn.mine</filename></term>
@@ -2390,7 +2405,10 @@ Updated to revision 46.
                   arbeidskopien din f&#248;r du oppdaterte arbeidskopien &#8212; 
                   det vil si uten konfliktmerker.
                   Denne filen har dine seneste forandringer og ingenting 
-                  annet.</para>
+                  annet.
+                  (Hvis Subversion avgj&#248;r at filen ikke er flettbar, 
+                  blir ikke <filename>.mine</filename>-filen opprettet, 
+                  siden den ville v&#230;rt identisk med arbeidsfilen.)</para>
               </listitem>
             </varlistentry>
             
@@ -2854,7 +2872,7 @@ Committed revision 3.
 
       <screen>
 $ svn commit --file logmsg 
-Sending        sandwich
+Sending        sandwich.txt
 Transmitting file data .
 Committed revision 4.
 </screen>
@@ -3387,7 +3405,7 @@ Index: rules.txt
 -Freedom = Chocolate Ice Cream
 +Freedom = Responsibility
  Everything in moderation
- Chew with your mouth closed 
+ Chew with your mouth open
 $
 </screen>
           
@@ -3443,7 +3461,7 @@ $ svn cat --revision 2 rules.txt
 Be kind to others
 Freedom = Chocolate Ice Cream
 Everything in moderation
-Chew with your mouth closed
+Chew with your mouth open
 $
 </screen>
 

@@ -871,7 +871,7 @@
           igjen.</para>
 
         <!-- @ENGLISH {{{
-        <para>The only real argument against an FSFS is its relative
+        <para>The only real argument against FSFS is its relative
           immaturity compared to Berkeley DB.  It hasn't been used or
           stress-tested nearly as much, and so a lot of these
           assertions about speed and scalability are just that:
@@ -880,8 +880,8 @@
           susceptible to problems.  In practice, only time will
           tell.</para>
         @ENGLISH }}} -->
-        <para>Det eneste virkelige argumentet mot et FSFS-depot er 
-          fartstiden det har hatt i forhold til Berkeley DB.
+        <para>Det eneste virkelige argumentet mot FSFS er fartstiden det 
+          har hatt i forhold til Berkeley DB.
           Det er ikke like mye brukt og har ikke blitt stresstestet like 
           mye, s&#229; derfor er mange av disse antakelsene om hastighet og 
           skalerbarhet nettopp det:
@@ -1300,6 +1300,29 @@ pre-commit.tmpl
         <filename>.com</filename> for programmer, og 
         <filename>.bat</filename> for batchfiler.</para>
 
+      <tip>
+        <!-- @ENGLISH {{{
+        <para>For security reasons, the Subversion repository executes
+        hook scripts with an empty environment&mdash;that is, no
+        environment variables are set at all, not even
+        <literal>$PATH</literal> or <literal>%PATH%</literal>.
+        Because of this, a lot of administrators are baffled when
+        their hook script runs fine by hand, but doesn't work when run
+        by Subversion.  Be sure to explicitly set environment
+        variables in your hook and/or use absolute paths to
+        programs.</para>
+        @ENGLISH }}} -->
+        <para>Av sikkerhetsgrunner kj&#248;rer Subversion p&#229;hakningsskript 
+          med et tomt milj&#248; (environment) &#8212; det betyr, ingen 
+          milj&#248;variabler er satt i det hele tatt, ikke engang 
+          <literal>$PATH</literal> eller <literal>%PATH%</literal>.
+          P&#229; grunn av dette blir mange adminstratorer forvirret n&#229;r 
+          p&#229;hakningsskriptet kj&#248;rer fint for h&#229;nd, men virker ikke n&#229;r 
+          det blir kj&#248;rt av Subversion.
+          Pass p&#229; &#229; eksplisitt sette variabler i skriptet og/eller bruk 
+          absolutte stier til programmer.</para>
+      </tip>
+
       <!-- @ENGLISH {{{
       <para>Currently there are five hooks implemented by the
         Subversion repository:</para>
@@ -1425,8 +1448,9 @@ pre-commit.tmpl
               Returverdien fra programmet blir ignorert.</para>
                 
             <!-- @ENGLISH {{{
-            <para>The Subversion distribution includes a
-              <command>commit-email.pl</command> script (located in
+            <para>The Subversion distribution includes
+              <command>mailer.py</command> and
+              <command>commit-email.pl</command> scripts (located in
               the <filename>tools/hook-scripts/</filename> directory
               of the Subversion source tree) that can be used to send
               email with (and/or append to a log file) a description
@@ -1436,8 +1460,9 @@ pre-commit.tmpl
               GNU diff-style display of the changes made to the
               various versioned files as part of the commit.</para>
             @ENGLISH }}} -->
-            <para>Subversiondistribusjonen inneholder et 
-              <command>commit-email.pl</command>-skript (i 
+            <para>Subversiondistribusjonen inneholder skriptene
+              <command>mailer.py</command> og 
+              <command>commit-email.pl</command> (i 
               <filename>tools/hook-scripts/</filename>-katalogen i 
               Subversiontreet) som kan bli brukt til &#229; sende email med 
               (og/eller legge til en loggfil) en beskrivelse av en 
@@ -1579,7 +1604,44 @@ pre-commit.tmpl
         </varlistentry>
       </variablelist>
 
-      <!-- @ENGLISH {{{
+      <warning>
+        <!-- @ENGLISH {{{
+        <para>Do not attempt to modify the transaction using hook
+          scripts. A common example of this would be to automatically
+          set properties such as <literal>svn:eol-style</literal> or
+          <literal>svn:mime-type</literal> during the commit.  While
+          this might seem like a good idea, it causes problems.  The
+          main problem is that the client does not know about the
+          change made by the hook script, and there is no way to
+          inform the client that it is out-of-date.  This
+          inconsistency can lead to surprising and unexpected
+          behavior.</para>
+        @ENGLISH }}} -->
+        <para>Ikke fors&#248;k &#229; forandre transaksjonen ved &#229; bruke 
+          p&#229;hakningsskript.
+          Et vanlig eksempel p&#229; dette ville v&#230;re &#229; automatisk sette 
+          egenskaper som <literal>svn:eol-style</literal> eller 
+          <literal>svn:mime-type</literal> under innleggingen.
+          Selv om dette kan se ut som en god id&#233;, f&#248;rer det til 
+          problemer.
+          Hovedproblemet er at klienten ved ikke om forandringen gjort 
+          av p&#229;hakningsscriptet, og det er ingen m&#229;te &#229; informere 
+          klienten om at den er utdatert.
+          Denne inkonsekventheten kan f&#248;re til overraskende og uventet 
+          oppf&#248;rsel.</para>
+
+        <!-- @ENGLISH {{{
+        <para>Instead of attempting to modify the transaction, it is
+          much better to <emphasis>check</emphasis> the transaction in
+          the <filename>pre-commit</filename> hook and reject the
+          commit if it does not meet the desired requirements.</para>
+        @ENGLISH }}} -->
+        <para>Istedenfor &#229; fors&#248;ke &#229; modifisere transaksjonen, er det 
+          mye bedre &#229; <emphasis>sjekke</emphasis> transaksjonen i 
+          <filename>pre-commit</filename> og nekte innlegging hvis den 
+          ikke m&#248;ter de &#248;nskede kravene.</para>
+      </warning>
+
       <para>Subversion will attempt to execute hooks as the same user
         who owns the process which is accessing the Subversion
         repository.  In most cases, the repository is being accessed
@@ -1620,7 +1682,7 @@ pre-commit.tmpl
       <!-- @ENGLISH {{{
       <para>A Berkeley DB environment is an encapsulation of one or
         more databases, log files, region files and configuration
-        files.  The Berkeley DB environment has it own set of default
+        files.  The Berkeley DB environment has its own set of default
         configuration values for things like the number of locks
         allowed to be taken out at any given time, or the maximum size
         of the journaling log files, etc.  Subversion's filesystem
@@ -2224,9 +2286,13 @@ $ svnlook tree /sti/til/depot --show-ids
             <term><literal>uuid</literal></term>
             <listitem>
               <!-- @ENGLISH {{{
-              <para>Print the tree's unique user ID (UUID).</para>
+              <para>Print the repository's UUID&mdash;
+                <emphasis>U</emphasis>niversal <emphasis>U</emphasis>nique
+                <emphasis>ID</emphasis>entifier.</para>
               @ENGLISH }}} -->
-              <para>Skriv treets unike bruker-ID (UUID).</para>
+              <para>Skriv depotets UUID &#8212; <emphasis>U</emphasis>niversal 
+                <emphasis>U</emphasis>nique
+                <emphasis>ID</emphasis>entifier.</para>
             </listitem>
           </varlistentry>
 
