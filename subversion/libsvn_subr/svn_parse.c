@@ -66,7 +66,7 @@
 
 
 ap_status_t
-my__readline (const ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
+my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 {
   char c;
   ap_status_t result;

@@ -71,7 +71,8 @@ svn_create_error (ap_status_t err,
   new_error->message = message;
   new_error->canonical_errno = ap_canonical_error (errno);
 
-  *strerror_msg = 
+  /* ap_strerror() should overwrite the "desc" bytestring buffer... */
+  strerror_msg = 
     ap_strerror (err, (char *) desc->data, (ap_size_t) desc->len);
 
   new_error->description = svn_string_create (strerror_msg, pool);
