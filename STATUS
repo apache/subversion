@@ -98,7 +98,7 @@ the section for unapproved changes.)
       +0: jerenkrantz, gstein, cmpilato, striker
 
 
-   * Issue #999
+   * r8216
      Anchor/target split may use NULL for target.
      Justification: API consistency
      Notes: Greg Hudson has said he has no intention of merging this
@@ -110,7 +110,7 @@ the section for unapproved changes.)
       -0: gstein
 
 
-   * Issue #1644
+   * r8219
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
      Votes:
@@ -188,7 +188,7 @@ the section for unapproved changes.)
       +1: jerenkrantz, rooneg, ghudson, dionisos, gstein, striker
 
 
-   * Issue #1652
+   * r8218
      Error messages cf most important conventions [patch in issue].
      Justification: low impact (though huge); better user experience
      Notes: Should apply this after most other changes, to avoid
@@ -199,7 +199,7 @@ the section for unapproved changes.)
       -0: gstein, kfogel (seem to be doing fine with our current msgs so far)
 
 
-   * Issue #1668
+   * r8213
      Rename 'svn_repos_authz_read_func_t' to 'svn_repos_authz_func_t'.
      Justification: API stability; and, old name was overly restrictive.
      Votes:
@@ -208,7 +208,7 @@ the section for unapproved changes.)
       -0: gstein
 
 
-   * Issue #1671
+   * r8215
      Add a pool parameter to finish_abort and abort_report.
      Justification: API stability; low risk
      Votes:
@@ -240,7 +240,7 @@ the section for unapproved changes.)
       -0: gstein
 
 
-   * Issue #1677
+   * r8214
      Constify two svn_fs_dirent_t fields
      Justification: API stability; essentially zero risk
      Votes:
@@ -263,7 +263,7 @@ the section for unapproved changes.)
       +1: ghudson, jszakmeister, gstein, epg
 
 
-   * Issue #1678
+   * r8212
      Document reporter requirements and require depth-first.
      Justification: API change; allow better report processing; no risk.
      Votes:
@@ -325,7 +325,7 @@ the section for unapproved changes.)
       -0: gstein (alternative is to remove the late-added 'blame' feature)
 
 
-   * Issue #1689
+   * r8220
      Clean up structure definitions.
      Justification: Negligible risk, API cleanliness and stability.
      Votes:
