@@ -1,0 +1,125 @@
+
+Last updated: $Date: 2001-04-16 22:30:38 $
+
+Three related things that need to happen in the filesystem before we
+get to alpha:
+
+   a) file contents need to be moved into a separate table
+
+   b) we need to do reverse-delta storage in the filesystem (with
+      checksums)
+
+   c) we need to operate on file contents without holding the entire
+      contents in RAM.  Berkeley DB gives us tools to operate on
+      regions within a value, we just need to use them.
+
+This is a rough guide to how we'll do these three things.  I'm writing
+it up here mainly so JimB can tear it down and replace it with
+something better.
+
+I'm going to describe the changes as though they are being done
+independently, in the order given above.  Probably they will in fact
+be implemented independently, as our brains aren't big enough to do
+otherwise.  But if it turns to be easy to condense some of them into a
+single pass, then we may try it.
+
+
+a) File contents need to be moved into a separate table.
+========================================================
+
+There will be a new table, `strings'.  The keys will simply be numbers
+(or whatever -- the point is, they're not node rev IDs), and the
+values are, well, a string.  Not a skel, just a string.  Berkeley
+keeps track of the length for us anyway, so no point making it a skel.
+
+Before we go on, here's some background from `structure':
+
+   If a NODE-REVISION's header's KIND is "file", then the
+   node-revision skel represents a file, and has the form:
+
+      (HEADER DATA)
+
+   where DATA is an atom giving the full contents of the file.  (In
+   the future, DATA may have other alternate forms, indicating that
+   the fulltext of the file is stored elsewhere in the database, or
+   perhaps in an ordinary Unix file.)
+
+Great, thank you `structure'.  Take it away, Eric the Orchestra
+Leader...
+
+We now define one of those hitherto speculative alternate forms:
+
+   DATA := atom | ("strings" KEY) ;
+   KEY  := atom ;                     /* a key in the `strings' table */
+
+Fine, except that supporting both forms of DATA -- the atom form and
+the forwarding pointer form of DATA -- is probably a lot of complexity
+for not much gain.  So let's just do this:
+
+   DATA := atom ;                     /* a key into the `strings' table */
+
+(The reason supporting both would be too much complexity will become
+clearer when we discuss item (c) later.  In case you were wondering.)
+
+Next,
+
+   - Replace dag_node_t->node_revision with two fields:
+     dag_node_t->node_rev_header and dag_node_t->node_rev_data.
+
+   - Replace svn_fs__get_node_revision() with, you guessed it,
+     svn_fs__get_node_rev_header() and svn_fs__get_node_rev_data().
+
+   - Find all callers of svn_fs__get_node_revision().  You know what
+     to do.  Some of them will only need to call
+     svn_fs__get_node_rev_header(), yay, they'll never need to touch
+     the contents.
+
+
+b) Reverse-delta storage.
+=========================
+
+   Uh, yeah.  Will discuss after (c) below.
+
+
+c) Operate on portions of files efficiently.
+============================================
+
+You're gonna love Berkeley DB even more after this, if that were
+possible... The basic story is, you tell your DBT you're only
+interested in a substring of the record, and then do everything else
+in the usual way.  Here's how:
+
+  dbt->flags |= DB_DBT_PARTIAL
+  dbt->doff  = some_offset;
+  dbt->dlen  = some_length;
+
+If it's a read operation, Berkeley will read the specified range.  If
+some of those bytes don't exist, the read will still succeed, and null
+bytes will be returned for the absent ones.  This is good for reading
+into a fixed-size window, I guess -- cleanses the unused portion
+automatically for you.  Heh.
+
+If it's a write operation, and dbt->size != dbt->dlen, then that range
+of the record will grow or shrink accordingly.  See
+http://www.sleepycat.com/docs/ref/am/partial.html for details.
+
+To take advantage of 
+
+   - Replace dag_node_t->node_revision with two fields:
+     dag_node_t->node_rev_header and dag_node_t->node_rev_data.
+
+   - Replace svn_fs__get_node_revision() with, you guessed it,
+     svn_fs__get_node_rev_header() and svn_fs__get_node_rev_data().
+
+   - Find all callers of svn_fs__get_node_revision().  You know what
+     to do.  Some of them will only need to call
+     svn_fs__get_node_rev_header(), yay, they'll never need to touch
+     the contents.
+
+
+
+
+
+b) Now we can talk about reverse-delta storage.
+===============================================
+
