@@ -130,7 +130,6 @@ svn_client_unlock (const char *path, svn_boolean_t force,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   const char *lock_token;
-  svn_lock_t *lock;
   svn_ra_session_t *ra_session;
 
   /* ### TODO Support unlock on URL with --force. */
