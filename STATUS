@@ -107,3 +107,8 @@ Candidate changes:
     Finish Issue #1741 - svn status -v shows unwanted status of externals.
     Votes:
       +1: cmpilato
+
+  * r8844
+    Make RPMs build again after cvs2svn was taken out.
+    Votes:
+      +1: david
