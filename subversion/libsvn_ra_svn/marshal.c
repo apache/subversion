@@ -155,6 +155,8 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         status = apr_socket_send(conn->sock, data, &count);
       else
         status = apr_file_write(conn->out_file, data, &count);
+      if (status)
+        return svn_error_wrap_apr(status, "Can't write to connection");
       if (count == 0)
         {
           if (!subpool)
@@ -163,8 +165,6 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
             apr_pool_clear(subpool);
           SVN_ERR(conn->block_handler(conn, subpool, conn->block_baton));
         }
-      if (status)
-        return svn_error_wrap_apr(status, "Can't write to connection");
       data += count;
     }
 
