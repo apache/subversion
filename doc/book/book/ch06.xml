@@ -766,7 +766,7 @@ $
 
         <screen>
 $ svn propset svn:log '* button.c: Fix a compiler warning.' -r11 --revprop
-property `status' set on repository revision '11'
+property `svn:log' set on repository revision '11'
 $
 </screen>
 
