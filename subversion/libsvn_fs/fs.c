@@ -119,7 +119,7 @@ cleanup_fs (svn_fs_t *fs)
 
     while (db_err == DB_INCOMPLETE)
       {
-        apr_sleep (1000000L);
+        apr_sleep (1000000L); /* microseconds, so 1000000L == 1 second */
         db_err = txn_checkpoint (env, 0, 0, 0);
       }
 
