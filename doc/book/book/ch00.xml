@@ -150,9 +150,55 @@
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-3">
     <title>Conventions Used in This Book</title>
+    
+    <para>This section covers the various conventions used in this
+      book.</para>
+    
+    <sect2 id="svn-ch-0-sect3.1">
+      <title>Typographic Conventions</title>
+      
+      <variablelist>
+        
+        <varlistentry>
+          <term><command>Constant width</command></term>
+          <listiatem>
+            <para>Used for commands, command output, and switches</para>
+          </listitem>
+        </varlistentry>
 
-    <para>### O'Reilly almost certainly needs to fill this in,
-      depending on how they typeset the book.</para>
+        <varlistentry>
+          <term><replaceable>Constant width italic</replaceable></term>
+          <listiatem>
+            <para>Used for replaceable items in code and text</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><filename>Italic</filename></term>
+          <listiatem>
+            <para>Used for file and directory names</para>
+          </listitem>
+        </varlistentry>
+        
+      </variablelist>
+
+    </sect2>
+
+    <sect2 id="svn-ch-0-sect3.1">
+      <title>Icons</title>
+
+      <note>
+        <para>This icon designates a note relating to the surrounding
+          text.</para>
+      </note>
+
+      <warning>
+        <para>This icon designates a warning relating to the surrounding
+          text.</para>
+      </warning>
+
+    </sect2>
+
 
     <para>Note that the source code examples are just
       that&mdash;examples. While they will compile with the proper
@@ -166,6 +212,159 @@
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-4">
+    <title>Organization of This Book</title>
+
+    <para>The chapters that follow and their contents are listed
+      here:</para>
+
+      <variablelist>
+        
+        <varlistentry>
+          <term>Chapter 1, <emphasis>Introduction</emphasis></term>
+          <listiatem>
+            <para>Covers the history of
+              <productname>Subversion</productname> as well as its
+              features, architecture architecture, components, and
+              install methods.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 2, <emphasis>Basic Concepts</emphasis></term>
+          <listiatem>
+            <para>Explains the basics of version control and different
+              versioning models, along with Subversion's repository,
+              working copies, and revisions.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 3, <emphasis>Guided Tour</emphasis></term>
+          <listiatem>
+            <para>Walks you through a day in the life of a Subversion
+              user.  It demonstrates how to use Subversion obtain,
+              modify, and commit data using Subversion.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 4, <emphasis>Branching and Merging</emphasis></term>
+          <listiatem>
+            <para>Discusses branches, merges, and tagging, including
+              best practices for branching and merging, common
+              use-cases, how to undo changes, and how to easily swing
+              from one branch to the next.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 5, <emphasis>Repository Administration</emphasis></term>
+          <listiatem>
+            <para>Describes the basics of the Subversion repository,
+              how to create, configure, and maintain a repository, as
+              well as the tools you can use to do so.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 6, <emphasis>Server Configuration</emphasis></term>
+          <listiatem>
+            <para>Explains how to configure your Subversion server and
+              the three ways to access your repository:
+              <literal>HTTP</literal>, the <literal>svn</literal>
+              protocol, and local access.  It also covers the details
+              of authentication, authorization and anonymous
+              access.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 7, <emphasis>Advanced Topics</emphasis></term>
+          <listiatem>
+            <para>Explores the Subversion client configuration files,
+              file and directory properties, how to
+              <literal>ignore</literal> files in your working copy,
+              how to include external trees in your working copy, and
+              lastly, how to handle vendor branches.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 8, <emphasis>Developer Information</emphasis></term>
+          <listiatem>
+            <para>Describes the internals of Subversion, the
+              Subversion filesystem, and the working copy
+              administrative areas from a programmer's point of view.
+              Demonstrates how to use the public APIs to write a
+              program that uses Subversion, and most importantly, how
+              to contribute to the development of Subversion.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Chapter 9, <emphasis>Subversion Complete Reference</emphasis></term>
+          <listiatem>
+            <para>Explains in great detail every subcommand of
+              <command>svn</command>, <command>svnadmin</command>, and
+              <command>svnlook</command> with plenty of examples for
+              the whole family!</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Appendix A, <emphasis>Subversion for CVS Users</emphasis></term>
+          <listiatem>
+            <para>Covers the similarities and differences between
+              Subversion and CVS, with numerous suggestions on how to
+              break all the bad habits you picked up from years of
+              using CVS.  Included are descriptions of Subversion
+              revision numbers, versioned directories, offline
+              operations, <command>update</command>
+              vs. <command>status</command>, branches, tags, metadata,
+              conflict resolution, and authentication.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Appendix B, <emphasis>Troubleshooting</emphasis></term>
+          <listiatem>
+            <para>Addresses common problems and difficulties using and
+              building Subversion.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Appendix C, <emphasis>WebDAV and Autoversioning</emphasis></term>
+          <listiatem>
+            <para>Describes the details of WebDAV and DeltaV, and how
+            you can configure your Subversion repository to be mounted
+            read/write as a DAV share with any changes you make are
+            automatically committed to the repository.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Appendix D, <emphasis>Other Subversion Clients</emphasis></term>
+          <listiatem>
+            <para>Explains where you can find Subversion clients other
+            than the command line client.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Appendix E, <emphasis>Third Party Tools</emphasis></term>
+          <listiatem>
+            <para>Discusses tools that support or use
+            Subversion.</para>
+          </listitem>
+        </varlistentry>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-5">
     <title>This Book is Free</title>
 
     <para>This book started out as bits of documentation written by
@@ -202,9 +401,9 @@
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-0-sect-5">
+  <sect1 id="svn-ch-0-sect-6">
     <title>Acknowledgments</title>
 
     <para>### Huge list of thanks to the many svn developers who sent
@@ -217,3 +416,9 @@
 
 
 </preface>
+
+<!--
+local variables: 
+sgml-parent-document: ("book.xml" "chapter")
+end:
+-->
