@@ -186,9 +186,9 @@ svn_client_status2 (svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR (svn_wc_crawl_revisions (path, target_access, reporter, 
-                                           report_baton, FALSE, descend, 
-                                           FALSE, NULL, NULL, NULL, pool));
+          SVN_ERR (svn_wc_crawl_revisions2 (path, target_access, reporter, 
+                                            report_baton, FALSE, descend, 
+                                            FALSE, NULL, NULL, NULL, pool));
         }
     }
   else
@@ -196,15 +196,13 @@ svn_client_status2 (svn_revnum_t *result_rev,
       SVN_ERR (editor->close_edit (edit_baton, pool));
     }
 
-  if (ctx->notify_func && update)
-    (ctx->notify_func) (ctx->notify_baton,
-                        path,
-                        svn_wc_notify_status_completed,
-                        svn_node_unknown,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        edit_revision);
+  if (ctx->notify_func2 && update)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (path, svn_wc_notify_status_completed, pool);
+      notify->revision = edit_revision;
+      (ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)

@@ -65,10 +65,10 @@ revert (const char *path,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    pool));
 
-  err = svn_wc_revert (path, adm_access, recursive, use_commit_times,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       ctx->notify_func, ctx->notify_baton,
-                       pool);
+  err = svn_wc_revert2 (path, adm_access, recursive, use_commit_times,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        ctx->notify_func2, ctx->notify_baton2,
+                        pool);
 
   /* If no error, or SVN_ERR_UNVERSIONED_RESOURCE error, then we want
      to close up before returning.  For any other kind of error, we
@@ -113,12 +113,11 @@ svn_client_revert (const apr_array_header_t *paths,
           if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
               || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
             {
-              if (ctx->notify_func)
-                (*ctx->notify_func) (ctx->notify_baton, path,
-                                     svn_wc_notify_skip, svn_node_unknown,
-                                     NULL, svn_wc_notify_state_unknown,
-                                     svn_wc_notify_state_unknown,
-                                     SVN_INVALID_REVNUM);
+              if (ctx->notify_func2)
+                (*ctx->notify_func2)
+                  (ctx->notify_baton2,
+                   svn_wc_create_notify (path, svn_wc_notify_skip, subpool),
+                   subpool);
               svn_error_clear (err);
               err = SVN_NO_ERROR;
               continue;

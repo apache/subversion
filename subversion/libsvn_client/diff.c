@@ -1148,12 +1148,12 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       if (! merge_b->dry_run)
         {
           SVN_ERR (svn_io_make_dir_recursively (path, subpool));
-          SVN_ERR (svn_wc_add (path, adm_access,
-                               copyfrom_url, rev,
-                               merge_b->ctx->cancel_func,
-                               merge_b->ctx->cancel_baton,
-                               NULL, NULL, /* don't pass notification func! */
-                               merge_b->pool));
+          SVN_ERR (svn_wc_add2 (path, adm_access,
+                                copyfrom_url, rev,
+                                merge_b->ctx->cancel_func,
+                                merge_b->ctx->cancel_baton,
+                                NULL, NULL, /* don't pass notification func! */
+                                merge_b->pool));
 
         }
       if (merge_b->dry_run)
@@ -1167,12 +1167,12 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
         {
           if (!merge_b->dry_run)
-            SVN_ERR (svn_wc_add (path, adm_access,
-                                 copyfrom_url, rev,
-                                 merge_b->ctx->cancel_func,
-                                 merge_b->ctx->cancel_baton,
-                                 NULL, NULL, /* no notification func! */
-                                 merge_b->pool));
+            SVN_ERR (svn_wc_add2 (path, adm_access,
+                                  copyfrom_url, rev,
+                                  merge_b->ctx->cancel_func,
+                                  merge_b->ctx->cancel_baton,
+                                  NULL, NULL, /* no notification func! */
+                                  merge_b->pool));
           if (merge_b->dry_run)
             merge_b->added_path = apr_pstrdup (merge_b->pool, path);
           if (state)
@@ -1216,31 +1216,31 @@ typedef struct merge_delete_notify_baton_t
  * and set the proper action. */
 static void
 merge_delete_notify_func (void *baton,
-                          const char *path,
-                          svn_wc_notify_action_t action,
-                          svn_node_kind_t kind,
-                          const char *mime_type,
-                          svn_wc_notify_state_t content_state,
-                          svn_wc_notify_state_t prop_state,
-                          svn_revnum_t revision)
+                          const svn_wc_notify_t *notify,
+                          apr_pool_t *pool)
 {
-  merge_delete_notify_baton_t *mdb = (merge_delete_notify_baton_t *) baton;
+  merge_delete_notify_baton_t *mdb = baton;
+  svn_wc_notify_t *new_notify;
 
   /* Skip the notification for the path we called svn_client__wc_delete() with,
    * because it will be outputed by repos_diff.c:delete_item */  
-  if (strcmp (path, mdb->path_skip) == 0)
+  if (strcmp (notify->path, mdb->path_skip) == 0)
     return;
   
   /* svn_client__wc_delete() is written primarily for scheduling operations not
    * update operations.  Since merges are update operations we need to alter
    * the delete notification to show as an update not a schedule so alter 
    * the action. */
-  if (action == svn_wc_notify_delete)
-    action = svn_wc_notify_update_delete;
+  if (notify->action == svn_wc_notify_delete)
+    {
+      /* We need to copy it since notify is const. */
+      new_notify = svn_wc_dup_notify (notify, pool);
+      new_notify->action = svn_wc_notify_update_delete;
+      notify = new_notify;
+    }
 
-  if (mdb->ctx->notify_func)
-    (*mdb->ctx->notify_func) (mdb->ctx->notify_baton, path, action, kind,
-                              mime_type, content_state, prop_state, revision);
+  if (mdb->ctx->notify_func2)
+    (*mdb->ctx->notify_func2) (mdb->ctx->notify_baton2, notify, pool);
 }
 
 /* A svn_wc_diff_callbacks2_t function. */
@@ -1500,8 +1500,8 @@ do_merge (const char *initial_URL1,
                                         dry_run,
                                         ra_session2,
                                         start_revnum,
-                                        ctx->notify_func,
-                                        ctx->notify_baton,
+                                        ctx->notify_func2,
+                                        ctx->notify_baton2,
                                         ctx->cancel_func,
                                         ctx->cancel_baton,
                                         &diff_editor,
@@ -1657,16 +1657,16 @@ do_single_file_merge (const char *initial_URL1,
     return err;
   svn_error_clear (err);
   
-  if (merge_b->ctx->notify_func)
+  if (merge_b->ctx->notify_func2)
     {
-      (*merge_b->ctx->notify_func) (merge_b->ctx->notify_baton,
-                                    merge_b->target,
-                                    svn_wc_notify_update_update,
-                                    svn_node_file,
-                                    NULL,
-                                    text_state, 
-                                    prop_state,
-                                    SVN_INVALID_REVNUM);
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (merge_b->target, svn_wc_notify_update_update,
+                                pool);
+      notify->kind = svn_node_file;
+      notify->content_state = text_state;
+      notify->prop_state = prop_state;
+      (*merge_b->ctx->notify_func2) (merge_b->ctx->notify_baton2, notify,
+                                     pool);
     }
 
   return SVN_NO_ERROR;
@@ -2039,11 +2039,11 @@ diff_repos_wc (const apr_array_header_t *options,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR (svn_wc_crawl_revisions (path2, dir_access,
-                                   reporter, report_baton,
-                                   FALSE, recurse, FALSE,
-                                   NULL, NULL, /* notification is N/A */
-                                   NULL, pool));
+  SVN_ERR (svn_wc_crawl_revisions2 (path2, dir_access,
+                                    reporter, report_baton,
+                                    FALSE, recurse, FALSE,
+                                    NULL, NULL, /* notification is N/A */
+                                    NULL, pool));
 
   SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;

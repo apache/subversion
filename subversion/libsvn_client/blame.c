@@ -405,15 +405,16 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
   /* If this file has a non-textual mime-type, bail out. */
   SVN_ERR (check_mimetype (prop_diffs, frb->target, frb->currpool));
 
-  if (frb->ctx->notify_func)
-    frb->ctx->notify_func (frb->ctx->notify_baton,
-                           path,
-                           svn_wc_notify_blame_revision,
-                           svn_node_none,
-                           NULL,
-                           svn_wc_notify_state_inapplicable,
-                           svn_wc_notify_state_inapplicable,
-                           revnum);
+  if (frb->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(path, svn_wc_notify_blame_revision, pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->revision = revnum;
+      frb->ctx->notify_func2 (frb->ctx->notify_baton2, notify, pool);
+    }
 
   if (frb->ctx->cancel_func)
     SVN_ERR (frb->ctx->cancel_func (frb->ctx->cancel_baton));
@@ -773,15 +774,17 @@ old_blame (const char *target, const char *url,
                svn_path_local_style (target, frb->currpool));
         }
 
-      if (frb->ctx->notify_func)
-        frb->ctx->notify_func (frb->ctx->notify_baton,
-                               rev->path,
-                               svn_wc_notify_blame_revision,
-                               svn_node_none,
-                               NULL,
-                               svn_wc_notify_state_inapplicable,
-                               svn_wc_notify_state_inapplicable,
-                               rev->revision);
+      if (frb->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify (rev->path, svn_wc_notify_blame_revision,
+                                    pool);
+          notify->kind = svn_node_none;
+          notify->content_state = notify->prop_state
+            = svn_wc_notify_state_inapplicable;
+          notify->revision = rev->revision;
+          frb->ctx->notify_func2 (frb->ctx->notify_baton2, notify, pool);
+        }                               
 
       if (frb->ctx->cancel_func)
         SVN_ERR (frb->ctx->cancel_func (frb->ctx->cancel_baton));

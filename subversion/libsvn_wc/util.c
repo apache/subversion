@@ -123,7 +123,22 @@ svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
 
   return ret;
 }
-  
+
+svn_wc_notify_t *
+svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool)
+{
+  svn_wc_notify_t *ret = apr_palloc (pool, sizeof (*ret));
+
+  memcpy (ret, notify, sizeof (*ret));
+
+  if (ret->path)
+    ret->path = apr_pstrdup (pool, ret->path);
+  if (ret->mime_type)
+    ret->mime_type = apr_pstrdup (pool, ret->mime_type);
+
+  return ret;
+}
+ 
 
 void svn_wc__compat_call_notify_func (void *baton,
                                       const svn_wc_notify_t *n,

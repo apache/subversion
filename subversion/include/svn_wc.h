@@ -595,6 +595,13 @@ svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
 
 /** @since New in 1.2.
  *
+ * Return a deep copy of @a notify, allocated in @a pool.
+ */
+svn_wc_notify_t *
+svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool);
+
+/** @since New in 1.2.
+ *
  * Notify the world that @a notify->action has happened to @a notify->path.
  * @a notify->path is either absolute or relative to cwd (i.e., not relative
  * to an anchor).
