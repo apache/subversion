@@ -1349,7 +1349,22 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
 
 
 
-/* Recursive directory deletion. */
+/* Deletion. */
+
+svn_error_t *
+svn_io_remove_file (const char *path, apr_pool_t *pool)
+{
+  apr_status_t apr_err = apr_file_remove (path, pool);
+
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_io_remove_file: failed to remove file \"%s\"",
+       path);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Neither windows nor unix allows us to delete a non-empty
    directory.  

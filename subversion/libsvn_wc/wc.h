@@ -57,6 +57,8 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
  * it usually is, only sometimes we're calling this on incoming
  * temporary text-bases).
  * 
+ * If an error is returned, the effect on *MODIFIED_P is undefined.
+ * 
  * Use POOL for temporary allocation.
  */
 svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,

@@ -314,6 +314,10 @@ svn_error_t *svn_string_from_aprfile (svn_stringbuf_t **result,
                                       apr_file_t *file,
                                       apr_pool_t *pool);
 
+/* Remove a file.  This wraps apr_file_remove(), converting any error
+   to a Subversion error. */
+svn_error_t *svn_io_remove_file (const char *path, apr_pool_t *pool);
+
 /* Recursively remove directory PATH. */
 apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
 
