@@ -104,11 +104,7 @@ typedef struct svn_svr_plugin_t
      If successful, it should fill in the
      "canonical" filesystem name in the user structure.  */
 
-  (svn_error_t *) (* authorization_hook) (svn_string_t *repos,
-                                          svn_user_t *user,
-                                          svn_svr_action_t action,
-                                          unsigned long ver,
-                                          svn_string_t *path);
+  (svn_error_t *) (* authorization_hook) (struct svn_fsrequest *request);
 
   /* CONFLICT RESOLUTION HOOK:
      
@@ -149,6 +145,36 @@ typedef struct svn_svr_policies_t
   ap_pool_t *pool;                   
   
 } svn_svr_policies_t;
+
+
+
+
+/* 
+   A structure which represents all the information a client might
+   ever need to give to the Subversion filesystem; unused fields are
+   NULL.  This is the main argument to each wrappered filesystem call.  
+*/
+
+
+typedef struct svn_fsrequest
+{
+  svn_svr_policies_t *policy;     /* global server settings */
+  svn_string_t *repos;            /* a repository alias-name */
+  svn_user_t *user;               /* user making the request */
+  svn_svr_action_t action;        /* filesystem call to be authorized */
+  unsigned long ver1;
+  svn_string_t *path1;            /* (ver, path) specify a repos object */
+  unsigned long ver2;
+  svn_string_t *path2;            /* needed if doing a diff */
+  svn_string_t *propname;         /* a property name, if any is required */
+  svn_skelta_t *skelta;           /* needed if doing a status/update */
+  svn_delta_t *delta;             /* needed if doing a write */
+  svn_token_t *token;             /* need if doing a write */
+
+} svn_fsrequest_t;
+
+
+
 
 
 
@@ -199,26 +225,26 @@ svn_error_t * svn_svr_register_plugin (svn_svr_policies_t *policy,
    The third one is a convenience routine, which calls the other two.
 */
 
-svn_error_t * svn_server_policy_authorize (svn_svr_policies_t *policy,
-                                           svn_string_t *repos,
-                                           svn_user_t *user,
-                                           svn_svr_action_t *action,
-                                           unsigned long ver,
-                                           svn_string_t *path);
+svn_error_t * svn_server_policy_authorize (svn_fsrequest_t *request);
 
-svn_error_t * svn_svr_plugin_authorize (svn_svr_policies_t *policy, 
-                                        svn_string_t *repos, 
-                                        svn_user_t *user, 
-                                        svn_svr_action_t *action,
-                                        unsigned long ver,
-                                        svn_string_t *path);
+svn_error_t * svn_svr_plugin_authorize (svn_fsrequest_t *request);
 
-svn_error_t * svn_svr_authorize (svn_svr_policies_t *policy, 
-                                 svn_string_t *repos, 
-                                 svn_user_t *user, 
-                                 svn_svr_action_t *action,
-                                 unsigned long ver,
-                                 svn_string_t *path);
+svn_error_t * svn_svr_authorize (svn_fsrequest_t *request);
+
+
+
+/*  The main UBER-filesystem wrapper!
+
+    Build a fsrequest_t with all relevant data inside, then pass it to
+    this routine.  This routine will look up the repository's true
+    name, check authorization on the request, and then actually do the
+    filesystem call.  
+
+    The filesystem call will return relevant data in **returndata.
+
+*/
+
+svn_error_t * svn_svr_do_fs_call (void **returndata, svn_fsrequest_t *request);
 
 
 /******************************************

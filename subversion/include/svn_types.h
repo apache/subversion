@@ -117,7 +117,7 @@ typedef struct svn_node_t
 
 
 /* a version is a node number and property list */
-typedef struct svn_ver_t
+typedef struct svn_ver
 {
   unsigned long node_num;             /* the root node of a tree */
   ap_hash_t *proplist;           /* version's properties */
@@ -134,8 +134,9 @@ typedef struct svn_ver_t
 /* a repository is a node table and a history */
 
 
-/* A list of all filesystem actions that users can perform, used when
-   discussion authorization checks.  */
+/* A list of all filesystem calls that users can perform.  Each
+   ACL/authorization system must create its own concept of
+   "permissions" around these filesystem calls. */
 
 typedef enum 
 {
@@ -161,12 +162,13 @@ typedef enum
 
 
 
+
 /* This structure defines a client 'user' to be used by any security
    plugin on the Subversion server.  This structure is created by the
    network layer when it performs initial authentication with some
    database.  */
 
-typedef struct svn_user_t
+typedef struct svn_user
 {
   /* The first three fields are filled in by the network layer,
      and possibly used by the server for informational or matching purposes */
@@ -187,6 +189,7 @@ typedef struct svn_user_t
                                        WinNT SID */
 
 } svn_user_t;
+
 
 
 
