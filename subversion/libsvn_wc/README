@@ -25,11 +25,6 @@ To resolve all situations safely, we must carefully define what is a
 conflict between repository and working copy, and describe how such
 conflicts are resolved.
 
-The principles and definitions below do not presume any particular
-tree delta format; the semantics require merely that working copies
-and repositories have some way to communicate their `state' to each
-other.
-
 Kinds of Changes.
 =================
 
@@ -42,7 +37,7 @@ changes, "direct" and "indirect":
           | Change to file's    |                     |
    file   | contents; OR, file  |                     |
           | was added, removed, |  [No such thing]    |
-          | or renamed.         |                     |
+          | or renamed          |                     |
           |_____________________|_____________________|
           |                     |  An immediate child |
    dir    | This dir was added, |  of this dir was    |
@@ -92,6 +87,29 @@ Below, we describe
 
 How the working copy describes its state to the server.
 =======================================================
+
+The problem of describing the working copy's state to the server is
+the same whether for pre-commit check or for update.  Both involve
+some subset of the working copy (the subset could be everything in the
+working copy, or it could be a selection of files and directories).
+The client sends this subset to the server as a "snapshot", and the
+server uses the snapshot to figure out how to respond to the client.
+
+For the moment, let's tree the snapshot as a kind of black box (in
+practice, it's probably a skelta, but that's not a requirement).  The
+black box contains a number of entries, each one containing
+
+   Original Name
+   Original Version   (i.e., "base" version)
+   Action             (content change, add, remove, rename...)
+   New Name           (if any)
+   Later Version      (only if other than repository latest)
+
+
+
+
+
+
 
 
 
