@@ -401,6 +401,47 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                               "creating Berkeley DB environment dir `%s'",
                               fs->path);
 
+  /* Write the DB_CONFIG file. */
+  {
+    apr_file_t *dbconfig_file = NULL;
+    apr_size_t written = 0;
+    const char *dbconfig_file_name = apr_psprintf (fs->pool,
+                                                   "%s/%s",
+                                                   path, "DB_CONFIG");
+    const char *dbconfig_contents =
+      "# This is the configuration file for the Berkeley DB environment\n"
+      "# used by your Subversion repository.\n"
+      "\n"
+      "### Lock subsystem\n"
+      "#\n"
+      "# Make sure you read the documentation at:\n"
+      "#\n"
+      "#   http://www.sleepycat.com/docs/ref/lock/max.html\n"
+      "#\n"
+      "# before tweaking these values.\n"
+      "set_lk_max_locks   1000\n"
+      "set_lk_max_lockers 1000\n"
+      "set_lk_max_objects 1000\n";
+
+    apr_err = apr_file_open (&dbconfig_file, dbconfig_file_name,
+                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
+                             fs->pool);
+    if (apr_err != APR_SUCCESS)
+      return svn_error_createf (apr_err, 0, 0, fs->pool,
+                                "opening `%s' for writing", dbconfig_file_name);
+
+    apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
+                                   strlen (dbconfig_contents), &written);
+    if (apr_err != APR_SUCCESS)
+      return svn_error_createf (apr_err, 0, 0, fs->pool,
+                                "writing to `%s'", dbconfig_file_name);
+
+    apr_err = apr_file_close (dbconfig_file);
+    if (apr_err != APR_SUCCESS)
+      return svn_error_createf (apr_err, 0, 0, fs->pool,
+                                "closing `%s'", dbconfig_file_name);
+  }
+
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
