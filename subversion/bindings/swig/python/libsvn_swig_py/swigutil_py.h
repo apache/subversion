@@ -36,7 +36,9 @@
 
 #if SVN_SWIG_VERSION >= 103020
 #include "python/precommon.swg"
+#ifndef SWIG_NewPointerObj
 #define SWIG_NewPointerObj SWIG_Python_NewPointerObj
+#endif
 #endif
 
 #ifdef __cplusplus

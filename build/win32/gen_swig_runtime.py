@@ -15,6 +15,18 @@ class Literal:
   def write(self, out):
     out.write(self.value);
 
+class Include(Literal):
+  def __init__(self, value):
+    Literal.__init__(self, '#include ' + value + '\n')
+
+class If(Literal):
+  def __init__(self, value):
+    Literal.__init__(self, '#if ' + value + '\n')
+
+class Endif(Literal):
+  def __init__(self, count=1):
+    Literal.__init__(self, '#endif\n' * count)
+
 class File:
   def __init__(self, *path_parts):
     self.path = os.path.join(*path_parts)
@@ -34,11 +46,17 @@ languages = {
   'tcl':      (File('common.swg'),
                File('tcl', 'swigtcl8.swg')),
 
-  'python':   (Literal('#include "Python.h"\n'),
+  'python':   (Include('"Python.h"'),
+               If('SVN_SWIG_VERSION >= 103020'),
+               File('python', 'precommon.swg'),
+               Endif(),
                File('common.swg'),
                File('python', 'pyrun.swg')),
 
   'perl':     (File('common.swg'),
+               If('SVN_SWIG_VERSION >= 103020'),
+               File('perl5', 'precommon.swg'),
+               Endif(),
                File('perl5', 'perlrun.swg')),
 
   'ruby':     (File('common.swg'),
@@ -59,30 +77,36 @@ languages = {
   'pike':     (File('common.swg'),
                File('pike', 'pikerun.swg')),
 
-  'chicken':  (Literal('#include "chicken.h"\n'),
+  'chicken':  (Include('"chicken.h"'),
                File('common.swg'),
                File('chicken', 'chickenrun.swg')),
 
 }
 
 if __name__ == "__main__":
-  if len(sys.argv) != 3:
-    print >> sys.stderr, 'Usage: %s language output.c' % sys.argv[0]
+  if len(sys.argv) < 3 or len(sys.argv) > 4:
+    print >> sys.stderr, 'Usage: %s language output.c [swiglib]' % sys.argv[0]
     sys.exit(1)
 
   language = sys.argv[1]
   output = sys.argv[2]
 
-  fp = os.popen('swig -swiglib', 'r')
-  try:
-    SWIG_LIB = string.rstrip(fp.readline())
-  finally:
-    fp.close()
+  if len(sys.argv) == 4:
+    SWIG_LIB = sys.argv[3]
+  else:
+    SWIG_LIB = None
 
   if not SWIG_LIB:
-    print >> sys.stderr, "Error: `swig -swiglib` returned nothing, unable to"
-    print >> sys.stderr, "detect swig library directory. Make sure swig is on"
-    print >> sys.stderr, "the standard path."
+    fp = os.popen('swig -swiglib', 'r')
+    try:
+      SWIG_LIB = string.rstrip(fp.readline())
+    finally:
+      fp.close()
+
+  if not SWIG_LIB:
+    sys.stderr.write("Error: `swig -swiglib` returned nothing, unable to\n"
+                     "detect swig library directory. Make sure swig is on\n"
+                     "the standard path.")
     sys.exit(1)
 
   contents = languages[language]

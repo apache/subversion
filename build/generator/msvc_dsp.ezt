@@ -70,8 +70,8 @@ USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.custom_build]
 InputPath=[sources.path]
 
 [sources.custom_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-[is sources.custom_build "swiglib"]	swig -c -[sources.swig_language][for includes] -I"[includes]"[end] -o [sources.swig_output] $(InputPath)
-[else][is sources.custom_build "swigrun"]	python $(InputPath) [sources.swig_language] [sources.custom_target]
+[is sources.custom_build "swiglib"]	swig [swig_options] -[sources.swig_language][for includes] -I"[includes]"[end] -o [sources.swig_output] $(InputPath)
+[else][is sources.custom_build "swigrun"]	python $(InputPath) [sources.swig_language] [sources.custom_target] "[sources.swig_libdir]"
 [end][end]
 # End Custom Build
 
