@@ -316,6 +316,9 @@ fetch_dirents (svn_ra_session_t *ras,
                       validate_element, start_element, end_element, fc);
 
   rv = dav_propfind_named(fc->dph, fetch_props, fc);
+
+  dav_propfind_destroy(fc->dph);
+
   if (rv != HTTP_OK)
     {
       switch (rv)
@@ -333,8 +336,6 @@ fetch_dirents (svn_ra_session_t *ras,
                                   http_get_error(ras->sess));
         }
     }
-
-  dav_propfind_destroy(fc->dph);
 
   return NULL;
 }
