@@ -2182,6 +2182,8 @@ copy_helper (svn_fs_root_t *from_root,
   parent_path_t *to_parent_path;
   const char *txn_id = to_root->txn;
 
+  assert (from_root->fs == to_root->fs);
+
   if (from_root->is_txn_root)
     return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              "Copy from mutable tree not currently supported");

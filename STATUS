@@ -56,13 +56,6 @@ Candidate changes:
     Votes:
       +1: jerenkrantz, dionisos
 
-  * r12003
-    Disallow cross-repository copies at the libsvn_fs* level.
-    Justification:
-      For BDB backends, this bug resulted in wedged repositories.
-    Votes:
-      +1: cmpilato, sussman
-
   * r12327
     Fix race condition in dump loader computing the next revision.
     Justification:
