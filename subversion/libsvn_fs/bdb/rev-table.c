@@ -19,10 +19,9 @@
 #include "svn_fs.h"
 #include "../fs.h"
 #include "../err.h"
-#include "../validate.h"
-#include "dbt.h"
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
+#include "dbt.h"
 #include "rev-table.h"
 
 
@@ -94,11 +93,11 @@ svn_fs__get_rev (svn_fs__revision_t **revision_p,
    number, write this revision as one that corresponds to *REV, else
    write a new revision and return its newly created revision number
    in *REV.  */
-static svn_error_t *
-put_rev (svn_revnum_t *rev,
-         svn_fs_t *fs,
-         const svn_fs__revision_t *revision,
-         trail_t *trail)
+svn_error_t *
+svn_fs__put_rev (svn_revnum_t *rev,
+                 svn_fs_t *fs,
+                 const svn_fs__revision_t *revision,
+                 trail_t *trail)
 {
   int db_err;
   db_recno_t recno = 0;
@@ -131,55 +130,6 @@ put_rev (svn_revnum_t *rev,
      Revisions are numbered starting with zero; Berkeley DB record
      numbers begin with one.  */
   *rev = recno - 1;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__put_rev (svn_revnum_t *rev,
-                 svn_fs_t *fs,
-                 const svn_fs__revision_t *revision,
-                 trail_t *trail)
-{
-  *rev = SVN_INVALID_REVNUM;
-  return put_rev (rev, fs, revision, trail);
-}
-
-
-svn_error_t *
-svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      trail_t *trail)
-{
-  svn_fs__revision_t *revision;
-
-  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
-
-  /* The skel validator doesn't check the ID format. */
-  if (revision->id == NULL)
-    return svn_fs__err_corrupt_fs_revision (fs, -1);
-
-  *root_id_p = revision->id;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__rev_get_txn_id (const char **txn_id_p,
-                        svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        trail_t *trail)
-{
-  svn_fs__revision_t *revision;
-
-  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
-
-  /* The skel validator doesn't check the ID format. */
-  if (revision->id == NULL)
-    return svn_fs__err_corrupt_fs_revision (fs, -1);
-
-  *txn_id_p = revision->txn;
   return SVN_NO_ERROR;
 }
 
@@ -242,200 +192,6 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
      Revisions are numbered starting with zero; Berkeley DB record
      numbers begin with one.  */
   *youngest_p = recno - 1;
-  return SVN_NO_ERROR;
-}
-
-
-struct youngest_rev_args {
-  svn_revnum_t youngest;
-  svn_fs_t *fs;
-};
-
-
-static svn_error_t *
-txn_body_youngest_rev (void *baton,
-                       trail_t *trail)
-{
-  struct youngest_rev_args *args = baton;
-  SVN_ERR (svn_fs__youngest_rev (&(args->youngest), args->fs, trail));
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_youngest_rev (svn_revnum_t *youngest_p,
-                     svn_fs_t *fs,
-                     apr_pool_t *pool)
-{
-  struct youngest_rev_args args;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.fs = fs;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_youngest_rev, &args, pool));
-
-  *youngest_p = args.youngest;
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Generic revision operations.  */
-
-
-struct revision_prop_args {
-  svn_string_t **value_p;
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-  const char *propname;
-};
-
-
-static svn_error_t *
-txn_body_revision_prop (void *baton,
-                        trail_t *trail)
-{
-  struct revision_prop_args *args = baton;
-  svn_fs__revision_t *revision;
-
-  SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
-  *(args->value_p) = NULL;
-  if (revision->proplist)
-    *(args->value_p) = apr_hash_get (revision->proplist, args->propname,
-                                     APR_HASH_KEY_STRING);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_revision_prop (svn_string_t **value_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      const char *propname,
-                      apr_pool_t *pool)
-{
-  struct revision_prop_args args;
-  svn_string_t *value;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.value_p = &value;
-  args.fs = fs;
-  args.rev = rev;
-  args.propname = propname;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_prop, &args, pool));
-
-  *value_p = value;
-  return SVN_NO_ERROR;
-}
-
-
-struct revision_proplist_args {
-  apr_hash_t **table_p;
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-};
-
-
-static svn_error_t *
-txn_body_revision_proplist (void *baton, trail_t *trail)
-{
-  struct revision_proplist_args *args = baton;
-  svn_fs__revision_t *revision;
-
-  SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
-  *(args->table_p) = revision->proplist 
-                     ? revision->proplist : apr_hash_make (trail->pool);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_revision_proplist (apr_hash_t **table_p,
-                          svn_fs_t *fs,
-                          svn_revnum_t rev,
-                          apr_pool_t *pool)
-{
-  struct revision_proplist_args args;
-  apr_hash_t *table;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.table_p = &table;
-  args.fs = fs;
-  args.rev = rev;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_proplist, &args, pool));
-
-  *table_p = table;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__set_rev_prop (svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      const char *name,
-                      const svn_string_t *value,
-                      trail_t *trail)
-{
-  svn_fs__revision_t *revision;
-  svn_revnum_t rev_copy = rev;
-
-  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
-
-  /* If there's no proplist, but we're just deleting a property, exit now. */
-  if ((! revision->proplist) && (! value))
-    return SVN_NO_ERROR;
-
-  /* Now, if there's no proplist, we know we need to make one. */
-  if (! revision->proplist)
-    revision->proplist = apr_hash_make (trail->pool);
-
-  /* Set the property. */
-  apr_hash_set (revision->proplist, name, APR_HASH_KEY_STRING, value);
-
-  /* Overwrite the revision. */
-  return put_rev (&rev_copy, fs, revision, trail);
-}
-
-
-struct change_rev_prop_args {
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-  const char *name;
-  const svn_string_t *value;
-};
-
-
-static svn_error_t *
-txn_body_change_rev_prop (void *baton, trail_t *trail)
-{
-  struct change_rev_prop_args *args = baton;
-
-  SVN_ERR (svn_fs__set_rev_prop (args->fs, args->rev,
-                                 args->name, args->value, trail));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_change_rev_prop (svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
-{
-  struct change_rev_prop_args args;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.fs = fs;
-  args.rev = rev;
-  args.name = name;
-  args.value = value;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_rev_prop, &args, pool));
-
   return SVN_NO_ERROR;
 }
 

@@ -21,14 +21,13 @@
 
 #include "svn_pools.h"
 #include "txn-table.h"
+#include "dbt.h"
 #include "../fs.h"
 #include "../err.h"
 #include "../key-gen.h"
-#include "dbt.h"
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
 #include "../trail.h"
-#include "../validate.h"
 #include "../id.h"
 
 
@@ -68,12 +67,11 @@ svn_fs__open_transactions_table (DB **transactions_p,
 }
 
 
-/* Store TXN as a transaction named TXN_NAME in FS as part of TRAIL.  */
-static svn_error_t *
-put_txn (svn_fs_t *fs,
-         const svn_fs__transaction_t *txn,
-         const char *txn_name,
-         trail_t *trail)
+svn_error_t *
+svn_fs__put_txn (svn_fs_t *fs,
+                 const svn_fs__transaction_t *txn,
+                 const char *txn_name,
+                 trail_t *trail)
 {
   skel_t *txn_skel;
   DBT key, value;
@@ -148,32 +146,10 @@ svn_fs__create_txn (const char **txn_name_p,
   txn.proplist = NULL;
   txn.copies = NULL;
   txn.revision = SVN_INVALID_REVNUM;
-  SVN_ERR (put_txn (fs, &txn, txn_name, trail));
+  SVN_ERR (svn_fs__put_txn (fs, &txn, txn_name, trail));
 
   *txn_name_p = txn_name; 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__commit_txn (svn_fs_t *fs,
-                    const char *txn_name,
-                    svn_revnum_t revision,
-                    trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-
-  /* Don't you dare call this with an invalid REVISION. */
-  assert (SVN_IS_VALID_REVNUM (revision));
-
-  /* Make sure the TXN is not committed already. */
-  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (fs, txn_name);
-
-  /* Convert TXN to a committed transaction. */
-  txn->revision = revision;
-  return put_txn (fs, txn, txn_name, trail);
 }
 
 
@@ -232,92 +208,6 @@ svn_fs__get_txn (svn_fs__transaction_t **txn_p,
   SVN_ERR (svn_fs__parse_transaction_skel (&transaction, skel, trail->pool));
   *txn_p = transaction;
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
-                     const svn_fs_id_t **base_root_id_p,
-                     svn_fs_t *fs,
-                     const char *txn_name,
-                     trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-  
-  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (fs, txn_name);
-
-  *root_id_p = txn->root_id;
-  *base_root_id_p = txn->base_id;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__set_txn_root (svn_fs_t *fs,
-                      const char *txn_name,
-                      const svn_fs_id_t *new_id,
-                      trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-
-  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (fs, txn_name);
-
-  if (! svn_fs__id_eq (txn->root_id, new_id))
-    {
-      txn->root_id = new_id;
-      SVN_ERR (put_txn (fs, txn, txn_name, trail));
-    }
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__set_txn_base (svn_fs_t *fs,
-                      const char *txn_name,
-                      const svn_fs_id_t *new_id,
-                      trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-
-  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (fs, txn_name);
-
-  if (! svn_fs__id_eq (txn->base_id, new_id))
-    {
-      txn->base_id = new_id;
-      SVN_ERR (put_txn (fs, txn, txn_name, trail));
-    }
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs__add_txn_copy (svn_fs_t *fs,
-                      const char *txn_name,
-                      const char *copy_id,
-                      trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-
-  /* Get the transaction and ensure its mutability. */
-  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (fs, txn_name);
-
-  /* Allocate a new array if this transaction has no copies. */
-  if (! txn->copies)
-    txn->copies = apr_array_make (trail->pool, 1, sizeof (copy_id));
-
-  /* Add COPY_ID to the array. */
-  (*((const char **)(apr_array_push (txn->copies)))) = copy_id;
-
-  /* Finally, write out the transaction. */
-  return put_txn (fs, txn, txn_name, trail);
 }
 
 
@@ -403,171 +293,6 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
   return SVN_NO_ERROR;
 }
 
-
-
-/* Generic transaction operations.  */
-
-
-struct txn_prop_args {
-  svn_string_t **value_p;
-  svn_fs_t *fs;
-  const char *id;
-  const char *propname;
-};
-
-
-static svn_error_t *
-txn_body_txn_prop (void *baton,
-                   trail_t *trail)
-{
-  struct txn_prop_args *args = baton;
-  svn_fs__transaction_t *txn;
-  
-  SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail)); 
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (args->fs, args->id);
-
-  *(args->value_p) = NULL;
-  if (txn->proplist)
-    *(args->value_p) = apr_hash_get (txn->proplist, 
-                                     args->propname, APR_HASH_KEY_STRING);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_txn_prop (svn_string_t **value_p,
-                 svn_fs_txn_t *txn,
-                 const char *propname,
-                 apr_pool_t *pool)
-{
-  struct txn_prop_args args;
-  svn_string_t *value;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.value_p = &value;
-  args.fs = fs;
-  svn_fs_txn_name (&args.id, txn, pool);
-  args.propname = propname;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_prop, &args, pool));
-
-  *value_p = value;
-  return SVN_NO_ERROR;
-}
-
-
-struct txn_proplist_args {
-  apr_hash_t **table_p;
-  svn_fs_t *fs;
-  const char *id;
-  svn_revnum_t rev;
-};
-
-
-static svn_error_t *
-txn_body_txn_proplist (void *baton, trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-  struct txn_proplist_args *args = baton;
-
-  SVN_ERR (svn_fs__get_txn (&txn, args->fs, args->id, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (args->fs, args->id);
-
-  *(args->table_p) = txn->proplist 
-                     ? txn->proplist : apr_hash_make (trail->pool);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_txn_proplist (apr_hash_t **table_p,
-                     svn_fs_txn_t *txn,
-                     apr_pool_t *pool)
-{
-  struct txn_proplist_args args;
-  apr_hash_t *table;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.table_p = &table;
-  args.fs = fs;
-  svn_fs_txn_name (&args.id, txn, pool);
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
-
-  *table_p = table;
-  return SVN_NO_ERROR;
-}
-
-
-struct change_txn_prop_args {
-  svn_fs_t *fs;
-  const char *id;
-  const char *name;
-  const svn_string_t *value;
-};
-
-
-svn_error_t *
-svn_fs__set_txn_prop (svn_fs_t *fs,
-                      const char *txn_name,
-                      const char *name,
-                      const svn_string_t *value,
-                      trail_t *trail)
-{
-  svn_fs__transaction_t *txn;
-
-  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
-  if (is_committed (txn))
-    return svn_fs__err_txn_not_mutable (fs, txn_name);
-
-  /* If there's no proplist, but we're just deleting a property, exit now. */
-  if ((! txn->proplist) && (! value))
-    return SVN_NO_ERROR;
-
-  /* Now, if there's no proplist, we know we need to make one. */
-  if (! txn->proplist)
-    txn->proplist = apr_hash_make (trail->pool);
-
-  /* Set the property. */
-  apr_hash_set (txn->proplist, name, APR_HASH_KEY_STRING, value);
-
-  /* Now overwrite the transaction. */
-  return put_txn (fs, txn, txn_name, trail);
-}
-
-
-static svn_error_t *
-txn_body_change_txn_prop (void *baton, trail_t *trail)
-{
-  struct change_txn_prop_args *args = baton;
-  return svn_fs__set_txn_prop (args->fs, args->id, args->name, 
-                               args->value, trail);
-}
-
-
-svn_error_t *
-svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
-{
-  struct change_txn_prop_args args;
-  svn_fs_t *fs = svn_fs_txn_fs (txn);
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.fs = fs;
-  svn_fs_txn_name (&args.id, txn, pool);
-  args.name = name;
-  args.value = value;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_txn_prop, &args, pool));
-
-  return SVN_NO_ERROR;
-}
 
 
 /* 

@@ -31,6 +31,7 @@
 #include "err.h"
 #include "trail.h"
 #include "tree.h"
+#include "revs-txns.h"
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"

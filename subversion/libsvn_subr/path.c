@@ -688,6 +688,28 @@ svn_path_decompose (const char *path,
 }
 
 
+svn_boolean_t
+svn_path_is_single_path_component (const char *name)
+{
+  /* Can't be empty.  */
+  if (! (name && *name))
+    return 0;
+
+  /* Can't be `.' or `..'  */
+  if (name[0] == '.'
+      && (name[1] == '\0'
+          || (name[1] == '.' && name[2] == '\0')))
+    return 0;
+
+  /* Slashes are bad, m'kay... */
+  if (strchr (name, '/') != NULL)
+    return 0;
+
+  /* It is valid.  */
+  return 1;
+}
+
+
 
 /*** URI Stuff ***/
 
