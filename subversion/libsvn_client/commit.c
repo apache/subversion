@@ -455,6 +455,11 @@ send_to_repos (svn_revnum_t *committed_rev,
       /* ### kff todo: imports are not known to work with xml yet.
          They should someday. */
 
+      /* Set the author and date fields to NULL, since we're not
+         really committing to a repository.  */
+      *committed_date = NULL;
+      *committed_author = NULL;
+
       /* Open the xml file for writing. */
       apr_err = apr_file_open (&dst, xml_dst->data,
                                (APR_WRITE | APR_CREATE),
@@ -616,7 +621,12 @@ send_to_repos (svn_revnum_t *committed_rev,
       apr_err = apr_file_close (dst);
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "error closing %s", xml_dst->data);      
+                                  "error closing %s", xml_dst->data);
+
+      /* Even though the revision was passed in, return it back in
+         committed_rev, so that the command-line client has something
+         reasonable to print.  :-)  */
+      *committed_rev = revision;
     }
   else  
     /* We were committing to RA, so close the session. */
