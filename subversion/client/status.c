@@ -114,7 +114,7 @@ svn_cl__print_status (svn_string_t *path, svn_wc_status_t *status)
 
 
 void
-svn_cl__print_statuses (apr_hash_t *statushash, apr_pool_t *pool)
+svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
 {
   int i;
   apr_array_header_t *statusarray;
