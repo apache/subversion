@@ -19,6 +19,7 @@
 
 
 #include <string.h>
+#include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_time.h>
 #include <apr_strings.h>
@@ -251,7 +252,7 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
                       exploded_time.tm_min,
                       exploded_time.tm_sec,
                       exploded_time.tm_gmtoff / (60 * 60),
-                      (exploded_time.tm_gmtoff / 60) % 60);
+                      (abs (exploded_time.tm_gmtoff) / 60) % 60);
 
   /* If we overfilled the buffer, just return what we got. */
   if (len >= SVN_TIME__MAX_LENGTH)
@@ -268,8 +269,8 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
                       &exploded_time);
   
   /* If there was an error, ensure that the string is zero-terminated. */
-  if (!ret || retlen == 0)
-    curptr = '\0';
+  if (ret || retlen == 0)
+    *curptr = '\0';
 
   return datestr;
 }
