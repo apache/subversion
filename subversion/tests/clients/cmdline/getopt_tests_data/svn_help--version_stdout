@@ -1,4 +1,4 @@
-help (?, h): Describe the usage of Subversion or the given subcommands.
+help (?, h): Describe the usage of this program or its subcommands.
 usage: help [SUBCOMMAND...]
 
 Valid options:

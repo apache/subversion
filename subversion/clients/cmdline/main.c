@@ -274,7 +274,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      svn_cl__config_dir_opt} },
 
   { "help", svn_cl__help, {"?", "h"},
-    "Describe the usage of Subversion or the given subcommands.\n"
+    "Describe the usage of this program or its subcommands.\n"
     "usage: help [SUBCOMMAND...]\n",
     {svn_cl__version_opt, 'q', svn_cl__config_dir_opt} },
   /* We need to support "--help", "-?", and all that good stuff, of
@@ -741,7 +741,7 @@ main (int argc, const char * const *argv)
             else
               svn_handle_error (svn_error_createf
                                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 "Syntax error in revision argument \"%s\"",
+                                 "Syntax error in revision argument '%s'",
                                  utf8_opt_arg),
                                 stderr, FALSE);
             svn_pool_destroy (pool);
@@ -989,8 +989,7 @@ main (int argc, const char * const *argv)
                                                          first_arg);
           if (subcommand == NULL)
             {
-              /* FIXME: should we print "unknown foo" ?? seems ok */
-              fprintf (stderr, "unknown command: %s\n", first_arg);
+              fprintf (stderr, "unknown command: '%s'\n", first_arg);
               svn_cl__help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -998,9 +997,7 @@ main (int argc, const char * const *argv)
         }
     }
 
-  /* If we made it this far, then we definitely have the subcommand,
-     so call it.  But first check that it wasn't passed any
-     inappropriate options. */
+  /* Check that the subcommand wasn't passed any inappropriate options. */
   for (i = 0; i < num_opts; i++)
     {
       opt_id = received_opts[i];
@@ -1019,12 +1016,9 @@ main (int argc, const char * const *argv)
             svn_opt_get_option_from_code (opt_id, svn_cl__options);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
-                   "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
-                   subcommand->name, optstr);
-          svn_opt_subcommand_help (subcommand->name,
-                                   svn_cl__cmd_table,
-                                   svn_cl__options,
-                                   pool);
+                   "subcommand '%s' doesn't accept option '%s'\n"
+                   "Type 'svn help %s' for usage.\n",
+                   subcommand->name, optstr, subcommand->name);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }

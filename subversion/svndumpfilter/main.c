@@ -752,7 +752,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
     {"help", subcommand_help, {"?", "h"},
      "usage: svndumpfilter help [SUBCOMMAND...]\n\n"
-     "Display this usage message.\n",
+     "Describe the usage of this program or its subcommands.\n",
      {0} },
 
     { NULL, NULL, {0}, NULL, {0} }
@@ -1030,7 +1030,7 @@ main (int argc, const char * const *argv)
           subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, "unknown command: %s\n", first_arg);
+              fprintf (stderr, "unknown command: '%s'\n", first_arg);
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1073,7 +1073,7 @@ main (int argc, const char * const *argv)
     }
 
 
-  /* Check that the subcommand wasn't passed any inappropriate options.*/
+  /* Check that the subcommand wasn't passed any inappropriate options. */
   for (i = 0; i < num_opts; i++)
     {
       opt_id = received_opts[i];
@@ -1092,12 +1092,9 @@ main (int argc, const char * const *argv)
             svn_opt_get_option_from_code (opt_id, options_table);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
-                   "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
-                   subcommand->name, optstr);
-          svn_opt_subcommand_help (subcommand->name,
-                                   cmd_table,
-                                   options_table,
-                                   pool);
+                   "subcommand '%s' doesn't accept option '%s'\n"
+                   "Type 'svndumpfilter help %s' for usage.\n",
+                   subcommand->name, optstr, subcommand->name);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
