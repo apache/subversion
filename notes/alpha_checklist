@@ -70,11 +70,40 @@ D. Auto-detection of text/binary file types.  Use it for keyword
            - mime-type. We will have a heuristic that determines as best it
            can what the mime-type of a file is (of course it will be
            user-configurable).
+
+                [ We should look in the standard locations for mime
+                  data on the platforms where it's available;
+                  /etc/mime.magic on various Unices, the registry on
+                  Win32, etc.                                      --xbc ]
+
            - Keyword Substitution (BOOL)
            - Newline Translation (BOOL)
            Note that we will always err on the safe side (assume that a file
            is binary and wants no Keyword Substitution or Newline
            Translation if we are not certain about the contents of a file. 
+
+                [ I think it would be better to make these values (a
+                  list of) keywords instead of plain switches.
+
+                   - For keyword substitution, you could enable only a
+                     subset of the available keywords -- e.g., turn of
+                     the infamous $Log: not supported by cvs2svn $.
+
+                   - Newline translation might have the following
+                     values:
+
+                   - "none": No translation; default for binary files
+
+                   - "native": Use whatever the client platform's own
+                      line separator is; this would be the default for
+                      plain text files
+
+                   - "unix", "dos", "mac": force newlines to \n, \r\n
+                     or \n\r, respectively; for instance, MSVC's .dsp
+                     and .dsw files would need "dos" translation.
+
+                  Also see dev thread
+                  Subject: Alphe-checklist comments                --xbc ]
 
 
 E. Locking issues with the filesystem: mod_dav_svn (as well as
@@ -264,6 +293,13 @@ B. i18n/multilingual development.
            filesystem for 1.0 to avoid problems in the future. Also, Fitz
            will (time permitting) look into a gettext-like implementation
            that are license compatible.
+
+                [ Just a reminder: the gettext implementation from
+                  glibc is LGPL. That licence should be compatible,
+                  shouldn't it? In fact, I can get my hands on a
+                  stand-alone gettext implementation, based on
+                  glibc-2.1 (I think), that's currently being used on
+                  Linux, HP-UX and Win32.                          --xbc ]
         
 C. GUI clients.
 
