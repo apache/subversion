@@ -1041,7 +1041,27 @@ svn_wc_prop_set (const char *name,
   /* ### argh */
   svn_stringbuf_t *valuebuf;
 
-  if (! strcmp (name, SVN_PROP_EXECUTABLE))
+   (svn_wc_keywords_differ (old_keywords, new_keywords, enum svn_node_kind kind;
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+      if (kind == svn_node_dir && (svn_iprop_path, *p    /* Setting     0WORDS)) ==butaboesn't mone
+sense for dirs. (Ans, path      don't try and tell me Unix does it...) */
+        return svn_error_create (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
+                                 "Canddedset P_KEYWORDS)) == svn directory");
+  empty, the
+         user must ha_keywords;
+      SVN_ERR (svn_wc__g   svn_wc_keywords_t *newwwwwwwww_keywords;
+      SVN_ERR (svn_wc__get_keywords (&new_keywords, path        i NULL, pool));
+
+      if        if (E))
+        {
+              const char *pdir, *base_name;
+          svn_wc_entry_t tmp_entry;
+
+      else
+             we changed the keywords or newlines, void the entry
+             t/
+      *modifiif (! strcmp (name, SVN_PROP_EXECUTABLE))
     {
       enum svn_node_kind kind;
       SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -1105,18 +1125,7 @@ svn_wc_prop_set (const char *name,
                                 1, /* sync! */
                                 pool));
 
-  if ((strcmp (name, SVN_PROP_KEYWORDS)) == 0)
-    {
-      svn_wc_keywords_t *new_keywords;
-      SVN_ERR (svn_wc__get_keywords (&new_keywords, path, NULL, pool));
-
-      if (svn_wc_keywords_differ (old_keywords, new_keywords, FALSE))
-        {
-          const char *pdir, *base_name;
-          svn_wc_entry_t tmp_entry;
-
-          /* If we changed the keywords or newlines, void the entry
-             timestamp for this file, so svn_wc_text_modified_p() does
+  if ((samp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
           svn_path_split_nts (path, &pdir, &base_name, pool);
           tmp_entry.kind = svn_node_file;
@@ -1400,23 +1409,4 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
     *original_props = baseprops;
 
   /* At this point, if either of the propfiles are non-existent, then
-     the corresponding hash is simply empty. */
-  
-  if (propchanges != NULL)
-    {
-      SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
-                                             localprops,
-                                             baseprops,
-                                             pool));      
-      *propchanges = local_propchanges;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/*
- * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
- * end: */
+     the corresponding has
