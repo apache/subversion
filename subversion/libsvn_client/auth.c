@@ -75,6 +75,7 @@ open_tmp_file (apr_file_t **fp,
 static svn_error_t *
 get_username (char **username,
               void *auth_baton,
+              svn_boolean_t force_prompt,
               apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -82,7 +83,22 @@ get_username (char **username,
 
   svn_client_auth_baton_t *ab = 
     (svn_client_auth_baton_t *) auth_baton;
-  
+
+  if (force_prompt)
+    {
+      char *prompt = apr_psprintf (pool, "username: ");
+      SVN_ERR (ab->prompt_callback (username, prompt,
+                                    FALSE, /* screen echo ok */
+                                    ab->prompt_baton, pool));
+      
+      /* Since we got new totally new info, it's okay to overwrite
+         any cached info in the working copy (later on). */
+      ab->overwrite = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
+
   /* Does auth_baton already have the value, received from
      the application (probably from argv[])? */
   if (ab->username)
@@ -133,13 +149,29 @@ static svn_error_t *
 get_password (char **password,
               char *username,
               void *auth_baton,
+              svn_boolean_t force_prompt,
               apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stringbuf_t *pword;
+  char *prompt = apr_psprintf (pool, "%s's password: ", username);
 
   svn_client_auth_baton_t *ab = 
     (svn_client_auth_baton_t *) auth_baton;
+
+  if (force_prompt)
+    {
+      SVN_ERR (ab->prompt_callback (password, prompt,
+                                    TRUE, /* don't echo to the screen */
+                                    ab->prompt_baton, pool));
+      
+      /* Since we got new totally new info, it's okay to overwrite
+         any cached info in the working copy (later on). */
+      ab->overwrite = TRUE;
+
+      return SVN_NO_ERROR;
+    }
+
   
   /* Does auth_baton already have the value, received from
      the application (probably from argv[])? */
@@ -162,8 +194,6 @@ get_password (char **password,
       
       else
         {
-          char *prompt = apr_psprintf (pool, "%s's password: ", username);
-
           /* No file cache?  Then prompt the user. */
           SVN_ERR (ab->prompt_callback (password, prompt,
                                         TRUE, /* don't echo to the screen */
@@ -184,10 +214,11 @@ static svn_error_t *
 get_user_and_pass (char **username,
                    char **password,
                    void *auth_baton,
+                   svn_boolean_t force_prompt,
                    apr_pool_t *pool)
 {
-  SVN_ERR (get_username (username, auth_baton, pool));
-  SVN_ERR (get_password (password, *username, auth_baton, pool));
+  SVN_ERR (get_username (username, auth_baton, force_prompt, pool));
+  SVN_ERR (get_password (password, *username, auth_baton, force_prompt, pool));
 
   return SVN_NO_ERROR;
 }

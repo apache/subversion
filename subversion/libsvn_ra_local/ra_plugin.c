@@ -100,7 +100,7 @@ open (void **session_baton,
   authenticator = (svn_ra_username_authenticator_t *) a;
 
   SVN_ERR (authenticator->get_username (&(session->username),
-                                        auth_baton, pool));
+                                        auth_baton, FALSE, pool));
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
