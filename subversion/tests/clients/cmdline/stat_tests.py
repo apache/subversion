@@ -191,19 +191,64 @@ def status_type_change(sbox):
   was_cwd = os.getcwd()
 
   os.chdir(wc_dir)
+  try:
 
-  os.rename('iota', 'was_iota')
-  os.rename('A', 'iota')
-  os.rename('was_iota', 'A')
+    os.rename('iota', 'was_iota')
+    os.rename('A', 'iota')
+    os.rename('was_iota', 'A')
 
-  stat_output, err_output = svntest.main.run_svn(None, 'status')
-  if err_output:
-    return 1
-  for line in stat_output:
-    if not re.match("~ +(iota|A)", line):
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
       return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A)", line):
+        return 1
 
-  os.chdir(was_cwd)
+  finally:
+    os.chdir(was_cwd)
+
+  return 0
+
+def status_type_change_to_symlink(sbox):
+  "status with versioned items replaced by symbolic links"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+  try:
+
+    # "broken" symlinks
+    os.remove('iota')
+    os.symlink('foo', 'iota')
+    svntest.main.remove_wc('A/D')
+    os.symlink('bar', 'A/D')
+
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
+      return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A/D)", line):
+        return 1
+
+    # "valid" symlinks
+    os.remove('iota')
+    os.remove('A/D')
+    os.symlink('A/mu', 'iota')
+    os.symlink('C', 'A/D')
+
+    stat_output, err_output = svntest.main.run_svn(None, 'status')
+    if err_output or len(stat_output) != 2:
+      return 1
+    for line in stat_output:
+      if not re.match("~ +(iota|A/D)", line):
+        return 1
+
+  finally:
+    os.chdir(was_cwd)
 
   return 0
 
@@ -413,6 +458,7 @@ test_list = [ None,
               status_shows_all_in_current_dir,
               status_missing_file,
               status_type_change,
+              Skip(status_type_change_to_symlink, svntest.main.windows),
               status_with_new_files_pending,
               status_blank_for_unignored_file,
               status_file_needs_update,

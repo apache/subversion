@@ -421,7 +421,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      'C' Conflicted\n"
     "      '?' item is not under revision control\n"
     "      '!' item is missing and was removed via a non-svn command\n"
-    "      '~' versioned as a directory, but is a file, or vice versa\n"
+    "      '~' versioned item obstructed by some item of a different kind\n"
     "    Second column: Modifications of a file's or directory's properties\n"
     "      ' ' no modifications\n"
     "      'M' Modified\n"
