@@ -1183,7 +1183,7 @@ svn_ra_local__get_lock (svn_ra_session_t *session,
   /* Get the absolute path. */
   abs_path = svn_path_join (sess->fs_path, path, pool);
 
-  SVN_ERR (svn_fs_get_lock_from_path (lock, sess->fs, abs_path, pool));
+  SVN_ERR (svn_fs_get_lock (lock, sess->fs, abs_path, pool));
 
   return SVN_NO_ERROR;
 }

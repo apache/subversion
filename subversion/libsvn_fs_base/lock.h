@@ -55,10 +55,10 @@ svn_error_t *svn_fs_base__unlock (svn_fs_t *fs,
                                   svn_boolean_t force,
                                   apr_pool_t *pool);
 
-svn_error_t *svn_fs_base__get_lock_from_path (svn_lock_t **lock,
-                                              svn_fs_t *fs,
-                                              const char *path,
-                                              apr_pool_t *pool);
+svn_error_t *svn_fs_base__get_lock (svn_lock_t **lock,
+                                    svn_fs_t *fs,
+                                    const char *path,
+                                    apr_pool_t *pool);
 
 svn_error_t *
 svn_fs_base__get_locks (svn_fs_t *fs,
@@ -75,13 +75,13 @@ svn_fs_base__get_locks (svn_fs_t *fs,
 */
 
 
-/* Implements main logic of 'svn_fs_get_lock_from_path' (or in this
-   case, svn_fs_base__get_lock_from_path() above.)  See svn_fs.h. */
+/* Implements main logic of 'svn_fs_get_lock' (or in this
+   case, svn_fs_base__get_lock() above.)  See svn_fs.h. */
 svn_error_t *
-svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
-                                        const char *path,
-                                        trail_t *trail,
-                                        apr_pool_t *pool);
+svn_fs_base__get_lock_helper (svn_lock_t **lock_p,
+                              const char *path,
+                              trail_t *trail,
+                              apr_pool_t *pool);
   
 
 /* Examine PATH for existing locks, and check whether they can be

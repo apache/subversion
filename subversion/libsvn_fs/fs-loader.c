@@ -830,10 +830,10 @@ svn_fs_unlock (svn_fs_t *fs, const char *path, const char *token,
 }
 
 svn_error_t *
-svn_fs_get_lock_from_path (svn_lock_t **lock, svn_fs_t *fs, const char *path,
-                           apr_pool_t *pool)
+svn_fs_get_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
+                 apr_pool_t *pool)
 {
-  return fs->vtable->get_lock_from_path (lock, fs, path, pool);
+  return fs->vtable->get_lock (lock, fs, path, pool);
 }
 
 svn_error_t *

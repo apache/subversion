@@ -147,8 +147,8 @@ typedef struct fs_vtable_t
                                   apr_pool_t *pool);
   svn_error_t *(*unlock) (svn_fs_t *fs, const char *path, const char *token,
                           svn_boolean_t force, apr_pool_t *pool);
-  svn_error_t *(*get_lock_from_path) (svn_lock_t **lock, svn_fs_t *fs,
-                                      const char *path, apr_pool_t *pool);
+  svn_error_t *(*get_lock) (svn_lock_t **lock, svn_fs_t *fs,
+                            const char *path, apr_pool_t *pool);
   svn_error_t *(*get_locks) (svn_fs_t *fs, const char *path,
                              svn_fs_get_locks_callback_t get_locks_func,
                              void *get_locks_baton,

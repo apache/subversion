@@ -520,10 +520,10 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
-  serr = svn_fs_get_lock_from_path(&slock,
-                                   resource->info->repos->fs,
-                                   resource->info->repos_path,
-                                   resource->pool);
+  serr = svn_fs_get_lock(&slock,
+                         resource->info->repos->fs,
+                         resource->info->repos_path,
+                         resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to check path for a lock.",
@@ -584,10 +584,10 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
-  serr = svn_fs_get_lock_from_path(&slock,
-                                    resource->info->repos->fs,
-                                    resource->info->repos_path,
-                                    resource->pool);
+  serr = svn_fs_get_lock(&slock,
+                         resource->info->repos->fs,
+                         resource->info->repos_path,
+                         resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to look up lock by path.",
@@ -666,10 +666,10 @@ dav_svn_has_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
-  serr = svn_fs_get_lock_from_path(&slock,
-                                   resource->info->repos->fs,
-                                   resource->info->repos_path,
-                                   resource->pool);
+  serr = svn_fs_get_lock(&slock,
+                         resource->info->repos->fs,
+                         resource->info->repos_path,
+                         resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to check path for a lock.",
@@ -793,10 +793,10 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
   if (locktoken == NULL)
     {
       /* Need to manually discover any lock on the resource. */     
-      serr = svn_fs_get_lock_from_path(&slock,
-                                       resource->info->repos->fs,
-                                       resource->info->repos_path,
-                                       resource->pool);
+      serr = svn_fs_get_lock(&slock,
+                             resource->info->repos->fs,
+                             resource->info->repos_path,
+                             resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Failed to check path for a lock.",
@@ -874,10 +874,10 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                          "Path is not accessible.");
 
   /* Convert the path into an svn_lock_t. */
-  serr = svn_fs_get_lock_from_path(&slock,
-                                   resource->info->repos->fs,
-                                   resource->info->repos_path,
-                                   resource->pool);
+  serr = svn_fs_get_lock(&slock,
+                         resource->info->repos->fs,
+                         resource->info->repos_path,
+                         resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Token doesn't point to a lock.",

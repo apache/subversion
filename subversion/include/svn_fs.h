@@ -1594,10 +1594,10 @@ svn_error_t *svn_fs_unlock (svn_fs_t *fs,
  *  
  * If @a path is not locked, set @a *lock to NULL.
  */
-svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
-                                        svn_fs_t *fs,
-                                        const char *path,
-                                        apr_pool_t *pool);
+svn_error_t *svn_fs_get_lock (svn_lock_t **lock,
+                              svn_fs_t *fs,
+                              const char *path,
+                              apr_pool_t *pool);
 
 
 /** The type of a lock discovery callback function.  @a baton is the

@@ -156,8 +156,8 @@ txn_body_lock (void *baton, trail_t *trail)
      acceptable to ignore; it means that the path is now free and
      clear for locking, because the bdb funcs just cleared out both
      of the tables for us.   */
-  SVN_ERR (svn_fs_base__get_lock_from_path_helper (&existing_lock, args->path, 
-                                                   trail, trail->pool));
+  SVN_ERR (svn_fs_base__get_lock_helper (&existing_lock, args->path, 
+                                         trail, trail->pool));
   if (existing_lock)
     {
       if (! args->force)
@@ -270,8 +270,8 @@ txn_body_attach_lock (void *baton, trail_t *trail)
     }
 
   /* Is the path already locked? */
-  SVN_ERR (svn_fs_base__get_lock_from_path_helper (&existing_lock, lock->path, 
-                                                   trail, trail->pool));
+  SVN_ERR (svn_fs_base__get_lock_helper (&existing_lock, lock->path, 
+                                         trail, trail->pool));
   if (existing_lock)
     {
       if (! args->force)
@@ -404,10 +404,10 @@ svn_fs_base__unlock (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
-                                        const char *path,
-                                        trail_t *trail,
-                                        apr_pool_t *pool)
+svn_fs_base__get_lock_helper (svn_lock_t **lock_p,
+                              const char *path,
+                              trail_t *trail,
+                              apr_pool_t *pool)
 {
   const char *lock_token;
   svn_error_t *err;
@@ -452,19 +452,19 @@ struct lock_token_get_args
 
 
 static svn_error_t *
-txn_body_get_lock_from_path (void *baton, trail_t *trail)
+txn_body_get_lock (void *baton, trail_t *trail)
 {
   struct lock_token_get_args *args = baton;
-  return svn_fs_base__get_lock_from_path_helper (args->lock_p, args->path, 
-                                                 trail, trail->pool);
+  return svn_fs_base__get_lock_helper (args->lock_p, args->path, 
+                                       trail, trail->pool);
 }
 
 
 svn_error_t *
-svn_fs_base__get_lock_from_path (svn_lock_t **lock,
-                                 svn_fs_t *fs,
-                                 const char *path,
-                                 apr_pool_t *pool)
+svn_fs_base__get_lock (svn_lock_t **lock,
+                       svn_fs_t *fs,
+                       const char *path,
+                       apr_pool_t *pool)
 {
   struct lock_token_get_args args;
   svn_error_t *err;
@@ -473,8 +473,7 @@ svn_fs_base__get_lock_from_path (svn_lock_t **lock,
   
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.lock_p = lock;  
-  return svn_fs_base__retry_txn (fs, txn_body_get_lock_from_path,
-                                 &args, pool);
+  return svn_fs_base__retry_txn (fs, txn_body_get_lock, &args, pool);
   return err;
 }
 
@@ -584,8 +583,7 @@ svn_fs_base__allow_locked_operation (const char *path,
       svn_lock_t *lock;
 
       /* Discover any lock attached to the path. */
-      SVN_ERR (svn_fs_base__get_lock_from_path_helper (&lock, path, 
-                                                       trail, pool));
+      SVN_ERR (svn_fs_base__get_lock_helper (&lock, path, trail, pool));
       if (lock)
         SVN_ERR (verify_lock (trail->fs, lock, pool));
     }

@@ -658,10 +658,10 @@ read_lock_from_hash_name (svn_lock_t **lock_p,
 
 
 static svn_error_t *
-get_lock_from_path (svn_lock_t **lock_p,
-                    svn_fs_t *fs,
-                    const char *path,
-                    apr_pool_t *pool)
+get_lock (svn_lock_t **lock_p,
+          svn_fs_t *fs,
+          const char *path,
+          apr_pool_t *pool)
 {
   svn_lock_t *lock;
     
@@ -685,15 +685,15 @@ get_lock_from_path (svn_lock_t **lock_p,
 
 
 static svn_error_t *
-get_lock_from_path_helper (svn_fs_t *fs,
-                           svn_lock_t **lock_p,
-                           const char *path,
-                           apr_pool_t *pool)
+get_lock_helper (svn_fs_t *fs,
+                 svn_lock_t **lock_p,
+                 const char *path,
+                 apr_pool_t *pool)
 {
   svn_lock_t *lock;
   svn_error_t *err;
   
-  err = get_lock_from_path (&lock, fs, path, pool);
+  err = get_lock (&lock, fs, path, pool);
 
   /* We've deliberately decided that this function doesn't tell the
      caller *why* the lock is unavailable.  */
@@ -840,7 +840,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
      acceptable to ignore; it means that the path is now free and
      clear for locking, because the fsfs funcs just cleared out both
      of the tables for us.   */
-  SVN_ERR (get_lock_from_path_helper (fs, &existing_lock, path, pool));
+  SVN_ERR (get_lock_helper (fs, &existing_lock, path, pool));
   if (existing_lock)
     {
       if (! force)
@@ -928,7 +928,7 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   SVN_ERR (svn_fs_fs__get_write_lock (fs, subpool));
 
     /* Try and get a lock from lock->path */ 
-  SVN_ERR (get_lock_from_path_helper (fs, &existing_lock, lock->path, pool));
+  SVN_ERR (get_lock_helper (fs, &existing_lock, lock->path, pool));
 
   if (existing_lock)
     {
@@ -991,7 +991,7 @@ svn_fs_fs__unlock (svn_fs_t *fs,
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or
      SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR (get_lock_from_path (&existing_lock, fs, path, pool));
+  SVN_ERR (get_lock (&existing_lock, fs, path, pool));
   
   /* Unless breaking the lock, we do some checks. */
   if (!force)
@@ -1023,12 +1023,12 @@ svn_fs_fs__unlock (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_fs__get_lock_from_path (svn_lock_t **lock_p,
-                               svn_fs_t *fs,
-                               const char *path,
-                               apr_pool_t *pool)
+svn_fs_fs__get_lock (svn_lock_t **lock_p,
+                     svn_fs_t *fs,
+                     const char *path,
+                     apr_pool_t *pool)
 {
-  SVN_ERR (get_lock_from_path_helper (fs, lock_p, path, pool));
+  SVN_ERR (get_lock_helper (fs, lock_p, path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1159,7 +1159,7 @@ svn_fs_fs__allow_locked_operation (const char *path,
       svn_lock_t *lock;
 
       /* Discover any lock attached to the path. */
-      SVN_ERR (get_lock_from_path_helper (fs, &lock, path, pool));
+      SVN_ERR (get_lock_helper (fs, &lock, path, pool));
 
       /* Easy out. */
       if (! lock)

@@ -1399,7 +1399,7 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
-  SVN_CMD_ERR(svn_fs_get_lock_from_path(&l, b->fs, full_path, pool));
+  SVN_CMD_ERR(svn_fs_get_lock(&l, b->fs, full_path, pool));
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   if (l)

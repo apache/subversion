@@ -73,7 +73,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__attach_lock,
   svn_fs_fs__generate_token,
   svn_fs_fs__unlock,
-  svn_fs_fs__get_lock_from_path,
+  svn_fs_fs__get_lock,
   svn_fs_fs__get_locks
 };
 

@@ -1748,7 +1748,7 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
 
-  SVN_ERR (svn_fs_get_lock_from_path (&lock, c->fs, path, pool));
+  SVN_ERR (svn_fs_get_lock (&lock, c->fs, path, pool));
 
   if (lock)
     {

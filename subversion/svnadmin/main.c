@@ -1089,7 +1089,7 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_utf_cstring_to_utf8 (&lock_path_utf8, lock_path, subpool));
       
       /* Fetch the path's svn_lock_t. */
-      err = svn_fs_get_lock_from_path (&lock, fs, lock_path_utf8, subpool);
+      err = svn_fs_get_lock (&lock, fs, lock_path_utf8, subpool);
       if (err)
         goto move_on;
       if (! lock)

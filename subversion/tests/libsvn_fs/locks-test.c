@@ -140,7 +140,7 @@ lookup_lock_by_path (const char **msg,
                         SVN_INVALID_REVNUM, pool));
 
   /* Can we look up the lock by path? */
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
@@ -194,14 +194,14 @@ attach_lock (const char **msg,
   SVN_ERR (svn_fs_attach_lock (&mylock, fs, FALSE, SVN_INVALID_REVNUM, pool));
 
   /* Can we look up the lock by path? */
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if ((! somelock) || (strcmp (somelock->token, mylock.token) != 0))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
 
   /* Unlock /A/D/G/rho, and verify that it's gone. */
   SVN_ERR (svn_fs_unlock (fs, mylock.path, mylock.token, 0, pool));
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Removed a lock, but it's still there.");
@@ -316,14 +316,14 @@ basic_lock (const char **msg,
                         SVN_INVALID_REVNUM, pool));
 
   /* Can we look up the lock by path? */
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
     
   /* Unlock /A/D/G/rho, and verify that it's gone. */
   SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token, 0, pool));
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Removed a lock, but it's still there.");
@@ -711,7 +711,7 @@ lock_break_steal_refresh (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, access));
   SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token,
                           1 /* FORCE BREAK */, pool));
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Tried to break a lock, but it's still there.");
@@ -719,7 +719,7 @@ lock_break_steal_refresh (const char **msg,
   /* As hortense, create a new lock, and verify that we own it. */
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 0,
                         SVN_INVALID_REVNUM, pool));
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (strcmp (somelock->owner, mylock->owner) != 0)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made a lock, but we don't seem to own it.");
@@ -731,7 +731,7 @@ lock_break_steal_refresh (const char **msg,
                         1 /* FORCE STEAL */,
                         300 /* expire in 5 minutes */,
                         SVN_INVALID_REVNUM, pool));
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (strcmp (somelock->owner, mylock->owner) != 0)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made a lock, but we don't seem to own it.");
@@ -742,7 +742,7 @@ lock_break_steal_refresh (const char **msg,
   /* Refresh the lock, so that it never expires. */
   somelock->expiration_date = 0;
   SVN_ERR (svn_fs_attach_lock (somelock, fs, TRUE, SVN_INVALID_REVNUM, pool));
-  SVN_ERR (svn_fs_get_lock_from_path (&somelock, fs, "/A/D/G/rho", pool));
+  SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
   if (somelock->expiration_date)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made non-expirirng lock, but it expires.");  

@@ -400,7 +400,7 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   /* Update lock properties. */
   if (lock_token)
     {
-      SVN_ERR (svn_fs_get_lock_from_path (&lock, b->repos->fs, t_path, pool));
+      SVN_ERR (svn_fs_get_lock (&lock, b->repos->fs, t_path, pool));
 
       /* Delete a defunct lock. */
       if (! lock || strcmp (lock_token, lock->token) != 0)
