@@ -240,8 +240,8 @@ svn_wc__sync_text_base (svn_stringbuf_t *path, apr_pool_t *pool);
 /* Return a path to PATH's text-base file.
    If TMP is set, return a path to the tmp text-base file. */
 svn_stringbuf_t *svn_wc__text_base_path (const svn_stringbuf_t *path,
-                                      svn_boolean_t tmp,
-                                      apr_pool_t *pool);
+                                         svn_boolean_t tmp,
+                                         apr_pool_t *pool);
 
 
 /* Set *PROP_PATH to PATH's working properties file.

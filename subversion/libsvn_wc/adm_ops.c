@@ -678,6 +678,29 @@ svn_wc_get_pristine_copy_path (svn_stringbuf_t *path,
 }
 
 
+/* Remove FILE if it exists and is a file.  If it does not exist, do
+   nothing.  If it is not a file, error. */
+static svn_error_t *
+remove_file_if_present (svn_stringbuf_t *file, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  enum svn_node_kind kind;
+  
+  SVN_ERR (svn_io_check_path (file, &kind, pool));
+
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+
+  /* Else. */
+
+  apr_err = apr_file_remove (file->data, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool, "Unable to remove '%s'", file->data);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_remove_from_revision_control (svn_stringbuf_t *path, 
@@ -698,36 +721,50 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       
   if (is_file)
     {
+      svn_path_add_component (full_path, name, svn_path_local_style);
+
       if (destroy_wf)
         {
           /* Check for local mods. */
           svn_boolean_t text_modified_p;
-          svn_path_add_component (full_path, name, svn_path_local_style);
           SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
                                            subpool));
           if (text_modified_p)  /* don't kill local mods */
-            return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, 0, NULL,
-                                     subpool, "");
+            {
+              return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD,
+                                       0, NULL, subpool, "");
+            }
           else
             {
-              /* Remove the actual working file. */
-              apr_err = apr_file_remove (full_path->data, subpool);
-              if (apr_err)
-                return svn_error_createf (apr_err, 0, NULL, subpool,
-                                          "Unable to remove file '%s'",
-                                          full_path->data);
+              /* The working file is still present; remove it. */
+              SVN_ERR (remove_file_if_present (full_path, subpool));
             }
         }
 
       /* Remove NAME from PATH's entries file: */
-      svn_path_add_component (full_path, name, svn_path_local_style);
       SVN_ERR (svn_wc_entries_read (&entries, path, pool));
       svn_wc__entry_remove (entries, name);
       SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
       /* Remove text-base/NAME, prop/NAME, prop-base/NAME, wcprops/NAME */
       {
-        /* ### if they exist, remove them. */
+        svn_stringbuf_t *svn_thang;
+
+        /* Text base. */
+        svn_thang = svn_wc__text_base_path (full_path, 0, subpool);
+        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+
+        /* Working prop file. */
+        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+
+        /* Prop base file. */
+        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (remove_file_if_present (svn_thang, subpool));
+
+        /* wc-prop file. */
+        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, 0, subpool));
+        SVN_ERR (remove_file_if_present (svn_thang, subpool));
       }
 
     }  /* done with file case */
