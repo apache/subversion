@@ -21,12 +21,14 @@
 #include <httpd.h>
 #include <util_xml.h>
 #include <apr_tables.h>
+#include <apr_md5.h>
 #include <mod_dav.h>
 
 #include "dav_svn.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_dav.h"
+#include "svn_md5.h"
 
 #undef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
 
@@ -76,8 +78,9 @@ enum {
 enum {
   SVN_PROPID_baseline_relative_path = 1,
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
-  SVN_OLD_PROPID_baseline_relative_path
+  SVN_OLD_PROPID_baseline_relative_path,
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  SVN_PROPID_md5_checksum
 };
 
 static const dav_liveprop_spec dav_svn_props[] =
@@ -107,6 +110,7 @@ static const dav_liveprop_spec dav_svn_props[] =
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   SVN_RO_SVN_OLD_PROP(baseline_relative_path, baseline-relative-path),
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  SVN_RO_SVN_PROP(md5_checksum, md5-checksum),
 
   { 0 } /* sentinel */
 };
@@ -483,6 +487,35 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       /* drop the leading slash, so it is relative */
       s = resource->info->repos_path + 1;
       value = apr_xml_quote_string(p, s, 1);
+      break;
+
+    case SVN_PROPID_md5_checksum:
+      if ((! resource->collection)
+          && (resource->type == DAV_RESOURCE_TYPE_REGULAR
+              || resource->type == DAV_RESOURCE_TYPE_WORKING
+              || resource->type == DAV_RESOURCE_TYPE_VERSION))
+        {
+          unsigned char digest[MD5_DIGESTSIZE];
+          unsigned char zeros_digest[MD5_DIGESTSIZE] = { 0 };
+
+          serr = svn_fs_file_md5_checksum(digest,
+                                          resource->info->root.root,
+                                          resource->info->repos_path, p);
+          if (serr != NULL)
+            {
+              /* ### what to do? */
+              value = "###error###";
+              break;
+            }
+
+          if (memcmp (digest, zeros_digest, MD5_DIGESTSIZE) != 0)
+            value = svn_md5_digest_to_cstring (digest, p);
+          else
+            return DAV_PROP_INSERT_NOTSUPP;
+        }
+      else
+        return DAV_PROP_INSERT_NOTSUPP;
+
       break;
 
     default:

@@ -684,6 +684,15 @@ svn_ra_local__get_file (void *session_baton,
           rlen = SVN_STREAM_CHUNK_SIZE; 
           SVN_ERR (svn_stream_read (contents, buf, &rlen));
           
+          /* Note that this particular RA layer does not computing a
+             checksum as we go, and confirming it against the
+             repository's checksum when done.  That's because it calls
+             svn_fs_file_contents() directly, which already checks the
+             stored checksum, and all we're doing here is writing
+             bytes in a loop.  Truly, Nothing Can Go Wrong :-).  But
+             RA layers that go over a network should confirm the
+             checksum. */
+
           /* write however many bytes you read, please. */
           wlen = rlen;
           SVN_ERR (svn_stream_write (stream, buf, &wlen));
